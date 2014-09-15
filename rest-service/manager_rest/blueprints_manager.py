@@ -22,7 +22,6 @@ from flask import g, current_app
 from dsl_parser import functions
 from dsl_parser import tasks
 from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
-from dsl_parser.utils import scan_properties
 
 from manager_rest import models
 from manager_rest import manager_exceptions
