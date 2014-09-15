@@ -318,12 +318,16 @@ class BlueprintsManager(object):
                             instance.runtime_properties.get(
                                 func.attribute_name) if
                             instance.runtime_properties else None)
-                dict_[k] = attributes
+                    if len(attributes) == 1:
+                        dict_[k] = attributes[0]
+                    else:
+                        dict_[k] = attributes
 
-        scan_properties(deployment.outputs,
+        outputs = {k: v['value'] for k, v in deployment.outputs.iteritems()}
+        scan_properties(outputs,
                         handler,
                         '{0}.outputs'.format(deployment_id))
-        return deployment.outputs
+        return outputs
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:
