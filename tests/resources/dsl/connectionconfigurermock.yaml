@@ -1,4 +1,4 @@
 plugins:
     connection_configurer_mock:
         executor: central_deployment_agent
-        source: connection_configurer_mock
+        install: false

@@ -7,7 +7,7 @@ imports:
 plugins:
     diamond:
         executor: host_agent
-        source: system
+        install: false
 
 node_types:
     monitor_type:

@@ -1,4 +1,4 @@
 plugins:
     context:
         executor: central_deployment_agent
-        source: context_plugin
+        install: false
