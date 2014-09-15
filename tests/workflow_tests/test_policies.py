@@ -50,7 +50,7 @@ class TestPolicies(TestCase):
             self.instance_id = self.wait_for_node_instance().id
             expected_metric_value = 42
             self.wait_for_executions(3)
-            invocations = self.wait_for_invocations(1)
+            invocations = self.wait_for_invocations(deployment.id, 1)
             self.assertEqual(expected_metric_value, invocations[0]['metric'])
         finally:
             from diamond_agent import tasks
@@ -124,6 +124,7 @@ class TestPolicies(TestCase):
         def assertion():
             executions = self.client.executions.list(
                 deployment_id=self.deployment_id)
+            self.logger.info(executions)
             self.assertEqual(expected_count, len(executions))
         self.do_assertions(assertion)
 

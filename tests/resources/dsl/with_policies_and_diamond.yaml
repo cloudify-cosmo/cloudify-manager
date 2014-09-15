@@ -6,7 +6,8 @@ imports:
 
 plugins:
     diamond:
-        derived_from: cloudify.plugins.remote_plugin
+        executor: host_agent
+        source: system
 
 node_types:
     monitor_type:

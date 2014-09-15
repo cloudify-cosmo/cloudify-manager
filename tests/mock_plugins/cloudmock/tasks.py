@@ -19,7 +19,6 @@ from cloudify.exceptions import NonRecoverableError
 from testenv.utils import update_storage
 from cloudify import ctx
 
-DEFAULT_VM_IP = '10.0.0.1'
 
 RUNNING = 'running'
 NOT_RUNNING = 'not_running'
@@ -34,8 +33,6 @@ def provision(**kwargs):
                                       .format(ctx.node_id))
         if ctx.properties.get('test_ip'):
             ctx.runtime_properties['ip'] = ctx.properties['test_ip']
-        else:
-            ctx.runtime_properties['ip'] = DEFAULT_VM_IP
         machines[ctx.node_id] = NOT_RUNNING
         data['machines'] = machines
 

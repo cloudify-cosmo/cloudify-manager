@@ -209,7 +209,7 @@ class BasicWorkflowsTest(TestCase):
         def change_execution_status(_execution_id, status):
             self.client.executions.update(_execution_id, status)
             time.sleep(2)  # waiting for elasticsearch to update...
-            executions = self.client.deployments.list_executions(deployment_id)
+            executions = self.client.executions.list(deployment_id)
             updated_execution = next(execution for execution in executions
                                      if execution.id == _execution_id)
             self.assertEqual(status, updated_execution.status)

@@ -45,6 +45,7 @@ from testenv.processes.celery import CeleryWorkerProcess
 from testenv.utils import timestamp
 from testenv.utils import update_storage
 from testenv.utils import deploy_application
+from cloudify.logs import create_event_message_prefix
 
 logger = setup_default_logger('TESTENV')
 testenv_instance = None
@@ -57,8 +58,8 @@ class TestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self.logger = logging.getLogger(self._testMethodName)
-        self.logger.setLevel(logging.INFO)
+        self.logger = setup_default_logger(self._testMethodName,
+                                           logging.INFO)
         self.client = utils.create_rest_client()
         utils.restore_provider_context()
         TestEnvironment.start_celery_management_worker()
@@ -270,7 +271,7 @@ class TestEnvironment(object):
         if self.file_server_process:
             self.file_server_process.stop()
         self.kill_celery_workers()
-        self.delete_working_directory()
+        # self.delete_working_directory()
 
     def delete_working_directory(self):
         if os.path.exists(self.test_working_dir):
@@ -369,7 +370,7 @@ def start_events_and_logs_polling():
             if RABBITMQ_VERBOSE_MESSAGES_ENABLED:
                 output = '\n{0}'.format(json.dumps(output, indent=4))
             else:
-                output = _create_event_message(output)
+                output = create_event_message_prefix(output)
             logger.info(output)
         except Exception as e:
             logger.error('event/log format error - output: {0} [message={1}]'
@@ -389,27 +390,3 @@ def start_events_and_logs_polling():
     polling_thread = threading.Thread(target=consume)
     polling_thread.daemon = True
     polling_thread.start()
-
-
-def _create_event_message(event):
-    context = event['context']
-    deployment_id = context['deployment_id']
-    node_info = ''
-    operation = ''
-    if 'node_id' in context and context['node_id'] is not None:
-        node_id = context['node_id']
-        if 'operation' in context and context['operation'] is not None:
-            operation = '.{0}'.format(context['operation'].split('.')[-1])
-        node_info = '[{0}{1}] '.format(node_id, operation)
-    level = 'CFY'
-    message = event['message']['text'].encode('utf-8')
-    if 'cloudify_log' in event['type']:
-        level = 'LOG'
-        message = '{0}: {1}'.format(event['level'].upper(), message)
-    timestamp_ = event['timestamp'].split('.')[0]
-
-    return '{0} {1} <{2}> {3}{4}'.format(timestamp_,
-                                         level,
-                                         deployment_id,
-                                         node_info,
-                                         message)
