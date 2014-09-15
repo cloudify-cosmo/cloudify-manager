@@ -144,23 +144,23 @@ plugins:
 
     agent_installer:
         executor: central_deployment_agent
-        source: system
+        install: false
 
     plugin_installer:
         executor: host_agent
-        source: system
+        install: false
 
     windows_agent_installer:
         executor: central_deployment_agent
-        source: system
+        install: false
 
     windows_plugin_installer:
         executor: central_deployment_agent
-        source: system
+        install: false
 
     default_workflows:
         executor: central_deployment_agent
-        source: system
+        install: false
 
 
 ##################################################################################
