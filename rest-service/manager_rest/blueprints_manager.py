@@ -302,32 +302,11 @@ class BlueprintsManager(object):
         deployment = get_blueprints_manager().get_deployment(
             deployment_id, include=['outputs'])
 
-        context = {}
+        def get_node_instances():
+            return get_storage_manager().get_node_instances(deployment_id)
 
-        def handler(dict_, k, v, _):
-            func = functions.parse(v)
-            if isinstance(func, functions.GetAttribute):
-                attributes = []
-                if 'node_instances' not in context:
-                    sm = get_storage_manager()
-                    context['node_instances'] = sm.get_node_instances(
-                        deployment_id)
-                for instance in context['node_instances']:
-                    if instance.node_id == func.node_name:
-                        attributes.append(
-                            instance.runtime_properties.get(
-                                func.attribute_name) if
-                            instance.runtime_properties else None)
-                    if len(attributes) == 1:
-                        dict_[k] = attributes[0]
-                    else:
-                        dict_[k] = attributes
-
-        outputs = {k: v['value'] for k, v in deployment.outputs.iteritems()}
-        scan_properties(outputs,
-                        handler,
-                        '{0}.outputs'.format(deployment_id))
-        return outputs
+        return functions.evaluate_outputs(deployment.outputs,
+                                          get_node_instances)
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:

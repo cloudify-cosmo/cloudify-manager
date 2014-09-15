@@ -345,13 +345,6 @@ class DeploymentsTestCase(BaseServerTestCase):
         ws_props = {'port': 8080}
         self.client.node_instances.update(ws.id, runtime_properties=ws_props)
 
-        vm2 = [x for x in instances if x.node_id == 'vm2']
-
-        for i in range(0, 4):
-            self.client.node_instances.update(vm2[i].id, runtime_properties={
-                'partial': i
-            })
-
         response = self.client.deployments.outputs.get(id_)
         self.assertEqual(id_, response.deployment_id)
         outputs = response.outputs
@@ -371,9 +364,3 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEqual('http', endpoint['type'])
         self.assertEqual('10.0.0.1', endpoint['ip'])
         self.assertEqual(8080, endpoint['port'])
-
-        partial = outputs['partial']
-        self.assertEqual(5, len(partial))
-        for i in range(0, 4):
-            self.assertTrue(i in partial)
-        self.assertTrue(None in partial)
