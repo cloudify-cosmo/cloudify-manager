@@ -124,7 +124,6 @@ class TestPolicies(TestCase):
         def assertion():
             executions = self.client.executions.list(
                 deployment_id=self.deployment_id)
-            self.logger.info(executions)
             self.assertEqual(expected_count, len(executions))
         self.do_assertions(assertion)
 

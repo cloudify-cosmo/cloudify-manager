@@ -392,7 +392,7 @@ class BasicWorkflowsTest(TestCase):
 
     def test_deployment_creation_workflow(self):
 
-        dsl_path = resource('dsl/basic.yaml')
+        dsl_path = resource('dsl/basic_with_deployment_plugin_and_workflow_plugin.yaml')
         deployment, _ = deploy(dsl_path)
 
         def _is_riemann_core_up():
@@ -413,10 +413,12 @@ class BasicWorkflowsTest(TestCase):
                                     deployment_id=deployment.id)
 
         # assert both deployment and workflows plugins
-        # were installed and started
+        # were installed, started and restarted
+        # this is because we both install a custom workflow and a deployment plugin
         self.assertEqual(data[deployment_operations_worker_name]['states'],
                          ['installed', 'started', 'stopped', 'started'])
-        self.assertEqual(data[deployment_workflows_worker_name]['states'], ['installed', 'started'])
+        self.assertEqual(data[deployment_workflows_worker_name]['states'],
+                         ['installed', 'started', 'stopped', 'started'])
 
         undeploy(deployment.id, delete_deployment=True)
 
@@ -428,7 +430,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(data[deployment_operations_worker_name]['states'],
                          ['installed', 'started', 'stopped', 'started', 'stopped', 'uninstalled'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['installed', 'started', 'stopped', 'uninstalled'])
+                         ['installed', 'started', 'stopped', 'started', 'stopped', 'uninstalled'])
 
         self.assertFalse(_is_riemann_core_up())
 
