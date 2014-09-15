@@ -17,13 +17,16 @@
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from testenv.utils import update_storage
+from cloudify import ctx
+
+DEFAULT_VM_IP = '10.0.0.1'
 
 RUNNING = 'running'
 NOT_RUNNING = 'not_running'
 
 
 @operation
-def provision(ctx, **kwargs):
+def provision(**kwargs):
     with update_storage(ctx) as data:
         machines = data.get('machines', {})
         if ctx.node_id in machines:
@@ -31,12 +34,14 @@ def provision(ctx, **kwargs):
                                       .format(ctx.node_id))
         if ctx.properties.get('test_ip'):
             ctx.runtime_properties['ip'] = ctx.properties['test_ip']
+        else:
+            ctx.runtime_properties['ip'] = DEFAULT_VM_IP
         machines[ctx.node_id] = NOT_RUNNING
         data['machines'] = machines
 
 
 @operation
-def start(ctx, **kwargs):
+def start(**kwargs):
     with update_storage(ctx) as data:
         machines = data.get('machines', {})
         ctx.send_event('starting machine event')
@@ -50,23 +55,23 @@ def start(ctx, **kwargs):
 
 
 @operation
-def start_error(ctx, **kwargs):
+def start_error(**kwargs):
     raise RuntimeError('Exception raised from cloudmock.start()!')
 
 
 @operation
-def stop_error(ctx, **kwargs):
+def stop_error(**kwargs):
     raise RuntimeError('Exception raised from cloudmock.stop()!')
 
 
 @operation
-def get_state(ctx, **kwargs):
+def get_state(**kwargs):
     with update_storage(ctx) as data:
         return data['machines'][ctx.node_id] == RUNNING
 
 
 @operation
-def stop(ctx, **kwargs):
+def stop(**kwargs):
     with update_storage(ctx) as data:
         ctx.logger.info('stopping machine: {0}'.format(ctx.node_id))
         if ctx.node_id not in data['machines']:
@@ -76,7 +81,7 @@ def stop(ctx, **kwargs):
 
 
 @operation
-def terminate(ctx, **kwargs):
+def terminate(**kwargs):
     with update_storage(ctx) as data:
         ctx.logger.info('terminating machine: {0}'.format(ctx.node_id))
         if ctx.node_id not in data['machines']:

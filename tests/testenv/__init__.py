@@ -109,7 +109,6 @@ class TestCase(unittest.TestCase):
                 data[deployment_id] = {}
             return data.get(deployment_id)
 
-
     @staticmethod
     def do_assertions(assertions_func, timeout=10, **kwargs):
         return utils.do_retries(assertions_func, timeout, AssertionError, **kwargs)
@@ -136,7 +135,10 @@ class TestCase(unittest.TestCase):
             'node_id': node_id
         }
         queue = '{0}-riemann'.format(deployment_id)
-        utils.publish_event(queue, event)
+        routing_key = deployment_id
+        utils.publish_event(queue,
+                            routing_key,
+                            event)
 
 
 class TestEnvironment(object):
@@ -191,7 +193,8 @@ class TestEnvironment(object):
             additional_includes=[
                 'riemann_controller.tasks',
                 'cloudify_system_workflows.deployment_environment',
-                'cloudify.plugins.workflows'
+                'cloudify.plugins.workflows',
+                'diamond_agent.tasks'
             ],
 
             # we need higher concurrency since

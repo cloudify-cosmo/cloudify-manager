@@ -39,6 +39,24 @@ class TestPolicies(TestCase):
         self.assertEqual(self.instance_id, invocations[0]['node_id'])
         self.assertEqual(123, invocations[1]['metric'])
 
+    def test_policies_flow_with_diamond(self):
+        """
+        Tests policy/trigger/group creation and processing flow
+        """
+        try:
+            dsl_path = resource("dsl/with_policies_and_diamond.yaml")
+            deployment, _ = deploy(dsl_path)
+            self.deployment_id = deployment.id
+            self.instance_id = self.wait_for_node_instance().id
+            expected_metric_value = 42
+            self.wait_for_executions(3)
+            invocations = self.wait_for_invocations(1)
+            self.assertEqual(expected_metric_value, invocations[0]['metric'])
+        finally:
+            from diamond_agent import tasks
+            from cloudify.mocks import MockCloudifyContext
+            tasks.stop(MockCloudifyContext())
+
     def test_threshold_policy(self):
         dsl_path = resource("dsl/with_policies2.yaml")
         deployment, _ = deploy(dsl_path)
@@ -104,7 +122,8 @@ class TestPolicies(TestCase):
 
     def wait_for_executions(self, expected_count):
         def assertion():
-            executions = self.client.executions.list(self.deployment_id)
+            executions = self.client.executions.list(
+                deployment_id=self.deployment_id)
             self.assertEqual(expected_count, len(executions))
         self.do_assertions(assertion)
 

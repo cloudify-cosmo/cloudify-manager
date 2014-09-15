@@ -19,9 +19,12 @@ import uuid
 from datetime import datetime
 from flask import g, current_app
 
+from dsl_parser import functions
 from dsl_parser import tasks
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
+from dsl_parser.utils import scan_properties
+
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
@@ -54,21 +57,19 @@ class BlueprintsManager(object):
     def deployments_list(self, include=None):
         return self.sm.deployments_list(include=include)
 
-    def executions_list(self, include=None):
-        return self.sm.executions_list(include=include)
+    def executions_list(self, deployment_id=None, include=None):
+        return self.sm.executions_list(deployment_id=deployment_id,
+                                       include=include)
 
     def get_blueprint(self, blueprint_id, include=None):
         return self.sm.get_blueprint(blueprint_id, include=include)
 
     def get_deployment(self, deployment_id, include=None):
-        return self.sm.get_deployment(deployment_id, include=include)
+        return self.sm.get_deployment(deployment_id=deployment_id,
+                                      include=include)
 
     def get_execution(self, execution_id, include=None):
         return self.sm.get_execution(execution_id, include=include)
-
-    def get_deployment_executions(self, deployment_id, include=None):
-        return self.sm.get_deployment_executions(deployment_id,
-                                                 include=include)
 
     # TODO: call celery tasks instead of doing this directly here
     # TODO: prepare multi instance plan should be called on workflow execution
@@ -111,7 +112,7 @@ class BlueprintsManager(object):
         storage.get_deployment(deployment_id)
 
         # validate there are no running executions for this deployment
-        executions = storage.get_deployment_executions(deployment_id)
+        executions = storage.executions_list(deployment_id=deployment_id)
         if any(execution.status not in models.Execution.END_STATES for
            execution in executions):
             raise manager_exceptions.DependentExistsError(
@@ -156,7 +157,8 @@ class BlueprintsManager(object):
 
         # validate no execution is currently in progress
         if not force:
-            executions = self.get_deployment_executions(deployment_id)
+            executions = get_storage_manager().executions_list(
+                deployment_id=deployment_id)
             running = [
                 e.id for e in executions if
                 get_storage_manager().get_execution(e.id).status
@@ -261,7 +263,8 @@ class BlueprintsManager(object):
             inputs=deployment_plan['inputs'],
             policy_types=deployment_plan['policy_types'],
             policy_triggers=deployment_plan['policy_triggers'],
-            groups=deployment_plan['groups'])
+            groups=deployment_plan['groups'],
+            outputs=deployment_plan['outputs'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id,
@@ -294,6 +297,34 @@ class BlueprintsManager(object):
                              deployment_id=deployment_id)
 
         return new_deployment
+
+    @staticmethod
+    def evaluate_deployment_outputs(deployment_id):
+        deployment = get_blueprints_manager().get_deployment(
+            deployment_id, include=['outputs'])
+
+        context = {}
+
+        def handler(dict_, k, v, _):
+            func = functions.parse(v)
+            if isinstance(func, functions.GetAttribute):
+                attributes = []
+                if 'node_instances' not in context:
+                    sm = get_storage_manager()
+                    context['node_instances'] = sm.get_node_instances(
+                        deployment_id)
+                for instance in context['node_instances']:
+                    if instance.node_id == func.node_name:
+                        attributes.append(
+                            instance.runtime_properties.get(
+                                func.attribute_name) if
+                            instance.runtime_properties else None)
+                dict_[k] = attributes
+
+        scan_properties(deployment.outputs,
+                        handler,
+                        '{0}.outputs'.format(deployment_id))
+        return deployment.outputs
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:
@@ -393,8 +424,8 @@ class BlueprintsManager(object):
                                                             is_retry=False):
         deployment_env_creation_execution = next(
             (execution for execution in
-             get_storage_manager().get_deployment_executions(
-                 deployment_id) if execution.workflow_id ==
+             get_storage_manager().executions_list(
+                 deployment_id=deployment_id) if execution.workflow_id ==
                 'create_deployment_environment'),
             None)
 

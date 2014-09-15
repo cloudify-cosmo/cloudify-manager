@@ -64,7 +64,6 @@ class WorkflowsAPITest(TestCase):
         # I am in love with eventual consistency
         instance = self.client.node_instances.get(instance.id)
         self.assertEqual('test_state', instance.state)
-        self.assertDictEqual(result_dict, instance.runtime_properties)
 
     def test_fail_remote_task_eventual_success(self):
         deployment, _ = deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,

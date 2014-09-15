@@ -84,6 +84,8 @@ run_intergration_tests()
     cd cloudify-rest-client; pip install .; cd ..
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
+    git clone https://github.com/cloudify-cosmo/cloudify-diamond-plugin --depth=1
+    cd cloudify-diamond-plugin; pip install .; cd ..
 
     cd rest-service && pip install . -r dev-requirements.txt && cd ..
 

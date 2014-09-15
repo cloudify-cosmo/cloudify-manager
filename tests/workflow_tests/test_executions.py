@@ -76,8 +76,8 @@ class ExecutionsTest(TestCase):
         deployment, execution_id = deploy(dsl_path)
 
         def assertions():
-            deployments_executions = self.client.deployments.list_executions(
-                deployment.id)
+            deployments_executions = self.client.executions.list(
+                deployment_id=deployment.id)
             # expecting 2 executions (1 for deployment environment
             # creation and 1 execution of 'install'). Checking the install
             # execution's status
@@ -109,7 +109,7 @@ class ExecutionsTest(TestCase):
             },
             'custom-parameter': "doesn't matter"
         }
-        execution = self.client.deployments.execute(
+        execution = self.client.executions.start(
             deployment_id, 'another_execute_operation',
             parameters=execution_parameters,
             allow_custom_parameters=True)
@@ -166,7 +166,7 @@ class ExecutionsTest(TestCase):
         self.client.deployments.create(blueprint_id, deployment_id)
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
-        execution = self.client.deployments.execute(
+        execution = self.client.executions.start(
             deployment_id, workflow_id)
 
         node_inst_id = self.client.node_instances.list(deployment_id)[0].id

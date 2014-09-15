@@ -100,8 +100,8 @@ def deploy_and_execute_workflow(dsl_path,
                timeout_seconds=30,
                deployment_id=deployment_id)
 
-    execution = client.deployments.execute(deployment_id, workflow_name,
-                                           parameters=parameters or {})
+    execution = client.executions.start(deployment_id, workflow_name,
+                                        parameters=parameters or {})
 
     if wait_for_execution:
         wait_for_execution_to_end(execution,
@@ -114,7 +114,7 @@ def verify_deployment_environment_creation_complete(deployment_id):
     # a workaround for waiting for the deployment environment creation to
     # complete
     client = create_rest_client()
-    execs = client.deployments.list_executions(deployment_id)
+    execs = client.executions.list(deployment_id)
     if not execs \
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
@@ -131,8 +131,8 @@ def undeploy_application(deployment_id, timeout_seconds=240, delete_deployment=F
     path.
     """
     client = create_rest_client()
-    execution = client.deployments.execute(deployment_id,
-                                           'uninstall')
+    execution = client.executions.start(deployment_id,
+                                        'uninstall')
     wait_for_execution_to_end(execution, timeout_seconds=timeout_seconds)
 
     if execution.error and execution.error != 'None':
@@ -230,17 +230,29 @@ def send_task(task, queue, args=None):
         queue=queue)
 
 
-def publish_event(queue, event):
+def publish_event(queue,
+                  routing_key,
+                  event,
+                  exchange_name='cloudify-monitoring',
+                  exchange_type='topic'):
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
+    channel.exchange_declare(exchange=exchange_name,
+                             type=exchange_type,
+                             durable=False,
+                             auto_delete=True,
+                             internal=False)
     channel.queue_declare(
         queue=queue,
         auto_delete=True,
         durable=False,
         exclusive=False)
-    channel.basic_publish(exchange='',
-                          routing_key=queue,
+    channel.queue_bind(exchange=exchange_name,
+                       queue=queue,
+                       routing_key=routing_key)
+    channel.basic_publish(exchange=exchange_name,
+                          routing_key=routing_key,
                           body=json.dumps(event))
     channel.close()
     connection.close()

@@ -13,7 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-
 import uuid
 import time
 import errno
@@ -47,8 +46,11 @@ class BasicWorkflowsTest(TestCase):
             plugin_name='cloudmock',
             deployment_id=deployment.id
         )['machines']
-
         self.assertEquals(1, len(machines))
+
+        outputs = self.client.deployments.outputs.get(deployment.id).outputs
+        # ip runtime property is not set in this case
+        self.assertEqual([None], outputs['ip_address']['value'])
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies_order_with_two_nodes.yaml")
