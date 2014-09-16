@@ -12,7 +12,6 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-import time
 
 from cloudify.decorators import operation
 from testenv.utils import update_storage
@@ -21,6 +20,12 @@ from cloudify.celery import celery
 from testenv.utils import task_exists
 
 
+# This is needed because in this
+# environment, all tasks are sent to
+# the management worker, and handled by
+# different consumers. The original method
+# asserts that tasks are being sent to
+# different workers,
 tasks.verify_task_registered = task_exists
 
 

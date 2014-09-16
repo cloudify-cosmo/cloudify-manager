@@ -144,7 +144,7 @@ class CeleryWorkerProcess(object):
                          cwd=self.envdir)
 
         timeout = 60
-        worker_name = 'celery.{}'.format(self.name)
+        worker_name = 'celery.{0}'.format(self.name)
         inspect = celery_client.control.inspect(destination=[worker_name])
         timeout = time.time() + timeout
         while time.time() < timeout:
@@ -161,8 +161,11 @@ class CeleryWorkerProcess(object):
                 logger.warning('Error when inspecting celery : {0}'.format(e.message))
                 logger.warning('Retrying...')
                 time.sleep(0.5)
-        raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
-                                  .format(timeout))
+        celery_log = self.try_read_logfile()
+        if celery_log:
+            logger.error('Celery log:\n {0}'.format(celery_log))
+        raise RuntimeError('Failed starting worker {0}. waited for {1} seconds.'
+                           .format(self.name, timeout))
 
     def restart(self):
         self.stop()
