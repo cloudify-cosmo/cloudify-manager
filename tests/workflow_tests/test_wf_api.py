@@ -12,19 +12,14 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-
-__author__ = 'dank'
+import uuid
 
 from cloudify_rest_client.executions import Execution
-
 from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_and_execute_workflow as deploy
-from testenv import send_task
-from plugins.testmockoperations.tasks import (get_mock_operation_invocations,
-                                              get_fail_invocations)
-
-from testenv import delete_provider_context, restore_provider_context
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_and_execute_workflow as deploy
+from testenv.utils import delete_provider_context
+from testenv.utils import restore_provider_context
 
 
 class WorkflowsAPITest(TestCase):
@@ -57,7 +52,10 @@ class WorkflowsAPITest(TestCase):
                                parameters=parameters)
 
         # testing workflow remote task
-        invocation = send_task(get_mock_operation_invocations).get()[0]
+        invocation = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['mock_operation_invocation'][0]
         self.assertDictEqual(result_dict, invocation)
 
         # testing workflow local task
@@ -68,23 +66,32 @@ class WorkflowsAPITest(TestCase):
         self.assertEqual('test_state', instance.state)
 
     def test_fail_remote_task_eventual_success(self):
-        deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
-               parameters={'do_get': self.do_get})
+        deployment, _ = deploy(resource('dsl/workflow_api.yaml'),
+                               self._testMethodName,
+                               parameters={'do_get': self.do_get})
 
         # testing workflow remote task
-        invocations = send_task(get_fail_invocations).get()
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['failure_invocation']
         self.assertEqual(3, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(1, invocations[i+1] - invocations[i])
 
     def test_fail_remote_task_eventual_failure(self):
+        deployment_id = str(uuid.uuid4())
         self.assertRaises(RuntimeError, deploy,
                           resource('dsl/workflow_api.yaml'),
                           self._testMethodName,
+                          deployment_id=deployment_id,
                           parameters={'do_get': self.do_get})
 
         # testing workflow remote task
-        invocations = send_task(get_fail_invocations).get()
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['failure_invocation']
         self.assertEqual(3, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(1, invocations[i+1] - invocations[i])

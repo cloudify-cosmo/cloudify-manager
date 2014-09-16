@@ -23,9 +23,9 @@ setup(
     version='3.1a4',
     author='elip',
     author_email='elip@gigaspaces.com',
-    packages=['workflows', 'system_workflows'],
+    packages=['cloudify_system_workflows'],
     license='LICENSE',
-    description='Default cloudify workflows',
+    description='Various Cloudify Workflows',
     install_requires=[
         'cloudify-plugins-common==3.1a4',
     ]

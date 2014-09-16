@@ -22,7 +22,7 @@ from flask import g, current_app
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
-
+from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
@@ -484,14 +484,14 @@ class BlueprintsManager(object):
         deployment_env_creation_task_id = str(uuid.uuid4())
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
-            'system_workflows.deployment_environment.create'
+            'cloudify_system_workflows.deployment_environment.create'
 
         context = self._build_context_from_deployment(
             deployment, deployment_env_creation_task_id, wf_id,
             deployment_env_creation_task_name)
         kwargs = {
-            'management_plugins_to_install': deployment_plan[
-                'management_plugins_to_install'],
+            DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
+                DEPLOYMENT_PLUGINS_TO_INSTALL],
             'workflow_plugins_to_install': deployment_plan[
                 'workflow_plugins_to_install'],
             'policy_configuration': {
@@ -537,7 +537,7 @@ class BlueprintsManager(object):
         deployment_env_deletion_task_id = str(uuid.uuid4())
         wf_id = 'delete_deployment_environment'
         deployment_env_deletion_task_name = \
-            'system_workflows.deployment_environment.delete'
+            'cloudify_system_workflows.deployment_environment.delete'
 
         context = self._build_context_from_deployment(
             deployment,

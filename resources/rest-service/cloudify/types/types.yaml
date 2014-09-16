@@ -82,19 +82,19 @@ node_types:
         derived_from: cloudify.types.base
 
     cloudify.types.db_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     cloudify.types.web_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
         properties:
             port:
                 default: 80
 
     cloudify.types.app_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     cloudify.types.message_bus_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     # An application artifact to deploy
     cloudify.types.app_module:
@@ -124,53 +124,43 @@ relationships:
                 default: all_to_all
 
     cloudify.relationships.connected_to:
-        derived_from: "cloudify.relationships.depends_on"
+        derived_from: cloudify.relationships.depends_on
 
     cloudify.relationships.contained_in:
-        derived_from: "cloudify.relationships.depends_on"
+        derived_from: cloudify.relationships.depends_on
 
 
 ##################################################################################
 # Workflows
 ##################################################################################
 workflows:
-    install: default_workflows.workflows.default.install
-    uninstall: default_workflows.workflows.default.uninstall
+    install: default_workflows.cloudify.plugins.workflows.install
+    uninstall: default_workflows.cloudify.plugins.workflows.uninstall
 
 ##################################################################################
 # Base artifact definitions
 ##################################################################################
 plugins:
 
-    # Basic plugin artifact
-    cloudify.plugins.plugin: { }
-
-    # Remote plugin artifact
-    cloudify.plugins.remote_plugin:
-        derived_from: cloudify.plugins.plugin
-
-    # Worker plugin artifact - runs on Cloudify agent
-    cloudify.plugins.agent_plugin:
-        derived_from: cloudify.plugins.plugin
-
-    # Worker plugin artifact - runs on a dedicated worker for the deployment
-    cloudify.plugins.manager_plugin:
-        derived_from: cloudify.plugins.plugin
-
     agent_installer:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        install: false
 
     plugin_installer:
-        derived_from: cloudify.plugins.agent_plugin
+        executor: host_agent
+        install: false
 
     windows_agent_installer:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        install: false
 
     windows_plugin_installer:
-        derived_from: cloudify.plugins.agent_plugin
+        executor: central_deployment_agent
+        install: false
 
     default_workflows:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        install: false
 
 
 ##################################################################################

@@ -32,8 +32,8 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: connection_configurer_mock.testmockoperations.tasks.make_reachable
-                - delete: connection_configurer_mock.testmockoperations.tasks.make_unreachable
+                - create: testmockoperations.testmockoperations.tasks.make_reachable
+                - delete: testmockoperations.testmockoperations.tasks.make_unreachable
             cloudify.interfaces.monitor_lifecycle:
-                            - start: connection_configurer_mock.testmockoperations.tasks.start_monitor
-                            - stop: connection_configurer_mock.testmockoperations.tasks.stop_monitor
+                            - start: testmockoperations.testmockoperations.tasks.start_monitor
+                            - stop: testmockoperations.testmockoperations.tasks.stop_monitor

@@ -12,16 +12,34 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+import os
+import testenv
 
-__author__ = 'idanmo'
-
-
+from cloudify.utils import id_generator
+from testenv.constants import TOP_LEVEL_DIR
 from testenv import TestEnvironment
 
+"""
+These methods are honored by nose.
+They are executed at the package level. (Once for each package)
 
-def setUp():
-    TestEnvironment.create()
+see http://nose.readthedocs.org/en/latest/writing_tests.html
+"""
 
 
-def tearDown():
-    TestEnvironment.destroy()
+def setup_package():
+
+    unique_name = 'WorkflowsTests-{0}'.format(id_generator(4))
+
+    test_working_dir = os.path.join(
+        TOP_LEVEL_DIR,
+        unique_name
+    )
+    os.makedirs(test_working_dir)
+
+    testenv.testenv_instance = TestEnvironment(test_working_dir)
+    testenv.testenv_instance.create()
+
+
+def teardown_package():
+    testenv.testenv_instance.destroy()

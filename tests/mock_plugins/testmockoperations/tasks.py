@@ -18,24 +18,16 @@ import tempfile
 import os
 import shutil
 
-from cloudify.manager import get_rest_client, get_node_instance_ip
+from cloudify.manager import get_rest_client
+from cloudify.manager import get_node_instance_ip
 from cloudify.decorators import operation
-from cloudify.exceptions import NonRecoverableError, RecoverableError
-
-state = []
-touched_time = None
-unreachable_call_order = []
-mock_operation_invocation = []
-node_states = []
-get_resource_operation_invocation = []
-monitoring_operations_invocation = []
-failure_invocation = []
-host_get_state_invocation = []
+from cloudify.exceptions import NonRecoverableError
+from cloudify.exceptions import RecoverableError
+from testenv.utils import update_storage
 
 
 @operation
 def make_reachable(ctx, **kwargs):
-    global state
     state_info = {
         'id': ctx.node_id,
         'time': time.time(),
@@ -43,16 +35,19 @@ def make_reachable(ctx, **kwargs):
     }
     ctx.logger.info('Appending to state [node_id={0}, state={1}]'
                     .format(ctx.node_id, state_info))
-    state.append(state_info)
+    with update_storage(ctx) as data:
+        data['state'] = data.get('state', [])
+        data['state'].append(state_info)
 
 
 @operation
 def make_unreachable(ctx, **kwargs):
-    global unreachable_call_order
-    unreachable_call_order.append({
-        'id': ctx.node_id,
-        'time': time.time()
-    })
+    with update_storage(ctx) as data:
+        data['unreachable_call_order'] = data.get('unreachable_call_order', [])
+        data['unreachable_call_order'].append({
+            'id': ctx.node_id,
+            'time': time.time()
+        })
 
 
 @operation
@@ -73,91 +68,100 @@ def del_property(ctx, **kwargs):
 
 
 @operation
-def touch(**kwargs):
-    global touched_time
-    touched_time = time.time()
-
-
-@operation
-def get_state(**kwargs):
-    return state
-
-
-@operation
-def get_touched_time(**kwargs):
-    return touched_time
-
-
-@operation
-def is_unreachable_called(node_id, **kwargs):
-    return next((x for x in
-                 unreachable_call_order if x['id'] == node_id), None)
-
-
-@operation
-def get_unreachable_call_order(**kwargs):
-    return unreachable_call_order
+def touch(ctx, **kwargs):
+    with update_storage(ctx) as data:
+        data['touched_time'] = data.get('touched_time', None)
+        data['touched_time'] = time.time()
 
 
 @operation
 def start_monitor(ctx, **kwargs):
-    global monitoring_operations_invocation
-    monitoring_operations_invocation.append({
-        'id': ctx.node_id,
-        'operation': 'start_monitor'
-    })
+    with update_storage(ctx) as data:
+        data['monitoring_operations_invocation'] = data.get(
+            'monitoring_operations_invocation', []
+        )
+        data['monitoring_operations_invocation'].append({
+            'id': ctx.node_id,
+            'operation': 'start_monitor'
+        })
 
 
 @operation
 def stop_monitor(ctx, **kwargs):
-    global monitoring_operations_invocation
-    monitoring_operations_invocation.append({
-        'id': ctx.node_id,
-        'operation': 'stop_monitor'
-    })
+    with update_storage(ctx) as data:
+        data['monitoring_operations_invocation'] = data.get(
+            'monitoring_operations_invocation', []
+        )
+        data['monitoring_operations_invocation'].append({
+            'id': ctx.node_id,
+            'operation': 'stop_monitor'
+        })
 
 
 @operation
 def mock_operation(ctx, **kwargs):
     mockprop = get_prop('mockprop', ctx, kwargs)
-    global mock_operation_invocation
-    mock_operation_invocation.append({
-        'id': ctx.node_id,
-        'mockprop': mockprop,
-        'properties': {key: value for (key, value) in ctx.properties.items()}
-    })
+    with update_storage(ctx) as data:
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
+        data['mock_operation_invocation'].append({
+            'id': ctx.node_id,
+            'mockprop': mockprop,
+            'properties': {
+                key: value for (key, value) in ctx.properties.items()
+            }
+        })
 
 
 @operation
-def mock_operation_from_custom_workflow(key, value, **_):
-    mock_operation_invocation.append({
-        key: value
-    })
+def mock_operation_from_custom_workflow(ctx, key, value, **kwargs):
+    with update_storage(ctx) as data:
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
+        data['mock_operation_invocation'].append({
+            key: value
+        })
 
 
 @operation
-def mock_operation_get_instance_ip(ctx, **_):
-    mock_operation_invocation.append((
-        ctx.node_name, get_node_instance_ip(ctx.node_id)
-    ))
-    # mapped to cloudify.interfaces.host.get_state
+def mock_operation_get_instance_ip(ctx, **kwargs):
+    with update_storage(ctx) as data:
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
+        data['mock_operation_invocation'].append((
+            ctx.node_name, get_node_instance_ip(ctx.node_id)
+        ))
+
     return True
 
 
 @operation
 def mock_operation_get_instance_ip_from_context(ctx, **_):
-    mock_operation_invocation.append((
-        ctx.node_name, ctx.host_ip
-    ))
-    # mapped to cloudify.interfaces.host.get_state
+    with update_storage(ctx) as data:
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
+        data['mock_operation_invocation'].append((
+            ctx.node_name, ctx.host_ip
+        ))
+
     return True
 
 
 @operation
 def mock_operation_get_instance_ip_of_related_from_context(ctx, **_):
-    mock_operation_invocation.append((
-        '{}_rel'.format(ctx.node_name), ctx.related.host_ip
-    ))
+    with update_storage(ctx) as data:
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
+        data['mock_operation_invocation'].append((
+            '{}_rel'.format(ctx.node_name), ctx.related.host_ip
+        ))
+
+    return True
 
 
 @operation
@@ -184,42 +188,25 @@ def get_resource_operation(ctx, **kwargs):
     finally:
         shutil.rmtree(tempdir)
 
-    global get_resource_operation_invocation
-    get_resource_operation_invocation.append({
-        'res1_data': res1_data,
-        'res2_data': res2_data,
-        'custom_filepath': filepath,
-        'res2_path': res2
-    })
-
-
-@operation
-def get_resource_operation_invocations(**kwargs):
-    return get_resource_operation_invocation
-
-
-@operation
-def get_mock_operation_invocations(**kwargs):
-    return mock_operation_invocation
-
-
-@operation
-def get_monitoring_operations_invocation(**kwargs):
-    return monitoring_operations_invocation
+    with update_storage(ctx) as data:
+        data['get_resource_operation_invocation'] = data.get(
+            'get_resource_operation_invocation', []
+        )
+        data['get_resource_operation_invocation'].append({
+            'res1_data': res1_data,
+            'res2_data': res2_data,
+            'custom_filepath': filepath,
+            'res2_path': res2
+        })
 
 
 @operation
 def append_node_state(ctx, **kwargs):
     client = get_rest_client()
     instance = client.node_instances.get(ctx.node_id)
-    global node_states
-    node_states.append(instance.state)
-
-
-@operation
-def get_node_states(**kwargs):
-    global node_states
-    return node_states
+    with update_storage(ctx) as data:
+        data['node_states'] = data.get('node_states', [])
+        data['node_states'].append(instance.state)
 
 
 @operation
@@ -233,9 +220,11 @@ def sleep(ctx, **kwargs):
 def fail(ctx, **kwargs):
     fail_count = get_prop('fail_count', ctx, kwargs, 1000000)
 
-    global failure_invocation
-    failure_invocation.append(time.time())
-    if len(failure_invocation) > fail_count:
+    with update_storage(ctx) as data:
+        data['failure_invocation'] = data.get('failure_invocation', [])
+        data['failure_invocation'].append(time.time())
+
+    if len(data['failure_invocation']) > fail_count:
         return
 
     message = 'TEST_EXPECTED_FAIL'
@@ -254,26 +243,18 @@ def fail(ctx, **kwargs):
 
 
 @operation
-def get_fail_invocations(**_):
-    global failure_invocation
-    return failure_invocation
-
-
-@operation
 def host_get_state(ctx, **kwargs):
-    global host_get_state_invocation
-    host_get_state_invocation.append(time.time())
-    if len(host_get_state_invocation) <= get_prop('false_count',
-                                                  ctx,
-                                                  kwargs):
+    with update_storage(ctx) as data:
+        data['host_get_state_invocation'] = data.get(
+            'host_get_state_invocation', []
+        )
+        data['host_get_state_invocation'].append(time.time())
+
+    if len(data['host_get_state_invocation']) <= get_prop('false_count',
+                                                          ctx,
+                                                          kwargs):
         return False
     return True
-
-
-@operation
-def get_host_get_state_invocations(**_):
-    global host_get_state_invocation
-    return host_get_state_invocation
 
 
 def get_prop(prop_name, ctx, kwargs, default=None):

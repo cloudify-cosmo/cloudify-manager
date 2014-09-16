@@ -13,15 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-
 import uuid
-from testenv import (TestCase,
-                     wait_for_execution_to_end,
-                     do_retries,
-                     verify_deployment_environment_creation_complete,
-                     send_task,
-                     get_resource as resource,
-                     deploy_application as deploy)
+
+from testenv import TestCase
+from testenv.utils import get_resource as resource
+from testenv.utils import verify_deployment_environment_creation_complete
+from testenv.utils import do_retries
+from testenv.utils import wait_for_execution_to_end
+from testenv.utils import deploy_application as deploy
 
 
 class TestDeploymentWorkflows(TestCase):
@@ -50,10 +49,10 @@ class TestDeploymentWorkflows(TestCase):
                                                  'execute_operation')
         wait_for_execution_to_end(execution)
 
-        from plugins.testmockoperations.tasks import \
-            get_mock_operation_invocations
-
-        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['mock_operation_invocation']
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0], {'test_key': 'test_value'})
 

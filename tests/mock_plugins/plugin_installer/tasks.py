@@ -13,39 +13,18 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-
-from time import time
-
 from cloudify.decorators import operation
-
-
-state = []
-
-
-@operation
-def configure_connection(ctx, **kwargs):
-    append_to_state(ctx)
+from testenv.utils import update_storage
 
 
 @operation
-def unconfigure_connection(ctx, **kwargs):
-    append_to_state(ctx)
+def install(ctx, plugins, **kwargs):
 
-
-def append_to_state(ctx):
-    global state
-    state.append({
-        'id': ctx.node_id,
-        'related_id': ctx.related.node_id,
-        'time': time(),
-        'properties': dict(ctx.properties),
-        'runtime_properties': dict(ctx.runtime_properties),
-        'related_properties': ctx.related.properties,
-        'related_runtime_properties': ctx.related.runtime_properties,
-        'capabilities': ctx.capabilities.get_all()
-    })
-
-
-@operation
-def get_state(ctx, **kwargs):
-    return state
+    for plugin in plugins:
+        plugin_name = plugin['name']
+        ctx.logger.info('Installing plugin {0}'.format(plugin_name))
+        with update_storage(ctx) as data:
+            data[ctx.task_target] = data.get(ctx.task_target, {})
+            data[ctx.task_target][plugin_name] = \
+                data[ctx.task_target].get(plugin_name, [])
+            data[ctx.task_target][plugin_name].append('installed')

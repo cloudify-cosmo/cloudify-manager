@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#       http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -57,7 +57,7 @@ AGENT_PACKAGE_PATH = '/packages/agents/CloudifyWindowsAgent.exe'
 RUNTIME_AGENT_PATH = 'C:\CloudifyAgent'
 
 # Agent includes list, Mandatory
-AGENT_INCLUDES = 'windows_plugin_installer.tasks'
+AGENT_INCLUDES = 'windows_plugin_installer.tasks,cloudify.plugins.workflows'
 
 
 def get_agent_package_url():
@@ -72,20 +72,20 @@ def get_manager_ip():
 def create_env_string(cloudify_agent):
     env = {
         LOCAL_IP_KEY:
-            cloudify_agent['host'],
+        cloudify_agent['host'],
         MANAGER_IP_KEY:
-            get_manager_ip(),
+        get_manager_ip(),
         MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY:
-            get_manager_file_server_blueprints_root_url(),
+        get_manager_file_server_blueprints_root_url(),
         MANAGER_FILE_SERVER_URL_KEY:
-            get_manager_file_server_url(),
+        get_manager_file_server_url(),
         MANAGER_REST_PORT_KEY:
-            get_manager_rest_service_port()
+        get_manager_rest_service_port()
     }
     env_string = ''
     for key, value in env.iteritems():
-        env_string = '{0} {1}={2}'\
-                     .format(env_string, key, value)
+        env_string = '{0} {1}={2}' \
+            .format(env_string, key, value)
     return env_string.strip()
 
 
@@ -139,7 +139,7 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, env))
     runner.run('sc config {0} start= auto'.format(AGENT_SERVICE_NAME))
     runner.run(
-        'sc failure {0} reset= {1} actions= restart/{2}' .format(
+        'sc failure {0} reset= {1} actions= restart/{2}'.format(
             AGENT_SERVICE_NAME,
             cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY],
             cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY]))
@@ -256,7 +256,6 @@ def _wait_for_service_status(runner,
                              service_name,
                              desired_status,
                              timeout_in_seconds):
-
     end_time = time.time() + timeout_in_seconds
 
     successful_consecutive_queries = 0
@@ -266,8 +265,10 @@ def _wait_for_service_status(runner,
         service_state = runner.service_state(service_name)
         if desired_status.strip().lower() == service_state.strip().lower():
             successful_consecutive_queries += 1
-            if successful_consecutive_queries == cloudify_agent['service'][
-                    SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY]:
+            if successful_consecutive_queries == \
+                    cloudify_agent['service'][
+                        SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY
+                    ]:
                 return
         else:
             successful_consecutive_queries = 0
@@ -285,8 +286,8 @@ def _wait_for_service_status(runner,
 
 
 def _read_celery_log():
-    log_file_path = '{0}\celery.log'\
-                    .format(RUNTIME_AGENT_PATH)
+    log_file_path = '{0}\celery.log' \
+        .format(RUNTIME_AGENT_PATH)
     if os.path.exists(log_file_path):
         with open(log_file_path, "r") as myfile:
             return myfile.read()

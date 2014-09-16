@@ -89,13 +89,17 @@ run_intergration_tests()
 
     cd rest-service && pip install . -r dev-requirements.txt && cd ..
 
+    # make utils and such
+    # available as python packages
+    cd tests && pip install . && cd ..
+
     cd plugins/riemann-controller && pip install . && cd ../..
     cd workflows && pip install . && cd ..
     cd tests && pip install . && cd ..
 
     pip install nose
     nosetests tests/workflow_tests --nologcapture --nocapture -v
-    nosetests tests/deployment_env_tests --nologcapture --nocapture -v
+    
 }
 
 run_flake8()

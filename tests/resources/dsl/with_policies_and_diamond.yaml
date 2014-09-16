@@ -8,7 +8,8 @@ imports:
 
 plugins:
     diamond:
-        derived_from: cloudify.plugins.remote_plugin
+        executor: host_agent
+        install: false
 
 node_types:
     monitor_type:
