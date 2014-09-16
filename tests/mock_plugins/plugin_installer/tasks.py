@@ -25,5 +25,6 @@ def install(ctx, plugins, **kwargs):
         ctx.logger.info('Installing plugin {0}'.format(plugin_name))
         with update_storage(ctx) as data:
             data[ctx.task_target] = data.get(ctx.task_target, {})
-            data[ctx.task_target][plugin_name] = data[ctx.task_target].get(plugin_name, [])
+            data[ctx.task_target][plugin_name] = \
+                data[ctx.task_target].get(plugin_name, [])
             data[ctx.task_target][plugin_name].append('installed')

@@ -13,8 +13,8 @@ test_plugins()
     git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
     cd cloudify-rest-client; pip install .; cd ..
 
-    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
-    cd cloudify-plugins-common; git checkout CFY-1185-remove-plugin-inheritance; pip install .; cd ..
+    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1 -b CFY-1185-remove-plugin-inheritance
+    cd cloudify-plugins-common; pip install .; cd ..
 
     cd plugins/agent-installer && pip install . && cd ../..
     cd plugins/windows-agent-installer && pip install . && cd ../..
