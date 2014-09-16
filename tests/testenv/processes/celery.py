@@ -64,6 +64,7 @@ class CeleryWorkerProcess(object):
             'work'
         )
 
+        # env folder for this worker
         self.envdir = os.path.join(
             self.test_working_dir,
             self.name,
