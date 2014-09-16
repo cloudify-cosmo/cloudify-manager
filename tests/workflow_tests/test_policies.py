@@ -41,7 +41,6 @@ class TestPolicies(TestCase):
         self.assertEqual(self.instance_id, invocations[0]['node_id'])
         self.assertEqual(123, invocations[1]['metric'])
 
-    @nose.tools.nottest
     def test_policies_flow_with_diamond(self):
         """
         Tests policy/trigger/group creation and processing flow
