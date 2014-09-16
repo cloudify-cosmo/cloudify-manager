@@ -21,7 +21,6 @@ import pip
 
 from os import path
 from cloudify import utils
-from cloudify.constants import VIRTUALENV_PATH_KEY
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import LocalCommandRunner
@@ -88,7 +87,7 @@ def install_package(url):
     :param url: A URL to the package archive.
     """
 
-    command = '{0} install --process-dependency-links {1}'.format(_pip(), url)
+    command = 'pip install --process-dependency-links {0}'.format(url)
     LocalCommandRunner().run(command)
 
 
@@ -98,8 +97,7 @@ def extract_module_paths(url):
 
     module_paths = []
     files = LocalCommandRunner().run(
-        '{0} show -f {1}'.format(
-            _pip(),
+        'pip show -f {0}'.format(
             plugin_name)).std_out.splitlines()
     for module in files:
         if module.endswith('.py') and '__init__' not in module:
@@ -126,12 +124,10 @@ def extract_plugin_name(plugin_url):
         runner = LocalCommandRunner()
         os.chdir(plugin_dir)
         plugin_name = runner.run(
-            '{0} {1} {2}'.format(_python(),
-                                 path.join(
-                                     path.dirname(__file__),
-                                     'extract_package_name.py'),
-                                 plugin_dir)).std_out
-        runner.run('{0} install --no-deps {1}'.format(_pip(), plugin_dir))
+            'python {0} {1}'.format(path.join(
+                                    path.dirname(__file__),
+                                    'extract_package_name.py'),
+                                    plugin_dir)).std_out
         return plugin_name
     finally:
         os.chdir(previous_cwd)
@@ -160,25 +156,3 @@ def get_url(blueprint_id, plugin):
         blueprint_id
     )
     return '{0}/{1}.zip'.format(blueprint_plugins_url, source)
-
-
-def _python():
-    return _virtualenv('python')
-
-
-def _pip():
-    return _virtualenv('pip')
-
-
-def _virtualenv(command):
-    return os.path.join(os.environ[VIRTUALENV_PATH_KEY],
-                        'bin',
-                        command)
-
-
-def local_directory_handler(plugin):
-    pass
-
-
-def url_handler(plugin):
-    pass
