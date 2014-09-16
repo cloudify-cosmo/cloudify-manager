@@ -1,3 +1,5 @@
+tosca_definitions_version: cloudify_1_0
+
 imports:
     - cloudify/types/types.yaml
     - testmockoperations.yaml
