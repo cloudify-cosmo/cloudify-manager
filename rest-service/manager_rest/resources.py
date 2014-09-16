@@ -67,6 +67,7 @@ def exceptions_handled(func):
                 manager_exceptions.NoSuchIncludeFieldError,
                 manager_exceptions.MissingRequiredDeploymentInputError,
                 manager_exceptions.UnknownDeploymentInputError,
+                manager_exceptions.DeploymentOutputsEvaluationError,
                 manager_exceptions.DeploymentEnvironmentCreationInProgressError
         ) as e:
             abort_error(e)

@@ -345,32 +345,37 @@ class DeploymentsTestCase(BaseServerTestCase):
         ws_props = {'port': 8080}
         self.client.node_instances.update(ws.id, runtime_properties=ws_props)
 
-        vm2 = [x for x in instances if x.node_id == 'vm2']
-
-        for i in range(0, 4):
-            self.client.node_instances.update(vm2[i].id, runtime_properties={
-                'partial': i
-            })
-
         response = self.client.deployments.outputs.get(id_)
         self.assertEqual(id_, response.deployment_id)
         outputs = response.outputs
+
         self.assertTrue('ip_address' in outputs)
         self.assertTrue('port' in outputs)
-        self.assertEqual('Web site IP address.',
-                         outputs['ip_address']['description'])
-        self.assertEqual('10.0.0.1', outputs['ip_address']['value'][0])
-        self.assertEqual('Web site port.', outputs['port']['description'])
-        self.assertEqual(80, outputs['port']['value'])
+        self.assertEqual('10.0.0.1', outputs['ip_address'])
+        self.assertEqual(80, outputs['port'])
 
-        endpoint = outputs['endpoint']['value']
+        dep = self.client.deployments.get(id_)
+        self.assertEqual('Web site IP address.',
+                         dep.outputs['ip_address']['description'])
+        self.assertEqual('Web site port.', dep.outputs['port']['description'])
+
+        endpoint = outputs['endpoint']
 
         self.assertEqual('http', endpoint['type'])
-        self.assertEqual('10.0.0.1', endpoint['ip'][0])
-        self.assertEqual(8080, endpoint['port'][0])
+        self.assertEqual('10.0.0.1', endpoint['ip'])
+        self.assertEqual(8080, endpoint['port'])
 
-        partial = outputs['partial']['value']
-        self.assertEqual(5, len(partial))
-        for i in range(0, 4):
-            self.assertTrue(i in partial)
-            self.assertTrue(None in partial)
+    def test_illegal_output(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_illegal_output.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+        try:
+            self.client.deployments.outputs.get(id_)
+            self.fail()
+        except CloudifyClientError, e:
+            self.assertEqual(400, e.status_code)
+            self.assertEqual(
+                manager_exceptions.DeploymentOutputsEvaluationError.ERROR_CODE,
+                e.error_code)
