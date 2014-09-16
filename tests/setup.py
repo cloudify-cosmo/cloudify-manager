@@ -23,10 +23,13 @@ setup(
     version='3.1a4',
     author='Idan Moyal',
     author_email='idan@gigaspaces.com',
-    packages=['mock_plugins',
+    packages=['testenv',
+              'testenv.processes'
+              'mock_plugins',
               'mock_plugins.cloudmock',
               'mock_plugins.connection_configurer_mock',
               'mock_plugins.context_plugin',
+              'mock_plugins.mock_agent_plugin'
               'mock_plugins.plugin_installer',
               'mock_plugins.testmockoperations',
               'mock_plugins.worker_installer',

@@ -16,9 +16,9 @@
 
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
-from testenv.utils import update_storage
 from cloudify import ctx
 
+from testenv.utils import update_storage
 
 RUNNING = 'running'
 NOT_RUNNING = 'not_running'

@@ -89,6 +89,10 @@ run_intergration_tests()
 
     cd rest-service && pip install . -r dev-requirements.txt && cd ..
 
+    # make utils and such
+    # available as python packages
+    cd tests && pip install . && cd ..
+
     cd plugins/riemann-controller && pip install . && cd ../..
     cd workflows && pip install . && cd ..
     cd tests && pip install . && cd ..
