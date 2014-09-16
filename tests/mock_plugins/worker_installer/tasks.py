@@ -41,7 +41,6 @@ def install(ctx, **kwargs):
         data[worker_name]['pids'] = []
 
 
-
 @operation
 def start(ctx, **kwargs):
     agent_config = _fix_worker(ctx, **kwargs)

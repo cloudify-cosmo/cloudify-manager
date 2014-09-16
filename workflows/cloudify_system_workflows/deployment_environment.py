@@ -32,11 +32,13 @@ def create(ctx, **kwargs):
 
     deployment_plugins = kwargs['deployment_plugins_to_install']
 
-    deployment_plugins = filter(lambda plugin: plugin['install'], deployment_plugins)
+    deployment_plugins = filter(lambda plugin: plugin['install'],
+                                deployment_plugins)
 
     workflow_plugins = kwargs['workflow_plugins_to_install']
 
-    workflow_plugins = filter(lambda plugin: plugin['install'], workflow_plugins)
+    workflow_plugins = filter(lambda plugin: plugin['install'],
+                              workflow_plugins)
 
     # installing the operations worker
     sequence.add(

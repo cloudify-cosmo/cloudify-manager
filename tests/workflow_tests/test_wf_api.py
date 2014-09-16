@@ -66,7 +66,8 @@ class WorkflowsAPITest(TestCase):
         self.assertEqual('test_state', instance.state)
 
     def test_fail_remote_task_eventual_success(self):
-        deployment, _ = deploy(resource('dsl/workflow_api.yaml'), self._testMethodName,
+        deployment, _ = deploy(resource('dsl/workflow_api.yaml'),
+                               self._testMethodName,
                                parameters={'do_get': self.do_get})
 
         # testing workflow remote task

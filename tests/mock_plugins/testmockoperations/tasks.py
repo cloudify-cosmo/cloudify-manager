@@ -77,7 +77,9 @@ def touch(ctx, **kwargs):
 @operation
 def start_monitor(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data['monitoring_operations_invocation'] = data.get('monitoring_operations_invocation', [])
+        data['monitoring_operations_invocation'] = data.get(
+            'monitoring_operations_invocation', []
+        )
         data['monitoring_operations_invocation'].append({
             'id': ctx.node_id,
             'operation': 'start_monitor'
@@ -87,7 +89,9 @@ def start_monitor(ctx, **kwargs):
 @operation
 def stop_monitor(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data['monitoring_operations_invocation'] = data.get('monitoring_operations_invocation', [])
+        data['monitoring_operations_invocation'] = data.get(
+            'monitoring_operations_invocation', []
+        )
         data['monitoring_operations_invocation'].append({
             'id': ctx.node_id,
             'operation': 'stop_monitor'
@@ -98,18 +102,24 @@ def stop_monitor(ctx, **kwargs):
 def mock_operation(ctx, **kwargs):
     mockprop = get_prop('mockprop', ctx, kwargs)
     with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get('mock_operation_invocation', [])
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
         data['mock_operation_invocation'].append({
             'id': ctx.node_id,
             'mockprop': mockprop,
-            'properties': {key: value for (key, value) in ctx.properties.items()}
+            'properties': {
+                key: value for (key, value) in ctx.properties.items()
+            }
         })
 
 
 @operation
 def mock_operation_from_custom_workflow(ctx, key, value, **kwargs):
     with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get('mock_operation_invocation', [])
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
         data['mock_operation_invocation'].append({
             key: value
         })
@@ -118,7 +128,9 @@ def mock_operation_from_custom_workflow(ctx, key, value, **kwargs):
 @operation
 def mock_operation_get_instance_ip(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get('mock_operation_invocation', [])
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
         data['mock_operation_invocation'].append((
             ctx.node_name, get_node_instance_ip(ctx.node_id)
         ))
@@ -129,7 +141,9 @@ def mock_operation_get_instance_ip(ctx, **kwargs):
 @operation
 def mock_operation_get_instance_ip_from_context(ctx, **_):
     with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get('mock_operation_invocation', [])
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
         data['mock_operation_invocation'].append((
             ctx.node_name, ctx.host_ip
         ))
@@ -140,7 +154,9 @@ def mock_operation_get_instance_ip_from_context(ctx, **_):
 @operation
 def mock_operation_get_instance_ip_of_related_from_context(ctx, **_):
     with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get('mock_operation_invocation', [])
+        data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
         data['mock_operation_invocation'].append((
             '{}_rel'.format(ctx.node_name), ctx.related.host_ip
         ))
@@ -173,7 +189,9 @@ def get_resource_operation(ctx, **kwargs):
         shutil.rmtree(tempdir)
 
     with update_storage(ctx) as data:
-        data['get_resource_operation_invocation'] = data.get('get_resource_operation_invocation', [])
+        data['get_resource_operation_invocation'] = data.get(
+            'get_resource_operation_invocation', []
+        )
         data['get_resource_operation_invocation'].append({
             'res1_data': res1_data,
             'res2_data': res2_data,
@@ -227,7 +245,9 @@ def fail(ctx, **kwargs):
 @operation
 def host_get_state(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data['host_get_state_invocation'] = data.get('host_get_state_invocation', [])
+        data['host_get_state_invocation'] = data.get(
+            'host_get_state_invocation', []
+        )
         data['host_get_state_invocation'].append(time.time())
 
     if len(data['host_get_state_invocation']) <= get_prop('false_count',

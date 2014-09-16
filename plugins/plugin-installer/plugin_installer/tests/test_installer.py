@@ -14,7 +14,6 @@
 #    * limitations under the License.
 # ***************************************************************************/
 
-import logging
 import os
 from os.path import dirname
 import tempfile
@@ -24,15 +23,15 @@ import shutil
 from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 from cloudify.utils import LocalCommandRunner
+from cloudify.utils import setup_default_logger
 from plugin_installer.tasks import install, update_includes
-from cloudify.constants import CELERY_WORK_DIR_PATH_KEY, MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY, LOCAL_IP_KEY, \
-    VIRTUALENV_PATH_KEY
+from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
+from cloudify.constants import VIRTUALENV_PATH_KEY
+from cloudify.constants import LOCAL_IP_KEY
+from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
 
 
-logging.basicConfig(format='%(asctime)s - %(name)s '
-                           '- %(levelname)s - %(message)s')
-logger = logging.getLogger('test_installer')
-logger.level = logging.DEBUG
+logger = setup_default_logger('test_plugin_installer')
 
 
 def _get_local_path(ctx, plugin):
@@ -65,8 +64,10 @@ class PluginInstallerTestCase(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.temp_folder)
 
-    def _assert_plugin_installed(self, package_name, plugin, dependencies=None):
-        if not dependencies: dependencies = []
+    def _assert_plugin_installed(self, package_name,
+                                 plugin, dependencies=None):
+        if not dependencies:
+            dependencies = []
         runner = LocalCommandRunner()
         out = runner.run(
             '{0}/bin/pip list | grep {1}'
@@ -95,9 +96,11 @@ class PluginInstallerTestCase(unittest.TestCase):
     def test_get_url_folder(self):
         from plugin_installer.tasks import get_url
         url = get_url(self.ctx, {'source': 'plugin'})
-        self.assertEqual(url, '{0}/{1}/plugins/plugin.zip'
-                              .format(self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL,
-                                      self.TEST_BLUEPRINT_ID))
+        self.assertEqual(url,
+                         '{0}/{1}/plugins/plugin.zip'
+                         .format(
+                             self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL,
+                             self.TEST_BLUEPRINT_ID))
 
     def test_install(self):
 

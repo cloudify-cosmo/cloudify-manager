@@ -70,8 +70,10 @@ class CeleryWorkerProcess(object):
             self.name,
             'env'
         )
-        self.celery_pid_file = path.join(self.workdir, 'celery-{0}.pid'.format(self.name))
-        self.celery_log_file = path.join(self.workdir, 'celery-{0}.log'.format(self.name))
+        self.celery_pid_file = path.join(self.workdir,
+                                         'celery-{0}.pid'.format(self.name))
+        self.celery_log_file = path.join(self.workdir,
+                                         'celery-{0}.log'.format(self.name))
         self.pids = self._get_celery_process_ids()
 
     def create_dirs(self):
@@ -158,13 +160,15 @@ class CeleryWorkerProcess(object):
                     return
                 time.sleep(0.5)
             except BaseException as e:
-                logger.warning('Error when inspecting celery : {0}'.format(e.message))
+                logger.warning('Error when inspecting celery : {0}'
+                               .format(e.message))
                 logger.warning('Retrying...')
                 time.sleep(0.5)
         celery_log = self.try_read_logfile()
         if celery_log:
             logger.error('Celery log:\n {0}'.format(celery_log))
-        raise RuntimeError('Failed starting worker {0}. waited for {1} seconds.'
+        raise RuntimeError('Failed starting worker {0}. '
+                           'waited for {1} seconds.'
                            .format(self.name, timeout))
 
     def restart(self):

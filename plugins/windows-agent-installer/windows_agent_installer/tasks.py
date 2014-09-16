@@ -265,8 +265,10 @@ def _wait_for_service_status(runner,
         service_state = runner.service_state(service_name)
         if desired_status.strip().lower() == service_state.strip().lower():
             successful_consecutive_queries += 1
-            if successful_consecutive_queries == cloudify_agent['service'][
-                SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY]:
+            if successful_consecutive_queries == \
+                    cloudify_agent['service'][
+                        SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY
+                    ]:
                 return
         else:
             successful_consecutive_queries = 0

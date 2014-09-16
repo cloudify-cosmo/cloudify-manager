@@ -125,7 +125,9 @@ def verify_deployment_environment_creation_complete(deployment_id):
                 json.dumps(execs, indent=2)))
 
 
-def undeploy_application(deployment_id, timeout_seconds=240, delete_deployment=False):
+def undeploy_application(deployment_id,
+                         timeout_seconds=240,
+                         delete_deployment=False):
     """
     A blocking method which undeploys an application from the provided dsl
     path.
@@ -183,7 +185,10 @@ def wait_for_execution_to_end(execution, timeout_seconds=240):
     return execution
 
 
-def do_retries(func, timeout_seconds=10, exception_class=BaseException, **kwargs):
+def do_retries(func,
+               timeout_seconds=10,
+               exception_class=BaseException,
+               **kwargs):
     deadline = time.time() + timeout_seconds
     while True:
         try:
@@ -203,8 +208,10 @@ def do_retries_boolean(func, timeout_seconds=10, **kwargs):
                 break
             else:
                 if time.time() > deadline:
-                    raise RuntimeError('function {0} did not return True in {1} seconds'
-                                       .format(func.__name__, timeout_seconds))
+                    raise RuntimeError(
+                        'function {0} did not return True in {1} seconds'
+                        .format(func.__name__, timeout_seconds)
+                    )
                 time.sleep(1)
 
 
@@ -285,7 +292,8 @@ def update_storage(ctx):
 
     if CELERY_WORK_DIR_PATH_KEY not in os.environ:
         raise RuntimeError('Missing {0} in os.environ. '
-                           'This method can only be called from within a plugin. '
+                           'This method can only be '
+                           'called from within a plugin. '
                            'Are you using this correctly?'
                            .format(CELERY_WORK_DIR_PATH_KEY))
     deployment_id = ctx.deployment_id

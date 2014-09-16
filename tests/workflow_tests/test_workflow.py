@@ -369,8 +369,11 @@ class BasicWorkflowsTest(TestCase):
     def test_deploy_with_agent_worker(self):
         dsl_path = resource('dsl/with_agent_worker.yaml')
         deployment, _ = deploy(dsl_path)
-        deployment_nodes = self.client.node_instances.list(deployment_id=deployment.id)
-        webserver_nodes = filter(lambda node: 'host' not in node.node_id, deployment_nodes)
+        deployment_nodes = self.client.node_instances.list(
+            deployment_id=deployment.id
+        )
+        webserver_nodes = filter(lambda node: 'host' not in node.node_id,
+                                 deployment_nodes)
         self.assertEquals(1, len(webserver_nodes))
         webserver_node = webserver_nodes[0]
         invocations = self.get_plugin_data(
@@ -392,12 +395,16 @@ class BasicWorkflowsTest(TestCase):
 
     def test_deployment_creation_workflow(self):
 
-        dsl_path = resource('dsl/basic_with_deployment_plugin_and_workflow_plugin.yaml')
+        dsl_path = resource(
+            'dsl/basic_with_deployment_plugin_and_workflow_plugin.yaml'
+        )
         deployment, _ = deploy(dsl_path)
 
         def _is_riemann_core_up():
             try:
-                with open(path.join(self.riemann_workdir, deployment.id, 'ok')) as f:
+                with open(path.join(self.riemann_workdir,
+                                    deployment.id,
+                                    'ok')) as f:
                     return f.read().strip() == 'ok'
             except IOError, e:
                 if e.errno == errno.ENOENT:
@@ -407,14 +414,16 @@ class BasicWorkflowsTest(TestCase):
         self.assertTrue(_is_riemann_core_up())
 
         deployment_operations_worker_name = deployment.id
-        deployment_workflows_worker_name = '{0}_workflows'.format(deployment.id)
+        deployment_workflows_worker_name = '{0}_workflows'\
+            .format(deployment.id)
 
         data = self.get_plugin_data(plugin_name='worker_installer',
                                     deployment_id=deployment.id)
 
         # assert both deployment and workflows plugins
         # were installed, started and restarted
-        # this is because we both install a custom workflow and a deployment plugin
+        # this is because we both install a custom
+        # workflow and a deployment plugin
         self.assertEqual(data[deployment_operations_worker_name]['states'],
                          ['installed', 'started', 'stopped', 'started'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
@@ -428,15 +437,10 @@ class BasicWorkflowsTest(TestCase):
         # assert both deployment and workflows plugins
         # were stopped and uninstalled
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['installed', 'started', 'stopped', 'started', 'stopped', 'uninstalled'])
+                         ['installed', 'started', 'stopped',
+                          'started', 'stopped', 'uninstalled'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['installed', 'started', 'stopped', 'started', 'stopped', 'uninstalled'])
+                         ['installed', 'started', 'stopped',
+                          'started', 'stopped', 'uninstalled'])
 
         self.assertFalse(_is_riemann_core_up())
-
-
-
-
-
-
-

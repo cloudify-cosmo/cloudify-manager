@@ -34,17 +34,12 @@ from testenv.constants import RABBITMQ_POLLING_ENABLED
 from testenv.constants import FILE_SERVER_RESOURCES_URI
 from testenv.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
-from testenv.constants import WORKERS_ENV_DIR_SUFFIX
-from testenv.constants import TOP_LEVEL_DIR
 from testenv.processes.elastic import ElasticSearchProcess
 from testenv.processes.manager_rest import ManagerRestProcess
 from testenv.processes.riemann import RiemannProcess
 from testenv import utils
 from cloudify.utils import setup_default_logger
 from testenv.processes.celery import CeleryWorkerProcess
-from testenv.utils import timestamp
-from testenv.utils import update_storage
-from testenv.utils import deploy_application
 from cloudify.logs import create_event_message_prefix
 
 logger = setup_default_logger('TESTENV')
@@ -112,7 +107,10 @@ class TestCase(unittest.TestCase):
 
     @staticmethod
     def do_assertions(assertions_func, timeout=10, **kwargs):
-        return utils.do_retries(assertions_func, timeout, AssertionError, **kwargs)
+        return utils.do_retries(assertions_func,
+                                timeout,
+                                AssertionError,
+                                **kwargs)
 
     @property
     def riemann_workdir(self):
@@ -316,7 +314,9 @@ class TestEnvironment(object):
     @staticmethod
     def riemann_workdir():
         global testenv_instance
-        return testenv_instance.celery_management_worker_process.riemann_config_dir
+        return testenv_instance.\
+            celery_management_worker_process.\
+            riemann_config_dir
 
     @staticmethod
     def _get_manager_root():

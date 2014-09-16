@@ -14,8 +14,6 @@
 #    * limitations under the License.
 
 
-import time
-
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
@@ -40,7 +38,9 @@ class TestUninstallDeployment(TestCase):
             deployment_id=deployment_id
         )['unreachable_call_order']
 
-        unreachable_called = is_unreachable_called(node_id, unreachable_call_order)
+        unreachable_called = is_unreachable_called(
+            node_id,
+            unreachable_call_order)
         self.assertTrue(unreachable_called)
 
         node_instance = self.client.node_instances.get(node_id)
