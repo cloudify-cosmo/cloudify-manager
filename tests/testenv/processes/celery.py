@@ -21,7 +21,6 @@ import time
 
 from os import path
 from os.path import dirname
-from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import setup_default_logger
 from testenv.constants import FILE_SERVER_PORT
 from testenv.constants import MANAGER_REST_PORT
