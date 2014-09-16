@@ -14,10 +14,16 @@
 #    * limitations under the License.
 
 from cloudify.decorators import operation
+from testenv.utils import update_storage
 
 
 @operation
 def install(ctx, plugins, **kwargs):
 
     for plugin in plugins:
-        ctx.logger.info('Installing plugin {0}'.format(plugin['name']))
+        plugin_name = plugin['name']
+        ctx.logger.info('Installing plugin {0}'.format(plugin_name))
+        with update_storage(ctx) as data:
+            data[ctx.task_target] = data.get(ctx.task_target, {})
+            data[ctx.task_target][plugin_name] = data[ctx.task_target].get(plugin_name, [])
+            data[ctx.task_target][plugin_name].append('installed')
