@@ -29,7 +29,7 @@ setup(
               'mock_plugins.cloudmock',
               'mock_plugins.connection_configurer_mock',
               'mock_plugins.context_plugin',
-              'mock_plugins.mock_agent_plugin'
+              'mock_plugins.mock_agent_plugin',
               'mock_plugins.plugin_installer',
               'mock_plugins.testmockoperations',
               'mock_plugins.worker_installer',
