@@ -14,23 +14,22 @@
 #    * limitations under the License.
 # ***************************************************************************/
 
-import logging
 import os
 import tempfile
 import shutil
-from os import path
-
 import pip
 
+from os import path
+from cloudify import utils
 from cloudify.constants import VIRTUALENV_PATH_KEY
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import LocalCommandRunner
+from cloudify.utils import setup_default_logger
 from cloudify.decorators import operation
 
 
-logger = logging.getLogger('plugin_installer.tasks')
-logger.level = logging.DEBUG
+logger = setup_default_logger('plugin_installer.tasks')
 manager_branch = 'master'
 
 
@@ -50,13 +49,13 @@ def install(ctx, plugins, **kwargs):
     logger = ctx.logger
 
     for plugin in plugins:
-        install_plugin(ctx, plugin)
+        install_plugin(ctx.blueprint_id, plugin)
 
 
-def install_plugin(ctx, plugin):
+def install_plugin(blueprint_id, plugin):
     name = plugin['name']
     logger.info('Installing {0}'.format(name))
-    url = get_url(ctx, plugin)
+    url = get_url(blueprint_id, plugin)
     logger.debug('Installing {0} from {1}'.format(name, url))
     install_package(url)
     module_paths = extract_module_paths(url)
@@ -140,7 +139,7 @@ def extract_plugin_name(plugin_url):
             shutil.rmtree(plugin_dir)
 
 
-def get_url(ctx, plugin):
+def get_url(blueprint_id, plugin):
 
     source = plugin['source']
     if '://' in source:
@@ -155,7 +154,12 @@ def get_url(ctx, plugin):
     # Else, assume its a relative path from <blueprint_home>/plugins
     # to a directory containing the plugin project.
     # in this case, the archived plugin will reside in the manager file server.
-    return '{0}/{1}.zip'.format(ctx.blueprint_plugins_url, source)
+
+    blueprint_plugins_url = '{0}/{1}/plugins'.format(
+        utils.get_manager_file_server_blueprints_root_url(),
+        blueprint_id
+    )
+    return '{0}/{1}.zip'.format(blueprint_plugins_url, source)
 
 
 def _python():
