@@ -23,6 +23,10 @@ node_templates:
                         diamond_config:
                             interval: 10
                             autostart: true
+                            collectors:
+                                ExampleCollector:
+                                    config:
+                                        stub: prop
                 - stop: diamond.diamond_agent.tasks.stop
             test:
                 - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
