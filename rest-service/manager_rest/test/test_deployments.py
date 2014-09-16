@@ -364,3 +364,18 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEqual('http', endpoint['type'])
         self.assertEqual('10.0.0.1', endpoint['ip'])
         self.assertEqual(8080, endpoint['port'])
+
+    def test_illegal_output(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_illegal_output.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+        try:
+            self.client.deployments.outputs.get(id_)
+            self.fail()
+        except CloudifyClientError, e:
+            self.assertEqual(400, e.status_code)
+            self.assertEqual(
+                manager_exceptions.DeploymentOutputsEvaluationError.ERROR_CODE,
+                e.error_code)

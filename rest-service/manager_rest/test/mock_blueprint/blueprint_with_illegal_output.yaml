@@ -1,0 +1,18 @@
+imports:
+    - hello_world.yaml
+node_templates:
+    vm:
+        type: cloudify.types.host
+        instances:
+            deploy: 2
+    http_web_server:
+        type: cloudify.types.web_server
+        properties:
+            port: 80
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: vm
+outputs:
+    ip_address:
+        description: Web site IP address.
+        value: { get_attribute: [ vm, ip ] }

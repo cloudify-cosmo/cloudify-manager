@@ -19,9 +19,9 @@ import uuid
 from datetime import datetime
 from flask import g, current_app
 
+from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
-from dsl_parser.exceptions import MissingRequiredInputError, UnknownInputError
 
 from manager_rest import models
 from manager_rest import manager_exceptions
@@ -247,10 +247,10 @@ class BlueprintsManager(object):
         plan = blueprint.plan
         try:
             deployment_plan = tasks.prepare_deployment_plan(plan, inputs)
-        except MissingRequiredInputError, e:
+        except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))
-        except UnknownInputError, e:
+        except parser_exceptions.UnknownInputError, e:
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
 
         now = str(datetime.now())
@@ -304,8 +304,11 @@ class BlueprintsManager(object):
         def get_node_instances():
             return get_storage_manager().get_node_instances(deployment_id)
 
-        return functions.evaluate_outputs(deployment.outputs,
-                                          get_node_instances)
+        try:
+            return functions.evaluate_outputs(deployment.outputs,
+                                              get_node_instances)
+        except parser_exceptions.FunctionEvaluationError, e:
+            raise manager_exceptions.DeploymentOutputsEvaluationError(str(e))
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:
