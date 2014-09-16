@@ -17,7 +17,7 @@ __author__ = 'dank'
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
-from testenv import deploy_application as deploy
+from testenv.utils import deploy_application as deploy
 
 
 class TestRelationships(TestCase):
