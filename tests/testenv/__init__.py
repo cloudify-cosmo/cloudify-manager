@@ -268,7 +268,6 @@ class TestEnvironment(object):
             self.manager_rest_process.close()
         if self.file_server_process:
             self.file_server_process.stop()
-        self.kill_celery_workers()
         self.delete_working_directory()
 
     def delete_working_directory(self):
@@ -290,11 +289,6 @@ class TestEnvironment(object):
     @classmethod
     def _get_libs_path(cls):
         return path.join(cls._get_manager_root(), '.libs')
-
-    @staticmethod
-    def kill_celery_workers():
-        logger.info('Killing all celery processes...')
-        os.system('pkill -f celery -9')
 
     @staticmethod
     def reset_elasticsearch_data():
