@@ -24,7 +24,7 @@ setup(
     author='Idan Moyal',
     author_email='idan@gigaspaces.com',
     packages=['testenv',
-              'testenv.processes'
+              'testenv.processes',
               'mock_plugins',
               'mock_plugins.cloudmock',
               'mock_plugins.connection_configurer_mock',
