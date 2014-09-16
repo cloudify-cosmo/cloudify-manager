@@ -90,6 +90,7 @@ class Deployment(object):
         self.policy_types = kwargs['policy_types']
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
+        self.outputs = kwargs['outputs']
 
 
 @swagger.model

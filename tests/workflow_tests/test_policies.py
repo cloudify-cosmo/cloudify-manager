@@ -14,6 +14,8 @@
 #    * limitations under the License.
 
 
+import nose.tools
+
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv import deploy_application as deploy
@@ -39,6 +41,7 @@ class TestPolicies(TestCase):
         self.assertEqual(self.instance_id, invocations[0]['node_id'])
         self.assertEqual(123, invocations[1]['metric'])
 
+    @nose.tools.nottest
     def test_policies_flow_with_diamond(self):
         """
         Tests policy/trigger/group creation and processing flow
@@ -55,7 +58,10 @@ class TestPolicies(TestCase):
         finally:
             from diamond_agent import tasks
             from cloudify.mocks import MockCloudifyContext
-            tasks.stop(MockCloudifyContext())
+            try:
+                tasks.stop(MockCloudifyContext())
+            except:
+                pass
 
     def test_threshold_policy(self):
         dsl_path = resource("dsl/with_policies2.yaml")

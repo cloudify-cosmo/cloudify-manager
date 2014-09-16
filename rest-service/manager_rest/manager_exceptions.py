@@ -163,3 +163,15 @@ class UnknownDeploymentInputError(ManagerException):
             *args,
             **kwargs
         )
+
+
+class DeploymentOutputsEvaluationError(ManagerException):
+    ERROR_CODE = 'deployment_outputs_evaluation_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentOutputsEvaluationError, self).__init__(
+            400,
+            DeploymentOutputsEvaluationError.ERROR_CODE,
+            *args,
+            **kwargs
+        )

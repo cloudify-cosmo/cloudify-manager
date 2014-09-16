@@ -6,9 +6,10 @@
           raw-manager-rest-port (or (System/getenv "MANAGER_REST_PORT") "80")
           manager-rest-port     (Integer/parseInt raw-manager-rest-port)
           base-uri              (str "http://" manager-ip ":" manager-rest-port)
-          endpoint              (str "/deployments/" deployment-id "/executions")
+          endpoint              (str "/executions")
           resource-uri          (str base-uri endpoint)
           body                  (cheshire.core/generate-string {
+                                  :deployment_id           deployment-id
                                   :workflow_id             (:workflow parameters)
                                   :force                   (:force parameters)
                                   :allow_custom_parameters (:allow_custom_parameters parameters)
