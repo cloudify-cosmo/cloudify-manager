@@ -1,2 +1,2 @@
--e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@master#egg=cloudify-dsl-parser==3.1a4
+-e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@CFY-1185-remove-plugin-inheritance#egg=cloudify-dsl-parser==3.1a4
 -e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.1a4
