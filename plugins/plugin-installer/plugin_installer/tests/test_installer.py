@@ -52,6 +52,7 @@ class PluginInstallerTestCase(unittest.TestCase):
         # this will be used for actually installing plugins of tests.
         os.environ[LOCAL_IP_KEY] = 'localhost'
         LocalCommandRunner().run('virtualenv {0}'.format(self.temp_folder))
+        os.chdir(os.path.join(self.temp_folder, 'bin'))
         os.environ[VIRTUALENV_PATH_KEY] = self.temp_folder
 
         self.ctx = MockCloudifyContext(
