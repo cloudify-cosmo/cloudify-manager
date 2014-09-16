@@ -269,7 +269,7 @@ class TestEnvironment(object):
         if self.file_server_process:
             self.file_server_process.stop()
         self.kill_celery_workers()
-        # self.delete_working_directory()
+        self.delete_working_directory()
 
     def delete_working_directory(self):
         if os.path.exists(self.test_working_dir):
