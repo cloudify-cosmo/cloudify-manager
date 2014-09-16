@@ -372,6 +372,7 @@ class BasicWorkflowsTest(TestCase):
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment.id
         )
+
         webserver_nodes = filter(lambda node: 'host' not in node.node_id,
                                  deployment_nodes)
         self.assertEquals(1, len(webserver_nodes))
@@ -380,6 +381,20 @@ class BasicWorkflowsTest(TestCase):
             plugin_name='mock_agent_plugin',
             deployment_id=deployment.id
         )[webserver_node.id]
+
+        worker_installer_data = self.get_plugin_data(plugin_name='worker_installer',
+                                                     deployment_id=deployment.id)
+
+        # agent on host should have been started and restarted
+        self.assertEqual(worker_installer_data[webserver_node.host_id]['states'],
+                         ['installed', 'started', 'stopped', 'started'])
+
+        plugin_installer_data = self.get_plugin_data(plugin_name='plugin_installer',
+                                                     deployment_id=deployment.id)
+
+        self.assertEqual(
+            plugin_installer_data[webserver_node.host_id]['mock_agent_plugin'],
+            ['installed'])
 
         expected_invocations = ['create', 'start']
         self.assertListEqual(invocations, expected_invocations)
@@ -392,6 +407,13 @@ class BasicWorkflowsTest(TestCase):
 
         expected_invocations = ['create', 'start', 'stop', 'delete']
         self.assertListEqual(invocations, expected_invocations)
+
+        # agent on host should have also
+        # been stopped and uninstalled
+        worker_installer_data = self.get_plugin_data(plugin_name='worker_installer',
+                                                     deployment_id=deployment.id)
+        self.assertEqual(worker_installer_data[webserver_node.host_id]['states'],
+                         ['installed', 'started', 'stopped', 'started', 'stopped', 'uninstalled'])
 
     def test_deployment_creation_workflow(self):
 
@@ -428,6 +450,22 @@ class BasicWorkflowsTest(TestCase):
                          ['installed', 'started', 'stopped', 'started'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
                          ['installed', 'started', 'stopped', 'started'])
+
+        # assert plugin installer installed
+        # the necessary plugins.
+        plugin_installer_data = self.get_plugin_data(plugin_name='plugin_installer',
+                                                     deployment_id=deployment.id)
+
+        # cloudmock should have been installed
+        # on the deployment worker
+        self.assertEqual(
+            plugin_installer_data[deployment_operations_worker_name]['cloudmock'],
+            ['installed'])
+
+        # mock_workflows should have been
+        # installed on the workflows worker
+        self.assertEqual(plugin_installer_data[deployment_workflows_worker_name]['mock_workflows'],
+                         ['installed'])
 
         undeploy(deployment.id, delete_deployment=True)
 
