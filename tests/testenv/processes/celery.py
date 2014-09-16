@@ -167,7 +167,7 @@ class CeleryWorkerProcess(object):
         celery_log = self.try_read_logfile()
         if celery_log:
             logger.error('Celery log:\n {0}'.format(celery_log))
-        self.delete_dirs()
+        self.stop()
         raise RuntimeError('Failed starting worker {0}. '
                            'waited for {1} seconds.'
                            .format(self.name, timeout))
