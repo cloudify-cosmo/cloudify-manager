@@ -14,7 +14,6 @@
 #    * limitations under the License.
 
 
-
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
