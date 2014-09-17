@@ -43,8 +43,7 @@ class CeleryWorkerProcess(object):
                  name=None,
                  hostname=None,
                  manager_rest_port=MANAGER_REST_PORT,
-                 concurrency=1,
-                 plugins_dir=None):
+                 concurrency=1):
 
         self.test_working_dir = test_working_dir
         self.name = name or queues[0]
@@ -54,7 +53,6 @@ class CeleryWorkerProcess(object):
         self.hostname = hostname or queues[0]
         self.concurrency = concurrency
         self.additional_includes = additional_includes or []
-        self.plugins_dir = plugins_dir
         self.riemann_config_dir = path.join(self.test_working_dir, 'riemann')
 
         # work folder for this worker
@@ -180,6 +178,7 @@ class CeleryWorkerProcess(object):
             logger.info('Shutting down {0} worker [pid={1}]'
                         .format(self.name, self.pids))
             os.system('kill -9 {0}'.format(' '.join(self.pids)))
+            time.sleep(0.5)
             self.pids = []
 
     def _get_celery_process_ids(self):
