@@ -90,7 +90,6 @@ class CeleryWorkerProcess(object):
 
     def start(self):
 
-        self._copy_plugins()
         self.create_dirs()
 
         # includes should always have
@@ -181,7 +180,7 @@ class CeleryWorkerProcess(object):
             logger.info('Shutting down {0} worker [pid={1}]'
                         .format(self.name, self.pids))
             os.system('kill -9 {0}'.format(' '.join(self.pids)))
-        self.delete_dirs()
+            self.pids = []
 
     def _get_celery_process_ids(self):
         from subprocess import CalledProcessError

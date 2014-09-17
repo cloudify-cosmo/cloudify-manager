@@ -99,6 +99,8 @@ class TestCase(unittest.TestCase):
             worker_work_dir,
             '{0}.json'.format(plugin_name)
         )
+        if not os.path.exists(storage_file_path):
+            return {}
         with open(storage_file_path, 'r') as f:
             data = json.load(f)
             if deployment_id not in data:
@@ -166,6 +168,7 @@ class TestEnvironment(object):
             self.start_riemann()
             self.start_fileserver()
             self.start_manager_rest()
+            self.create_management_worker()
 
         except BaseException as error:
             s_traceback = StringIO.StringIO()
@@ -175,10 +178,7 @@ class TestEnvironment(object):
             self.destroy()
             raise
 
-    def start_management_worker(self):
-
-        import mock_plugins
-        mock_plugins_path = os.path.dirname(mock_plugins.__file__)
+    def create_management_worker(self):
 
         self.celery_management_worker_process = CeleryWorkerProcess(
             queues=['cloudify.management'],
@@ -201,12 +201,18 @@ class TestEnvironment(object):
             # 'plugin_installer.install' as a sub-task
             # and they are both executed inside
             # this worker
-            concurrency=2,
-
-            plugins_dir=mock_plugins_path
+            concurrency=2
         )
 
-        self.celery_management_worker_process.start()
+        # copy plugins to worker env
+        import mock_plugins
+        mock_plugins_path = os.path.dirname(mock_plugins.__file__)
+
+        shutil.copytree(
+            src=mock_plugins_path,
+            dst=self.celery_management_worker_process.envdir,
+            ignore=shutil.ignore_patterns('*.pyc')
+        )
 
     def start_riemann(self):
         riemann_config_path = self._get_riemann_config()
@@ -303,7 +309,7 @@ class TestEnvironment(object):
     @staticmethod
     def start_celery_management_worker():
         global testenv_instance
-        testenv_instance.start_management_worker()
+        testenv_instance.celery_management_worker_process.start()
 
     @staticmethod
     def riemann_workdir():

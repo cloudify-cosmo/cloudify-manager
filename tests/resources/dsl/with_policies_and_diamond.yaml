@@ -8,7 +8,7 @@ imports:
 
 plugins:
     diamond:
-        executor: host_agent
+        executor: central_deployment_agent
         install: false
 
 node_types:
