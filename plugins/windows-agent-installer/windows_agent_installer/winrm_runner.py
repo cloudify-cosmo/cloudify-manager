@@ -116,20 +116,22 @@ class WinRMRunner(object):
             .format(url, output_path))
 
     def move(self, src, dest, create_missing_directories=False):
-        '''
+
+        """
         Moves item at <src> to <dest>. Does not create missing directories.
 
         :param src: Path to the source item.
         :param dest: Path to the destination item.
         :return: An execution 'response' instance.
-        '''
+        """
 
         return self.run(
             '''@powershell -Command "Move-Item {0} {1}"'''  # NOQA
             .format(src, dest))
 
     def copy(self, src, dest, create_missing_directories=False):
-        '''
+
+        """
         Copies item at <src> to <dest>. Does not create missing directories.
 
         :param src: Path to the source item.
@@ -137,7 +139,7 @@ class WinRMRunner(object):
         :param create_missing_directories: True to create any missing
                                            directories in the destination path.
         :return: An execution 'response' instance.
-        '''
+        """
 
         if create_missing_directories:
             return self.run(
@@ -178,6 +180,9 @@ class WinRMRunner(object):
         return self.run(
             '''@powershell -Command "Add-Content {0} '{1}'"'''  # NOQA
             .format(path, contents))
+
+    def get(self, path):
+        pass
 
 
 class WinRMExecutionException(CommandExecutionException):

@@ -12,28 +12,17 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import os
 import time
-from cloudify.constants import LOCAL_IP_KEY, \
-    MANAGER_IP_KEY, \
-    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY, \
-    MANAGER_FILE_SERVER_URL_KEY, MANAGER_REST_PORT_KEY
 
-from cloudify.decorators import operation
+from cloudify import constants
 from cloudify import utils
+from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
-from cloudify.utils import \
-    get_manager_file_server_blueprints_root_url, \
-    get_manager_file_server_url, \
-    get_manager_rest_service_port
 from windows_agent_installer import init_worker_installer
-from windows_agent_installer import SERVICE_FAILURE_RESTART_DELAY_KEY, \
-    SERVICE_START_TIMEOUT_KEY, \
-    SERVICE_STOP_TIMEOUT_KEY, SERVICE_FAILURE_RESET_TIMEOUT_KEY, \
-    SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY, \
-    SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY, \
-    MAX_WORKERS_KEY, \
-    MIN_WORKERS_KEY
+from windows_agent_installer import constants as win_const
+from cloudify.celery import celery as celery_client
 
 
 # This is the folder under which the agent is
@@ -71,16 +60,16 @@ def get_manager_ip():
 
 def create_env_string(cloudify_agent):
     env = {
-        LOCAL_IP_KEY:
+        constants.LOCAL_IP_KEY:
         cloudify_agent['host'],
-        MANAGER_IP_KEY:
+        constants.MANAGER_IP_KEY:
         get_manager_ip(),
-        MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY:
-        get_manager_file_server_blueprints_root_url(),
-        MANAGER_FILE_SERVER_URL_KEY:
-        get_manager_file_server_url(),
-        MANAGER_REST_PORT_KEY:
-        get_manager_rest_service_port()
+        constants.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY:
+        utils.get_manager_file_server_blueprints_root_url(),
+        constants.MANAGER_FILE_SERVER_URL_KEY:
+        utils.get_manager_file_server_url(),
+        constants.MANAGER_REST_PORT_KEY:
+        utils.get_manager_rest_service_port()
     }
     env_string = ''
     for key, value in env.iteritems():
@@ -129,8 +118,8 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
               .format(get_manager_ip(),
                       cloudify_agent['name'],
                       RUNTIME_AGENT_PATH,
-                      cloudify_agent[MIN_WORKERS_KEY],
-                      cloudify_agent[MAX_WORKERS_KEY],
+                      cloudify_agent[constants.MIN_WORKERS_KEY],
+                      cloudify_agent[constants.MAX_WORKERS_KEY],
                       AGENT_INCLUDES))
     runner.run('{0}\\nssm\\nssm.exe install {1} {0}\Scripts\celeryd.exe {2}'
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, params))
@@ -141,8 +130,8 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.run(
         'sc failure {0} reset= {1} actions= restart/{2}'.format(
             AGENT_SERVICE_NAME,
-            cloudify_agent['service'][SERVICE_FAILURE_RESET_TIMEOUT_KEY],
-            cloudify_agent['service'][SERVICE_FAILURE_RESTART_DELAY_KEY]))
+            cloudify_agent['service'][win_const.SERVICE_FAILURE_RESET_TIMEOUT_KEY],
+            cloudify_agent['service'][win_const.SERVICE_FAILURE_RESTART_DELAY_KEY]))
 
     ctx.logger.info('Creating parameters file from {0}'.format(params))
     runner.put(params, '{0}\AppParameters'.format(RUNTIME_AGENT_PATH))
@@ -151,7 +140,8 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
 @operation
 @init_worker_installer
 def start(ctx, runner=None, cloudify_agent=None, **kwargs):
-    '''
+
+    """
 
     Starts the cloudify agent service on the machine.
 
@@ -159,7 +149,7 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
     :return:
-    '''
+    """
 
     ctx.logger.info('Starting agent {0}'.format(cloudify_agent['name']))
 
@@ -167,18 +157,12 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     ctx.logger.info('Waiting for {0} to start...'.format(AGENT_SERVICE_NAME))
 
-    _wait_for_service_status(
-        runner,
-        cloudify_agent,
-        AGENT_SERVICE_NAME,
-        'Running',
-        cloudify_agent['service'][SERVICE_START_TIMEOUT_KEY])
-
 
 @operation
 @init_worker_installer
 def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
-    '''
+
+    """
 
     Stops the cloudify agent service on the machine.
 
@@ -186,7 +170,7 @@ def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
     :return:
-    '''
+    """
 
     ctx.logger.info('Stopping agent {0}'.format(cloudify_agent['name']))
 
@@ -194,18 +178,12 @@ def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     ctx.logger.info('Waiting for {0} to stop...'.format(AGENT_SERVICE_NAME))
 
-    _wait_for_service_status(
-        runner,
-        cloudify_agent,
-        AGENT_SERVICE_NAME,
-        'Stopped',
-        cloudify_agent['service'][SERVICE_STOP_TIMEOUT_KEY])
-
 
 @operation
 @init_worker_installer
 def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
-    '''
+
+    """
 
     Restarts the cloudify agent service on the machine.
 
@@ -216,7 +194,7 @@ def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
     :return:
-    '''
+    """
 
     ctx.logger.info('Restarting agent {0}'.format(cloudify_agent['name']))
 
@@ -227,7 +205,8 @@ def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
 @operation
 @init_worker_installer
 def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
-    '''
+
+    """
 
     Uninstalls the cloudify agent service from the machine.
 
@@ -239,7 +218,7 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
     :return:
-    '''
+    """
 
     ctx.logger.info('Uninstalling agent {0}'.format(cloudify_agent['name']))
 
@@ -251,43 +230,32 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.delete(path='C:\\{0}'.format(AGENT_EXEC_FILE_NAME))
 
 
-def _wait_for_service_status(runner,
-                             cloudify_agent,
-                             service_name,
-                             desired_status,
-                             timeout_in_seconds):
-    end_time = time.time() + timeout_in_seconds
+def _verify_no_celery_error(runner, agent_config):
+    celery_error_out = os.path.join(
+        agent_config['base_dir'], 'work/celery_error.out')
 
-    successful_consecutive_queries = 0
-
-    while end_time > time.time():
-
-        service_state = runner.service_state(service_name)
-        if desired_status.strip().lower() == service_state.strip().lower():
-            successful_consecutive_queries += 1
-            if successful_consecutive_queries == \
-                    cloudify_agent['service'][
-                        SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY
-                    ]:
-                return
-        else:
-            successful_consecutive_queries = 0
-        time.sleep(
-            cloudify_agent['service']
-            [SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY])
-    raise NonRecoverableError(
-        "Service {0} did not reach {1} state in {2} seconds. "
-        "Error was: {3}"
-        .format(
-            service_name,
-            desired_status,
-            timeout_in_seconds,
-            _read_celery_log()))
+    # this means the celery worker had an uncaught
+    #  exception and it wrote its content
+    # to the file above because of our custom exception handler (see celery.py)
+    if runner.exists(celery_error_out):
+        output = runner.get(celery_error_out)
+        runner.delete(path=celery_error_out)
+        raise NonRecoverableError(
+            'Celery worker failed to start:\n{0}'.format(output))
 
 
-def _read_celery_log():
-    log_file_path = '{0}\celery.log' \
-        .format(RUNTIME_AGENT_PATH)
-    if os.path.exists(log_file_path):
-        with open(log_file_path, "r") as myfile:
-            return myfile.read()
+def _wait_for_started(runner, agent_config):
+    _verify_no_celery_error(runner, agent_config)
+    worker_name = 'celery.{0}'.format(agent_config['name'])
+    inspect = celery_client.control.inspect(destination=[worker_name])
+    wait_started_timeout = agent_config['wait_started_timeout']
+    timeout = time.time() + wait_started_timeout
+    interval = agent_config['wait_started_interval']
+    while time.time() < timeout:
+        stats = (inspect.stats() or {}).get(worker_name)
+        if stats:
+            return
+        time.sleep(interval)
+    _verify_no_celery_error(runner, agent_config)
+    raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
+                              .format(wait_started_timeout))

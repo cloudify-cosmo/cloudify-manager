@@ -13,30 +13,19 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'elip'
 
 from functools import wraps
+
 from cloudify import utils
 from cloudify.context import CloudifyContext
 from cloudify.exceptions import NonRecoverableError
 from windows_agent_installer.winrm_runner import WinRMRunner
 
 
-# Configuration keys.
-MIN_WORKERS_KEY = 'min_workers'
-MAX_WORKERS_KEY = 'max_workers'
-SERVICE_START_TIMEOUT_KEY = 'start_timeout'
-SERVICE_STOP_TIMEOUT_KEY = 'stop_timeout'
-SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY = \
-    'status_transition_sleep_interval'
-SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY = \
-    'successful_consecutive_status_queries_count'
-SERVICE_FAILURE_RESET_TIMEOUT_KEY = 'failure_reset_timeout'
-SERVICE_FAILURE_RESTART_DELAY_KEY = 'failure_restart_delay'
-
-
 def init_worker_installer(func):
-    '''
+
+    """
+
     Decorator for injecting a 'runner' and a 'cloudify_agent'
     into the function's invocation parameters.
 
@@ -48,7 +37,7 @@ def init_worker_installer(func):
 
     :param func: The function to inject the parameters with.
     :return:
-    '''
+    """
 
     @wraps(func)
     def wrapper(*args, **kwargs):
