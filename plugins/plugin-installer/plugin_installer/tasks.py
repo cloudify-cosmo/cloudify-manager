@@ -88,7 +88,7 @@ def install_package(url):
     :param url: A URL to the package archive.
     """
 
-    command = '{0} install --process-dependency-links {1}'.format(_pip(), url)
+    command = '{0} install {1}'.format(_pip(), url)
     LocalCommandRunner().run(command)
 
 
