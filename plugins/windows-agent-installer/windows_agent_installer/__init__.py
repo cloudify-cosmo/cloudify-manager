@@ -17,8 +17,11 @@
 from functools import wraps
 
 from cloudify import utils
+from cloudify import constants as g_constants
 from cloudify.context import CloudifyContext
 from cloudify.exceptions import NonRecoverableError
+
+from windows_agent_installer import constants
 from windows_agent_installer.winrm_runner import WinRMRunner
 
 
@@ -36,7 +39,8 @@ def init_worker_installer(func):
     augmented with default values and will go through a validation process.
 
     :param func: The function to inject the parameters with.
-    :return:
+    :return: the decorator.
+    :rtype: function
     """
 
     @wraps(func)
@@ -61,14 +65,14 @@ def init_worker_installer(func):
 
 
 def prepare_configuration(ctx, cloudify_agent):
-    '''
+
+    """
     Sets default and runtime values to the cloudify_agent.
     Also performs validation on these values.
 
     :param ctx: The invocation context.
     :param cloudify_agent: The cloudify_agent configuration dict.
-    :return:
-    '''
+    """
 
     set_bootstrap_context_parameters(ctx.bootstrap_context, cloudify_agent)
     set_service_configuration_parameters(cloudify_agent)
@@ -79,7 +83,8 @@ def prepare_configuration(ctx, cloudify_agent):
 
 
 def set_bootstrap_context_parameters(bootstrap_context, cloudify_agent):
-    '''
+
+    """
     Sets parameters that were passed during the bootstrap process.
     The semantics should always be:
 
@@ -87,11 +92,10 @@ def set_bootstrap_context_parameters(bootstrap_context, cloudify_agent):
         2. Parameter in the bootstrap context.
         3. default value.
 
-    :param ctx: The bootstrap context from the 'cloudify'
-                section in the cloudify-config.yaml
+    :param bootstrap_context: The bootstrap context from the 'cloudify'
+                              section in the cloudify-config.yaml
     :param cloudify_agent: Cloudify agent configuration dictionary.
-    :return:
-    '''
+    """
     set_autoscale_parameters(bootstrap_context, cloudify_agent)
 
 
@@ -101,23 +105,13 @@ def set_service_configuration_parameters(cloudify_agent):
     if 'service' not in cloudify_agent:
         cloudify_agent['service'] = {}
 
-    _set_default(cloudify_agent['service'], SERVICE_START_TIMEOUT_KEY, 30)
-    _set_default(cloudify_agent['service'], SERVICE_STOP_TIMEOUT_KEY, 30)
     _set_default(
         cloudify_agent['service'],
-        SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY,
-        1)
-    _set_default(
-        cloudify_agent['service'],
-        SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY,
-        10)
-    _set_default(
-        cloudify_agent['service'],
-        SERVICE_FAILURE_RESET_TIMEOUT_KEY,
+        constants.SERVICE_FAILURE_RESET_TIMEOUT_KEY,
         60)
     _set_default(
         cloudify_agent['service'],
-        SERVICE_FAILURE_RESTART_DELAY_KEY,
+        constants.SERVICE_FAILURE_RESTART_DELAY_KEY,
         5000)
 
     # validations
@@ -128,20 +122,20 @@ def set_service_configuration_parameters(cloudify_agent):
 
 
 def set_autoscale_parameters(bootstrap_context, cloudify_agent):
-    if MIN_WORKERS_KEY not in cloudify_agent and\
+    if g_constants.MIN_WORKERS_KEY not in cloudify_agent and\
        bootstrap_context.cloudify_agent.min_workers:
-        cloudify_agent[MIN_WORKERS_KEY] =\
+        cloudify_agent[g_constants.MIN_WORKERS_KEY] =\
             bootstrap_context.cloudify_agent.min_workers
-    if MAX_WORKERS_KEY not in cloudify_agent and\
+    if g_constants.MAX_WORKERS_KEY not in cloudify_agent and\
        bootstrap_context.cloudify_agent.max_workers:
-        cloudify_agent[MAX_WORKERS_KEY] =\
+        cloudify_agent[g_constants.MAX_WORKERS_KEY] =\
             bootstrap_context.cloudify_agent.max_workers
 
-    min_workers = cloudify_agent.get(MIN_WORKERS_KEY, 2)
-    max_workers = cloudify_agent.get(MAX_WORKERS_KEY, 5)
+    min_workers = cloudify_agent.get(g_constants.MIN_WORKERS_KEY, 2)
+    max_workers = cloudify_agent.get(g_constants.MAX_WORKERS_KEY, 5)
 
-    _validate_digit(MIN_WORKERS_KEY, min_workers)
-    _validate_digit(MAX_WORKERS_KEY, max_workers)
+    _validate_digit(g_constants.MIN_WORKERS_KEY, min_workers)
+    _validate_digit(g_constants.MAX_WORKERS_KEY, max_workers)
 
     min_workers = int(min_workers)
     max_workers = int(max_workers)
@@ -149,12 +143,12 @@ def set_autoscale_parameters(bootstrap_context, cloudify_agent):
         raise NonRecoverableError(
             '{0} cannot be greater than {2} '
             '[{0}={1}, {2}={3}]' .format(
-                MIN_WORKERS_KEY,
+                g_constants.MIN_WORKERS_KEY,
                 min_workers,
                 max_workers,
-                MAX_WORKERS_KEY))
-    cloudify_agent[MIN_WORKERS_KEY] = min_workers
-    cloudify_agent[MAX_WORKERS_KEY] = max_workers
+                g_constants.MAX_WORKERS_KEY))
+    cloudify_agent[g_constants.MIN_WORKERS_KEY] = min_workers
+    cloudify_agent[g_constants.MAX_WORKERS_KEY] = max_workers
 
 
 def _validate_digit(name, value):
@@ -163,9 +157,9 @@ def _validate_digit(name, value):
                                   'but is: {1}'.format(name, value))
 
 
-def _set_default(dict, key, value):
-    if key not in dict:
-        dict[key] = value
+def _set_default(dictionary, key, value):
+    if key not in dictionary:
+        dictionary[key] = value
 
 
 def _get_machine_ip(ctx):
