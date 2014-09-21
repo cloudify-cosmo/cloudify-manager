@@ -122,20 +122,20 @@ def set_service_configuration_parameters(cloudify_agent):
 
 
 def set_autoscale_parameters(bootstrap_context, cloudify_agent):
-    if g_constants.MIN_WORKERS_KEY not in cloudify_agent and\
+    if constants.MIN_WORKERS_KEY not in cloudify_agent and\
        bootstrap_context.cloudify_agent.min_workers:
-        cloudify_agent[g_constants.MIN_WORKERS_KEY] =\
+        cloudify_agent[constants.MIN_WORKERS_KEY] =\
             bootstrap_context.cloudify_agent.min_workers
-    if g_constants.MAX_WORKERS_KEY not in cloudify_agent and\
+    if constants.MAX_WORKERS_KEY not in cloudify_agent and\
        bootstrap_context.cloudify_agent.max_workers:
-        cloudify_agent[g_constants.MAX_WORKERS_KEY] =\
+        cloudify_agent[constants.MAX_WORKERS_KEY] =\
             bootstrap_context.cloudify_agent.max_workers
 
-    min_workers = cloudify_agent.get(g_constants.MIN_WORKERS_KEY, 2)
-    max_workers = cloudify_agent.get(g_constants.MAX_WORKERS_KEY, 5)
+    min_workers = cloudify_agent.get(constants.MIN_WORKERS_KEY, 2)
+    max_workers = cloudify_agent.get(constants.MAX_WORKERS_KEY, 5)
 
-    _validate_digit(g_constants.MIN_WORKERS_KEY, min_workers)
-    _validate_digit(g_constants.MAX_WORKERS_KEY, max_workers)
+    _validate_digit(constants.MIN_WORKERS_KEY, min_workers)
+    _validate_digit(constants.MAX_WORKERS_KEY, max_workers)
 
     min_workers = int(min_workers)
     max_workers = int(max_workers)
@@ -143,12 +143,12 @@ def set_autoscale_parameters(bootstrap_context, cloudify_agent):
         raise NonRecoverableError(
             '{0} cannot be greater than {2} '
             '[{0}={1}, {2}={3}]' .format(
-                g_constants.MIN_WORKERS_KEY,
+                constants.MIN_WORKERS_KEY,
                 min_workers,
                 max_workers,
-                g_constants.MAX_WORKERS_KEY))
-    cloudify_agent[g_constants.MIN_WORKERS_KEY] = min_workers
-    cloudify_agent[g_constants.MAX_WORKERS_KEY] = max_workers
+                constants.MAX_WORKERS_KEY))
+    cloudify_agent[constants.MIN_WORKERS_KEY] = min_workers
+    cloudify_agent[constants.MAX_WORKERS_KEY] = max_workers
 
 
 def _validate_digit(name, value):

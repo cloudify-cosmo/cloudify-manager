@@ -15,3 +15,6 @@
 
 SERVICE_FAILURE_RESET_TIMEOUT_KEY = 'failure_reset_timeout'
 SERVICE_FAILURE_RESTART_DELAY_KEY = 'failure_restart_delay'
+
+MAX_WORKERS_KEY = 'max_workers'
+MIN_WORKERS_KEY = 'min_workers'
