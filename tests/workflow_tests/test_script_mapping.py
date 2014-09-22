@@ -16,7 +16,8 @@
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
-from testenv.utils import deploy_and_execute_workflow as deploy
+from testenv.utils import deploy_application as deploy
+from testenv.utils import execute_workflow
 
 
 class TestScriptMapping(TestCase):
@@ -26,7 +27,10 @@ class TestScriptMapping(TestCase):
         Tests policy/trigger/group creation and processing flow
         """
         dsl_path = resource('dsl/test_script_mapping.yaml')
-        deployment, _ = deploy(dsl_path, workflow_name='workflow')
-        data = self.get_plugin_data(plugin_name='script',
+        deployment, _ = deploy(dsl_path)
+        execute_workflow('workflow', deployment.id)
+
+        data = self.get_plugin_data(plugin_name='script_runner',
                                     deployment_id=deployment.id)
-        self.assertEqual(data, '1223')
+        self.assertEqual(data['op1_called_with_property'], 'op2_called')
+        self.assertEqual(data['op2_prop'], 'op2_value')
