@@ -193,7 +193,8 @@ class TestEnvironment(object):
                 'riemann_controller.tasks',
                 'cloudify_system_workflows.deployment_environment',
                 'cloudify.plugins.workflows',
-                'diamond_agent.tasks'
+                'diamond_agent.tasks',
+                'script_runner.tasks'
             ],
 
             # we need higher concurrency since
