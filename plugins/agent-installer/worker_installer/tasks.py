@@ -49,15 +49,20 @@ DISABLE_REQUIRETTY_SCRIPT_PATH = \
 
 def get_agent_resource_url(ctx, agent_config, resource):
     """returns an agent's resource url
+
+    the resource will be looked for in the agent's properties.
+    If it isn't found, it will look for it in the default location.
     """
     if agent_config.get(resource):
-        return os.path.join(
+        origin = os.path.join(
             utils.get_manager_file_server_blueprints_root_url(),
             os.path.join(ctx.blueprint.id, agent_config[resource]))
     else:
         resource_path = globals()[resource.upper()]
-        return os.path.join(utils.get_manager_file_server_url(),
-                            resource_path.format(agent_config['distro']))
+        origin = os.path.join(utils.get_manager_file_server_url(),
+                              resource_path.format(agent_config['distro']))
+    ctx.logger.debug('resource origin: {0}'.format(origin))
+    return origin
 
 
 def get_celery_includes_list():
@@ -66,6 +71,9 @@ def get_celery_includes_list():
 
 def download_resource_on_host(logger, runner, url, destination_path):
     """downloads a resource from the fileserver on the agent's host
+
+    Will try to get the resource. If it fails, will try to curl.
+    If both fail, will return the state of the last fabric action.
     """
     logger.debug('attempting to download {0} to {1}'.format(
         url, destination_path))
@@ -81,7 +89,8 @@ def download_resource_on_host(logger, runner, url, destination_path):
         logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
         return runner.run('curl {0} -O {1}'.format(
             url, destination_path))
-    logger.warn('could not download resource')
+    logger.warn('could not download resource ({0} (with code {1}) )'.format(
+        r.stderr, r.status_code))
     return r.succeeded
 
 
