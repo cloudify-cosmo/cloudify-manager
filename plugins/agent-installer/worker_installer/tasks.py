@@ -97,12 +97,12 @@ def download_resource_on_host(logger, runner, url, destination_path):
 @operation
 @init_worker_installer
 def install(ctx, runner, agent_config, **kwargs):
-    # try:
-    agent_package_url = get_agent_resource_url(
-        ctx, agent_config, 'agent_package_path')
-    # except Exception as ex:
-    #     raise NonRecoverableError(
-    #         'failed to retrieve agent package url ({0})'.format(ex))
+    try:
+        agent_package_url = get_agent_resource_url(
+            ctx, agent_config, 'agent_package_path')
+    except Exception as ex:
+        raise NonRecoverableError(
+            'failed to retrieve agent package url ({0})'.format(ex))
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
@@ -303,8 +303,6 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
         'Creating celery config and init files [cloudify_agent={0}]'.format(
             agent_config))
 
-    # runner.put(agent_config['config_file'], config, use_sudo=True)
-    # runner.put(agent_config['init_file'], init, use_sudo=True)
     celery_config_url = get_agent_resource_url(
         ctx, agent_config, 'celery_config_path')
     celery_init_url = get_agent_resource_url(
