@@ -38,8 +38,11 @@ setup(
     description='Cloudify workflow python tests',
     zip_safe=False,
     install_requires=[
-        "cloudify-plugins-common==3.1a4",
+        "cloudify-dsl-parser==3.1a4",
         "cloudify-rest-client==3.1a4",
+        "cloudify-plugins-common==3.1a4",
+        "cloudify-diamond-plugin==1.1a4",
+        "cloudify-script-plugin==1.1a4",
         "pika==0.9.13",
         'elasticsearch==1.0.0'
     ]

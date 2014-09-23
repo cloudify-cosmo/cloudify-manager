@@ -1,0 +1,12 @@
+-e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@master#egg=cloudify-dsl-parser==3.1a4
+-e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.1a4
+-e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==3.1a4
+-e git+https://github.com/cloudify-cosmo/cloudify-diamond-plugin@master#egg=cloudify-diamond-plugin==1.1a4
+-e git+https://github.com/cloudify-cosmo/cloudify-script-plugin@master#egg=cloudify-script-plugin==1.1a4
+pyzmq
+
+# Manually install:
+# cloudify-manager/workflows
+# cloudify-manager/plugins/agent-installer
+# cloudify-manager/plugins/plugin-installer
+# cloudify-manager/rest-service
