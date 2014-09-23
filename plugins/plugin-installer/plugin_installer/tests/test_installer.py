@@ -72,9 +72,9 @@ class PluginInstallerTestCase(unittest.TestCase):
         out = runner.run(
             '{0}/bin/pip list | grep {1}'
             .format(self.temp_folder, plugin['name'])).std_out
-        self.assertIn(package_name, out)
+        self.assertTrue(package_name in out)
         for dependency in dependencies:
-            self.assertIn(dependency, out)
+            self.assertTrue(dependency in out)
 
     def test_get_url_http(self):
         from plugin_installer.tasks import get_url
@@ -121,7 +121,7 @@ class PluginInstallerTestCase(unittest.TestCase):
             'cat {0}'.format(
                 os.path.join(self.temp_folder,
                              'celeryd-includes'))).std_out
-        self.assertIn('mock_for_test.module', out)
+        self.assertTrue('mock_for_test.module' in out)
 
     def test_install_with_dependencies(self):
 
@@ -144,7 +144,7 @@ class PluginInstallerTestCase(unittest.TestCase):
             'cat {0}'.format(
                 os.path.join(self.temp_folder,
                              'celeryd-includes'))).std_out
-        self.assertIn('mock_with_dependencies_for_test.module', out)
+        self.assertTrue('mock_with_dependencies_for_test.module' in out)
 
     def test_write_to_empty_includes(self):
 
