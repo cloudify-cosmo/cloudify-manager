@@ -92,8 +92,9 @@ def install(ctx, runner, agent_config, **kwargs):
     try:
         agent_package_url = get_agent_resource_url(
             ctx, agent_config, 'agent_package_path')
-    except:
-        raise NonRecoverableError('failed to retrieve agent package url')
+    except Exception as ex:
+        raise NonRecoverableError(
+            'failed to retrieve agent package url ({0})'.format(ex))
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
