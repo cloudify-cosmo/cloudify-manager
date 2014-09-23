@@ -51,14 +51,13 @@ def get_agent_resource_url(ctx, agent_config, resource):
     """returns an agent's resource url
     """
     if agent_config.get(resource):
-        return '{0}/{1}/{2}'.format(
+        return os.path.join(
             utils.get_manager_file_server_blueprints_root_url(),
-            ctx.blueprint.id, agent_config[resource])
+            os.path.join(ctx.blueprint.id, agent_config[resource]))
     else:
-        resource_path = locals()[resource.upper()]
-        return '{0}/{1}'.format(
-            utils.get_manager_file_server_url(),
-            resource_path.format(agent_config['distro']))
+        resource_path = globals()[resource.upper()]
+        return os.path.join(utils.get_manager_file_server_url(),
+                            resource_path.format(agent_config['distro']))
 
 
 def get_celery_includes_list():
@@ -89,12 +88,12 @@ def download_resource_on_host(logger, runner, url, destination_path):
 @operation
 @init_worker_installer
 def install(ctx, runner, agent_config, **kwargs):
-    try:
-        agent_package_url = get_agent_resource_url(
-            ctx, agent_config, 'agent_package_path')
-    except Exception as ex:
-        raise NonRecoverableError(
-            'failed to retrieve agent package url ({0})'.format(ex))
+    # try:
+    agent_package_url = get_agent_resource_url(
+        ctx, agent_config, 'agent_package_path')
+    # except Exception as ex:
+    #     raise NonRecoverableError(
+    #         'failed to retrieve agent package url ({0})'.format(ex))
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
@@ -314,9 +313,11 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
 def create_celery_includes_file(ctx, runner, agent_config):
     # build initial includes
     includes_list = get_celery_includes_list()
-
-    runner.put(agent_config['includes_file'],
-               'INCLUDES={0}\n'.format(','.join(includes_list)))
+    r = download_resource_on_host(
+        ctx.logger, runner, agent_config['includes_file'],
+        'INCLUDES={0}\n'.format(','.join(includes_list)))
+    if not r:
+        raise NonRecoverableError('failed to download celery includes file')
 
     ctx.logger.debug('Created celery includes file [file=%s, content=%s]',
                      agent_config['includes_file'],
