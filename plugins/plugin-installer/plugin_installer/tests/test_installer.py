@@ -16,150 +16,157 @@
 
 import os
 from os.path import dirname
-import sys
 import tempfile
-
-
-__author__ = 'elip'
-
 import unittest
-from plugin_installer.tasks import get_plugin_simple_name, \
-    install_celery_plugin, uninstall_celery_plugin, \
-    extract_plugin_name, write_to_includes, extract_module_paths
-from plugin_installer.tests import get_logger
-from cloudify.constants import VIRTUALENV_PATH_KEY, CELERY_WORK_DIR_PATH_KEY
-from plugin_installer.tests import id_generator
+import shutil
+
+from cloudify.exceptions import NonRecoverableError
+from cloudify.mocks import MockCloudifyContext
+from cloudify.utils import LocalCommandRunner
+from cloudify.utils import setup_default_logger
+from plugin_installer.tasks import install, update_includes
+from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
+from cloudify.constants import VIRTUALENV_PATH_KEY
+from cloudify.constants import LOCAL_IP_KEY
+from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
 
 
-logger = get_logger("PluginInstallerTestCase")
+logger = setup_default_logger('test_plugin_installer')
+
+
+def _get_local_path(ctx, plugin):
+    return os.path.join(dirname(__file__),
+                        plugin['source'])
 
 
 class PluginInstallerTestCase(unittest.TestCase):
 
-    plugins = {
-        "plugin": {
-            "name": "mock-plugin",
-            "url": os.path.join(os.path.dirname(__file__), "mock-plugin")
-        },
-        "plugin_with_dependencies": {
-            "name": "mock-with-dependencies-plugin",
-            "url": os.path.join(os.path.dirname(__file__),
-                                "mock-with-dependencies-plugin")
-        }
-    }
-
-    def create_temp_folder(self):
-        path_join = os.path.join(tempfile.gettempdir(), id_generator(8))
-        os.makedirs(path_join)
-        return path_join
+    TEST_BLUEPRINT_ID = 'test_id'
+    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'localhost/blueprints'
 
     def setUp(self):
-        python_home = dirname(dirname(sys.executable))
 
-        logger.info("Setting virtualenv path to {0}".format(python_home))
+        self.temp_folder = tempfile.mkdtemp()
 
-        os.environ[VIRTUALENV_PATH_KEY] = python_home
+        # Create a virtualenv in a temp folder.
+        # this will be used for actually installing plugins of tests.
+        os.environ[LOCAL_IP_KEY] = 'localhost'
+        LocalCommandRunner().run('virtualenv {0}'.format(self.temp_folder))
+        os.environ[VIRTUALENV_PATH_KEY] = self.temp_folder
+
+        self.ctx = MockCloudifyContext(
+            blueprint_id=self.TEST_BLUEPRINT_ID
+        )
+        os.environ[CELERY_WORK_DIR_PATH_KEY] = self.temp_folder
+        os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] \
+            = self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL
 
     def tearDown(self):
+        shutil.rmtree(self.temp_folder)
 
-        logger.info("Uninstalling all plugins that were installed by the test")
+    def _assert_plugin_installed(self, package_name,
+                                 plugin, dependencies=None):
+        if not dependencies:
+            dependencies = []
+        runner = LocalCommandRunner()
+        out = runner.run(
+            '{0}/bin/pip list | grep {1}'
+            .format(self.temp_folder, plugin['name'])).std_out
+        self.assertIn(package_name, out)
+        for dependency in dependencies:
+            self.assertIn(dependency, out)
 
-        for plugin in self.plugins.itervalues():
-            try:
-                uninstall_celery_plugin(plugin_name=plugin['name'])
-            except BaseException as e:
-                logger.warning("Failed to uninstall plugin {0} : {1}"
-                               .format(plugin['name'], e.message))
+    def test_get_url_http(self):
+        from plugin_installer.tasks import get_url
+        url = get_url(self.ctx.blueprint_id, {'source': 'http://google.com'})
+        self.assertEqual(url, 'http://google.com')
 
-    def test_get_plugin_simple_name(self):
-        name = "a.b.c"
-        self.assertEqual(get_plugin_simple_name(name), "c")
+    def test_get_url_https(self):
+        from plugin_installer.tasks import get_url
+        url = get_url(self.ctx.blueprint_id, {'source': 'https://google.com'})
+        self.assertEqual(url, 'https://google.com')
+
+    def test_get_url_faulty_schema(self):
+        from plugin_installer.tasks import get_url
+        self.assertRaises(NonRecoverableError,
+                          get_url,
+                          self.ctx.blueprint_id,
+                          {'source': 'bla://google.com'})
+
+    def test_get_url_folder(self):
+        from plugin_installer.tasks import get_url
+        url = get_url(self.ctx.blueprint_id, {'source': 'plugin'})
+        self.assertEqual(url,
+                         '{0}/{1}/plugins/plugin.zip'
+                         .format(
+                             self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL,
+                             self.TEST_BLUEPRINT_ID))
 
     def test_install(self):
 
-        temp_folder = self.create_temp_folder()
+        # override get_url to return local paths
+        from plugin_installer import tasks
+        tasks.get_url = _get_local_path
 
-        os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
+        plugin = {
+            'name': 'mock-plugin',
+            'source': 'mock-plugin'
+        }
 
-        install_celery_plugin(plugin=self.plugins['plugin'])
+        install(plugins=[plugin])
+        self._assert_plugin_installed('mock-plugin', plugin)
 
-        # check the plugin was installed
-        from mock_for_test import module as m
-        print m.var
-
-    def test_install_twice(self):
-
-        temp_folder = self.create_temp_folder()
-
-        os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
-
-        install_celery_plugin(plugin=self.plugins['plugin'])
-        install_celery_plugin(plugin=self.plugins['plugin'])
-
-        # check the plugin was installed
-        from mock_for_test import module as m
-        print m.var
+        # Assert includes file was written
+        out = LocalCommandRunner().run(
+            'cat {0}'.format(
+                os.path.join(self.temp_folder,
+                             'celeryd-includes'))).std_out
+        self.assertIn('mock_for_test.module', out)
 
     def test_install_with_dependencies(self):
 
-        temp_folder = self.create_temp_folder()
+        # override get_url to return local paths
+        from plugin_installer import tasks
+        tasks.get_url = _get_local_path
 
-        os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
+        plugin = {
+            'name': 'mock-with-dependencies-plugin',
+            'source': 'mock-with-dependencies-plugin'
+        }
 
-        install_celery_plugin(plugin=self.plugins['plugin_with_dependencies'])
+        install(plugins=[plugin])
+        self._assert_plugin_installed('mock-with-dependencies-plugin',
+                                      plugin,
+                                      dependencies=['simplejson'])
 
-        # check the plugin was installed
-        from mock_with_dependencies_for_test import module as m
-        print m.var
-
-        # check the dependency was installed
-        from python_webserver_installer import tasks as t
-        t.get_webserver_root
-
-    def test_extract_plugin_name(self):
-        name = extract_plugin_name(self.plugins['plugin']['url'])
-        assert name == "mock-plugin"
+        # Assert includes file was written
+        out = LocalCommandRunner().run(
+            'cat {0}'.format(
+                os.path.join(self.temp_folder,
+                             'celeryd-includes'))).std_out
+        self.assertIn('mock_with_dependencies_for_test.module', out)
 
     def test_write_to_empty_includes(self):
 
-        temp_folder = self.create_temp_folder()
-        try:
-            write_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
-                              .format(temp_folder))
-            with open("{0}/celeryd-includes"
-                      .format(temp_folder), mode='r') as f:
-                includes = f.read()
-                self.assertEquals("INCLUDES=a.tasks,b.tasks\n", includes)
+        update_includes(['a.tasks', 'b.tasks'])
 
-        finally:
-            os.remove("{0}/celeryd-includes".format(temp_folder))
+        # The includes file will be created
+        # in the temp folder for this test
+        with open('{0}/celeryd-includes'
+                  .format(self.temp_folder), mode='r') as f:
+            includes = f.read()
+            self.assertEquals("INCLUDES=a.tasks,b.tasks\n", includes)
 
     def test_write_to_existing_includes(self):
-        temp_folder = self.create_temp_folder()
-        try:
-            with open("{0}/celeryd-includes"
-                      .format(temp_folder), mode='w') as f:
-                f.write("INCLUDES=test.tasks\n")
-            write_to_includes("a.tasks,b.tasks", "{0}/celeryd-includes"
-                              .format(temp_folder))
-            with open("{0}/celeryd-includes"
-                      .format(temp_folder), mode='r') as f:
-                includes = f.read()
-                self.assertEquals(
-                    "INCLUDES=test.tasks,a.tasks,b.tasks\n",
-                    includes)
 
-        finally:
-            os.remove("{0}/celeryd-includes".format(temp_folder))
+        # Create initial includes file
+        update_includes(['test.tasks'])
 
-    def test_extract_module_paths(self):
-
-        temp_folder = self.create_temp_folder()
-
-        os.environ[CELERY_WORK_DIR_PATH_KEY] = temp_folder
-
-        install_celery_plugin(self.plugins['plugin'])
-
-        paths = extract_module_paths("mock-plugin")
-
-        assert "mock_for_test.module" in paths
+        # Append to that file
+        update_includes(['a.tasks', 'b.tasks'])
+        with open('{0}/celeryd-includes'
+                  .format(self.temp_folder), mode='r') as f:
+            includes = f.read()
+            self.assertEquals(
+                "INCLUDES=test.tasks,a.tasks,b.tasks\n",
+                includes)

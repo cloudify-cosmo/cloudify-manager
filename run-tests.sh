@@ -84,8 +84,14 @@ run_intergration_tests()
     cd cloudify-rest-client; pip install .; cd ..
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
+    git clone https://github.com/cloudify-cosmo/cloudify-diamond-plugin --depth=1
+    cd cloudify-diamond-plugin; pip install .; cd ..
 
     cd rest-service && pip install . -r dev-requirements.txt && cd ..
+
+    # make utils and such
+    # available as python packages
+    cd tests && pip install . && cd ..
 
     cd plugins/riemann-controller && pip install . && cd ../..
     cd workflows && pip install . && cd ..
@@ -93,7 +99,7 @@ run_intergration_tests()
 
     pip install nose
     nosetests tests/workflow_tests --nologcapture --nocapture -v
-    nosetests tests/deployment_env_tests --nologcapture --nocapture -v
+    
 }
 
 run_flake8()

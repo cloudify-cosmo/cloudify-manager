@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'dan'
-
 from flask.ext.restful import fields
 from flask_restful_swagger import swagger
 
@@ -77,7 +75,8 @@ class Deployment(object):
         'inputs': fields.Raw,
         'policy_types': fields.Raw,
         'policy_triggers': fields.Raw,
-        'groups': fields.Raw
+        'groups': fields.Raw,
+        'outputs': fields.Raw
     }
 
     def __init__(self, **kwargs):
@@ -91,6 +90,20 @@ class Deployment(object):
         self.policy_types = kwargs['policy_types']
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
+        self.outputs = kwargs['outputs']
+
+
+@swagger.model
+class DeploymentOutputs(object):
+
+    resource_fields = {
+        'deployment_id': fields.String,
+        'outputs': fields.Raw
+    }
+
+    def __init__(self, **kwargs):
+        self.deployment_id = kwargs['deployment_id']
+        self.outputs = kwargs['outputs']
 
 
 @swagger.model

@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import uuid
 
 from base_test import BaseServerTestCase
 from manager_rest import manager_exceptions
@@ -103,16 +104,12 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        execution = self.post(resource_path, {
-            'workflow_id': 'install'
-        }).json
-        self.assertEquals(execution['workflow_id'], 'install')
-        self.assertEquals(execution['blueprint_id'], blueprint_id)
-        self.assertEquals(execution['deployment_id'],
-                          deployment_response['id'])
-        self.assertIsNotNone(execution['created_at'])
-        executions = self.get(resource_path).json
+        execution = self.client.executions.start(deployment_id, 'install')
+        self.assertEquals('install', execution.workflow_id)
+        self.assertEquals(blueprint_id, execution['blueprint_id'])
+        self.assertEquals(deployment_id, execution.deployment_id)
+        self.assertIsNotNone(execution.created_at)
+        executions = self.client.executions.list(deployment_id=deployment_id)
         # expecting two executions - 'install' and
         # 'create_deployment_environment'
         self.assertEquals(2, len(executions))
@@ -126,22 +123,25 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/deployments/{0}/executions'.format(deployment_id)
-        response = self.post(resource_path, {
-            'workflow_id': 'nonexisting-workflow-id'
-        })
-        self.assertEqual(400, response.status_code)
-        self.assertEquals(response.json['error_code'],
-                          manager_exceptions.NonexistentWorkflowError
-                          .NONEXISTENT_WORKFLOW_ERROR_CODE)
+        try:
+            self.client.executions.start(deployment_id,
+                                         'nonexisting-workflow-id')
+            self.fail()
+        except CloudifyClientError, e:
+            self.assertEqual(400, e.status_code)
+            error = manager_exceptions.NonexistentWorkflowError
+            self.assertEquals(error.NONEXISTENT_WORKFLOW_ERROR_CODE,
+                              e.error_code)
 
     def test_listing_executions_for_nonexistent_deployment(self):
-        resource_path = '/deployments/{0}/executions'.format('doesnotexist')
-        response = self.get(resource_path)
-        self.assertEqual(404, response.status_code)
-        self.assertEquals(
-            response.json['error_code'],
-            manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE)
+        try:
+            self.client.executions.list(deployment_id='doesnotexist')
+            self.fail()
+        except CloudifyClientError, e:
+            self.assertEqual(404, e.status_code)
+            self.assertEquals(
+                manager_exceptions.NotFoundError.NOT_FOUND_ERROR_CODE,
+                e.error_code)
 
     def test_get_workflows_of_deployment(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -328,3 +328,54 @@ class DeploymentsTestCase(BaseServerTestCase):
                 })
         except CloudifyClientError, e:
             self.assertTrue('Unknown input' in str(e))
+
+    def test_outputs(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_outputs.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+        instances = self.client.node_instances.list(deployment_id=id_)
+
+        vm = [x for x in instances if x.node_id == 'vm'][0]
+        vm_props = {'ip': '10.0.0.1'}
+        self.client.node_instances.update(vm.id, runtime_properties=vm_props)
+
+        ws = [x for x in instances if x.node_id == 'http_web_server'][0]
+        ws_props = {'port': 8080}
+        self.client.node_instances.update(ws.id, runtime_properties=ws_props)
+
+        response = self.client.deployments.outputs.get(id_)
+        self.assertEqual(id_, response.deployment_id)
+        outputs = response.outputs
+
+        self.assertTrue('ip_address' in outputs)
+        self.assertTrue('port' in outputs)
+        self.assertEqual('10.0.0.1', outputs['ip_address'])
+        self.assertEqual(80, outputs['port'])
+
+        dep = self.client.deployments.get(id_)
+        self.assertEqual('Web site IP address.',
+                         dep.outputs['ip_address']['description'])
+        self.assertEqual('Web site port.', dep.outputs['port']['description'])
+
+        endpoint = outputs['endpoint']
+
+        self.assertEqual('http', endpoint['type'])
+        self.assertEqual('10.0.0.1', endpoint['ip'])
+        self.assertEqual(8080, endpoint['port'])
+
+    def test_illegal_output(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='blueprint_with_illegal_output.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+        try:
+            self.client.deployments.outputs.get(id_)
+            self.fail()
+        except CloudifyClientError, e:
+            self.assertEqual(400, e.status_code)
+            self.assertEqual(
+                manager_exceptions.DeploymentOutputsEvaluationError.ERROR_CODE,
+                e.error_code)

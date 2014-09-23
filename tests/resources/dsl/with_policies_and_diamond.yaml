@@ -1,0 +1,60 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+    - testmockoperations.yaml
+    - mock_workflows.yaml
+    - policies/answer_to_life.yaml
+
+plugins:
+    diamond:
+        executor: central_deployment_agent
+        install: false
+
+node_types:
+    monitor_type:
+        derived_from: cloudify.types.base
+
+node_templates:
+    node:
+        type: monitor_type
+        interfaces:
+            cloudify.interfaces.monitor_lifecycle:
+                - start:
+                    mapping: diamond.diamond_agent.tasks.install
+                    properties:
+                        diamond_config:
+                            interval: 10
+                            autostart: true
+                            collectors:
+                                ExampleCollector:
+                                    config:
+                                        stub: prop
+                - stop: diamond.diamond_agent.tasks.stop
+            test:
+                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+
+groups:
+    some_group:
+        members: [node]
+        policies:
+            some_policy:
+                type: answer_to_life
+                triggers:
+                    some_workflow_trigger:
+                        type: cloudify.policies.triggers.execute_workflow
+                        parameters:
+                            workflow: some_workflow
+                            force: true
+                            workflow_parameters:
+                                key: metric
+                                value: { get_property: [SELF, metric] }
+
+workflows:
+    some_workflow:
+        mapping: mock_workflows.mock_workflows.workflows.test_policies_3
+        parameters:
+            key:
+                description: a key to write
+            value:
+                description: a value to write

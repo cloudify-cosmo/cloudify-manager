@@ -4,6 +4,8 @@
 # 
 
 # The following import contains nodes implementation details
+tosca_definitions_version: cloudify_dsl_1_0
+
 imports:
     - hello_world.yaml
 

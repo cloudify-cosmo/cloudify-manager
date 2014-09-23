@@ -16,9 +16,9 @@
 import uuid
 
 from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_application as deploy
-from testenv import create_rest_client
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_application as deploy
+from testenv.utils import create_rest_client
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 

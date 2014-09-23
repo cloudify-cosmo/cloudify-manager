@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
-
 import json
 
 
@@ -46,7 +44,7 @@ class Deployment(SerializableObject):
 
     fields = {'id', 'created_at', 'updated_at', 'blueprint_id',
               'workflows', 'permalink', 'inputs', 'policy_types',
-              'policy_triggers', 'groups'}
+              'policy_triggers', 'groups', 'outputs'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
@@ -58,6 +56,7 @@ class Deployment(SerializableObject):
         self.policy_types = kwargs['policy_types']
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
+        self.outputs = kwargs['outputs']
         self.permalink = None  # TODO: implement
 
 

@@ -13,12 +13,11 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'dank'
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from testenv import (TestCase,
-                     PROVIDER_NAME,
-                     PROVIDER_CONTEXT)
+from testenv import TestCase
+from testenv.utils import PROVIDER_NAME
+from testenv.utils import PROVIDER_CONTEXT
 
 
 class TestProviderContext(TestCase):
