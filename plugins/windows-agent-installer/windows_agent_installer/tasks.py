@@ -57,7 +57,7 @@ AGENT_PACKAGE_PATH = '/packages/agents/CloudifyWindowsAgent.exe'
 RUNTIME_AGENT_PATH = 'C:\CloudifyAgent'
 
 # Agent includes list, Mandatory
-AGENT_INCLUDES = 'windows_plugin_installer.tasks,cloudify.plugins.workflows'
+AGENT_INCLUDES = 'script_runner.tasks,windows_plugin_installer.tasks,cloudify.plugins.workflows'
 
 
 def get_agent_package_url():
