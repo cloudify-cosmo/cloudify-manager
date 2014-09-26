@@ -12,158 +12,188 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+import unittest
+
 from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 
-__author__ = 'elip'
-
-
-import unittest
-
-from windows_agent_installer import MIN_WORKERS_KEY, \
-    MAX_WORKERS_KEY, SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY, \
-    SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY, \
-    SERVICE_FAILURE_RESET_TIMEOUT_KEY, \
-    SERVICE_FAILURE_RESTART_DELAY_KEY, \
-    SERVICE_START_TIMEOUT_KEY, \
-    SERVICE_STOP_TIMEOUT_KEY, \
-    set_service_configuration_parameters, \
-    set_autoscale_parameters, \
-    set_bootstrap_context_parameters
+from windows_agent_installer import constants
 
 
 class InitTest(unittest.TestCase):
 
     def test_set_service_configuration_parameters_with_empty_service(self):  # NOQA
 
-        # cloudify agent does not contain any service configuration parameters.
+        from windows_agent_installer \
+            import set_service_configuration_parameters
+
+        # cloudify agent does not contain any
+        # service configuration parameters.
+        # this means all parameters should be the default ones.
+        cloudify_agent = {'service': {}}
+        set_service_configuration_parameters(cloudify_agent)
+        self.assertEqual(
+            cloudify_agent['service']
+            [constants.SERVICE_FAILURE_RESET_TIMEOUT_KEY],
+            60)
+        self.assertEqual(
+            cloudify_agent['service']
+            [constants.SERVICE_FAILURE_RESTART_DELAY_KEY],
+            5000)
+
+    def test_set_service_configuration_parameters_no_service(self):  # NOQA
+
+        from windows_agent_installer \
+            import set_service_configuration_parameters
+
+        # cloudify agent does not contain the 'service' key.
         # this means all parameters should be the default ones.
         cloudify_agent = {}
         set_service_configuration_parameters(cloudify_agent)
         self.assertEqual(
             cloudify_agent['service']
-            [SERVICE_FAILURE_RESET_TIMEOUT_KEY],
+            [constants.SERVICE_FAILURE_RESET_TIMEOUT_KEY],
             60)
         self.assertEqual(
             cloudify_agent['service']
-            [SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY],
-            1)
-        self.assertEqual(
-            cloudify_agent['service']
-            [SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY],
-            10)
-        self.assertEqual(
-            cloudify_agent['service']
-            [SERVICE_STOP_TIMEOUT_KEY],
-            30)
-        self.assertEqual(
-            cloudify_agent['service']
-            [SERVICE_START_TIMEOUT_KEY],
-            30)
-        self.assertEqual(
-            cloudify_agent['service']
-            [SERVICE_FAILURE_RESTART_DELAY_KEY],
+            [constants.SERVICE_FAILURE_RESTART_DELAY_KEY],
             5000)
 
     def test_set_service_configuration_parameters_with_full_service(self):  # NOQA
 
+        from windows_agent_installer \
+            import set_service_configuration_parameters
+
+        # cloudify agent does contains all service configuration parameters.
+        # this means all parameters should be the ones we specify.
         cloudify_agent = {'service': {
-            SERVICE_FAILURE_RESET_TIMEOUT_KEY: 1,
-            SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY: 1,
-            SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY: 1,
-            SERVICE_STOP_TIMEOUT_KEY: 1,
-            SERVICE_START_TIMEOUT_KEY: 1,
-            SERVICE_FAILURE_RESTART_DELAY_KEY: 1
+            constants.SERVICE_FAILURE_RESET_TIMEOUT_KEY: 1,
+            constants.SERVICE_FAILURE_RESTART_DELAY_KEY: 1
         }}
         set_service_configuration_parameters(cloudify_agent)
 
         self.assertEqual(
             cloudify_agent['service']
-            [SERVICE_FAILURE_RESET_TIMEOUT_KEY],
+            [constants.SERVICE_FAILURE_RESET_TIMEOUT_KEY],
             1)
         self.assertEqual(
             cloudify_agent['service']
-            [SERVICE_STATUS_TRANSITION_SLEEP_INTERVAL_KEY],
-            1)
-        self.assertEqual(
-            cloudify_agent['service']
-            [SERVICE_SUCCESSFUL_CONSECUTVE_STATUS_QUERIES_COUNT_KEY],
-            1)
-        self.assertEqual(
-            cloudify_agent['service']
-            [SERVICE_STOP_TIMEOUT_KEY],
-            1)
-        self.assertEqual(
-            cloudify_agent['service']
-            [SERVICE_START_TIMEOUT_KEY],
-            1)
-        self.assertEqual(
-            cloudify_agent['service']
-            [SERVICE_FAILURE_RESTART_DELAY_KEY],
+            [constants.SERVICE_FAILURE_RESTART_DELAY_KEY],
             1)
 
     def test_set_service_configuration_parameters_digit_validation(self):  # NOQA
 
+        from windows_agent_installer \
+            import set_service_configuration_parameters
+
         cloudify_agent = {'service': {
-            SERVICE_FAILURE_RESET_TIMEOUT_KEY: "Hello"
+            constants.SERVICE_FAILURE_RESET_TIMEOUT_KEY: "Hello"
         }}
         try:
             set_service_configuration_parameters(cloudify_agent)
             self.fail('Expected NonRecoverableError since {0} is not a number'
-                      .format(SERVICE_FAILURE_RESET_TIMEOUT_KEY))
+                      .format(constants.SERVICE_FAILURE_RESET_TIMEOUT_KEY))
         except NonRecoverableError:
             pass
 
-    def test_set_autoscale_parameters_with_empty_bootstrap_context_and_no_parameters(self):  # NOQA
+    def test_set_autoscale_parameters_with_empty_bootstrap_context_and_empty_cloudify_agent(self):  # NOQA
 
-        # Default values should be populated.
+        from windows_agent_installer import set_bootstrap_context_parameters
 
+        # cloudify agent does not contain any
+        # auto scale configuration parameters.
+        # bootstrap_context does not contain any
+        # auto scale configuration parameters.
+        # this means all parameters should be the default ones.
         cloudify_agent = {}
         ctx = MockCloudifyContext(bootstrap_context={})
         set_bootstrap_context_parameters(
             ctx.bootstrap_context,
             cloudify_agent)
-        self.assertEqual(cloudify_agent[MAX_WORKERS_KEY], 5)
-        self.assertEqual(cloudify_agent[MIN_WORKERS_KEY], 2)
+        self.assertEqual(cloudify_agent[constants.MAX_WORKERS_KEY], 5)
+        self.assertEqual(cloudify_agent[constants.MIN_WORKERS_KEY], 2)
 
-    def test_set_autoscale_parameters_with_bootstrap_context_and_no_parameters(self):  # NOQA
+    def test_set_autoscale_parameters_with_bootstrap_context_and_empty_cloudify_agent(self):  # NOQA
 
-        # Bootstrap context values should be populated.
+        from windows_agent_installer import set_autoscale_parameters
 
+        # cloudify agent does not contain any
+        # auto scale configuration parameters.
+        # bootstrap_context does contain auto
+        # scale configuration parameters.
+        # this means all parameters should be the ones
+        # specified by the bootstrap_context.
         cloudify_agent = {}
         bootstrap_context = BootstrapContext({'cloudify_agent': {
-            MAX_WORKERS_KEY: 10,
-            MIN_WORKERS_KEY: 5
+            constants.MAX_WORKERS_KEY: 10,
+            constants.MIN_WORKERS_KEY: 5
         }})
         ctx = MockCloudifyContext(bootstrap_context=bootstrap_context)
         set_autoscale_parameters(
             ctx.bootstrap_context,
             cloudify_agent)
-        self.assertEqual(cloudify_agent[MAX_WORKERS_KEY], 10)
-        self.assertEqual(cloudify_agent[MIN_WORKERS_KEY], 5)
+        self.assertEqual(cloudify_agent[constants.MAX_WORKERS_KEY], 10)
+        self.assertEqual(cloudify_agent[constants.MIN_WORKERS_KEY], 5)
 
-    def test_set_autoscale_parameters_with_bootstrap_context_and_parameters(self):  # NOQA
+    def test_set_autoscale_parameters_with_bootstrap_context_cloudify_agent(self):  # NOQA
 
-        # Cloudify agent configuration parameters should be populated.
+        from windows_agent_installer import set_autoscale_parameters
+
+        # cloudify agent does contain auto scale configuration parameters.
+        # bootstrap_context does contain auto scale configuration parameters.
+        # this means all parameters should be
+        # the ones specified by the cloudify_agent.
         cloudify_agent = {
-            MAX_WORKERS_KEY: 10,
-            MIN_WORKERS_KEY: 5
+            constants.MAX_WORKERS_KEY: 10,
+            constants.MIN_WORKERS_KEY: 5
         }
-        set_autoscale_parameters({}, cloudify_agent)
-        self.assertEqual(cloudify_agent[MAX_WORKERS_KEY], 10)
-        self.assertEqual(cloudify_agent[MIN_WORKERS_KEY], 5)
+        bootstrap_context = BootstrapContext({'cloudify_agent': {
+            constants.MAX_WORKERS_KEY: 2,
+            constants.MIN_WORKERS_KEY: 3
+        }})
+        set_autoscale_parameters(bootstrap_context, cloudify_agent)
+        self.assertEqual(cloudify_agent[constants.MAX_WORKERS_KEY], 10)
+        self.assertEqual(cloudify_agent[constants.MIN_WORKERS_KEY], 5)
 
     def test_set_autoscale_parameters_validate_max_bigger_than_min(self):  # NOQA
 
-        # Cloudify agent configuration parameters should be populated.
+        from windows_agent_installer import set_autoscale_parameters
+
         cloudify_agent = {
-            MAX_WORKERS_KEY: 10,
-            MIN_WORKERS_KEY: 20
+            constants.MAX_WORKERS_KEY: 10,
+            constants.MIN_WORKERS_KEY: 20
         }
         try:
             set_autoscale_parameters({}, cloudify_agent)
             self.fail('Expected NonRecoverableError since {0} is bigger than'
-                      .format(MIN_WORKERS_KEY, MAX_WORKERS_KEY))
+                      .format(constants.MIN_WORKERS_KEY,
+                              constants.MAX_WORKERS_KEY))
         except NonRecoverableError:
             pass
+
+    def set_agent_configuration_parameters_with_empty_cloudify_agent(self):
+
+        from windows_agent_installer import set_agent_configuration_parameters
+
+        # cloudify agent does not contain any agent configuration parameters.
+        # this means all parameters should be the default ones.
+        cloudify_agent = {}
+        set_agent_configuration_parameters(cloudify_agent)
+        self.assertEqual(cloudify_agent[constants.AGENT_START_TIMEOUT_KEY], 15)
+        self.assertEqual(cloudify_agent[constants.AGENT_START_INTERVAL_KEY], 1)
+
+    def set_agent_configuration_parameters_with_full_cloudify_agent(self):
+
+        from windows_agent_installer import set_agent_configuration_parameters
+
+        # cloudify agent does contain agent configuration parameters.
+        # this means all parameters should be the ones specified.
+        cloudify_agent = {
+            constants.AGENT_START_TIMEOUT_KEY: 60,
+            constants.AGENT_START_INTERVAL_KEY: 5
+        }
+        set_agent_configuration_parameters(cloudify_agent)
+        self.assertEqual(cloudify_agent[constants.AGENT_START_TIMEOUT_KEY], 60)
+        self.assertEqual(cloudify_agent[constants.AGENT_START_INTERVAL_KEY], 5)

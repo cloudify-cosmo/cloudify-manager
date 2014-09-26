@@ -12,19 +12,16 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import os
-
-TEST_WORKING_DIRECTORY = 'C:\work'
-
-__author__ = 'elip'
-
-
 import unittest
-from windows_agent_installer import winrm_runner
-from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
 from nose.tools import nottest
 
+from windows_agent_installer import winrm_runner
+from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
 
+
+TEST_WORKING_DIRECTORY = 'C:\work'
 TEST_FILE_DOWNLOAD_URL = 'https://github.com/cloudify-cosmo' \
                          '/cloudify-dsl-parser/archive/master.zip'
 
@@ -149,11 +146,11 @@ class WinRMRunnerTest(unittest.TestCase):
     def test_run_error(self):
 
         from windows_agent_installer.winrm_runner import \
-            WinRMExecutionException
+            WinRMCommandExecutionException
         try:
             self.runner.run('Bad command')
             self.fail('Expected WinRMExecutionException due to bad command')
-        except WinRMExecutionException as e:
+        except WinRMCommandExecutionException as e:
             self.assertEqual(1, e.code)
 
     def test_download(self):
@@ -191,7 +188,7 @@ class WinRMRunnerTest(unittest.TestCase):
 
         # Move it.
         self.runner.move(src='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY),
-                         dest='{0}\moved.zip'.format(TEST_WORKING_DIRECTORY))
+                         dst='{0}\moved.zip'.format(TEST_WORKING_DIRECTORY))
 
         # Assert
         self.assertTrue(
@@ -260,7 +257,7 @@ class WinRMRunnerTest(unittest.TestCase):
         # Copy the entire directory to a new one
         self.runner.copy(
             src='{0}\k'.format(TEST_WORKING_DIRECTORY),
-            dest='{0}\e'.format(TEST_WORKING_DIRECTORY))
+            dst='{0}\e'.format(TEST_WORKING_DIRECTORY))
 
         # Assert new directory exists and contains the file
         self.assertTrue(
@@ -278,8 +275,8 @@ class WinRMRunnerTest(unittest.TestCase):
 
         # Copy the entire directory to a new one
         self.runner.copy(src='{0}\k'.format(TEST_WORKING_DIRECTORY),
-                         dest='{0}\q\e'.format(TEST_WORKING_DIRECTORY),
-                         create_missing_directories=True)
+                         dst='{0}\q\e'.format(TEST_WORKING_DIRECTORY),
+                         force=True)
 
         # Assert new directory exists and contains the file
         self.assertTrue(
@@ -293,3 +290,10 @@ class WinRMRunnerTest(unittest.TestCase):
 
         state = self.runner.service_state('WinRM')
         self.assertEqual(state, 'Running')
+
+    def test_get(self):
+        path = '{0}\content'.format(TEST_WORKING_DIRECTORY)
+        self.runner.put(contents='Hello world',
+                        path=path)
+        contents = self.runner.get(path=path)
+        self.assertEqual('Hello world', contents.rstrip('\r\n'))

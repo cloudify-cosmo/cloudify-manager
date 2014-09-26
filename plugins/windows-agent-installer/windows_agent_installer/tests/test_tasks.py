@@ -12,20 +12,14 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from cloudify.constants import \
-    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY, \
-    MANAGER_FILE_SERVER_URL_KEY, \
-    MANAGER_REST_PORT_KEY
-
-
-__author__ = 'elip'
 
 import unittest
 import os
-
 from nose.tools import nottest
 
+from cloudify import constants
 from cloudify.mocks import MockCloudifyContext
+
 from windows_agent_installer import tasks
 from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
 from windows_agent_installer.tasks import AGENT_INCLUDES
@@ -42,22 +36,23 @@ tasks.get_manager_ip = lambda: '127.0.0.1'
 class TestTasks(unittest.TestCase):
 
     """
-    Test cases for the worker installer functionality..
+    Test cases for the worker installer functionality.
     These tests run PowerShell commands remotely on a WinRM enabled server.
 
-    An existing server must be setup, set the
-    'TEST_MACHINE_IP' environment variable to the server IP.
-    Otherwise, an exception will be raised.
+    An existing server must be setup, set the 'TEST_MACHINE_IP'
+    environment variable to the server IP,
+    otherwise an exception will be raised.
 
-    Note : These tests require a machine with RabbitMQ
+    Note: These tests require a machine with RabbitMQ
     running for the celery worker to start properly.
-
     """
 
     ctx = None
 
     @classmethod
     def setUpClass(cls):
+
+        os.environ[TEST_MACHINE_IP_ENV_VARIABLE] = '15.126.205.73'
 
         if TEST_MACHINE_IP_ENV_VARIABLE not in os.environ:
             raise RuntimeError('TEST_MACHINE_IP environment variable must '
@@ -123,9 +118,15 @@ class TestTasks(unittest.TestCase):
             'host': '127.0.0.1'
         }
         import os
-        os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = 'url1'
-        os.environ[MANAGER_FILE_SERVER_URL_KEY] = 'url2'
-        os.environ[MANAGER_REST_PORT_KEY] = '80'
+        os.environ[
+            constants.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
+        ] = 'url1'
+        os.environ[
+            constants.MANAGER_FILE_SERVER_URL_KEY
+        ] = 'url2'
+        os.environ[
+            constants.MANAGER_REST_PORT_KEY
+        ] = '80'
         env_string = create_env_string(cloudify_agent)
         expected = 'AGENT_IP=127.0.0.1 MANAGEMENT_IP=127.0.0.1 ' \
                    'MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL=url1 ' \

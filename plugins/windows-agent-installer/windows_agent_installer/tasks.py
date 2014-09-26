@@ -16,13 +16,15 @@
 import os
 import time
 
-from cloudify import constants
 from cloudify import utils
+from cloudify import constants
+from cloudify.celery import celery as celery_client
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
+
+from windows_agent_installer import constants as win_constants
 from windows_agent_installer import init_worker_installer
 from windows_agent_installer import constants as win_const
-from cloudify.celery import celery as celery_client
 
 
 # This is the folder under which the agent is
@@ -61,6 +63,8 @@ def get_manager_ip():
 
 def create_env_string(cloudify_agent):
     env = {
+        constants.CELERY_WORK_DIR_PATH_KEY:
+        RUNTIME_AGENT_PATH,
         constants.LOCAL_IP_KEY:
         cloudify_agent['host'],
         constants.MANAGER_IP_KEY:
@@ -82,7 +86,8 @@ def create_env_string(cloudify_agent):
 @operation
 @init_worker_installer
 def install(ctx, runner=None, cloudify_agent=None, **kwargs):
-    '''
+
+    """
 
     Installs the cloudify agent service on the machine.
     The agent installation consists of the following:
@@ -96,7 +101,7 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
     :return:
-    '''
+    """
 
     ctx.logger.info('Installing agent {0}'.format(cloudify_agent['name']))
 
@@ -119,8 +124,8 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
               .format(get_manager_ip(),
                       cloudify_agent['name'],
                       RUNTIME_AGENT_PATH,
-                      cloudify_agent[constants.MIN_WORKERS_KEY],
-                      cloudify_agent[constants.MAX_WORKERS_KEY],
+                      cloudify_agent[win_constants.MIN_WORKERS_KEY],
+                      cloudify_agent[win_constants.MAX_WORKERS_KEY],
                       AGENT_INCLUDES))
     runner.run('{0}\\nssm\\nssm.exe install {1} {0}\Scripts\celeryd.exe {2}'
                .format(RUNTIME_AGENT_PATH, AGENT_SERVICE_NAME, params))
@@ -131,8 +136,12 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.run(
         'sc failure {0} reset= {1} actions= restart/{2}'.format(
             AGENT_SERVICE_NAME,
-            cloudify_agent['service'][win_const.SERVICE_FAILURE_RESET_TIMEOUT_KEY],
-            cloudify_agent['service'][win_const.SERVICE_FAILURE_RESTART_DELAY_KEY]))
+            cloudify_agent['service'][
+                win_const.SERVICE_FAILURE_RESET_TIMEOUT_KEY
+            ],
+            cloudify_agent['service'][
+                win_const.SERVICE_FAILURE_RESTART_DELAY_KEY
+            ]))
 
     ctx.logger.info('Creating parameters file from {0}'.format(params))
     runner.put(params, '{0}\AppParameters'.format(RUNTIME_AGENT_PATH))
@@ -231,32 +240,34 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.delete(path='C:\\{0}'.format(AGENT_EXEC_FILE_NAME))
 
 
-def _verify_no_celery_error(runner, agent_config):
+def _verify_no_celery_error(runner):
     celery_error_out = os.path.join(
-        agent_config['base_dir'], 'work/celery_error.out')
+        RUNTIME_AGENT_PATH, win_constants.CELERY_ERROR_FILE)
 
     # this means the celery worker had an uncaught
-    #  exception and it wrote its content
-    # to the file above because of our custom exception handler (see celery.py)
+    # exception and it wrote its content
+    # to the file above because of our custom
+    # exception handler (see celery.py)
     if runner.exists(celery_error_out):
         output = runner.get(celery_error_out)
         runner.delete(path=celery_error_out)
-        raise NonRecoverableError(
-            'Celery worker failed to start:\n{0}'.format(output))
+        raise NonRecoverableError(output)
 
 
-def _wait_for_started(runner, agent_config):
-    _verify_no_celery_error(runner, agent_config)
-    worker_name = 'celery.{0}'.format(agent_config['name'])
+def _wait_for_started(runner, cloudify_agent):
+    _verify_no_celery_error(runner)
+    worker_name = 'celery.{0}'.format(cloudify_agent['name'])
     inspect = celery_client.control.inspect(destination=[worker_name])
-    wait_started_timeout = agent_config['wait_started_timeout']
+    wait_started_timeout = cloudify_agent[
+        win_constants.AGENT_START_TIMEOUT_KEY
+    ]
     timeout = time.time() + wait_started_timeout
-    interval = agent_config['wait_started_interval']
+    interval = cloudify_agent[win_constants.AGENT_START_INTERVAL_KEY]
     while time.time() < timeout:
         stats = (inspect.stats() or {}).get(worker_name)
         if stats:
             return
         time.sleep(interval)
-    _verify_no_celery_error(runner, agent_config)
-    raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
+    _verify_no_celery_error(runner)
+    raise NonRecoverableError('Failed starting agent. waited for {0} seconds.'
                               .format(wait_started_timeout))

@@ -18,3 +18,8 @@ SERVICE_FAILURE_RESTART_DELAY_KEY = 'failure_restart_delay'
 
 MAX_WORKERS_KEY = 'max_workers'
 MIN_WORKERS_KEY = 'min_workers'
+
+AGENT_START_TIMEOUT_KEY = 'start_timeout'
+AGENT_START_INTERVAL_KEY = 'start_interval'
+
+CELERY_ERROR_FILE = 'celery_error.out'
