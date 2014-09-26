@@ -88,7 +88,6 @@ def create_env_string(cloudify_agent):
 def install(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     """
-
     Installs the cloudify agent service on the machine.
     The agent installation consists of the following:
 
@@ -100,7 +99,6 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param ctx: Invocation context - injected by the @operation
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
-    :return:
     """
 
     ctx.logger.info('Installing agent {0}'.format(cloudify_agent['name']))
@@ -152,13 +150,11 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
 def start(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     """
-
     Starts the cloudify agent service on the machine.
 
     :param ctx: Invocation context - injected by the @operation
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
-    :return:
     """
 
     ctx.logger.info('Starting agent {0}'.format(cloudify_agent['name']))
@@ -166,6 +162,7 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
 
     ctx.logger.info('Waiting for {0} to start...'.format(AGENT_SERVICE_NAME))
+    _wait_for_started(runner, cloudify_agent)
 
 
 @operation
@@ -173,28 +170,21 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
 def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     """
-
     Stops the cloudify agent service on the machine.
 
     :param ctx: Invocation context - injected by the @operation
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
-    :return:
     """
 
     ctx.logger.info('Stopping agent {0}'.format(cloudify_agent['name']))
-
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
-
-    ctx.logger.info('Waiting for {0} to stop...'.format(AGENT_SERVICE_NAME))
-
 
 @operation
 @init_worker_installer
 def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     """
-
     Restarts the cloudify agent service on the machine.
 
         1. Stop the service.
@@ -203,7 +193,6 @@ def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param ctx: Invocation context - injected by the @operation
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
-    :return:
     """
 
     ctx.logger.info('Restarting agent {0}'.format(cloudify_agent['name']))
@@ -217,7 +206,6 @@ def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
 def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     """
-
     Uninstalls the cloudify agent service from the machine.
 
         1. Remove the service from the registry.
@@ -227,7 +215,6 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param ctx: Invocation context - injected by the @operation
     :param runner: Injected by the @init_worker_installer
     :param cloudify_agent: Injected by the @init_worker_installer
-    :return:
     """
 
     ctx.logger.info('Uninstalling agent {0}'.format(cloudify_agent['name']))
