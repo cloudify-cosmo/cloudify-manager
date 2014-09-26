@@ -180,6 +180,7 @@ def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
     ctx.logger.info('Stopping agent {0}'.format(cloudify_agent['name']))
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
 
+
 @operation
 @init_worker_installer
 def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
