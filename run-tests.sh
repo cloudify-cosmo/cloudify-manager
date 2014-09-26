@@ -16,6 +16,9 @@ test_plugins()
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
 
+    git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
+    cd cloudify-script-plugin; pip install .; cd ..
+
     cd plugins/agent-installer && pip install . && cd ../..
     cd plugins/windows-agent-installer && pip install . && cd ../..
     cd plugins/plugin-installer && pip install . && cd ../..
@@ -86,6 +89,9 @@ run_intergration_tests()
     cd cloudify-plugins-common; pip install .; cd ..
     git clone https://github.com/cloudify-cosmo/cloudify-diamond-plugin --depth=1
     cd cloudify-diamond-plugin; pip install .; cd ..
+    git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
+    cd cloudify-script-plugin; pip install .; cd ..
+    pip install pyzmq
 
     cd rest-service && pip install . -r dev-requirements.txt && cd ..
 

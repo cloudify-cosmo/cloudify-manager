@@ -162,6 +162,9 @@ plugins:
         executor: central_deployment_agent
         install: false
 
+    script:
+        executor: host_agent
+        install: false
 
 ##################################################################################
 # Policy types definitions
