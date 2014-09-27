@@ -43,6 +43,7 @@ test_plugins()
     python -m SimpleHTTPServer 8000 &
 
     pip install nose
+    pip install mock
 
     nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
     nosetests plugins/windows-plugin-installer/windows_plugin_installer/tests --nologcapture --nocapture
