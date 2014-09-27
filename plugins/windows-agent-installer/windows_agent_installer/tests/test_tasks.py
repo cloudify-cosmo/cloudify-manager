@@ -48,7 +48,7 @@ def get_worker_stats(worker_name):
     global attempts
     if attempts == 3:
         return Mock()
-    attempts += attempts
+    attempts += 1
     return None
 tasks.get_worker_stats = get_worker_stats
 
