@@ -19,6 +19,7 @@ import sys
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify import utils
+
 from windows_plugin_installer import plugin_utils
 
 # Hard coded path for now - agents are always installed to this path.
@@ -29,6 +30,46 @@ APP_PARAMETERS_FILE_PATH = 'C:\CloudifyAgent\AppParameters'
 
 
 logger = utils.setup_default_logger('plugin_installer.tasks')
+
+
+@operation
+def install(ctx, plugins, **kwargs):
+
+    """
+    Installs the given plugins.
+    Each method decorated with the 'cloudify.decorators.operation'
+    will be registered as a task.
+
+    :param ctx: Invocation context. See class CloudifyContext @context.py
+    :param plugins: A collection of plugins to install.
+    """
+
+    global logger
+    logger = ctx.logger
+
+    for plugin in plugins:
+        logger.info('Installing plugin {0}'.format(plugin['name']))
+        url = get_url(ctx.blueprint_id, plugin)
+        install_celery_plugin(url)
+
+
+def install_celery_plugin(plugin_url):
+
+    """
+    Installs celery tasks into the cloudify agent.
+
+        1. Installs the plugin into the current python installation directory.
+        2  Adds the python files into the agent includes directive.
+
+    :param plugin_url: URL to an archive of the plugin.
+    """
+
+    command = 'cmd /c "{0}\Scripts\pip.exe install {1}"' \
+        .format(sys.prefix, plugin_url)
+    utils.LocalCommandRunner(logger).run(command)
+    plugin_name = plugin_utils.extract_plugin_name(plugin_url)
+    module_paths = plugin_utils.extract_module_paths(plugin_name)
+    _update_includes(module_paths)
 
 
 def read_app_parameters():
@@ -79,55 +120,6 @@ def add_module_paths_to_includes(module_paths, app_parameters):
     return app_parameters.replace(includes, new_includes)
 
 
-@operation
-def install(ctx, plugins, **kwargs):
-
-    """
-    Installs the given plugins.
-    Each method decorated with the 'cloudify.decorators.operation'
-    will be registered as a task.
-
-    :param ctx: Invocation context. See class CloudifyContext @context.py
-    :param plugins: A collection of plugins to install.
-    """
-
-    global logger
-    logger = ctx.logger
-
-    for plugin in plugins:
-        install_plugin(ctx.blueprint_id, plugin)
-
-
-def install_plugin(blueprint_id, plugin):
-    logger.info('Installing plugin {0}'.format(plugin['name']))
-    url = get_url(blueprint_id, plugin)
-    install_celery_plugin(url)
-
-
-def install_celery_plugin(plugin_url):
-
-    """
-
-    Installs celery tasks into the cloudify agent.
-
-        1. Installs the plugin into the current python installation directory.
-        2  Adds the python files into the agent includes directive.
-
-    :param plugin_url: URL to an archive of the plugin.
-    :return:
-    """
-
-    command = 'cmd /c "{0}\Scripts\pip.exe install {1}"'\
-              .format(sys.prefix, plugin_url)
-    utils.LocalCommandRunner(logger).run(command)
-
-    plugin_name = plugin_utils.extract_plugin_name(plugin_url)
-
-    module_paths = plugin_utils.extract_module_paths(plugin_name)
-
-    _update_includes(module_paths)
-
-
 def get_url(blueprint_id, plugin):
 
     source = plugin['source']
@@ -140,10 +132,9 @@ def get_url(blueprint_id, plugin):
         # invalid schema
         raise NonRecoverableError('Invalid schema: {0}'.format(schema))
 
-    # Else, assume its a relative path from <blueprint_home>/plugins
+    # else, assume its a relative path from <blueprint_home>/plugins
     # to a directory containing the plugin project.
     # in this case, the archived plugin will reside in the manager file server.
-
     blueprint_plugins_url = '{0}/{1}/plugins'.format(
         utils.get_manager_file_server_blueprints_root_url(),
         blueprint_id

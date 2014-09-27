@@ -41,7 +41,7 @@ AGENT_SERVICE_NAME = 'CloudifyAgent'
 
 # location of the agent package on the management machine,
 # relative to the file server root.
-AGENT_PACKAGE_PATH = '/packages/agents/CloudifyWindowsAgent.exe'
+AGENT_PACKAGE_PATH = 'packages/agents/CloudifyWindowsAgent.exe'
 
 # Path to the agent. We are using global (not user based) paths
 # because of virtualenv relocation issues on windows.
@@ -53,12 +53,8 @@ AGENT_INCLUDES = 'script_runner.tasks,windows_plugin_installer.tasks,'\
 
 
 def get_agent_package_url():
-    return '{0}{1}'.format(utils.get_manager_file_server_url(),
-                           AGENT_PACKAGE_PATH)
-
-
-def get_manager_ip():
-    return utils.get_manager_ip()
+    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
+                            AGENT_PACKAGE_PATH)
 
 
 def create_env_string(cloudify_agent):
@@ -68,7 +64,7 @@ def create_env_string(cloudify_agent):
         constants.LOCAL_IP_KEY:
         cloudify_agent['host'],
         constants.MANAGER_IP_KEY:
-        get_manager_ip(),
+        utils.get_manager_ip(),
         constants.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY:
         utils.get_manager_file_server_blueprints_root_url(),
         constants.MANAGER_FILE_SERVER_URL_KEY:
@@ -108,7 +104,8 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.download(get_agent_package_url(), agent_exec_path)
     ctx.logger.debug('Extracting agent to C:\\ ...')
 
-    runner.run('{0} -o{1} -y'.format(agent_exec_path, RUNTIME_AGENT_PATH))
+    runner.run('{0} -o{1} -y'.format(agent_exec_path, RUNTIME_AGENT_PATH),
+               quiet=True)
 
     params = ('--broker=amqp://guest:guest@{0}:5672// '
               '--events '
@@ -119,7 +116,7 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
               '--pidfile={2}\celery.pid '
               '--autoscale={3},{4} '
               '--include={5} '
-              .format(get_manager_ip(),
+              .format(utils.get_manager_ip(),
                       cloudify_agent['name'],
                       RUNTIME_AGENT_PATH,
                       cloudify_agent[win_constants.MIN_WORKERS_KEY],
@@ -245,17 +242,22 @@ def _verify_no_celery_error(runner):
 def _wait_for_started(runner, cloudify_agent):
     _verify_no_celery_error(runner)
     worker_name = 'celery.{0}'.format(cloudify_agent['name'])
-    inspect = celery_client.control.inspect(destination=[worker_name])
     wait_started_timeout = cloudify_agent[
         win_constants.AGENT_START_TIMEOUT_KEY
     ]
     timeout = time.time() + wait_started_timeout
     interval = cloudify_agent[win_constants.AGENT_START_INTERVAL_KEY]
     while time.time() < timeout:
-        stats = (inspect.stats() or {}).get(worker_name)
+        stats = get_worker_stats(worker_name)
         if stats:
             return
         time.sleep(interval)
     _verify_no_celery_error(runner)
     raise NonRecoverableError('Failed starting agent. waited for {0} seconds.'
                               .format(wait_started_timeout))
+
+
+def get_worker_stats(worker_name):
+    inspect = celery_client.control.inspect(destination=[worker_name])
+    stats = (inspect.stats() or {}).get(worker_name)
+    return stats

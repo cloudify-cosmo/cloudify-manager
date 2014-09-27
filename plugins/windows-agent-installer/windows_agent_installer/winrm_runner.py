@@ -75,7 +75,7 @@ class WinRMRunner(object):
                              auth=(self.session_config['user'],
                                    self.session_config['password']))
 
-    def run(self, command, raise_on_failure=True):
+    def run(self, command, raise_on_failure=True, quiet=False):
 
         """
         :param command: The command to execute.
@@ -92,19 +92,20 @@ class WinRMRunner(object):
 
         def _chk(res):
             if res.status_code == 0:
-                self.logger.info(
-                    '[{0}] out: {1}'.format(
-                        self.session_config['host'],
-                        res.std_out))
+                if not quiet:
+                    self.logger.info(
+                        '[{0}] out: {1}'.format(
+                            self.session_config['host'],
+                            res.std_out))
             else:
                 error = WinRMCommandExecutionException(
                     command=command,
                     code=res.status_code,
                     error=res.std_err,
                     output=res.std_out)
-                self.logger.error(error)
                 if raise_on_failure:
                     raise error
+                self.logger.error(error)
 
         self.logger.info(
             '[{0}] run: {1}'.format(
@@ -196,7 +197,7 @@ class WinRMRunner(object):
             .format(path))
         return response.std_out == 'True\r\n'
 
-    def delete(self, path):
+    def delete(self, path, ignore_missing=False):
 
         """
         Deletes the resource in the given path.
@@ -212,7 +213,7 @@ class WinRMRunner(object):
 
         return self.run(
             '''@powershell -Command "Remove-Item -Recurse -Force {0}"'''  # NOQA
-            .format(path))
+            .format(path), raise_on_failure=not ignore_missing)
 
     def new_dir(self, path):
 

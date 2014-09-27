@@ -18,14 +18,9 @@ import os
 import shutil
 import tempfile
 import sys
-from os import path
-
 import pip
 
 from cloudify.utils import LocalCommandRunner
-
-
-__author__ = 'elip'
 
 
 def extract_plugin_name(plugin_url):
@@ -45,7 +40,7 @@ def extract_plugin_name(plugin_url):
         os.chdir(plugin_dir)
         return LocalCommandRunner().run('cmd.exe /c "{0} {1} {2}"'.format(
             sys.executable,
-            path.join(path.dirname(__file__), 'extract_package_name.py'),
+            os.path.join(os.path.dirname(__file__), 'extract_package_name.py'),
             plugin_dir)).std_out
     finally:
         os.chdir(previous_cwd)

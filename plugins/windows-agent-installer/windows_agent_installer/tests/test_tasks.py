@@ -19,17 +19,22 @@ from nose.tools import nottest
 
 from cloudify import constants
 from cloudify.mocks import MockCloudifyContext
+from cloudify.utils import setup_default_logger
 
-from windows_agent_installer import tasks
+from windows_agent_installer import tasks, WinRMRunner
 from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
 from windows_agent_installer.tasks import AGENT_INCLUDES
+from windows_agent_installer.tests.test_winrm_runner import WinRMRunnerTest
 
 
-PACKAGE_URL = 'https://dl.dropboxusercontent.com/u/3588656/CloudifyAgent.exe'
+PACKAGE_URL = 'https://dl.dropboxusercontent.com/u/3588656/Cloudify.exe'
 
 # Configure mocks
 tasks.get_agent_package_url = lambda: PACKAGE_URL
-tasks.get_manager_ip = lambda: '127.0.0.1'
+tasks.utils.get_manager_ip = lambda: 'localhost'
+tasks.utils.get_manager_file_server_blueprints_root_url = lambda: 'localhost'
+tasks.utils.get_manager_file_server_url = lambda: 'localhost'
+tasks.utils.get_manager_rest_service_port = lambda: 8080
 
 
 @nottest
@@ -47,17 +52,9 @@ class TestTasks(unittest.TestCase):
     running for the celery worker to start properly.
     """
 
-    ctx = None
+    @staticmethod
+    def _create_context(task_name):
 
-    @classmethod
-    def setUpClass(cls):
-
-        os.environ[TEST_MACHINE_IP_ENV_VARIABLE] = '15.126.205.73'
-
-        if TEST_MACHINE_IP_ENV_VARIABLE not in os.environ:
-            raise RuntimeError('TEST_MACHINE_IP environment variable must '
-                               'be set and point to an existing server with '
-                               'WinRM configured properly')
         cloudify_agent = {
             'user': 'Administrator',
             'password': '1408Rokk'
@@ -68,13 +65,44 @@ class TestTasks(unittest.TestCase):
             'cloudify_agent': cloudify_agent
         }
 
-        cls.ctx = MockCloudifyContext(
+        return MockCloudifyContext(
             properties=properties,
-            node_id='test-node-id')
+            node_id='test-node-id',
+            task_name=task_name
+        )
+
+    def setUp(self):
+
+        os.environ[TEST_MACHINE_IP_ENV_VARIABLE] = '15.126.205.73'
+
+        if TEST_MACHINE_IP_ENV_VARIABLE not in os.environ:
+            raise RuntimeError('TEST_MACHINE_IP environment variable must '
+                               'be set and point to an existing server with '
+                               'WinRM configured properly')
+
+        self.runner = WinRMRunner(
+            session_config=WinRMRunnerTest._create_session()
+        )
+        self.logger = setup_default_logger('test_tasks')
+
+    def tearDown(self):
+        try:
+            tasks.stop(ctx=self._create_context('stop'))
+        except BaseException as e:
+            self.logger.error(e.message)
+        try:
+            tasks.uninstall(ctx=self._create_context('uninstall'))
+        except BaseException as e:
+            self.logger.warning(e.message)
+            self.runner.delete(path=tasks.AGENT_FOLDER_NAME,
+                               ignore_missing=True)
+            self.runner.delete(
+                path='C:\\{0}'.format(tasks.AGENT_EXEC_FILE_NAME),
+                ignore_missing=True)
 
     def test_full_lifecycle(self):
-        tasks.install(ctx=self.ctx)
-        tasks.start(ctx=self.ctx)
+        tasks.install(ctx=self._create_context('install'))
+        tasks.start(ctx=self._create_context('start'))
 
         def _create_session():
             return {
@@ -96,13 +124,13 @@ class TestTasks(unittest.TestCase):
         self.assertTrue(AGENT_INCLUDES in response.std_out)
 
         # Restart the service
-        tasks.restart(ctx=self.ctx)
+        tasks.restart(ctx=self._create_context('restart'))
 
         # Stop the service
-        tasks.stop(ctx=self.ctx)
+        tasks.stop(ctx=self._create_context('stop'))
 
         # Uninstall, delete the files
-        tasks.uninstall(ctx=self.ctx)
+        tasks.uninstall(ctx=self._create_context('uninstall'))
 
         # Assert files are gone
         self.assertFalse(runner.exists(path=RUNTIME_AGENT_PATH))
