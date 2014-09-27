@@ -31,8 +31,9 @@ setup(
         'pywinrm==0.0.2dev',
     ],
     tests_require=[
-        "nose",
-        "python-novaclient==2.17.0",
-        "python-neutronclient==2.3.4"
+        'nose',
+        'python-novaclient==2.17.0',
+        'python-neutronclient==2.3.4',
+        'mock'
     ]
 )
