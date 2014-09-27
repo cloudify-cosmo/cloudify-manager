@@ -98,7 +98,7 @@ class TestDefaults(unittest.TestCase):
             winrm_runner.DEFAULT_WINRM_PORT)
 
 
-# @nottest
+@nottest
 class WinRMRunnerTest(unittest.TestCase):
 
     """

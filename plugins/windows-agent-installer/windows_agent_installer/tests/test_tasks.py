@@ -15,6 +15,7 @@
 
 import unittest
 import os
+from mock import Mock
 from nose.tools import nottest
 
 from cloudify import constants
@@ -29,12 +30,27 @@ from windows_agent_installer.tests.test_winrm_runner import WinRMRunnerTest
 
 PACKAGE_URL = 'https://dl.dropboxusercontent.com/u/3588656/Cloudify.exe'
 
+logger = setup_default_logger('test_tasks')
+
 # Configure mocks
 tasks.get_agent_package_url = lambda: PACKAGE_URL
 tasks.utils.get_manager_ip = lambda: 'localhost'
 tasks.utils.get_manager_file_server_blueprints_root_url = lambda: 'localhost'
 tasks.utils.get_manager_file_server_url = lambda: 'localhost'
 tasks.utils.get_manager_rest_service_port = lambda: 8080
+
+attempts = 0
+
+
+def get_worker_stats(worker_name):
+    logger.info('Retrieving worker {0} stats'
+                .format(worker_name))
+    global attempts
+    if attempts == 3:
+        return Mock()
+    attempts += attempts
+    return None
+tasks.get_worker_stats = get_worker_stats
 
 
 @nottest
@@ -83,17 +99,16 @@ class TestTasks(unittest.TestCase):
         self.runner = WinRMRunner(
             session_config=WinRMRunnerTest._create_session()
         )
-        self.logger = setup_default_logger('test_tasks')
 
     def tearDown(self):
         try:
             tasks.stop(ctx=self._create_context('stop'))
         except BaseException as e:
-            self.logger.error(e.message)
+            logger.error(e.message)
         try:
             tasks.uninstall(ctx=self._create_context('uninstall'))
         except BaseException as e:
-            self.logger.warning(e.message)
+            logger.warning(e.message)
             self.runner.delete(path=tasks.AGENT_FOLDER_NAME,
                                ignore_missing=True)
             self.runner.delete(
