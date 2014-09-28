@@ -131,8 +131,11 @@ def _verify_core_up(deployment_config_dir_path):
             else:
                 raise
 
-    riemann_log_output = subprocess.check_output(
-        'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+    try:
+        riemann_log_output = subprocess.check_output(
+            'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+    except Exception as e:
+        riemann_log_output = 'Failed extracting log: {0}'.format(e)
 
     raise NonRecoverableError('Riemann core has not started in {} seconds.\n'
                               'tail -n 100 {}:\n {}'
