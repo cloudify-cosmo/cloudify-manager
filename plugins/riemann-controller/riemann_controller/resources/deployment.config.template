@@ -13,7 +13,9 @@
       deployment-processing-queue
         (processing-queue "{{ctx.deployment_id}}" {:queue-size     1000
                                                    :core-pool-size 1
-                                                   :max-pool-size  4})]
+                                                   :max-pool-size  4})
+      publish-event (publish-event* "{{ctx.blueprint_id}}"
+                                    "{{ctx.deployment_id}}")]
 (streams
 
 (default :ttl 60 index)
