@@ -34,11 +34,17 @@
                                "{{ctx.deployment_id}}"
                                "{{stream.metadata.group}}"
                                "{{stream.metadata.policy}}")
+      publish-policy-error
+        (publish-policy-error* "{{ctx.blueprint_id}}"
+                               "{{ctx.deployment_id}}"
+                               "{{stream.metadata.group}}"
+                               "{{stream.metadata.policy}}")
       publish-log
         (publish-log* "{{ctx.blueprint_id}}"
                       "{{ctx.deployment_id}}"
                       "{{stream.metadata.group}}"
                       "{{stream.metadata.policy}}")]
 (where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
-{{stream.data}}))
+(exception-stream publish-policy-error
+{{stream.data}})))
 {% endfor %}))
