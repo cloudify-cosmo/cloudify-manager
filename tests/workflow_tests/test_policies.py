@@ -17,6 +17,7 @@
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
+from testenv.utils import undeploy_application as undeploy
 
 
 class TestPolicies(TestCase):
@@ -43,6 +44,7 @@ class TestPolicies(TestCase):
         """
         Tests policy/trigger/group creation and processing flow
         """
+        deployment = None
         try:
             dsl_path = resource("dsl/with_policies_and_diamond.yaml")
             deployment, _ = deploy(dsl_path)
@@ -53,10 +55,9 @@ class TestPolicies(TestCase):
             invocations = self.wait_for_invocations(deployment.id, 1)
             self.assertEqual(expected_metric_value, invocations[0]['metric'])
         finally:
-            from diamond_agent import tasks
-            from cloudify.mocks import MockCloudifyContext
             try:
-                tasks.uninstall(MockCloudifyContext())
+                if deployment:
+                    undeploy(deployment.id)
             except BaseException as e:
                 if e.message:
                     self.logger.warning(e.message)

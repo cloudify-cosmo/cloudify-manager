@@ -13,11 +13,7 @@
       deployment-processing-queue
         (processing-queue "{{ctx.deployment_id}}" {:queue-size     1000
                                                    :core-pool-size 1
-                                                   :max-pool-size  4})
-      publish-event (publish-event* "{{ctx.blueprint_id}}"
-                                    "{{ctx.deployment_id}}")
-      publish-log   (publish-log*   "{{ctx.blueprint_id}}"
-                                    "{{ctx.deployment_id}}")]
+                                                   :max-pool-size  4})]
 (streams
 
 (default :ttl 60 index)
@@ -28,10 +24,16 @@
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
 (let [process-policy-triggers
-        (process-policy-triggers-stream "{{ctx.deployment_id}}"
+        (process-policy-triggers-stream "{{ctx.blueprint_id}}"
+                                        "{{ctx.deployment_id}}"
                                         "{{stream.metadata.group}}"
                                         "{{stream.metadata.policy}}"
-                                        deployment-processing-queue)]
+                                        deployment-processing-queue)
+      publish-policy-event
+        (publish-policy-event* "{{ctx.blueprint_id}}"
+                               "{{ctx.deployment_id}}"
+                               "{{stream.metadata.group}}"
+                               "{{stream.metadata.policy}}")]
 (where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
 {{stream.data}}))
 {% endfor %}))
