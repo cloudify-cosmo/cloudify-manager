@@ -33,7 +33,12 @@
         (publish-policy-event* "{{ctx.blueprint_id}}"
                                "{{ctx.deployment_id}}"
                                "{{stream.metadata.group}}"
-                               "{{stream.metadata.policy}}")]
+                               "{{stream.metadata.policy}}")
+      publish-log
+        (publish-log* "{{ctx.blueprint_id}}"
+                      "{{ctx.deployment_id}}"
+                      "{{stream.metadata.group}}"
+                      "{{stream.metadata.policy}}")]
 (where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
 {{stream.data}}))
 {% endfor %}))
