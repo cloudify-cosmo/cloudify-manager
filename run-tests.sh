@@ -105,7 +105,7 @@ run_intergration_tests()
 
     pip install nose
     nosetests tests/workflow_tests --nologcapture --nocapture -v
-    
+
 }
 
 run_flake8()

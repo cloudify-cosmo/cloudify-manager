@@ -45,8 +45,7 @@ def create(policy_types=None,
     groups = groups or {}
     policy_triggers = policy_triggers or {}
 
-    _process_sources(policy_triggers)
-    _process_sources(policy_types)
+    _process_types_and_triggers(groups, policy_types, policy_triggers)
     deployment_config_dir_path = _deployment_config_dir()
     if not os.path.isdir(deployment_config_dir_path):
         os.makedirs(deployment_config_dir_path)
@@ -132,8 +131,11 @@ def _verify_core_up(deployment_config_dir_path):
             else:
                 raise
 
-    riemann_log_output = subprocess.check_output(
-        'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+    try:
+        riemann_log_output = subprocess.check_output(
+            'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+    except Exception as e:
+        riemann_log_output = 'Failed extracting log: {0}'.format(e)
 
     raise NonRecoverableError('Riemann core has not started in {} seconds.\n'
                               'tail -n 100 {}:\n {}'
@@ -142,9 +144,30 @@ def _verify_core_up(deployment_config_dir_path):
                                       riemann_log_output))
 
 
-def _process_sources(sources):
-    for source in sources.values():
-        source['source'] = _process_source(source['source'])
+def _process_types_and_triggers(groups, policy_types, policy_triggers):
+    types_to_process = set()
+    types_to_remove = set()
+    triggers_to_process = set()
+    triggers_to_remove = set()
+    for group in groups.values():
+        for policy in group['policies'].values():
+            types_to_process.add(policy['type'])
+            for trigger in policy['triggers'].values():
+                triggers_to_process.add(trigger['type'])
+    for policy_type_name, policy_type in policy_types.items():
+        if policy_type_name in types_to_process:
+            policy_type['source'] = _process_source(policy_type['source'])
+        else:
+            types_to_remove.add(policy_type_name)
+    for policy_trigger_name, trigger in policy_triggers.items():
+        if policy_trigger_name in triggers_to_process:
+            trigger['source'] = _process_source(trigger['source'])
+        else:
+            triggers_to_remove.add(policy_trigger_name)
+    for policy_type_name in types_to_remove:
+        del policy_types[policy_type_name]
+    for trigger_type_name in triggers_to_remove:
+        del policy_triggers[trigger_type_name]
 
 
 def _process_source(source):
