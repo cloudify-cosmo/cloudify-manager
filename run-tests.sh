@@ -13,7 +13,7 @@ test_plugins()
     git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
     cd cloudify-rest-client; pip install .; cd ..
 
-    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1 -b CFY-1144-monitor-error-handling
+    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
 
     git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
@@ -85,7 +85,7 @@ run_intergration_tests()
 
     git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
     cd cloudify-rest-client; pip install .; cd ..
-    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1 -b CFY-1144-monitor-error-handling
+    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
     git clone https://github.com/cloudify-cosmo/cloudify-diamond-plugin --depth=1
     cd cloudify-diamond-plugin; pip install .; cd ..
