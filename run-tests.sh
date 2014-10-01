@@ -10,14 +10,9 @@ test_plugins()
 
     pip install celery==3.0.24
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-    pushd cloudify-rest-client; pip install .; popd
-
-    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
-    pushd cloudify-plugins-common; pip install .; popd
-
-    git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
-    pushd cloudify-script-plugin; pip install .; popd
+    pip install -e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.1a4
+    pip install -e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==3.1a4
+    pip install -e git+https://github.com/cloudify-cosmo/cloudify-script-plugin@master#egg=cloudify-script-plugin==1.1a4
 
     pushd plugins/agent-installer && pip install . && popd
     pushd plugins/windows-agent-installer && pip install . && popd
@@ -31,8 +26,8 @@ test_plugins()
     source ~/env/bin/activate
 
     pip install celery==3.0.24
-    pushd cloudify-rest-client; pip install .; popd
-    pushd cloudify-plugins-common; pip install .; popd
+    pip install -e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.1a4
+    pip install -e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==3.1a4
     pushd plugins/agent-installer && pip install . && popd
     pushd plugins/plugin-installer && pip install . && popd
     pushd plugins/windows-agent-installer; pip install .; popd
