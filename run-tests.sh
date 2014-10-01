@@ -81,7 +81,7 @@ run_intergration_tests()
     sudo ln -Tsf /{run,dev}/shm
     sudo chmod 777 /dev/shm  # for celery worker
 
-    pip install -r dev-requirements.txt
+    pip install -r tests/dev-requirements.txt
     pushd rest-service && pip install . -r dev-requirements.txt && popd
 
     # make utils and such
