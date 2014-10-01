@@ -9,9 +9,7 @@ test_plugins()
     source package/linux/env/bin/activate
 
     pip install celery==3.0.24
-    pip install https://github.com/cloudify-cosmo/cloudify-rest-client/archive/3.1m4-build.zip
-    pip install https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/3.1m4-build.zip
-    pip install https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.1m4-build.zip
+    pip install -r tests/dev-requirements
 
     pushd plugins/agent-installer && pip install . && popd
     pushd plugins/windows-agent-installer && pip install . && popd
@@ -26,6 +24,7 @@ test_plugins()
 
     pip install celery==3.0.24
     pip install -r tests/dev-requirements.txt
+
     pushd plugins/agent-installer && pip install . && popd
     pushd plugins/plugin-installer && pip install . && popd
     pushd plugins/windows-agent-installer; pip install .; popd
