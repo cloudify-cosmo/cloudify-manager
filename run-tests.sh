@@ -9,7 +9,7 @@ test_plugins()
     source package/linux/env/bin/activate
 
     pip install celery==3.0.24
-    pip install -r tests/dev-requirements
+    pip install -r tests/dev-requirements.txt
 
     pushd plugins/agent-installer && pip install . && popd
     pushd plugins/windows-agent-installer && pip install . && popd
