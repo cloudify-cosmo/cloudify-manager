@@ -58,8 +58,6 @@ test_plugins()
 test_rest_service()
 {
     echo "### Testing rest-service..."
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-    pushd cloudify-rest-client; pip install .; popd
     pushd rest-service && pip install . -r dev-requirements.txt && popd
     pip install nose
     nosetests rest-service/manager_rest/test --nologcapture --nocapture
@@ -83,22 +81,12 @@ run_intergration_tests()
     sudo ln -Tsf /{run,dev}/shm
     sudo chmod 777 /dev/shm  # for celery worker
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-    pushd cloudify-rest-client; pip install .; popd
-    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
-    pushd cloudify-plugins-common; pip install .; popd
-    git clone https://github.com/cloudify-cosmo/cloudify-diamond-plugin --depth=1
-    pushd cloudify-diamond-plugin; pip install .; popd
-    git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
-    pushd cloudify-script-plugin; pip install .; popd
-    pip install pyzmq
-
+    pip install -r dev-requirements.txt
     pushd rest-service && pip install . -r dev-requirements.txt && popd
 
     # make utils and such
     # available as python packages
     pushd tests && pip install . && popd
-
     pushd plugins/riemann-controller && pip install . && popd
     pushd workflows && pip install . && popd
     pushd tests && pip install . && popd
