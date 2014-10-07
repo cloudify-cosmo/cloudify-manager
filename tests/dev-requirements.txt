@@ -1,4 +1,4 @@
-https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/3.1m4-build.zip
+https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/3.1m4-build.zip
 https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/3.1m4-build.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/1.1m4-build.zip
