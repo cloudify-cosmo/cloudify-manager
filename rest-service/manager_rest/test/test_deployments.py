@@ -151,12 +151,6 @@ class DeploymentsTestCase(BaseServerTestCase):
         resource_path = '/deployments/{0}'.format(deployment_id)
         workflows = self.get(resource_path).json['workflows']
         self.assertEquals(4, len(workflows))
-        self.assertEquals(workflows[1]['name'], 'install')
-        self.assertTrue('created_at' in workflows[1])
-        self.assertEquals({}, workflows[1]['parameters'])
-        self.assertEquals(workflows[2]['name'], 'uninstall')
-        self.assertTrue('created_at' in workflows[2])
-        self.assertEquals({}, workflows[2]['parameters'])
         self.assertEquals(workflows[0]['name'], 'mock_workflow')
         self.assertTrue('created_at' in workflows[0])
         parameters = {
