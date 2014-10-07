@@ -14,6 +14,9 @@ node_types:
             cloudify.interfaces.monitor_lifecycle:
                 - start
                 - stop
+            cloudify.interfaces.validation:
+                - creation
+                - deletion
 
     # A tier in a topology
     cloudify.types.tier: 
@@ -142,6 +145,21 @@ relationships:
 workflows:
     install: default_workflows.cloudify.plugins.workflows.install
     uninstall: default_workflows.cloudify.plugins.workflows.uninstall
+    execute_operation:
+        mapping: default_workflows.cloudify.plugins.workflows.execute_operation
+        parameters:
+            operation: {}
+            operation_kwargs:
+                default: {}
+            run_by_dependency_order:
+                default: false
+            type_names:
+                default: []
+            node_ids:
+                default: []
+            node_instances_ids:
+                default: []
+
 
 ##################################################################################
 # Base artifact definitions
