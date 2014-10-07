@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'idanmo'
 
 import os
 import pwd
@@ -51,8 +50,8 @@ def init_worker_installer(func):
         if not ctx:
             raise NonRecoverableError(
                 'CloudifyContext not found in invocation args')
-        if ctx.properties and 'cloudify_agent' in ctx.properties:
-            agent_config = ctx.properties['cloudify_agent']
+        if ctx.node.properties and 'cloudify_agent' in ctx.node.properties:
+            agent_config = ctx.node.properties['cloudify_agent']
         else:
             agent_config = kwargs.get('cloudify_agent', {})
         prepare_configuration(ctx, agent_config)
@@ -71,13 +70,13 @@ def get_machine_distro(runner):
 
 
 def get_machine_ip(ctx):
-    if ctx.properties.get('ip'):
-        return ctx.properties['ip']
-    if 'ip' in ctx.runtime_properties:
-        return ctx.runtime_properties['ip']
+    if ctx.node.properties.get('ip'):
+        return ctx.node.properties['ip']
+    if 'ip' in ctx.instance.runtime_properties:
+        return ctx.instance.runtime_properties['ip']
     raise NonRecoverableError(
         'ip property is not set for node: {0}. This is mandatory'
-        ' for installing agent via ssh.'.format(ctx.node_id))
+        ' for installing agent via ssh.'.format(ctx.instance.id))
 
 
 def _prepare_and_validate_autoscale_params(ctx, config):
@@ -165,14 +164,14 @@ def prepare_configuration(ctx, agent_config):
         workflows_worker = agent_config['workflows_worker']\
             if 'workflows_worker' in agent_config else False
         suffix = '_workflows' if workflows_worker else ''
-        name = '{0}{1}'.format(ctx.deployment_id, suffix)
+        name = '{0}{1}'.format(ctx.deployment.id, suffix)
         agent_config['name'] = name
     else:
         agent_config['host'] = get_machine_ip(ctx)
         _set_ssh_key(ctx, agent_config)
         _set_user(ctx, agent_config)
         _set_remote_execution_port(ctx, agent_config)
-        agent_config['name'] = ctx.node_id
+        agent_config['name'] = ctx.instance.id
 
     _set_wait_started_config(agent_config)
 

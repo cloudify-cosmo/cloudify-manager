@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'elip'
 
 import time
 import os
@@ -91,7 +90,7 @@ def install(ctx, runner, agent_config, **kwargs):
     if worker_exists(runner, agent_config):
         ctx.logger.info("Worker for deployment {0} "
                         "is already installed. nothing to do."
-                        .format(ctx.deployment_id))
+                        .format(ctx.deployment.id))
         return
 
     ctx.logger.info(
