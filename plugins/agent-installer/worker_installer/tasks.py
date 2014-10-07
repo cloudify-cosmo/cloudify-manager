@@ -19,6 +19,7 @@ import time
 import os
 import jinja2
 
+from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify.celery import celery as celery_client
@@ -326,5 +327,10 @@ def _wait_for_started(runner, agent_config):
             return
         time.sleep(interval)
     _verify_no_celery_error(runner, agent_config)
+    celery_log_file = os.path.join(
+        agent_config['base_dir'], 'work/celery.log')
+    if os.path.exists(celery_log_file):
+        with open(celery_log_file, 'r') as f:
+            ctx.logger.error(f.read())
     raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
                               .format(wait_started_timeout))
