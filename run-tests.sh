@@ -16,6 +16,9 @@ test_plugins()
     git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
     cd cloudify-plugins-common; pip install .; cd ..
 
+    git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
+    cd cloudify-script-plugin; pip install .; cd ..
+
     pushd plugins/agent-installer && pip install . && popd
     pushd plugins/windows-agent-installer && pip install . && popd
     pushd plugins/plugin-installer && pip install . && popd
