@@ -151,8 +151,10 @@ class DeploymentsTestCase(BaseServerTestCase):
         resource_path = '/deployments/{0}'.format(deployment_id)
         workflows = self.get(resource_path).json['workflows']
         self.assertEquals(4, len(workflows))
-        self.assertEquals(workflows[0]['name'], 'mock_workflow')
-        self.assertTrue('created_at' in workflows[0])
+        workflow = next((workflow for workflow in workflows if
+                        workflow['name'] == 'mock_workflow'), None)
+        self.assertIsNotNone(workflow)
+        self.assertTrue('created_at' in workflow)
         parameters = {
             'optional_param': {'default': 'test_default_value'},
             'mandatory_param': {},
@@ -164,7 +166,7 @@ class DeploymentsTestCase(BaseServerTestCase):
                 }
             }
         }
-        self.assertEquals(parameters, workflows[0]['parameters'])
+        self.assertEquals(parameters, workflow['parameters'])
 
     def test_delete_deployment_verify_nodes_deletion(self):
         (blueprint_id, deployment_id, blueprint_response,
