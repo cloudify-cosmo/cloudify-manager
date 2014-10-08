@@ -32,7 +32,7 @@ def provision(**kwargs):
             raise NonRecoverableError('machine with id [{0}] already exists'
                                       .format(ctx.instance.id))
         if ctx.node.properties.get('test_ip'):
-            ctx.instance.runtime_properties['ip'] = ctx.properties['test_ip']
+            ctx.instance.runtime_properties['ip'] = ctx.node.properties['test_ip']
         machines[ctx.instance.id] = NOT_RUNNING
         data['machines'] = machines
 

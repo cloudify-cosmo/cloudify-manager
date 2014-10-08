@@ -14,8 +14,6 @@
 #  * limitations under the License.
 
 
-__author__ = 'elip'
-
 import getpass
 import unittest
 import time
