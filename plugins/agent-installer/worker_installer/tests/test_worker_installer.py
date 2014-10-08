@@ -274,8 +274,8 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         ctx = get_local_context()
         agent_config = {}
         t.install(ctx, cloudify_agent=agent_config)
-        t.start(ctx, cloudify_agent=agent_config)
-        self.assert_installed_plugins(ctx)
+        t.start(ctx)
+        self.assert_installed_plugins(ctx, agent_config['name'])
 
         broker_url = 'amqp://guest:guest@localhost:5672//'
         c = Celery(broker=broker_url, backend=broker_url)
@@ -288,8 +288,8 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         ctx = get_local_context()
         agent_config = {'disable_requiretty': True}
         t.install(ctx, cloudify_agent=agent_config)
-        t.start(ctx, cloudify_agent=agent_config)
-        self.assert_installed_plugins(ctx)
+        t.start(ctx)
+        self.assert_installed_plugins(ctx, agent_config['name'])
 
         broker_url = 'amqp://guest:guest@localhost:5672//'
         c = Celery(broker=broker_url, backend=broker_url)
