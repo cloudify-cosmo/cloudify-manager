@@ -104,7 +104,7 @@ def deploy_and_execute_workflow(dsl_path,
     and runs the requested workflows
     """
     deployment = deploy(dsl_path, blueprint_id, deployment_id)
-    execution = execute_workflow(workflow_name, deployment_id, parameters,
+    execution = execute_workflow(workflow_name, deployment.id, parameters,
                                  timeout_seconds, wait_for_execution)
     return deployment, execution.id
 

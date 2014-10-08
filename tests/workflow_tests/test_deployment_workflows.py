@@ -46,7 +46,7 @@ class TestDeploymentWorkflows(TestCase):
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
         execution = self.client.executions.start(deployment_id,
-                                                 'execute_operation')
+                                                 'custom_execute_operation')
         wait_for_execution_to_end(execution)
 
         invocations = self.get_plugin_data(
