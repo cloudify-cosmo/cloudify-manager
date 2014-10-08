@@ -157,7 +157,8 @@ def uninstall(ctx, runner, agent_config, **kwargs):
         'Uninstalling celery worker [cloudify_agent={0}]'.format(agent_config))
 
     files_to_delete = [
-        agent_config['init_file'], agent_config['config_file']
+        agent_config['init_file'], agent_config['config_file'],
+        agent_config['includes_file']
     ]
     folders_to_delete = [agent_config['base_dir']]
     delete_files_if_exist(ctx, agent_config, runner, files_to_delete)
