@@ -30,11 +30,12 @@ class TestDeploymentWorkflows(TestCase):
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
         workflows = self.client.deployments.get(deployment_id).workflows
-        self.assertEqual(3, len(workflows))
+        self.assertEqual(4, len(workflows))
         wf_ids = [x.name for x in workflows]
-        self.assertTrue('uninstall' in wf_ids)
-        self.assertTrue('install' in wf_ids)
-        self.assertTrue('custom' in wf_ids)
+        self.assertIn('uninstall', wf_ids)
+        self.assertIn('install', wf_ids)
+        self.assertIn('execute_operation', wf_ids)
+        self.assertIn('custom', wf_ids)
 
     def test_workflow_parameters_pass_from_blueprint(self):
         dsl_path = resource('dsl/workflow_parameters.yaml')
