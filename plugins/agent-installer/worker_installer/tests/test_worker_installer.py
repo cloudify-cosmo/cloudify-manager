@@ -272,7 +272,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_install_worker_with_sudo_plugin(self):
         ctx = get_local_context()
-        agent_config = {}
+        agent_config = {'disable_requiretty': False}
         t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
