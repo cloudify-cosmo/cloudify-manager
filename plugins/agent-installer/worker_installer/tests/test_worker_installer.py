@@ -93,8 +93,9 @@ def get_resource(resource_name):
 
 class WorkerInstallerTestCase(unittest.TestCase):
 
-    def assert_installed_plugins(self, ctx):
-        worker_name = ctx.node.properties['cloudify_agent']['name']
+    def assert_installed_plugins(self, ctx, name=None):
+        worker_name = name if name else ctx.node.properties[
+            'cloudify_agent']['name']
         ctx.logger.info("extracting plugins from newly installed worker")
         plugins = _extract_registered_plugins(worker_name)
         if not plugins:
@@ -219,29 +220,30 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_install_worker(self):
         ctx = get_local_context()
-        t.install(ctx)
+        agent_config = {}
+        t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
-        self.assert_installed_plugins(ctx)
+        self.assert_installed_plugins(ctx, agent_config['name'])
 
     def test_install_same_worker_twice(self):
         ctx = get_local_context()
-        t.install(ctx)
+
+        agent_config = {}
+        t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
 
         t.install(ctx)
         t.start(ctx)
 
-        self.assert_installed_plugins(ctx)
+        self.assert_installed_plugins(ctx, agent_config['name'])
 
     def test_remove_worker(self):
         ctx = get_local_context()
-
-        t.install(ctx)
-        t.start(ctx)
-        t.stop(ctx)
-        t.uninstall(ctx)
-
-        agent_config = ctx.node.properties['cloudify_agent']
+        agent_config = {}
+        t.install(ctx, cloudify_agent=agent_config)
+        t.start(ctx, cloudify_agent=agent_config)
+        t.stop(ctx, cloudify_agent=agent_config)
+        t.uninstall(ctx, cloudify_agent=agent_config)
 
         plugins = _extract_registered_plugins(agent_config['name'])
         # make sure the worker has stopped
@@ -270,8 +272,9 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_install_worker_with_sudo_plugin(self):
         ctx = get_local_context()
-        t.install(ctx)
-        t.start(ctx)
+        agent_config = {}
+        t.install(ctx, cloudify_agent=agent_config)
+        t.start(ctx, cloudify_agent=agent_config)
         self.assert_installed_plugins(ctx)
 
         broker_url = 'amqp://guest:guest@localhost:5672//'
@@ -283,9 +286,9 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
             queue=ctx.node.properties['cloudify_agent']['name'])
         self.assertRaises(Exception, result.get, timeout=10)
         ctx = get_local_context()
-        ctx.node.properties['cloudify_agent']['disable_requiretty'] = True
-        t.install(ctx)
-        t.start(ctx)
+        agent_config = {'disable_requiretty': True}
+        t.install(ctx, cloudify_agent=agent_config)
+        t.start(ctx, cloudify_agent=agent_config)
         self.assert_installed_plugins(ctx)
 
         broker_url = 'amqp://guest:guest@localhost:5672//'
@@ -294,7 +297,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         result = c.send_task(
             name='sudo_plugin.sudo.run',
             kwargs=kwargs,
-            queue=ctx.node.properties['cloudify_agent']['name'])
+            queue=agent_config['name'])
         result.get(timeout=10)
 
 
