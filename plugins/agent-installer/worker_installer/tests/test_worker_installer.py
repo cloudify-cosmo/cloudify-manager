@@ -220,7 +220,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_install_worker(self):
         ctx = get_local_context()
-        agent_config = {}
+        agent_config = {'disable_requiretty': False}
         t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
@@ -228,7 +228,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
     def test_install_same_worker_twice(self):
         ctx = get_local_context()
 
-        agent_config = {}
+        agent_config = {'disable_requiretty': False}
         t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
 
@@ -239,7 +239,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_remove_worker(self):
         ctx = get_local_context()
-        agent_config = {}
+        agent_config = {'disable_requiretty': False}
         t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx, cloudify_agent=agent_config)
         t.stop(ctx, cloudify_agent=agent_config)
