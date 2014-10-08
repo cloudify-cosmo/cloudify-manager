@@ -157,7 +157,7 @@ workflows:
                 default: []
             node_ids:
                 default: []
-            node_instances_ids:
+            node_instance_ids:
                 default: []
 
 
