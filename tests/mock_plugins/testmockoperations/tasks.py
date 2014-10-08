@@ -145,7 +145,7 @@ def mock_operation_get_instance_ip_from_context(ctx, **_):
             'mock_operation_invocation', []
         )
         data['mock_operation_invocation'].append((
-            ctx.node_name, ctx.host_ip
+            ctx.node.name, ctx.instance.host_ip
         ))
 
     return True
@@ -158,7 +158,7 @@ def mock_operation_get_instance_ip_of_related_from_context(ctx, **_):
             'mock_operation_invocation', []
         )
         data['mock_operation_invocation'].append((
-            '{}_rel'.format(ctx.node_name), ctx.related.host_ip
+            '{}_rel'.format(ctx.node.name), ctx.related.host_ip
         ))
 
     return True

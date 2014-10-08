@@ -44,9 +44,11 @@ def get_logger(name):
 
 
 def get_local_context():
+    instance_id = 'instance-{0}'.format(str(uuid.uuid4())[:5])
     deployment_id = 'deployment-{0}'.format(str(uuid.uuid4())[:5])
     return MockCloudifyContext(
         deployment_id=deployment_id,
+        node_id=instance_id,
         properties={
             'cloudify_agent': {
                 'disable_requiretty': False
