@@ -283,7 +283,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         result = c.send_task(
             name='sudo_plugin.sudo.run',
             kwargs=kwargs,
-            queue=ctx.node.properties['cloudify_agent']['name'])
+            queue=agent_config['name'])
         self.assertRaises(Exception, result.get, timeout=10)
         ctx = get_local_context()
         agent_config = {'disable_requiretty': True}
