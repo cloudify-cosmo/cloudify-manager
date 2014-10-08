@@ -42,6 +42,17 @@ CELERY_INCLUDES_LIST = [
     SCRIPT_PLUGIN_PATH, DEFAULT_WORKFLOWS_PLUGIN_PATH
 ]
 
+agent_resources = {
+    'celery_config_path':
+    '/packages/templates/{0}-celeryd-cloudify.conf.template',
+    'celery_init_path':
+    '/packages/templates/{0}-celeryd-cloudify.init.template',
+    'agent_package_path':
+    '/packages/agents/{0}-agent.tar.gz',
+    'disable_requiretty_script_path':
+    '/packages/scripts/{0}-agent-disable-requiretty.sh'
+}
+
 CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
 CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
 AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
@@ -60,7 +71,8 @@ def get_agent_resource_url(ctx, agent_config, resource):
             utils.get_manager_file_server_blueprints_root_url(),
             os.path.join(ctx.blueprint.id, agent_config[resource]))
     else:
-        resource_path = globals()[resource.upper()]
+        # resource_path = globals()[resource.upper()]
+        resource_path = agent_resources[resource]
         origin = os.path.join(utils.get_manager_file_server_url(),
                               resource_path.format(agent_config['distro']))
     ctx.logger.debug('resource origin: {0}'.format(origin))
@@ -267,8 +279,10 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     create_celery_includes_file(ctx, runner, agent_config)
     loader = jinja2.FunctionLoader(resource_loader)
     env = jinja2.Environment(loader=loader)
-    config_template = env.get_template(CELERY_CONFIG_PATH.format(
-        agent_config['distro']))
+    # config_template = env.get_template(CELERY_CONFIG_PATH.format(
+    #     agent_config['distro']))
+    config_template = env.get_template(get_agent_resource_url(
+        'celery_config_path').format(agent_config['distro']))
     config_template_values = {
         'includes_file_path': agent_config['includes_file'],
         'celery_base_dir': agent_config['celery_base_dir'],
