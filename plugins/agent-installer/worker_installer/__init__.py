@@ -50,7 +50,7 @@ def init_worker_installer(func):
         if not ctx:
             raise NonRecoverableError(
                 'CloudifyContext not found in invocation args')
-        if ctx.node.properties and 'cloudify_agent' in ctx.node.properties:
+        if ctx.node and 'cloudify_agent' in ctx.node.properties:
             agent_config = ctx.node.properties['cloudify_agent']
         else:
             agent_config = kwargs.get('cloudify_agent', {})
