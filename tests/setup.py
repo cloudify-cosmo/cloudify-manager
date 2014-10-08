@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-tests',
-    version='3.1a4',
+    version='3.1a5',
     author='Idan Moyal',
     author_email='idan@gigaspaces.com',
     packages=['testenv',
@@ -38,11 +38,11 @@ setup(
     description='Cloudify workflow python tests',
     zip_safe=False,
     install_requires=[
-        "cloudify-dsl-parser==3.1a4",
-        "cloudify-rest-client==3.1a4",
-        "cloudify-plugins-common==3.1a4",
-        "cloudify-diamond-plugin==1.1a4",
-        "cloudify-script-plugin==1.1a4",
+        "cloudify-dsl-parser==3.1a5",
+        "cloudify-rest-client==3.1a5",
+        "cloudify-plugins-common==3.1a5",
+        "cloudify-diamond-plugin==1.1a5",
+        "cloudify-script-plugin==1.1a5",
         "pika==0.9.13",
         'elasticsearch==1.0.0'
     ]
