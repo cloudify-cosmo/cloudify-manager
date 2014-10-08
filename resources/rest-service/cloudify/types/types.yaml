@@ -100,6 +100,12 @@ node_types:
     cloudify.types.app_module:
         derived_from: cloudify.types.base
 
+    # A type for a Cloudify Manager, to be used in manager blueprints
+    cloudify.types.cloudify_manager:
+        derived_from: cloudify.types.middleware_server
+        properties:
+            cloudify: {}
+
 
 ##################################################################################
 # Base relationship definitions
@@ -162,6 +168,9 @@ plugins:
         executor: central_deployment_agent
         install: false
 
+    script:
+        executor: host_agent
+        install: false
 
 ##################################################################################
 # Policy types definitions

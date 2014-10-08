@@ -19,6 +19,7 @@ import time
 import os
 import jinja2
 
+from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify.celery import celery as celery_client
@@ -33,11 +34,12 @@ PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
 AGENT_INSTALLER_PLUGIN_PATH = 'worker_installer.tasks'
 WINDOWS_AGENT_INSTALLER_PLUGIN_PATH = 'windows_agent_installer.tasks'
 WINDOWS_PLUGIN_INSTALLER_PLUGIN_PATH = 'windows_plugin_installer.tasks'
+SCRIPT_PLUGIN_PATH = 'script_runner.tasks'
 DEFAULT_WORKFLOWS_PLUGIN_PATH = 'cloudify.plugins.workflows'
 CELERY_INCLUDES_LIST = [
     AGENT_INSTALLER_PLUGIN_PATH, PLUGIN_INSTALLER_PLUGIN_PATH,
     WINDOWS_AGENT_INSTALLER_PLUGIN_PATH, WINDOWS_PLUGIN_INSTALLER_PLUGIN_PATH,
-    DEFAULT_WORKFLOWS_PLUGIN_PATH
+    SCRIPT_PLUGIN_PATH, DEFAULT_WORKFLOWS_PLUGIN_PATH
 ]
 
 CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
@@ -368,5 +370,10 @@ def _wait_for_started(runner, agent_config):
             return
         time.sleep(interval)
     _verify_no_celery_error(runner, agent_config)
+    celery_log_file = os.path.join(
+        agent_config['base_dir'], 'work/celery.log')
+    if os.path.exists(celery_log_file):
+        with open(celery_log_file, 'r') as f:
+            ctx.logger.error(f.read())
     raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
                               .format(wait_started_timeout))

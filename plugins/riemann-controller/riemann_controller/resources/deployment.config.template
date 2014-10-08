@@ -24,10 +24,27 @@
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
 (let [process-policy-triggers
-        (process-policy-triggers-stream "{{ctx.deployment_id}}"
+        (process-policy-triggers-stream "{{ctx.blueprint_id}}"
+                                        "{{ctx.deployment_id}}"
                                         "{{stream.metadata.group}}"
                                         "{{stream.metadata.policy}}"
-                                        deployment-processing-queue)]
+                                        deployment-processing-queue)
+      publish-policy-event
+        (publish-policy-event* "{{ctx.blueprint_id}}"
+                               "{{ctx.deployment_id}}"
+                               "{{stream.metadata.group}}"
+                               "{{stream.metadata.policy}}")
+      publish-policy-error
+        (publish-policy-error* "{{ctx.blueprint_id}}"
+                               "{{ctx.deployment_id}}"
+                               "{{stream.metadata.group}}"
+                               "{{stream.metadata.policy}}")
+      publish-log
+        (publish-log* "{{ctx.blueprint_id}}"
+                      "{{ctx.deployment_id}}"
+                      "{{stream.metadata.group}}"
+                      "{{stream.metadata.policy}}")]
 (where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
-{{stream.data}}))
+(exception-stream publish-policy-error
+{{stream.data}})))
 {% endfor %}))

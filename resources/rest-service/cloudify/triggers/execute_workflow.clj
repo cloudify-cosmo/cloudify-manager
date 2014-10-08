@@ -1,7 +1,7 @@
 (fn execute-workflow
   [ctx]
     (let [deployment-id         (:deployment-id ctx)
-          parameters            (:parameters ctx)
+          parameters            (:trigger-parameters ctx)
           manager-ip            (or (System/getenv "MANAGEMENT_IP") "127.0.0.1")
           raw-manager-rest-port (or (System/getenv "MANAGER_REST_PORT") "80")
           manager-rest-port     (Integer/parseInt raw-manager-rest-port)

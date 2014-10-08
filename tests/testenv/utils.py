@@ -110,6 +110,25 @@ def deploy_and_execute_workflow(dsl_path,
     return deployment, execution.id
 
 
+def execute_workflow(workflow_name, deployment_id,
+                     parameters=None,
+                     timeout_seconds=240,
+                     wait_for_execution=True):
+    """
+    A blocking method which runs the requested workflow
+    """
+    client = create_rest_client()
+
+    execution = client.executions.start(deployment_id, workflow_name,
+                                        parameters=parameters or {})
+
+    if wait_for_execution:
+        wait_for_execution_to_end(execution,
+                                  timeout_seconds=timeout_seconds)
+
+    return execution
+
+
 def verify_deployment_environment_creation_complete(deployment_id):
     # a workaround for waiting for the deployment environment creation to
     # complete

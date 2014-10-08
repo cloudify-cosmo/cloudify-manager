@@ -158,8 +158,8 @@ class TestEnvironment(object):
     def create(self):
 
         try:
-
-            logger.info('Setting up test environment...')
+            logger.info('Setting up test environment... workdir=[{0}]'
+                        .format(self.test_working_dir))
 
             # events/logs polling
             start_events_and_logs_polling()
@@ -193,7 +193,8 @@ class TestEnvironment(object):
                 'riemann_controller.tasks',
                 'cloudify_system_workflows.deployment_environment',
                 'cloudify.plugins.workflows',
-                'diamond_agent.tasks'
+                'diamond_agent.tasks',
+                'script_runner.tasks'
             ],
 
             # we need higher concurrency since
@@ -383,7 +384,6 @@ def start_events_and_logs_polling():
         channel.basic_consume(callback, queue=queues[0], no_ack=True)
         channel.basic_consume(callback, queue=queues[1], no_ack=True)
         channel.start_consuming()
-
     logger.info("Starting RabbitMQ events/logs polling - queues={0}".format(
         queues))
 
