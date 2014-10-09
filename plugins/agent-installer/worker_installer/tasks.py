@@ -18,6 +18,7 @@ __author__ = 'elip'
 import time
 import os
 import jinja2
+import urllib2
 
 from cloudify import ctx
 from cloudify.decorators import operation
@@ -77,8 +78,13 @@ def get_agent_resource_url(ctx, agent_config, resource):
             raise NonRecoverableError('could not retrieve file server url')
         origin = utils.get_manager_file_server_url() + \
             resource_path.format(agent_config['distro'])
-    raise Exception('origin: {0}'.format(origin))
     ctx.logger.debug('resource origin: {0}'.format(origin))
+    try:
+        urllib2.urlopen(origin)
+    except Exception as ex:
+        raise NonRecoverableError(
+            'resource: {0} could not be validated ({1})'.format(
+                origin, str(ex)))
     return origin
 
 
