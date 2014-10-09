@@ -26,6 +26,10 @@ from worker_installer.tests import \
     id_generator, get_local_context, \
     get_remote_context, VAGRANT_MACHINE_IP, MANAGER_IP
 
+from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
+from cloudify.constants import MANAGER_FILE_SERVER_URL_KEY
+from cloudify.tests.fileserver import PORT
+
 from celery import Celery
 from worker_installer import tasks as t
 from cloudify import manager
@@ -36,6 +40,8 @@ from cloudify import manager
 AGENT_PACKAGE_URL = 'http://localhost:8000/Ubuntu-agent.tar.gz'
 DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'  # NOQA
 MOCK_SUDO_PLUGIN_INCLUDE = 'sudo_plugin.sudo'
+os.environ[MANAGER_FILE_SERVER_URL_KEY] = "http://localhost:{0}".format(PORT)
+os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = "http://localhost:{0}".format(PORT)  # NOQA
 
 
 def _get_custom_agent_package_url(distro):
