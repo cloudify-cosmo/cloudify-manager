@@ -144,11 +144,11 @@ def install(ctx, runner, agent_config, **kwargs):
 
     ctx.logger.debug(
         'Downloading agent package from: {0}'.format(agent_package_url))
-    r = download_resource_on_host(
+    download_resource_on_host(
         ctx.logger, runner, agent_package_url, '{0}/{1}'.format(
             agent_config['base_dir'], 'agent.tar.gz'))
-    if not r:
-        raise NonRecoverableError('failed to download agent package')
+    # if not r:
+    #     raise NonRecoverableError('failed to download agent package')
 
     ctx.logger.debug('extracting agent package on host')
     runner.run(
@@ -190,12 +190,12 @@ def install(ctx, runner, agent_config, **kwargs):
         disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
             agent_config['base_dir'])
 
-        r = download_resource_on_host(
+        download_resource_on_host(
             ctx.logger, runner, disable_requiretty_script_url,
             disable_requiretty_script)
-        if not r:
-            raise NonRecoverableError(
-                'failed to download disable-requiretty script')
+        # if not r:
+        #     raise NonRecoverableError(
+        #         'failed to download disable-requiretty script')
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
@@ -336,23 +336,23 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     celery_init_url = get_agent_resource_url(
         ctx, agent_config, 'celery_init_path')
 
-    r = download_resource_on_host(
+    download_resource_on_host(
         ctx.logger, runner, celery_config_url, config)
-    if not r:
-        raise NonRecoverableError('failed to download celery config file')
-    r = download_resource_on_host(ctx.logger, runner, celery_init_url, init)
-    if not r:
-        raise NonRecoverableError('failed to download celery init file')
+    # if not r:
+    #     raise NonRecoverableError('failed to download celery config file')
+    download_resource_on_host(ctx.logger, runner, celery_init_url, init)
+    # if not r:
+    #     raise NonRecoverableError('failed to download celery init file')
 
 
 def create_celery_includes_file(ctx, runner, agent_config):
     # build initial includes
     includes_list = get_celery_includes_list()
-    r = download_resource_on_host(
+    download_resource_on_host(
         ctx.logger, runner, agent_config['includes_file'],
         'INCLUDES={0}\n'.format(','.join(includes_list)))
-    if not r:
-        raise NonRecoverableError('failed to download celery includes file')
+    # if not r:
+    #     raise NonRecoverableError('failed to download celery includes file')
 
     ctx.logger.debug('Created celery includes file [file=%s, content=%s]',
                      agent_config['includes_file'],
