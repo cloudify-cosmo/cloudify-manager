@@ -28,7 +28,7 @@ from worker_installer.tests import \
 
 from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
 from cloudify.constants import MANAGER_FILE_SERVER_URL_KEY
-from cloudify.tests.file_server import PORT
+# from cloudify.tests.file_server import PORT
 
 from celery import Celery
 from worker_installer import tasks as t
@@ -37,11 +37,12 @@ from cloudify import manager
 
 # agent is created and served via python simple http server when
 # tests run in travis.
-AGENT_PACKAGE_URL = 'http://localhost:8000/Ubuntu-agent.tar.gz'
-DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'  # NOQA
+FILE_SERVER = 'http://localhost:8000'
+AGENT_PACKAGE_URL = '{0}/Ubuntu-agent.tar.gz'.format(FILE_SERVER)
+DISABLE_REQUIRETTY_SCRIPT_URL = '{0}/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'.format(FILE_SERVER)  # NOQA
 MOCK_SUDO_PLUGIN_INCLUDE = 'sudo_plugin.sudo'
-os.environ[MANAGER_FILE_SERVER_URL_KEY] = "http://localhost:{0}".format(PORT)
-os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = "http://localhost:{0}".format(PORT)  # NOQA
+os.environ[MANAGER_FILE_SERVER_URL_KEY] = FILE_SERVER
+os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = FILE_SERVER  # NOQA
 
 
 def _get_custom_agent_package_url(distro):
@@ -306,6 +307,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
     def test_get_agent_resource_url(self):
         ctx = get_local_context()
         ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        t.AGENT_RESOURCES.update({'agent_package_path': 'Ubuntu-agent.tar.gz'})
         p = t.get_agent_resource_url(
             ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, '/packages/agents/Ubuntu-agent.tar.gz',)

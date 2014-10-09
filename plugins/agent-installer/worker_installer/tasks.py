@@ -43,7 +43,7 @@ CELERY_INCLUDES_LIST = [
     SCRIPT_PLUGIN_PATH, DEFAULT_WORKFLOWS_PLUGIN_PATH
 ]
 
-agent_resources = {
+AGENT_RESOURCES = {
     'celery_config_path':
     '/packages/templates/{0}-celeryd-cloudify.conf.template',
     'celery_init_path':
@@ -54,11 +54,11 @@ agent_resources = {
     '/packages/scripts/{0}-agent-disable-requiretty.sh'
 }
 
-CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
-CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
-AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
-DISABLE_REQUIRETTY_SCRIPT_PATH = \
-    '/packages/scripts/{0}-agent-disable-requiretty.sh'
+# CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
+# CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
+# AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
+# DISABLE_REQUIRETTY_SCRIPT_PATH = \
+#     '/packages/scripts/{0}-agent-disable-requiretty.sh'
 
 
 def get_agent_resource_url(ctx, agent_config, resource):
@@ -73,9 +73,10 @@ def get_agent_resource_url(ctx, agent_config, resource):
             os.path.join(ctx.blueprint.id, agent_config[resource]))
     else:
         # resource_path = globals()[resource.upper()]
-        resource_path = agent_resources[resource]
+        resource_path = AGENT_RESOURCES[resource]
         if not len(str(utils.get_manager_file_server_url())) > 0:
-            raise NonRecoverableError('could not retrieve file server url')
+            raise NonRecoverableError(
+                'MANAGER_FILE_SERVER_URL env var not configured')
         origin = utils.get_manager_file_server_url() + \
             resource_path.format(agent_config['distro'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
@@ -83,7 +84,7 @@ def get_agent_resource_url(ctx, agent_config, resource):
         urllib2.urlopen(origin)
     except Exception as ex:
         raise NonRecoverableError(
-            'resource: {0} could not be validated ({1})'.format(
+            'resource: {0} is not accessible ({1})'.format(
                 origin, str(ex)))
     return origin
 
@@ -311,8 +312,10 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
         'values: {0}'.format(config_template_values))
 
     config = config_template.render(config_template_values)
-    init_template = env.get_template(CELERY_INIT_PATH.format(
-        agent_config['distro']))
+    # init_template = env.get_template(CELERY_INIT_PATH.format(
+    #     agent_config['distro']))
+    init_template = env.get_template(get_agent_resource_url(
+        'celery_init_path').format(agent_config['distro']))
     init_template_values = {
         'celery_base_dir': agent_config['celery_base_dir'],
         'worker_modifier': agent_config['name']
