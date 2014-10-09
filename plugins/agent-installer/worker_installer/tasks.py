@@ -292,7 +292,8 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     # config_template = env.get_template(CELERY_CONFIG_PATH.format(
     #     agent_config['distro']))
     config_template = env.get_template(get_agent_resource_url(
-        'celery_config_path').format(agent_config['distro']))
+        ctx, agent_config, 'celery_config_path').format(
+        agent_config['distro']))
     config_template_values = {
         'includes_file_path': agent_config['includes_file'],
         'celery_base_dir': agent_config['celery_base_dir'],
@@ -315,7 +316,8 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     # init_template = env.get_template(CELERY_INIT_PATH.format(
     #     agent_config['distro']))
     init_template = env.get_template(get_agent_resource_url(
-        'celery_init_path').format(agent_config['distro']))
+        ctx, agent_config, 'celery_init_path').format(
+        agent_config['distro']))
     init_template_values = {
         'celery_base_dir': agent_config['celery_base_dir'],
         'worker_modifier': agent_config['name']
