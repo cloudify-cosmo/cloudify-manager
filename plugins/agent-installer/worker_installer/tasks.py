@@ -75,6 +75,7 @@ def get_agent_resource_url(ctx, agent_config, resource):
         resource_path = agent_resources[resource]
         origin = os.path.join(utils.get_manager_file_server_url(),
                               resource_path.format(agent_config['distro']))
+    raise Exception(origin)
     ctx.logger.debug('resource origin: {0}'.format(origin))
     return origin
 
