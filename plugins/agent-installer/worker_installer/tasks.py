@@ -152,7 +152,7 @@ def install(ctx, runner, agent_config, **kwargs):
 
     ctx.logger.debug('extracting agent package on host')
     runner.run(
-        'tar xzvf {0}/agent.tar.gz --strip=2 -C {2}'.format(
+        'tar xzvf {0}/agent.tar.gz --strip=2 -C {1}'.format(
             agent_config['base_dir'], agent_config['base_dir']))
 
     ctx.logger.debug('configuring virtualenv')
