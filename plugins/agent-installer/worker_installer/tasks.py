@@ -93,13 +93,13 @@ def download_resource_on_host(logger, runner, url, destination_path):
         url, destination_path))
     logger.debug('checking if wget exists on the host machine')
     r = runner.run('which wget')
-    if r.succeeded:
+    if type(r) is str or r.succeeded:
         logger.debug('wget-ing {0} to {1}'.format(url, destination_path))
         return runner.run('wget -T 30 {0} -O {1}'.format(
             url, destination_path))
     logger.debug('checking if curl exists on the host machine')
     r = runner.run('which curl')
-    if r.succeeded:
+    if type(r) is str or r.succeeded:
         logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
         return runner.run('curl {0} -O {1}'.format(
             url, destination_path))
