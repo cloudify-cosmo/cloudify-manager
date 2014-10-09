@@ -297,6 +297,12 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
                              queue=ctx.properties['cloudify_agent']['name'])
         result.get(timeout=10)
 
+    def test_get_agent_resource_url(self):
+        ctx = get_local_context()
+        p = t.get_agent_resource_url(
+            ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(p, '/packages/agents/Ubuntu-agent.tar.gz',)
+
 
 if __name__ == '__main__':
     unittest.main()
