@@ -331,16 +331,18 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
         'Creating celery config and init files [cloudify_agent={0}]'.format(
             agent_config))
 
-    celery_config_url = get_agent_resource_url(
-        ctx, agent_config, 'celery_config_path')
-    celery_init_url = get_agent_resource_url(
-        ctx, agent_config, 'celery_init_path')
+    # celery_config_url = get_agent_resource_url(
+    #     ctx, agent_config, 'celery_config_path')
+    # celery_init_url = get_agent_resource_url(
+    #     ctx, agent_config, 'celery_init_path')
 
-    download_resource_on_host(
-        ctx.logger, runner, celery_config_url, config)
+    runner.put(agent_config['config_file'], config, use_sudo=True)
+    runner.put(agent_config['init_file'], init, use_sudo=True)
+    # download_resource_on_host(
+    #     ctx.logger, runner, celery_config_url, config)
     # if not r:
     #     raise NonRecoverableError('failed to download celery config file')
-    download_resource_on_host(ctx.logger, runner, celery_init_url, init)
+    # download_resource_on_host(ctx.logger, runner, celery_init_url, init)
     # if not r:
     #     raise NonRecoverableError('failed to download celery init file')
 
@@ -348,9 +350,11 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
 def create_celery_includes_file(ctx, runner, agent_config):
     # build initial includes
     includes_list = get_celery_includes_list()
-    download_resource_on_host(
-        ctx.logger, runner, agent_config['includes_file'],
-        'INCLUDES={0}\n'.format(','.join(includes_list)))
+    # download_resource_on_host(
+    #     ctx.logger, runner, agent_config['includes_file'],
+    #     'INCLUDES={0}\n'.format(','.join(includes_list)))
+    runner.put(agent_config['includes_file'], 'INCLUDES={0}\n'.format(
+        ','.join(includes_list)))
     # if not r:
     #     raise NonRecoverableError('failed to download celery includes file')
 
