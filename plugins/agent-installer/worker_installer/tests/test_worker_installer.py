@@ -28,7 +28,7 @@ from worker_installer.tests import \
 
 from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
 from cloudify.constants import MANAGER_FILE_SERVER_URL_KEY
-from cloudify.tests.fileserver import PORT
+from cloudify.tests.file_server import PORT
 
 from celery import Celery
 from worker_installer import tasks as t
