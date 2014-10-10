@@ -325,17 +325,19 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
     def test_get_agent_missing_resource_origin(self):
         ctx = get_local_context()
         ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
-        self.assertRaises(
+        ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
             ctx.properties['cloudify_agent'], 'nonexisting_resource_key')
+        self.assertIn(str(ex), 'no such resource')
 
     def test_get_resource_url_not_dict(self):
         ctx = get_local_context()
         ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
-        self.assertRaises(
+        ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
             ctx.properties['cloudify_agent'], 'some_resource',
             'NOT_A_DICT')
+        self.assertEquals(str(ex), 'resource paths must be of type dict')
 
 
 if __name__ == '__main__':
