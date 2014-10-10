@@ -66,13 +66,18 @@ def get_agent_resource_url(ctx, agent_config, resource):
             utils.get_manager_file_server_blueprints_root_url(),
             os.path.join(ctx.blueprint.id, agent_config[resource]))
     else:
-        resource_path = AGENT_RESOURCES[resource]
+        try:
+            resource_path = AGENT_RESOURCES[resource]
+        except KeyError:
+            raise NonRecoverableError('no such resource: {0}'.format(resource))
         if not len(str(utils.get_manager_file_server_url())) > 0:
             raise NonRecoverableError(
                 'MANAGER_FILE_SERVER_URL env var not configured')
         origin = utils.get_manager_file_server_url() + \
             resource_path.format(agent_config['distro'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
+    if resource == 'disable_requiretty_script_path':
+        raise NonRecoverableError(origin)
     try:
         urllib2.urlopen(origin)
     except NonRecoverableError as ex:

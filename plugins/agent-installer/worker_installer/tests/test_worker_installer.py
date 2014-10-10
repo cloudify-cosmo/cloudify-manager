@@ -313,6 +313,22 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
             ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
+    def test_get_agent_missing_resource(self):
+        ctx = get_local_context()
+        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        t.AGENT_RESOURCES.update(
+            {'agent_package_path': '/MISSING_RESOURCE.file'})
+        p = t.get_agent_resource_url(
+            ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(p, None)
+
+    def test_get_agent_missing_resource_origin(self):
+        ctx = get_local_context()
+        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        self.assertRaises(
+            KeyError, t.get_agent_resource_url, ctx,
+            ctx.properties['cloudify_agent'], 'nonexisting_resource_key')
+
 
 if __name__ == '__main__':
     unittest.main()
