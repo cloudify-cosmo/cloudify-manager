@@ -308,8 +308,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         ctx = get_local_context()
         ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
         t.AGENT_RESOURCES.update(
-            {'agent_package_path': '/Ubuntu-agent.tar.gz',
-             'disable_requiretty_script_path': '/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'})  # NOQA
+            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
         p = t.get_agent_resource_url(
             ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, AGENT_PACKAGE_URL)

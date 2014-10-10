@@ -81,7 +81,8 @@ def get_agent_resource_url(ctx, agent_config, resource):
     except Exception as ex:
         ctx.logger.warning('resource: {0} is not accessible ({1})'.format(
             origin, str(ex)))
-        raise NonRecoverableError(ex)
+        raise NonRecoverableError(
+            'resource: {0} is not accessible ({1})'.format(origin, str(ex)))
         return
     return origin
 
