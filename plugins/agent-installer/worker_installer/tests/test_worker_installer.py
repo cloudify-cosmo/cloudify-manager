@@ -28,7 +28,7 @@ from worker_installer.tests import \
 
 from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
 from cloudify.constants import MANAGER_FILE_SERVER_URL_KEY
-# from cloudify.tests.file_server import PORT
+from cloudify.exceptions import NonRecoverableError
 
 from celery import Celery
 from worker_installer import tasks as t
@@ -326,7 +326,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         ctx = get_local_context()
         ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
         self.assertRaises(
-            KeyError, t.get_agent_resource_url, ctx,
+            NonRecoverableError, t.get_agent_resource_url, ctx,
             ctx.properties['cloudify_agent'], 'nonexisting_resource_key')
 
 

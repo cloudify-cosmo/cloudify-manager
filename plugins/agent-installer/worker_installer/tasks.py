@@ -80,9 +80,10 @@ def get_agent_resource_url(ctx, agent_config, resource):
         raise NonRecoverableError(origin)
     try:
         urllib2.urlopen(origin)
-    except NonRecoverableError as ex:
+    except Exception as ex:
         ctx.logger.warning('resource: {0} is not accessible ({1})'.format(
             origin, str(ex)))
+        raise NonRecoverableError(str(ex))
         return
     return origin
 
