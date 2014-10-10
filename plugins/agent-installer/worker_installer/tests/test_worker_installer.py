@@ -314,6 +314,16 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
             {'agent_package_path': '/Ubuntu-agent.tar.gz'})
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
+    def test_get_agent_resource_url_from_agent_config(self):
+        ctx = get_local_context()
+        ctx.properties['cloudify_agent'].update(
+            {'distro': 'Ubuntu', 'agent_package_path': 'agent.file'})
+        ctx.blueprint.id = '/test_blueprint'
+        path = FILE_SERVER + '/test_blueprint/agent.file'
+        p = t.get_agent_resource_url(
+            ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(p, path)
+
     def test_get_missing_agent_resource(self):
         ctx = get_local_context()
         ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
@@ -328,7 +338,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
             ctx.properties['cloudify_agent'], 'nonexisting_resource_key')
-        self.assertIn(str(ex), 'no such resource')
+        self.assertIn('no such resource', str(ex))
 
     def test_get_resource_url_not_dict(self):
         ctx = get_local_context()
