@@ -17,7 +17,7 @@
 __author__ = 'elip'
 
 import getpass
-import unittest
+import testtools
 import time
 import os
 from os import path
@@ -102,7 +102,7 @@ def get_resource(resource_name):
     return None
 
 
-class WorkerInstallerTestCase(unittest.TestCase):
+class WorkerInstallerTestCase(testtools.TestCase):
 
     def assert_installed_plugins(self, ctx):
         worker_name = ctx.properties['cloudify_agent']['name']
@@ -341,4 +341,4 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    testtools.main()

@@ -4,6 +4,8 @@ test_plugins()
 {
     echo "### Testing plugins..."
     echo "### Creating agent package..."
+
+    pip install testtools
     mkdir -p package/linux
     virtualenv package/linux/env
     source package/linux/env/bin/activate
