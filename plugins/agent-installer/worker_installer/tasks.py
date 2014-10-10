@@ -54,12 +54,6 @@ AGENT_RESOURCES = {
     '/packages/scripts/{0}-agent-disable-requiretty.sh'
 }
 
-# CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
-# CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
-# AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
-# DISABLE_REQUIRETTY_SCRIPT_PATH = \
-#     '/packages/scripts/{0}-agent-disable-requiretty.sh'
-
 
 def get_agent_resource_url(ctx, agent_config, resource):
     """returns an agent's resource url
@@ -72,7 +66,6 @@ def get_agent_resource_url(ctx, agent_config, resource):
             utils.get_manager_file_server_blueprints_root_url(),
             os.path.join(ctx.blueprint.id, agent_config[resource]))
     else:
-        # resource_path = globals()[resource.upper()]
         resource_path = AGENT_RESOURCES[resource]
         if not len(str(utils.get_manager_file_server_url())) > 0:
             raise NonRecoverableError(
@@ -82,10 +75,10 @@ def get_agent_resource_url(ctx, agent_config, resource):
     ctx.logger.debug('resource origin: {0}'.format(origin))
     try:
         urllib2.urlopen(origin)
-    except Exception as ex:
-        raise NonRecoverableError(
-            'resource: {0} is not accessible ({1})'.format(
-                origin, str(ex)))
+    except NonRecoverableError as ex:
+        ctx.logger.warning('resource: {0} is not accessible ({1})'.format(
+            origin, str(ex)))
+        return
     return origin
 
 
@@ -121,12 +114,10 @@ def download_resource_on_host(logger, runner, url, destination_path):
 @operation
 @init_worker_installer
 def install(ctx, runner, agent_config, **kwargs):
-    try:
-        agent_package_url = get_agent_resource_url(
-            ctx, agent_config, 'agent_package_path')
-    except Exception as ex:
-        raise NonRecoverableError(
-            'failed to retrieve agent package url ({0})'.format(ex))
+    agent_package_url = get_agent_resource_url(
+        ctx, agent_config, 'agent_package_path')
+    if not agent_package_url:
+        raise NonRecoverableError('failed to retrieve agent package url')
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
@@ -180,10 +171,9 @@ def install(ctx, runner, agent_config, **kwargs):
 
     # Disable requiretty
     if agent_config['disable_requiretty']:
-        try:
-            disable_requiretty_script_url = get_agent_resource_url(
-                ctx, agent_config, 'disable_requiretty_script_path')
-        except:
+        disable_requiretty_script_url = get_agent_resource_url(
+            ctx, agent_config, 'disable_requiretty_script_path')
+        if not disable_requiretty_script_url:
             raise NonRecoverableError(
                 'failed to retrieve disable-requiretty script url')
         ctx.logger.debug("Removing requiretty in sudoers file")
@@ -327,32 +317,15 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
         'Creating celery config and init files [cloudify_agent={0}]'.format(
             agent_config))
 
-    # celery_config_url = get_agent_resource_url(
-    #     ctx, agent_config, 'celery_config_path')
-    # celery_init_url = get_agent_resource_url(
-    #     ctx, agent_config, 'celery_init_path')
-
     runner.put(agent_config['config_file'], config, use_sudo=True)
     runner.put(agent_config['init_file'], init, use_sudo=True)
-    # download_resource_on_host(
-    #     ctx.logger, runner, celery_config_url, config)
-    # if not r:
-    #     raise NonRecoverableError('failed to download celery config file')
-    # download_resource_on_host(ctx.logger, runner, celery_init_url, init)
-    # if not r:
-    #     raise NonRecoverableError('failed to download celery init file')
 
 
 def create_celery_includes_file(ctx, runner, agent_config):
     # build initial includes
     includes_list = get_celery_includes_list()
-    # download_resource_on_host(
-    #     ctx.logger, runner, agent_config['includes_file'],
-    #     'INCLUDES={0}\n'.format(','.join(includes_list)))
     runner.put(agent_config['includes_file'], 'INCLUDES={0}\n'.format(
         ','.join(includes_list)))
-    # if not r:
-    #     raise NonRecoverableError('failed to download celery includes file')
 
     ctx.logger.debug('Created celery includes file [file=%s, content=%s]',
                      agent_config['includes_file'],
@@ -385,7 +358,7 @@ def _verify_no_celery_error(runner, agent_config):
 
 def _wait_for_started(runner, agent_config):
     _verify_no_celery_error(runner, agent_config)
-    worker_name = 'celery.{}'.format(agent_config['name'])
+    worker_name = 'celery.{0}'.format(agent_config['name'])
     inspect = celery_client.control.inspect(destination=[worker_name])
     wait_started_timeout = agent_config['wait_started_timeout']
     timeout = time.time() + wait_started_timeout
@@ -401,5 +374,5 @@ def _wait_for_started(runner, agent_config):
     if os.path.exists(celery_log_file):
         with open(celery_log_file, 'r') as f:
             ctx.logger.error(f.read())
-    raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
+    raise NonRecoverableError('Failed starting agent. waited for {0} seconds.'
                               .format(wait_started_timeout))
