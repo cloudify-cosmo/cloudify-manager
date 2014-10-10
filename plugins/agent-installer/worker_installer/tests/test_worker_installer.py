@@ -311,7 +311,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
             {'agent_package_path': '/Ubuntu-agent.tar.gz'})
         p = t.get_agent_resource_url(
             ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
-        self.assertEquals(p, '/packages/agents/Ubuntu-agent.tar.gz',)
+        self.assertEquals(p, AGENT_PACKAGE_URL)
 
 
 if __name__ == '__main__':

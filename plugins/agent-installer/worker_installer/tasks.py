@@ -182,7 +182,7 @@ def install(ctx, runner, agent_config, **kwargs):
     if agent_config['disable_requiretty']:
         try:
             disable_requiretty_script_url = get_agent_resource_url(
-                ctx, agent_config, 'disable_requiretty_script')
+                ctx, agent_config, 'disable_requiretty_script_path')
         except:
             raise NonRecoverableError(
                 'failed to retrieve disable-requiretty script url')
