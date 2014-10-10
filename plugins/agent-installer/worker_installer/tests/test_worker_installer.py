@@ -307,19 +307,17 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
     def test_get_agent_resource_url(self):
         ctx = get_local_context()
         ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
-        t.AGENT_RESOURCES.update(
-            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
         p = t.get_agent_resource_url(
-            ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
+            ctx, ctx.properties['cloudify_agent'], 'agent_package_path',
+            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
     def test_get_missing_agent_resource(self):
         ctx = get_local_context()
         ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
-        t.AGENT_RESOURCES.update(
-            {'agent_package_path': '/MISSING_RESOURCE.file'})
         p = t.get_agent_resource_url(
-            ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
+            ctx, ctx.properties['cloudify_agent'], 'agent_package_path',
+            {'agent_package_path': '/MISSING_RESOURCE.file'})
         self.assertEquals(p, None)
 
     def test_get_agent_missing_resource_origin(self):
@@ -328,6 +326,14 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
             ctx.properties['cloudify_agent'], 'nonexisting_resource_key')
+
+    def test_get_resource_url_not_dict(self):
+        ctx = get_local_context()
+        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        self.assertRaises(
+            NonRecoverableError, t.get_agent_resource_url, ctx,
+            ctx.properties['cloudify_agent'], 'some_resource',
+            'NOT_A_DICT')
 
 
 if __name__ == '__main__':
