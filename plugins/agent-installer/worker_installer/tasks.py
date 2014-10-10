@@ -76,14 +76,11 @@ def get_agent_resource_url(ctx, agent_config, resource):
         origin = utils.get_manager_file_server_url() + \
             resource_path.format(agent_config['distro'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
-    if resource == 'disable_requiretty_script_path':
-        raise NonRecoverableError(origin)
     try:
         urllib2.urlopen(origin)
     except Exception as ex:
         ctx.logger.warning('resource: {0} is not accessible ({1})'.format(
             origin, str(ex)))
-        raise NonRecoverableError(str(ex))
         return
     return origin
 
