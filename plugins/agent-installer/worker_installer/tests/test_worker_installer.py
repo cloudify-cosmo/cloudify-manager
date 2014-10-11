@@ -163,10 +163,10 @@ class WorkerInstallerTestCase(testtools.TestCase):
 
     def test_download_resource(self):
         ctx = get_local_context()
-        runner = FabricRunner(ctx.properties['agent_config'])
+        runner = FabricRunner(ctx.properties['cloudify_agent'])
         p = t.download_resource_on_host(
             ctx.logger, runner, AGENT_PACKAGE_URL,
-            ctx.properties['agent_config']['base_dir'])
+            ctx.properties['cloudify_agent']['base_dir'])
         self.assertEquals(p, 'x')
 
 
