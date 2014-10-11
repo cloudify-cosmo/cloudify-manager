@@ -164,10 +164,10 @@ class WorkerInstallerTestCase(testtools.TestCase):
     def test_download_resource(self):
         ctx = get_local_context()
         runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
-        p = t.download_resource_on_host(
-            ctx.logger, runner, AGENT_PACKAGE_URL,
-            ctx.properties['cloudify_agent']['base_dir'])
-        self.assertEquals(p, 'x')
+        t.download_resource_on_host(
+            ctx.logger, runner, AGENT_PACKAGE_URL, '.')
+        r = runner.run('ll . | grep Ubuntu-agent.tar.gz')
+        self.assertEquals(r, 'x')
 
 
 class TestRemoteInstallerCase(WorkerInstallerTestCase):
