@@ -118,6 +118,57 @@ class WorkerInstallerTestCase(testtools.TestCase):
         self.assertTrue(
             '{0}@worker_installer'.format(worker_name) in plugins)
 
+    def test_get_agent_resource_url(self):
+        ctx = get_local_context()
+        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        p = t.get_agent_resource_url(
+            ctx, ctx.properties['cloudify_agent'], 'agent_package_path',
+            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
+        self.assertEquals(p, AGENT_PACKAGE_URL)
+
+    # def test_get_agent_resource_url_from_agent_config(self):
+    #     ctx = get_local_context()
+    #     ctx.properties['cloudify_agent'].update(
+    #         {'distro': 'Ubuntu', 'agent_package_path': 'agent.file'})
+    #     ctx.blueprint.id = '/test_blueprint'
+    #     path = FILE_SERVER + '/test_blueprint/agent.file'
+    #     p = t.get_agent_resource_url(
+    #         ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
+    #     self.assertEquals(p, path)
+
+    def test_get_missing_agent_resource(self):
+        ctx = get_local_context()
+        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        p = t.get_agent_resource_url(
+            ctx, ctx.properties['cloudify_agent'], 'agent_package_path',
+            {'agent_package_path': '/MISSING_RESOURCE.file'})
+        self.assertEquals(p, None)
+
+    def test_get_agent_missing_resource_origin(self):
+        ctx = get_local_context()
+        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        ex = self.assertRaises(
+            NonRecoverableError, t.get_agent_resource_url, ctx,
+            ctx.properties['cloudify_agent'], 'nonexisting_resource_key')
+        self.assertIn('no such resource', str(ex))
+
+    def test_get_resource_url_not_dict(self):
+        ctx = get_local_context()
+        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        ex = self.assertRaises(
+            NonRecoverableError, t.get_agent_resource_url, ctx,
+            ctx.properties['cloudify_agent'], 'some_resource',
+            'NOT_A_DICT')
+        self.assertEquals(str(ex), 'resource paths must be of type dict')
+
+    def test_download_resource(self):
+        ctx = get_local_context()
+        runner = FabricRunner(ctx.properties['agent_config'])
+        p = t.download_resource_on_host(
+            ctx.logger, runner, AGENT_PACKAGE_URL,
+            ctx.properties['agent_config']['base_dir'])
+        self.assertEquals(p, 'x')
+
 
 class TestRemoteInstallerCase(WorkerInstallerTestCase):
 
@@ -305,49 +356,6 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
                              kwargs=kwargs,
                              queue=ctx.properties['cloudify_agent']['name'])
         result.get(timeout=10)
-
-    def test_get_agent_resource_url(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
-        p = t.get_agent_resource_url(
-            ctx, ctx.properties['cloudify_agent'], 'agent_package_path',
-            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
-        self.assertEquals(p, AGENT_PACKAGE_URL)
-
-    def test_get_agent_resource_url_from_agent_config(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update(
-            {'distro': 'Ubuntu', 'agent_package_path': 'agent.file'})
-        ctx.blueprint.id = '/test_blueprint'
-        path = FILE_SERVER + '/test_blueprint/agent.file'
-        p = t.get_agent_resource_url(
-            ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
-        self.assertEquals(p, path)
-
-    def test_get_missing_agent_resource(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
-        p = t.get_agent_resource_url(
-            ctx, ctx.properties['cloudify_agent'], 'agent_package_path',
-            {'agent_package_path': '/MISSING_RESOURCE.file'})
-        self.assertEquals(p, None)
-
-    def test_get_agent_missing_resource_origin(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
-        ex = self.assertRaises(
-            NonRecoverableError, t.get_agent_resource_url, ctx,
-            ctx.properties['cloudify_agent'], 'nonexisting_resource_key')
-        self.assertIn('no such resource', str(ex))
-
-    def test_get_resource_url_not_dict(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
-        ex = self.assertRaises(
-            NonRecoverableError, t.get_agent_resource_url, ctx,
-            ctx.properties['cloudify_agent'], 'some_resource',
-            'NOT_A_DICT')
-        self.assertEquals(str(ex), 'resource paths must be of type dict')
 
 
 if __name__ == '__main__':
