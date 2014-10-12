@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'idanmo'
-
 import unittest
 import os
 import getpass
@@ -30,7 +28,7 @@ from cloudify.exceptions import NonRecoverableError
 
 
 # for tests purposes. need a path to a file which always exists
-KEY_FILE_PATH = '/var/log/syslog'
+KEY_FILE_PATH = '/bin/sh'
 
 
 @init_worker_installer
@@ -119,18 +117,17 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                         expected=None,
                                         should_raise_exception=False):
         ctx = MockCloudifyContext(
-            deployment_id='test',
-            properties={
-                'cloudify_agent': {
-                    'disable_requiretty': value,
-                    'distro': 'Ubuntu',
-                }
-            }
+            deployment_id='test'
         )
+        config = {
+            'disable_requiretty': value,
+            'distro': 'Ubuntu',
+        }
         if should_raise_exception:
-            self.assertRaises(NonRecoverableError, m, ctx)
+            self.assertRaises(NonRecoverableError, m, ctx,
+                              cloudify_agent=config)
         else:
-            conf = m(ctx)
+            conf = m(ctx, cloudify_agent=config)
             self.assertEqual(expected, conf['disable_requiretty'])
 
     def test_autoscale_configuration(self):
@@ -380,17 +377,15 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
     def test_workflows_agent_config(self):
         ctx = MockCloudifyContext(
             deployment_id='test',
-            properties={
-                'cloudify_agent': {
-                    'workflows_worker': 'true',
-                    'distro': 'Ubuntu',
-                }
-            },
             runtime_properties={
                 'ip': '192.168.0.1'
             }
         )
-        conf = m(ctx)
+        config = {
+            'workflows_worker': 'true',
+            'distro': 'Ubuntu',
+        }
+        conf = m(ctx, cloudify_agent=config)
         self.assertEqual(conf['name'], 'test_workflows')
 
 

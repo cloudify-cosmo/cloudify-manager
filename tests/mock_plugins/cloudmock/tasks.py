@@ -28,12 +28,13 @@ NOT_RUNNING = 'not_running'
 def provision(**kwargs):
     with update_storage(ctx) as data:
         machines = data.get('machines', {})
-        if ctx.node_id in machines:
+        if ctx.instance.id in machines:
             raise NonRecoverableError('machine with id [{0}] already exists'
-                                      .format(ctx.node_id))
-        if ctx.properties.get('test_ip'):
-            ctx.runtime_properties['ip'] = ctx.properties['test_ip']
-        machines[ctx.node_id] = NOT_RUNNING
+                                      .format(ctx.instance.id))
+        if ctx.node.properties.get('test_ip'):
+            ctx.instance.runtime_properties['ip'] = \
+                ctx.node.properties['test_ip']
+        machines[ctx.instance.id] = NOT_RUNNING
         data['machines'] = machines
 
 
@@ -43,12 +44,12 @@ def start(**kwargs):
         machines = data.get('machines', {})
         ctx.send_event('starting machine event')
         ctx.logger.info('cloudmock start: [node_id={0}, machines={1}]'
-                        .format(ctx.node_id, machines))
-        if ctx.node_id not in machines:
+                        .format(ctx.instance.id, machines))
+        if ctx.instance.id not in machines:
             raise NonRecoverableError('machine with id [{0}] does not exist'
-                                      .format(ctx.node_id))
-        machines[ctx.node_id] = RUNNING
-        ctx.runtime_properties['id'] = ctx.node_id
+                                      .format(ctx.instance.id))
+        machines[ctx.instance.id] = RUNNING
+        ctx.instance.runtime_properties['id'] = ctx.instance.id
 
 
 @operation
@@ -64,24 +65,24 @@ def stop_error(**kwargs):
 @operation
 def get_state(**kwargs):
     with update_storage(ctx) as data:
-        return data['machines'][ctx.node_id] == RUNNING
+        return data['machines'][ctx.instance.id] == RUNNING
 
 
 @operation
 def stop(**kwargs):
     with update_storage(ctx) as data:
-        ctx.logger.info('stopping machine: {0}'.format(ctx.node_id))
-        if ctx.node_id not in data['machines']:
+        ctx.logger.info('stopping machine: {0}'.format(ctx.instance.id))
+        if ctx.instance.id not in data['machines']:
             raise RuntimeError('machine with id [{0}] does not exist'
-                               .format(ctx.node_id))
-        data['machines'][ctx.node_id] = NOT_RUNNING
+                               .format(ctx.instance.id))
+        data['machines'][ctx.instance.id] = NOT_RUNNING
 
 
 @operation
 def terminate(**kwargs):
     with update_storage(ctx) as data:
-        ctx.logger.info('terminating machine: {0}'.format(ctx.node_id))
-        if ctx.node_id not in data['machines']:
+        ctx.logger.info('terminating machine: {0}'.format(ctx.instance.id))
+        if ctx.instance.id not in data['machines']:
             raise RuntimeError('machine with id [{0}] does not exist'
-                               .format(ctx.node_id))
-        del data['machines'][ctx.node_id]
+                               .format(ctx.instance.id))
+        del data['machines'][ctx.instance.id]
