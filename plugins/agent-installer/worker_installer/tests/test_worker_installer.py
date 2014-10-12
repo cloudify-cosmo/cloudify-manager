@@ -161,22 +161,6 @@ class WorkerInstallerTestCase(testtools.TestCase):
             'NOT_A_DICT')
         self.assertEquals(str(ex), 'resource paths must be of type dict')
 
-    def test_download_resource_on_local_host(self):
-        ctx = get_local_context()
-        runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
-        t.download_resource_on_host(
-            ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
-        r = runner.exists('Ubuntu-agent.tar.gz')
-        self.assertTrue(r)
-
-    def test_download_resource_on_remote_host(self):
-        ctx = get_remote_context()
-        runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
-        t.download_resource_on_host(
-            ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
-        r = runner.exists('Ubuntu-agent.tar.gz')
-        self.assertTrue(r)
-
 
 class TestRemoteInstallerCase(WorkerInstallerTestCase):
 
@@ -272,6 +256,14 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         ctx = get_remote_context()
         t.stop(ctx)
 
+    def test_download_resource_on_host(self):
+        ctx = get_remote_context()
+        runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
+        t.download_resource_on_host(
+            ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
+        r = runner.exists('Ubuntu-agent.tar.gz')
+        self.assertTrue(r)
+
 
 class TestLocalInstallerCase(WorkerInstallerTestCase):
 
@@ -364,6 +356,14 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
                              kwargs=kwargs,
                              queue=ctx.properties['cloudify_agent']['name'])
         result.get(timeout=10)
+
+    def test_download_resource_on_host(self):
+        ctx = get_local_context()
+        runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
+        t.download_resource_on_host(
+            ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
+        r = runner.exists('Ubuntu-agent.tar.gz')
+        self.assertTrue(r)
 
 
 if __name__ == '__main__':
