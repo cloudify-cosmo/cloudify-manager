@@ -70,14 +70,9 @@ run_intergration_tests()
     dpkg -L python-dbus
     #sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
     #sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
-    echo "### checking for elastic - which elasticsearch = $(which elasticsearch)"
-    wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb    
+    wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb
     sudo dpkg -i elasticsearch-1.3.2.deb
     export PATH=/usr/share/elasticsearch/bin:$PATH
-    echo "### checking for elastic - which elasticsearch = $(which elasticsearch)"
-    # echo "### Exporting ES_INCLUDE (export ES_INCLUDE=/usr/share/elasticsearch/bin)..."
-    # export ES_INCLUDE=/usr/share/elasticsearch/bin
-    # echo "### ES_INCLUDE = $ES_INCLUDE"
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
     wget http://aphyr.com/riemann/riemann_0.2.6_all.deb
