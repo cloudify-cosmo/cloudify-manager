@@ -35,6 +35,31 @@ def is_on_management_worker(ctx):
     return ctx.node_id is None
 
 
+def download_resource_on_host(logger, runner, url, destination_path):
+    """downloads a resource from the fileserver on the agent's host
+
+    Will try to get the resource. If it fails, will try to curl.
+    If both fail, will return the state of the last fabric action.
+    """
+    logger.debug('attempting to download {0} to {1}'.format(
+        url, destination_path))
+    logger.debug('checking if wget exists on the host machine')
+    r = runner.run('which wget')
+    if type(r) is str or r.succeeded:
+        logger.debug('wget-ing {0} to {1}'.format(url, destination_path))
+        return runner.run('wget -T 30 {0} -O {1}'.format(
+            url, destination_path))
+    logger.debug('checking if curl exists on the host machine')
+    r = runner.run('which curl')
+    if type(r) is str or r.succeeded:
+        logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
+        return runner.run('curl {0} -O {1}'.format(
+            url, destination_path))
+    logger.warn('could not download resource ({0} (with code {1}) )'.format(
+        r.stderr, r.status_code))
+    return r.succeeded
+
+
 class FabricRunner(object):
 
     def __init__(self, ctx, agent_config=None):

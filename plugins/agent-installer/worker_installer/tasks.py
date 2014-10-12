@@ -29,6 +29,7 @@ from cloudify import utils
 
 from worker_installer import init_worker_installer
 from worker_installer.utils import is_on_management_worker
+from worker_installer.utils import download_resource_on_host
 
 
 PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
@@ -90,31 +91,6 @@ def get_agent_resource_url(ctx, agent_config, resource,
 
 def get_celery_includes_list():
     return CELERY_INCLUDES_LIST
-
-
-def download_resource_on_host(logger, runner, url, destination_path):
-    """downloads a resource from the fileserver on the agent's host
-
-    Will try to get the resource. If it fails, will try to curl.
-    If both fail, will return the state of the last fabric action.
-    """
-    logger.debug('attempting to download {0} to {1}'.format(
-        url, destination_path))
-    logger.debug('checking if wget exists on the host machine')
-    r = runner.run('which wget')
-    if type(r) is str or r.succeeded:
-        logger.debug('wget-ing {0} to {1}'.format(url, destination_path))
-        return runner.run('wget -T 30 {0} -O {1}'.format(
-            url, destination_path))
-    logger.debug('checking if curl exists on the host machine')
-    r = runner.run('which curl')
-    if type(r) is str or r.succeeded:
-        logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
-        return runner.run('curl {0} -O {1}'.format(
-            url, destination_path))
-    logger.warn('could not download resource ({0} (with code {1}) )'.format(
-        r.stderr, r.status_code))
-    return r.succeeded
 
 
 @operation

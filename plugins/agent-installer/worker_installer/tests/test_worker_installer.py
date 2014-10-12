@@ -161,8 +161,16 @@ class WorkerInstallerTestCase(testtools.TestCase):
             'NOT_A_DICT')
         self.assertEquals(str(ex), 'resource paths must be of type dict')
 
-    def test_download_resource(self):
+    def test_download_resource_on_local_host(self):
         ctx = get_local_context()
+        runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
+        t.download_resource_on_host(
+            ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
+        r = runner.exists('Ubuntu-agent.tar.gz')
+        self.assertTrue(r)
+
+    def test_download_resource_on_remote_host(self):
+        ctx = get_remote_context()
         runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
         t.download_resource_on_host(
             ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
