@@ -73,7 +73,7 @@ def delete(**_):
 
 def _deployment_config_dir():
     return os.path.join(os.environ[RIEMANN_CONFIGS_DIR],
-                        ctx.deployment_id)
+                        ctx.deployment.id)
 
 
 def _publish_configuration_event(state, deployment_config_dir_path):
@@ -102,7 +102,7 @@ def _publish_configuration_event(state, deployment_config_dir_path):
                 'service': 'cloudify.configuration',
                 'state': state,
                 'config_path': deployment_config_dir_path,
-                'deployment_id': ctx.deployment_id,
+                'deployment_id': ctx.deployment.id,
                 'time': int(time.time())
             }))
     finally:

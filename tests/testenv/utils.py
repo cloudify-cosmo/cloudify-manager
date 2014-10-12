@@ -314,7 +314,7 @@ def update_storage(ctx):
                            'called from within a plugin. '
                            'Are you using this correctly?'
                            .format(CELERY_WORK_DIR_PATH_KEY))
-    deployment_id = ctx.deployment_id
+    deployment_id = ctx.deployment.id
     plugin_name = ctx.task_name.split('.')[0]
     storage_file_path = os.path.join(
         os.environ[CELERY_WORK_DIR_PATH_KEY],

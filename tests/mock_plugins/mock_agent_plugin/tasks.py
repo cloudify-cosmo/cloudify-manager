@@ -21,26 +21,26 @@ from testenv.utils import update_storage
 @operation
 def create(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data[ctx.node_id] = data.get(ctx.node_id, [])
-        data[ctx.node_id].append('create')
+        data[ctx.instance.id] = data.get(ctx.instance.id, [])
+        data[ctx.instance.id].append('create')
 
 
 @operation
 def start(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data[ctx.node_id] = data.get(ctx.node_id, [])
-        data[ctx.node_id].append('start')
+        data[ctx.instance.id] = data.get(ctx.instance.id, [])
+        data[ctx.instance.id].append('start')
 
 
 @operation
 def stop(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data[ctx.node_id] = data.get(ctx.node_id, [])
-        data[ctx.node_id].append('stop')
+        data[ctx.instance.id] = data.get(ctx.instance.id, [])
+        data[ctx.instance.id].append('stop')
 
 
 @operation
 def delete(ctx, **kwargs):
     with update_storage(ctx) as data:
-        data[ctx.node_id] = data.get(ctx.node_id, [])
-        data[ctx.node_id].append('delete')
+        data[ctx.instance.id] = data.get(ctx.instance.id, [])
+        data[ctx.instance.id].append('delete')
