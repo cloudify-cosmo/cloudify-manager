@@ -280,7 +280,16 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         t.stop(ctx)
 
     def test_download_resource_on_host(self):
-        ctx = get_remote_context()
+        properties = {
+            'cloudify_agent': {
+                'user': 'vagrant',
+                'host': VAGRANT_MACHINE_IP,
+                'key': '~/.vagrant.d/insecure_private_key',
+                'port': 2222,
+                'distro': 'Ubuntu'
+            },
+        }
+        ctx = get_remote_context(properties)
         runner = FabricRunner(ctx, ctx.node.properties['cloudify_agent'])
         t.download_resource_on_host(
             ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
