@@ -14,9 +14,6 @@
 #  * limitations under the License.
 
 
-__author__ = 'idanmo'
-
-
 import os
 import tempfile
 from StringIO import StringIO
@@ -32,7 +29,7 @@ def is_on_management_worker(ctx):
     """
     Gets whether agent installation was invoked for a deployment.
     """
-    return ctx.node_id is None
+    return ctx.node is None
 
 
 def download_resource_on_host(logger, runner, url, destination_path):

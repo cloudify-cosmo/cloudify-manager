@@ -31,27 +31,27 @@ def get_state(**kwargs):
 def nop_and_assert_no_runtime_update(ctx, **kwargs):
     with mocked_update_node_instance(ctx):
         # nothing should happen here
-        ctx.update()
+        ctx.instance.update()
 
 
 @operation
 def read_runtime_properties_and_assert_no_runtime_update(ctx, **kwargs):
-    props = ctx.runtime_properties
+    props = ctx.instance.runtime_properties
     ctx.logger.info('got these props: {0}'.format(props))
     with mocked_update_node_instance(ctx):
         # nothing should happen here
-        ctx.update()
+        ctx.instance.update()
 
 
 @operation
 def change_runtime_properties_and_assert_runtime_update(ctx, **kwargs):
-    props = ctx.runtime_properties
+    props = ctx.instance.runtime_properties
     props['prop'] = 'value'
     ctx.logger.info('changed these props: {0}'.format(props))
     with mocked_update_node_instance(ctx):
         try:
             # should actually try and update
-            ctx.update()
+            ctx.instance.update()
         except UpdatedNodeInstance:
             return
     raise RuntimeError('update node instance should have been called')

@@ -14,8 +14,6 @@
 #  * limitations under the License.
 
 
-__author__ = 'elip'
-
 import getpass
 import testtools
 import time
@@ -104,8 +102,9 @@ def get_resource(resource_name):
 
 class WorkerInstallerTestCase(testtools.TestCase):
 
-    def assert_installed_plugins(self, ctx):
-        worker_name = ctx.properties['cloudify_agent']['name']
+    def assert_installed_plugins(self, ctx, name=None):
+        worker_name = name if name else ctx.node.properties[
+            'cloudify_agent']['name']
         ctx.logger.info("extracting plugins from newly installed worker")
         plugins = _extract_registered_plugins(worker_name)
         if not plugins:
@@ -119,10 +118,16 @@ class WorkerInstallerTestCase(testtools.TestCase):
             '{0}@worker_installer'.format(worker_name) in plugins)
 
     def test_get_agent_resource_url(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        },
+        ctx = get_local_context(properties)
+        ctx.node.properties['cloudify_agent']
         p = t.get_agent_resource_url(
-            ctx, ctx.properties['cloudify_agent'], 'agent_package_path',
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path',
             {'agent_package_path': '/Ubuntu-agent.tar.gz'})
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
@@ -137,24 +142,42 @@ class WorkerInstallerTestCase(testtools.TestCase):
     #     self.assertEquals(p, path)
 
     def test_get_missing_agent_resource(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        },
+        ctx = get_local_context(properties)
+        ctx.node.properties['cloudify_agent']
         p = t.get_agent_resource_url(
-            ctx, ctx.properties['cloudify_agent'], 'agent_package_path',
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path',
             {'agent_package_path': '/MISSING_RESOURCE.file'})
         self.assertEquals(p, None)
 
     def test_get_agent_missing_resource_origin(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        },
+        ctx = get_local_context(properties)
+        ctx.node.properties['cloudify_agent']
         ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
-            ctx.properties['cloudify_agent'], 'nonexisting_resource_key')
+            ctx.node.properties['cloudify_agent'], 'nonexisting_resource_key')
         self.assertIn('no such resource', str(ex))
 
     def test_get_resource_url_not_dict(self):
-        ctx = get_local_context()
-        ctx.properties['cloudify_agent'].update({'distro': 'Ubuntu'})
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        },
+        ctx = get_local_context(properties)
+        ctx.node.properties['cloudify_agent']
         ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
             ctx.properties['cloudify_agent'], 'some_resource',
@@ -229,7 +252,7 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         t.stop(ctx)
         t.uninstall(ctx)
 
-        agent_config = ctx.properties['cloudify_agent']
+        agent_config = ctx.node.properties['cloudify_agent']
 
         plugins = _extract_registered_plugins(agent_config['name'])
         # make sure the worker has stopped
@@ -258,7 +281,7 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
 
     def test_download_resource_on_host(self):
         ctx = get_remote_context()
-        runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
+        runner = FabricRunner(ctx, ctx.node.properties['cloudify_agent'])
         t.download_resource_on_host(
             ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
         r = runner.exists('Ubuntu-agent.tar.gz')
@@ -281,29 +304,30 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_install_worker(self):
         ctx = get_local_context()
-        t.install(ctx)
+        agent_config = {'disable_requiretty': False}
+        t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
-        self.assert_installed_plugins(ctx)
+        self.assert_installed_plugins(ctx, agent_config['name'])
 
     def test_install_same_worker_twice(self):
         ctx = get_local_context()
-        t.install(ctx)
+
+        agent_config = {'disable_requiretty': False}
+        t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
 
         t.install(ctx)
         t.start(ctx)
 
-        self.assert_installed_plugins(ctx)
+        self.assert_installed_plugins(ctx, agent_config['name'])
 
     def test_remove_worker(self):
         ctx = get_local_context()
-
-        t.install(ctx)
-        t.start(ctx)
-        t.stop(ctx)
-        t.uninstall(ctx)
-
-        agent_config = ctx.properties['cloudify_agent']
+        agent_config = {'disable_requiretty': False}
+        t.install(ctx, cloudify_agent=agent_config)
+        t.start(ctx, cloudify_agent=agent_config)
+        t.stop(ctx, cloudify_agent=agent_config)
+        t.uninstall(ctx, cloudify_agent=agent_config)
 
         plugins = _extract_registered_plugins(agent_config['name'])
         # make sure the worker has stopped
@@ -332,34 +356,37 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_install_worker_with_sudo_plugin(self):
         ctx = get_local_context()
-        t.install(ctx)
+        agent_config = {'disable_requiretty': False}
+        t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
-        self.assert_installed_plugins(ctx)
+        self.assert_installed_plugins(ctx, agent_config['name'])
 
         broker_url = 'amqp://guest:guest@localhost:5672//'
         c = Celery(broker=broker_url, backend=broker_url)
         kwargs = {'command': 'ls -l'}
-        result = c.send_task(name='sudo_plugin.sudo.run',
-                             kwargs=kwargs,
-                             queue=ctx.properties['cloudify_agent']['name'])
+        result = c.send_task(
+            name='sudo_plugin.sudo.run',
+            kwargs=kwargs,
+            queue=agent_config['name'])
         self.assertRaises(Exception, result.get, timeout=10)
         ctx = get_local_context()
-        ctx.properties['cloudify_agent']['disable_requiretty'] = True
-        t.install(ctx)
+        agent_config = {'disable_requiretty': True}
+        t.install(ctx, cloudify_agent=agent_config)
         t.start(ctx)
-        self.assert_installed_plugins(ctx)
+        self.assert_installed_plugins(ctx, agent_config['name'])
 
         broker_url = 'amqp://guest:guest@localhost:5672//'
         c = Celery(broker=broker_url, backend=broker_url)
         kwargs = {'command': 'ls -l'}
-        result = c.send_task(name='sudo_plugin.sudo.run',
-                             kwargs=kwargs,
-                             queue=ctx.properties['cloudify_agent']['name'])
+        result = c.send_task(
+            name='sudo_plugin.sudo.run',
+            kwargs=kwargs,
+            queue=agent_config['name'])
         result.get(timeout=10)
 
     def test_download_resource_on_host(self):
         ctx = get_local_context()
-        runner = FabricRunner(ctx, ctx.properties['cloudify_agent'])
+        runner = FabricRunner(ctx, ctx.node.properties['cloudify_agent'])
         t.download_resource_on_host(
             ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
         r = runner.exists('Ubuntu-agent.tar.gz')

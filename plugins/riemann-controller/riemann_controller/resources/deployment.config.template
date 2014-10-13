@@ -1,17 +1,17 @@
-(amqp-queue-consumer "{{ctx.deployment_id}}-riemann" "{{ctx.deployment_id}}")
+(amqp-queue-consumer "{{ctx.deployment.id}}-riemann" "{{ctx.deployment.id}}")
 
 (periodically-expire 5)
 
 {% for trigger_name, trigger in policy_triggers.iteritems()  %}
 
-(register-policy-trigger "{{ctx.deployment_id}}" "{{trigger_name}}"
+(register-policy-trigger "{{ctx.deployment.id}}" "{{trigger_name}}"
 {{trigger.source}})
 
 {% endfor %}
 
 (let [index (index)
       deployment-processing-queue
-        (processing-queue "{{ctx.deployment_id}}" {:queue-size     1000
+        (processing-queue "{{ctx.deployment.id}}" {:queue-size     1000
                                                    :core-pool-size 1
                                                    :max-pool-size  4})]
 (streams
@@ -24,24 +24,24 @@
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
 (let [process-policy-triggers
-        (process-policy-triggers-stream "{{ctx.blueprint_id}}"
-                                        "{{ctx.deployment_id}}"
+        (process-policy-triggers-stream "{{ctx.blueprint.id}}"
+                                        "{{ctx.deployment.id}}"
                                         "{{stream.metadata.group}}"
                                         "{{stream.metadata.policy}}"
                                         deployment-processing-queue)
       publish-policy-event
-        (publish-policy-event* "{{ctx.blueprint_id}}"
-                               "{{ctx.deployment_id}}"
+        (publish-policy-event* "{{ctx.blueprint.id}}"
+                               "{{ctx.deployment.id}}"
                                "{{stream.metadata.group}}"
                                "{{stream.metadata.policy}}")
       publish-policy-error
-        (publish-policy-error* "{{ctx.blueprint_id}}"
-                               "{{ctx.deployment_id}}"
+        (publish-policy-error* "{{ctx.blueprint.id}}"
+                               "{{ctx.deployment.id}}"
                                "{{stream.metadata.group}}"
                                "{{stream.metadata.policy}}")
       publish-log
-        (publish-log* "{{ctx.blueprint_id}}"
-                      "{{ctx.deployment_id}}"
+        (publish-log* "{{ctx.blueprint.id}}"
+                      "{{ctx.deployment.id}}"
                       "{{stream.metadata.group}}"
                       "{{stream.metadata.policy}}")]
 (where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})

@@ -75,7 +75,7 @@ run_intergration_tests()
     #sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
     wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb
     sudo dpkg -i elasticsearch-1.3.2.deb
-    export PATH=$PATH:/usr/share/elasticsearch/bin
+    export PATH=/usr/share/elasticsearch/bin:$PATH
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
     wget http://aphyr.com/riemann/riemann_0.2.6_all.deb

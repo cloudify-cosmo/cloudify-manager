@@ -13,7 +13,7 @@ node_templates:
                 - operation: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
 workflows:
-    execute_operation:
+    custom_execute_operation:
         mapping: mock_workflows.mock_workflows.workflows.execute_operation
         parameters:
             node_id:

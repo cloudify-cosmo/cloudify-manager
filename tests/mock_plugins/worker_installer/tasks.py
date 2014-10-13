@@ -94,11 +94,11 @@ def uninstall(ctx, **kwargs):
 def _fix_worker(ctx, **kwargs):
     agent_config = {}
     if _is_workflows_worker(kwargs):
-        agent_config['name'] = '{0}_workflows'.format(ctx.deployment_id)
-    elif ctx.node_id is None:
-        agent_config['name'] = ctx.deployment_id
+        agent_config['name'] = '{0}_workflows'.format(ctx.deployment.id)
+    elif ctx.instance is None:
+        agent_config['name'] = ctx.deployment.id
     else:
-        agent_config['name'] = ctx.node_id
+        agent_config['name'] = ctx.instance.id
     return agent_config
 
 

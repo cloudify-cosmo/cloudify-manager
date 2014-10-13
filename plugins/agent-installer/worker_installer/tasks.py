@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'elip'
 
 import time
 import os
@@ -107,8 +106,9 @@ def install(ctx, runner, agent_config, **kwargs):
     ctx.logger.info(
         "installing celery worker {0}".format(agent_config['name']))
     if worker_exists(runner, agent_config):
-        ctx.logger.info("Worker for deployment {0} is already installed. "
-                        "nothing to do.".format(ctx.deployment_id))
+        ctx.logger.info("Worker for deployment {0} "
+                        "is already installed. nothing to do."
+                        .format(ctx.deployment.id))
         return
 
     ctx.logger.info(

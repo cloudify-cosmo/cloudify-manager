@@ -53,7 +53,7 @@ def create(ctx, **kwargs):
         sequence.add(
             ctx.send_event('Installing deployment operations plugins'),
             ctx.execute_task(
-                task_queue=ctx.deployment_id,
+                task_queue=ctx.deployment.id,
                 task_name='plugin_installer.tasks.install',
                 kwargs={'plugins': deployment_plugins}),
             ctx.execute_task(
@@ -75,7 +75,7 @@ def create(ctx, **kwargs):
         sequence.add(
             ctx.send_event('Installing deployment workflows plugins'),
             ctx.execute_task(
-                task_queue='{0}_workflows'.format(ctx.deployment_id),
+                task_queue='{0}_workflows'.format(ctx.deployment.id),
                 task_name='plugin_installer.tasks.install',
                 kwargs={'plugins': workflow_plugins}),
             ctx.execute_task(

@@ -78,24 +78,24 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     def test_get_url_http(self):
         from plugin_installer.tasks import get_url
-        url = get_url(self.ctx.blueprint_id, {'source': 'http://google.com'})
+        url = get_url(self.ctx.blueprint.id, {'source': 'http://google.com'})
         self.assertEqual(url, 'http://google.com')
 
     def test_get_url_https(self):
         from plugin_installer.tasks import get_url
-        url = get_url(self.ctx.blueprint_id, {'source': 'https://google.com'})
+        url = get_url(self.ctx.blueprint.id, {'source': 'https://google.com'})
         self.assertEqual(url, 'https://google.com')
 
     def test_get_url_faulty_schema(self):
         from plugin_installer.tasks import get_url
         self.assertRaises(NonRecoverableError,
                           get_url,
-                          self.ctx.blueprint_id,
+                          self.ctx.blueprint.id,
                           {'source': 'bla://google.com'})
 
     def test_get_url_folder(self):
         from plugin_installer.tasks import get_url
-        url = get_url(self.ctx.blueprint_id, {'source': 'plugin'})
+        url = get_url(self.ctx.blueprint.id, {'source': 'plugin'})
         self.assertEqual(url,
                          '{0}/{1}/plugins/plugin.zip'
                          .format(

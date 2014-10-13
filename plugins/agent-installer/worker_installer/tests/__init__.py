@@ -56,13 +56,15 @@ def get_local_context(properties=None):
         },
         runtime_properties={
             'ip': 'localhost'
-        }
+        }.update(properties if properties else {})
     )
 
 
-def get_remote_context():
+def get_remote_context(properties=None):
+    blueprint_id = 'mock_blueprint_id'
     node_id = 'node-{0}'.format(str(uuid.uuid4())[:5])
     return MockCloudifyContext(
+        blueprint_id=blueprint_id,
         node_id=node_id,
         properties={
             'cloudify_agent': {
@@ -71,7 +73,7 @@ def get_remote_context():
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222
             },
-        },
+        }.update(properties if properties else {}),
         runtime_properties={
             'ip': '127.0.0.1'
         },
