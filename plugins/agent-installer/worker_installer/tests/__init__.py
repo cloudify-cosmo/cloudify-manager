@@ -43,13 +43,15 @@ def get_logger(name):
     return logger
 
 
-def get_local_context():
+def get_local_context(properties=None):
+    blueprint_id = 'mock_blueprint_id'
     deployment_id = 'deployment-{0}'.format(str(uuid.uuid4())[:5])
     return MockCloudifyContext(
+        blueprint_id=blueprint_id,
         deployment_id=deployment_id,
         properties={
             'cloudify_agent': {
-                'disable_requiretty': False
+                'disable_requiretty': False,
             }
         },
         runtime_properties={

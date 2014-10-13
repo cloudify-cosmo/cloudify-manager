@@ -44,7 +44,7 @@ CELERY_INCLUDES_LIST = [
     SCRIPT_PLUGIN_PATH, DEFAULT_WORKFLOWS_PLUGIN_PATH
 ]
 
-AGENT_RESOURCES = {
+DEFAULT_AGENT_RESOURCES = {
     'celery_config_path':
     '/packages/templates/{0}-celeryd-cloudify.conf.template',
     'celery_init_path':
@@ -57,7 +57,7 @@ AGENT_RESOURCES = {
 
 
 def get_agent_resource_url(ctx, agent_config, resource,
-                           resource_paths=AGENT_RESOURCES):
+                           resource_paths=DEFAULT_AGENT_RESOURCES):
     """returns an agent's resource url
 
     The resource will be looked for in the agent's properties.
@@ -262,7 +262,8 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     loader = jinja2.FunctionLoader(resource_loader)
     env = jinja2.Environment(loader=loader)
     config_template = env.get_template(
-        AGENT_RESOURCES['celery_config_path'].format(agent_config['distro']))
+        DEFAULT_AGENT_RESOURCES['celery_config_path'].format(
+            agent_config['distro']))
     config_template_values = {
         'includes_file_path': agent_config['includes_file'],
         'celery_base_dir': agent_config['celery_base_dir'],
@@ -283,7 +284,8 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
 
     config = config_template.render(config_template_values)
     init_template = env.get_template(
-        AGENT_RESOURCES['celery_init_path'].format(agent_config['distro']))
+        DEFAULT_AGENT_RESOURCES['celery_init_path'].format(
+            agent_config['distro']))
     init_template_values = {
         'celery_base_dir': agent_config['celery_base_dir'],
         'worker_modifier': agent_config['name']
