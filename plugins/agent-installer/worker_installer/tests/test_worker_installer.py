@@ -41,8 +41,8 @@ DISABLE_REQUIRETTY_SCRIPT_URL = '{0}/plugins/agent-installer/worker_installer/te
 MOCK_SUDO_PLUGIN_INCLUDE = 'sudo_plugin.sudo'
 os.environ[MANAGER_FILE_SERVER_URL_KEY] = FILE_SERVER
 os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = FILE_SERVER  # NOQA
-t.AGENT_RESOURCES.update({'agent_package_path': '/Ubuntu-agent.tar.gz'})
-t.AGENT_RESOURCES.update({'disable_requiretty_script_path': '/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'})  # NOQA
+t.DEFAULT_AGENT_RESOURCES.update({'agent_package_path': '/Ubuntu-agent.tar.gz'})  # NOQA
+t.DEFAULT_AGENT_RESOURCES.update({'disable_requiretty_script_path': '/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'})  # NOQA
 
 
 def _get_custom_agent_package_url(distro):
