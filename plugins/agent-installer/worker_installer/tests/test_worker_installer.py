@@ -386,7 +386,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_download_resource_on_host(self):
         ctx = get_local_context()
-        runner = FabricRunner(ctx, ctx.node.properties['cloudify_agent'])
+        runner = FabricRunner(ctx)
         t.download_resource_on_host(
             ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
         r = runner.exists('Ubuntu-agent.tar.gz')

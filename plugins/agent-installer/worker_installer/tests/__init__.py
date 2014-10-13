@@ -53,10 +53,10 @@ def get_local_context(properties=None):
             'cloudify_agent': {
                 'disable_requiretty': False,
             }
-        },
+        }.update(properties if properties else {}),
         runtime_properties={
             'ip': 'localhost'
-        }.update(properties if properties else {})
+        }
     )
 
 
