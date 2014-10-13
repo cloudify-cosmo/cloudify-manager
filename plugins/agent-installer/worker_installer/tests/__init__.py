@@ -50,7 +50,7 @@ def get_local_context(properties=None):
         'cloudify_agent': {
             'disable_requiretty': False,
         }
-    },
+    }
     properties = def_properties if not properties \
         else def_properties.update(properties)
     return MockCloudifyContext(
@@ -72,7 +72,7 @@ def get_remote_context(properties=None):
             'host': VAGRANT_MACHINE_IP,
             'key': '~/.vagrant.d/insecure_private_key',
             'port': 2222
-        },
+        }
     }
     properties = def_properties if not properties \
         else def_properties.update(properties)
