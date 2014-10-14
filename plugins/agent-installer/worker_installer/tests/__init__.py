@@ -44,7 +44,7 @@ def get_logger(name):
 
 
 def get_local_context(p=None):
-    blueprint_id = 'mock_blueprint_id'
+    blueprint_id = 'mock_blueprint'
     deployment_id = 'deployment-{0}'.format(str(uuid.uuid4())[:5])
     properties = {
         'cloudify_agent': {

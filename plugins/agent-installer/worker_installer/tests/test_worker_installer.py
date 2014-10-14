@@ -179,11 +179,13 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222,
                 'distro': 'Ubuntu',
-                'agent_package_path': 'agent.file'
+                'agent_package_path': '/plugins/agent-installer/worker_installer/tests/mock_agent_package.file'  # NOQA
             }
         }
         ctx = get_remote_context(properties)
-        path = FILE_SERVER + '/test_blueprint/agent.file'
+        path = FILE_SERVER + os.path.join(
+            '/mock_blueprint',
+            properties['cloudify_agent']['agent_package_path'])
         p = t.get_agent_resource_url(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, path)
