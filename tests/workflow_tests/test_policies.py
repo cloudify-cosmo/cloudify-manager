@@ -23,9 +23,6 @@ from testenv.utils import undeploy_application as undeploy
 class TestPolicies(TestCase):
 
     def test_policies_flow(self):
-        """
-        Tests policy/trigger/group creation and processing flow
-        """
         dsl_path = resource('dsl/with_policies1.yaml')
         deployment, _ = deploy(dsl_path)
         self.deployment_id = deployment.id
@@ -41,9 +38,6 @@ class TestPolicies(TestCase):
         self.assertEqual(123, invocations[1]['metric'])
 
     def test_policies_flow_with_diamond(self):
-        """
-        Tests policy/trigger/group creation and processing flow
-        """
         deployment = None
         try:
             dsl_path = resource("dsl/with_policies_and_diamond.yaml")
