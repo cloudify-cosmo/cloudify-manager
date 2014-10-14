@@ -131,16 +131,6 @@ class WorkerInstallerTestCase(testtools.TestCase):
             {'agent_package_path': '/Ubuntu-agent.tar.gz'})
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
-    # def test_get_agent_resource_url_from_agent_config(self):
-    #     ctx = get_remote_context()
-    #     ctx.properties['cloudify_agent'].update(
-    #         {'distro': 'Ubuntu', 'agent_package_path': 'agent.file'})
-    #     ctx.blueprint.id = '/test_blueprint'
-    #     path = FILE_SERVER + '/test_blueprint/agent.file'
-    #     p = t.get_agent_resource_url(
-    #         ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
-    #     self.assertEquals(p, path)
-
     def test_get_missing_agent_resource(self):
         properties = {
             'cloudify_agent': {
@@ -180,6 +170,16 @@ class WorkerInstallerTestCase(testtools.TestCase):
             ctx.node.properties['cloudify_agent'], 'some_resource',
             'NOT_A_DICT')
         self.assertEquals(str(ex), 'resource paths must be of type dict')
+
+    def test_get_agent_resource_url_from_agent_config(self):
+        ctx = get_remote_context()
+        ctx.node.properties['cloudify_agent'].update(
+            {'distro': 'Ubuntu', 'agent_package_path': 'agent.file'})
+        ctx.blueprint.id = '/test_blueprint'
+        path = FILE_SERVER + '/test_blueprint/agent.file'
+        p = t.get_agent_resource_url(
+            ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(p, path)
 
 
 class TestRemoteInstallerCase(WorkerInstallerTestCase):
