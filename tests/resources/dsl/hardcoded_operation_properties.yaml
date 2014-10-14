@@ -21,6 +21,6 @@ node_types:
                           mockprop: 'mockpropvalue'
                           mockprop2: 'mockpropvalue2'
                 - stop: testmockoperations.testmockoperations.tasks.make_unreachable
-            cloudify.interfaces.monitor_lifecycle:
+            cloudify.interfaces.monitoring:
                 - start: testmockoperations.testmockoperations.tasks.start_monitor
                 - stop: testmockoperations.testmockoperations.tasks.stop_monitor

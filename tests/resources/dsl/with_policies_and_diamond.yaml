@@ -26,7 +26,7 @@ node_templates:
                     mapping: diamond.diamond_agent.tasks.install
                     properties:
                         diamond_config:
-                            interval: 10
+                            interval: 1
                 - start: diamond.diamond_agent.tasks.start
                 - stop: diamond.diamond_agent.tasks.stop
                 - uninstall: diamond.diamond_agent.tasks.uninstall
