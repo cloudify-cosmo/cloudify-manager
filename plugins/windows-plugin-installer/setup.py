@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-windows-plugin-installer-plugin',
-    version='3.1a5',
+    version='1.1a5',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['windows_plugin_installer'],
