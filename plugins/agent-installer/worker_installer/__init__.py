@@ -149,10 +149,12 @@ def _set_wait_started_config(config):
     if 'wait_started_interval' not in config:
         config['wait_started_interval'] = DEFAULT_WAIT_STARTED_INTERVAL
 
+
 def _set_home_dir(ctx, config):
     if 'home_dir' not in config:
         home_dir = pwd.getpwnam(config['user']).pw_dir
         config['home_dir'] = home_dir
+
 
 def prepare_configuration(ctx, agent_config):
     if is_on_management_worker(ctx):
