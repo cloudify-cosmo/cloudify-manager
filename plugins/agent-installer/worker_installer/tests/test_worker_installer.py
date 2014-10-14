@@ -172,12 +172,20 @@ class WorkerInstallerTestCase(testtools.TestCase):
         self.assertEquals(str(ex), 'resource paths must be of type dict')
 
     def test_get_agent_resource_url_from_agent_config(self):
-        ctx = get_remote_context()
-        ctx.node.properties['cloudify_agent'].update(
-            {'distro': 'Ubuntu', 'agent_package_path': 'agent.file'})
+        properties = {
+            'cloudify_agent': {
+                'user': 'vagrant',
+                'host': VAGRANT_MACHINE_IP,
+                'key': '~/.vagrant.d/insecure_private_key',
+                'port': 2222,
+                'distro': 'Ubuntu',
+                'agent_package_path': 'agent.file'
+            }
+        }
+        ctx = get_remote_context(properties)
         path = FILE_SERVER + '/test_blueprint/agent.file'
         p = t.get_agent_resource_url(
-            ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, path)
 
 
