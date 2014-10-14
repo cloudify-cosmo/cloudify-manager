@@ -124,7 +124,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'distro': 'Ubuntu'
             }
         }
-        ctx = get_local_context(properties)
+        ctx = get_remote_context(properties)
         ctx.node.properties['cloudify_agent']
         p = t.get_agent_resource_url(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path',
@@ -132,7 +132,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
     # def test_get_agent_resource_url_from_agent_config(self):
-    #     ctx = get_local_context()
+    #     ctx = get_remote_context()
     #     ctx.properties['cloudify_agent'].update(
     #         {'distro': 'Ubuntu', 'agent_package_path': 'agent.file'})
     #     ctx.blueprint.id = '/test_blueprint'
@@ -148,8 +148,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'distro': 'Ubuntu'
             }
         }
-        ctx = get_local_context(properties)
-        ctx.node.properties['cloudify_agent']
+        ctx = get_remote_context(properties)
         p = t.get_agent_resource_url(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path',
             {'agent_package_path': '/MISSING_RESOURCE.file'})
@@ -162,8 +161,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'distro': 'Ubuntu'
             }
         }
-        ctx = get_local_context(properties)
-        ctx.node.properties['cloudify_agent']
+        ctx = get_remote_context(properties)
         ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
             ctx.node.properties['cloudify_agent'], 'nonexisting_resource_key')
@@ -176,11 +174,10 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'distro': 'Ubuntu'
             }
         }
-        ctx = get_local_context(properties)
-        ctx.node.properties['cloudify_agent']
+        ctx = get_remote_context(properties)
         ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
-            ctx.properties['cloudify_agent'], 'some_resource',
+            ctx.node.properties['cloudify_agent'], 'some_resource',
             'NOT_A_DICT')
         self.assertEquals(str(ex), 'resource paths must be of type dict')
 
