@@ -149,6 +149,10 @@ def _set_wait_started_config(config):
     if 'wait_started_interval' not in config:
         config['wait_started_interval'] = DEFAULT_WAIT_STARTED_INTERVAL
 
+def _set_home_dir(ctx, config):
+    if 'home_dir' not in config:
+        home_dir = pwd.getpwnam(config['user']).pw_dir
+        config['home_dir'] = home_dir
 
 def prepare_configuration(ctx, agent_config):
     if is_on_management_worker(ctx):
@@ -175,8 +179,9 @@ def prepare_configuration(ctx, agent_config):
 
     _set_wait_started_config(agent_config)
 
-    home_dir = pwd.getpwnam(agent_config['user']).pw_dir
+    _set_home_dir(ctx, agent_config)
 
+    home_dir = agent_config['home_dir']
     agent_config['celery_base_dir'] = home_dir
 
     agent_config['base_dir'] = '{0}/cloudify.{1}'.format(
