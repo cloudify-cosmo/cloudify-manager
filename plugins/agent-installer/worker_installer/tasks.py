@@ -63,9 +63,8 @@ def get_agent_resource_url(ctx, agent_config, resource,
     If it isn't found, it will look for it in the default location.
     """
     if agent_config.get(resource):
-        origin = os.path.join(
-            utils.get_manager_file_server_blueprints_root_url(),
-            os.path.join(ctx.blueprint.id, agent_config[resource]))
+        origin = utils.get_manager_file_server_blueprints_root_url() + \
+            os.path.join(ctx.blueprint.id, agent_config[resource])
     else:
         if not type(resource_paths) is dict:
             raise NonRecoverableError('resource paths must be of type dict')
@@ -85,6 +84,7 @@ def get_agent_resource_url(ctx, agent_config, resource,
     #     ctx.logger.warning('resource: {0} is not accessible ({1})'.format(
     #         origin, str(ex)))
     #     return
+    raise Exception('origin: {0}'.format(origin))
     return origin
 
 

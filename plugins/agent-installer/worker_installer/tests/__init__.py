@@ -64,7 +64,7 @@ def get_local_context(p=None):
 
 
 def get_remote_context(p=None):
-    blueprint_id = 'mock_blueprint_id'
+    blueprint_id = 'mock_blueprint'
     node_id = 'node-{0}'.format(str(uuid.uuid4())[:5])
     properties = {
         'cloudify_agent': {
