@@ -13,24 +13,31 @@ plugins:
 
 node_types:
     monitor_type:
-        derived_from: cloudify.types.base
+        derived_from: cloudify.types.host
 
 node_templates:
     node:
         type: monitor_type
+        properties:
+            install_agent: false
         interfaces:
-            cloudify.interfaces.monitor_lifecycle:
-                - start:
+            cloudify.interfaces.monitoring_agent:
+                - install:
                     mapping: diamond.diamond_agent.tasks.install
                     properties:
                         diamond_config:
                             interval: 10
-                            autostart: true
-                            collectors:
-                                ExampleCollector:
-                                    config:
-                                        stub: prop
-                - stop: diamond.diamond_agent.tasks.uninstall
+                - start: diamond.diamond_agent.tasks.start
+                - stop: diamond.diamond_agent.tasks.stop
+                - uninstall: diamond.diamond_agent.tasks.uninstall
+            cloudify.interfaces.monitoring:
+                - start:
+                    mapping: diamond.diamond_agent.tasks.add_collectors
+                    properties:
+                        collectors_config:
+                            ExampleCollector:
+                                config:
+                                    stub: prop
             test:
                 - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
