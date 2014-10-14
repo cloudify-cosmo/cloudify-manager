@@ -123,7 +123,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'disable_requiretty': False,
                 'distro': 'Ubuntu'
             }
-        },
+        }
         ctx = get_local_context(properties)
         ctx.node.properties['cloudify_agent']
         p = t.get_agent_resource_url(
@@ -147,7 +147,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'disable_requiretty': False,
                 'distro': 'Ubuntu'
             }
-        },
+        }
         ctx = get_local_context(properties)
         ctx.node.properties['cloudify_agent']
         p = t.get_agent_resource_url(
@@ -161,7 +161,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'disable_requiretty': False,
                 'distro': 'Ubuntu'
             }
-        },
+        }
         ctx = get_local_context(properties)
         ctx.node.properties['cloudify_agent']
         ex = self.assertRaises(
@@ -175,7 +175,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'disable_requiretty': False,
                 'distro': 'Ubuntu'
             }
-        },
+        }
         ctx = get_local_context(properties)
         ctx.node.properties['cloudify_agent']
         ex = self.assertRaises(
@@ -287,7 +287,7 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222,
                 'distro': 'Ubuntu'
-            },
+            }
         }
         ctx = get_remote_context(properties)
         runner = FabricRunner(ctx, ctx.node.properties['cloudify_agent'])
