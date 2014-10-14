@@ -175,7 +175,6 @@ class WorkerInstallerTestCase(testtools.TestCase):
         ctx = get_remote_context()
         ctx.node.properties['cloudify_agent'].update(
             {'distro': 'Ubuntu', 'agent_package_path': 'agent.file'})
-        ctx.blueprint.id = '/test_blueprint'
         path = FILE_SERVER + '/test_blueprint/agent.file'
         p = t.get_agent_resource_url(
             ctx, ctx.properties['cloudify_agent'], 'agent_package_path')
