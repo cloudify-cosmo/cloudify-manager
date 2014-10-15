@@ -173,7 +173,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
 
     def test_get_agent_resource_url_from_agent_config(self):
         blueprint_id = 'mock_blueprint'
-        os.makedir(blueprint_id)
+        os.makedirs(blueprint_id)
         with open('{0}/some-agent.tar.gz'.format(blueprint_id), 'w') as f:
             f.write('t')
         properties = {
