@@ -188,9 +188,8 @@ class WorkerInstallerTestCase(testtools.TestCase):
             }
         }
         ctx = get_remote_context(properties)
-        path = FILE_SERVER + os.path.join(
-            '/{0}'.format(blueprint_id),
-            properties['cloudify_agent']['agent_package_path'])
+        path = FILE_SERVER + '/{0}'.format(blueprint_id) + \
+            '/' + properties['cloudify_agent']['agent_package_path']
         p = t.get_agent_resource_url(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, path)
