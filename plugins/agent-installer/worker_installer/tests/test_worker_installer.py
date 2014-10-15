@@ -184,7 +184,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'port': 2222,
                 'distro': 'Ubuntu',
                 # 'agent_package_path': '/plugins/agent-installer/worker_installer/tests/some-agent.tar.gz'  # NOQA
-                'agent_package_path': '/{0}/some-agent.tar.gz'.format(blueprint_id)  # NOQA
+                'agent_package_path': '/some-agent.tar.gz'  # NOQA
             }
         }
         ctx = get_remote_context(properties)
