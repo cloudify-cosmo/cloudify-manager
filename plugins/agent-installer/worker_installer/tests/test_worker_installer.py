@@ -178,6 +178,8 @@ class WorkerInstallerTestCase(testtools.TestCase):
             f.write('t')
         if not os.path.exists('mock_blueprint/some-agent.tar.gz'):
             raise Exception('mock agent not created')
+        pth = os.path.abspath('mock_blueprint/some-agent.tar.gz')
+        raise Exception('PATH: {0}'.format(pth))
         properties = {
             'cloudify_agent': {
                 'user': 'vagrant',
