@@ -172,6 +172,10 @@ class WorkerInstallerTestCase(testtools.TestCase):
         self.assertEquals(str(ex), 'resource paths must be of type dict')
 
     def test_get_agent_resource_url_from_agent_config(self):
+        blueprint_id = 'mock_blueprint'
+        os.makedir(blueprint_id)
+        with open('{0}/some-agent.tar.gz'.format(blueprint_id), 'w') as f:
+            f.write('t')
         properties = {
             'cloudify_agent': {
                 'user': 'vagrant',
@@ -179,12 +183,13 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222,
                 'distro': 'Ubuntu',
-                'agent_package_path': '/plugins/agent-installer/worker_installer/tests/some-agent.tar.gz'  # NOQA
+                # 'agent_package_path': '/plugins/agent-installer/worker_installer/tests/some-agent.tar.gz'  # NOQA
+                'agent_package_path': '/{0}/some-agent.tar.gz'.format(blueprint_id)  # NOQA
             }
         }
         ctx = get_remote_context(properties)
         path = FILE_SERVER + os.path.join(
-            '/mock_blueprint',
+            '/{0}'.format(blueprint_id),
             properties['cloudify_agent']['agent_package_path'])
         p = t.get_agent_resource_url(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
