@@ -64,7 +64,7 @@ def get_agent_resource_url(ctx, agent_config, resource,
     """
     if agent_config.get(resource):
         origin = utils.get_manager_file_server_blueprints_root_url() + \
-            os.path.join(ctx.blueprint.id, agent_config[resource])
+            '/' + ctx.blueprint.id + '/' + agent_config[resource]
     else:
         if not type(resource_paths) is dict:
             raise NonRecoverableError('resource paths must be of type dict')
