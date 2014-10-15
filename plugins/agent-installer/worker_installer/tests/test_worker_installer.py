@@ -173,12 +173,13 @@ class WorkerInstallerTestCase(testtools.TestCase):
 
     def test_get_agent_resource_url_from_agent_config(self):
         blueprint_id = 'mock_blueprint'
-        os.makedirs(blueprint_id)
-        with open('{0}/some-agent.tar.gz'.format(blueprint_id), 'w') as f:
+        os.makedirs('../../' + blueprint_id)
+        with open('../../{0}/some-agent.tar.gz'.format(
+                blueprint_id), 'w') as f:
             f.write('t')
-        if not os.path.exists('mock_blueprint/some-agent.tar.gz'):
-            raise Exception('mock agent not created')
-        pth = os.path.abspath('mock_blueprint/some-agent.tar.gz')
+        # if not os.path.exists('mock_blueprint/some-agent.tar.gz'):
+        #     raise Exception('mock agent not created')
+        pth = os.path.abspath('../../mock_blueprint/some-agent.tar.gz')
         raise Exception('PATH: {0}'.format(pth))
         properties = {
             'cloudify_agent': {
