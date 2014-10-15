@@ -176,6 +176,8 @@ class WorkerInstallerTestCase(testtools.TestCase):
         os.makedirs(blueprint_id)
         with open('{0}/some-agent.tar.gz'.format(blueprint_id), 'w') as f:
             f.write('t')
+        if not os.path.exists('mock_blueprint/some-agent.tar.gz'):
+            raise Exception('mock agent not created')
         properties = {
             'cloudify_agent': {
                 'user': 'vagrant',
@@ -184,7 +186,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'port': 2222,
                 'distro': 'Ubuntu',
                 # 'agent_package_path': '/plugins/agent-installer/worker_installer/tests/some-agent.tar.gz'  # NOQA
-                'agent_package_path': '/some-agent.tar.gz'  # NOQA
+                'agent_package_path': 'some-agent.tar.gz'  # NOQA
             }
         }
         ctx = get_remote_context(properties)
