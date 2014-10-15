@@ -179,7 +179,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222,
                 'distro': 'Ubuntu',
-                'agent_package_path': '/plugins/agent-installer/worker_installer/tests/mock_agent_package.file'  # NOQA
+                'agent_package_path': '/plugins/agent-installer/worker_installer/tests/some-agent.tar.gz'  # NOQA
             }
         }
         ctx = get_remote_context(properties)

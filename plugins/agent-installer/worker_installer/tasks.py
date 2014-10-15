@@ -84,7 +84,7 @@ def get_agent_resource_url(ctx, agent_config, resource,
     #     ctx.logger.warning('resource: {0} is not accessible ({1})'.format(
     #         origin, str(ex)))
     #     return
-    raise Exception('origin: {0}'.format(origin))
+    raise Exception('origin: {0}, ({1})'.format(origin, ctx.blueprint.id))
     return origin
 
 
