@@ -215,6 +215,9 @@ policy_types:
                 default: true
         source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
 
+    cloudify.policies.types.host_failure:
+        source: ../policies/host_failure.clj
+
 ##################################################################################
 # Policy triggers definitions
 ##################################################################################
