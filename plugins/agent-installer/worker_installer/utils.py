@@ -22,6 +22,7 @@ from fabric.api import run, put, get, local, sudo
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
 
+from cloudify import context
 from cloudify.exceptions import NonRecoverableError
 
 
@@ -29,7 +30,7 @@ def is_on_management_worker(ctx):
     """
     Gets whether agent installation was invoked for a deployment.
     """
-    return ctx.node is None
+    return ctx.type == context.DEPLOYMENT
 
 
 class FabricRunner(object):
