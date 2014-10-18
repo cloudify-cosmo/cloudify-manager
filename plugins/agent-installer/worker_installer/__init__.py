@@ -18,7 +18,7 @@ import os
 import pwd
 from functools import wraps
 
-import cloudify
+from cloudify import context
 from cloudify.exceptions import NonRecoverableError
 
 from worker_installer.utils import (FabricRunner,
@@ -45,12 +45,13 @@ def _find_type_in_kwargs(cls, all_args):
 def init_worker_installer(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
+        ctx = _find_type_in_kwargs(context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
             raise NonRecoverableError(
                 'CloudifyContext not found in invocation args')
-        if ctx.node and 'cloudify_agent' in ctx.node.properties:
+        if ctx.type == context.NODE_INSTANCE and \
+                'cloudify_agent' in ctx.node.properties:
             agent_config = ctx.node.properties['cloudify_agent']
         else:
             agent_config = kwargs.get('cloudify_agent', {})

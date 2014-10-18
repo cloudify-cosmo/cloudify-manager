@@ -91,13 +91,13 @@ class TestUninstallDeployment(TestCase):
         )['state']
         self.assertEquals(2, len(configurer_state))
         self.assertTrue(
-            configurer_state[0]['id'].startswith('contained_in_node2'))
+            configurer_state[0]['source_id'].startswith('contained_in_node2'))
         self.assertTrue(
-            configurer_state[0]['related_id'].startswith('contained_in_node1'))
+            configurer_state[0]['target_id'].startswith('contained_in_node1'))
         self.assertTrue(
-            configurer_state[1]['id'].startswith('containing_node'))
+            configurer_state[1]['target_id'].startswith('containing_node'))
         self.assertTrue(
-            configurer_state[1]['related_id'].startswith('contained_in_node1'))
+            configurer_state[1]['source_id'].startswith('contained_in_node1'))
 
     def test_stop_monitor_node_operation(self):
         dsl_path = resource(

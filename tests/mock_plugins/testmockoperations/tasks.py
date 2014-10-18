@@ -152,15 +152,19 @@ def mock_operation_get_instance_ip_from_context(ctx, **_):
 
 
 @operation
-def mock_operation_get_instance_ip_of_related_from_context(ctx, **_):
+def get_instance_ip_of_source_and_target(ctx, **_):
     with update_storage(ctx) as data:
         data['mock_operation_invocation'] = data.get(
             'mock_operation_invocation', []
         )
         data['mock_operation_invocation'].append((
-            '{}_rel'.format(ctx.node.name), ctx.related.host_ip
+            '{}_source'.format(ctx.source.node.name),
+            ctx.source.instance.host_ip
         ))
-
+        data['mock_operation_invocation'].append((
+            '{}_target'.format(ctx.target.node.name),
+            ctx.target.instance.host_ip
+        ))
     return True
 
 

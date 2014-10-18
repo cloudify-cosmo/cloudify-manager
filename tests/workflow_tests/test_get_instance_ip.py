@@ -30,7 +30,6 @@ class GetInstanceIPTest(TestCase):
             deployment_id=deployment.id
         )['mock_operation_invocation']
         mapping = {name: ip for name, ip in invocations}
-
         self.assertDictEqual({
             'host1_1': '1.1.1.1',
             'host1_2': '2.2.2.2',
@@ -40,8 +39,8 @@ class GetInstanceIPTest(TestCase):
             'host2_2': '4.4.4.4',
             'contained2_in_host2_1': '3.3.3.3',
             'contained2_in_host2_2': '4.4.4.4',
-            'host2_1_rel': '3.3.3.3',
-            'host2_2_rel': '4.4.4.4',
-            'contained2_in_host2_1_rel': '3.3.3.3',
-            'contained2_in_host2_2_rel': '4.4.4.4'
+            'host2_1_target': '3.3.3.3',
+            'host2_2_target': '4.4.4.4',
+            'contained2_in_host2_1_source': '3.3.3.3',
+            'contained2_in_host2_2_source': '4.4.4.4'
         }, mapping)

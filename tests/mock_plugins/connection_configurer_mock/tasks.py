@@ -33,12 +33,13 @@ def append_to_state(ctx):
     with update_storage(ctx) as data:
         data['state'] = data.get('state', [])
         data['state'].append({
-            'id': ctx.instance.id,
-            'related_id': ctx.related.node_id,
+            'source_id': ctx.source.instance.id,
+            'target_id': ctx.target.instance.id,
             'time': time(),
-            'properties': dict(ctx.node.properties),
-            'runtime_properties': dict(ctx.instance.runtime_properties),
-            'related_properties': ctx.related.properties,
-            'related_runtime_properties': ctx.related.runtime_properties,
-            'capabilities': ctx.capabilities.get_all()
+            'source_properties': dict(ctx.source.node.properties),
+            'source_runtime_properties': dict(
+                ctx.source.instance.runtime_properties),
+            'target_properties': ctx.target.node.properties,
+            'target_runtime_properties':
+            ctx.target.instance.runtime_properties,
         })
