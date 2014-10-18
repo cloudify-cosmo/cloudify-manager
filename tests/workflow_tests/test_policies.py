@@ -15,6 +15,7 @@
 
 
 from testenv import TestCase
+from testenv import utils
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
@@ -23,9 +24,6 @@ from testenv.utils import undeploy_application as undeploy
 class TestPolicies(TestCase):
 
     def test_policies_flow(self):
-        """
-        Tests policy/trigger/group creation and processing flow
-        """
         dsl_path = resource('dsl/with_policies1.yaml')
         deployment, _ = deploy(dsl_path)
         self.deployment_id = deployment.id
@@ -41,9 +39,6 @@ class TestPolicies(TestCase):
         self.assertEqual(123, invocations[1]['metric'])
 
     def test_policies_flow_with_diamond(self):
-        """
-        Tests policy/trigger/group creation and processing flow
-        """
         deployment = None
         try:
             dsl_path = resource("dsl/with_policies_and_diamond.yaml")
@@ -139,7 +134,7 @@ class TestPolicies(TestCase):
                 deployment_id=deployment_id
             )['mock_operation_invocation']
             self.assertEqual(expected_count, len(_invocations))
-        self.do_assertions(assertion)
+        utils.do_retries(assertion)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id
