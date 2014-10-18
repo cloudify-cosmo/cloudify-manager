@@ -15,6 +15,7 @@
 
 
 from testenv import TestCase
+from testenv import utils
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
@@ -133,7 +134,7 @@ class TestPolicies(TestCase):
                 deployment_id=deployment_id
             )['mock_operation_invocation']
             self.assertEqual(expected_count, len(_invocations))
-        self.do_assertions(assertion)
+        utils.do_retries(assertion)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id
