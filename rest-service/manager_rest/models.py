@@ -93,7 +93,8 @@ class DeploymentNode(SerializableObject):
 
     fields = {
         'id', 'deployment_id', 'blueprint_id', 'type', 'type_hierarchy',
-        'number_of_instances', 'host_id', 'properties',
+        'number_of_instances', 'deploy_number_of_instances',
+        'host_id', 'properties',
         'operations', 'plugins', 'relationships', 'plugins_to_install'
     }
 
@@ -103,6 +104,7 @@ class DeploymentNode(SerializableObject):
         self.blueprint_id = kwargs['blueprint_id']
         self.type = kwargs['type']
         self.type_hierarchy = kwargs['type_hierarchy']
+        self.deploy_number_of_instances = kwargs['deploy_number_of_instances']
         self.number_of_instances = kwargs['number_of_instances']
         self.host_id = kwargs['host_id']
         self.properties = kwargs['properties']

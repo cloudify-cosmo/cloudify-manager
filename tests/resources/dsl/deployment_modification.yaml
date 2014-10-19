@@ -1,0 +1,23 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify.types
+    - testmockoperations.yaml
+    - mock_workflows.yaml
+
+node_templates:
+    host:
+        type: cloudify.types.host
+        properties:
+            install_agent: false
+    db:
+        type: cloudify.types.base
+        relationships:
+            - target: host
+              type: cloudify.relationships.contained_in
+
+workflows:
+    deployment_modification:
+        mapping: mock_workflows.mock_workflows.workflows.deployment_modification
+        parameters:
+            nodes: {}

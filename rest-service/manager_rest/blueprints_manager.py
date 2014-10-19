@@ -273,12 +273,90 @@ class BlueprintsManager(object):
                                             now)
 
         node_instances = deployment_plan['node_instances']
-        for node_instance in node_instances:
+        self._create_deployment_node_instances(deployment_id,
+                                               node_instances)
+        self._wait_for_count(expected_count=len(node_instances),
+                             query_method=self._get_node_instance_ids,
+                             deployment_id=deployment_id)
+
+        return new_deployment
+
+    def start_deployment_modification(self, deployment_id, modified_nodes):
+        self.sm.get_deployment(deployment_id)
+        nodes = [node.to_dict() for node in self.sm.get_nodes(deployment_id)]
+        node_instances = [instance.to_dict() for instance
+                          in self.sm.get_node_instances(deployment_id)]
+        node_instances_modification = tasks.modify_deployment(
+            nodes=nodes,
+            previous_node_instances=node_instances,
+            modified_nodes=modified_nodes)
+        added_and_related = node_instances_modification['added_and_related']
+        added_node_instances = [instance for instance in added_and_related
+                                if instance.get('modification') == 'added']
+        self._create_deployment_node_instances(deployment_id,
+                                               added_node_instances)
+        self._wait_for_count(expected_count=(len(node_instances) +
+                                             len(added_node_instances)),
+                             query_method=self._get_node_instance_ids,
+                             deployment_id=deployment_id)
+        return {
+            'node_instances': node_instances_modification,
+            'modified_nodes': modified_nodes
+        }
+
+    def finish_deployment_modification(self, deployment_id, modification):
+        self.sm.get_deployment(deployment_id)
+        modified_nodes = modification['modified_nodes']
+        for node_id, modified_node in modified_nodes.items():
+            self.sm.update_node(deployment_id, node_id,
+                                modified_node['instances'])
+        node_instances = modification['node_instances']
+        for node_instance in node_instances['added_and_related']:
+            if node_instance.get('modification') == 'added':
+                continue
+            current = self.sm.get_node_instance(node_instance['id'])
+            new_relationships = current.relationships
+            new_relationships += node_instance['relationship']
+            self.sm.update_node_instance(models.DeploymentNodeInstance(
+                id=node_instance['id'],
+                relationships=new_relationships,
+                version=0,
+                node_id=None,
+                host_id=None,
+                deployment_id=None,
+                state=None,
+                runtime_properties=None))
+        for node_instance in node_instances['removed_and_related']:
+            if node_instance.get('modification') == 'removed':
+                self.sm.delete_node_instance(node_instance['id'])
+            else:
+                removed_relationship_target_ids = set([
+                    rel['target_id'] for rel in node_instance['relationship']])
+                current = self.sm.get_node_instance(node_instance['id'])
+                new_relationships = [rel for rel in current.relationships
+                                     if rel['target_id']
+                                     not in removed_relationship_target_ids]
+                self.sm.update_node_instance(models.DeploymentNodeInstance(
+                    id=node_instance['id'],
+                    relationships=new_relationships,
+                    version=0,
+                    node_id=None,
+                    host_id=None,
+                    deployment_id=None,
+                    state=None,
+                    runtime_properties=None))
+
+    def _get_node_instance_ids(self, deployment_id):
+        return self.sm.get_node_instances(deployment_id, include=['id'])
+
+    def _create_deployment_node_instances(self,
+                                          deployment_id,
+                                          dsl_node_instances):
+        for node_instance in dsl_node_instances:
             instance_id = node_instance['id']
             node_id = node_instance['name']
             relationships = node_instance.get('relationships', [])
             host_id = node_instance.get('host_id')
-
             instance = models.DeploymentNodeInstance(
                 id=instance_id,
                 node_id=node_id,
@@ -286,15 +364,9 @@ class BlueprintsManager(object):
                 relationships=relationships,
                 deployment_id=deployment_id,
                 state='uninitialized',
-                runtime_properties=None,
+                runtime_properties={},
                 version=None)
             self.sm.put_node_instance(instance)
-
-        self._wait_for_count(expected_count=len(node_instances),
-                             query_method=self.sm.get_node_instances,
-                             deployment_id=deployment_id)
-
-        return new_deployment
 
     @staticmethod
     def evaluate_deployment_outputs(deployment_id):
@@ -319,6 +391,7 @@ class BlueprintsManager(object):
                 type=raw_node['type'],
                 type_hierarchy=raw_node['type_hierarchy'],
                 number_of_instances=raw_node['instances']['deploy'],
+                deploy_number_of_instances=raw_node['instances']['deploy'],
                 host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],

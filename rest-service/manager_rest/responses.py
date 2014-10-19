@@ -107,6 +107,21 @@ class DeploymentOutputs(object):
 
 
 @swagger.model
+class DeploymentModification(object):
+
+    resource_fields = {
+        'deployment_id': fields.String,
+        'node_instances': fields.Raw,
+        'modified_nodes': fields.Raw
+    }
+
+    def __init__(self, **kwargs):
+        self.deployment_id = kwargs['deployment_id']
+        self.node_instances = kwargs['node_instances']
+        self.modified_nodes = kwargs['modified_nodes']
+
+
+@swagger.model
 class Execution(object):
 
     resource_fields = {
@@ -141,6 +156,7 @@ class Node(object):
         'type': fields.String,
         'type_hierarchy': fields.Raw,
         'number_of_instances': fields.String,
+        'deploy_number_of_instances': fields.String,
         'host_id': fields.String,
         'properties': fields.Raw,
         'operations': fields.Raw,
@@ -156,6 +172,7 @@ class Node(object):
         self.type = kwargs['type']
         self.type_hierarchy = kwargs['type_hierarchy']
         self.number_of_instances = kwargs['number_of_instances']
+        self.deploy_number_of_instances = kwargs['deploy_number_of_instances']
         self.host_id = kwargs['host_id']
         self.properties = kwargs['properties']
         self.operations = kwargs['operations']

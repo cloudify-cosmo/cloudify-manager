@@ -185,8 +185,8 @@ class ESStorageManager(object):
         return node
 
     def get_node(self, deployment_id, node_id, include=None):
-        node_id = '{}_{}'.format(deployment_id, node_id)
-        return self._get_doc_and_deserialize(doc_id=node_id,
+        storage_node_id = self._storage_node_id(deployment_id, node_id)
+        return self._get_doc_and_deserialize(doc_id=storage_node_id,
                                              doc_type=NODE_TYPE,
                                              model_class=DeploymentNode,
                                              fields=include)
@@ -240,9 +240,9 @@ class ESStorageManager(object):
                                     execution.to_dict())
 
     def put_node(self, node):
-        node_id = '{0}_{1}'.format(node.deployment_id, node.id)
+        storage_node_id = self._storage_node_id(node.deployment_id, node.id)
         doc_data = node.to_dict()
-        self._put_doc_if_not_exists(NODE_TYPE, str(node_id), doc_data)
+        self._put_doc_if_not_exists(NODE_TYPE, storage_node_id, doc_data)
 
     def put_node_instance(self, node_instance):
         node_instance_id = node_instance.id
@@ -289,9 +289,23 @@ class ESStorageManager(object):
                                 node_instance_id,
                                 DeploymentNodeInstance)
 
+    def update_node(self, deployment_id, node_id, number_of_instances):
+        storage_node_id = self._storage_node_id(deployment_id, node_id)
+        update_doc_data = {'number_of_instances': number_of_instances}
+        update_doc = {'doc': update_doc_data}
+        try:
+            self._get_es_conn().update(index=STORAGE_INDEX_NAME,
+                                       doc_type=NODE_TYPE,
+                                       id=storage_node_id,
+                                       body=update_doc)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Node {0} not found".format(node_id))
+
     def update_node_instance(self, node):
         new_state = node.state
         new_runtime_props = node.runtime_properties
+        new_relationships = node.relationships
 
         current = self.get_node_instance(node.id)
         # Validate version - this is not 100% safe since elasticsearch
@@ -305,7 +319,10 @@ class ESStorageManager(object):
             current.state = new_state
 
         if new_runtime_props is not None:
-            current.runtime_properties = node.runtime_properties
+            current.runtime_properties = new_runtime_props
+
+        if new_relationships is not None:
+            current.relationships = new_relationships
 
         updated = current.to_dict()
         del updated['version']
@@ -326,6 +343,9 @@ class ESStorageManager(object):
                                              PROVIDER_CONTEXT_ID,
                                              ProviderContext,
                                              fields=include)
+
+    def _storage_node_id(self, deployment_id, node_id):
+        return '{0}_{1}'.format(deployment_id, node_id)
 
 
 def create():
