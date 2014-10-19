@@ -68,7 +68,7 @@ class RestAPITest(TestCase):
         instance = self.client.node_instances.get(instance.id)
         self.assertIsNotNone(instance.id)
         self.assertEqual(self.deployment_id, instance.deployment_id)
-        self.assertIsNone(instance.runtime_properties)
+        self.assertEqual(instance.runtime_properties, {})
         self.assertEqual('uninitialized', instance.state)
         self.assertEqual(1, instance.version)
 
