@@ -130,7 +130,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
-    def test_get_missing_agent_resource(self):
+    def test_get_agent_resource_local_path(self):
         properties = {
             'cloudify_agent': {
                 'disable_requiretty': False,
@@ -138,14 +138,12 @@ class WorkerInstallerTestCase(testtools.TestCase):
             }
         }
         ctx = get_remote_context(properties)
-        t.DEFAULT_AGENT_RESOURCES.update(
-            {'agent_package_path': '/MISSING_RESOURCE.file'})
-        t.get_agent_resource_url(
+        ctx.node.properties['cloudify_agent']
+        p = t.get_agent_resource_local_path(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
-        t.DEFAULT_AGENT_RESOURCES.update(
-            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
+        self.assertEquals(p, '/Ubuntu-agent.tar.gz')
 
-    def test_get_agent_missing_resource_origin(self):
+    def test_get_agent_reosource_url_missing_origin(self):
         properties = {
             'cloudify_agent': {
                 'disable_requiretty': False,
@@ -155,6 +153,19 @@ class WorkerInstallerTestCase(testtools.TestCase):
         ctx = get_remote_context(properties)
         ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url, ctx,
+            ctx.node.properties['cloudify_agent'], 'nonexisting_resource_key')
+        self.assertIn('no such resource', str(ex))
+
+    def test_get_agent_resource_path_missing_origin(self):
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        }
+        ctx = get_remote_context(properties)
+        ex = self.assertRaises(
+            NonRecoverableError, t.get_agent_resource_local_path, ctx,
             ctx.node.properties['cloudify_agent'], 'nonexisting_resource_key')
         self.assertIn('no such resource', str(ex))
 
@@ -176,6 +187,23 @@ class WorkerInstallerTestCase(testtools.TestCase):
             '/' + properties['cloudify_agent']['agent_package_path']
 
         r = t.get_agent_resource_url(
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(path, r)
+
+    def test_get_agent_resource_path_from_agent_config(self):
+        properties = {
+            'cloudify_agent': {
+                'user': 'vagrant',
+                'host': VAGRANT_MACHINE_IP,
+                'key': '~/.vagrant.d/insecure_private_key',
+                'port': 2222,
+                'distro': 'Ubuntu',
+                'agent_package_path': 'some-agent.tar.gz'
+            }
+        }
+        ctx = get_remote_context(properties)
+        path = properties['cloudify_agent']['agent_package_path']
+        r = t.get_agent_resource_local_path(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(path, r)
 
