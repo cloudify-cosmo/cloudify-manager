@@ -15,6 +15,7 @@
 
 from cloudify.decorators import operation
 from testenv.utils import update_storage
+from cloudify import context
 from cloudify.workflows import tasks
 from cloudify.celery import celery
 from testenv.utils import task_exists
@@ -95,7 +96,7 @@ def _fix_worker(ctx, **kwargs):
     agent_config = {}
     if _is_workflows_worker(kwargs):
         agent_config['name'] = '{0}_workflows'.format(ctx.deployment.id)
-    elif ctx.instance is None:
+    elif ctx.type == context.DEPLOYMENT:
         agent_config['name'] = ctx.deployment.id
     else:
         agent_config['name'] = ctx.instance.id

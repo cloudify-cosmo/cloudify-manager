@@ -18,7 +18,7 @@ import os
 import pwd
 from functools import wraps
 
-import cloudify
+from cloudify import context
 from cloudify.exceptions import NonRecoverableError
 
 from worker_installer.utils import (FabricRunner,
@@ -45,12 +45,13 @@ def _find_type_in_kwargs(cls, all_args):
 def init_worker_installer(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
+        ctx = _find_type_in_kwargs(context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
             raise NonRecoverableError(
                 'CloudifyContext not found in invocation args')
-        if ctx.node and 'cloudify_agent' in ctx.node.properties:
+        if ctx.type == context.NODE_INSTANCE and \
+                'cloudify_agent' in ctx.node.properties:
             agent_config = ctx.node.properties['cloudify_agent']
         else:
             agent_config = kwargs.get('cloudify_agent', {})
@@ -154,6 +155,12 @@ def _set_wait_started_config(config):
         config['wait_started_interval'] = DEFAULT_WAIT_STARTED_INTERVAL
 
 
+def _set_home_dir(ctx, config):
+    if 'home_dir' not in config:
+        home_dir = pwd.getpwnam(config['user']).pw_dir
+        config['home_dir'] = home_dir
+
+
 def prepare_configuration(ctx, agent_config):
     if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
@@ -179,8 +186,9 @@ def prepare_configuration(ctx, agent_config):
 
     _set_wait_started_config(agent_config)
 
-    home_dir = pwd.getpwnam(agent_config['user']).pw_dir
+    _set_home_dir(ctx, agent_config)
 
+    home_dir = agent_config['home_dir']
     agent_config['celery_base_dir'] = home_dir
 
     agent_config['base_dir'] = '{0}/cloudify.{1}'.format(

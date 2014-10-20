@@ -11,15 +11,15 @@ node_types:
                 - start
                 - stop
                 - delete
-            cloudify.interfaces.monitor_lifecycle:
-                - start
-                - stop
             cloudify.interfaces.validation:
                 - creation
                 - deletion
+            cloudify.interfaces.monitoring:
+                - start
+                - stop
 
     # A tier in a topology
-    cloudify.types.tier: 
+    cloudify.types.tier:
         derived_from: cloudify.types.base
 
     # A host (physical / virtual or LXC) in a topology
@@ -36,6 +36,11 @@ node_types:
                 - install: plugin_installer.plugin_installer.tasks.install
             cloudify.interfaces.host:
                 - get_state
+            cloudify.interfaces.monitoring_agent:
+                - install
+                - start
+                - stop
+                - uninstall
         properties:
             install_agent:
                 default: true
