@@ -143,7 +143,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, '/Ubuntu-agent.tar.gz')
 
-    def test_get_agent_reosource_url_missing_origin(self):
+    def test_get_agent_resource_url_missing_origin(self):
         properties = {
             'cloudify_agent': {
                 'disable_requiretty': False,
@@ -423,7 +423,6 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
             ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
         r = runner.exists('Ubuntu-agent.tar.gz')
         self.assertTrue(r)
-
 
 if __name__ == '__main__':
     testtools.main()
