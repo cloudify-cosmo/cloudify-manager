@@ -253,9 +253,6 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     create_celery_includes_file(ctx, runner, agent_config)
     loader = jinja2.FunctionLoader(resource_loader)
     env = jinja2.Environment(loader=loader)
-    # config_template = env.get_template(
-    #     DEFAULT_AGENT_RESOURCES['celery_config_path'].format(
-    #         agent_config['distro']))
     config_template_path = get_agent_resource_local_path(
         ctx, agent_config, 'celery_config_path')
     config_template = env.get_template(config_template_path)
@@ -278,9 +275,6 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
         'values: {0}'.format(config_template_values))
 
     config = config_template.render(config_template_values)
-    # init_template = env.get_template(
-    #     DEFAULT_AGENT_RESOURCES['celery_init_path'].format(
-    #         agent_config['distro']))
     init_template_path = get_agent_resource_local_path(
         ctx, agent_config, 'celery_init_path')
     init_template = env.get_template(init_template_path)
