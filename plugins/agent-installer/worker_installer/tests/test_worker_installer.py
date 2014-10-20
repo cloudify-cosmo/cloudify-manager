@@ -130,25 +130,20 @@ class WorkerInstallerTestCase(testtools.TestCase):
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
-    # def test_get_missing_agent_resource(self):
-    #     properties = {
-    #         'cloudify_agent': {
-    #             'disable_requiretty': False,
-    #             'distro': 'Ubuntu'
-    #         }
-    #     }
-    #     ctx = get_remote_context(properties)
-    #     t.DEFAULT_AGENT_RESOURCES.update(
-    #         {'agent_package_path': '/MISSING_RESOURCE.file'})
-    #     t.get_agent_resource_url(
-    #         ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
-    #     # ex = self.assertRaises(
-    #     #     NonRecoverableError, t.get_agent_resource_url,
-    #     #     ctx, ctx.node.properties['cloudify_agent'],
-    #     #     'agent_package_path')
-    #     # self.assertIn('failed to retrieve resource', str(ex))
-    #     t.DEFAULT_AGENT_RESOURCES.update(
-    #         {'agent_package_path': '/Ubuntu-agent.tar.gz'})
+    def test_get_missing_agent_resource(self):
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        }
+        ctx = get_remote_context(properties)
+        t.DEFAULT_AGENT_RESOURCES.update(
+            {'agent_package_path': '/MISSING_RESOURCE.file'})
+        t.get_agent_resource_url(
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
+        t.DEFAULT_AGENT_RESOURCES.update(
+            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
 
     def test_get_agent_missing_resource_origin(self):
         properties = {
