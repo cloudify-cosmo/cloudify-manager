@@ -17,7 +17,6 @@
 import time
 import os
 import jinja2
-import urllib2
 
 from cloudify import ctx
 from cloudify.decorators import operation
@@ -71,16 +70,10 @@ def get_agent_resource_url(ctx, agent_config, resource):
         origin = utils.get_manager_file_server_url() + \
             resource_path.format(agent_config['distro'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
-    try:
-        urllib2.urlopen(origin)
-    except Exception as ex:
-        raise NonRecoverableError(
-            'failed to retrieve resource: {0} ({1})'.format(
-                origin, ex.message))
     return origin
 
 
-def get_agent_resource_path(ctx, agent_config, resource):
+def get_agent_resource_local_path(ctx, agent_config, resource):
     """returns an agent's resource path
 
     The resource will be looked for in the agent's properties.
