@@ -19,6 +19,7 @@ from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
 
+import time
 
 class TestPolicies(TestCase):
 
@@ -118,6 +119,23 @@ class TestPolicies(TestCase):
             tester.publish_above_threshold(deployment.id, do_assert=False)
             tester.publish_below_threshold(deployment.id, do_assert=True)
             tester.publish_below_threshold(deployment.id, do_assert=False)
+
+    def test_autoheal_policy_triggering(self):
+        dsl_path = resource('dsl/simple_auto_heal_policy.yaml')
+        deployment, _ = deploy(dsl_path)
+        self.deployment_id = deployment.id
+        self.instance_id = self.wait_for_node_instance().id
+        self.wait_for_executions(2)
+
+        self.publish("heart-beat")
+
+        time.sleep(65) # default TTL is 60. TODO: we should be able to specify TTL when publishing events..
+
+        self.wait_for_executions(3)
+
+        invocations = self.wait_for_invocations(deployment.id, 1)
+
+        self.assertEqual("heart-beat-failure", invocations[0]['diagnose'])
 
     def wait_for_executions(self, expected_count):
         def assertion():

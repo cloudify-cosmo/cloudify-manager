@@ -237,8 +237,7 @@ def test_policies_1(ctx, key, value,
 
 
 @workflow
-def test_policies_2(ctx, key, value,
-                    **_):
+def test_policies_2(ctx, key, value, **_):
     instance = list(ctx.get_node('node').instances)[0]
     instance.execute_operation('test.op1', kwargs={
         'key': key,
