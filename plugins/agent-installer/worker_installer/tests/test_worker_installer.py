@@ -140,10 +140,12 @@ class WorkerInstallerTestCase(testtools.TestCase):
         ctx = get_remote_context(properties)
         t.DEFAULT_AGENT_RESOURCES.update(
             {'agent_package_path': '/MISSING_RESOURCE.file'})
-        ex = self.assertRaises(
-            NonRecoverableError, t.get_agent_resource_url,
+        t.get_agent_resource_url(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
-        self.assertIn('failed to retrieve resource', str(ex))
+        # ex = self.assertRaises(
+        #     NonRecoverableError, t.get_agent_resource_url,
+        #     ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
+        # self.assertIn('failed to retrieve resource', str(ex))
         t.DEFAULT_AGENT_RESOURCES.update(
             {'agent_package_path': '/Ubuntu-agent.tar.gz'})
 
@@ -177,10 +179,9 @@ class WorkerInstallerTestCase(testtools.TestCase):
         path = FILE_SERVER + '/{0}'.format(blueprint_id) + \
             '/' + properties['cloudify_agent']['agent_package_path']
 
-        ex = self.assertRaises(
-            NonRecoverableError, t.get_agent_resource_url,
+        r = t.get_agent_resource_url(
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
-        self.assertIn('failed to retrieve resource: {0}'.format(path), str(ex))
+        self.assertEquals(path, r)
 
 
 class TestRemoteInstallerCase(WorkerInstallerTestCase):

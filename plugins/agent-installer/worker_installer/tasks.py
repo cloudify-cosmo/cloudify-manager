@@ -80,6 +80,23 @@ def get_agent_resource_url(ctx, agent_config, resource):
     return origin
 
 
+def get_agent_resource_path(ctx, agent_config, resource):
+    """returns an agent's resource path
+
+    The resource will be looked for in the agent's properties.
+    If it isn't found, it will look for it in the default location.
+    """
+    if agent_config.get(resource):
+        origin = agent_config[resource]
+    else:
+        resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
+        if not resource_path:
+            raise NonRecoverableError('no such resource: {0}'.format(resource))
+        origin = resource_path.format(agent_config['distro'])
+    ctx.logger.debug('resource origin: {0}'.format(origin))
+    return origin
+
+
 def get_celery_includes_list():
     return CELERY_INCLUDES_LIST
 
@@ -89,8 +106,6 @@ def get_celery_includes_list():
 def install(ctx, runner, agent_config, **kwargs):
     agent_package_url = get_agent_resource_url(
         ctx, agent_config, 'agent_package_path')
-    if not agent_package_url:
-        raise NonRecoverableError('failed to retrieve agent package url')
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
@@ -112,8 +127,6 @@ def install(ctx, runner, agent_config, **kwargs):
     download_resource_on_host(
         ctx.logger, runner, agent_package_url, '{0}/{1}'.format(
             agent_config['base_dir'], 'agent.tar.gz'))
-    # if not r:
-    #     raise NonRecoverableError('failed to download agent package')
 
     ctx.logger.debug('extracting agent package on host')
     runner.run(
@@ -147,9 +160,6 @@ def install(ctx, runner, agent_config, **kwargs):
     if agent_config['disable_requiretty']:
         disable_requiretty_script_url = get_agent_resource_url(
             ctx, agent_config, 'disable_requiretty_script_path')
-        if not disable_requiretty_script_url:
-            raise NonRecoverableError(
-                'failed to retrieve disable-requiretty script url')
         ctx.logger.debug("Removing requiretty in sudoers file")
         disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
             agent_config['base_dir'])
@@ -157,9 +167,6 @@ def install(ctx, runner, agent_config, **kwargs):
         download_resource_on_host(
             ctx.logger, runner, disable_requiretty_script_url,
             disable_requiretty_script)
-        # if not r:
-        #     raise NonRecoverableError(
-        #         'failed to download disable-requiretty script')
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
