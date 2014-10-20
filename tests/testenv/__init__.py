@@ -43,6 +43,7 @@ from testenv.processes.celery import CeleryWorkerProcess
 from cloudify.logs import create_event_message_prefix
 
 logger = setup_default_logger('TESTENV')
+setup_default_logger('cloudify.rest_client', logging.INFO)
 testenv_instance = None
 
 
