@@ -172,15 +172,14 @@ class WorkerInstallerTestCase(testtools.TestCase):
         self.assertEquals(str(ex), 'resource paths must be of type dict')
 
     def test_get_agent_resource_url_from_agent_config(self):
+        # os.makedirs('../../' + blueprint_id)
+        # with open('../../{0}/some-agent.tar.gz'.format(
+        #         blueprint_id), 'w') as f:
+        #     f.write('t')
+        # # if not os.path.exists('mock_blueprint/some-agent.tar.gz'):
+        # #     raise Exception('mock agent not created')
+        # pth = os.path.abspath('../../mock_blueprint/some-agent.tar.gz')
         blueprint_id = 'mock_blueprint'
-        os.makedirs('../../' + blueprint_id)
-        with open('../../{0}/some-agent.tar.gz'.format(
-                blueprint_id), 'w') as f:
-            f.write('t')
-        # if not os.path.exists('mock_blueprint/some-agent.tar.gz'):
-        #     raise Exception('mock agent not created')
-        pth = os.path.abspath('../../mock_blueprint/some-agent.tar.gz')
-        raise Exception('PATH: {0}'.format(pth))
         properties = {
             'cloudify_agent': {
                 'user': 'vagrant',
@@ -188,16 +187,18 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222,
                 'distro': 'Ubuntu',
-                # 'agent_package_path': '/plugins/agent-installer/worker_installer/tests/some-agent.tar.gz'  # NOQA
-                'agent_package_path': 'some-agent.tar.gz'  # NOQA
+                'agent_package_path': 'some-agent.tar.gz'
             }
         }
         ctx = get_remote_context(properties)
+        # should be http://localhost:8000/mock_blueprint/some-agent.tar.gz
         path = FILE_SERVER + '/{0}'.format(blueprint_id) + \
             '/' + properties['cloudify_agent']['agent_package_path']
-        p = t.get_agent_resource_url(
+
+        ex = self.assertRaises(
+            NonRecoverableError, t.get_agent_resource_url,
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
-        self.assertEquals(p, path)
+        self.assertIn('ahsdlnahsdlkahnsd' + path, str(ex))
 
 
 class TestRemoteInstallerCase(WorkerInstallerTestCase):
@@ -416,6 +417,13 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         r = runner.exists('Ubuntu-agent.tar.gz')
         self.assertTrue(r)
 
+    def test_fail_to_download_resource_on_host(self):
+        ctx = get_local_context()
+        runner = FabricRunner(ctx)
+        ex = self.assertRaises(
+            NonRecoverableError, t.download_resource_on_host,
+            ctx.logger, runner, AGENT_PACKAGE_URL, 'MISSING_RESOURCE')
+        self.assertIn('could not download resource', str(ex))
 
 if __name__ == '__main__':
     testtools.main()

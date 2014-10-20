@@ -81,11 +81,8 @@ def get_agent_resource_url(ctx, agent_config, resource,
     try:
         urllib2.urlopen(origin)
     except Exception as ex:
-        ctx.logger.warning('resource: {0} is not accessible ({1})'.format(
-            origin, str(ex)))
-        raise Exception('origin: {0}, ({1} - ex: {2})'.format(
-            origin, ctx.blueprint.id, str(ex)))
-        return
+        raise NonRecoverableError(
+            'resource is not accessible: {0} ({1})'.format(origin, str(ex)))
     return origin
 
 
