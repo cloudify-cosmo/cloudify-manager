@@ -55,8 +55,7 @@ DEFAULT_AGENT_RESOURCES = {
 }
 
 
-def get_agent_resource_url(ctx, agent_config, resource,
-                           resource_paths=DEFAULT_AGENT_RESOURCES):
+def get_agent_resource_url(ctx, agent_config, resource):
     """returns an agent's resource url
 
     The resource will be looked for in the agent's properties.
@@ -66,15 +65,9 @@ def get_agent_resource_url(ctx, agent_config, resource,
         origin = utils.get_manager_file_server_blueprints_root_url() + \
             '/' + ctx.blueprint.id + '/' + agent_config[resource]
     else:
-        if not type(resource_paths) is dict:
-            raise NonRecoverableError('resource paths must be of type dict')
-        try:
-            resource_path = resource_paths[resource]
-        except KeyError:
+        resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
+        if not resource_path:
             raise NonRecoverableError('no such resource: {0}'.format(resource))
-        if not len(str(utils.get_manager_file_server_url())) > 0:
-            raise NonRecoverableError(
-                'MANAGER_FILE_SERVER_URL env var not configured')
         origin = utils.get_manager_file_server_url() + \
             resource_path.format(agent_config['distro'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
@@ -82,7 +75,8 @@ def get_agent_resource_url(ctx, agent_config, resource,
         urllib2.urlopen(origin)
     except Exception as ex:
         raise NonRecoverableError(
-            'resource is not accessible: {0} ({1})'.format(origin, str(ex)))
+            'failed to retrieve resource: {0} ({1})'.format(
+                origin, ex.message))
     return origin
 
 

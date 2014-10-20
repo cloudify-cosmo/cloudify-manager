@@ -127,8 +127,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
         ctx = get_remote_context(properties)
         ctx.node.properties['cloudify_agent']
         p = t.get_agent_resource_url(
-            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path',
-            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
         self.assertEquals(p, AGENT_PACKAGE_URL)
 
     def test_get_missing_agent_resource(self):
@@ -139,11 +138,14 @@ class WorkerInstallerTestCase(testtools.TestCase):
             }
         }
         ctx = get_remote_context(properties)
+        t.DEFAULT_AGENT_RESOURCES.update(
+            {'agent_package_path': '/MISSING_RESOURCE.file'})
         ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url,
-            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path',
-            {'agent_package_path': '/MISSING_RESOURCE.file'})
-        self.assertIn('resource is not accessible', str(ex))
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
+        self.assertIn('failed to retrieve resource', str(ex))
+        t.DEFAULT_AGENT_RESOURCES.update(
+            {'agent_package_path': '/Ubuntu-agent.tar.gz'})
 
     def test_get_agent_missing_resource_origin(self):
         properties = {
@@ -157,20 +159,6 @@ class WorkerInstallerTestCase(testtools.TestCase):
             NonRecoverableError, t.get_agent_resource_url, ctx,
             ctx.node.properties['cloudify_agent'], 'nonexisting_resource_key')
         self.assertIn('no such resource', str(ex))
-
-    def test_get_resource_url_not_dict(self):
-        properties = {
-            'cloudify_agent': {
-                'disable_requiretty': False,
-                'distro': 'Ubuntu'
-            }
-        }
-        ctx = get_remote_context(properties)
-        ex = self.assertRaises(
-            NonRecoverableError, t.get_agent_resource_url, ctx,
-            ctx.node.properties['cloudify_agent'], 'some_resource',
-            'NOT_A_DICT')
-        self.assertEquals(str(ex), 'resource paths must be of type dict')
 
     def test_get_agent_resource_url_from_agent_config(self):
         blueprint_id = 'mock_blueprint'
@@ -192,7 +180,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
         ex = self.assertRaises(
             NonRecoverableError, t.get_agent_resource_url,
             ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
-        self.assertIn('resource is not accessible: {0}'.format(path), str(ex))
+        self.assertIn('failed to retrieve resource: {0}'.format(path), str(ex))
 
 
 class TestRemoteInstallerCase(WorkerInstallerTestCase):
