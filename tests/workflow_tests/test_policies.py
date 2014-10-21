@@ -141,6 +141,23 @@ class TestPolicies(TestCase):
 
         self.assertEqual("heart-beat-failure", invocations[0]['diagnose'])
 
+    def test_autoheal_policy_stability(self):
+        EVENTS_TTL = 3
+        EVENTS_NO = 10
+        AUTOHEAL_EVENTS_MSG = "heart-beat"
+        DEFAULT_WORKFLOW_NO = 2
+
+        dsl_path = resource('dsl/simple_auto_heal_policy.yaml')
+        deployment, _ = deploy(dsl_path)
+        self.deployment_id = deployment.id
+        self.instance_id = self.wait_for_node_instance().id
+        self.wait_for_executions(DEFAULT_WORKFLOW_NO)
+
+        for _ in range(EVENTS_NO):
+            self.publish(AUTOHEAL_EVENTS_MSG, EVENTS_TTL)
+            time.sleep(EVENTS_TTL - 2)
+        self.wait_for_executions(DEFAULT_WORKFLOW_NO)
+
     def wait_for_executions(self, expected_count):
         def assertion():
             executions = self.client.executions.list(
