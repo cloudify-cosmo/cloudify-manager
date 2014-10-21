@@ -27,6 +27,7 @@ from cloudify import utils
 
 from worker_installer import init_worker_installer
 from worker_installer.utils import is_on_management_worker
+from worker_installer.utils import download_resource_on_host
 
 
 PLUGIN_INSTALLER_PLUGIN_PATH = 'plugin_installer.tasks'
@@ -41,30 +42,52 @@ CELERY_INCLUDES_LIST = [
     SCRIPT_PLUGIN_PATH, DEFAULT_WORKFLOWS_PLUGIN_PATH
 ]
 
-CELERY_CONFIG_PATH = '/packages/templates/{0}-celeryd-cloudify.conf.template'
-CELERY_INIT_PATH = '/packages/templates/{0}-celeryd-cloudify.init.template'
-AGENT_PACKAGE_PATH = '/packages/agents/{0}-agent.tar.gz'
-DISABLE_REQUIRETTY_SCRIPT_URL =\
+DEFAULT_AGENT_RESOURCES = {
+    'celery_config_path':
+    '/packages/templates/{0}-celeryd-cloudify.conf.template',
+    'celery_init_path':
+    '/packages/templates/{0}-celeryd-cloudify.init.template',
+    'agent_package_path':
+    '/packages/agents/{0}-agent.tar.gz',
+    'disable_requiretty_script_path':
     '/packages/scripts/{0}-agent-disable-requiretty.sh'
+}
 
-SUPPORTED_DISTROS = ('Ubuntu', 'debian', 'centos')
 
+def get_agent_resource_url(ctx, agent_config, resource):
+    """returns an agent's resource url
 
-def get_agent_package_url(distro):
+    The resource will be looked for in the agent's properties.
+    If it isn't found, it will look for it in the default location.
     """
-    Returns the agent package url the package will be downloaded from.
-    """
-    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
-                            AGENT_PACKAGE_PATH.format(distro))
+    if agent_config.get(resource):
+        origin = utils.get_manager_file_server_blueprints_root_url() + \
+            '/' + ctx.blueprint.id + '/' + agent_config[resource]
+    else:
+        resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
+        if not resource_path:
+            raise NonRecoverableError('no such resource: {0}'.format(resource))
+        origin = utils.get_manager_file_server_url() + \
+            resource_path.format(agent_config['distro'])
+    ctx.logger.debug('resource origin: {0}'.format(origin))
+    return origin
 
 
-def get_disable_requiretty_script_url(distro):
+def get_agent_resource_local_path(ctx, agent_config, resource):
+    """returns an agent's resource path
+
+    The resource will be looked for in the agent's properties.
+    If it isn't found, it will look for it in the default location.
     """
-    Returns the disable requiretty script url the script will be downloaded
-    from.
-    """
-    return '{0}/{1}'.format(utils.get_manager_file_server_url(),
-                            DISABLE_REQUIRETTY_SCRIPT_URL.format(distro))
+    if agent_config.get(resource):
+        origin = agent_config[resource]
+    else:
+        resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
+        if not resource_path:
+            raise NonRecoverableError('no such resource: {0}'.format(resource))
+        origin = resource_path.format(agent_config['distro'])
+    ctx.logger.debug('resource origin: {0}'.format(origin))
+    return origin
 
 
 def get_celery_includes_list():
@@ -74,20 +97,14 @@ def get_celery_includes_list():
 @operation
 @init_worker_installer
 def install(ctx, runner, agent_config, **kwargs):
-
-    if agent_config['distro'] not in SUPPORTED_DISTROS:
-        ctx.logger.error('distro {} not supported '
-                         'when installing agent'.format(
-                             agent_config['distro']))
-        raise RuntimeError('unsupported distribution')
-    agent_package_url = get_agent_package_url(agent_config['distro'])
+    agent_package_url = get_agent_resource_url(
+        ctx, agent_config, 'agent_package_path')
 
     ctx.logger.debug("Pinging agent installer target")
     runner.ping()
 
     ctx.logger.info(
         "installing celery worker {0}".format(agent_config['name']))
-
     if worker_exists(runner, agent_config):
         ctx.logger.info("Worker for deployment {0} "
                         "is already installed. nothing to do."
@@ -96,21 +113,20 @@ def install(ctx, runner, agent_config, **kwargs):
 
     ctx.logger.info(
         'Installing celery worker [cloudify_agent={0}]'.format(agent_config))
-
     runner.run('mkdir -p {0}'.format(agent_config['base_dir']))
 
     ctx.logger.debug(
-        'Downloading agent package from: {0}'.format(
-            agent_package_url))
+        'Downloading agent package from: {0}'.format(agent_package_url))
+    download_resource_on_host(
+        ctx.logger, runner, agent_package_url, '{0}/{1}'.format(
+            agent_config['base_dir'], 'agent.tar.gz'))
 
-    runner.run('wget -T 30 -O {0}/{1}-agent.tar.gz {2}'.format(
-        agent_config['base_dir'], agent_config['distro'], agent_package_url))
-
+    ctx.logger.debug('extracting agent package on host')
     runner.run(
-        'tar xzvf {0}/{1}-agent.tar.gz --strip=2 -C {2}'.format(
-            agent_config['base_dir'], agent_config['distro'],
-            agent_config['base_dir']))
+        'tar xzvf {0}/agent.tar.gz --strip=2 -C {1}'.format(
+            agent_config['base_dir'], agent_config['base_dir']))
 
+    ctx.logger.debug('configuring virtualenv')
     for link in ['archives', 'bin', 'include', 'lib']:
         link_path = '{0}/env/local/{1}'.format(agent_config['base_dir'], link)
         try:
@@ -118,7 +134,7 @@ def install(ctx, runner, agent_config, **kwargs):
             runner.run('ln -s {0}/env/{1} {2}'.format(
                 agent_config['base_dir'], link, link_path))
         except Exception as e:
-            ctx.logger.warn('Error process link: {0} [error={1}] - '
+            ctx.logger.warn('Error processing link: {0} [error={1}] - '
                             'ignoring..'.format(link_path, str(e)))
 
     create_celery_configuration(
@@ -131,17 +147,19 @@ def install(ctx, runner, agent_config, **kwargs):
                "{0}/env/bin/*".format(agent_config['base_dir']))
 
     # Remove downloaded agent package
-    runner.run('rm {0}/{1}-agent.tar.gz'.format(
-        agent_config['base_dir'], agent_config['distro']))
+    runner.run('rm {0}/agent.tar.gz'.format(agent_config['base_dir']))
 
     # Disable requiretty
     if agent_config['disable_requiretty']:
+        disable_requiretty_script_url = get_agent_resource_url(
+            ctx, agent_config, 'disable_requiretty_script_path')
         ctx.logger.debug("Removing requiretty in sudoers file")
         disable_requiretty_script = '{0}/disable-requiretty.sh'.format(
             agent_config['base_dir'])
-        runner.run('wget -T 30 -O {0} {1}'.format(
-            disable_requiretty_script, get_disable_requiretty_script_url(
-                agent_config['distro'])))
+
+        download_resource_on_host(
+            ctx.logger, runner, disable_requiretty_script_url,
+            disable_requiretty_script)
 
         runner.run('chmod +x {0}'.format(disable_requiretty_script))
 
@@ -235,8 +253,9 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     create_celery_includes_file(ctx, runner, agent_config)
     loader = jinja2.FunctionLoader(resource_loader)
     env = jinja2.Environment(loader=loader)
-    config_template = env.get_template(CELERY_CONFIG_PATH.format(
-        agent_config['distro']))
+    config_template_path = get_agent_resource_local_path(
+        ctx, agent_config, 'celery_config_path')
+    config_template = env.get_template(config_template_path)
     config_template_values = {
         'includes_file_path': agent_config['includes_file'],
         'celery_base_dir': agent_config['celery_base_dir'],
@@ -256,8 +275,9 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
         'values: {0}'.format(config_template_values))
 
     config = config_template.render(config_template_values)
-    init_template = env.get_template(CELERY_INIT_PATH.format(
-        agent_config['distro']))
+    init_template_path = get_agent_resource_local_path(
+        ctx, agent_config, 'celery_init_path')
+    init_template = env.get_template(init_template_path)
     init_template_values = {
         'celery_base_dir': agent_config['celery_base_dir'],
         'worker_modifier': agent_config['name']
@@ -280,9 +300,8 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
 def create_celery_includes_file(ctx, runner, agent_config):
     # build initial includes
     includes_list = get_celery_includes_list()
-
-    runner.put(agent_config['includes_file'],
-               'INCLUDES={0}\n'.format(','.join(includes_list)))
+    runner.put(agent_config['includes_file'], 'INCLUDES={0}\n'.format(
+        ','.join(includes_list)))
 
     ctx.logger.debug('Created celery includes file [file=%s, content=%s]',
                      agent_config['includes_file'],
@@ -315,7 +334,7 @@ def _verify_no_celery_error(runner, agent_config):
 
 def _wait_for_started(runner, agent_config):
     _verify_no_celery_error(runner, agent_config)
-    worker_name = 'celery.{}'.format(agent_config['name'])
+    worker_name = 'celery.{0}'.format(agent_config['name'])
     inspect = celery_client.control.inspect(destination=[worker_name])
     wait_started_timeout = agent_config['wait_started_timeout']
     timeout = time.time() + wait_started_timeout
@@ -331,5 +350,5 @@ def _wait_for_started(runner, agent_config):
     if os.path.exists(celery_log_file):
         with open(celery_log_file, 'r') as f:
             ctx.logger.error(f.read())
-    raise NonRecoverableError('Failed starting agent. waited for {} seconds.'
+    raise NonRecoverableError('Failed starting agent. waited for {0} seconds.'
                               .format(wait_started_timeout))
