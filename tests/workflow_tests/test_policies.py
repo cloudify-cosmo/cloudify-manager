@@ -18,8 +18,10 @@ from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
+from riemann_controller.config_constants import Constants
 
 import time
+
 
 class TestPolicies(TestCase):
 
@@ -127,9 +129,11 @@ class TestPolicies(TestCase):
         self.instance_id = self.wait_for_node_instance().id
         self.wait_for_executions(2)
 
-        self.publish("heart-beat")
+        EVENTS_TTL = 3
+        self.publish("heart-beat", EVENTS_TTL)
 
-        time.sleep(66) # default TTL is 60. TODO: we should be able to specify TTL when publishing events..
+        # Two "buffer seconds"
+        time.sleep(EVENTS_TTL + Constants.PERIODICAL_EXPIRATION_INTERVAL + 2)
 
         self.wait_for_executions(3)
 
@@ -165,10 +169,12 @@ class TestPolicies(TestCase):
         self.do_assertions(assertion)
         return self.client.node_instances.list(self.deployment_id)[0]
 
-    def publish(self, metric):
+    def publish(self, metric, ttl=60):
         self.publish_riemann_event(
             self.deployment_id,
             node_name='node',
             node_id=self.instance_id,
             metric=metric,
-            service='service')
+            service='service',
+            ttl=ttl
+        )
