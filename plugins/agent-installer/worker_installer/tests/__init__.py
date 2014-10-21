@@ -43,7 +43,7 @@ def get_logger(name):
     return logger
 
 
-def get_local_context(p=None):
+def get_local_context(overriding_properties=None):
     blueprint_id = 'mock_blueprint'
     deployment_id = 'deployment-{0}'.format(str(uuid.uuid4())[:5])
     properties = {
@@ -51,8 +51,8 @@ def get_local_context(p=None):
             'disable_requiretty': False,
         }
     }
-    if p:
-        properties.update(p)
+    if overriding_properties:
+        properties.update(overriding_properties)
     return MockCloudifyContext(
         blueprint_id=blueprint_id,
         deployment_id=deployment_id,
@@ -63,7 +63,7 @@ def get_local_context(p=None):
     )
 
 
-def get_remote_context(p=None):
+def get_remote_context(overriding_properties=None):
     blueprint_id = 'mock_blueprint'
     node_id = 'node-{0}'.format(str(uuid.uuid4())[:5])
     properties = {
@@ -74,8 +74,8 @@ def get_remote_context(p=None):
             'port': 2222
         }
     }
-    if p:
-        properties.update(p)
+    if overriding_properties:
+        properties.update(overriding_properties)
     return MockCloudifyContext(
         blueprint_id=blueprint_id,
         node_id=node_id,
