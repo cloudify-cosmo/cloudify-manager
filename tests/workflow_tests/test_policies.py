@@ -129,7 +129,7 @@ class TestPolicies(TestCase):
 
         self.publish("heart-beat")
 
-        time.sleep(65) # default TTL is 60. TODO: we should be able to specify TTL when publishing events..
+        time.sleep(66) # default TTL is 60. TODO: we should be able to specify TTL when publishing events..
 
         self.wait_for_executions(3)
 
