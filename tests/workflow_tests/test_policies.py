@@ -23,6 +23,13 @@ from riemann_controller.config_constants import Constants
 import time
 
 
+NUM_OF_INITIAL_WORKFLOWS = 2
+SAFETY_MARGIN = 2
+
+# Autoheal constant
+AUTOHEAL_EVENTS_MSG = "heart-beat"
+
+
 class TestPolicies(TestCase):
 
     def test_policies_flow(self):
@@ -35,7 +42,7 @@ class TestPolicies(TestCase):
 
         self.publish(metric=metric_value)
 
-        self.wait_for_executions(3)
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
         invocations = self.wait_for_invocations(deployment.id, 2)
         self.assertEqual(self.instance_id, invocations[0]['node_id'])
         self.assertEqual(123, invocations[1]['metric'])
@@ -48,7 +55,7 @@ class TestPolicies(TestCase):
             self.deployment_id = deployment.id
             self.instance_id = self.wait_for_node_instance().id
             expected_metric_value = 42
-            self.wait_for_executions(3)
+            self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
             invocations = self.wait_for_invocations(deployment.id, 1)
             self.assertEqual(expected_metric_value, invocations[0]['metric'])
         finally:
@@ -123,20 +130,24 @@ class TestPolicies(TestCase):
             tester.publish_below_threshold(deployment.id, do_assert=False)
 
     def test_autoheal_policy_triggering(self):
-        dsl_path = resource('dsl/simple_auto_heal_policy.yaml')
+        EVENTS_TTL = 3
+        AUTOHEAL_YAML = 'dsl/simple_auto_heal_policy.yaml'
+
+        dsl_path = resource(AUTOHEAL_YAML)
         deployment, _ = deploy(dsl_path)
         self.deployment_id = deployment.id
         self.instance_id = self.wait_for_node_instance().id
-        self.wait_for_executions(2)
 
-        EVENTS_TTL = 3
-        self.publish("heart-beat", EVENTS_TTL)
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
 
-        # Two "buffer seconds"
-        time.sleep(EVENTS_TTL + Constants.PERIODICAL_EXPIRATION_INTERVAL + 2)
+        self.publish(AUTOHEAL_EVENTS_MSG, EVENTS_TTL)
+        time.sleep(
+            EVENTS_TTL +
+            Constants.PERIODICAL_EXPIRATION_INTERVAL +
+            SAFETY_MARGIN
+        )
 
-        self.wait_for_executions(3)
-
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
         invocations = self.wait_for_invocations(deployment.id, 1)
 
         self.assertEqual("heart-beat-failure", invocations[0]['diagnose'])
@@ -144,19 +155,20 @@ class TestPolicies(TestCase):
     def test_autoheal_policy_stability(self):
         EVENTS_TTL = 3
         EVENTS_NO = 10
-        AUTOHEAL_EVENTS_MSG = "heart-beat"
-        DEFAULT_WORKFLOW_NO = 2
+        AUTOHEAL_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
-        dsl_path = resource('dsl/simple_auto_heal_policy.yaml')
+        dsl_path = resource(AUTOHEAL_YAML)
         deployment, _ = deploy(dsl_path)
         self.deployment_id = deployment.id
         self.instance_id = self.wait_for_node_instance().id
-        self.wait_for_executions(DEFAULT_WORKFLOW_NO)
+
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
 
         for _ in range(EVENTS_NO):
             self.publish(AUTOHEAL_EVENTS_MSG, EVENTS_TTL)
-            time.sleep(EVENTS_TTL - 2)
-        self.wait_for_executions(DEFAULT_WORKFLOW_NO)
+            time.sleep(EVENTS_TTL - SAFETY_MARGIN)
+
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
 
     def wait_for_executions(self, expected_count):
         def assertion():
