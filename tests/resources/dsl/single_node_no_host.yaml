@@ -14,10 +14,22 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - start: testmockoperations.testmockoperations.tasks.make_reachable
-                - stop: testmockoperations.testmockoperations.tasks.make_unreachable
+                start:
+                    implementation: testmockoperations.testmockoperations.tasks.make_reachable
+                    inputs: {}
+                stop:
+                    implementation: testmockoperations.testmockoperations.tasks.make_unreachable
+                    inputs: {}
             mock_interface:
-                - touch: testmockoperations.testmockoperations.tasks.touch
-                - make_reachable: testmockoperations.testmockoperations.tasks.make_reachable
-                - make_unreachable: testmockoperations.testmockoperations.tasks.make_unreachable
-                - set_property: testmockoperations.testmockoperations.tasks.set_property
+                touch:
+                    implementation: testmockoperations.testmockoperations.tasks.touch
+                    inputs: {}
+                make_reachable:
+                    implementation: testmockoperations.testmockoperations.tasks.make_reachable
+                    inputs: {}
+                make_unreachable:
+                    implementation: testmockoperations.testmockoperations.tasks.make_unreachable
+                    inputs: {}
+                set_property:
+                    implementation: testmockoperations.testmockoperations.tasks.set_property
+                    inputs: {}
