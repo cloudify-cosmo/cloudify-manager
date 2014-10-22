@@ -60,12 +60,8 @@ def init_worker_installer(func):
         kwargs['runner'] = FabricRunner(ctx, agent_config)
 
         if not agent_config.get('distro'):
-            try:
-                kwargs['agent_config']['distro'] = get_machine_distro(
-                    kwargs['runner'])
-            except:
-                raise NonRecoverableError(
-                    'could not retrieve distribution for machine')
+            kwargs['agent_config']['distro'] = get_machine_distro(
+                kwargs['runner'])
         return func(*args, **kwargs)
     return wrapper
 
