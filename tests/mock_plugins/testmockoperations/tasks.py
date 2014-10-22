@@ -116,13 +116,16 @@ def mock_operation(ctx, **kwargs):
 
 @operation
 def mock_operation_from_custom_workflow(ctx, key, value, **kwargs):
+    saving_multiple_params_op(ctx, {key: value}, **kwargs)
+
+
+@operation
+def saving_multiple_params_op(ctx, params, **kwargs):
     with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get(
+        invocations = data['mock_operation_invocation'] = data.get(
             'mock_operation_invocation', []
         )
-        data['mock_operation_invocation'].append({
-            key: value
-        })
+        invocations.append(params)
 
 
 @operation

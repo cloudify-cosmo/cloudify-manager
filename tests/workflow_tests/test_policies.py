@@ -148,9 +148,10 @@ class TestPolicies(TestCase):
         )
 
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-        invocations = self.wait_for_invocations(deployment.id, 1)
+        invocation = self.wait_for_invocations(deployment.id, 1)[0]
 
-        self.assertEqual("heart-beat-failure", invocations[0]['diagnose'])
+        self.assertEqual("heart-beat-failure", invocation['diagnose'])
+        self.assertEqual("some_vm", invocation['failing_node'])
 
     def test_autoheal_policy_stability(self):
         EVENTS_TTL = 3

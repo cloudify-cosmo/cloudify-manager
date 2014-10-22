@@ -1,1 +1,1 @@
-(where* expired? (with :diagnose "heart-beat-failure" process-policy-triggers))
+(where* expired? (with {:failing_node "some_vm" :diagnose "heart-beat-failure"} process-policy-triggers))

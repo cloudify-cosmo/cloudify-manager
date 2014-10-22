@@ -255,6 +255,17 @@ def test_policies_3(ctx, key, value, **_):
 
 
 @workflow
+def auto_heal_vm(ctx, key, value, diagnose_key=None, diagnose_value=None, **_):
+    instance = list(ctx.get_node('node').instances)[0]
+    instance.execute_operation('test.op1', kwargs={
+        'params': {
+            key: value,
+            diagnose_key: diagnose_value
+        }
+    })
+
+
+@workflow
 def operation_mapping1(ctx, **_):
     node1 = list(ctx.get_node('node1').instances)[0]
     node2_rel = list(list(ctx.get_node('node2').instances)[0].relationships)[0]

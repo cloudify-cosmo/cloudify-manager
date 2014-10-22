@@ -10,7 +10,7 @@ node_templates:
         type: cloudify.types.base
         interfaces:
             test:
-                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                - op1: testmockoperations.testmockoperations.tasks.saving_multiple_params_op
 
 groups:
     autohealing_group:
@@ -23,14 +23,17 @@ groups:
                         type: cloudify.policies.triggers.execute_workflow
                         parameters:
                             workflow: auto_heal_workflow
+                            allow_custom_parameters: true
                             workflow_parameters:
-                                value: { get_property: [SELF, diagnose]}
+                                value: { get_property: [SELF, failing_node]}
+                                diagnose_key: diagnose
+                                diagnose_value: { get_property: [SELF, diagnose] }
 
 workflows:
     auto_heal_workflow:
-        mapping: mock_workflows.mock_workflows.workflows.test_policies_2
+        mapping: mock_workflows.mock_workflows.workflows.auto_heal_vm
         parameters:
             key:
-                default: diagnose
+                default: failing_node
             value:
-                description: The diagnose of failure
+                description: Which node has failed
