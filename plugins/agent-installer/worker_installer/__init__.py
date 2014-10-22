@@ -18,7 +18,7 @@ import os
 import pwd
 from functools import wraps
 
-import cloudify
+from cloudify import context
 from cloudify.exceptions import NonRecoverableError
 
 from worker_installer.utils import (FabricRunner,
@@ -45,28 +45,33 @@ def _find_type_in_kwargs(cls, all_args):
 def init_worker_installer(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
+        ctx = _find_type_in_kwargs(context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
             raise NonRecoverableError(
                 'CloudifyContext not found in invocation args')
-        if ctx.node and 'cloudify_agent' in ctx.node.properties:
+        if ctx.type == context.NODE_INSTANCE and \
+                'cloudify_agent' in ctx.node.properties:
             agent_config = ctx.node.properties['cloudify_agent']
         else:
             agent_config = kwargs.get('cloudify_agent', {})
         prepare_configuration(ctx, agent_config)
         kwargs['agent_config'] = agent_config
         kwargs['runner'] = FabricRunner(ctx, agent_config)
+
         if not agent_config.get('distro'):
-            kwargs['agent_config']['distro'] = \
-                get_machine_distro(kwargs['runner'])
+            try:
+                kwargs['agent_config']['distro'] = get_machine_distro(
+                    kwargs['runner'])
+            except:
+                raise NonRecoverableError(
+                    'could not retrieve distribution for machine')
         return func(*args, **kwargs)
     return wrapper
 
 
 def get_machine_distro(runner):
-    return runner.run(
-        'python -c "import platform; print(platform.dist()[0])"')
+    return runner.run('python -c "import platform; print platform.dist()[0]"')
 
 
 def get_machine_ip(ctx):

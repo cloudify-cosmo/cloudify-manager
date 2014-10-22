@@ -43,33 +43,43 @@ def get_logger(name):
     return logger
 
 
-def get_local_context():
+def get_local_context(overriding_properties=None):
+    blueprint_id = 'mock_blueprint'
     deployment_id = 'deployment-{0}'.format(str(uuid.uuid4())[:5])
+    properties = {
+        'cloudify_agent': {
+            'disable_requiretty': False,
+        }
+    }
+    if overriding_properties:
+        properties.update(overriding_properties)
     return MockCloudifyContext(
+        blueprint_id=blueprint_id,
         deployment_id=deployment_id,
-        properties={
-            'cloudify_agent': {
-                'disable_requiretty': False
-            }
-        },
+        properties=properties,
         runtime_properties={
             'ip': 'localhost'
         }
     )
 
 
-def get_remote_context():
+def get_remote_context(overriding_properties=None):
+    blueprint_id = 'mock_blueprint'
     node_id = 'node-{0}'.format(str(uuid.uuid4())[:5])
+    properties = {
+        'cloudify_agent': {
+            'user': 'vagrant',
+            'host': VAGRANT_MACHINE_IP,
+            'key': '~/.vagrant.d/insecure_private_key',
+            'port': 2222
+        }
+    }
+    if overriding_properties:
+        properties.update(overriding_properties)
     return MockCloudifyContext(
+        blueprint_id=blueprint_id,
         node_id=node_id,
-        properties={
-            'cloudify_agent': {
-                'user': 'vagrant',
-                'host': VAGRANT_MACHINE_IP,
-                'key': '~/.vagrant.d/insecure_private_key',
-                'port': 2222
-            },
-        },
+        properties=properties,
         runtime_properties={
             'ip': '127.0.0.1'
         },

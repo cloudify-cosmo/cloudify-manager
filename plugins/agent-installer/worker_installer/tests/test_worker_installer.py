@@ -15,7 +15,7 @@
 
 
 import getpass
-import unittest
+import testtools
 import time
 import os
 from os import path
@@ -24,16 +24,25 @@ from worker_installer.tests import \
     id_generator, get_local_context, \
     get_remote_context, VAGRANT_MACHINE_IP, MANAGER_IP
 
+from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
+from cloudify.constants import MANAGER_FILE_SERVER_URL_KEY
+from cloudify.exceptions import NonRecoverableError
+
 from celery import Celery
-from worker_installer import tasks as t
+from worker_installer import tasks
 from cloudify import manager
 
 
 # agent is created and served via python simple http server when
 # tests run in travis.
-AGENT_PACKAGE_URL = 'http://localhost:8000/Ubuntu-agent.tar.gz'
-DISABLE_REQUIRETTY_SCRIPT_URL = 'http://localhost:8000/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'  # NOQA
+FILE_SERVER = 'http://localhost:8000'
+AGENT_PACKAGE_URL = '{0}/Ubuntu-agent.tar.gz'.format(FILE_SERVER)
+DISABLE_REQUIRETTY_SCRIPT_URL = '{0}/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'.format(FILE_SERVER)  # NOQA
 MOCK_SUDO_PLUGIN_INCLUDE = 'sudo_plugin.sudo'
+os.environ[MANAGER_FILE_SERVER_URL_KEY] = FILE_SERVER
+os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = FILE_SERVER  # NOQA
+tasks.DEFAULT_AGENT_RESOURCES.update({'agent_package_path': '/Ubuntu-agent.tar.gz'})  # NOQA
+tasks.DEFAULT_AGENT_RESOURCES.update({'disable_requiretty_script_path': '/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'})  # NOQA
 
 
 def _get_custom_agent_package_url(distro):
@@ -45,7 +54,7 @@ def _get_custom_disable_requiretty_script_url(distro):
 
 
 def _get_custom_celery_includes_list():
-    includes_list = t.CELERY_INCLUDES_LIST[:]
+    includes_list = tasks.CELERY_INCLUDES_LIST[:]
     includes_list.append(MOCK_SUDO_PLUGIN_INCLUDE)
     return includes_list
 
@@ -91,7 +100,7 @@ def get_resource(resource_name):
     return None
 
 
-class WorkerInstallerTestCase(unittest.TestCase):
+class WorkerInstallerTestCase(testtools.TestCase):
 
     def assert_installed_plugins(self, ctx, name=None):
         worker_name = name if name else ctx.node.properties[
@@ -108,6 +117,94 @@ class WorkerInstallerTestCase(unittest.TestCase):
         self.assertTrue(
             '{0}@worker_installer'.format(worker_name) in plugins)
 
+    def test_get_agent_resource_url(self):
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        }
+        ctx = get_remote_context(properties)
+        agent_package_url = tasks.get_agent_resource_url(
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(agent_package_url, AGENT_PACKAGE_URL)
+
+    def test_get_agent_resource_local_path(self):
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        }
+        ctx = get_remote_context(properties)
+        agent_package_path = tasks.get_agent_resource_local_path(
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(agent_package_path, '/Ubuntu-agent.tar.gz')
+
+    def test_get_agent_resource_url_missing_origin(self):
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        }
+        ctx = get_remote_context(properties)
+        ex = self.assertRaises(
+            NonRecoverableError, tasks.get_agent_resource_url, ctx,
+            ctx.node.properties['cloudify_agent'], 'nonexisting_resource_key')
+        self.assertIn('no such resource', str(ex))
+
+    def test_get_agent_resource_path_missing_origin(self):
+        properties = {
+            'cloudify_agent': {
+                'disable_requiretty': False,
+                'distro': 'Ubuntu'
+            }
+        }
+        ctx = get_remote_context(properties)
+        ex = self.assertRaises(
+            NonRecoverableError, tasks.get_agent_resource_local_path, ctx,
+            ctx.node.properties['cloudify_agent'], 'nonexisting_resource_key')
+        self.assertIn('no such resource', str(ex))
+
+    def test_get_agent_resource_url_from_agent_config(self):
+        blueprint_id = 'mock_blueprint'
+        properties = {
+            'cloudify_agent': {
+                'user': 'vagrant',
+                'host': VAGRANT_MACHINE_IP,
+                'key': '~/.vagrant.d/insecure_private_key',
+                'port': 2222,
+                'distro': 'Ubuntu',
+                'agent_package_path': 'some-agent.tar.gz'
+            }
+        }
+        ctx = get_remote_context(properties)
+        # should be http://localhost:8000/mock_blueprint/some-agent.tar.gz
+        path = FILE_SERVER + '/{0}'.format(blueprint_id) + \
+            '/' + properties['cloudify_agent']['agent_package_path']
+
+        r = tasks.get_agent_resource_url(
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(path, r)
+
+    def test_get_agent_resource_path_from_agent_config(self):
+        properties = {
+            'cloudify_agent': {
+                'user': 'vagrant',
+                'host': VAGRANT_MACHINE_IP,
+                'key': '~/.vagrant.d/insecure_private_key',
+                'port': 2222,
+                'distro': 'Ubuntu',
+                'agent_package_path': 'some-agent.tar.gz'
+            }
+        }
+        ctx = get_remote_context(properties)
+        path = properties['cloudify_agent']['agent_package_path']
+        r = tasks.get_agent_resource_local_path(
+            ctx, ctx.node.properties['cloudify_agent'], 'agent_package_path')
+        self.assertEquals(path, r)
+
 
 class TestRemoteInstallerCase(WorkerInstallerTestCase):
 
@@ -121,10 +218,10 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         os.environ['MANAGEMENT_IP'] = MANAGER_IP
         os.environ['AGENT_IP'] = VAGRANT_MACHINE_IP
         manager.get_resource = get_resource
-        t.get_agent_package_url = _get_custom_agent_package_url
-        t.get_disable_requiretty_script_url = \
+        tasks.get_agent_package_url = _get_custom_agent_package_url
+        tasks.get_disable_requiretty_script_url = \
             _get_custom_disable_requiretty_script_url()
-        t.get_celery_includes_list = _get_custom_celery_includes_list
+        tasks.get_celery_includes_list = _get_custom_celery_includes_list
         from vagrant_helper import launch_vagrant
         launch_vagrant(cls.VM_ID, cls.RAN_ID)
 
@@ -136,19 +233,19 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
     def test_install_vm_worker(self):
         ctx = get_remote_context()
 
-        t.install(ctx)
-        t.start(ctx)
+        tasks.install(ctx)
+        tasks.start(ctx)
 
         self.assert_installed_plugins(ctx)
 
     def test_install_same_worker_twice(self):
         ctx = get_remote_context()
 
-        t.install(ctx)
-        t.start(ctx)
+        tasks.install(ctx)
+        tasks.start(ctx)
 
-        t.install(ctx)
-        t.start(ctx)
+        tasks.install(ctx)
+        tasks.start(ctx)
 
         self.assert_installed_plugins(ctx)
 
@@ -157,12 +254,12 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         ctx2 = get_remote_context()
 
         # install first worker
-        t.install(ctx1)
-        t.start(ctx1)
+        tasks.install(ctx1)
+        tasks.start(ctx1)
 
         # install second worker
-        t.install(ctx2)
-        t.start(ctx2)
+        tasks.install(ctx2)
+        tasks.start(ctx2)
 
         self.assert_installed_plugins(ctx1)
         self.assert_installed_plugins(ctx2)
@@ -171,10 +268,10 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
         ctx = get_remote_context()
 
         # install first worker
-        t.install(ctx)
-        t.start(ctx)
-        t.stop(ctx)
-        t.uninstall(ctx)
+        tasks.install(ctx)
+        tasks.start(ctx)
+        tasks.stop(ctx)
+        tasks.uninstall(ctx)
 
         agent_config = ctx.node.properties['cloudify_agent']
 
@@ -197,11 +294,28 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
 
     def test_uninstall_non_existing_worker(self):
         ctx = get_remote_context()
-        t.uninstall(ctx)
+        tasks.uninstall(ctx)
 
     def test_stop_non_existing_worker(self):
         ctx = get_remote_context()
-        t.stop(ctx)
+        tasks.stop(ctx)
+
+    def test_download_resource_on_host(self):
+        properties = {
+            'cloudify_agent': {
+                'user': 'vagrant',
+                'host': VAGRANT_MACHINE_IP,
+                'key': '~/.vagrant.d/insecure_private_key',
+                'port': 2222,
+                'distro': 'Ubuntu'
+            }
+        }
+        ctx = get_remote_context(properties)
+        runner = FabricRunner(ctx, ctx.node.properties['cloudify_agent'])
+        tasks.download_resource_on_host(
+            ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
+        r = runner.exists('Ubuntu-agent.tar.gz')
+        self.assertTrue(r)
 
 
 class TestLocalInstallerCase(WorkerInstallerTestCase):
@@ -213,37 +327,37 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         os.environ['MANAGEMENT_IP'] = 'localhost'
         os.environ['AGENT_IP'] = 'localhost'
         manager.get_resource = get_resource
-        t.get_agent_package_url = _get_custom_agent_package_url
-        t.get_disable_requiretty_script_url = \
+        tasks.get_agent_package_url = _get_custom_agent_package_url
+        tasks.get_disable_requiretty_script_url = \
             _get_custom_disable_requiretty_script_url
-        t.get_celery_includes_list = _get_custom_celery_includes_list
+        tasks.get_celery_includes_list = _get_custom_celery_includes_list
 
     def test_install_worker(self):
         ctx = get_local_context()
         agent_config = {'disable_requiretty': False}
-        t.install(ctx, cloudify_agent=agent_config)
-        t.start(ctx)
+        tasks.install(ctx, cloudify_agent=agent_config)
+        tasks.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
 
     def test_install_same_worker_twice(self):
         ctx = get_local_context()
 
         agent_config = {'disable_requiretty': False}
-        t.install(ctx, cloudify_agent=agent_config)
-        t.start(ctx)
+        tasks.install(ctx, cloudify_agent=agent_config)
+        tasks.start(ctx)
 
-        t.install(ctx)
-        t.start(ctx)
+        tasks.install(ctx)
+        tasks.start(ctx)
 
         self.assert_installed_plugins(ctx, agent_config['name'])
 
     def test_remove_worker(self):
         ctx = get_local_context()
         agent_config = {'disable_requiretty': False}
-        t.install(ctx, cloudify_agent=agent_config)
-        t.start(ctx, cloudify_agent=agent_config)
-        t.stop(ctx, cloudify_agent=agent_config)
-        t.uninstall(ctx, cloudify_agent=agent_config)
+        tasks.install(ctx, cloudify_agent=agent_config)
+        tasks.start(ctx, cloudify_agent=agent_config)
+        tasks.stop(ctx, cloudify_agent=agent_config)
+        tasks.uninstall(ctx, cloudify_agent=agent_config)
 
         plugins = _extract_registered_plugins(agent_config['name'])
         # make sure the worker has stopped
@@ -264,17 +378,17 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
     def test_uninstall_non_existing_worker(self):
         ctx = get_local_context()
-        t.uninstall(ctx)
+        tasks.uninstall(ctx)
 
     def test_stop_non_existing_worker(self):
         ctx = get_local_context()
-        t.stop(ctx)
+        tasks.stop(ctx)
 
     def test_install_worker_with_sudo_plugin(self):
         ctx = get_local_context()
         agent_config = {'disable_requiretty': False}
-        t.install(ctx, cloudify_agent=agent_config)
-        t.start(ctx)
+        tasks.install(ctx, cloudify_agent=agent_config)
+        tasks.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
 
         broker_url = 'amqp://guest:guest@localhost:5672//'
@@ -287,8 +401,8 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         self.assertRaises(Exception, result.get, timeout=10)
         ctx = get_local_context()
         agent_config = {'disable_requiretty': True}
-        t.install(ctx, cloudify_agent=agent_config)
-        t.start(ctx)
+        tasks.install(ctx, cloudify_agent=agent_config)
+        tasks.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
 
         broker_url = 'amqp://guest:guest@localhost:5672//'
@@ -300,6 +414,13 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
             queue=agent_config['name'])
         result.get(timeout=10)
 
+    def test_download_resource_on_host(self):
+        ctx = get_local_context()
+        runner = FabricRunner(ctx)
+        tasks.download_resource_on_host(
+            ctx.logger, runner, AGENT_PACKAGE_URL, 'Ubuntu-agent.tar.gz')
+        r = runner.exists('Ubuntu-agent.tar.gz')
+        self.assertTrue(r)
 
 if __name__ == '__main__':
-    unittest.main()
+    testtools.main()

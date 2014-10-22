@@ -4,10 +4,12 @@ test_plugins()
 {
     echo "### Testing plugins..."
     echo "### Creating agent package..."
+
     mkdir -p package/linux
     virtualenv package/linux/env
     source package/linux/env/bin/activate
 
+    pip install testtools
     pip install celery==3.0.24
 
     git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
@@ -30,6 +32,7 @@ test_plugins()
     virtualenv ~/env
     source ~/env/bin/activate
 
+    pip install testtools
     pip install celery==3.0.24
     pip install -r tests/dev-requirements.txt
 

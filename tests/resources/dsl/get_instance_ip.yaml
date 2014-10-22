@@ -57,10 +57,10 @@ relationships:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - establish: testmockoperations.testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
+                - establish: testmockoperations.testmockoperations.tasks.get_instance_ip_of_source_and_target
         target_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - establish: testmockoperations.testmockoperations.tasks.mock_operation_get_instance_ip_of_related_from_context
+                - establish: testmockoperations.testmockoperations.tasks.get_instance_ip_of_source_and_target
 
 node_templates:
     host1_1:
