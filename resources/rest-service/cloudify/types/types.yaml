@@ -6,17 +6,17 @@ node_types:
     cloudify.types.base:
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create
-                - configure
-                - start
-                - stop
-                - delete
+                create: {}
+                configure: {}
+                start: {}
+                stop: {}
+                delete: {}
             cloudify.interfaces.validation:
-                - creation
-                - deletion
+                creation: {}
+                deletion: {}
             cloudify.interfaces.monitoring:
-                - start
-                - stop
+                start: {}
+                stop: {}
 
     # A tier in a topology
     cloudify.types.tier:
@@ -27,20 +27,32 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.worker_installer:
-                - install: agent_installer.worker_installer.tasks.install
-                - start: agent_installer.worker_installer.tasks.start
-                - stop: agent_installer.worker_installer.tasks.stop
-                - uninstall: agent_installer.worker_installer.tasks.uninstall
-                - restart: agent_installer.worker_installer.tasks.restart
+                install:
+                    implementation: agent_installer.worker_installer.tasks.install
+                    inputs: {}
+                start:
+                    implementation: agent_installer.worker_installer.tasks.start
+                    inputs: {}
+                stop:
+                    implementation: agent_installer.worker_installer.tasks.stop
+                    inputs: {}
+                uninstall:
+                    implementation: agent_installer.worker_installer.tasks.uninstall
+                    inputs: {}
+                restart:
+                    implementation: agent_installer.worker_installer.tasks.restart
+                    inputs: {}
             cloudify.interfaces.plugin_installer:
-                - install: plugin_installer.plugin_installer.tasks.install
+                install:
+                    implementation: plugin_installer.plugin_installer.tasks.install
+                    inputs: {}
             cloudify.interfaces.host:
-                - get_state
+                get_state: {}
             cloudify.interfaces.monitoring_agent:
-                - install
-                - start
-                - stop
-                - uninstall
+                install: {}
+                start: {}
+                stop: {}
+                uninstall: {}
         properties:
             install_agent:
                 default: true
@@ -123,16 +135,16 @@ relationships:
     cloudify.relationships.depends_on:
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - preconfigure
-                - postconfigure
-                - establish
-                - unlink
+                preconfigure: {}
+                postconfigure: {}
+                establish: {}
+                unlink: {}
         target_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - preconfigure
-                - postconfigure
-                - establish
-                - unlink
+                preconfigure: {}
+                postconfigure: {}
+                establish: {}
+                unlink: {}
         properties:
             connection_type:
                 default: all_to_all
