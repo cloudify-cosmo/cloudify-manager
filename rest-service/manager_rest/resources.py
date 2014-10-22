@@ -795,8 +795,8 @@ class DeploymentsIdModify(Resource):
                 node_instances={},
                 modified_nodes={})
         else:
-            # TODO raise proper error coded exception
-            raise RuntimeError('unknown stage: {0}'.format(stage))
+            raise manager_exceptions.UnknownModificationStageError(
+                'Unknown modification stage: {0}'.format(stage))
 
 
 class Nodes(Resource):
