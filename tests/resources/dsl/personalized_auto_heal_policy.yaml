@@ -1,0 +1,41 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+    - testmockoperations.yaml
+    - mock_workflows.yaml
+
+node_templates:
+    my_special_node:
+        type: cloudify.types.base
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - start: testmockoperations.testmockoperations.tasks.mock_start
+                - stop: testmockoperations.testmockoperations.tasks.mock_stop
+
+groups:
+    autohealing_group:
+        members: [my_special_node]
+        policies:
+            simple_autoheal_policy:
+                type: cloudify.policies.types.host_failure
+                triggers:
+                    auto_heal_trigger:
+                        type: cloudify.policies.triggers.execute_workflow
+                        parameters:
+                            workflow: auto_heal_workflow
+                            allow_custom_parameters: true
+                            workflow_parameters:
+                                value: { get_property: [SELF, failing_node]}
+                                diagnose_key: diagnose
+                                diagnose_value: { get_property: [SELF, diagnose] }
+
+workflows:
+    auto_heal_workflow:
+        #TODO workflow is in repository plugin commons
+        mapping: workflows.py
+        parameters:
+            key:
+                default: failing_node
+            value:
+                description: Which node has failed

@@ -130,25 +130,13 @@ class TestPolicies(TestCase):
             tester.publish_below_threshold(deployment.id, do_assert=False)
 
     def test_autoheal_policy_triggering(self):
-        EVENTS_TTL = 3
         AUTOHEAL_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
-        dsl_path = resource(AUTOHEAL_YAML)
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
-        self.instance_id = self.wait_for_node_instance().id
-
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
-
-        self.publish(AUTOHEAL_EVENTS_MSG, EVENTS_TTL)
-        time.sleep(
-            EVENTS_TTL +
-            Constants.PERIODICAL_EXPIRATION_INTERVAL +
-            SAFETY_MARGIN
-        )
-
+        self.launch_deployment(AUTOHEAL_YAML)
+        self.publish_and_expire()
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-        invocation = self.wait_for_invocations(deployment.id, 1)[0]
+
+        invocation = self.wait_for_invocations(self.deployment_id, 1)[0]
 
         self.assertEqual("heart-beat-failure", invocation['diagnose'])
         self.assertEqual(self.instance_id, invocation['failing_node'])
@@ -158,17 +146,42 @@ class TestPolicies(TestCase):
         EVENTS_NO = 10
         AUTOHEAL_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
-        dsl_path = resource(AUTOHEAL_YAML)
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
-        self.instance_id = self.wait_for_node_instance().id
-
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+        self.launch_deployment(AUTOHEAL_YAML)
 
         for _ in range(EVENTS_NO):
             self.publish(AUTOHEAL_EVENTS_MSG, EVENTS_TTL)
             time.sleep(EVENTS_TTL - SAFETY_MARGIN)
 
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+
+    def test_autoheal_workflow(self):
+        AUTOHEAL_YAML = 'dsl/personalized_auto_heal_policy.yaml'
+
+        self.launch_deployment(AUTOHEAL_YAML)
+        self.publish_and_expire()
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 2)
+
+        invocation_start = self.wait_for_invocations(self.deployment_id, 2)[0]
+        invocation_stop = self.wait_for_invocations(self.deployment_id, 2)[1]
+
+        self.assertEqual('start', invocation_start['operation'])
+        self.assertEqual('stop', invocation_stop['operation'])
+
+    def publish_and_expire(self):
+        EVENTS_TTL = 3
+
+        self.publish(AUTOHEAL_EVENTS_MSG, EVENTS_TTL)
+        time.sleep(
+            EVENTS_TTL +
+            Constants.PERIODICAL_EXPIRATION_INTERVAL +
+            SAFETY_MARGIN
+        )
+
+    def launch_deployment(self, yaml_file):
+        dsl_path = resource(yaml_file)
+        deployment, _ = deploy(dsl_path)
+        self.deployment_id = deployment.id
+        self.instance_id = self.wait_for_node_instance().id
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
 
     def wait_for_executions(self, expected_count):

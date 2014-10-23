@@ -129,6 +129,16 @@ def saving_multiple_params_op(ctx, params, **kwargs):
 
 
 @operation
+def mock_start(ctx, **kwargs):
+    mock_operation_from_custom_workflow(ctx, 'operation', 'start', **kwargs)
+
+
+@operation
+def mock_stop(ctx, **kwargs):
+    mock_operation_from_custom_workflow(ctx, 'operation', 'stop', **kwargs)
+
+
+@operation
 def mock_operation_get_instance_ip(ctx, **kwargs):
     with update_storage(ctx) as data:
         data['mock_operation_invocation'] = data.get(
