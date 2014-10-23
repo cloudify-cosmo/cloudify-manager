@@ -8,8 +8,8 @@ node_templates:
         type: cloudify.types.host
         interfaces:
             test:
-                - op1: scripts/operations/op1.py
-                - op2: scripts/operations/op2.sh
+                op1: scripts/operations/op1.py
+                op2: scripts/operations/op2.sh
 
 workflows:
     workflow: scripts/workflows/workflow.py

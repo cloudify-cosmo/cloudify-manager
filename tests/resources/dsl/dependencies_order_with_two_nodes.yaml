@@ -24,5 +24,9 @@ node_types:
                 default: value1
         interfaces:
             cloudify.interfaces.lifecycle:
-                - start: testmockoperations.testmockoperations.tasks.make_reachable
-                - create: testmockoperations.testmockoperations.tasks.set_property
+                start:
+                    implementation: testmockoperations.testmockoperations.tasks.make_reachable
+                    inputs: {}
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.set_property
+                    inputs: {}
