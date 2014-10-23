@@ -256,7 +256,7 @@ def test_policies_3(ctx, key, value, **_):
 
 @workflow
 def auto_heal_vm(ctx, key, value, diagnose_key=None, diagnose_value=None, **_):
-    instance = list(ctx.get_node('node').instances)[0]
+    instance = list(ctx.get_node_instance(value).instances)[0]
     instance.execute_operation('test.op1', kwargs={
         'params': {
             key: value,

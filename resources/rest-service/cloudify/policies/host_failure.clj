@@ -1,1 +1,1 @@
-(where* expired? (with {:failing_node "some_vm" :diagnose "heart-beat-failure"} process-policy-triggers))
+(where* expired? (fn [event] ((with {:failing_node (:node_id event) :diagnose "heart-beat-failure"} process-policy-triggers) event )))

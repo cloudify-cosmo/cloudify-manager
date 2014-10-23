@@ -151,7 +151,7 @@ class TestPolicies(TestCase):
         invocation = self.wait_for_invocations(deployment.id, 1)[0]
 
         self.assertEqual("heart-beat-failure", invocation['diagnose'])
-        self.assertEqual("some_vm", invocation['failing_node'])
+        self.assertEqual(self.instance_id, invocation['failing_node'])
 
     def test_autoheal_policy_stability(self):
         EVENTS_TTL = 3
