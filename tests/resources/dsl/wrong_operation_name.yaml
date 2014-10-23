@@ -13,4 +13,6 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - start: testmockoperations.testmockoperations.non_existent
+                start:
+                    implementation: testmockoperations.testmockoperations.non_existent
+                    inputs: {}

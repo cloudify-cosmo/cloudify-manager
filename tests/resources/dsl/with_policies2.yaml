@@ -10,7 +10,7 @@ node_templates:
         type: cloudify.types.base
         interfaces:
             test:
-                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
 groups:
     threshold_group:

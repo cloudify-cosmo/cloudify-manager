@@ -22,24 +22,24 @@ node_templates:
             install_agent: false
         interfaces:
             cloudify.interfaces.monitoring_agent:
-                - install:
-                    mapping: diamond.diamond_agent.tasks.install
-                    properties:
+                install:
+                    implementation: diamond.diamond_agent.tasks.install
+                    inputs:
                         diamond_config:
                             interval: 1
-                - start: diamond.diamond_agent.tasks.start
-                - stop: diamond.diamond_agent.tasks.stop
-                - uninstall: diamond.diamond_agent.tasks.uninstall
+                start: diamond.diamond_agent.tasks.start
+                stop: diamond.diamond_agent.tasks.stop
+                uninstall: diamond.diamond_agent.tasks.uninstall
             cloudify.interfaces.monitoring:
-                - start:
-                    mapping: diamond.diamond_agent.tasks.add_collectors
-                    properties:
+                start:
+                    implementation: diamond.diamond_agent.tasks.add_collectors
+                    inputs:
                         collectors_config:
                             ExampleCollector:
                                 config:
                                     stub: prop
             test:
-                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
 groups:
     some_group:
