@@ -17,8 +17,6 @@ node_types:
             cloudify.interfaces.monitoring:
                 - start
                 - stop
-            cloudify.interfaces.auto_healing:
-                - restart
 
     # A tier in a topology
     cloudify.types.tier:
@@ -43,8 +41,6 @@ node_types:
                 - start
                 - stop
                 - uninstall
-            cloudify.interfaces.auto_healing:
-                - restart
         properties:
             install_agent:
                 default: true
@@ -197,10 +193,6 @@ plugins:
 
     script:
         executor: host_agent
-        install: false
-
-    auto_healing:
-        executor: central_deployment_agent
         install: false
 
 ##################################################################################
