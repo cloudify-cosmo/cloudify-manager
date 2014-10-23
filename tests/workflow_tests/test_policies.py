@@ -155,7 +155,7 @@ class TestPolicies(TestCase):
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
 
     def test_autoheal_workflow(self):
-        AUTOHEAL_YAML = 'dsl/personalized_auto_heal_policy.yaml'
+        AUTOHEAL_YAML = 'dsl/customized_auto_heal_policy.yaml'
 
         self.launch_deployment(AUTOHEAL_YAML)
         self.publish_and_expire()

@@ -29,11 +29,14 @@ groups:
                                 value: { get_property: [SELF, failing_node]}
                                 diagnose_key: diagnose
                                 diagnose_value: { get_property: [SELF, diagnose] }
+                                execution_plans:
+                                    - heart-beat-failure:
+                                        - cloudify.interfaces.lifecycle.stop
+                                        - cloudify.interfaces.lifecycle.start
 
 workflows:
     auto_heal_workflow:
-        #TODO workflow is in repository plugin commons
-        mapping: workflows.py
+        mapping: default_workflows.workflows.default.auto_heal
         parameters:
             key:
                 default: failing_node
