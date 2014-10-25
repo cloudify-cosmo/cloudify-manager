@@ -30,7 +30,16 @@ class ModifyTests(BaseServerTestCase):
         modification = self.client.deployments.modify.start(
             deployment.id, nodes={
                 'node': {
-                    'instances': 2
+                    'instances': 200
                 }
             })
-        
+        self.client.deployments.modify.finish(deployment.id, modification)
+        modification = self.client.deployments.modify.start(
+            deployment.id, nodes={
+                'node': {
+                    'instances': 100
+                }
+            })
+        self.client.deployments.modify.finish(deployment.id, modification)
+        from pprint import pprint
+        pprint(modification)
