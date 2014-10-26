@@ -176,6 +176,7 @@ def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     ctx.logger.info('Stopping agent {0}'.format(cloudify_agent['name']))
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
+    _wait_for_stopped(runner, cloudify_agent)
 
 
 @operation
@@ -254,6 +255,24 @@ def _wait_for_started(runner, cloudify_agent):
         time.sleep(interval)
     _verify_no_celery_error(runner)
     raise NonRecoverableError('Failed starting agent. waited for {0} seconds.'
+                              .format(wait_started_timeout))
+
+
+def _wait_for_stopped(runner, cloudify_agent):
+    _verify_no_celery_error(runner)
+    worker_name = 'celery.{0}'.format(cloudify_agent['name'])
+    wait_started_timeout = cloudify_agent[
+        win_constants.AGENT_STOP_TIMEOUT_KEY
+    ]
+    timeout = time.time() + wait_started_timeout
+    interval = cloudify_agent[win_constants.AGENT_STOP_INTERVAL_KEY]
+    while time.time() < timeout:
+        stats = get_worker_stats(worker_name)
+        if not stats:
+            return
+        time.sleep(interval)
+    _verify_no_celery_error(runner)
+    raise NonRecoverableError('Failed stopping agent. waited for {0} seconds.'
                               .format(wait_started_timeout))
 
 

@@ -114,6 +114,14 @@ def set_agent_configuration_parameters(cloudify_agent):
                  constants.AGENT_START_INTERVAL_KEY,
                  1)
 
+    # defaults
+    _set_default(cloudify_agent,
+                 constants.AGENT_STOP_TIMEOUT_KEY,
+                 15)
+    _set_default(cloudify_agent,
+                 constants.AGENT_STOP_INTERVAL_KEY,
+                 1)
+
 
 def set_service_configuration_parameters(cloudify_agent):
 
