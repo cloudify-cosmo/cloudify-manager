@@ -56,9 +56,13 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.logger = setup_default_logger(self._testMethodName,
                                            logging.INFO)
+        self.logger.info('Creating rest client')
         self.client = utils.create_rest_client()
+        self.logger.info('REstoring provider context')
         utils.restore_provider_context()
+        self.logger.info('+++++++++++++++++++++++++++++++++++++++++++++++++++')
         TestEnvironment.start_celery_management_worker()
+        self.logger.info("CONTEXT={0}".format(self.client.manager.get_context()))
 
     def tearDown(self):
         TestEnvironment.reset_elasticsearch_data()

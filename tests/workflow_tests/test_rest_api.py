@@ -19,6 +19,7 @@ import uuid
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application
+from testenv.utils import wait_for_deployment_creation_to_complete
 
 
 class RestAPITest(TestCase):
@@ -33,6 +34,7 @@ class RestAPITest(TestCase):
     def _create_basic_deployment(self):
         self.client.blueprints.upload(self.dsl_path, self.blueprint_id)
         self.client.deployments.create(self.blueprint_id, self.deployment_id)
+        # wait_for_deployment_creation_to_complete(deployment_id=self.deployment_id)
 
     def _deploy_basic_blueprint(self):
         deploy_application(self.dsl_path,
