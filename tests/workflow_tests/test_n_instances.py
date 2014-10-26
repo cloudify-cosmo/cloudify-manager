@@ -13,27 +13,26 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
 
 from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_application as deploy
-from testenv import send_task
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_application as deploy
 
 
 class TestMultiInstanceApplication(TestCase):
 
     def test_deploy_multi_instance_application(self):
         dsl_path = resource("dsl/multi_instance.yaml")
-        deploy(dsl_path)
-
-        from plugins.cloudmock.tasks import get_machines
-        result = send_task(get_machines)
-        machines = set(result.get(timeout=10))
+        deployment, _ = deploy(dsl_path)
+        machines = set(self.get_plugin_data(
+            plugin_name='cloudmock',
+            deployment_id=deployment.id
+        )['machines'])
         self.assertEquals(2, len(machines))
-
-        from plugins.testmockoperations.tasks import get_state as get_state
-        apps_state = send_task(get_state).get(timeout=10)
+        apps_state = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['state']
         machines_with_apps = set([])
         for app_state in apps_state:
             host_id = app_state['capabilities'].keys()[0]
@@ -42,11 +41,11 @@ class TestMultiInstanceApplication(TestCase):
 
     def test_deploy_multi_instance_many_different_hosts(self):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
-        deploy(dsl_path)
-
-        from plugins.cloudmock.tasks import get_machines
-        result = send_task(get_machines)
-        machines = set(result.get(timeout=10))
+        deployment, _ = deploy(dsl_path)
+        machines = set(self.get_plugin_data(
+            plugin_name='cloudmock',
+            deployment_id=deployment.id
+        )['machines'])
         self.assertEquals(15, len(machines))
 
         self.assertEquals(5, len(filter(lambda ma: ma.startswith('host1'),

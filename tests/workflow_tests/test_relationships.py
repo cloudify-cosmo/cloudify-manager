@@ -13,12 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'dank'
-
 from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_application as deploy
-from testenv import send_task
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_application as deploy
+from testenv.utils import is_node_started
 
 
 class TestRelationships(TestCase):
@@ -26,96 +24,73 @@ class TestRelationships(TestCase):
     def test_pre_source_started_location_source(self):
         dsl_path = resource(
             "dsl/relationship_interface_pre_source_location_source.yaml")
-        deploy(dsl_path)
-        self.verify_assertions(hook='pre-init',
+        deployment, _ = deploy(dsl_path)
+        self.verify_assertions(deployment.id,
+                               hook='pre-init',
                                runs_on_source=True)
 
     def test_post_source_started_location_target(self):
         dsl_path = resource(
             "dsl/relationship_interface_post_source_location_target.yaml")
-        deploy(dsl_path)
-        self.verify_assertions(hook='post-init',
+        deployment, _ = deploy(dsl_path)
+        self.verify_assertions(deployment.id,
+                               hook='post-init',
                                runs_on_source=False)
 
-    def verify_assertions(self, hook, runs_on_source):
+    def verify_assertions(self, deployment_id, hook, runs_on_source):
 
-        if runs_on_source:
-            node_id_id_prefix = 'mock_node_that_connects_to_host'
-            related_id_prefix = 'host'
-        else:
-            node_id_id_prefix = 'host'
-            related_id_prefix = 'mock_node_that_connects_to_host'
+        source_node_id_prefix = 'mock_node_that_connects_to_host'
+        target_node_id_prefix = 'host'
 
-        from plugins.cloudmock.tasks import get_machines
-        result = send_task(get_machines)
-        machines = result.get(timeout=10)
+        machines = self.get_plugin_data(
+            plugin_name='cloudmock',
+            deployment_id=deployment_id
+        )['machines']
         self.assertEquals(1, len(machines))
 
-        from plugins.connection_configurer_mock.tasks import get_state \
-            as config_get_state
-        result = send_task(config_get_state)
+        state = self.get_plugin_data(
+            plugin_name='connection_configurer_mock',
+            deployment_id=deployment_id
+        )['state'][0]
 
-        state = result.get(timeout=10)[0]
+        source_id = state['source_id']
+        target_id = state['target_id']
 
-        node_id = state['id']
-        related_id = state['related_id']
+        self.assertTrue(source_id.startswith(source_node_id_prefix))
+        self.assertTrue(target_id.startswith(target_node_id_prefix))
 
-        self.assertTrue(node_id.startswith(node_id_id_prefix))
-        self.assertTrue(related_id.startswith(related_id_prefix))
+        self.assertTrue(is_node_started(target_id))
 
-        from testenv import is_node_started
-        self.assertTrue(is_node_started(related_id))
+        self.assertEquals('source_property_value',
+                          state['source_properties']['source_property_key'])
+        self.assertEquals(
+            'target_property_value',
+            state['target_properties']['target_property_key'])
+        self.assertEquals(
+            'source_runtime_property_value',
+            state['source_runtime_properties']['source_runtime_property_key']
+        )
+        self.assertEquals(
+            'target_runtime_property_value',
+            state['target_runtime_properties']
+                 ['target_runtime_property_key']
+        )
 
-        if runs_on_source:
-            self.assertEquals('source_property_value',
-                              state['properties']['source_property_key'])
-            self.assertEquals(
-                'target_property_value',
-                state['related_properties']['target_property_key'])
-            self.assertEquals(
-                'source_runtime_property_value',
-                state['runtime_properties']['source_runtime_property_key']
-            )
-            self.assertEquals(
-                'target_runtime_property_value',
-                state['related_runtime_properties']
-                     ['target_runtime_property_key']
-            )
-        else:
-            self.assertEquals('source_property_value',
-                              state['related_properties']
-                              ['source_property_key'])
-            self.assertEquals(
-                'target_property_value',
-                state['properties']['target_property_key'])
-            self.assertEquals(
-                'source_runtime_property_value',
-                state['related_runtime_properties']
-                     ['source_runtime_property_key']
-            )
-            self.assertEquals(
-                'target_runtime_property_value',
-                state['runtime_properties']
-                     ['target_runtime_property_key']
-            )
-
-        if hook == 'pre-init':
-            self.assertTrue(node_id not in
-                            state['capabilities'])
-        elif hook == 'post-init':
-            self.assertTrue(is_node_started(node_id))
-        else:
+        if hook == 'post-init':
+            self.assertTrue(is_node_started(source_id))
+        elif hook != 'pre-init':
             self.fail('unhandled state')
 
         connector_timestamp = state['time']
 
-        from plugins.testmockoperations.tasks import get_state \
-            as testmock_get_state
-        from plugins.testmockoperations.tasks import get_touched_time \
-            as testmock_get_touch_time
-        state = send_task(testmock_get_state).get(timeout=10)[0]
-        touched_timestamp = send_task(testmock_get_touch_time)\
-            .get(timeout=10)
+        state = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['state'][0]
+        touched_timestamp = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['touched_time']
 
         reachable_timestamp = state['time']
         if hook == 'pre-init':

@@ -13,11 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
 
-import json
-from elasticsearch import Elasticsearch
 import elasticsearch.exceptions
+from elasticsearch import Elasticsearch
+
 from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
                                  Deployment,
@@ -163,19 +162,18 @@ class ESStorageManager(object):
     def deployments_list(self, include=None):
         return self._list_docs(DEPLOYMENT_TYPE, Deployment, fields=include)
 
-    def executions_list(self, include=None):
-        return self._list_docs(EXECUTION_TYPE, Execution, fields=include)
+    def executions_list(self, deployment_id=None, include=None):
+        query = None
+        if deployment_id:
+            query = self._build_field_value_filter('deployment_id',
+                                                   deployment_id)
+        return self._list_docs(EXECUTION_TYPE, Execution,
+                               query=query, fields=include)
 
     def get_blueprint_deployments(self, blueprint_id, include=None):
         return self._list_docs(DEPLOYMENT_TYPE, Deployment,
                                self._build_field_value_filter(
                                    'blueprint_id', blueprint_id),
-                               fields=include)
-
-    def get_deployment_executions(self, deployment_id, include=None):
-        return self._list_docs(EXECUTION_TYPE, Execution,
-                               self._build_field_value_filter(
-                                   'deployment_id', deployment_id),
                                fields=include)
 
     def get_node_instance(self, node_instance_id, include=None):
@@ -292,32 +290,30 @@ class ESStorageManager(object):
                                 DeploymentNodeInstance)
 
     def update_node_instance(self, node):
-        update_doc = {'script': ''}
-
         new_state = node.state
         new_runtime_props = node.runtime_properties
 
+        current = self.get_node_instance(node.id)
+        # Validate version - this is not 100% safe since elasticsearch
+        # update doesn't accept the version field.
+        if node.version != 0 and current.version != node.version:
+            raise manager_exceptions.ConflictError(
+                'Node instance update conflict [current_version={0}, updated_'
+                'version={1}]'.format(current.version, node.version))
+
         if new_state is not None:
-            update_doc['script'] += \
-                '; ctx._source.put("state", "{0}") ;'.format(new_state)
+            current.state = new_state
 
         if new_runtime_props is not None:
-            update_doc['script'] += \
-                '; ctx._source.put("runtime_properties", {0}) ;'.format(
-                    json.dumps(new_runtime_props))
+            current.runtime_properties = node.runtime_properties
 
-        try:
-            self._get_es_conn().update(index=STORAGE_INDEX_NAME,
-                                       doc_type=NODE_INSTANCE_TYPE,
-                                       id=str(node.id),
-                                       body=update_doc,
-                                       version=node.version)
-        except elasticsearch.exceptions.NotFoundError:
-            raise manager_exceptions.NotFoundError(
-                "Node {0} not found".format(node.id))
-        except elasticsearch.exceptions.ConflictError:
-            raise manager_exceptions.ConflictError(
-                'Node update conflict: mismatching versions')
+        updated = current.to_dict()
+        del updated['version']
+
+        self._get_es_conn().index(index=STORAGE_INDEX_NAME,
+                                  doc_type=NODE_INSTANCE_TYPE,
+                                  id=node.id,
+                                  body=updated)
 
     def put_provider_context(self, provider_context):
         doc_data = provider_context.to_dict()

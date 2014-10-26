@@ -1,16 +1,17 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
 imports:
-    - cloudify.types
+    - cloudify/types/types.yaml
     - testmockoperations.yaml
     - mock_workflows.yaml
     - policies/nop.yaml
-    - triggers/execute_workflow.yaml
 
 node_templates:
     node:
         type: cloudify.types.base
         interfaces:
             test:
-                - op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
 groups:
     some_group:
@@ -20,7 +21,7 @@ groups:
                 type: nop
                 triggers:
                     some_workflow_trigger:
-                        type: execute_workflow
+                        type: cloudify.policies.triggers.execute_workflow
                         parameters:
                             workflow: some_workflow
                             allow_custom_parameters: true

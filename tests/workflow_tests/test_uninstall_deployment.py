@@ -13,39 +13,35 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'eitany'
 
 from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_application as deploy
-from testenv import undeploy_application as undeploy
-from testenv import send_task
-from plugins.cloudmock import tasks as cloudmock
-import time
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_application as deploy
+from testenv.utils import undeploy_application as undeploy
 
 
 class TestUninstallDeployment(TestCase):
 
     def test_uninstall_application_single_node_no_host(self):
-        from testenv import logger
         dsl_path = resource("dsl/single_node_no_host.yaml")
-        logger.info('starting deploy process')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        logger.info('deploy completed')
-        logger.info('starting undeploy process')
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
-        logger.info('undeploy completed')
 
-        from plugins.testmockoperations.tasks import get_state as \
-            testmock_get_state
-        from plugins.testmockoperations.tasks import is_unreachable_called
-        states = send_task(testmock_get_state).get(timeout=10)
+        states = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['state']
         node_id = states[0]['id']
+        unreachable_call_order = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['unreachable_call_order']
 
-        result = send_task(is_unreachable_called, [node_id])
-        self.assertTrue(result.get(timeout=10))
+        unreachable_called = is_unreachable_called(
+            node_id,
+            unreachable_call_order)
+        self.assertTrue(unreachable_called)
 
         node_instance = self.client.node_instances.get(node_id)
         self.assertEqual('deleted', node_instance['state'])
@@ -53,80 +49,67 @@ class TestUninstallDeployment(TestCase):
     def test_uninstall_application_single_host_node(self):
         dsl_path = resource("dsl/basic.yaml")
 
-        self.logger.info('starting deploy process')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        self.logger.info('deploy completed')
 
-        self.logger.info('starting undeploy process')
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
-        self.logger.info('undeploy completed')
 
-        from plugins.cloudmock.tasks import get_machines
-        result = send_task(get_machines)
-        machines = result.get(timeout=10)
+        machines = self.get_plugin_data(
+            plugin_name='cloudmock',
+            deployment_id=deployment_id
+        )['machines']
 
         self.assertEquals(0, len(machines))
 
     def test_uninstall_with_dependency_order(self):
         dsl_path = resource(
             "dsl/uninstall_dependencies-order-with-three-nodes.yaml")
-        print('starting deploy process')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        print('deploy completed')
-        print('starting undeploy process')
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
-        print('undeploy completed')
         # Checking that uninstall wasn't called on the contained node
-        from plugins.testmockoperations.tasks import \
-            get_unreachable_call_order \
-            as testmock_get_unreachable_call_order
-        from plugins.testmockoperations.tasks import get_state \
-            as testmock_get_state
-        states = send_task(testmock_get_state).get(timeout=10)
+        states = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['state']
         node1_id = states[0]['id']
         node2_id = states[1]['id']
         node3_id = states[2]['id']
 
-        unreachable_call_order = send_task(
-            testmock_get_unreachable_call_order).get(timeout=10)
+        unreachable_call_order = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['unreachable_call_order']
         self.assertEquals(3, len(unreachable_call_order))
         self.assertEquals(node3_id, unreachable_call_order[0]['id'])
         self.assertEquals(node2_id, unreachable_call_order[1]['id'])
         self.assertEquals(node1_id, unreachable_call_order[2]['id'])
 
-        from plugins.connection_configurer_mock.tasks import get_state \
-            as config_get_state
-        configurer_state = send_task(config_get_state).get(timeout=10)
+        configurer_state = self.get_plugin_data(
+            plugin_name='connection_configurer_mock',
+            deployment_id=deployment_id
+        )['state']
         self.assertEquals(2, len(configurer_state))
         self.assertTrue(
-            configurer_state[0]['id'].startswith('contained_in_node2'))
+            configurer_state[0]['source_id'].startswith('contained_in_node2'))
         self.assertTrue(
-            configurer_state[0]['related_id'].startswith('contained_in_node1'))
+            configurer_state[0]['target_id'].startswith('contained_in_node1'))
         self.assertTrue(
-            configurer_state[1]['id'].startswith('containing_node'))
+            configurer_state[1]['target_id'].startswith('containing_node'))
         self.assertTrue(
-            configurer_state[1]['related_id'].startswith('contained_in_node1'))
+            configurer_state[1]['source_id'].startswith('contained_in_node1'))
 
     def test_stop_monitor_node_operation(self):
         dsl_path = resource(
             "dsl/hardcoded_operation_properties.yaml")
-        print('starting deploy process')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        print('deploy completed')
-        print('starting undeploy process')
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
-        print('undeploy completed')
         # test stop monitor invocations
-        from plugins.testmockoperations.tasks import \
-            get_monitoring_operations_invocation
-        invocations = send_task(get_monitoring_operations_invocation) \
-            .get(timeout=10)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['monitoring_operations_invocation']
         self.assertEqual(2, len(invocations))
         self.assertTrue('single_node' in invocations[0]['id'])
         self.assertEquals('start_monitor', invocations[0]['operation'])
@@ -134,19 +117,20 @@ class TestUninstallDeployment(TestCase):
         self.assertEquals('stop_monitor', invocations[1]['operation'])
 
     def test_failed_uninstall_task(self):
-        dsl_path = resource("dsl/basic.yaml")
-        self.logger.info('** install **')
+        dsl_path = resource('dsl/basic_stop_error.yaml')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-
-        send_task(cloudmock.set_raise_exception_on_stop).get(timeout=10)
-
-        self.logger.info('** uninstall **')
-        time.sleep(5)  # give elasticsearch time to update execution status..
         undeploy(deployment_id)
 
-        from plugins.cloudmock.tasks import get_machines
-        result = send_task(get_machines)
-        machines = result.get(timeout=10)
+        machines = self.get_plugin_data(
+            plugin_name='cloudmock',
+            deployment_id=deployment_id
+        )['machines']
 
         self.assertEquals(0, len(machines))
+
+
+def is_unreachable_called(node_id,
+                          unreachable_call_order):
+    return next((x for x in
+                 unreachable_call_order if x['id'] == node_id), None)

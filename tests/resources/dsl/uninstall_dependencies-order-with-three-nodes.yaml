@@ -1,3 +1,5 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
 imports:
     - cloudify.types
     - testmockoperations.yaml
@@ -14,7 +16,7 @@ node_templates:
               target: contained_in_node1
               source_interfaces:
                   cloudify.interfaces.relationship_lifecycle:
-                      - unlink: connection_configurer_mock.connection_configurer_mock.tasks.unconfigure_connection
+                      unlink: connection_configurer_mock.connection_configurer_mock.tasks.unconfigure_connection
 
     contained_in_node1:
         type: mock_type
@@ -23,15 +25,23 @@ node_templates:
               target: containing_node
               target_interfaces:
                   cloudify.interfaces.relationship_lifecycle:
-                      - unlink: connection_configurer_mock.connection_configurer_mock.tasks.unconfigure_connection
+                      unlink: connection_configurer_mock.connection_configurer_mock.tasks.unconfigure_connection
 
 node_types:
     mock_type:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: connection_configurer_mock.testmockoperations.tasks.make_reachable
-                - delete: connection_configurer_mock.testmockoperations.tasks.make_unreachable
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.make_reachable
+                    inputs: {}
+                delete:
+                    implementation: testmockoperations.testmockoperations.tasks.make_unreachable
+                    inputs: {}
             cloudify.interfaces.monitor_lifecycle:
-                            - start: connection_configurer_mock.testmockoperations.tasks.start_monitor
-                            - stop: connection_configurer_mock.testmockoperations.tasks.stop_monitor
+                start:
+                    implementation: testmockoperations.testmockoperations.tasks.start_monitor
+                    inputs: {}
+                stop:
+                    implementation: testmockoperations.testmockoperations.tasks.stop_monitor
+                    inputs: {}

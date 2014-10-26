@@ -13,25 +13,23 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
 
 from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_application as deploy
-from testenv import send_task
-
-from plugins.testmockoperations.tasks import get_mock_operation_invocations
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_application as deploy
 
 
 class GetInstanceIPTest(TestCase):
 
     def test_get_instance_ip(self):
         dsl_path = resource("dsl/get_instance_ip.yaml")
-        deploy(dsl_path)
+        deployment, _ = deploy(dsl_path)
 
-        invocations = send_task(get_mock_operation_invocations).get()
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['mock_operation_invocation']
         mapping = {name: ip for name, ip in invocations}
-
         self.assertDictEqual({
             'host1_1': '1.1.1.1',
             'host1_2': '2.2.2.2',
@@ -41,8 +39,8 @@ class GetInstanceIPTest(TestCase):
             'host2_2': '4.4.4.4',
             'contained2_in_host2_1': '3.3.3.3',
             'contained2_in_host2_2': '4.4.4.4',
-            'host2_1_rel': '3.3.3.3',
-            'host2_2_rel': '4.4.4.4',
-            'contained2_in_host2_1_rel': '3.3.3.3',
-            'contained2_in_host2_2_rel': '4.4.4.4'
+            'host2_1_target': '3.3.3.3',
+            'host2_2_target': '4.4.4.4',
+            'contained2_in_host2_1_source': '3.3.3.3',
+            'contained2_in_host2_2_source': '4.4.4.4'
         }, mapping)

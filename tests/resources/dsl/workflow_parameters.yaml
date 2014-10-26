@@ -1,3 +1,5 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
 imports:
     - cloudify.types
     - testmockoperations.yaml
@@ -8,10 +10,10 @@ node_templates:
         type: cloudify.types.base
         interfaces:
             test_interface:
-                - operation: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                operation: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
 
 workflows:
-    execute_operation:
+    custom_execute_operation:
         mapping: mock_workflows.mock_workflows.workflows.execute_operation
         parameters:
             node_id:

@@ -14,9 +14,6 @@
 #  * limitations under the License.
 
 
-__author__ = 'idanmo'
-
-
 import os
 import tempfile
 from StringIO import StringIO
@@ -25,6 +22,7 @@ from fabric.api import run, put, get, local, sudo
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
 
+from cloudify import context
 from cloudify.exceptions import NonRecoverableError
 
 
@@ -32,7 +30,32 @@ def is_on_management_worker(ctx):
     """
     Gets whether agent installation was invoked for a deployment.
     """
-    return ctx.node_id is None
+    return ctx.type == context.DEPLOYMENT
+
+
+def download_resource_on_host(logger, runner, url, destination_path):
+    """downloads a resource from the fileserver on the agent's host
+
+    Will try to get the resource. If it fails, will try to curl.
+    If both fail, will return the state of the last fabric action.
+    """
+    logger.debug('attempting to download {0} to {1}'.format(
+        url, destination_path))
+    logger.debug('checking whether wget exists on the host machine')
+    r = runner.run('which wget')
+    if type(r) is str or r.succeeded:
+        logger.debug('wget-ing {0} to {1}'.format(url, destination_path))
+        return runner.run('wget -T 30 {0} -O {1}'.format(
+            url, destination_path))
+    logger.debug('checking whether curl exists on the host machine')
+    r = runner.run('which curl')
+    if type(r) is str or r.succeeded:
+        logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
+        return runner.run('curl {0} -O {1}'.format(
+            url, destination_path))
+    raise NonRecoverableError(
+        'could not download resource ({0} (with code {1}) )'.format(
+            r.stderr, r.status_code))
 
 
 class FabricRunner(object):

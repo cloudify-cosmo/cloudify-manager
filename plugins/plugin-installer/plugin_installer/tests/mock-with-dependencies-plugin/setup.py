@@ -20,17 +20,15 @@ from setuptools import setup
 
 setup(
     name='mock-with-dependencies-plugin',
-    version='3.1a3',
+    version='3.1a5',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['mock_with_dependencies_for_test'],
     license='LICENSE',
     description='Mock plugin for test',
     install_requires=[
-        "cosmo-plugin-python-webserver"
-    ],
-    dependency_links=["https://github.com/CloudifySource"
-                      "/cosmo-plugin-python-webserver"
-                      "/tarball/develop#egg=cosmo"
-                      "-plugin-python-webserver-0.1.0"]
+        # Just some dependency.
+        # we assert for this name in the tests code.
+        'simplejson'
+    ]
 )

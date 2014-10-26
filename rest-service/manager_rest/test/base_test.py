@@ -46,7 +46,7 @@ class MockHTTPClient(HTTPClient):
     def _build_url(resource_path, query_params):
         query_string = ''
         if query_params and len(query_params) > 0:
-            query_string += '&' + urllib.urlencode(query_params)
+            query_string += urllib.urlencode(query_params) + '&'
             return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
         return resource_path
 
@@ -67,6 +67,10 @@ class MockHTTPClient(HTTPClient):
             response = self.app.post(self._build_url(uri, params),
                                      content_type='application/json',
                                      data=json.dumps(data))
+        elif 'patch' in requests_method.__name__:
+            response = self.app.patch(self._build_url(uri, params),
+                                      content_type='application/json',
+                                      data=json.dumps(data))
         else:
             raise NotImplemented()
         if response.status_code != expected_status_code:
@@ -94,6 +98,7 @@ class BaseServerTestCase(unittest.TestCase):
         mock_http_client = MockHTTPClient(self.app)
         self.client.blueprints.api = mock_http_client
         self.client.deployments.api = mock_http_client
+        self.client.deployments.outputs.api = mock_http_client
         self.client.executions.api = mock_http_client
         self.client.nodes.api = mock_http_client
         self.client.node_instances.api = mock_http_client
@@ -213,8 +218,8 @@ class BaseServerTestCase(unittest.TestCase):
 
         if 'error_code' in blueprint_response:
             raise RuntimeError(
-                '{} - {}'.format(blueprint_response['error_code'],
-                                 blueprint_response['message']))
+                '{}: {}'.format(blueprint_response['error_code'],
+                                blueprint_response['message']))
 
         blueprint_id = blueprint_response['id']
         deployment = self.client.deployments.create(blueprint_id,

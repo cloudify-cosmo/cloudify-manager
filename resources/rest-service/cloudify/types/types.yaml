@@ -6,17 +6,20 @@ node_types:
     cloudify.types.base:
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create
-                - configure
-                - start
-                - stop
-                - delete
-            cloudify.interfaces.monitor_lifecycle:
-                - start
-                - stop
+                create: {}
+                configure: {}
+                start: {}
+                stop: {}
+                delete: {}
+            cloudify.interfaces.validation:
+                creation: {}
+                deletion: {}
+            cloudify.interfaces.monitoring:
+                start: {}
+                stop: {}
 
     # A tier in a topology
-    cloudify.types.tier: 
+    cloudify.types.tier:
         derived_from: cloudify.types.base
 
     # A host (physical / virtual or LXC) in a topology
@@ -24,15 +27,32 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.worker_installer:
-                - install: agent_installer.worker_installer.tasks.install
-                - start: agent_installer.worker_installer.tasks.start
-                - stop: agent_installer.worker_installer.tasks.stop
-                - uninstall: agent_installer.worker_installer.tasks.uninstall
-                - restart: agent_installer.worker_installer.tasks.restart
+                install:
+                    implementation: agent_installer.worker_installer.tasks.install
+                    inputs: {}
+                start:
+                    implementation: agent_installer.worker_installer.tasks.start
+                    inputs: {}
+                stop:
+                    implementation: agent_installer.worker_installer.tasks.stop
+                    inputs: {}
+                uninstall:
+                    implementation: agent_installer.worker_installer.tasks.uninstall
+                    inputs: {}
+                restart:
+                    implementation: agent_installer.worker_installer.tasks.restart
+                    inputs: {}
             cloudify.interfaces.plugin_installer:
-                - install: plugin_installer.plugin_installer.tasks.install
+                install:
+                    implementation: plugin_installer.plugin_installer.tasks.install
+                    inputs: {}
             cloudify.interfaces.host:
-                - get_state
+                get_state: {}
+            cloudify.interfaces.monitoring_agent:
+                install: {}
+                start: {}
+                stop: {}
+                uninstall: {}
         properties:
             install_agent:
                 default: true
@@ -82,23 +102,29 @@ node_types:
         derived_from: cloudify.types.base
 
     cloudify.types.db_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     cloudify.types.web_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
         properties:
             port:
                 default: 80
 
     cloudify.types.app_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     cloudify.types.message_bus_server:
-        derived_from: "cloudify.types.middleware_server"
+        derived_from: cloudify.types.middleware_server
 
     # An application artifact to deploy
     cloudify.types.app_module:
         derived_from: cloudify.types.base
+
+    # A type for a Cloudify Manager, to be used in manager blueprints
+    cloudify.types.cloudify_manager:
+        derived_from: cloudify.types.middleware_server
+        properties:
+            cloudify: {}
 
 
 ##################################################################################
@@ -109,65 +135,124 @@ relationships:
     cloudify.relationships.depends_on:
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - preconfigure
-                - postconfigure
-                - establish
-                - unlink
+                preconfigure: {}
+                postconfigure: {}
+                establish: {}
+                unlink: {}
         target_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                - preconfigure
-                - postconfigure
-                - establish
-                - unlink
+                preconfigure: {}
+                postconfigure: {}
+                establish: {}
+                unlink: {}
         properties:
             connection_type:
                 default: all_to_all
 
     cloudify.relationships.connected_to:
-        derived_from: "cloudify.relationships.depends_on"
+        derived_from: cloudify.relationships.depends_on
 
     cloudify.relationships.contained_in:
-        derived_from: "cloudify.relationships.depends_on"
+        derived_from: cloudify.relationships.depends_on
 
 
 ##################################################################################
 # Workflows
 ##################################################################################
 workflows:
-    install: default_workflows.workflows.default.install
-    uninstall: default_workflows.workflows.default.uninstall
+    install: default_workflows.cloudify.plugins.workflows.install
+    uninstall: default_workflows.cloudify.plugins.workflows.uninstall
+    execute_operation:
+        mapping: default_workflows.cloudify.plugins.workflows.execute_operation
+        parameters:
+            operation: {}
+            operation_kwargs:
+                default: {}
+            run_by_dependency_order:
+                default: false
+            type_names:
+                default: []
+            node_ids:
+                default: []
+            node_instance_ids:
+                default: []
+
 
 ##################################################################################
 # Base artifact definitions
 ##################################################################################
 plugins:
 
-    # Basic plugin artifact
-    cloudify.plugins.plugin: { }
-
-    # Remote plugin artifact
-    cloudify.plugins.remote_plugin:
-        derived_from: cloudify.plugins.plugin
-
-    # Worker plugin artifact - runs on Cloudify agent
-    cloudify.plugins.agent_plugin:
-        derived_from: cloudify.plugins.plugin
-
-    # Worker plugin artifact - runs on a dedicated worker for the deployment
-    cloudify.plugins.manager_plugin:
-        derived_from: cloudify.plugins.plugin
-
     agent_installer:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        install: false
 
     plugin_installer:
-        derived_from: cloudify.plugins.agent_plugin
+        executor: host_agent
+        install: false
 
     windows_agent_installer:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        install: false
 
     windows_plugin_installer:
-        derived_from: cloudify.plugins.agent_plugin
+        executor: central_deployment_agent
+        install: false
 
     default_workflows:
-        derived_from: cloudify.plugins.manager_plugin
+        executor: central_deployment_agent
+        install: false
+
+    script:
+        executor: host_agent
+        install: false
+
+##################################################################################
+# Policy types definitions
+##################################################################################
+policy_types:
+
+    cloudify.policies.types.threshold:
+        properties:
+            metric:
+                description: The metric name
+            threshold:
+                description: The metric threshold value
+            upper_bound:
+                description: |
+                    boolean value for describing the semantics of the threshold.
+                    if 'true': metrics whose value if bigger then the threshold
+                    will cause the triggers to be processed. if 'false': metrics
+                    with values lower then the threshold will do so.
+                default: true
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
+
+##################################################################################
+# Policy triggers definitions
+##################################################################################
+policy_triggers:
+
+    cloudify.policies.triggers.execute_workflow:
+        parameters:
+            workflow:
+                description: Workflow name to execute
+            workflow_parameters:
+                description: Workflow paramters
+                default: {}
+            force:
+                description: |
+                    Should the workflow be executed even when another execution
+                    for the same workflow is currently in progress
+                default: false
+            allow_custom_parameters:
+                description: |
+                    Should parameters not defined in the workflow parameters
+                    schema be accepted
+                default: false
+            socket_timeout:
+                description: Socket timeout when making request to manager REST in ms
+                default: 1000
+            conn_timeout:
+                description: Connection timeout when making request to manager REST in ms
+                default: 1000
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/triggers/execute_workflow.clj

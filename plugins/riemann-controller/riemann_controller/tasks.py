@@ -26,7 +26,8 @@ import pika
 
 from cloudify import ctx
 from cloudify.decorators import operation
-from cloudify.exceptions import NonRecoverableError
+from cloudify.exceptions import NonRecoverableError, HttpException
+from cloudify.manager import get_resource
 
 from riemann_controller import config
 
@@ -39,12 +40,12 @@ def create(policy_types=None,
            policy_triggers=None,
            groups=None,
            **_):
+
     policy_types = policy_types or {}
     groups = groups or {}
     policy_triggers = policy_triggers or {}
 
-    _process_sources(policy_triggers)
-    _process_sources(policy_types)
+    _process_types_and_triggers(groups, policy_types, policy_triggers)
     deployment_config_dir_path = _deployment_config_dir()
     if not os.path.isdir(deployment_config_dir_path):
         os.makedirs(deployment_config_dir_path)
@@ -72,27 +73,36 @@ def delete(**_):
 
 def _deployment_config_dir():
     return os.path.join(os.environ[RIEMANN_CONFIGS_DIR],
-                        ctx.deployment_id)
+                        ctx.deployment.id)
 
 
 def _publish_configuration_event(state, deployment_config_dir_path):
     manager_queue = 'manager-riemann'
+    exchange_name = 'cloudify-monitoring'
     connection = pika.BlockingConnection()
     try:
         channel = connection.channel()
+        channel.exchange_declare(exchange=exchange_name,
+                                 type='topic',
+                                 durable=False,
+                                 auto_delete=True,
+                                 internal=False)
         channel.queue_declare(
             queue=manager_queue,
             auto_delete=True,
             durable=False,
             exclusive=False)
+        channel.queue_bind(exchange=exchange_name,
+                           queue=manager_queue,
+                           routing_key=manager_queue)
         channel.basic_publish(
-            exchange='',
+            exchange=exchange_name,
             routing_key=manager_queue,
             body=json.dumps({
                 'service': 'cloudify.configuration',
                 'state': state,
                 'config_path': deployment_config_dir_path,
-                'deployment_id': ctx.deployment_id,
+                'deployment_id': ctx.deployment.id,
                 'time': int(time.time())
             }))
     finally:
@@ -121,8 +131,11 @@ def _verify_core_up(deployment_config_dir_path):
             else:
                 raise
 
-    riemann_log_output = subprocess.check_output(
-        'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+    try:
+        riemann_log_output = subprocess.check_output(
+            'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+    except Exception as e:
+        riemann_log_output = 'Failed extracting log: {0}'.format(e)
 
     raise NonRecoverableError('Riemann core has not started in {} seconds.\n'
                               'tail -n 100 {}:\n {}'
@@ -131,19 +144,56 @@ def _verify_core_up(deployment_config_dir_path):
                                       riemann_log_output))
 
 
-def _process_sources(sources):
-    for source in sources.values():
-        source['source'] = _process_source(source['source'])
+def _process_types_and_triggers(groups, policy_types, policy_triggers):
+    types_to_process = set()
+    types_to_remove = set()
+    triggers_to_process = set()
+    triggers_to_remove = set()
+    for group in groups.values():
+        for policy in group['policies'].values():
+            types_to_process.add(policy['type'])
+            for trigger in policy['triggers'].values():
+                triggers_to_process.add(trigger['type'])
+    for policy_type_name, policy_type in policy_types.items():
+        if policy_type_name in types_to_process:
+            policy_type['source'] = _process_source(policy_type['source'])
+        else:
+            types_to_remove.add(policy_type_name)
+    for policy_trigger_name, trigger in policy_triggers.items():
+        if policy_trigger_name in triggers_to_process:
+            trigger['source'] = _process_source(trigger['source'])
+        else:
+            triggers_to_remove.add(policy_trigger_name)
+    for policy_type_name in types_to_remove:
+        del policy_types[policy_type_name]
+    for trigger_type_name in triggers_to_remove:
+        del policy_triggers[trigger_type_name]
 
 
 def _process_source(source):
     split = source.split('://')
     schema = split[0]
     the_rest = ''.join(split[1:])
-    if schema in ['http', 'https']:
-        return requests.get(source).text
-    elif schema == 'file' and the_rest:
-        with open(the_rest) as f:
-            return f.read()
-    else:
+
+    try:
+        if schema in ['http', 'https']:
+            return requests.get(source).text
+        elif schema == 'file' and the_rest:
+            with open(the_rest) as f:
+                return f.read()
+    except IOError, e:
+        raise NonRecoverableError('Failed processing source: {} ({})'
+                                  .format(source, e.message))
+
+    try:
+        # try downloading blueprint resource
         return ctx.get_resource(source)
+    except HttpException:
+        pass
+    try:
+        # try downloading cloudify resource
+        return get_resource(source)
+    except HttpException:
+        pass
+    raise NonRecoverableError('Failed processing source: {}'
+                              .format(source))

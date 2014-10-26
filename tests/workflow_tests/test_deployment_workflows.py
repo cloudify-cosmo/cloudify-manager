@@ -13,17 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'ran'
-
-
 import uuid
-from testenv import (TestCase,
-                     wait_for_execution_to_end,
-                     do_retries,
-                     verify_deployment_environment_creation_complete,
-                     send_task,
-                     get_resource as resource,
-                     deploy_application as deploy)
+
+from testenv import TestCase
+from testenv.utils import get_resource as resource
+from testenv.utils import verify_deployment_environment_creation_complete
+from testenv.utils import do_retries
+from testenv.utils import wait_for_execution_to_end
+from testenv.utils import deploy_application as deploy
 
 
 class TestDeploymentWorkflows(TestCase):
@@ -33,11 +30,12 @@ class TestDeploymentWorkflows(TestCase):
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
         workflows = self.client.deployments.get(deployment_id).workflows
-        self.assertEqual(3, len(workflows))
+        self.assertEqual(4, len(workflows))
         wf_ids = [x.name for x in workflows]
-        self.assertTrue('uninstall' in wf_ids)
-        self.assertTrue('install' in wf_ids)
-        self.assertTrue('custom' in wf_ids)
+        self.assertIn('uninstall', wf_ids)
+        self.assertIn('install', wf_ids)
+        self.assertIn('execute_operation', wf_ids)
+        self.assertIn('custom', wf_ids)
 
     def test_workflow_parameters_pass_from_blueprint(self):
         dsl_path = resource('dsl/workflow_parameters.yaml')
@@ -48,14 +46,14 @@ class TestDeploymentWorkflows(TestCase):
         self.client.deployments.create(blueprint_id, deployment_id)
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
-        execution = self.client.deployments.execute(deployment_id,
-                                                    'execute_operation')
+        execution = self.client.executions.start(deployment_id,
+                                                 'custom_execute_operation')
         wait_for_execution_to_end(execution)
 
-        from plugins.testmockoperations.tasks import \
-            get_mock_operation_invocations
-
-        invocations = send_task(get_mock_operation_invocations).get(timeout=10)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['mock_operation_invocation']
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0], {'test_key': 'test_value'})
 

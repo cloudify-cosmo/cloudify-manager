@@ -1,3 +1,5 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
 imports:
   - cloudify.types
   - cloudmock.yaml
@@ -27,7 +29,13 @@ node_types:
         derived_from: cloudify.types.host
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: cloudmock.cloudmock.tasks.provision
-                - start: cloudmock.cloudmock.tasks.start
+                create:
+                    implementation: cloudmock.cloudmock.tasks.provision
+                    inputs: {}
+                start:
+                    implementation: cloudmock.cloudmock.tasks.start
+                    inputs: {}
             cloudify.interfaces.host:
-                - get_state: cloudmock.cloudmock.tasks.get_state
+                get_state:
+                    implementation: cloudmock.cloudmock.tasks.get_state
+                    inputs: {}

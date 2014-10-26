@@ -1,0 +1,15 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+
+node_templates:
+    node:
+        type: cloudify.types.host
+        interfaces:
+            test:
+                op1: scripts/operations/op1.py
+                op2: scripts/operations/op2.sh
+
+workflows:
+    workflow: scripts/workflows/workflow.py

@@ -13,16 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'idanmo'
-
+import uuid
 
 from testenv import TestCase
-from testenv import get_resource as resource, deploy_application as deploy
-from testenv import delete_provider_context, restore_provider_context
-from testenv import send_task
-
-from plugins.testmockoperations.tasks import (get_fail_invocations,
-                                              get_host_get_state_invocations)
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_application as deploy
+from testenv.utils import delete_provider_context
+from testenv.utils import restore_provider_context
 
 INFINITY = -1
 
@@ -48,7 +45,7 @@ class TaskRetriesTest(TestCase):
             retry_interval=3,
             expected_interval=3,
             expected_retries=2,
-            invocations_task=get_fail_invocations)
+            invocations_type='failure_invocation')
 
     def test_infinite_retries(self):
         self._test_retries_and_retry_interval_impl(
@@ -58,7 +55,7 @@ class TaskRetriesTest(TestCase):
             expected_interval=1,
             # see blueprint
             expected_retries=5,
-            invocations_task=get_fail_invocations)
+            invocations_type='failure_invocation')
 
     def test_retries_ignore_total(self):
         self._test_retries_and_retry_interval_impl(
@@ -68,7 +65,7 @@ class TaskRetriesTest(TestCase):
             expected_interval=0,
             # see blueprint (get_state does ignores total_retries)
             expected_retries=3,
-            invocations_task=get_host_get_state_invocations)
+            invocations_type='host_get_state_invocation')
 
     def test_non_recoverable_error(self):
         self._test_retries_and_retry_interval_impl(
@@ -77,7 +74,7 @@ class TaskRetriesTest(TestCase):
             retry_interval=1,
             expected_interval=1,
             expected_retries=0,
-            invocations_task=get_fail_invocations,
+            invocations_type='failure_invocation',
             expect_failure=True)
 
     def test_recoverable_error(self):
@@ -88,7 +85,7 @@ class TaskRetriesTest(TestCase):
             # blueprint overrides retry_interval
             expected_interval=1,
             expected_retries=1,
-            invocations_task=get_fail_invocations)
+            invocations_type='failure_invocation')
 
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
@@ -96,14 +93,21 @@ class TaskRetriesTest(TestCase):
                                               retry_interval,
                                               expected_interval,
                                               expected_retries,
-                                              invocations_task,
+                                              invocations_type,
                                               expect_failure=False):
         self.configure(retries=retries, retry_interval=retry_interval)
+        deployment_id = str(uuid.uuid4())
         if expect_failure:
-            self.assertRaises(RuntimeError, deploy, resource(blueprint))
+            self.assertRaises(RuntimeError, deploy,
+                              dsl_path=resource(blueprint),
+                              deployment_id=deployment_id)
         else:
-            deploy(resource(blueprint))
-        invocations = send_task(invocations_task).get()
+            deploy(resource(blueprint),
+                   deployment_id=deployment_id)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )[invocations_type]
         self.assertEqual(expected_retries + 1, len(invocations))
         for i in range(len(invocations) - 1):
             self.assertLessEqual(expected_interval,

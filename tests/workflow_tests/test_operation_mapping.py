@@ -15,10 +15,8 @@
 
 
 from testenv import TestCase
-from testenv import get_resource as resource
-from testenv import deploy_and_execute_workflow as deploy
-from testenv import send_task
-from plugins.testmockoperations.tasks import get_mock_operation_invocations
+from testenv.utils import get_resource as resource
+from testenv.utils import deploy_and_execute_workflow as deploy
 
 
 class OperationMappingTest(TestCase):
@@ -26,7 +24,10 @@ class OperationMappingTest(TestCase):
     def test_operation_mapping(self):
         dsl_path = resource("dsl/operation_mapping.yaml")
         deployment, _ = deploy(dsl_path, 'workflow1')
-        invocations = send_task(get_mock_operation_invocations).get()
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['mock_operation_invocation']
         self.assertEqual(3, len(invocations))
         for invocation in invocations:
             self.assertEqual(1, len(invocation))
@@ -35,7 +36,10 @@ class OperationMappingTest(TestCase):
     def test_operation_mapping_override(self):
         dsl_path = resource("dsl/operation_mapping.yaml")
         deployment, _ = deploy(dsl_path, 'workflow2')
-        invocations = send_task(get_mock_operation_invocations).get()
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment.id
+        )['mock_operation_invocation']
         self.assertEqual(3, len(invocations))
         for invocation in invocations:
             self.assertEqual(1, len(invocation))

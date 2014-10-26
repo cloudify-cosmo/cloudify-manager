@@ -13,13 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'idanmo'
 
 import os
 import pwd
 from functools import wraps
 
-import cloudify
+from cloudify import context
 from cloudify.exceptions import NonRecoverableError
 
 from worker_installer.utils import (FabricRunner,
@@ -46,38 +45,39 @@ def _find_type_in_kwargs(cls, all_args):
 def init_worker_installer(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        ctx = _find_type_in_kwargs(cloudify.context.CloudifyContext,
+        ctx = _find_type_in_kwargs(context.CloudifyContext,
                                    kwargs.values() + list(args))
         if not ctx:
             raise NonRecoverableError(
                 'CloudifyContext not found in invocation args')
-        if ctx.properties and 'cloudify_agent' in ctx.properties:
-            agent_config = ctx.properties['cloudify_agent']
+        if ctx.type == context.NODE_INSTANCE and \
+                'cloudify_agent' in ctx.node.properties:
+            agent_config = ctx.node.properties['cloudify_agent']
         else:
             agent_config = kwargs.get('cloudify_agent', {})
         prepare_configuration(ctx, agent_config)
         kwargs['agent_config'] = agent_config
         kwargs['runner'] = FabricRunner(ctx, agent_config)
+
         if not agent_config.get('distro'):
-            kwargs['agent_config']['distro'] = \
-                get_machine_distro(kwargs['runner'])
+            kwargs['agent_config']['distro'] = get_machine_distro(
+                kwargs['runner'])
         return func(*args, **kwargs)
     return wrapper
 
 
 def get_machine_distro(runner):
-    return runner.run(
-        'python -c "import platform; print(platform.dist()[0])"')
+    return runner.run('python -c "import platform; print platform.dist()[0]"')
 
 
 def get_machine_ip(ctx):
-    if ctx.properties.get('ip'):
-        return ctx.properties['ip']
-    if 'ip' in ctx.runtime_properties:
-        return ctx.runtime_properties['ip']
+    if ctx.node.properties.get('ip'):
+        return ctx.node.properties['ip']
+    if 'ip' in ctx.instance.runtime_properties:
+        return ctx.instance.runtime_properties['ip']
     raise NonRecoverableError(
         'ip property is not set for node: {0}. This is mandatory'
-        ' for installing agent via ssh.'.format(ctx.node_id))
+        ' for installing agent via ssh.'.format(ctx.instance.id))
 
 
 def _prepare_and_validate_autoscale_params(ctx, config):
@@ -151,6 +151,12 @@ def _set_wait_started_config(config):
         config['wait_started_interval'] = DEFAULT_WAIT_STARTED_INTERVAL
 
 
+def _set_home_dir(ctx, config):
+    if 'home_dir' not in config:
+        home_dir = pwd.getpwnam(config['user']).pw_dir
+        config['home_dir'] = home_dir
+
+
 def prepare_configuration(ctx, agent_config):
     if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
@@ -165,19 +171,20 @@ def prepare_configuration(ctx, agent_config):
         workflows_worker = agent_config['workflows_worker']\
             if 'workflows_worker' in agent_config else False
         suffix = '_workflows' if workflows_worker else ''
-        name = '{0}{1}'.format(ctx.deployment_id, suffix)
+        name = '{0}{1}'.format(ctx.deployment.id, suffix)
         agent_config['name'] = name
     else:
         agent_config['host'] = get_machine_ip(ctx)
         _set_ssh_key(ctx, agent_config)
         _set_user(ctx, agent_config)
         _set_remote_execution_port(ctx, agent_config)
-        agent_config['name'] = ctx.node_id
+        agent_config['name'] = ctx.instance.id
 
     _set_wait_started_config(agent_config)
 
-    home_dir = pwd.getpwnam(agent_config['user']).pw_dir
+    _set_home_dir(ctx, agent_config)
 
+    home_dir = agent_config['home_dir']
     agent_config['celery_base_dir'] = home_dir
 
     agent_config['base_dir'] = '{0}/cloudify.{1}'.format(

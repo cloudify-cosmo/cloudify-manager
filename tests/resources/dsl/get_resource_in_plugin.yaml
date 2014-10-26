@@ -1,3 +1,5 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
 imports:
     - cloudify.types
     - testmockoperations.yaml
@@ -12,7 +14,8 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - start:
-                      mapping: testmockoperations.testmockoperations.tasks.get_resource_operation
-                      properties:
-                          resource_path: basic.yaml
+                start:
+                    implementation: testmockoperations.testmockoperations.tasks.get_resource_operation
+                    inputs:
+                        resource_path:
+                            default: basic.yaml
