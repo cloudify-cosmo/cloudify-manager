@@ -18,20 +18,29 @@ import uuid
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
+from testenv.utils import deploy_application
 
 
 class RestAPITest(TestCase):
 
     def setUp(self):
         super(RestAPITest, self).setUp()
-        dsl_path = resource('dsl/basic.yaml')
-        self.node_id = 'webserver_host'
         self.blueprint_id = 'blueprint-' + str(uuid.uuid4())
         self.deployment_id = 'deployment-' + str(uuid.uuid4())
-        self.client.blueprints.upload(dsl_path, self.blueprint_id)
+        self.dsl_path = resource('dsl/basic.yaml')
+        self.node_id = 'webserver_host'
+
+    def _create_basic_deployment(self):
+        self.client.blueprints.upload(self.dsl_path, self.blueprint_id)
         self.client.deployments.create(self.blueprint_id, self.deployment_id)
 
+    def _deploy_basic_blueprint(self):
+        deploy_application(self.dsl_path,
+                           blueprint_id=self.blueprint_id,
+                           deployment_id=self.deployment_id)
+
     def test_nodes(self):
+        self._create_basic_deployment()
         nodes = self.client.nodes.list(deployment_id=self.deployment_id)
         self.assertEqual(1, len(nodes))
 
@@ -52,6 +61,7 @@ class RestAPITest(TestCase):
         self.assertTrue(len(node.properties) > 0)
 
     def test_node_instances(self):
+        self._create_basic_deployment()
         instances = self.client.node_instances.list(
             deployment_id=self.deployment_id)
         self.assertEqual(1, len(instances))
@@ -73,9 +83,41 @@ class RestAPITest(TestCase):
         self.assertEqual(1, instance.version)
 
     def test_blueprints(self):
+        self._create_basic_deployment()
         blueprints = self.client.blueprints.list()
         self.assertEqual(1, len(blueprints))
         blueprint_id = blueprints[0].id
         blueprint_by_id = self.client.blueprints.get(blueprint_id)
         self.assertDictContainsSubset(blueprint_by_id, blueprints[0])
         self.assertDictContainsSubset(blueprints[0], blueprint_by_id)
+
+    def test_deployments(self):
+        self._create_basic_deployment()
+        deployments = self.client.deployments.list()
+        self.assertEqual(1, len(deployments))
+        deployment_id = deployments[0].id
+        deployment_by_id = self.client.deployments.get(deployment_id)
+        self.assertDictContainsSubset(deployment_by_id, deployments[0])
+        self.assertDictContainsSubset(deployments[0], deployment_by_id)
+
+    def test_executions(self):
+        self._deploy_basic_blueprint()
+        deployments = self.client.deployments.list()
+        self.assertEqual(1, len(deployments))
+        deployment_id = deployments[0].id
+        deployment_by_id = self.client.deployments.get(deployment_id)
+        executions = self.client.executions.list(
+            deployment_by_id.id)
+
+        self.assertEqual(len(executions),
+                         2,
+                         'There should be 2 executions but are: {0}'.format(
+                             executions))
+        execution_from_list = executions[0]
+        execution_by_id = self.client.executions.get(execution_from_list.id)
+
+        self.assertEqual(execution_from_list.id, execution_by_id.id)
+        self.assertEqual(execution_from_list.workflow_id,
+                         execution_by_id.workflow_id)
+        self.assertEqual(execution_from_list['blueprint_id'],
+                         execution_by_id['blueprint_id'])
