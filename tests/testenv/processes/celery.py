@@ -145,8 +145,8 @@ class CeleryWorkerProcess(object):
         timeout = 60
         worker_name = 'celery.{0}'.format(self.name)
         inspect = celery_client.control.inspect(destination=[worker_name])
-        timeout = time.time() + timeout
-        while time.time() < timeout:
+        end_time = time.time() + timeout
+        while time.time() < end_time:
             try:
                 stats = (inspect.stats() or {}).get(worker_name)
                 if stats:

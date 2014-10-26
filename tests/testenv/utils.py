@@ -86,10 +86,16 @@ def deploy(dsl_path, blueprint_id=None, deployment_id=None):
         deployment_id = str(uuid.uuid4())
     deployment = client.deployments.create(blueprint.id, deployment_id)
 
-    do_retries(func=verify_deployment_environment_creation_complete,
-               timeout_seconds=30,
-               deployment_id=deployment_id)
+    wait_for_deployment_creation_to_complete(
+        deployment_id=deployment_id)
     return deployment
+
+
+def wait_for_deployment_creation_to_complete(
+        deployment_id, timeout_seconds=30):
+    do_retries(func=verify_deployment_environment_creation_complete,
+               timeout_seconds=timeout_seconds,
+               deployment_id=deployment_id)
 
 
 def deploy_and_execute_workflow(dsl_path,
