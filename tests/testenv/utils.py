@@ -91,7 +91,8 @@ def deploy(dsl_path, blueprint_id=None, deployment_id=None):
     return deployment
 
 
-def wait_for_deployment_creation_to_complete(deployment_id, timeout_seconds=30):
+def wait_for_deployment_creation_to_complete(
+        deployment_id, timeout_seconds=30):
     do_retries(func=verify_deployment_environment_creation_complete,
                timeout_seconds=timeout_seconds,
                deployment_id=deployment_id)
