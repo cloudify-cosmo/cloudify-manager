@@ -4,10 +4,12 @@ test_plugins()
 {
     echo "### Testing plugins..."
     echo "### Creating agent package..."
+
     mkdir -p package/linux
     virtualenv package/linux/env
     source package/linux/env/bin/activate
 
+    pip install testtools
     pip install celery==3.0.24
 
     git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
@@ -19,25 +21,26 @@ test_plugins()
     git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
     cd cloudify-script-plugin; pip install .; cd ..
 
-    cd plugins/agent-installer && pip install . && cd ../..
-    cd plugins/windows-agent-installer && pip install . && cd ../..
-    cd plugins/plugin-installer && pip install . && cd ../..
-    cd plugins/windows-plugin-installer && pip install . && cd ../..
-    cd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && cd ../../../../..
+    pushd plugins/agent-installer && pip install . && popd
+    pushd plugins/windows-agent-installer && pip install . && popd
+    pushd plugins/plugin-installer && pip install . && popd
+    pushd plugins/windows-plugin-installer && pip install . && popd
+    pushd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && popd
     tar czf Ubuntu-agent.tar.gz package
     rm -rf package
 
     virtualenv ~/env
     source ~/env/bin/activate
 
+    pip install testtools
     pip install celery==3.0.24
-    cd cloudify-rest-client; pip install .; cd ..
-    cd cloudify-plugins-common; pip install .; cd ..
-    cd plugins/agent-installer && pip install . && cd ../..
-    cd plugins/plugin-installer && pip install . && cd ../..
-    cd plugins/windows-agent-installer; pip install .; cd ../..
-    cd plugins/windows-plugin-installer; pip install .; cd ../..
-    cd plugins/riemann-controller; pip install .; cd ../..
+    pip install -r tests/dev-requirements.txt
+
+    pushd plugins/agent-installer && pip install . && popd
+    pushd plugins/plugin-installer && pip install . && popd
+    pushd plugins/windows-agent-installer; pip install .; popd
+    pushd plugins/windows-plugin-installer; pip install .; popd
+    pushd plugins/riemann-controller; pip install .; popd
 
     echo "### Starting HTTP server for serving agent package (for agent installer tests)"
     python -m SimpleHTTPServer 8000 &
@@ -50,18 +53,16 @@ test_plugins()
     nosetests plugins/windows-agent-installer/windows_agent_installer/tests --nologcapture --nocapture
 
     echo "Defaults:travis  requiretty" | sudo tee -a /etc/sudoers
-    cd plugins/agent-installer
+    pushd plugins/agent-installer
     nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
     nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
-    cd ..
+    popd
 }
 
 test_rest_service()
 {
     echo "### Testing rest-service..."
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-    cd cloudify-rest-client; pip install .; cd ..
-    cd rest-service && pip install . -r dev-requirements.txt && cd ..
+    pushd rest-service && pip install . -r dev-requirements.txt && popd
     pip install nose
     nosetests rest-service/manager_rest/test --nologcapture --nocapture
 }
@@ -75,7 +76,7 @@ run_intergration_tests()
     #sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
     wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb
     sudo dpkg -i elasticsearch-1.3.2.deb
-    export PATH=$PATH:/usr/share/elasticsearch/bin
+    export PATH=/usr/share/elasticsearch/bin:$PATH
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
     wget http://aphyr.com/riemann/riemann_0.2.6_all.deb
@@ -84,29 +85,19 @@ run_intergration_tests()
     sudo ln -Tsf /{run,dev}/shm
     sudo chmod 777 /dev/shm  # for celery worker
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-    cd cloudify-rest-client; pip install .; cd ..
-    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
-    cd cloudify-plugins-common; pip install .; cd ..
-    git clone https://github.com/cloudify-cosmo/cloudify-diamond-plugin --depth=1
-    cd cloudify-diamond-plugin; pip install .; cd ..
-    git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
-    cd cloudify-script-plugin; pip install .; cd ..
-    pip install pyzmq
-
-    cd rest-service && pip install . -r dev-requirements.txt && cd ..
+    pip install -r tests/dev-requirements.txt
+    pushd rest-service && pip install . -r dev-requirements.txt && popd
 
     # make utils and such
     # available as python packages
-    cd tests && pip install . && cd ..
-
-    cd plugins/riemann-controller && pip install . && cd ../..
-    cd workflows && pip install . && cd ..
-    cd tests && pip install . && cd ..
+    pushd tests && pip install . && popd
+    pushd plugins/riemann-controller && pip install . && popd
+    pushd workflows && pip install . && popd
+    pushd tests && pip install . && popd
 
     pip install nose
     nosetests tests/workflow_tests --nologcapture --nocapture -v
-    
+
 }
 
 run_flake8()

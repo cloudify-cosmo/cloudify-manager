@@ -23,4 +23,6 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             mock_interface:
-                - make_reachable: testmockoperations.testmockoperations.tasks.make_reachable
+                make_reachable:
+                    implementation: testmockoperations.testmockoperations.tasks.make_reachable
+                    inputs: {}

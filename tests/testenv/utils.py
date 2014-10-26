@@ -77,6 +77,27 @@ def deploy_application(dsl_path,
                                        wait_for_execution=wait_for_execution)
 
 
+def deploy(dsl_path, blueprint_id=None, deployment_id=None):
+    client = create_rest_client()
+    if not blueprint_id:
+        blueprint_id = str(uuid.uuid4())
+    blueprint = client.blueprints.upload(dsl_path, blueprint_id)
+    if deployment_id is None:
+        deployment_id = str(uuid.uuid4())
+    deployment = client.deployments.create(blueprint.id, deployment_id)
+
+    wait_for_deployment_creation_to_complete(
+        deployment_id=deployment_id)
+    return deployment
+
+
+def wait_for_deployment_creation_to_complete(
+        deployment_id, timeout_seconds=30):
+    do_retries(func=verify_deployment_environment_creation_complete,
+               timeout_seconds=timeout_seconds,
+               deployment_id=deployment_id)
+
+
 def deploy_and_execute_workflow(dsl_path,
                                 workflow_name,
                                 timeout_seconds=240,
@@ -88,25 +109,9 @@ def deploy_and_execute_workflow(dsl_path,
     A blocking method which deploys an application from the provided dsl path.
     and runs the requested workflows
     """
-    client = create_rest_client()
-    if not blueprint_id:
-        blueprint_id = str(uuid.uuid4())
-    blueprint = client.blueprints.upload(dsl_path, blueprint_id)
-    if deployment_id is None:
-        deployment_id = str(uuid.uuid4())
-    deployment = client.deployments.create(blueprint.id, deployment_id)
-
-    do_retries(func=verify_deployment_environment_creation_complete,
-               timeout_seconds=30,
-               deployment_id=deployment_id)
-
-    execution = client.executions.start(deployment_id, workflow_name,
-                                        parameters=parameters or {})
-
-    if wait_for_execution:
-        wait_for_execution_to_end(execution,
-                                  timeout_seconds=timeout_seconds)
-
+    deployment = deploy(dsl_path, blueprint_id, deployment_id)
+    execution = execute_workflow(workflow_name, deployment.id, parameters,
+                                 timeout_seconds, wait_for_execution)
     return deployment, execution.id
 
 
@@ -315,7 +320,7 @@ def update_storage(ctx):
                            'called from within a plugin. '
                            'Are you using this correctly?'
                            .format(CELERY_WORK_DIR_PATH_KEY))
-    deployment_id = ctx.deployment_id
+    deployment_id = ctx.deployment.id
     plugin_name = ctx.task_name.split('.')[0]
     storage_file_path = os.path.join(
         os.environ[CELERY_WORK_DIR_PATH_KEY],

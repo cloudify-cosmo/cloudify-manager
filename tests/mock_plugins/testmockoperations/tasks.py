@@ -29,12 +29,12 @@ from testenv.utils import update_storage
 @operation
 def make_reachable(ctx, **kwargs):
     state_info = {
-        'id': ctx.node_id,
+        'id': ctx.instance.id,
         'time': time.time(),
         'capabilities': ctx.capabilities.get_all()
     }
     ctx.logger.info('Appending to state [node_id={0}, state={1}]'
-                    .format(ctx.node_id, state_info))
+                    .format(ctx.instance.id, state_info))
     with update_storage(ctx) as data:
         data['state'] = data.get('state', [])
         data['state'].append(state_info)
@@ -45,26 +45,26 @@ def make_unreachable(ctx, **kwargs):
     with update_storage(ctx) as data:
         data['unreachable_call_order'] = data.get('unreachable_call_order', [])
         data['unreachable_call_order'].append({
-            'id': ctx.node_id,
+            'id': ctx.instance.id,
             'time': time.time()
         })
 
 
 @operation
 def set_property(ctx, **kwargs):
-    property_name = ctx.properties['property_name']
-    value = ctx.properties['value']
+    property_name = ctx.node.properties['property_name']
+    value = ctx.node.properties['value']
     ctx.logger.info('Setting property [{0}={1}] for node: {2}'
-                    .format(property_name, value, ctx.node_id))
-    ctx.runtime_properties[property_name] = value
+                    .format(property_name, value, ctx.instance.id))
+    ctx.instance.runtime_properties[property_name] = value
 
 
 @operation
 def del_property(ctx, **kwargs):
-    property_name = ctx.properties['property_name']
+    property_name = ctx.node.properties['property_name']
     ctx.logger.info('Deleting property [{0}] for node: {1}'
-                    .format(property_name, ctx.node_id))
-    del(ctx.runtime_properties[property_name])
+                    .format(property_name, ctx.instance.id))
+    del(ctx.instance.runtime_properties[property_name])
 
 
 @operation
@@ -81,7 +81,7 @@ def start_monitor(ctx, **kwargs):
             'monitoring_operations_invocation', []
         )
         data['monitoring_operations_invocation'].append({
-            'id': ctx.node_id,
+            'id': ctx.instance.id,
             'operation': 'start_monitor'
         })
 
@@ -93,7 +93,7 @@ def stop_monitor(ctx, **kwargs):
             'monitoring_operations_invocation', []
         )
         data['monitoring_operations_invocation'].append({
-            'id': ctx.node_id,
+            'id': ctx.instance.id,
             'operation': 'stop_monitor'
         })
 
@@ -106,10 +106,10 @@ def mock_operation(ctx, **kwargs):
             'mock_operation_invocation', []
         )
         data['mock_operation_invocation'].append({
-            'id': ctx.node_id,
+            'id': ctx.instance.id,
             'mockprop': mockprop,
             'properties': {
-                key: value for (key, value) in ctx.properties.items()
+                key: value for (key, value) in ctx.node.properties.items()
             }
         })
 
@@ -132,7 +132,7 @@ def mock_operation_get_instance_ip(ctx, **kwargs):
             'mock_operation_invocation', []
         )
         data['mock_operation_invocation'].append((
-            ctx.node_name, get_node_instance_ip(ctx.node_id)
+            ctx.node.name, get_node_instance_ip(ctx.instance.id)
         ))
 
     return True
@@ -145,22 +145,26 @@ def mock_operation_get_instance_ip_from_context(ctx, **_):
             'mock_operation_invocation', []
         )
         data['mock_operation_invocation'].append((
-            ctx.node_name, ctx.host_ip
+            ctx.node.name, ctx.instance.host_ip
         ))
 
     return True
 
 
 @operation
-def mock_operation_get_instance_ip_of_related_from_context(ctx, **_):
+def get_instance_ip_of_source_and_target(ctx, **_):
     with update_storage(ctx) as data:
         data['mock_operation_invocation'] = data.get(
             'mock_operation_invocation', []
         )
         data['mock_operation_invocation'].append((
-            '{}_rel'.format(ctx.node_name), ctx.related.host_ip
+            '{}_source'.format(ctx.source.node.name),
+            ctx.source.instance.host_ip
         ))
-
+        data['mock_operation_invocation'].append((
+            '{}_target'.format(ctx.target.node.name),
+            ctx.target.instance.host_ip
+        ))
     return True
 
 
@@ -203,7 +207,7 @@ def get_resource_operation(ctx, **kwargs):
 @operation
 def append_node_state(ctx, **kwargs):
     client = get_rest_client()
-    instance = client.node_instances.get(ctx.node_id)
+    instance = client.node_instances.get(ctx.instance.id)
     with update_storage(ctx) as data:
         data['node_states'] = data.get('node_states', [])
         data['node_states'].append(instance.state)
@@ -211,8 +215,8 @@ def append_node_state(ctx, **kwargs):
 
 @operation
 def sleep(ctx, **kwargs):
-    sleep_time = ctx.properties['sleep'] if 'sleep' in ctx.properties \
-        else kwargs['sleep']
+    sleep_time = ctx.node.properties['sleep'] if 'sleep' in\
+        ctx.node.properties else kwargs['sleep']
     time.sleep(int(sleep_time))
 
 
@@ -260,7 +264,7 @@ def host_get_state(ctx, **kwargs):
 def get_prop(prop_name, ctx, kwargs, default=None):
     if prop_name in kwargs:
         return kwargs[prop_name]
-    elif prop_name in ctx.properties:
-        return ctx.properties[prop_name]
+    elif prop_name in ctx.node.properties:
+        return ctx.node.properties[prop_name]
     else:
         return default

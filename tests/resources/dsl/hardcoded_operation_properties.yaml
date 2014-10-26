@@ -14,13 +14,23 @@ node_types:
         derived_from: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create: testmockoperations.testmockoperations.tasks.make_reachable
-                - start:
-                      mapping: testmockoperations.testmockoperations.tasks.mock_operation
-                      properties:
-                          mockprop: 'mockpropvalue'
-                          mockprop2: 'mockpropvalue2'
-                - stop: testmockoperations.testmockoperations.tasks.make_unreachable
-            cloudify.interfaces.monitor_lifecycle:
-                - start: testmockoperations.testmockoperations.tasks.start_monitor
-                - stop: testmockoperations.testmockoperations.tasks.stop_monitor
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.make_reachable
+                    inputs: {}
+                start:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_operation
+                    inputs:
+                        mockprop:
+                            default: mockpropvalue
+                        mockprop2:
+                            default: mockpropvalue2
+                stop:
+                    implementation: testmockoperations.testmockoperations.tasks.make_unreachable
+                    inputs: {}
+            cloudify.interfaces.monitoring:
+                start:
+                    implementation: testmockoperations.testmockoperations.tasks.start_monitor
+                    inputs: {}
+                stop:
+                    implementation: testmockoperations.testmockoperations.tasks.stop_monitor
+                    inputs: {}

@@ -47,10 +47,9 @@ def init_worker_installer(func):
         ctx = utils.find_type_in_kwargs(CloudifyContext,
                                         kwargs.values() + list(args))
         if not ctx:
-            raise NonRecoverableError('CloudifyContext not '
-                                      'found in invocation args')
-        if ctx.properties and 'cloudify_agent' in ctx.properties:
-            cloudify_agent = ctx.properties['cloudify_agent']
+            raise RuntimeError('CloudifyContext not found in invocation args')
+        if ctx.node.properties and 'cloudify_agent' in ctx.node.properties:
+            cloudify_agent = ctx.node.properties['cloudify_agent']
         else:
             cloudify_agent = {}
         prepare_configuration(ctx, cloudify_agent)
@@ -81,7 +80,7 @@ def prepare_configuration(ctx, cloudify_agent):
     set_agent_configuration_parameters(cloudify_agent)
 
     # runtime info
-    cloudify_agent['name'] = ctx.node_id
+    cloudify_agent['name'] = ctx.instance.id
     cloudify_agent['host'] = _get_machine_ip(ctx)
 
 
@@ -178,10 +177,10 @@ def _set_default(dictionary, key, value):
 
 
 def _get_machine_ip(ctx):
-    if ctx.properties.get('ip'):
-        return ctx.properties['ip']
-    if 'ip' in ctx.runtime_properties:
-        return ctx.runtime_properties['ip']
+    if ctx.node.properties.get('ip'):
+        return ctx.node.properties['ip']
+    if 'ip' in ctx.instance.runtime_properties:
+        return ctx.instance.runtime_properties['ip']
     raise NonRecoverableError(
         'ip property is not set for node: {0}. This is mandatory'
-        ' for manipulating a remote agent.'.format(ctx.node_id))
+        ' for manipulating a remote agent.'.format(ctx.instance.id))

@@ -13,11 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'dank'
-
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
+from testenv.utils import is_node_started
 
 
 class TestRelationships(TestCase):
@@ -40,12 +39,9 @@ class TestRelationships(TestCase):
 
     def verify_assertions(self, deployment_id, hook, runs_on_source):
 
-        if runs_on_source:
-            node_id_id_prefix = 'mock_node_that_connects_to_host'
-            related_id_prefix = 'host'
-        else:
-            node_id_id_prefix = 'host'
-            related_id_prefix = 'mock_node_that_connects_to_host'
+        source_node_id_prefix = 'mock_node_that_connects_to_host'
+        target_node_id_prefix = 'host'
+
         machines = self.get_plugin_data(
             plugin_name='cloudmock',
             deployment_id=deployment_id
@@ -56,54 +52,33 @@ class TestRelationships(TestCase):
             plugin_name='connection_configurer_mock',
             deployment_id=deployment_id
         )['state'][0]
-        node_id = state['id']
-        related_id = state['related_id']
 
-        self.assertTrue(node_id.startswith(node_id_id_prefix))
-        self.assertTrue(related_id.startswith(related_id_prefix))
+        source_id = state['source_id']
+        target_id = state['target_id']
 
-        from testenv.utils import is_node_started
-        self.assertTrue(is_node_started(related_id))
+        self.assertTrue(source_id.startswith(source_node_id_prefix))
+        self.assertTrue(target_id.startswith(target_node_id_prefix))
 
-        if runs_on_source:
-            self.assertEquals('source_property_value',
-                              state['properties']['source_property_key'])
-            self.assertEquals(
-                'target_property_value',
-                state['related_properties']['target_property_key'])
-            self.assertEquals(
-                'source_runtime_property_value',
-                state['runtime_properties']['source_runtime_property_key']
-            )
-            self.assertEquals(
-                'target_runtime_property_value',
-                state['related_runtime_properties']
-                     ['target_runtime_property_key']
-            )
-        else:
-            self.assertEquals('source_property_value',
-                              state['related_properties']
-                              ['source_property_key'])
-            self.assertEquals(
-                'target_property_value',
-                state['properties']['target_property_key'])
-            self.assertEquals(
-                'source_runtime_property_value',
-                state['related_runtime_properties']
-                     ['source_runtime_property_key']
-            )
-            self.assertEquals(
-                'target_runtime_property_value',
-                state['runtime_properties']
-                     ['target_runtime_property_key']
-            )
+        self.assertTrue(is_node_started(target_id))
 
-        if hook == 'pre-init':
-            self.assertTrue(node_id not in
-                            state['capabilities'])
-        elif hook == 'post-init':
-            self.assertTrue(is_node_started(node_id))
-        else:
+        self.assertEquals('source_property_value',
+                          state['source_properties']['source_property_key'])
+        self.assertEquals(
+            'target_property_value',
+            state['target_properties']['target_property_key'])
+        self.assertEquals(
+            'source_runtime_property_value',
+            state['source_runtime_properties']['source_runtime_property_key']
+        )
+        self.assertEquals(
+            'target_runtime_property_value',
+            state['target_runtime_properties']
+                 ['target_runtime_property_key']
+        )
+
+        if hook == 'post-init':
+            self.assertTrue(is_node_started(source_id))
+        elif hook != 'pre-init':
             self.fail('unhandled state')
 
         connector_timestamp = state['time']

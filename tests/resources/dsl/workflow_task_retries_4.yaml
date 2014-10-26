@@ -9,8 +9,8 @@ node_templates:
         type: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
-                - create:
-                    mapping: testmockoperations.testmockoperations.tasks.fail
-                    properties:
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.fail
+                    inputs:
                         fail_count: 100000
                         non_recoverable: true
