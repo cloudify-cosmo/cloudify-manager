@@ -19,7 +19,7 @@ node_templates:
         instances:
             deploy: 2
     app_module:
-        type: cloudify.types.app_module
+        type: cloudify.nodes.ApplicationModule
         interfaces:
             cloudify.interfaces.lifecycle:
                 start: testmockoperations.testmockoperations.tasks.make_reachable
