@@ -341,7 +341,7 @@ class BlueprintsUpload(object):
         except DslParseException, ex:
             shutil.rmtree(os.path.join(file_server_root, application_dir))
             raise manager_exceptions.InvalidBlueprintError(
-                'Invalid blueprint - {0}'.format(ex.args))
+                'Invalid blueprint - {0}'.format(ex.message))
 
     def _extract_application_file(self, file_server_root, application_dir):
         if 'application_file_name' in request.args:

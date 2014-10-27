@@ -78,7 +78,7 @@ class BlueprintsManager(object):
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
                                    resources_base_url)
         except Exception, ex:
-            raise DslParseException(*ex.args)
+            raise DslParseException(ex.message)
 
         now = str(datetime.now())
         parsed_plan = json.loads(plan)
