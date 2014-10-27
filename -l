@@ -1,0 +1,106 @@
+[1mdiff --git a/rest-service/manager_rest/test/mock_blueprint/blueprint.yaml b/rest-service/manager_rest/test/mock_blueprint/blueprint.yaml[m
+[1mindex fb2e05f..4f24e79 100644[m
+[1m--- a/rest-service/manager_rest/test/mock_blueprint/blueprint.yaml[m
+[1m+++ b/rest-service/manager_rest/test/mock_blueprint/blueprint.yaml[m
+[36m@@ -12,10 +12,10 @@[m [mimports:[m
+ # The blueprint contains two nodes, a vm and a web server hosted in it.[m
+ node_templates:[m
+     vm:[m
+[31m-        type: cloudify.types.host[m
+[32m+[m[32m        type: cloudify.nodes.Compute[m
+ [m
+     http_web_server:[m
+[31m-        type: cloudify.types.web_server[m
+[32m+[m[32m        type: cloudify.nodes.WebServer[m
+         properties:[m
+             port: 8080[m
+         relationships:[m
+[1mdiff --git a/rest-service/manager_rest/test/mock_blueprint/blueprint_with_illegal_output.yaml b/rest-service/manager_rest/test/mock_blueprint/blueprint_with_illegal_output.yaml[m
+[1mindex dcf455e..d493de9 100644[m
+[1m--- a/rest-service/manager_rest/test/mock_blueprint/blueprint_with_illegal_output.yaml[m
+[1m+++ b/rest-service/manager_rest/test/mock_blueprint/blueprint_with_illegal_output.yaml[m
+[36m@@ -4,11 +4,11 @@[m [mimports:[m
+     - hello_world.yaml[m
+ node_templates:[m
+     vm:[m
+[31m-        type: cloudify.types.host[m
+[32m+[m[32m        type: cloudify.nodes.Compute[m
+         instances:[m
+             deploy: 2[m
+     http_web_server:[m
+[31m-        type: cloudify.types.web_server[m
+[32m+[m[32m        type: cloudify.nodes.WebServer[m
+         properties:[m
+             port: 80[m
+         relationships:[m
+[1mdiff --git a/rest-service/manager_rest/test/mock_blueprint/blueprint_with_inputs.yaml b/rest-service/manager_rest/test/mock_blueprint/blueprint_with_inputs.yaml[m
+[1mindex 31ab43e..4e3f65a 100644[m
+[1m--- a/rest-service/manager_rest/test/mock_blueprint/blueprint_with_inputs.yaml[m
+[1m+++ b/rest-service/manager_rest/test/mock_blueprint/blueprint_with_inputs.yaml[m
+[36m@@ -9,10 +9,10 @@[m [minputs:[m
+ [m
+ node_templates:[m
+     vm:[m
+[31m-        type: cloudify.types.host[m
+[32m+[m[32m        type: cloudify.nodes.Compute[m
+ [m
+     http_web_server:[m
+[31m-        type: cloudify.types.web_server[m
+[32m+[m[32m        type: cloudify.nodes.WebServer[m
+         properties:[m
+             port: { get_input: http_web_server_port }[m
+         relationships:[m
+[1mdiff --git a/rest-service/manager_rest/test/mock_blueprint/blueprint_with_outputs.yaml b/rest-service/manager_rest/test/mock_blueprint/blueprint_with_outputs.yaml[m
+[1mindex 5a31c7c..555fc8e 100644[m
+[1m--- a/rest-service/manager_rest/test/mock_blueprint/blueprint_with_outputs.yaml[m
+[1m+++ b/rest-service/manager_rest/test/mock_blueprint/blueprint_with_outputs.yaml[m
+[36m@@ -4,9 +4,9 @@[m [mimports:[m
+     - hello_world.yaml[m
+ node_templates:[m
+     vm:[m
+[31m-        type: cloudify.types.host[m
+[32m+[m[32m        type: cloudify.nodes.Compute[m
+     http_web_server:[m
+[31m-        type: cloudify.types.web_server[m
+[32m+[m[32m        type: cloudify.nodes.WebServer[m
+         properties:[m
+             port: 80[m
+         relationships:[m
+[1mdiff --git a/rest-service/manager_rest/test/mock_blueprint/blueprint_with_workflows.yaml b/rest-service/manager_rest/test/mock_blueprint/blueprint_with_workflows.yaml[m
+[1mindex 6368d31..7e0ab3e 100644[m
+[1m--- a/rest-service/manager_rest/test/mock_blueprint/blueprint_with_workflows.yaml[m
+[1m+++ b/rest-service/manager_rest/test/mock_blueprint/blueprint_with_workflows.yaml[m
+[36m@@ -12,10 +12,10 @@[m [mimports:[m
+ # The blueprint contains two nodes, a vm and a web server hosted in it.[m
+ node_templates:[m
+     vm:[m
+[31m-        type: cloudify.types.host[m
+[32m+[m[32m        type: cloudify.nodes.Compute[m
+ [m
+     http_web_server:[m
+[31m-        type: cloudify.types.web_server[m
+[32m+[m[32m        type: cloudify.nodes.WebServer[m
+         properties:[m
+             port: 8080[m
+         relationships:[m
+[1mdiff --git a/rest-service/manager_rest/test/mock_blueprint/hello_world.yaml b/rest-service/manager_rest/test/mock_blueprint/hello_world.yaml[m
+[1mindex 7abe41f..22eb257 100644[m
+[1m--- a/rest-service/manager_rest/test/mock_blueprint/hello_world.yaml[m
+[1m+++ b/rest-service/manager_rest/test/mock_blueprint/hello_world.yaml[m
+[36m@@ -3,7 +3,7 @@[m [mimports:[m
+ [m
+ node_types:[m
+     openstack_host:[m
+[31m-        derived_from: cloudify.types.host[m
+[32m+[m[32m        derived_from: cloudify.nodes.Compute[m
+         properties:[m
+             cloudify_agent:[m
+                 default:[m
+[36m@@ -19,4 +19,4 @@[m [mnode_types:[m
+                         flavor: 101[m
+                         key_name: cloudify_agents_idan[m
+     web_server:[m
+[31m-        derived_from: cloudify.types.web_server[m
+\ No newline at end of file[m
+[32m+[m[32m        derived_from: cloudify.nodes.WebServer[m
+\ No newline at end of file[m

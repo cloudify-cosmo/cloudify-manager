@@ -9,10 +9,10 @@ inputs:
 
 node_templates:
     vm:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 
     http_web_server:
-        type: cloudify.types.web_server
+        type: cloudify.nodes.WebServer
         properties:
             port: { get_input: http_web_server_port }
         relationships:
