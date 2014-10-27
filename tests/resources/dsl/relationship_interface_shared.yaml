@@ -40,7 +40,7 @@ node_types:
             value:
                 default: target_runtime_property_value
     test_app_module_type:
-        derived_from: cloudify.types.app_module
+        derived_from: cloudify.nodes.ApplicationModule
         properties:
             source_property_key:
                 default: source_property_value

@@ -60,7 +60,7 @@ class RestAPITest(TestCase):
         self.assertEqual(self.node_id, node.host_id)
         self.assertEqual(2, len(node.type_hierarchy))
         self.assertEqual(self.deployment_id, node.deployment_id)
-        self.assertEqual('cloudify.types.host', node.type)
+        self.assertEqual('cloudify.nodes.Compute', node.type)
         self.assertTrue(len(node.properties) > 0)
 
     def test_node_instances(self):
