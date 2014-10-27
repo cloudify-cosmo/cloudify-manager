@@ -3,7 +3,7 @@
 ##################################################################################
 node_types:
     # base type for provided cloudify types
-    cloudify.types.base:
+    cloudify.nodes.Root:
         interfaces:
             cloudify.interfaces.lifecycle:
                 create: {}
@@ -19,12 +19,12 @@ node_types:
                 stop: {}
 
     # A tier in a topology
-    cloudify.types.tier:
-        derived_from: cloudify.types.base
+    cloudify.nodes.Tier:
+        derived_from: cloudify.nodes.Root
 
     # A host (physical / virtual or LXC) in a topology
-    cloudify.types.host:
-        derived_from: cloudify.types.base
+    cloudify.nodes.Compute:
+        derived_from: cloudify.nodes.Root
         interfaces:
             cloudify.interfaces.worker_installer:
                 install:
@@ -62,67 +62,67 @@ node_types:
                 default: ''
 
     # A Linux container with or without docker
-    cloudify.types.container:
-        derived_from: cloudify.types.host
+    cloudify.nodes.Container:
+        derived_from: cloudify.nodes.Compute
 
     # A storage volume in a topology
-    cloudify.types.volume:
-        derived_from: cloudify.types.base
+    cloudify.nodes.Volume:
+        derived_from: cloudify.nodes.Root
 
     # A storage Container (Object Store segment)
-    cloudify.types.object_container:
-        derived_from: cloudify.types.base
+    cloudify.nodes.ObjectStorage:
+        derived_from: cloudify.nodes.Root
 
     # An isolated virtual layer 2 domain or a logical / virtual switch
-    cloudify.types.network:
-        derived_from: cloudify.types.base
+    cloudify.nodes.Network:
+        derived_from: cloudify.nodes.Root
 
     # An isolated virtual layer 3 subnet with IP range
-    cloudify.types.subnet:
-        derived_from: cloudify.types.base
+    cloudify.nodes.Subnet:
+        derived_from: cloudify.nodes.Root
 
     # A network router
-    cloudify.types.router:
-        derived_from: cloudify.types.base
+    cloudify.nodes.Router:
+        derived_from: cloudify.nodes.Root
 
     # A virtual Load Balancer
-    cloudify.types.load_balancer:
-        derived_from: cloudify.types.base
+    cloudify.nodes.LoadBalancer:
+        derived_from: cloudify.nodes.Root
 
     # A virtual floating IP
-    cloudify.types.virtual_ip:
-        derived_from: cloudify.types.base
+    cloudify.nodes.VirtualIP:
+        derived_from: cloudify.nodes.Root
 
     # A security group
-    cloudify.types.security_group:
-        derived_from: cloudify.types.base
+    cloudify.nodes.SecurityGroup:
+        derived_from: cloudify.nodes.Root
 
     # A middleware component in a topology
-    cloudify.types.middleware_server:
-        derived_from: cloudify.types.base
+    cloudify.nodes.MiddlewareServer:
+        derived_from: cloudify.nodes.Root
 
-    cloudify.types.db_server:
-        derived_from: cloudify.types.middleware_server
+    cloudify.nodes.DBMS:
+        derived_from: cloudify.nodes.MiddlewareServer:
 
-    cloudify.types.web_server:
-        derived_from: cloudify.types.middleware_server
+    cloudify.nodes.WebServer:
+        derived_from: cloudify.nodes.MiddlewareServer:
         properties:
             port:
                 default: 80
 
-    cloudify.types.app_server:
-        derived_from: cloudify.types.middleware_server
+    cloudify.nodes.ApplicationServer:
+        derived_from: cloudify.nodes.MiddlewareServer
 
-    cloudify.types.message_bus_server:
-        derived_from: cloudify.types.middleware_server
+    cloudify.nodes.MessageBusServer:
+        derived_from: cloudify.nodes.MiddlewareServer
 
     # An application artifact to deploy
-    cloudify.types.app_module:
-        derived_from: cloudify.types.base
+    cloudify.nodes.ApplicationModule:
+        derived_from: cloudify.nodes.Root
 
     # A type for a Cloudify Manager, to be used in manager blueprints
-    cloudify.types.cloudify_manager:
-        derived_from: cloudify.types.middleware_server
+    cloudify.nodes.CloudifyManager:
+        derived_from: cloudify.nodes.MiddlewareServer
         properties:
             cloudify: {}
 
