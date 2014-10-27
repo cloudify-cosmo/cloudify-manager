@@ -26,7 +26,7 @@ plugins:
 
 node_templates:
     webserver_host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         properties:
             install_agent: { get_input: install_agent }
         interfaces:

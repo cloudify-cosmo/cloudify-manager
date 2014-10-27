@@ -11,7 +11,7 @@ node_templates:
 
 node_types:
     mock_type:
-        derived_from: cloudify.types.base
+        derived_from: cloudify.nodes.Root
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:

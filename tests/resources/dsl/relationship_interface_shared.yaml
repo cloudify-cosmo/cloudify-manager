@@ -31,7 +31,7 @@ node_templates:
 
 node_types:
     test_host_type:
-        derived_from: cloudify.types.host
+        derived_from: cloudify.nodes.Compute
         properties:
             target_property_key:
                 default: target_property_value

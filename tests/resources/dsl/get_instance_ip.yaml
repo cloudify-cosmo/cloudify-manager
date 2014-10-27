@@ -7,7 +7,7 @@ imports:
 
 node_types:
     host1:
-        derived_from: cloudify.types.host
+        derived_from: cloudify.nodes.Compute
         properties:
             install_agent:
                 default: false
@@ -30,7 +30,7 @@ node_types:
     host1_static:
         derived_from: host1
     contained1:
-        derived_from: cloudify.types.base
+        derived_from: cloudify.nodes.Root
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
@@ -38,7 +38,7 @@ node_types:
                     inputs: {}
 
     host2:
-        derived_from: cloudify.types.host
+        derived_from: cloudify.nodes.Compute
         properties:
             install_agent:
                 default: false
@@ -61,7 +61,7 @@ node_types:
     host2_static:
         derived_from: host2
     contained2:
-        derived_from: cloudify.types.base
+        derived_from: cloudify.nodes.Root
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
