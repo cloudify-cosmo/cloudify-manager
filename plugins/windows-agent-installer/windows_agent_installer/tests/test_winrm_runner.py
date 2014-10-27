@@ -12,87 +12,22 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import os
-
-TEST_WORKING_DIRECTORY = 'C:\work'
-
-__author__ = 'elip'
-
-
 import unittest
-from windows_agent_installer import winrm_runner
-from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
 from nose.tools import nottest
 
+from windows_agent_installer import winrm_runner
+from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
+from windows_agent_installer.winrm_runner import WinRMCommandExecutionException
 
+
+TEST_WORKING_DIRECTORY = 'C:\work'
 TEST_FILE_DOWNLOAD_URL = 'https://github.com/cloudify-cosmo' \
                          '/cloudify-dsl-parser/archive/master.zip'
 
 
-@nottest
-class WinRMRunnerTest(unittest.TestCase):
-
-    """
-    Test cases for WinRM execution functionality.
-    These tests run PowerShell commands remotely on a WinRM enabled server.
-
-    An existing server must be setup, set the
-    'TEST_MACHINE_IP' environment variable to the server IP.
-    Otherwise, an exception will be raised.
-
-    """
-
-    runner = None
-
-    @classmethod
-    def setUpClass(cls):
-
-        if TEST_MACHINE_IP_ENV_VARIABLE not in os.environ:
-            raise RuntimeError('TEST_MACHINE_IP environment variable must '
-                               'be set and point to an existing server with '
-                               'WinRM configured properly')
-        from windows_agent_installer.winrm_runner import WinRMRunner
-        cls.runner = WinRMRunner(session_config=cls._create_session())
-
-    def setUp(self):
-
-        # Create the new working directory for this test.
-        if self.runner.exists(path=TEST_WORKING_DIRECTORY):
-            self.runner.delete(path=TEST_WORKING_DIRECTORY)
-        self.runner.new_dir(path=TEST_WORKING_DIRECTORY)
-
-    def tearDown(self):
-
-        # Delete the working directory for this test.
-        self.runner.delete(path=TEST_WORKING_DIRECTORY)
-
-    @staticmethod
-    def _create_session():
-        return {
-            'host': os.environ[TEST_MACHINE_IP_ENV_VARIABLE],
-            'user': 'Administrator',
-            'password': '1408Rokk'
-        }
-
-    def test_defaults(self):
-
-        session_config = {
-            'host': 'test_host',
-            'user': 'test_user',
-            'password': 'test_password'
-        }
-
-        from windows_agent_installer.winrm_runner import defaults
-        defaults(session_config)
-        self.assertEquals(
-            session_config['protocol'],
-            winrm_runner.DEFAULT_WINRM_PROTOCOL)
-        self.assertEquals(
-            session_config['uri'],
-            winrm_runner.DEFAULT_WINRM_URI)
-        self.assertEquals(
-            session_config['port'],
-            winrm_runner.DEFAULT_WINRM_PORT)
+class TestValidations(unittest.TestCase):
 
     def test_validate_host(self):
 
@@ -139,6 +74,77 @@ class WinRMRunnerTest(unittest.TestCase):
         except ValueError as e:
             self.assertEqual('Missing password in session_config', e.message)
 
+
+class TestDefaults(unittest.TestCase):
+
+    def test_defaults(self):
+
+        session_config = {
+            'host': 'test_host',
+            'user': 'test_user',
+            'password': 'test_password'
+        }
+
+        from windows_agent_installer.winrm_runner import defaults
+        defaults(session_config)
+        self.assertEquals(
+            session_config['protocol'],
+            winrm_runner.DEFAULT_WINRM_PROTOCOL)
+        self.assertEquals(
+            session_config['uri'],
+            winrm_runner.DEFAULT_WINRM_URI)
+        self.assertEquals(
+            session_config['port'],
+            winrm_runner.DEFAULT_WINRM_PORT)
+
+
+@nottest
+class WinRMRunnerTest(unittest.TestCase):
+
+    """
+    Test cases for WinRM execution functionality.
+    These tests run PowerShell commands remotely on a WinRM enabled server.
+
+    An existing server must be setup, set the
+    'TEST_MACHINE_IP' environment variable to the server IP.
+    Otherwise, an exception will be raised.
+
+    """
+
+    runner = None
+
+    @classmethod
+    def setUpClass(cls):
+
+        os.environ[TEST_MACHINE_IP_ENV_VARIABLE] = '15.126.205.73'
+
+        if TEST_MACHINE_IP_ENV_VARIABLE not in os.environ:
+            raise RuntimeError('TEST_MACHINE_IP environment variable must '
+                               'be set and point to an existing server with '
+                               'WinRM configured properly')
+        from windows_agent_installer.winrm_runner import WinRMRunner
+        cls.runner = WinRMRunner(session_config=cls._create_session())
+
+    def setUp(self):
+
+        # Create the new working directory for this test.
+        self.runner.delete(path=TEST_WORKING_DIRECTORY,
+                           ignore_missing=True)
+        self.runner.new_dir(path=TEST_WORKING_DIRECTORY)
+
+    def tearDown(self):
+
+        # Delete the working directory for this test.
+        self.runner.delete(path=TEST_WORKING_DIRECTORY)
+
+    @staticmethod
+    def _create_session():
+        return {
+            'host': os.environ[TEST_MACHINE_IP_ENV_VARIABLE],
+            'user': 'Administrator',
+            'password': '1408Rokk'
+        }
+
     def test_run_success(self):
 
         response = self.runner.run('echo Hello!')
@@ -149,11 +155,11 @@ class WinRMRunnerTest(unittest.TestCase):
     def test_run_error(self):
 
         from windows_agent_installer.winrm_runner import \
-            WinRMExecutionException
+            WinRMCommandExecutionException
         try:
             self.runner.run('Bad command')
             self.fail('Expected WinRMExecutionException due to bad command')
-        except WinRMExecutionException as e:
+        except WinRMCommandExecutionException as e:
             self.assertEqual(1, e.code)
 
     def test_download(self):
@@ -191,7 +197,7 @@ class WinRMRunnerTest(unittest.TestCase):
 
         # Move it.
         self.runner.move(src='{0}\parser.zip'.format(TEST_WORKING_DIRECTORY),
-                         dest='{0}\moved.zip'.format(TEST_WORKING_DIRECTORY))
+                         dst='{0}\moved.zip'.format(TEST_WORKING_DIRECTORY))
 
         # Assert
         self.assertTrue(
@@ -220,6 +226,19 @@ class WinRMRunnerTest(unittest.TestCase):
         self.assertFalse(
             self.runner.exists(
                 '{0}\parser.zip'.format(TEST_WORKING_DIRECTORY)))
+
+    def test_delete_non_existing_file_with_ignore(self):
+        self.runner.delete(
+            '{0}\parser.zip'.format(TEST_WORKING_DIRECTORY),
+            ignore_missing=True)
+
+    def test_delete_non_existing_file_without_ignore(self):
+        try:
+            self.runner.delete(
+                '{0}\parser.zip'.format(TEST_WORKING_DIRECTORY))
+            self.fail('Expected WinRMCommandExecutionException')
+        except WinRMCommandExecutionException as e:
+            self.assertEqual(e.code, 1)
 
     def test_new_file(self):
 
@@ -260,7 +279,7 @@ class WinRMRunnerTest(unittest.TestCase):
         # Copy the entire directory to a new one
         self.runner.copy(
             src='{0}\k'.format(TEST_WORKING_DIRECTORY),
-            dest='{0}\e'.format(TEST_WORKING_DIRECTORY))
+            dst='{0}\e'.format(TEST_WORKING_DIRECTORY))
 
         # Assert new directory exists and contains the file
         self.assertTrue(
@@ -278,8 +297,8 @@ class WinRMRunnerTest(unittest.TestCase):
 
         # Copy the entire directory to a new one
         self.runner.copy(src='{0}\k'.format(TEST_WORKING_DIRECTORY),
-                         dest='{0}\q\e'.format(TEST_WORKING_DIRECTORY),
-                         create_missing_directories=True)
+                         dst='{0}\q\e'.format(TEST_WORKING_DIRECTORY),
+                         force=True)
 
         # Assert new directory exists and contains the file
         self.assertTrue(
@@ -293,3 +312,10 @@ class WinRMRunnerTest(unittest.TestCase):
 
         state = self.runner.service_state('WinRM')
         self.assertEqual(state, 'Running')
+
+    def test_get(self):
+        path = '{0}\content'.format(TEST_WORKING_DIRECTORY)
+        self.runner.put(contents='Hello world',
+                        path=path)
+        contents = self.runner.get(path=path)
+        self.assertEqual('Hello world', contents.rstrip('\r\n'))

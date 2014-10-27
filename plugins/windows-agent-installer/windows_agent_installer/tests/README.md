@@ -5,7 +5,7 @@ The tests require a specific image that will serve as the remote machine.
 
 **Steps for creating an image**
 
-Provision a windows machine in the cloud of your chioce and do the following:
+Provision a windows machine in the cloud of your choice and do the following:
 
 1) Download and install Python 2.7 - [Get Python] (https://ninite.com/python/) <br>
 2) Donwload and install Erlang Binaries - [Get Erlang] (http://www.erlang.org/download.html) <br>
