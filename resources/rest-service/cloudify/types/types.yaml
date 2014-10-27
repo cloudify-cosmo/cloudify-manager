@@ -81,6 +81,9 @@ node_types:
     cloudify.nodes.Subnet:
         derived_from: cloudify.nodes.Root
 
+    cloudfiy.nodes.Port:
+        derived_from: cloudify.nodes.Root
+
     # A network router
     cloudify.nodes.Router:
         derived_from: cloudify.nodes.Root
@@ -98,23 +101,26 @@ node_types:
         derived_from: cloudify.nodes.Root
 
     # A middleware component in a topology
-    cloudify.nodes.MiddlewareServer:
+    cloudify.nodes.SoftwareComponent:
         derived_from: cloudify.nodes.Root
 
     cloudify.nodes.DBMS:
-        derived_from: cloudify.nodes.MiddlewareServer:
+        derived_from: cloudify.nodes.SoftwareComponent
+
+    cloudify.nodes.Database:
+        derived_from: cloudify.nodes.Root
 
     cloudify.nodes.WebServer:
-        derived_from: cloudify.nodes.MiddlewareServer:
+        derived_from: cloudify.nodes.SoftwareComponent
         properties:
             port:
                 default: 80
 
     cloudify.nodes.ApplicationServer:
-        derived_from: cloudify.nodes.MiddlewareServer
+        derived_from: cloudify.nodes.SoftwareComponent
 
     cloudify.nodes.MessageBusServer:
-        derived_from: cloudify.nodes.MiddlewareServer
+        derived_from: cloudify.nodes.SoftwareComponent
 
     # An application artifact to deploy
     cloudify.nodes.ApplicationModule:
@@ -122,7 +128,7 @@ node_types:
 
     # A type for a Cloudify Manager, to be used in manager blueprints
     cloudify.nodes.CloudifyManager:
-        derived_from: cloudify.nodes.MiddlewareServer
+        derived_from: cloudify.nodes.SoftwareComponent
         properties:
             cloudify: {}
 
