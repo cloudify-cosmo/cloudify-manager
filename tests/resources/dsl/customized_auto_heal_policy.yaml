@@ -6,7 +6,7 @@ imports:
     - mock_workflows.yaml
 
 node_templates:
-    my_special_node:
+    node:
         type: cloudify.types.base
         interfaces:
             cloudify.interfaces.lifecycle:
@@ -15,7 +15,7 @@ node_templates:
 
 groups:
     autohealing_group:
-        members: [my_special_node]
+        members: [node]
         policies:
             simple_autoheal_policy:
                 type: cloudify.policies.types.host_failure
@@ -36,7 +36,7 @@ groups:
 
 workflows:
     auto_heal_workflow:
-        mapping: default_workflows.workflows.default.auto_heal
+        mapping: default_workflows.cloudify.plugins.workflows.auto_heal
         parameters:
             key:
                 default: failing_node

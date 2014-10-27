@@ -159,10 +159,12 @@ class TestPolicies(TestCase):
 
         self.launch_deployment(AUTOHEAL_YAML)
         self.publish_and_expire()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 2)
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
 
-        invocation_start = self.wait_for_invocations(self.deployment_id, 2)[0]
-        invocation_stop = self.wait_for_invocations(self.deployment_id, 2)[1]
+        # One start invocation occurs during the test env deployment creation
+        invocation = self.wait_for_invocations(self.deployment_id, 3)
+        invocation_stop = invocation[1]
+        invocation_start = invocation[2]
 
         self.assertEqual('start', invocation_start['operation'])
         self.assertEqual('stop', invocation_stop['operation'])
