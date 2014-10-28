@@ -4,9 +4,9 @@ imports:
     - hello_world.yaml
 node_templates:
     vm:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
     http_web_server:
-        type: cloudify.types.web_server
+        type: cloudify.nodes.WebServer
         properties:
             port: 80
         relationships:

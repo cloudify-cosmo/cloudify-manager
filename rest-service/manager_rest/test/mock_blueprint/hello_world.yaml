@@ -3,7 +3,7 @@ imports:
 
 node_types:
     openstack_host:
-        derived_from: cloudify.types.host
+        derived_from: cloudify.nodes.Compute
         properties:
             cloudify_agent:
                 default:
@@ -19,4 +19,4 @@ node_types:
                         flavor: 101
                         key_name: cloudify_agents_idan
     web_server:
-        derived_from: cloudify.types.web_server
+        derived_from: cloudify.nodes.WebServer

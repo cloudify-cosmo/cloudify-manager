@@ -7,7 +7,7 @@ imports:
 
 node_templates:
     webserver_host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         properties:
             install_agent: true
         interfaces:
@@ -19,7 +19,7 @@ node_templates:
                 stop: cloudmock.cloudmock.tasks.stop
                 delete: cloudmock.cloudmock.tasks.terminate
     webserver:
-        type: cloudify.types.web_server
+        type: cloudify.nodes.WebServer
         relationships:
             -   type: cloudify.relationships.contained_in
                 target: webserver_host
