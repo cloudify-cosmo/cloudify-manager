@@ -24,13 +24,56 @@ import time
 
 
 NUM_OF_INITIAL_WORKFLOWS = 2
-SAFETY_MARGIN = 2
-
-# Autoheal constant
-AUTOHEAL_EVENTS_MSG = "heart-beat"
 
 
-class TestPolicies(TestCase):
+class PoliciesTestsBase(TestCase):
+    def launch_deployment(self, yaml_file):
+        dsl_path = resource(yaml_file)
+        deployment, _ = deploy(dsl_path)
+        self.deployment_id = deployment.id
+        self.instance_id = self.wait_for_node_instance().id
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+
+    def wait_for_executions(self, expected_count):
+        def assertion():
+            executions = self.client.executions.list(
+                deployment_id=self.deployment_id)
+            self.assertEqual(expected_count, len(executions))
+        self.do_assertions(assertion)
+
+    def wait_for_invocations(self, deployment_id, expected_count):
+        def assertion():
+            _invocations = self.get_plugin_data(
+                plugin_name='testmockoperations',
+                deployment_id=deployment_id
+            )['mock_operation_invocation']
+            self.assertEqual(expected_count, len(_invocations))
+        self.do_assertions(assertion)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['mock_operation_invocation']
+        return invocations
+
+    def wait_for_node_instance(self):
+        def assertion():
+            instances = self.client.node_instances.list(self.deployment_id)
+            self.assertEqual(1, len(instances))
+        self.do_assertions(assertion)
+        return self.client.node_instances.list(self.deployment_id)[0]
+
+    def publish(self, metric, ttl=60):
+        self.publish_riemann_event(
+            self.deployment_id,
+            node_name='node',
+            node_id=self.instance_id,
+            metric=metric,
+            service='service',
+            ttl=ttl
+        )
+
+
+class TestPolicies(PoliciesTestsBase):
 
     def test_policies_flow(self):
         dsl_path = resource('dsl/with_policies1.yaml')
@@ -129,11 +172,17 @@ class TestPolicies(TestCase):
             tester.publish_below_threshold(deployment.id, do_assert=True)
             tester.publish_below_threshold(deployment.id, do_assert=False)
 
-    def test_autoheal_policy_triggering(self):
-        AUTOHEAL_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
-        self.launch_deployment(AUTOHEAL_YAML)
-        self.publish_and_expire()
+class TestAutohealPolicies(PoliciesTestsBase):
+    AUTOHEAL_EVENTS_MSG = "heart-beat"
+    EVENTS_TTL = 3  # in seconds
+    # in seconds, a kind of time buffer for messages to get delivered for sure
+    OPERATIONAL_TIME_BUFFER = 1
+    SIMPLE_AUTOHEAL_POLICY_YAML = 'dsl/simple_auto_heal_policy.yaml'
+
+    def test_autoheal_policy_triggering(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_event_and_wait_for_its_expiration()
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
 
         invocation = self.wait_for_invocations(self.deployment_id, 1)[0]
@@ -141,24 +190,18 @@ class TestPolicies(TestCase):
         self.assertEqual("heart-beat-failure", invocation['diagnose'])
         self.assertEqual(self.instance_id, invocation['failing_node'])
 
-    def test_autoheal_policy_stability(self):
-        EVENTS_TTL = 3
-        EVENTS_NO = 10
-        AUTOHEAL_YAML = 'dsl/simple_auto_heal_policy.yaml'
+    def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
 
-        self.launch_deployment(AUTOHEAL_YAML)
-
-        for _ in range(EVENTS_NO):
-            self.publish(AUTOHEAL_EVENTS_MSG, EVENTS_TTL)
-            time.sleep(EVENTS_TTL - SAFETY_MARGIN)
+        for _ in range(10):
+            self.publish(self.AUTOHEAL_EVENTS_MSG, self.EVENTS_TTL)
+            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
 
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
 
     def test_autoheal_workflow(self):
-        AUTOHEAL_YAML = 'dsl/customized_auto_heal_policy.yaml'
-
-        self.launch_deployment(AUTOHEAL_YAML)
-        self.publish_and_expire()
+        self.launch_deployment('dsl/customized_auto_heal_policy.yaml')
+        self._publish_event_and_wait_for_its_expiration()
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
 
         # One start invocation occurs during the test env deployment creation
@@ -170,57 +213,10 @@ class TestPolicies(TestCase):
         self.assertEqual('stop', invocation_stop['operation'])
         self.assertEqual(20, invocation_stop['const_arg_stop'])
 
-    def publish_and_expire(self):
-        EVENTS_TTL = 3
-
-        self.publish(AUTOHEAL_EVENTS_MSG, EVENTS_TTL)
+    def _publish_event_and_wait_for_its_expiration(self):
+        self.publish(self.AUTOHEAL_EVENTS_MSG, self.EVENTS_TTL)
         time.sleep(
-            EVENTS_TTL +
+            self.EVENTS_TTL +
             Constants.PERIODICAL_EXPIRATION_INTERVAL +
-            SAFETY_MARGIN
-        )
-
-    def launch_deployment(self, yaml_file):
-        dsl_path = resource(yaml_file)
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
-        self.instance_id = self.wait_for_node_instance().id
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
-
-    def wait_for_executions(self, expected_count):
-        def assertion():
-            executions = self.client.executions.list(
-                deployment_id=self.deployment_id)
-            self.assertEqual(expected_count, len(executions))
-        self.do_assertions(assertion)
-
-    def wait_for_invocations(self, deployment_id, expected_count):
-        def assertion():
-            _invocations = self.get_plugin_data(
-                plugin_name='testmockoperations',
-                deployment_id=deployment_id
-            )['mock_operation_invocation']
-            self.assertEqual(expected_count, len(_invocations))
-        self.do_assertions(assertion)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['mock_operation_invocation']
-        return invocations
-
-    def wait_for_node_instance(self):
-        def assertion():
-            instances = self.client.node_instances.list(self.deployment_id)
-            self.assertEqual(1, len(instances))
-        self.do_assertions(assertion)
-        return self.client.node_instances.list(self.deployment_id)[0]
-
-    def publish(self, metric, ttl=60):
-        self.publish_riemann_event(
-            self.deployment_id,
-            node_name='node',
-            node_id=self.instance_id,
-            metric=metric,
-            service='service',
-            ttl=ttl
+            self.OPERATIONAL_TIME_BUFFER
         )
