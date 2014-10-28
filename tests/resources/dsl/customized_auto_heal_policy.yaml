@@ -29,10 +29,12 @@ groups:
                                 value: { get_property: [SELF, failing_node]}
                                 diagnose_key: diagnose
                                 diagnose_value: { get_property: [SELF, diagnose] }
+                                const_arg_stop: 20
                                 execution_plans:
                                     - heart-beat-failure:
-                                        - cloudify.interfaces.lifecycle.stop
-                                        - cloudify.interfaces.lifecycle.start
+                                        - cloudify.interfaces.lifecycle.stop:
+                                            - const_arg_stop
+                                        - cloudify.interfaces.lifecycle.start: []
 
 workflows:
     auto_heal_workflow:

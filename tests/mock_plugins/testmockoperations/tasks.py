@@ -134,8 +134,12 @@ def mock_start(ctx, **kwargs):
 
 
 @operation
-def mock_stop(ctx, **kwargs):
-    mock_operation_from_custom_workflow(ctx, 'operation', 'stop', **kwargs)
+def mock_stop(ctx, const_arg_stop=None, **kwargs):
+    saving_multiple_params_op(
+        ctx,
+        {'operation': 'stop', 'const_arg_stop': const_arg_stop},
+        **kwargs
+    )
 
 
 @operation

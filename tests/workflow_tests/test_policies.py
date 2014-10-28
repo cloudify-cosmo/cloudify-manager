@@ -168,6 +168,7 @@ class TestPolicies(TestCase):
 
         self.assertEqual('start', invocation_start['operation'])
         self.assertEqual('stop', invocation_stop['operation'])
+        self.assertEqual(20, invocation_stop['const_arg_stop'])
 
     def publish_and_expire(self):
         EVENTS_TTL = 3
