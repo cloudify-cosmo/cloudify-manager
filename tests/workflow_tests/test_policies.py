@@ -28,16 +28,15 @@ NUM_OF_INITIAL_WORKFLOWS = 2
 
 class PoliciesTestsBase(TestCase):
     def launch_deployment(self, yaml_file):
-        dsl_path = resource(yaml_file)
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
+        deployment, _ = deploy(resource(yaml_file))
+        self.deployment = deployment
         self.instance_id = self.wait_for_node_instance().id
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
 
     def wait_for_executions(self, expected_count):
         def assertion():
             executions = self.client.executions.list(
-                deployment_id=self.deployment_id)
+                deployment_id=self.deployment.id)
             self.assertEqual(expected_count, len(executions))
         self.do_assertions(assertion)
 
@@ -56,15 +55,16 @@ class PoliciesTestsBase(TestCase):
         return invocations
 
     def wait_for_node_instance(self):
+        node_instances = self.client.node_instances.list(self.deployment.id)
+
         def assertion():
-            instances = self.client.node_instances.list(self.deployment_id)
-            self.assertEqual(1, len(instances))
+            self.assertEqual(1, len(node_instances))
         self.do_assertions(assertion)
-        return self.client.node_instances.list(self.deployment_id)[0]
+        return node_instances[0]
 
     def publish(self, metric, ttl=60):
         self.publish_riemann_event(
-            self.deployment_id,
+            self.deployment.id,
             node_name='node',
             node_id=self.instance_id,
             metric=metric,
@@ -76,44 +76,34 @@ class PoliciesTestsBase(TestCase):
 class TestPolicies(PoliciesTestsBase):
 
     def test_policies_flow(self):
-        dsl_path = resource('dsl/with_policies1.yaml')
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
-        self.instance_id = self.wait_for_node_instance().id
+        self.launch_deployment('dsl/with_policies1.yaml')
 
         metric_value = 123
 
         self.publish(metric=metric_value)
 
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-        invocations = self.wait_for_invocations(deployment.id, 2)
+        invocations = self.wait_for_invocations(self.deployment.id, 2)
         self.assertEqual(self.instance_id, invocations[0]['node_id'])
         self.assertEqual(123, invocations[1]['metric'])
 
     def test_policies_flow_with_diamond(self):
-        deployment = None
         try:
-            dsl_path = resource("dsl/with_policies_and_diamond.yaml")
-            deployment, _ = deploy(dsl_path)
-            self.deployment_id = deployment.id
-            self.instance_id = self.wait_for_node_instance().id
+            self.launch_deployment('dsl/with_policies_and_diamond.yaml')
             expected_metric_value = 42
             self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-            invocations = self.wait_for_invocations(deployment.id, 1)
+            invocations = self.wait_for_invocations(self.deployment.id, 1)
             self.assertEqual(expected_metric_value, invocations[0]['metric'])
         finally:
             try:
-                if deployment:
-                    undeploy(deployment.id)
+                if self.deployment:
+                    undeploy(self.deployment.id)
             except BaseException as e:
                 if e.message:
                     self.logger.warning(e.message)
 
     def test_threshold_policy(self):
-        dsl_path = resource("dsl/with_policies2.yaml")
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
-        self.instance_id = self.wait_for_node_instance().id
+        self.launch_deployment('dsl/with_policies2.yaml')
 
         class Tester(object):
 
@@ -167,10 +157,10 @@ class TestPolicies(PoliciesTestsBase):
                         current_invocations=0)
 
         for _ in range(2):
-            tester.publish_above_threshold(deployment.id, do_assert=True)
-            tester.publish_above_threshold(deployment.id, do_assert=False)
-            tester.publish_below_threshold(deployment.id, do_assert=True)
-            tester.publish_below_threshold(deployment.id, do_assert=False)
+            tester.publish_above_threshold(self.deployment.id, do_assert=True)
+            tester.publish_above_threshold(self.deployment.id, do_assert=False)
+            tester.publish_below_threshold(self.deployment.id, do_assert=True)
+            tester.publish_below_threshold(self.deployment.id, do_assert=False)
 
 
 class TestAutohealPolicies(PoliciesTestsBase):
@@ -185,7 +175,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_event_and_wait_for_its_expiration()
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
 
-        invocation = self.wait_for_invocations(self.deployment_id, 1)[0]
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
         self.assertEqual("heart-beat-failure", invocation['diagnose'])
         self.assertEqual(self.instance_id, invocation['failing_node'])
@@ -205,7 +195,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
 
         # One start invocation occurs during the test env deployment creation
-        invocation = self.wait_for_invocations(self.deployment_id, 3)
+        invocation = self.wait_for_invocations(self.deployment.id, 3)
         invocation_stop = invocation[1]
         invocation_start = invocation[2]
 
