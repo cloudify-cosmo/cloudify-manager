@@ -6,7 +6,7 @@ imports:
 
 node_templates:
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         properties:
             install_agent: false
         interfaces:

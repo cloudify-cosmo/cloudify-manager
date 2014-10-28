@@ -5,7 +5,7 @@ imports:
 
 node_templates:
     node:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         interfaces:
             test:
                 op1: scripts/operations/op1.py

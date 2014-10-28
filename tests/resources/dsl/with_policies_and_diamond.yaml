@@ -13,7 +13,7 @@ plugins:
 
 node_types:
     monitor_type:
-        derived_from: cloudify.types.host
+        derived_from: cloudify.nodes.Compute
 
 node_templates:
     node:

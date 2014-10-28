@@ -20,7 +20,7 @@ node_templates:
                 delete: testmockoperations.testmockoperations.tasks.del_property
 node_types:
     test_host_type:
-        derived_from: cloudify.types.host
+        derived_from: cloudify.nodes.Compute
         properties:
             property_name:
                 default: property_name

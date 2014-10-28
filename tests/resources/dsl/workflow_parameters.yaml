@@ -7,7 +7,7 @@ imports:
 
 node_templates:
     test_node:
-        type: cloudify.types.base
+        type: cloudify.nodes.Root
         interfaces:
             test_interface:
                 operation: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
