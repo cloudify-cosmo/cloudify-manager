@@ -81,7 +81,7 @@ node_types:
     cloudify.nodes.Subnet:
         derived_from: cloudify.nodes.Root
 
-    cloudfiy.nodes.Port:
+    cloudify.nodes.Port:
         derived_from: cloudify.nodes.Root
 
     # A network router
