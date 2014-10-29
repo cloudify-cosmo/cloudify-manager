@@ -6,7 +6,7 @@ imports:
 
 node_templates:
     node1:
-        type: cloudify.types.base
+        type: cloudify.nodes.Root
         interfaces:
             cloudify.interfaces.lifecycle:
                 create: cloudmock.cloudmock.tasks.provision
