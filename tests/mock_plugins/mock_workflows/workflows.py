@@ -308,6 +308,7 @@ def not_exist_operation_workflow(ctx, **kwargs):
     node_instance = get_instance(ctx)
     node_instance.execute_operation('test.operation')
 
+
 @workflow
 def not_exist_operation_graph_mode_workflow(ctx, **kwargs):
     graph = ctx.graph_mode()
@@ -316,10 +317,12 @@ def not_exist_operation_graph_mode_workflow(ctx, **kwargs):
     sequence.add(node_instance.execute_operation('test.operation'))
     return graph.execute()
 
+
 @workflow
 def not_exist_stop_operation_workflow(ctx, **kwargs):
     node_instance = get_instance(ctx)
     node_instance.execute_operation('cloudify.interfaces.lifecycle.stop')
+
 
 @workflow
 def ignore_handler_on_not_exist_operation_workflow(ctx, **kwargs):
@@ -336,6 +339,7 @@ def ignore_handler_on_not_exist_operation_workflow(ctx, **kwargs):
 
     return graph.execute()
 
+
 @workflow
 def retry_handler_on_not_exist_operation_workflow(ctx, **kwargs):
     graph = ctx.graph_mode()
@@ -351,6 +355,7 @@ def retry_handler_on_not_exist_operation_workflow(ctx, **kwargs):
 
     return graph.execute()
 
+
 @workflow
 def continue_handler_on_not_exist_operation_workflow(ctx, **kwargs):
     graph = ctx.graph_mode()
@@ -365,6 +370,7 @@ def continue_handler_on_not_exist_operation_workflow(ctx, **kwargs):
     operation.on_failure = _ignore_on_error_handler
 
     return graph.execute()
+
 
 @workflow
 def fail_handler_on_not_exist_operation_workflow(ctx, **kwargs):

@@ -12,8 +12,6 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-from celery.platforms import resource
-from cloudify.exceptions import NonRecoverableError
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
@@ -43,8 +41,10 @@ class TestInstallWorkflow(TestCase):
             self.fail('RuntimeError expected')
         except RuntimeError as e:
             logger.info('Deploy failed as expected')
-            self.assertIn("RuntimeError: Workflow failed: Task failed 'cloudmock.tasks.non_existent' "
-                          "-> non_existent operation [cloudmock.tasks.non_existent]",
+            self.assertIn("RuntimeError: Workflow failed: "
+                          "Task failed 'cloudmock.tasks.non_existent' "
+                          "-> non_existent operation "
+                          "[cloudmock.tasks.non_existent]",
                           e.message)
 
 
@@ -57,35 +57,43 @@ class TestCustomWorkflow(TestCase):
             expected_error_message = 'non_existent operation [{0}]' \
                 .format('cloudmock.tasks.non_existent')
             execute_workflow(workflow, deployment.id)
-            logger.info('Successfully executed workflow [{0}]'.format(workflow))
+            logger.info('Successfully executed workflow [{0}]'
+                        .format(workflow))
             if error_expected:
                 self.fail('RuntimeError expected')
         except RuntimeError as e:
             logger.info('Failed to execute workflow [{0}]'.format(workflow))
             actual_message = str(e.message)
             if not error_expected:
-                self.fail('Success expected. error message: {0}'.format(e.message))
+                self.fail('Success expected. error message: {0}'
+                          .format(e.message))
             self.assertIn(expected_error_message, actual_message,
-                          'expected error message: {0}, actual error message: {1}'
+                          'expected error message: {0}, '
+                          'actual error message: {1}'
                           .format(expected_error_message, actual_message))
 
     def test_not_exist_operation_workflow(self):
         self._test_custom_workflow('not_exist_operation_workflow', True)
 
     def test_not_exist_operation_graph_mode_workflow(self):
-        self._test_custom_workflow('not_exist_operation_graph_mode_workflow', True)
+        self._test_custom_workflow(
+            'not_exist_operation_graph_mode_workflow', True)
 
     def test_not_exist_stop_operation_workflow(self):
         self._test_custom_workflow('not_exist_stop_operation_workflow', True)
 
     def test_ignore_handler_on_not_exist_operation_workflow(self):
-        self._test_custom_workflow('ignore_handler_on_not_exist_operation_workflow', False)
+        self._test_custom_workflow(
+            'ignore_handler_on_not_exist_operation_workflow', False)
 
     def test_retry_handler_on_not_exist_operation_workflow(self):
-        self._test_custom_workflow('retry_handler_on_not_exist_operation_workflow', True)
+        self._test_custom_workflow(
+            'retry_handler_on_not_exist_operation_workflow', True)
 
     def test_continue_handler_on_not_exist_operation_workflow(self):
-        self._test_custom_workflow('continue_handler_on_not_exist_operation_workflow', False)
+        self._test_custom_workflow(
+            'continue_handler_on_not_exist_operation_workflow', False)
 
     def test_fail_handler_on_not_exist_operation_workflow(self):
-        self._test_custom_workflow('fail_handler_on_not_exist_operation_workflow', True)
+        self._test_custom_workflow(
+            'fail_handler_on_not_exist_operation_workflow', True)
