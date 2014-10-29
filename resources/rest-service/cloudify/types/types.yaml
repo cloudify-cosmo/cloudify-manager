@@ -131,6 +131,8 @@ node_types:
         derived_from: cloudify.nodes.SoftwareComponent
         properties:
             cloudify:
+                description: >
+                    Configuration for Cloudify Manager
                 default:
                     resources_prefix: ''
 
@@ -146,7 +148,9 @@ node_types:
 
                     policy_engine:
                         start_timeout: 30
-            cloudify_packages: {}
+            cloudify_packages:
+                description: >
+                    Links to Cloudify packages to be installed on the manager
 
 
 ##################################################################################
