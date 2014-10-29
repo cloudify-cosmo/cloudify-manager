@@ -1,0 +1,17 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify.types
+    - cloudmock.yaml
+
+node_templates:
+    node1:
+        type: cloudify.types.base
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: cloudmock.cloudmock.tasks.provision
+                start: cloudmock.cloudmock.tasks.start
+                stop: cloudmock.cloudmock.tasks.non_existent
+                delete: cloudmock.cloudmock.tasks.terminate
+            cloudify.interfaces.monitoring:
+                stop : cloudmock.cloudmock.tasks.stop_error

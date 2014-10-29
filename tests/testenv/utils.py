@@ -25,6 +25,7 @@ from functools import wraps
 from celery import Celery
 from multiprocessing import Process
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
+from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import setup_default_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
@@ -57,7 +58,8 @@ def task_exists(name, *args):
     logger.info('task_exists invoked with : {0}'
                 .format(args))
     if 'non_existent' in name:
-        raise RuntimeError()
+        logger.info('non_existent operation, raising NonRecoverableError')
+        raise NonRecoverableError('non_existent operation [{0}]'.format(name))
     return True
 
 
