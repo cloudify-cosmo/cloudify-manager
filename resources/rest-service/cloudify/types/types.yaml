@@ -81,7 +81,7 @@ node_types:
     cloudify.nodes.Subnet:
         derived_from: cloudify.nodes.Root
 
-    cloudfiy.nodes.Port:
+    cloudify.nodes.Port:
         derived_from: cloudify.nodes.Root
 
     # A network router
@@ -130,7 +130,27 @@ node_types:
     cloudify.nodes.CloudifyManager:
         derived_from: cloudify.nodes.SoftwareComponent
         properties:
-            cloudify: {}
+            cloudify:
+                description: >
+                    Configuration for Cloudify Manager
+                default:
+                    resources_prefix: ''
+
+                    cloudify_agent:
+                        min_workers: 2
+                        max_workers: 5
+                        remote_execution_port: 22
+                        user: ubuntu
+
+                    workflows:
+                        task_retries: -1  # this means forever
+                        task_retry_interval: 30
+
+                    policy_engine:
+                        start_timeout: 30
+            cloudify_packages:
+                description: >
+                    Links to Cloudify packages to be installed on the manager
 
 
 ##################################################################################
