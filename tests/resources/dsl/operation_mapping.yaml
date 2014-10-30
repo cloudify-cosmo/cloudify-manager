@@ -7,7 +7,7 @@ imports:
 
 node_templates:
     node1:
-        type: cloudify.types.base
+        type: cloudify.nodes.Root
         interfaces:
             test:
                 operation:
@@ -16,7 +16,7 @@ node_templates:
                         key: test_key
                         value: test_value
     node2:
-        type: cloudify.types.base
+        type: cloudify.nodes.Root
         relationships:
             -   type: cloudify.relationships.depends_on
                 target: node1
@@ -28,7 +28,7 @@ node_templates:
                                 key: test_key
                                 value: test_value
     node3:
-        type: cloudify.types.base
+        type: cloudify.nodes.Root
         relationships:
             -   type: cloudify.relationships.depends_on
                 target: node1

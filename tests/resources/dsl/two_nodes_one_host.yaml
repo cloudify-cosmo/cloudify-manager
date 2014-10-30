@@ -7,7 +7,7 @@ imports:
 
 node_templates:
     host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
         properties:
             install_agent: false
         interfaces:
@@ -23,7 +23,7 @@ node_templates:
 
 node_types:
     mock_type:
-        derived_from: cloudify.types.base
+        derived_from: cloudify.nodes.Root
         interfaces:
             mock_interface:
                 touch:
