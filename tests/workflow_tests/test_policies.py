@@ -83,7 +83,7 @@ class TestPolicies(PoliciesTestsBase):
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
         invocations = self.wait_for_invocations(self.deployment.id, 2)
         self.assertEqual(
-            self.getNodeInstanceByName("node").id,
+            self.getNodeInstanceByName('node').id,
             invocations[0]['node_id']
         )
         self.assertEqual(123, invocations[1]['metric'])
@@ -165,7 +165,7 @@ class TestPolicies(PoliciesTestsBase):
 
 
 class TestAutohealPolicies(PoliciesTestsBase):
-    HEART_BEAT_METRIC = "heart-beat"
+    HEART_BEAT_METRIC = 'heart-beat'
     EVENTS_TTL = 3  # in seconds
     # in seconds, a kind of time buffer for messages to get delivered for sure
     OPERATIONAL_TIME_BUFFER = 1
@@ -180,7 +180,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
-        self.assertEqual("heart-beat-failure", invocation['diagnose'])
+        self.assertEqual('heart-beat-failure', invocation['diagnose'])
         self.assertEqual(
             self.getNodeInstanceByName('node').id,
             invocation['failing_node']
@@ -200,7 +200,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
-        self.assertEqual("heart-beat-failure", invocation['diagnose'])
+        self.assertEqual('heart-beat-failure', invocation['diagnose'])
         self.assertEqual(
             self.getNodeInstanceByName('node_about_to_fail').id,
             invocation['failing_node']
