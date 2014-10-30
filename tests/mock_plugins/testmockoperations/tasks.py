@@ -143,6 +143,12 @@ def mock_stop(ctx, const_arg_stop=None, **kwargs):
 
 
 @operation
+def mock_restart(ctx, **kwargs):
+    with open("/tmp/restart", "w") as f:
+        f.write("restart")
+
+
+@operation
 def mock_operation_get_instance_ip(ctx, **kwargs):
     with update_storage(ctx) as data:
         data['mock_operation_invocation'] = data.get(

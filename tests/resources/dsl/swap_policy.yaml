@@ -1,0 +1,71 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+    - testmockoperations.yaml
+
+plugins:
+    diamond:
+        executor: central_deployment_agent
+        install: false
+
+node_types:
+    monitor_type:
+        derived_from: cloudify.types.host
+
+node_templates:
+    node:
+        type: monitor_type
+        properties:
+            install_agent: false
+        interfaces:
+            cloudify.interfaces.monitoring_agent:
+                - install:
+                    mapping: diamond.diamond_agent.tasks.install
+                    properties:
+                        diamond_config:
+                            interval: 1
+                - start: diamond.diamond_agent.tasks.start
+                - stop: diamond.diamond_agent.tasks.stop
+                - uninstall: diamond.diamond_agent.tasks.uninstall
+            cloudify.interfaces.monitoring:
+                - start:
+                    mapping: diamond.diamond_agent.tasks.add_collectors
+                    properties:
+                        collectors_config:
+                            SwapCollector:
+                                config:
+                                    what: ever
+            cloudify.interfaces.lifecycle:
+                - restart: testmockoperations.testmockoperations.tasks.mock_restart
+
+groups:
+    swap_warning_group:
+        members: [node]
+        policies:
+            swap_usage_policy:
+                type: cloudify.policies.types.swap_usage
+                properties:
+                    swap_threshold: 0
+                triggers:
+                    swap_trigger:
+                        type: cloudify.policies.triggers.execute_workflow
+                        parameters:
+                            workflow: auto_heal_workflow
+                            allow_custom_parameters: true
+                            workflow_parameters:
+                                value: { get_property: [SELF, failing_node]}
+                                diagnose_key: diagnose
+                                diagnose_value: { get_property: [SELF, diagnose] }
+                                execution_plans:
+                                    - swap_in_use:
+                                        - cloudify.interfaces.lifecycle.restart: []
+
+workflows:
+    auto_heal_workflow:
+        mapping: default_workflows.cloudify.plugins.workflows.auto_heal
+        parameters:
+            key:
+                default: failing_node
+            value:
+                description: Which node has failed

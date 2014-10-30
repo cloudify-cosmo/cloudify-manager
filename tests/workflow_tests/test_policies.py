@@ -229,6 +229,17 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.assertEqual('stop', invocation_stop['operation'])
         self.assertEqual(20, invocation_stop['const_arg_stop'])
 
+    def test_swap_policy_stability(self):
+        try:
+            self.launch_deployment('dsl/swap_policy.yaml')
+            self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        finally:
+            try:
+                undeploy(self.deployment.id)
+            except BaseException as e:
+                if e.message:
+                    self.logger.warning(e.message)
+
     def _publish_heart_beat_event(self, node_name='node', service='service'):
         self.publish(
             self.HEART_BEAT_METRIC,
