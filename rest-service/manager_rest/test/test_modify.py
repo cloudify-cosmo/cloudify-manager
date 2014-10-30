@@ -18,7 +18,6 @@ __author__ = 'idanmo'
 import uuid
 
 from base_test import BaseServerTestCase
-from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 
 
 class ModifyTests(BaseServerTestCase):
@@ -27,19 +26,58 @@ class ModifyTests(BaseServerTestCase):
         _, _, _, deployment = self.put_deployment(
             deployment_id=str(uuid.uuid4()),
             blueprint_file_name='modify1.yaml')
+
+        node_instances1 = self.client.node_instances.list()
+        self.assertEqual(2, len(node_instances1))
+        self._assert_number_of_instances(deployment.id, 'node1', 1, 1)
+
+        modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployments.modify.start(
-            deployment.id, nodes={
-                'node': {
-                    'instances': 200
-                }
-            })
+            deployment.id, nodes=modified_nodes)
+
+        self._assert_number_of_instances(deployment.id, 'node1', 1, 1)
+
+        self.assertEqual(modified_nodes, modification.modified_nodes)
+        node_instances2 = self.client.node_instances.list()
+        self.assertEqual(3, len(node_instances2))
+
+        initial_instance_ids = [i2.id for i2 in node_instances1]
+        new_instances = [i for i in node_instances2
+                         if i.id not in initial_instance_ids]
+        old_instances = [i for i in node_instances2
+                         if i.id in initial_instance_ids]
+        self.assertEqual(1, len(new_instances))
+        self.assertEqual(2, len(old_instances))
+
+        new_instance = new_instances[0]
+        self.assertEqual('node1', new_instance.node_id)
+        self.assertEqual(sorted(old_instances, key=lambda _i: _i.id),
+                         sorted(node_instances1, key=lambda _i: _i.id))
+
+        added_and_related = modification.node_instances.added_and_related
+        self.assertEqual(2, len(added_and_related))
+
         self.client.deployments.modify.finish(deployment.id, modification)
-        modification = self.client.deployments.modify.start(
-            deployment.id, nodes={
-                'node': {
-                    'instances': 100
-                }
-            })
-        self.client.deployments.modify.finish(deployment.id, modification)
-        from pprint import pprint
-        pprint(modification)
+
+        self._assert_number_of_instances(deployment.id, 'node1', 2, 1)
+
+        node_instances3 = self.client.node_instances.list()
+        self.assertEqual(3, len(node_instances3))
+
+        node1_instance_ids = [i.id for i in node_instances3
+                              if i.node_id == 'node1']
+        node2_instance = [i for i in node_instances3
+                          if i.node_id == 'node2'][0]
+        node2_target_ids = [rel['target_id'] for rel
+                            in node2_instance.relationships]
+        self.assertEqual(set(node1_instance_ids), set(node2_target_ids))
+
+    def _assert_number_of_instances(self,
+                                    deployment_id, node_id,
+                                    expected_number_of_instances,
+                                    expected_deploy_number_of_instances):
+        node = self.client.nodes.get(deployment_id, node_id)
+        self.assertEqual(expected_deploy_number_of_instances,
+                         node.deploy_number_of_instances)
+        self.assertEqual(expected_number_of_instances,
+                         node.number_of_instances)

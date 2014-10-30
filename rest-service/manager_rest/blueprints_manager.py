@@ -316,7 +316,7 @@ class BlueprintsManager(object):
                 continue
             current = self.sm.get_node_instance(node_instance['id'])
             new_relationships = current.relationships
-            new_relationships += node_instance['relationship']
+            new_relationships += node_instance['relationships']
             self.sm.update_node_instance(models.DeploymentNodeInstance(
                 id=node_instance['id'],
                 relationships=new_relationships,
@@ -330,8 +330,9 @@ class BlueprintsManager(object):
             if node_instance.get('modification') == 'removed':
                 self.sm.delete_node_instance(node_instance['id'])
             else:
-                removed_relationship_target_ids = set([
-                    rel['target_id'] for rel in node_instance['relationship']])
+                removed_relationship_target_ids = set(
+                    [rel['target_id']
+                     for rel in node_instance['relationships']])
                 current = self.sm.get_node_instance(node_instance['id'])
                 new_relationships = [rel for rel in current.relationships
                                      if rel['target_id']

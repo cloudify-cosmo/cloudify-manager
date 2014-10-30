@@ -4,5 +4,11 @@ imports:
     - cloudify/types/types.yaml
 
 node_templates:
-    node:
-        type: cloudify.types.base
+    node1:
+        type: cloudify.nodes.Root
+
+    node2:
+        type: cloudify.nodes.Root
+        relationships:
+            - type: cloudify.relationships.connected_to
+              target: node1
