@@ -144,8 +144,7 @@ def mock_stop(ctx, const_arg_stop=None, **kwargs):
 
 @operation
 def mock_restart(ctx, **kwargs):
-    with open("/tmp/restart", "w") as f:
-        f.write("restart")
+    mock_operation_from_custom_workflow(ctx, 'operation', 'restart', **kwargs)
 
 
 @operation
