@@ -53,9 +53,9 @@ class TestCustomWorkflow(TestCase):
     def _test_custom_workflow(self, workflow, error_expected=False):
         dsl_path = resource("dsl/basic_task_not_exist.yaml")
         deployment, _ = deploy(dsl_path)
+        expected_error_message = 'non_existent operation [{0}]'\
+            .format('cloudmock.tasks.non_existent')
         try:
-            expected_error_message = 'non_existent operation [{0}]' \
-                .format('cloudmock.tasks.non_existent')
             execute_workflow(workflow, deployment.id)
             logger.info('Successfully executed workflow [{0}]'
                         .format(workflow))
