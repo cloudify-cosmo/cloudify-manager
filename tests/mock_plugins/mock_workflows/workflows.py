@@ -306,21 +306,19 @@ def deployment_modification(ctx, nodes, **_):
 
     for node in modification.added.nodes:
         for instance in node.instances:
-            instance.logger.info('modification: {0}'.format(
-                instance.modification))
-            instance.set_state('glad')
-            for relationship in instance.relationships:
-                instance.logger.info('rel target_id: {0}'.format(
-                    relationship.target_id))
+            instance.execute_operation('test.op', kwargs={
+                'modification': instance.modification,
+                'relationships': [(instance.id, rel.target_id)
+                                  for rel in instance.relationships]
+            })
 
     for node in modification.removed.nodes:
         for instance in node.instances:
-            instance.logger.info('modification: {0}'.format(
-                instance.modification))
-            instance.set_state('glad')
-            for relationship in instance.relationships:
-                instance.logger.info('rel target_id: {0}'.format(
-                    relationship.target_id))
+            instance.execute_operation('test.op', kwargs={
+                'modification': instance.modification,
+                'relationships': [rel.target_id
+                                  for rel in instance.relationships]
+            })
 
     modification.finish()
 

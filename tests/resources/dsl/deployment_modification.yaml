@@ -6,15 +6,29 @@ imports:
     - mock_workflows.yaml
 
 node_templates:
-    host:
-        type: cloudify.types.host
+    compute:
+        type: cloudify.nodes.Compute
         properties:
             install_agent: false
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.put_workflow_node_instance
     db:
-        type: cloudify.types.base
+        type: cloudify.nodes.DBMS
         relationships:
-            - target: host
+            - target: compute
               type: cloudify.relationships.contained_in
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.put_workflow_node_instance
+    webserver:
+        type: cloudify.nodes.WebServer
+        relationships:
+            - target: db
+              type: cloudify.relationships.connected_to
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.put_workflow_node_instance
 
 workflows:
     deployment_modification:

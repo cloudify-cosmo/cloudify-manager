@@ -261,6 +261,20 @@ def host_get_state(ctx, **kwargs):
     return True
 
 
+@operation
+def put_workflow_node_instance(ctx,
+                               modification,
+                               relationships):
+    with update_storage(ctx) as data:
+        state = data.get('state', {})
+        data['state'] = state
+        state[ctx.instance.id] = {
+            'node_id': ctx.node.id,
+            'modification': modification,
+            'relationships': relationships
+        }
+
+
 def get_prop(prop_name, ctx, kwargs, default=None):
     if prop_name in kwargs:
         return kwargs[prop_name]
