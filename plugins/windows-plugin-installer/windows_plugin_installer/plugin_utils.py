@@ -21,6 +21,7 @@ import sys
 import pip
 
 from cloudify.utils import LocalCommandRunner
+from cloudify import utils
 
 
 def extract_plugin_name(plugin_url):
@@ -38,7 +39,9 @@ def extract_plugin_name(plugin_url):
                                download_dir=None,
                                only_download=False)
         os.chdir(plugin_dir)
-        return LocalCommandRunner().run('cmd.exe /c "{0} {1} {2}"'.format(
+        return LocalCommandRunner(
+            host=utils.get_local_ip()
+        ).run('cmd.exe /c "{0} {1} {2}"'.format(
             sys.executable,
             os.path.join(os.path.dirname(__file__), 'extract_package_name.py'),
             plugin_dir)).std_out
@@ -51,7 +54,7 @@ def extract_plugin_name(plugin_url):
 def extract_module_paths(module_name):
 
     module_paths = []
-    files = LocalCommandRunner()\
+    files = LocalCommandRunner(host=utils.get_local_ip())\
         .run('cmd /c "{0}\Scripts\pip.exe show -f {1}"'
              .format(sys.prefix, module_name)).std_out.splitlines()
     for module in files:

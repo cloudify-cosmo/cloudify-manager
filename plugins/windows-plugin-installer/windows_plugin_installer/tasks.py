@@ -66,7 +66,10 @@ def install_celery_plugin(plugin_url):
 
     command = 'cmd /c "{0}\Scripts\pip.exe install {1}"' \
         .format(sys.prefix, plugin_url)
-    utils.LocalCommandRunner(logger).run(command)
+    utils.LocalCommandRunner(
+        logger=logger,
+        host=utils.get_local_ip()
+    ).run(command)
     plugin_name = plugin_utils.extract_plugin_name(plugin_url)
     module_paths = plugin_utils.extract_module_paths(plugin_name)
     _update_includes(module_paths)
@@ -104,7 +107,9 @@ def _update_includes(module_paths):
     new_app_parameters = add_module_paths_to_includes(
         module_paths,
         app_parameters)
-    utils.LocalCommandRunner().run(
+    utils.LocalCommandRunner(
+        host=utils.get_local_ip()
+    ).run(
         'cmd /c "{0} set CloudifyAgent AppParameters {1}"'
         .format(NSSM_PATH, new_app_parameters))
 

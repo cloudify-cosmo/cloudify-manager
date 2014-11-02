@@ -88,7 +88,9 @@ def install_package(url):
     """
 
     command = '{0} install {1}'.format(_pip(), url)
-    LocalCommandRunner().run(command)
+    LocalCommandRunner(
+        host=utils.get_local_ip()
+    ).run(command)
 
 
 def extract_module_paths(url):
@@ -96,7 +98,7 @@ def extract_module_paths(url):
     plugin_name = extract_plugin_name(url)
 
     module_paths = []
-    files = LocalCommandRunner().run(
+    files = LocalCommandRunner(host=utils.get_local_ip()).run(
         '{0} show -f {1}'.format(
             _pip(),
             plugin_name)).std_out.splitlines()
@@ -122,7 +124,7 @@ def extract_plugin_name(plugin_url):
                                location=plugin_dir,
                                download_dir=None,
                                only_download=False)
-        runner = LocalCommandRunner()
+        runner = LocalCommandRunner(host=utils.get_local_ip())
         os.chdir(plugin_dir)
         plugin_name = runner.run(
             '{0} {1} {2}'.format(_python(),

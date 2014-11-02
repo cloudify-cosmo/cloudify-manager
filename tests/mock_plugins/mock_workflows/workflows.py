@@ -325,3 +325,88 @@ def deployment_modification(ctx, nodes, **_):
 
 def get_instance(ctx):
     return next(next(ctx.nodes).instances)
+
+
+@workflow
+def not_exist_operation_workflow(ctx, **kwargs):
+    node_instance = get_instance(ctx)
+    node_instance.execute_operation('test.operation')
+
+
+@workflow
+def not_exist_operation_graph_mode_workflow(ctx, **kwargs):
+    graph = ctx.graph_mode()
+    sequence = graph.sequence()
+    node_instance = get_instance(ctx)
+    sequence.add(node_instance.execute_operation('test.operation'))
+    return graph.execute()
+
+
+@workflow
+def not_exist_stop_operation_workflow(ctx, **kwargs):
+    node_instance = get_instance(ctx)
+    node_instance.execute_operation('cloudify.interfaces.lifecycle.stop')
+
+
+@workflow
+def ignore_handler_on_not_exist_operation_workflow(ctx, **kwargs):
+    graph = ctx.graph_mode()
+    sequence = graph.sequence()
+    node_instance = get_instance(ctx)
+    operation = node_instance.execute_operation('test.operation')
+    sequence.add(operation)
+
+    def _ignore_on_error_handler(tsk):
+        from cloudify.workflows import tasks as workflow_tasks
+        return workflow_tasks.HandlerResult.ignore()
+    operation.on_failure = _ignore_on_error_handler
+
+    return graph.execute()
+
+
+@workflow
+def retry_handler_on_not_exist_operation_workflow(ctx, **kwargs):
+    graph = ctx.graph_mode()
+    sequence = graph.sequence()
+    node_instance = get_instance(ctx)
+    operation = node_instance.execute_operation('test.operation')
+    sequence.add(operation)
+
+    def _ignore_on_error_handler(tsk):
+        from cloudify.workflows import tasks as workflow_tasks
+        return workflow_tasks.HandlerResult.retry()
+    operation.on_failure = _ignore_on_error_handler
+
+    return graph.execute()
+
+
+@workflow
+def continue_handler_on_not_exist_operation_workflow(ctx, **kwargs):
+    graph = ctx.graph_mode()
+    sequence = graph.sequence()
+    node_instance = get_instance(ctx)
+    operation = node_instance.execute_operation('test.operation')
+    sequence.add(operation)
+
+    def _ignore_on_error_handler(tsk):
+        from cloudify.workflows import tasks as workflow_tasks
+        return workflow_tasks.HandlerResult.cont()
+    operation.on_failure = _ignore_on_error_handler
+
+    return graph.execute()
+
+
+@workflow
+def fail_handler_on_not_exist_operation_workflow(ctx, **kwargs):
+    graph = ctx.graph_mode()
+    sequence = graph.sequence()
+    node_instance = get_instance(ctx)
+    operation = node_instance.execute_operation('test.operation')
+    sequence.add(operation)
+
+    def _ignore_on_error_handler(tsk):
+        from cloudify.workflows import tasks as workflow_tasks
+        return workflow_tasks.HandlerResult.fail()
+    operation.on_failure = _ignore_on_error_handler
+
+    return graph.execute()
