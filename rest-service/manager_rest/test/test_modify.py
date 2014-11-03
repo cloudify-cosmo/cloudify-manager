@@ -130,3 +130,12 @@ class ModifyTests(BaseServerTestCase):
                          node.deploy_number_of_instances)
         self.assertEqual(expected_number_of_instances,
                          node.number_of_instances)
+
+    def test_illegal_modify_stage(self):
+        _, _, _, deployment = self.put_deployment(
+            deployment_id=str(uuid.uuid4()),
+            blueprint_file_name='modify1.yaml')
+        client = self.client._client
+        r = client.patch('/deployments/{0}/modify'.format(deployment.id),
+                         data={'stage': 'what?'}, expected_status_code=400)
+        self.assertIn('Unknown modification stage', r['message'])

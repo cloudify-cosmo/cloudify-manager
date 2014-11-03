@@ -66,6 +66,7 @@ def exceptions_handled(func):
                 manager_exceptions.IllegalActionError,
                 manager_exceptions.NoSuchIncludeFieldError,
                 manager_exceptions.MissingRequiredDeploymentInputError,
+                manager_exceptions.UnknownModificationStageError,
                 manager_exceptions.UnknownDeploymentInputError,
                 manager_exceptions.DeploymentOutputsEvaluationError,
                 manager_exceptions.DeploymentEnvironmentCreationInProgressError

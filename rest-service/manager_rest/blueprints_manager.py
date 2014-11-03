@@ -282,6 +282,7 @@ class BlueprintsManager(object):
         return new_deployment
 
     def start_deployment_modification(self, deployment_id, modified_nodes):
+        # verify deployment exists
         self.sm.get_deployment(deployment_id)
         nodes = [node.to_dict() for node in self.sm.get_nodes(deployment_id)]
         node_instances = [instance.to_dict() for instance
@@ -305,6 +306,7 @@ class BlueprintsManager(object):
         }
 
     def finish_deployment_modification(self, deployment_id, modification):
+        # verify deployment exists
         self.sm.get_deployment(deployment_id)
         modified_nodes = modification['modified_nodes']
         for node_id, modified_node in modified_nodes.items():
