@@ -28,13 +28,16 @@ class TestDeploymentModification(TestCase):
             modified_nodes=nodes,
             expected_compute={'existence': 1,
                               'modification': 1,
-                              'relationships': 0},
+                              'relationships': 0,
+                              'total_relationships': 0},
             expected_db={'existence': 1,
                          'modification': 1,
-                         'relationships': 1},
+                         'relationships': 1,
+                         'total_relationships': 1},
             expected_webserver={'existence': 1,
                                 'modification': 0,
-                                'relationships': 1},
+                                'relationships': 1,
+                                'total_relationships': 2},
             expected_total=5)
 
     def test_deployment_modification_add_db(self):
@@ -44,13 +47,16 @@ class TestDeploymentModification(TestCase):
             modified_nodes=nodes,
             expected_compute={'existence': 1,
                               'modification': 0,
-                              'relationships': 0},
+                              'relationships': 0,
+                              'total_relationships': 0},
             expected_db={'existence': 1,
                          'modification': 1,
-                         'relationships': 1},
+                         'relationships': 1,
+                         'total_relationships': 1},
             expected_webserver={'existence': 1,
                                 'modification': 0,
-                                'relationships': 1},
+                                'relationships': 1,
+                                'total_relationships': 2},
             expected_total=4)
 
     def test_deployment_modification_add_webserver(self):
@@ -60,13 +66,16 @@ class TestDeploymentModification(TestCase):
             modified_nodes=nodes,
             expected_compute={'existence': 0,
                               'modification': 0,
-                              'relationships': 0},
+                              'relationships': 0,
+                              'total_relationships': 0},
             expected_db={'existence': 1,
                          'modification': 0,
-                         'relationships': 0},
+                         'relationships': 0,
+                         'total_relationships': 1},
             expected_webserver={'existence': 1,
                                 'modification': 1,
-                                'relationships': 1},
+                                'relationships': 1,
+                                'total_relationships': 1},
             expected_total=4)
 
     def test_deployment_modification_remove_compute(self):
@@ -79,13 +88,16 @@ class TestDeploymentModification(TestCase):
             modified_nodes=nodes,
             expected_compute={'existence': 1,
                               'modification': 1,
-                              'relationships': 0},
+                              'relationships': 0,
+                              'total_relationships': 0},
             expected_db={'existence': 1,
                          'modification': 1,
-                         'relationships': 1},
+                         'relationships': 1,
+                         'total_relationships': 1},
             expected_webserver={'existence': 1,
                                 'modification': 0,
-                                'relationships': 1},
+                                'relationships': 1,
+                                'total_relationships': 1},
             expected_total=3)
 
     def _test_deployment_modification(self,
@@ -138,14 +150,25 @@ class TestDeploymentModification(TestCase):
                              len(webserver_instances[0]['relationships']))
 
         def assertion():
-            self.assertEqual(
-                expected_total,
-                len(self.client.node_instances.list(deployment_id)))
+            node_instances = self.client.node_instances.list(deployment_id)
+            self.assertEqual(expected_total, len(node_instances))
             for node_id, modification in modified_nodes.items():
                 self.assertEqual(
                     modification['instances'],
                     self.client.nodes.get(
                         deployment_id, node_id).number_of_instances)
+            for node_instance in node_instances:
+                relationships_count = len(node_instance.relationships)
+                if node_instance.node_id == 'compute':
+                    self.assertEqual(relationships_count,
+                                     expected_compute['total_relationships'])
+                if node_instance.node_id == 'db':
+                    self.assertEqual(relationships_count,
+                                     expected_db['total_relationships'])
+                if node_instance.node_id == 'webserver':
+                    self.assertEqual(relationships_count,
+                                     expected_webserver['total_relationships'])
+
         self.do_assertions(assertion)
 
         return deployment_id
