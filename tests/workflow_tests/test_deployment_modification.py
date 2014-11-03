@@ -141,6 +141,11 @@ class TestDeploymentModification(TestCase):
             self.assertEqual(
                 expected_total,
                 len(self.client.node_instances.list(deployment_id)))
+            for node_id, modification in modified_nodes.items():
+                self.assertEqual(
+                    modification['instances'],
+                    self.client.nodes.get(
+                        deployment_id, node_id).number_of_instances)
         self.do_assertions(assertion)
 
         return deployment_id

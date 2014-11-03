@@ -320,7 +320,7 @@ class BlueprintsManager(object):
             self.sm.update_node_instance(models.DeploymentNodeInstance(
                 id=node_instance['id'],
                 relationships=new_relationships,
-                version=0,
+                version=current.version,
                 node_id=None,
                 host_id=None,
                 deployment_id=None,
@@ -340,7 +340,7 @@ class BlueprintsManager(object):
                 self.sm.update_node_instance(models.DeploymentNodeInstance(
                     id=node_instance['id'],
                     relationships=new_relationships,
-                    version=0,
+                    version=current.version,
                     node_id=None,
                     host_id=None,
                     deployment_id=None,
