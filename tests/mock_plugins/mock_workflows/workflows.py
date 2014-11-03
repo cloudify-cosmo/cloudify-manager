@@ -277,20 +277,19 @@ def auto_heal_reinstall(
 
     def _uninstall(node):
         node.execute_operation('cloudify.interfaces.lifecycle.stop')
+        _unlink(node)
         node.execute_operation('cloudify.interfaces.lifecycle.delete')
 
     def _install(node):
         node.execute_operation('cloudify.interfaces.lifecycle.create')
-        node.execute_operation('cloudify.interfaces.lifecycle.configure')
-        node.execute_operation('cloudify.interfaces.lifecycle.start')
-
-    def _link(node):
         node.execute_operation(
             'cloudify.interfaces.relationship_lifecycle.preconfigure'
         )
+        node.execute_operation('cloudify.interfaces.lifecycle.configure')
         node.execute_operation(
             'cloudify.interfaces.relationship_lifecycle.postconfigure'
         )
+        node.execute_operation('cloudify.interfaces.lifecycle.start')
         node.execute_operation(
             'cloudify.interfaces.relationship_lifecycle.establish'
         )
@@ -304,7 +303,6 @@ def auto_heal_reinstall(
     db = list(ctx.get_node('db').instances)[0]
     webserver = list(ctx.get_node('webserver').instances)[0]
 
-    _unlink(db)
     _unlink(webserver)
     _uninstall(db)
     _uninstall(db_host)
