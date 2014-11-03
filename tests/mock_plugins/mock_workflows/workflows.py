@@ -266,6 +266,53 @@ def auto_heal_vm(ctx, key, value, diagnose_key=None, diagnose_value=None, **_):
 
 
 @workflow
+def auto_heal_reinstall(
+        ctx,
+        key,
+        value,
+        diagnose_key=None,
+        diagnose_value=None,
+        **kwargs
+):
+
+    def _uninstall(node):
+        node.execute_operation('cloudify.interfaces.lifecycle.stop')
+        node.execute_operation('cloudify.interfaces.lifecycle.delete')
+
+    def _install(node):
+        node.execute_operation('cloudify.interfaces.lifecycle.create')
+        node.execute_operation('cloudify.interfaces.lifecycle.configure')
+        node.execute_operation('cloudify.interfaces.lifecycle.start')
+
+    def _link(node):
+        node.execute_operation(
+            'cloudify.interfaces.relationship_lifecycle.preconfigure'
+        )
+        node.execute_operation(
+            'cloudify.interfaces.relationship_lifecycle.postconfigure'
+        )
+        node.execute_operation(
+            'cloudify.interfaces.relationship_lifecycle.establish'
+        )
+
+    def _unlink(node):
+        node.execute_operation(
+            'cloudify.interfaces.relationship_lifecycle.unlink'
+        )
+
+    db_host = list(ctx.get_node('db_host').instances)[0]
+    db = list(ctx.get_node('db').instances)[0]
+    webserver = list(ctx.get_node('webserver').instances)[0]
+
+    _unlink(db)
+    _unlink(webserver)
+    _uninstall(db)
+    _uninstall(db_host)
+    _install(db_host)
+    _install(db)
+
+
+@workflow
 def operation_mapping1(ctx, **_):
     node1 = list(ctx.get_node('node1').instances)[0]
     node2_rel = list(list(ctx.get_node('node2').instances)[0].relationships)[0]

@@ -1,0 +1,83 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+    - testmockoperations.yaml
+    - mock_workflows.yaml
+
+node_templates:
+    db_host:
+        type: cloudify.types.host
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: testmockoperations.testmockoperations.tasks.mock_create
+                - start: testmockoperations.testmockoperations.tasks.mock_start
+                - configure: testmockoperations.testmockoperations.tasks.mock_configure
+                - stop: testmockoperations.testmockoperations.tasks.mock_stop
+                - delete: testmockoperations.testmockoperations.tasks.mock_delete
+
+    webserver_host:
+        type: cloudify.types.host
+
+    db:
+        type: cloudify.types.base
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: testmockoperations.testmockoperations.tasks.mock_create
+                - start: testmockoperations.testmockoperations.tasks.mock_start
+                - configure: testmockoperations.testmockoperations.tasks.mock_configure
+                - stop: testmockoperations.testmockoperations.tasks.mock_stop
+                - delete: testmockoperations.testmockoperations.tasks.mock_delete
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: db_host
+              source_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+
+                    - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                    - establish: testmockoperations.testmockoperations.tasks.mock_establish
+                    - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+
+
+    webserver:
+        type: cloudify.types.base
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: webserver_host
+            - type: cloudify.relationships.connected_to
+              target: db
+              target_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                    - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                    - establish: testmockoperations.testmockoperations.tasks.mock_establish
+                    - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+
+groups:
+    autohealing_group:
+        members: [db]
+        policies:
+            simple_autoheal_policy:
+                type: cloudify.policies.types.host_failure
+                triggers:
+                    auto_heal_trigger:
+                        type: cloudify.policies.triggers.execute_workflow
+                        parameters:
+                            workflow: auto_heal_workflow
+                            allow_custom_parameters: true
+                            workflow_parameters:
+                                value: { get_property: [SELF, failing_node]}
+                                diagnose_key: diagnose
+                                diagnose_value: { get_property: [SELF, diagnose] }
+
+
+
+workflows:
+    auto_heal_workflow:
+        mapping: mock_workflows.mock_workflows.workflows.auto_heal_reinstall
+        parameters:
+            key:
+                default: failing_node
+            value:
+                description: Which node has failed

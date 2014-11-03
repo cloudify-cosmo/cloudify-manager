@@ -206,6 +206,24 @@ class TestAutohealPolicies(PoliciesTestsBase):
             invocation['failing_node']
         )
 
+    def test_autoheal_policy_nested_nodes(self):
+        # create, configure, start
+        NUM_OF_INITIAL_LIFECYCLE_OP = 3
+        # also stop and delete
+        NUM_OF_LIFECYCLE_OP = 5
+        # preconfigure, postconfigure, establish
+        NUM_OF_INITIAL_RELATIONSHIP_OP = 3
+        # also unlink
+        NUM_OF_RELATIONSHIP_OP = 4
+
+        self.launch_deployment('dsl/auto_heal_nested_nodes.yaml', 4)
+        self._publish_heart_beat_event('db')
+        self._wait_for_event_expiration()
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        invocations = self.wait_for_invocations(
+            self.deployment.id,
+            2 * NUM_OF_LIFECYCLE_OP + 2 * NUM_OF_INITIAL_LIFECYCLE_OP + 2 * NUM_OF_INITIAL_RELATIONSHIP_OP)
+
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
 

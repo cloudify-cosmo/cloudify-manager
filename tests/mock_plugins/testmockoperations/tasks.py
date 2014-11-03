@@ -129,17 +129,61 @@ def saving_multiple_params_op(ctx, params, **kwargs):
 
 
 @operation
+def saving_operation_info(ctx, operation, **kwargs):
+    saving_multiple_params_op(
+        ctx,
+        {'node': ctx.node.name, 'operation': operation},
+        **kwargs
+    )
+
+
+@operation
+def mock_create(ctx, **kwargs):
+    saving_operation_info(ctx, 'create', **kwargs)
+
+
+@operation
+def mock_configure(ctx, **kwargs):
+    saving_operation_info(ctx, 'configure', **kwargs)
+
+
+@operation
 def mock_start(ctx, **kwargs):
-    mock_operation_from_custom_workflow(ctx, 'operation', 'start', **kwargs)
+    saving_operation_info(ctx, 'start', **kwargs)
 
 
 @operation
 def mock_stop(ctx, const_arg_stop=None, **kwargs):
     saving_multiple_params_op(
         ctx,
-        {'operation': 'stop', 'const_arg_stop': const_arg_stop},
+        {'node': ctx.node.name, 'operation': 'stop', 'const_arg_stop': const_arg_stop},
         **kwargs
     )
+
+
+@operation
+def mock_delete(ctx, **kwargs):
+    saving_operation_info(ctx, 'delete', **kwargs)
+
+
+@operation
+def mock_preconfigure(ctx, **kwargs):
+    saving_operation_info(ctx, 'preconfigure', **kwargs)
+
+
+@operation
+def mock_postconfigure(ctx, **kwargs):
+    saving_operation_info(ctx, 'postconfigure', **kwargs)
+
+
+@operation
+def mock_establish(ctx, **kwargs):
+    saving_operation_info(ctx, 'establish', **kwargs)
+
+
+@operation
+def mock_unlink(ctx, **kwargs):
+    saving_operation_info(ctx, 'unlink', **kwargs)
 
 
 @operation
