@@ -764,6 +764,21 @@ class DeploymentsId(Resource):
 
 class DeploymentsIdModify(Resource):
 
+    @swagger.operation(
+        responseClass=responses.DeploymentModification,
+        nickname="modifyDeployment",
+        notes="Modify deployment.",
+        parameters=[{'name': 'body',
+                     'description': 'Deployment modification specification',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.
+                     DeploymentModificationRequest.__name__,
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification.resource_fields)
     def patch(self, deployment_id):
