@@ -66,6 +66,7 @@ def exceptions_handled(func):
                 manager_exceptions.IllegalActionError,
                 manager_exceptions.NoSuchIncludeFieldError,
                 manager_exceptions.MissingRequiredDeploymentInputError,
+                manager_exceptions.UnknownModificationStageError,
                 manager_exceptions.UnknownDeploymentInputError,
                 manager_exceptions.DeploymentOutputsEvaluationError,
                 manager_exceptions.DeploymentEnvironmentCreationInProgressError
@@ -192,6 +193,8 @@ def setup_resources(api):
                      '/deployments/<string:deployment_id>')
     api.add_resource(DeploymentsIdOutputs,
                      '/deployments/<string:deployment_id>/outputs')
+    api.add_resource(DeploymentsIdModify,
+                     '/deployments/<string:deployment_id>/modify')
     api.add_resource(Nodes,
                      '/nodes')
     api.add_resource(NodeInstances,
@@ -758,6 +761,58 @@ class DeploymentsId(Resource):
         # not using '_replace_workflows_field_for_deployment_response'
         # method since the object returned only contains the deployment's id
         return responses.Deployment(**deployment.to_dict()), 200
+
+
+class DeploymentsIdModify(Resource):
+
+    @swagger.operation(
+        responseClass=responses.DeploymentModification,
+        nickname="modifyDeployment",
+        notes="Modify deployment.",
+        parameters=[{'name': 'body',
+                     'description': 'Deployment modification specification',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.
+                     DeploymentModificationRequest.__name__,
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @exceptions_handled
+    @marshal_with(responses.DeploymentModification.resource_fields)
+    def patch(self, deployment_id):
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('stage', request_json)
+        stage = request_json['stage']
+        if stage == 'start':
+            verify_parameter_in_request_body('nodes',
+                                             request_json,
+                                             param_type=dict,
+                                             optional=True)
+            nodes = request_json.get('nodes', {})
+            modification = get_blueprints_manager().\
+                start_deployment_modification(deployment_id, nodes)
+            return responses.DeploymentModification(
+                deployment_id=deployment_id,
+                node_instances=modification['node_instances'],
+                modified_nodes=modification['modified_nodes'])
+        elif stage == 'finish':
+            verify_parameter_in_request_body('modification',
+                                             request_json,
+                                             param_type=dict)
+            modification = request_json['modification']
+            get_blueprints_manager().finish_deployment_modification(
+                deployment_id, modification)
+            return responses.DeploymentModification(
+                deployment_id=deployment_id,
+                node_instances={},
+                modified_nodes={})
+        else:
+            raise manager_exceptions.UnknownModificationStageError(
+                'Unknown modification stage: {0}'.format(stage))
 
 
 class Nodes(Resource):

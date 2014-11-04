@@ -299,6 +299,30 @@ def operation_mapping3(ctx, value, **_):
     expect_error(node3_rel.execute_target_operation)
 
 
+@workflow
+def deployment_modification(ctx, nodes, **_):
+
+    modification = ctx.deployment.start_modification(nodes)
+
+    for node in modification.added.nodes:
+        for instance in node.instances:
+            instance.execute_operation('test.op', kwargs={
+                'modification': instance.modification,
+                'relationships': [(instance.id, rel.target_id)
+                                  for rel in instance.relationships]
+            })
+
+    for node in modification.removed.nodes:
+        for instance in node.instances:
+            instance.execute_operation('test.op', kwargs={
+                'modification': instance.modification,
+                'relationships': [rel.target_id
+                                  for rel in instance.relationships]
+            })
+
+    modification.finish()
+
+
 def get_instance(ctx):
     return next(next(ctx.nodes).instances)
 

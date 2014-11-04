@@ -96,9 +96,11 @@ class BaseServerTestCase(unittest.TestCase):
         self.app = server.app.test_client()
         self.client = CloudifyClient('localhost')
         mock_http_client = MockHTTPClient(self.app)
+        self.client._client = mock_http_client
         self.client.blueprints.api = mock_http_client
         self.client.deployments.api = mock_http_client
         self.client.deployments.outputs.api = mock_http_client
+        self.client.deployments.modify.api = mock_http_client
         self.client.executions.api = mock_http_client
         self.client.nodes.api = mock_http_client
         self.client.node_instances.api = mock_http_client

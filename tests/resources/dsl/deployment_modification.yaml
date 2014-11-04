@@ -1,0 +1,37 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify.types
+    - testmockoperations.yaml
+    - mock_workflows.yaml
+
+node_templates:
+    compute:
+        type: cloudify.nodes.Compute
+        properties:
+            install_agent: false
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.put_workflow_node_instance
+    db:
+        type: cloudify.nodes.DBMS
+        relationships:
+            - target: compute
+              type: cloudify.relationships.contained_in
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.put_workflow_node_instance
+    webserver:
+        type: cloudify.nodes.WebServer
+        relationships:
+            - target: db
+              type: cloudify.relationships.connected_to
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.put_workflow_node_instance
+
+workflows:
+    deployment_modification:
+        mapping: mock_workflows.mock_workflows.workflows.deployment_modification
+        parameters:
+            nodes: {}

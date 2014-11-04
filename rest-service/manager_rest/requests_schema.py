@@ -39,6 +39,15 @@ class DeploymentRequest(object):
 
 
 @swagger.model
+class DeploymentModificationRequest(object):
+
+    resource_fields = {
+        'stage': fields.String,
+        'nodes': fields.Raw,
+    }
+
+
+@swagger.model
 class ModifyExecutionRequest(object):
 
     resource_fields = {

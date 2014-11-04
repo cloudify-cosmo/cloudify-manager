@@ -68,7 +68,7 @@ class TestCase(unittest.TestCase):
                         deployment_id=None):
 
         """
-        Retrieve the plugin state for a curtain deployment.
+        Retrieve the plugin state for a certain deployment.
 
         :param deployment_id: the deployment id in question.
         :param plugin_name: the plugin in question.
@@ -92,6 +92,23 @@ class TestCase(unittest.TestCase):
             worker_work_dir=worker.workdir
         )
 
+    def clear_plugin_data(self, plugin_name):
+        """
+        Clears plugin state.
+
+        :param plugin_name: the plugin in question.
+        """
+        global testenv_instance
+        # create worker instance to
+        # get the workdir
+        worker = CeleryWorkerProcess(
+            queues=['cloudify.management'],
+            test_working_dir=testenv_instance.test_working_dir)
+        return self._clear_plugin_data(
+            plugin_name=plugin_name,
+            worker_work_dir=worker.workdir
+        )
+
     def _get_plugin_data(self,
                          plugin_name,
                          deployment_id,
@@ -107,6 +124,16 @@ class TestCase(unittest.TestCase):
             if deployment_id not in data:
                 data[deployment_id] = {}
             return data.get(deployment_id)
+
+    def _clear_plugin_data(self,
+                           plugin_name,
+                           worker_work_dir):
+        storage_file_path = os.path.join(
+            worker_work_dir,
+            '{0}.json'.format(plugin_name)
+        )
+        if os.path.exists(storage_file_path):
+            os.remove(storage_file_path)
 
     @staticmethod
     def do_assertions(assertions_func, timeout=10, **kwargs):

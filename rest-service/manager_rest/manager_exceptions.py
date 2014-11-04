@@ -175,3 +175,15 @@ class DeploymentOutputsEvaluationError(ManagerException):
             *args,
             **kwargs
         )
+
+
+class UnknownModificationStageError(ManagerException):
+    ERROR_CODE = 'unknown_modification_stage_error'
+
+    def __init__(self, *args, **kwargs):
+        super(UnknownModificationStageError, self).__init__(
+            400,
+            UnknownModificationStageError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
