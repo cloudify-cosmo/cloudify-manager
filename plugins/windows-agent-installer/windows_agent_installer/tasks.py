@@ -227,8 +227,11 @@ def uninstall(ctx, runner=None, cloudify_agent=None, **kwargs):
 
 
 def _verify_no_celery_error(runner):
-    celery_error_out = os.path.join(
-        RUNTIME_AGENT_PATH, win_constants.CELERY_ERROR_FILE)
+    # don't use os.path.join here since
+    # since the manager is linux
+    # and the agent is windows
+    celery_error_out = '{0}\{1}'.format(RUNTIME_AGENT_PATH,
+                                        win_constants.CELERY_ERROR_FILE)
 
     # this means the celery worker had an uncaught
     # exception and it wrote its content
