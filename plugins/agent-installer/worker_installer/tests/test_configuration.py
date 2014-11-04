@@ -394,7 +394,7 @@ class MockFabricRunner(FabricRunner):
     def __init__(self):
         self.put_files = {}
 
-    def put(self, file_path, content, sudo=False):
+    def put(self, file_path, content, use_sudo=False):
         self.put_files[file_path] = content
 
 
