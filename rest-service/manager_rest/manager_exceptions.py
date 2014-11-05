@@ -177,6 +177,18 @@ class DeploymentOutputsEvaluationError(ManagerException):
         )
 
 
+class AttributesProcessingError(ManagerException):
+    ERROR_CODE = 'attributes_error'
+
+    def __init__(self, *args, **kwargs):
+        super(AttributesProcessingError, self).__init__(
+            400,
+            AttributesProcessingError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
 class UnknownModificationStageError(ManagerException):
     ERROR_CODE = 'unknown_modification_stage_error'
 

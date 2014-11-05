@@ -1255,8 +1255,9 @@ class Attributes(Resource):
         deployment_id = request_json['deployment_id']
         context = request_json.get('context', {})
         payload = request_json.get('payload')
-        assert context
-        assert payload
-        processed_payload = None
+        processed_payload = get_blueprints_manager().process_attributes(
+            deployment_id=deployment_id,
+            context=context,
+            payload=payload)
         return responses.ProcessedAttributes(deployment_id=deployment_id,
                                              payload=processed_payload)
