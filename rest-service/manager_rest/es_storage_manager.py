@@ -191,7 +191,7 @@ class ESStorageManager(object):
                                              model_class=DeploymentNode,
                                              fields=include)
 
-    def get_node_instances(self, deployment_id, include=None):
+    def get_node_instances(self, deployment_id, node_id=None, include=None):
         query = None
         if deployment_id:
             query = {'query': {'term': {'deployment_id': deployment_id}}}

@@ -869,6 +869,10 @@ class NodeInstances(Resource):
                                        type=str,
                                        required=False,
                                        location='args')
+        self._args_parser.add_argument('node_id',
+                                       type=str,
+                                       required=False,
+                                       location='args')
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.NodeInstance.__name__),
@@ -877,6 +881,12 @@ class NodeInstances(Resource):
               " parameters.",
         parameters=[{'name': 'deployment_id',
                      'description': 'Deployment id',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'},
+                    {'name': 'node_id',
+                     'description': 'node id',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'string',
@@ -890,7 +900,9 @@ class NodeInstances(Resource):
         """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
+        node_id = args.get('node_id')
         nodes = get_storage_manager().get_node_instances(deployment_id,
+                                                         node_id,
                                                          include=_include)
         return [responses.NodeInstance(**node.to_dict()) for node in nodes]
 
