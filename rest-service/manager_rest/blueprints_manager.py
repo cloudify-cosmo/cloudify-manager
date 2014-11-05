@@ -375,12 +375,17 @@ class BlueprintsManager(object):
         deployment = self.get_deployment(
             deployment_id, include=['outputs'])
 
-        def get_node_instances():
-            return self.sm.get_node_instances(deployment_id)
+        def get_node_instances(node_id=None):
+            return self.sm.get_node_instances(deployment_id, node_id)
+
+        def get_node_instance(node_instance_id):
+            return self.sm.get_node_instance(node_instance_id)
 
         try:
-            return functions.evaluate_outputs(deployment.outputs,
-                                              get_node_instances)
+            return functions.evaluate_outputs(
+                outputs_def=deployment.outputs,
+                get_node_instances_method=get_node_instances,
+                get_node_instance_method=get_node_instance)
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.DeploymentOutputsEvaluationError(str(e))
 
