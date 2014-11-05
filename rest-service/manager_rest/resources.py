@@ -69,6 +69,7 @@ def exceptions_handled(func):
                 manager_exceptions.UnknownModificationStageError,
                 manager_exceptions.UnknownDeploymentInputError,
                 manager_exceptions.DeploymentOutputsEvaluationError,
+                manager_exceptions.AttributesProcessingError,
                 manager_exceptions.DeploymentEnvironmentCreationInProgressError
         ) as e:
             abort_error(e)

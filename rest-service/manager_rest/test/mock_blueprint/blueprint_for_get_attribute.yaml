@@ -11,3 +11,7 @@ node_templates:
         type: cloudify.nodes.Root
     node4:
         type: cloudify.nodes.Root
+    node5:
+        type: cloudify.nodes.Root
+        instances:
+            deploy: 2

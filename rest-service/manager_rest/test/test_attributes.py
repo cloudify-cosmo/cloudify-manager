@@ -15,38 +15,43 @@
 
 import uuid
 
+from cloudify_rest_client.exceptions import AttributesProcessingError
+
 from base_test import BaseServerTestCase
 
 
 class AttributesTestCase(BaseServerTestCase):
 
-    def test_attributes(self):
-        id_ = str(uuid.uuid4())
+    def setUp(self):
+        super(AttributesTestCase, self).setUp()
+        self.id_ = str(uuid.uuid4())
         self.put_deployment(
             blueprint_file_name='blueprint_for_get_attribute.yaml',
-            blueprint_id=id_,
-            deployment_id=id_)
-        instances = self.client.node_instances.list(deployment_id=id_)
+            blueprint_id=self.id_,
+            deployment_id=self.id_)
 
-        node1 = [x for x in instances if x.node_id == 'node1'][0]
-        node2 = [x for x in instances if x.node_id == 'node2'][0]
-        node3 = [x for x in instances if x.node_id == 'node3'][0]
-        node4 = [x for x in instances if x.node_id == 'node4'][0]
+        instances = self.client.node_instances.list(deployment_id=self.id_)
+
+        self.node1 = [x for x in instances if x.node_id == 'node1'][0]
+        self.node2 = [x for x in instances if x.node_id == 'node2'][0]
+        self.node3 = [x for x in instances if x.node_id == 'node3'][0]
+        self.node4 = [x for x in instances if x.node_id == 'node4'][0]
 
         self.client.node_instances.update(
-            node1.id, runtime_properties={'key1': 'value1'})
+            self.node1.id, runtime_properties={'key1': 'value1'})
         self.client.node_instances.update(
-            node2.id, runtime_properties={'key2': 'value2'})
+            self.node2.id, runtime_properties={'key2': 'value2'})
         self.client.node_instances.update(
-            node3.id, runtime_properties={'key3': 'value3'})
+            self.node3.id, runtime_properties={'key3': 'value3'})
         self.client.node_instances.update(
-            node4.id, runtime_properties={'key4': 'value4'})
+            self.node4.id, runtime_properties={'key4': 'value4'})
 
-        deployment_id = id_
+    def test_attributes(self):
+
         context = {
-            'self': node1.id,
-            'source': node2.id,
-            'target': node3.id
+            'self': self.node1.id,
+            'source': self.node2.id,
+            'target': self.node3.id
         }
         payload = {
             'node1': {'get_attribute': ['SELF', 'key1']},
@@ -61,8 +66,48 @@ class AttributesTestCase(BaseServerTestCase):
             'node4': 'value4',
         }
 
-        response = self.client.attributes.process(deployment_id,
+        response = self.client.attributes.process(self.id_,
                                                   context,
                                                   payload)
-        self.assertEqual(response.deployment_id, deployment_id)
+        self.assertEqual(response.deployment_id, self.id_)
         self.assertEqual(response.payload, expected_processed_payload)
+
+    def test_missing_self(self):
+        payload = {
+            'node1': {'get_attribute': ['SELF', 'key1']},
+        }
+        try:
+            self.client.attributes.process(self.id_, {}, payload)
+            self.fail()
+        except AttributesProcessingError as e:
+            self.assertIn('SELF is missing', e.message)
+
+    def test_missing_source(self):
+        payload = {
+            'node2': {'get_attribute': ['SOURCE', 'key2']},
+        }
+        try:
+            self.client.attributes.process(self.id_, {}, payload)
+            self.fail()
+        except AttributesProcessingError as e:
+            self.assertIn('SOURCE is missing', e.message)
+
+    def test_missing_target(self):
+        payload = {
+            'node3': {'get_attribute': ['TARGET', 'key3']},
+        }
+        try:
+            self.client.attributes.process(self.id_, {}, payload)
+            self.fail()
+        except AttributesProcessingError as e:
+            self.assertIn('TARGET is missing', e.message)
+
+    def test_multi_instance(self):
+        payload = {
+            'node5': {'get_attribute': ['node5', 'key5']},
+        }
+        try:
+            self.client.attributes.process(self.id_, {}, payload)
+            self.fail()
+        except AttributesProcessingError as e:
+            self.assertIn('Multi instances of node', e.message)

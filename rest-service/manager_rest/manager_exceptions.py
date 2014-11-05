@@ -178,7 +178,7 @@ class DeploymentOutputsEvaluationError(ManagerException):
 
 
 class AttributesProcessingError(ManagerException):
-    ERROR_CODE = 'attributes_error'
+    ERROR_CODE = 'attributes_processing_error'
 
     def __init__(self, *args, **kwargs):
         super(AttributesProcessingError, self).__init__(
