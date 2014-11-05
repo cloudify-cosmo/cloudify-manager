@@ -193,8 +193,13 @@ class ESStorageManager(object):
 
     def get_node_instances(self, deployment_id, node_id=None, include=None):
         query = None
-        if deployment_id:
-            query = {'query': {'term': {'deployment_id': deployment_id}}}
+        if deployment_id or node_id:
+            terms = []
+            if deployment_id:
+                terms.append({'term': {'deployment_id': deployment_id}})
+            if node_id:
+                terms.append({'term': {'node_id': node_id}})
+            query = {'query': {'bool': {'must': terms}}}
         return self._list_docs(NODE_INSTANCE_TYPE,
                                DeploymentNodeInstance,
                                query=query,
