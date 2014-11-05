@@ -105,6 +105,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.client.nodes.api = mock_http_client
         self.client.node_instances.api = mock_http_client
         self.client.manager.api = mock_http_client
+        self.client.attributes.api = mock_http_client
 
     def tearDown(self):
         self.file_server.stop()

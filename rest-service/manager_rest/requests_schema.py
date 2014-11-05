@@ -62,3 +62,13 @@ class PostProviderContextRequest(object):
         'name': fields.String,
         'context': fields.Raw
     }
+
+
+@swagger.model
+class AttributesRequest(object):
+
+    resource_fields = {
+        'deployment_id': fields.String,
+        'context': fields.Raw,
+        'payload': fields.Raw
+    }

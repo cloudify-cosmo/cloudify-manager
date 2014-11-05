@@ -206,6 +206,7 @@ def setup_resources(api):
     api.add_resource(Status, '/status')
     api.add_resource(ProviderContext, '/provider/context')
     api.add_resource(Version, '/version')
+    api.add_resource(Attributes, '/attributes')
 
 
 class BlueprintsUpload(object):
@@ -1206,3 +1207,44 @@ class Version(Resource):
         Get version information
         """
         return responses.Version(**get_version_data())
+
+
+class Attributes(Resource):
+
+    @swagger.operation(
+        responseClass=responses.ProviderContextPostStatus,
+        nickname='processAttributes',
+        notes="Process provided attributes payload",
+        parameters=[{'name': 'body',
+                     'description': '',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.AttributesRequest.__name__,
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @exceptions_handled
+    @marshal_with(responses.ProcessedAttributes.resource_fields)
+    def post(self):
+        """
+        Process attributes in payload
+        """
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('deployment_id', request_json)
+        verify_parameter_in_request_body('context', request_json,
+                                         optional=True,
+                                         param_type=dict)
+        verify_parameter_in_request_body('payload', request_json,
+                                         param_type=dict)
+
+        deployment_id = request_json['deployment_id']
+        context = request_json.get('context', {})
+        payload = request_json.get('payload')
+        assert context
+        assert payload
+        processed_payload = None
+        return responses.ProcessedAttributes(deployment_id=deployment_id,
+                                             payload=processed_payload)

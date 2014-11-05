@@ -258,3 +258,16 @@ class Version(object):
         self.build = kwargs['build']
         self.date = kwargs['date']
         self.commit = kwargs['commit']
+
+
+@swagger.model
+class ProcessedAttributes():
+
+    resource_fields = {
+        'deployment_id': fields.String,
+        'payload': fields.Raw
+    }
+
+    def __init__(self, **kwargs):
+        self.deployment_id = kwargs['deployment_id']
+        self.payload = kwargs['payload']
