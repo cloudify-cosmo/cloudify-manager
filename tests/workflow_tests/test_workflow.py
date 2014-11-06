@@ -52,7 +52,7 @@ class BasicWorkflowsTest(TestCase):
 
         outputs = self.client.deployments.outputs.get(deployment.id).outputs
         # ip runtime property is not set in this case
-        self.assertIsNone(outputs['ip_address'])
+        self.assertEquals(outputs['ip_address'], '')
 
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = resource("dsl/dependencies_order_with_two_nodes.yaml")
