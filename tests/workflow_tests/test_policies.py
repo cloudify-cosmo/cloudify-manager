@@ -207,6 +207,13 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
 
     def test_autoheal_policy_nested_nodes(self):
+        def _get_operation_num(node, operation, invocations):
+            op_nums = []
+            for invocation in invocations:
+                if node == invocation['node'] and invocation['operation']:
+                    op_nums.append(invocation['num'])
+            return op_nums
+
         # create, configure, start
         NUM_OF_INITIAL_LIFECYCLE_OP = 3
         # also stop and delete
@@ -215,14 +222,28 @@ class TestAutohealPolicies(PoliciesTestsBase):
         NUM_OF_INITIAL_RELATIONSHIP_OP = 3
         # also unlink
         NUM_OF_RELATIONSHIP_OP = 4
+        DB_HOST = 'db_host'
+        DB = 'db'
 
         self.launch_deployment('dsl/auto_heal_nested_nodes.yaml', 4)
-        self._publish_heart_beat_event('db')
+        self._publish_heart_beat_event(DB)
         self._wait_for_event_expiration()
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+
         invocations = self.wait_for_invocations(
             self.deployment.id,
-            2 * NUM_OF_LIFECYCLE_OP + 2 * NUM_OF_INITIAL_LIFECYCLE_OP + 2 * NUM_OF_INITIAL_RELATIONSHIP_OP)
+            (
+                2 * NUM_OF_LIFECYCLE_OP +
+                2 * NUM_OF_INITIAL_LIFECYCLE_OP +
+                4 * NUM_OF_INITIAL_RELATIONSHIP_OP +
+                4 * NUM_OF_RELATIONSHIP_OP
+            )
+        )
+
+        self.assertLess(
+            _get_operation_num(DB_HOST, 'start', invocations)[0],
+            _get_operation_num(DB, 'start', invocations)[0]
+        )
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)

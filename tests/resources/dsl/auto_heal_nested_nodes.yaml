@@ -34,7 +34,12 @@ node_templates:
               source_interfaces:
                 cloudify.interfaces.relationship_lifecycle:
                     - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
-
+                    - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                    - establish: testmockoperations.testmockoperations.tasks.mock_establish
+                    - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+              target_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
                     - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
                     - establish: testmockoperations.testmockoperations.tasks.mock_establish
                     - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
@@ -47,6 +52,12 @@ node_templates:
               target: webserver_host
             - type: cloudify.relationships.connected_to
               target: db
+              source_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                    - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                    - establish: testmockoperations.testmockoperations.tasks.mock_establish
+                    - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
               target_interfaces:
                 cloudify.interfaces.relationship_lifecycle:
                     - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure

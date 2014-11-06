@@ -11,7 +11,7 @@ node_templates:
         interfaces:
             cloudify.interfaces.lifecycle:
                 - start: testmockoperations.testmockoperations.tasks.mock_start
-                - stop: testmockoperations.testmockoperations.tasks.mock_stop
+                - stop: testmockoperations.testmockoperations.tasks.mock_stop_with_arg
 
 groups:
     autohealing_group:

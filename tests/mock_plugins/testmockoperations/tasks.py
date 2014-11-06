@@ -130,11 +130,15 @@ def saving_multiple_params_op(ctx, params, **kwargs):
 
 @operation
 def saving_operation_info(ctx, operation, **kwargs):
-    saving_multiple_params_op(
-        ctx,
-        {'node': ctx.node.name, 'operation': operation},
-        **kwargs
-    )
+    with update_storage(ctx) as data:
+        invocations = data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
+        num = data.get('num', 0) + 1
+        data['num'] = num
+        invocations.append(
+            {'node': ctx.node.name, 'operation': operation, 'num': num}
+        )
 
 
 @operation
@@ -154,9 +158,14 @@ def mock_start(ctx, **kwargs):
 
 @operation
 def mock_stop(ctx, const_arg_stop=None, **kwargs):
+    saving_operation_info(ctx, 'stop', **kwargs)
+
+
+@operation
+def mock_stop_with_arg(ctx, const_arg_stop=None, **kwargs):
     saving_multiple_params_op(
         ctx,
-        {'node': ctx.node.name, 'operation': 'stop', 'const_arg_stop': const_arg_stop},
+        {'operation': 'stop', 'const_arg_stop': const_arg_stop},
         **kwargs
     )
 
