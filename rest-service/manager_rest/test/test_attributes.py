@@ -58,12 +58,14 @@ class AttributesTestCase(BaseServerTestCase):
             'node2': {'get_attribute': ['SOURCE', 'key2']},
             'node3': {'get_attribute': ['TARGET', 'key3']},
             'node4': {'get_attribute': ['node4', 'key4']},
+            'node6': {'get_attribute': ['node6', 'key6']}
         }
         expected_processed_payload = {
             'node1': 'value1',
             'node2': 'value2',
             'node3': 'value3',
             'node4': 'value4',
+            'node6': 'value6',
         }
 
         response = self.client.attributes.process(self.id_,

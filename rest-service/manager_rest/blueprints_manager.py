@@ -78,7 +78,7 @@ class BlueprintsManager(object):
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
                                    resources_base_url)
         except Exception, ex:
-            raise DslParseException(ex.message)
+            raise DslParseException(str(ex))
 
         now = str(datetime.now())
         parsed_plan = json.loads(plan)
@@ -381,11 +381,15 @@ class BlueprintsManager(object):
         def get_node_instance(node_instance_id):
             return self.sm.get_node_instance(node_instance_id)
 
+        def get_node(node_id):
+            return self.sm.get_node(deployment_id, node_id)
+
         try:
             return functions.evaluate_outputs(
                 outputs_def=deployment.outputs,
                 get_node_instances_method=get_node_instances,
-                get_node_instance_method=get_node_instance)
+                get_node_instance_method=get_node_instance,
+                get_node_method=get_node)
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.DeploymentOutputsEvaluationError(str(e))
 
@@ -398,12 +402,16 @@ class BlueprintsManager(object):
         def get_node_instance(node_instance_id):
             return self.sm.get_node_instance(node_instance_id)
 
+        def get_node(node_id):
+            return self.sm.get_node(deployment_id, node_id)
+
         try:
             return functions.process_attributes(
                 payload=payload,
                 context=context,
                 get_node_instances_method=get_node_instances,
-                get_node_instance_method=get_node_instance)
+                get_node_instance_method=get_node_instance,
+                get_node_method=get_node)
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.AttributesProcessingError(str(e))
 
