@@ -246,6 +246,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             )
         )
 
+        # unlink operation is executed before the source is deleted
         self.assertLess(
             _get_operation_num(DB_STATISTICS, 'unlink', invocations)[0],
             _get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
@@ -256,7 +257,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
 
         # DB and DB_STATISTICS is contained in DB_HOST
-        # so it has to be deleted before
+        # so they have to be deleted before
         self.assertLess(
             _get_operation_num(DB, 'delete', invocations)[0],
             _get_operation_num(DB_HOST, 'delete', invocations)[0]
@@ -327,9 +328,15 @@ class TestAutohealPolicies(PoliciesTestsBase):
             _get_operation_num(DB, 'start', invocations)[1],
             _get_operation_num(DB, 'establish', invocations)[1]
         )
+
+        # Establishing relationship is after start of the source
         self.assertLess(
-            _get_operation_num(DB, 'start', invocations)[1],
+            _get_operation_num(DB_STATISTICS, 'start', invocations)[1],
             _get_operation_num(DB_STATISTICS, 'establish', invocations)[1]
+        )
+        self.assertLess(
+            _get_operation_num(DB_STATISTICS, 'start', invocations)[1],
+            _get_operation_num(WEBSERVER, 'establish', invocations)[1]
         )
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
