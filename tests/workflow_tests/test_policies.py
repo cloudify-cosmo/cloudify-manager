@@ -227,8 +227,10 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         DB_HOST = 'db_host'
         DB = 'db'
+        DB_STATISTICS = 'db_statistics'
+        WEBSERVER = 'webserver'
 
-        self.launch_deployment('dsl/auto_heal_nested_nodes.yaml', 4)
+        self.launch_deployment('dsl/auto_heal_nested_nodes.yaml', 5)
         self._publish_heart_beat_event(DB)
         self._wait_for_event_expiration()
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
@@ -245,8 +247,89 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
 
         self.assertLess(
-            _get_operation_num(DB_HOST, 'start', invocations)[0],
-            _get_operation_num(DB, 'start', invocations)[0]
+            _get_operation_num(DB_STATISTICS, 'unlink', invocations)[0],
+            _get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
+        )
+        self.assertLess(
+            _get_operation_num(WEBSERVER, 'unlink', invocations)[0],
+            _get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
+        )
+
+        # DB and DB_STATISTICS is contained in DB_HOST
+        # so it has to be deleted before
+        self.assertLess(
+            _get_operation_num(DB, 'delete', invocations)[0],
+            _get_operation_num(DB_HOST, 'delete', invocations)[0]
+        )
+        self.assertLess(
+            _get_operation_num(DB_STATISTICS, 'delete', invocations)[0],
+            _get_operation_num(DB_HOST, 'delete', invocations)[0]
+        )
+
+        # DB has two unlinks - one for db_host and one from webserver
+        # Webserver unlinks from db after it is stopped
+        self.assertLess(
+            _get_operation_num(DB, 'unlink', invocations)[0],
+            _get_operation_num(DB, 'delete', invocations)[0]
+        )
+        self.assertLess(
+            _get_operation_num(DB, 'unlink', invocations)[1],
+            _get_operation_num(DB, 'delete', invocations)[0]
+        )
+        self.assertLess(
+            _get_operation_num(WEBSERVER, 'unlink', invocations)[0],
+            _get_operation_num(DB, 'delete', invocations)[0]
+        )
+
+        # DB_HOST has to be started before the nodes that are contained
+        # in it are created
+        self.assertLess(
+            _get_operation_num(DB_HOST, 'start', invocations)[1],
+            _get_operation_num(DB, 'create', invocations)[1]
+        )
+        self.assertLess(
+            _get_operation_num(DB_HOST, 'start', invocations)[1],
+            _get_operation_num(DB_STATISTICS, 'create', invocations)[1]
+        )
+
+        # configure operation is between preconfigure and postconfigure
+        self.assertLess(
+            _get_operation_num(DB, 'preconfigure', invocations)[1],
+            _get_operation_num(DB, 'configure', invocations)[1]
+        )
+        self.assertLess(
+            _get_operation_num(DB, 'configure', invocations)[1],
+            _get_operation_num(DB, 'postconfigure', invocations)[1]
+        )
+
+        # preconfigure operations of both the source (DB_STATISTICS) and
+        # the target (WEBSERVER) are executed before the configure
+        # operation of the host
+        self.assertLess(
+            _get_operation_num(DB_STATISTICS, 'preconfigure', invocations)[1],
+            _get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
+        )
+        self.assertLess(
+            _get_operation_num(WEBSERVER, 'preconfigure', invocations)[1],
+            _get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
+        )
+        # It is the same for configure and postconfigure
+        self.assertLess(
+            _get_operation_num(DB_STATISTICS, 'configure', invocations)[1],
+            _get_operation_num(DB_STATISTICS, 'postconfigure', invocations)[1]
+        )
+        self.assertLess(
+            _get_operation_num(DB_STATISTICS, 'configure', invocations)[1],
+            _get_operation_num(WEBSERVER, 'postconfigure', invocations)[1]
+        )
+
+        self.assertLess(
+            _get_operation_num(DB, 'start', invocations)[1],
+            _get_operation_num(DB, 'establish', invocations)[1]
+        )
+        self.assertLess(
+            _get_operation_num(DB, 'start', invocations)[1],
+            _get_operation_num(DB_STATISTICS, 'establish', invocations)[1]
         )
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
