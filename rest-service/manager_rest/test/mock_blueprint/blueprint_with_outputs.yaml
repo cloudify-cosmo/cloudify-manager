@@ -5,7 +5,7 @@ imports:
 
 node_types:
     NewWebServer:
-        derived_from: cloudify.nodes.Webserver
+        derived_from: cloudify.nodes.WebServer
         properties:
             port2:
                 default: 81
