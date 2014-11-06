@@ -222,6 +222,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
         NUM_OF_INITIAL_RELATIONSHIP_OP = 3
         # also unlink
         NUM_OF_RELATIONSHIP_OP = 4
+        # only unlink and establish
+        NUM_OF_RESTART_RELATIONSHIP_OP = 2
+
         DB_HOST = 'db_host'
         DB = 'db'
 
@@ -233,10 +236,11 @@ class TestAutohealPolicies(PoliciesTestsBase):
         invocations = self.wait_for_invocations(
             self.deployment.id,
             (
-                2 * NUM_OF_LIFECYCLE_OP +
-                2 * NUM_OF_INITIAL_LIFECYCLE_OP +
-                4 * NUM_OF_INITIAL_RELATIONSHIP_OP +
-                4 * NUM_OF_RELATIONSHIP_OP
+                3 * NUM_OF_INITIAL_LIFECYCLE_OP +
+                3 * NUM_OF_LIFECYCLE_OP +
+                6 * NUM_OF_INITIAL_RELATIONSHIP_OP +
+                4 * NUM_OF_RELATIONSHIP_OP +
+                2 * NUM_OF_RESTART_RELATIONSHIP_OP
             )
         )
 

@@ -44,6 +44,32 @@ node_templates:
                     - establish: testmockoperations.testmockoperations.tasks.mock_establish
                     - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
 
+    db_statistics:
+        type: cloudify.types.base
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                - create: testmockoperations.testmockoperations.tasks.mock_create
+                - start: testmockoperations.testmockoperations.tasks.mock_start
+                - configure: testmockoperations.testmockoperations.tasks.mock_configure
+                - stop: testmockoperations.testmockoperations.tasks.mock_stop
+                - delete: testmockoperations.testmockoperations.tasks.mock_delete
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: db_host
+            - type: cloudify.relationships.connected_to
+              target: webserver
+              source_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                    - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                    - establish: testmockoperations.testmockoperations.tasks.mock_establish
+                    - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+              target_interfaces:
+                cloudify.interfaces.relationship_lifecycle:
+                    - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                    - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                    - establish: testmockoperations.testmockoperations.tasks.mock_establish
+                    - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
 
     webserver:
         type: cloudify.types.base
