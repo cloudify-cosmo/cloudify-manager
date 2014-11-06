@@ -17,6 +17,8 @@ import uuid
 import time
 import errno
 
+import cloudify.context
+
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import do_retries
@@ -499,3 +501,17 @@ class BasicWorkflowsTest(TestCase):
                           'started', 'stopped', 'uninstalled'])
 
         self.assertFalse(_is_riemann_core_up())
+
+    def test_get_attribute(self):
+        # assertion happens in operation get_attribute.tasks.assertion
+        dsl_path = resource('dsl/get_attributes.yaml')
+        deployment, _ = deploy(dsl_path)
+        data = self.get_plugin_data(plugin_name='get_attribute',
+                                    deployment_id=deployment.id)
+        invocations = data['invocations']
+        self.assertEqual(2, len([
+            i for i in invocations
+            if i == cloudify.context.RELATIONSHIP_INSTANCE]))
+        self.assertEqual(1, len([
+            i for i in invocations
+            if i == cloudify.context.NODE_INSTANCE]))

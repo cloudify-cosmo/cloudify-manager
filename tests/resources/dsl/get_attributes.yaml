@@ -1,0 +1,54 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify.types
+    - testmockoperations.yaml
+
+plugins:
+    get_attribute:
+        executor: central_deployment_agent
+        install: false
+
+node_templates:
+    node1:
+        type: cloudify.nodes.Root
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start:
+                    implementation: get_attribute.get_attribute.tasks.assertion
+                    inputs:
+                        a: { get_attribute: [SELF, a_prop] }
+                        b: { get_attribute: [node2, b_prop] }
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: node2
+                source_interfaces:
+                    cloudify.interfaces.relationship_lifecycle:
+                        preconfigure:
+                            implementation: get_attribute.get_attribute.tasks.setup
+                            inputs:
+                                source:
+                                    a_prop: a_value
+                                    b_prop: b_value
+                                    c_prop: c_value
+                                    d_prop: d_value
+                                target:
+                                    a_prop: a_value
+                                    b_prop: b_value
+                                    c_prop: c_value
+                                    d_prop: d_value
+                        establish:
+                            implementation: get_attribute.get_attribute.tasks.assertion
+                            inputs:
+                                c: { get_attribute: [SOURCE, c_prop] }
+                                d: { get_attribute: [TARGET, d_prop] }
+                target_interfaces:
+                    cloudify.interfaces.relationship_lifecycle:
+                        establish:
+                            implementation: get_attribute.get_attribute.tasks.assertion
+                            inputs:
+                                c: { get_attribute: [SOURCE, c_prop] }
+                                d: { get_attribute: [TARGET, d_prop] }
+
+    node2:
+        type: cloudify.nodes.Root
