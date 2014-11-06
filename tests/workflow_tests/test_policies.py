@@ -210,7 +210,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         def _get_operation_num(node, operation, invocations):
             op_nums = []
             for invocation in invocations:
-                if node == invocation['node'] and invocation['operation']:
+                if node == invocation['node'] and operation == invocation['operation']:
                     op_nums.append(invocation['num'])
             return op_nums
 
@@ -295,12 +295,12 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         # configure operation is between preconfigure and postconfigure
         self.assertLess(
-            _get_operation_num(DB, 'preconfigure', invocations)[1],
+            _get_operation_num(DB, 'preconfigure', invocations)[2],
             _get_operation_num(DB, 'configure', invocations)[1]
         )
         self.assertLess(
             _get_operation_num(DB, 'configure', invocations)[1],
-            _get_operation_num(DB, 'postconfigure', invocations)[1]
+            _get_operation_num(DB, 'postconfigure', invocations)[2]
         )
 
         # preconfigure operations of both the source (DB_STATISTICS) and
@@ -311,7 +311,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             _get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
         )
         self.assertLess(
-            _get_operation_num(WEBSERVER, 'preconfigure', invocations)[1],
+            _get_operation_num(WEBSERVER, 'preconfigure', invocations)[2],
             _get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
         )
         # It is the same for configure and postconfigure
@@ -321,12 +321,12 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
         self.assertLess(
             _get_operation_num(DB_STATISTICS, 'configure', invocations)[1],
-            _get_operation_num(WEBSERVER, 'postconfigure', invocations)[1]
+            _get_operation_num(WEBSERVER, 'postconfigure', invocations)[2]
         )
 
         self.assertLess(
             _get_operation_num(DB, 'start', invocations)[1],
-            _get_operation_num(DB, 'establish', invocations)[1]
+            _get_operation_num(DB, 'establish', invocations)[2]
         )
 
         # Establishing relationship is after start of the source
@@ -336,7 +336,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
         self.assertLess(
             _get_operation_num(DB_STATISTICS, 'start', invocations)[1],
-            _get_operation_num(WEBSERVER, 'establish', invocations)[1]
+            _get_operation_num(WEBSERVER, 'establish', invocations)[2]
         )
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
