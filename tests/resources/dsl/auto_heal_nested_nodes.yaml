@@ -109,10 +109,9 @@ groups:
                                 diagnose_value: { get_property: [SELF, diagnose] }
 
 
-
 workflows:
     auto_heal_workflow:
-        mapping: mock_workflows.mock_workflows.workflows.auto_heal_reinstall
+        mapping: default_workflows.cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph
         parameters:
             key:
                 default: failing_node
