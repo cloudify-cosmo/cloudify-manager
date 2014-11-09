@@ -81,7 +81,6 @@ def get_agent_resource_url(ctx, agent_config, resource):
 
 def get_agent_resource_local_path(ctx, agent_config, resource):
     """returns an agent's resource path
-
     The resource will be looked for in the agent's properties.
     If it isn't found, it will look for it in the default location.
     """
@@ -92,12 +91,10 @@ def get_agent_resource_local_path(ctx, agent_config, resource):
         if not resource_path:
             raise NonRecoverableError('no such resource: {0}'.format(resource))
         if (agent_config['distro'] == 'Ubuntu') and (resource == 'agent_package_path'):
-            origin = utils.get_manager_file_server_url() + \
-                     resource_path.format(agent_config['distro'],
+            origin = resource_path.format(agent_config['distro'],
                                           agent_config['distro_codename'])
         else:
-            origin = utils.get_manager_file_server_url() + \
-                     resource_path.format(agent_config['distro'])
+            origin = resource_path.format(agent_config['distro'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
     return origin
 
