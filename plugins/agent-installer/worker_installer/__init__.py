@@ -63,11 +63,11 @@ def init_worker_installer(func):
             kwargs['agent_config']['distro'] = get_machine_distro(
                 kwargs['runner'], 0)
         if not agent_config.get('distro_release'):
-            kwargs['agent_config']['distro_release'] = \
-                get_machine_distro(kwargs['runner'], 1)
+            kwargs['agent_config']['distro_release'] = get_machine_distro(
+                kwargs['runner'], 1)
         if not agent_config.get('distro_codename'):
-            kwargs['agent_config']['distro_codename'] = \
-                get_machine_distro(kwargs['runner'], 2)
+            kwargs['agent_config']['distro_codename'] = get_machine_distro(
+                kwargs['runner'], 2)
         return func(*args, **kwargs)
     return wrapper
 
