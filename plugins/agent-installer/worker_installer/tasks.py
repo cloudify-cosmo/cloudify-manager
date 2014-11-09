@@ -67,9 +67,14 @@ def get_agent_resource_url(ctx, agent_config, resource):
         resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
         if not resource_path:
             raise NonRecoverableError('no such resource: {0}'.format(resource))
-        origin = utils.get_manager_file_server_url() + \
-            resource_path.format(agent_config['distro'],
-                                 agent_config['distro_codename'])
+        if (agent_config['distro'] == 'Ubuntu') and (resource == 'agent_package_path'):
+            origin = utils.get_manager_file_server_url() + \
+                resource_path.format(agent_config['distro'],
+                                     agent_config['distro_codename'])
+        else:
+            origin = utils.get_manager_file_server_url() + \
+                     resource_path.format(agent_config['distro'])
+
     ctx.logger.debug('resource origin: {0}'.format(origin))
     return origin
 
@@ -86,8 +91,13 @@ def get_agent_resource_local_path(ctx, agent_config, resource):
         resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
         if not resource_path:
             raise NonRecoverableError('no such resource: {0}'.format(resource))
-        origin = resource_path.format(agent_config['distro']) + '_' + \
-            resource_path.format(agent_config['distro_codename'])
+        if (agent_config['distro'] == 'Ubuntu') and (resource == 'agent_package_path'):
+            origin = utils.get_manager_file_server_url() + \
+                     resource_path.format(agent_config['distro'],
+                                          agent_config['distro_codename'])
+        else:
+            origin = utils.get_manager_file_server_url() + \
+                     resource_path.format(agent_config['distro'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
     return origin
 
