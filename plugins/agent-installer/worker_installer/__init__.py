@@ -61,13 +61,20 @@ def init_worker_installer(func):
 
         if not agent_config.get('distro'):
             kwargs['agent_config']['distro'] = get_machine_distro(
-                kwargs['runner'])
+                kwargs['runner'], 0)
+        if not agent_config.get('distro_release'):
+            kwargs['agent_config']['distro_release'] = \
+                get_machine_distro(kwargs['runner'], 1)
+        if not agent_config.get('distro_codename'):
+            kwargs['agent_config']['distro_codename'] = \
+                get_machine_distro(kwargs['runner'], 2)
         return func(*args, **kwargs)
     return wrapper
 
 
-def get_machine_distro(runner):
-    return runner.run('python -c "import platform; print platform.dist()[0]"')
+def get_machine_distro(runner, index=0):
+    return runner.run('python -c "import platform; '
+                      'print platform.dist()[' + index + ']"')
 
 
 def get_machine_ip(ctx):

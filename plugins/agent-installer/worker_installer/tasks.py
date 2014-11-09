@@ -44,13 +44,13 @@ CELERY_INCLUDES_LIST = [
 
 DEFAULT_AGENT_RESOURCES = {
     'celery_config_path':
-    '/packages/templates/{0}-celeryd-cloudify.conf.template',
+        '/packages/templates/{0}-celeryd-cloudify.conf.template',
     'celery_init_path':
-    '/packages/templates/{0}-celeryd-cloudify.init.template',
+        '/packages/templates/{0}-celeryd-cloudify.init.template',
     'agent_package_path':
-    '/packages/agents/{0}-agent.tar.gz',
+        '/packages/agents/{0}-{1}-agent.tar.gz',
     'disable_requiretty_script_path':
-    '/packages/scripts/{0}-agent-disable-requiretty.sh'
+        '/packages/scripts/{0}-agent-disable-requiretty.sh'
 }
 
 
@@ -62,13 +62,14 @@ def get_agent_resource_url(ctx, agent_config, resource):
     """
     if agent_config.get(resource):
         origin = utils.get_manager_file_server_blueprints_root_url() + \
-            '/' + ctx.blueprint.id + '/' + agent_config[resource]
+                 '/' + ctx.blueprint.id + '/' + agent_config[resource]
     else:
         resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
         if not resource_path:
             raise NonRecoverableError('no such resource: {0}'.format(resource))
         origin = utils.get_manager_file_server_url() + \
-            resource_path.format(agent_config['distro'])
+            resource_path.format(agent_config['distro'],
+                                 agent_config['distro_codename'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
     return origin
 
@@ -85,7 +86,8 @@ def get_agent_resource_local_path(ctx, agent_config, resource):
         resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
         if not resource_path:
             raise NonRecoverableError('no such resource: {0}'.format(resource))
-        origin = resource_path.format(agent_config['distro'])
+        origin = resource_path.format(agent_config['distro']) + '_' + \
+            resource_path.format(agent_config['distro_codename'])
     ctx.logger.debug('resource origin: {0}'.format(origin))
     return origin
 
@@ -108,7 +110,7 @@ def install(ctx, runner, agent_config, **kwargs):
     if worker_exists(runner, agent_config):
         ctx.logger.info("Worker for deployment {0} "
                         "is already installed. nothing to do."
-                        .format(ctx.deployment.id))
+            .format(ctx.deployment.id))
         return
 
     ctx.logger.info(
@@ -169,7 +171,6 @@ def install(ctx, runner, agent_config, **kwargs):
 @operation
 @init_worker_installer
 def uninstall(ctx, runner, agent_config, **kwargs):
-
     ctx.logger.info(
         'Uninstalling celery worker [cloudify_agent={0}]'.format(agent_config))
 
@@ -191,7 +192,7 @@ def delete_files_if_exist(ctx, agent_config, runner, files):
     if missing_files:
         ctx.logger.debug(
             "Could not find files {0} while trying to uninstall worker {1}"
-            .format(missing_files, agent_config['name']))
+                .format(missing_files, agent_config['name']))
 
 
 def delete_folders_if_exist(ctx, agent_config, runner, folders):
@@ -204,13 +205,12 @@ def delete_folders_if_exist(ctx, agent_config, runner, folders):
     if missing_folders:
         ctx.logger.debug(
             'Could not find folders {0} while trying to uninstall worker {1}'
-            .format(missing_folders, agent_config['name']))
+                .format(missing_folders, agent_config['name']))
 
 
 @operation
 @init_worker_installer
 def stop(ctx, runner, agent_config, **kwargs):
-
     ctx.logger.info("stopping celery worker {0}".format(agent_config['name']))
 
     if runner.exists(agent_config['init_file']):
@@ -219,13 +219,12 @@ def stop(ctx, runner, agent_config, **kwargs):
     else:
         ctx.logger.debug(
             "Could not find any workers with name {0}. nothing to do."
-            .format(agent_config["name"]))
+                .format(agent_config["name"]))
 
 
 @operation
 @init_worker_installer
 def start(ctx, runner, agent_config, **kwargs):
-
     ctx.logger.info("starting celery worker {0}".format(agent_config['name']))
 
     runner.run("sudo service celeryd-{0} start".format(agent_config["name"]))
@@ -236,7 +235,6 @@ def start(ctx, runner, agent_config, **kwargs):
 @operation
 @init_worker_installer
 def restart(ctx, runner, agent_config, **kwargs):
-
     ctx.logger.info(
         "restarting celery worker {0}".format(agent_config['name']))
 
@@ -351,4 +349,4 @@ def _wait_for_started(runner, agent_config):
         with open(celery_log_file, 'r') as f:
             ctx.logger.error(f.read())
     raise NonRecoverableError('Failed starting agent. waited for {0} seconds.'
-                              .format(wait_started_timeout))
+        .format(wait_started_timeout))
