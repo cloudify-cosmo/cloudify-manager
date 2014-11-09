@@ -15,7 +15,7 @@
 
 import uuid
 
-from cloudify_rest_client.exceptions import AttributesProcessingError
+from cloudify_rest_client.exceptions import FunctionsEvaluationError
 
 from base_test import BaseServerTestCase
 
@@ -68,7 +68,7 @@ class AttributesTestCase(BaseServerTestCase):
             'node6': 'value6',
         }
 
-        response = self.client.attributes.process(self.id_,
+        response = self.client.evaluate.functions(self.id_,
                                                   context,
                                                   payload)
         self.assertEqual(response.deployment_id, self.id_)
@@ -79,9 +79,9 @@ class AttributesTestCase(BaseServerTestCase):
             'node1': {'get_attribute': ['SELF', 'key1']},
         }
         try:
-            self.client.attributes.process(self.id_, {}, payload)
+            self.client.evaluate.functions(self.id_, {}, payload)
             self.fail()
-        except AttributesProcessingError as e:
+        except FunctionsEvaluationError as e:
             self.assertIn('SELF is missing', e.message)
 
     def test_missing_source(self):
@@ -89,9 +89,9 @@ class AttributesTestCase(BaseServerTestCase):
             'node2': {'get_attribute': ['SOURCE', 'key2']},
         }
         try:
-            self.client.attributes.process(self.id_, {}, payload)
+            self.client.evaluate.functions(self.id_, {}, payload)
             self.fail()
-        except AttributesProcessingError as e:
+        except FunctionsEvaluationError as e:
             self.assertIn('SOURCE is missing', e.message)
 
     def test_missing_target(self):
@@ -99,9 +99,9 @@ class AttributesTestCase(BaseServerTestCase):
             'node3': {'get_attribute': ['TARGET', 'key3']},
         }
         try:
-            self.client.attributes.process(self.id_, {}, payload)
+            self.client.evaluate.functions(self.id_, {}, payload)
             self.fail()
-        except AttributesProcessingError as e:
+        except FunctionsEvaluationError as e:
             self.assertIn('TARGET is missing', e.message)
 
     def test_multi_instance(self):
@@ -109,7 +109,7 @@ class AttributesTestCase(BaseServerTestCase):
             'node5': {'get_attribute': ['node5', 'key5']},
         }
         try:
-            self.client.attributes.process(self.id_, {}, payload)
+            self.client.evaluate.functions(self.id_, {}, payload)
             self.fail()
-        except AttributesProcessingError as e:
+        except FunctionsEvaluationError as e:
             self.assertIn('Multi instances of node', e.message)

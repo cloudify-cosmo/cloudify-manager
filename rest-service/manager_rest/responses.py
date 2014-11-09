@@ -261,7 +261,7 @@ class Version(object):
 
 
 @swagger.model
-class ProcessedAttributes():
+class EvaluatedFunctions():
 
     resource_fields = {
         'deployment_id': fields.String,

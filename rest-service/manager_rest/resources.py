@@ -69,7 +69,7 @@ def exceptions_handled(func):
                 manager_exceptions.UnknownModificationStageError,
                 manager_exceptions.UnknownDeploymentInputError,
                 manager_exceptions.DeploymentOutputsEvaluationError,
-                manager_exceptions.AttributesProcessingError,
+                manager_exceptions.FunctionsEvaluationError,
                 manager_exceptions.DeploymentEnvironmentCreationInProgressError
         ) as e:
             abort_error(e)
@@ -207,7 +207,7 @@ def setup_resources(api):
     api.add_resource(Status, '/status')
     api.add_resource(ProviderContext, '/provider/context')
     api.add_resource(Version, '/version')
-    api.add_resource(Attributes, '/attributes')
+    api.add_resource(EvaluateFunctions, '/evaluate/functions')
 
 
 class BlueprintsUpload(object):
@@ -1222,27 +1222,27 @@ class Version(Resource):
         return responses.Version(**get_version_data())
 
 
-class Attributes(Resource):
+class EvaluateFunctions(Resource):
 
     @swagger.operation(
-        responseClass=responses.ProviderContextPostStatus,
-        nickname='processAttributes',
-        notes="Process provided attributes payload",
+        responseClass=responses.EvaluatedFunctions,
+        nickname='evaluateFunctions',
+        notes="Evaluate provided payload for intrinsic functions",
         parameters=[{'name': 'body',
                      'description': '',
                      'required': True,
                      'allowMultiple': False,
-                     'dataType': requests_schema.AttributesRequest.__name__,
+                     'dataType': requests_schema.EvaluateFunctionsRequest.__name__,  # noqa
                      'paramType': 'body'}],
         consumes=[
             "application/json"
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.ProcessedAttributes.resource_fields)
+    @marshal_with(responses.EvaluatedFunctions.resource_fields)
     def post(self):
         """
-        Process attributes in payload
+        Evaluate intrinsic in payload
         """
         verify_json_content_type()
         request_json = request.json
@@ -1256,9 +1256,9 @@ class Attributes(Resource):
         deployment_id = request_json['deployment_id']
         context = request_json.get('context', {})
         payload = request_json.get('payload')
-        processed_payload = get_blueprints_manager().process_attributes(
+        processed_payload = get_blueprints_manager().evaluate_functions(
             deployment_id=deployment_id,
             context=context,
             payload=payload)
-        return responses.ProcessedAttributes(deployment_id=deployment_id,
-                                             payload=processed_payload)
+        return responses.EvaluatedFunctions(deployment_id=deployment_id,
+                                            payload=processed_payload)

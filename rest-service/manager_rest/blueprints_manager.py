@@ -393,7 +393,7 @@ class BlueprintsManager(object):
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.DeploymentOutputsEvaluationError(str(e))
 
-    def process_attributes(self, deployment_id, context, payload):
+    def evaluate_functions(self, deployment_id, context, payload):
         self.get_deployment(deployment_id, include=['id'])
 
         def get_node_instances(node_id=None):
@@ -406,14 +406,14 @@ class BlueprintsManager(object):
             return self.sm.get_node(deployment_id, node_id)
 
         try:
-            return functions.process_attributes(
+            return functions.evaluate_functions(
                 payload=payload,
                 context=context,
                 get_node_instances_method=get_node_instances,
                 get_node_instance_method=get_node_instance,
                 get_node_method=get_node)
         except parser_exceptions.FunctionEvaluationError, e:
-            raise manager_exceptions.AttributesProcessingError(str(e))
+            raise manager_exceptions.FunctionsEvaluationError(str(e))
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:

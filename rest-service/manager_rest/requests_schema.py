@@ -65,7 +65,7 @@ class PostProviderContextRequest(object):
 
 
 @swagger.model
-class AttributesRequest(object):
+class EvaluateFunctionsRequest(object):
 
     resource_fields = {
         'deployment_id': fields.String,
