@@ -33,6 +33,7 @@ setup(
         'Flask==0.10.1',
         'flask-restful==0.2.5',
         'flask-restful-swagger==0.12',
+        'supervise==1.1.1',
         'cloudify-dsl-parser==3.1rc1',
         'requests==2.2.1',
         'gunicorn==18.0',

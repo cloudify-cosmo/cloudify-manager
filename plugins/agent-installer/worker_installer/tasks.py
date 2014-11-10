@@ -67,8 +67,7 @@ def get_agent_resource_url(ctx, agent_config, resource):
         resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
         if not resource_path:
             raise NonRecoverableError('no such resource: {0}'.format(resource))
-        if agent_config['distro'] == 'Ubuntu' and \
-                resource == 'agent_package_path':
+        if resource == 'agent_package_path':
             origin = utils.get_manager_file_server_url() + \
                 resource_path.format(agent_config['distro'],
                                      agent_config['distro_codename'])
@@ -91,8 +90,7 @@ def get_agent_resource_local_path(ctx, agent_config, resource):
         resource_path = DEFAULT_AGENT_RESOURCES.get(resource)
         if not resource_path:
             raise NonRecoverableError('no such resource: {0}'.format(resource))
-        if agent_config['distro'] == 'Ubuntu' and \
-                resource == 'agent_package_path':
+        if resource == 'agent_package_path':
             origin = resource_path.format(agent_config['distro'],
                                           agent_config['distro_codename'])
         else:
