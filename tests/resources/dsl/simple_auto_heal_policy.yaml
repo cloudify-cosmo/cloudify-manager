@@ -25,15 +25,12 @@ groups:
                             workflow: auto_heal_workflow
                             allow_custom_parameters: true
                             workflow_parameters:
-                                value: { get_property: [SELF, failing_node]}
-                                diagnose_key: diagnose
+                                node_id: { get_property: [SELF, failing_node]}
                                 diagnose_value: { get_property: [SELF, diagnose] }
 
 workflows:
     auto_heal_workflow:
         mapping: mock_workflows.mock_workflows.workflows.auto_heal_vm
         parameters:
-            key:
-                default: failing_node
-            value:
+            node_id:
                 description: Which node has failed

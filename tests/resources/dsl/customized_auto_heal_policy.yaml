@@ -26,8 +26,7 @@ groups:
                             workflow: auto_heal_workflow
                             allow_custom_parameters: true
                             workflow_parameters:
-                                value: { get_property: [SELF, failing_node]}
-                                diagnose_key: diagnose
+                                node_id: { get_property: [SELF, failing_node]}
                                 diagnose_value: { get_property: [SELF, diagnose] }
                                 const_arg_stop: 20
                                 execution_plans:
@@ -40,7 +39,5 @@ workflows:
     auto_heal_workflow:
         mapping: default_workflows.cloudify.plugins.workflows.auto_heal
         parameters:
-            key:
-                default: failing_node
-            value:
+            node_id:
                 description: Which node has failed
