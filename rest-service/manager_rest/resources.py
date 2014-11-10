@@ -1139,25 +1139,34 @@ class Status(Resource):
         """
         Get the status of running system services
         """
-        job_list = {'rsyslog': 'Syslog',
-                    'manager': 'Cloudify Manager',
+        job_list = {'manager': 'Cloudify Manager',
                     'riemann': 'Riemann',
                     'rabbitmq-server': 'RabbitMQ',
                     'celeryd-cloudify-management': 'Celery Managment',
-                    'ssh': 'SSH',
                     'elasticsearch': 'Elasticsearch',
                     'cloudify-ui': 'Cloudify UI',
                     'logstash': 'Logstash',
                     'nginx': 'Webserver'
                     }
+        if not self._is_docker_env(self):
+            job_list.update({'rsyslog': 'Syslog',
+                             'ssh': 'SSH',
+                             })
 
         try:
-            from manager_rest.upstartdbus import get_jobs
-            jobs = get_jobs(job_list.keys(), job_list.values())
+            if self._is_docker_env(self):
+                from manager_rest.runitsupervise import get_jobs
+                jobs = get_jobs(job_list.keys(), job_list.values())
+            else:
+                from manager_rest.upstartdbus import get_jobs
+                jobs = get_jobs(job_list.keys(), job_list.values())
         except ImportError:
             jobs = ['undefined']
 
         return responses.Status(status='running', services=jobs)
+
+    def _is_docker_env(self):
+        return os.getenv('DOCKER_ENV')
 
 
 class ProviderContext(Resource):
