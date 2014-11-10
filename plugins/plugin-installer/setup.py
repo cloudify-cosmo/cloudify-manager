@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-plugin-installer-plugin',
-    version='3.1rc1',
+    version='3.1rc2',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['plugin_installer'],
@@ -28,7 +28,7 @@ setup(
     description='Plugin for installing plugins into an existing celery worker',
     zip_safe=False,
     install_requires=[
-        "cloudify-plugins-common==3.1rc1"
+        "cloudify-plugins-common==3.1rc2"
     ],
     tests_require=[
         "nose"
