@@ -207,12 +207,6 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
 
     def test_autoheal_policy_nested_nodes(self):
-        def _get_operation_num(node, operation, invocations):
-            op_nums = []
-            for invocation in invocations:
-                if node == invocation['node'] and operation == invocation['operation']:
-                    op_nums.append(invocation['num'])
-            return op_nums
 
         # create, configure, start
         NUM_OF_INITIAL_LIFECYCLE_OP = 3
@@ -224,6 +218,17 @@ class TestAutohealPolicies(PoliciesTestsBase):
         NUM_OF_RELATIONSHIP_OP = 4
         # only unlink and establish
         NUM_OF_RESTART_RELATIONSHIP_OP = 2
+
+        NODES_WITH_LIFECYCLE_OP = 3
+        NODES_WITH_RELATIONSHIP_OP = 3
+        NODES_FROM_FAILING_SUBGRAPH_WITH_RELATIONSHIP_OP = 2
+        # For every node with relationship there are two lifecycles
+        # one for target and one for source
+        NUM_OF_RELATIONSHIP_LIFECYCLES = 2 * NODES_WITH_LIFECYCLE_OP
+        NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH = (
+            2 *
+            NODES_FROM_FAILING_SUBGRAPH_WITH_RELATIONSHIP_OP
+        )
 
         DB_HOST = 'db_host'
         DB = 'db'
@@ -238,105 +243,131 @@ class TestAutohealPolicies(PoliciesTestsBase):
         invocations = self.wait_for_invocations(
             self.deployment.id,
             (
-                3 * NUM_OF_INITIAL_LIFECYCLE_OP +
-                3 * NUM_OF_LIFECYCLE_OP +
-                6 * NUM_OF_INITIAL_RELATIONSHIP_OP +
-                4 * NUM_OF_RELATIONSHIP_OP +
+                NODES_WITH_LIFECYCLE_OP * NUM_OF_INITIAL_LIFECYCLE_OP +
+                NODES_WITH_RELATIONSHIP_OP * NUM_OF_LIFECYCLE_OP +
+                NUM_OF_RELATIONSHIP_LIFECYCLES *
+                NUM_OF_INITIAL_RELATIONSHIP_OP +
+                NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH *
+                NUM_OF_RELATIONSHIP_OP +
                 2 * NUM_OF_RESTART_RELATIONSHIP_OP
             )
         )
 
         # unlink operation is executed before the source is deleted
         self.assertLess(
-            _get_operation_num(DB_STATISTICS, 'unlink', invocations)[0],
-            _get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
+            self._get_operation_num(DB_STATISTICS, 'unlink', invocations)[0],
+            self._get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
         )
         self.assertLess(
-            _get_operation_num(WEBSERVER, 'unlink', invocations)[0],
-            _get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
+            self._get_operation_num(WEBSERVER, 'unlink', invocations)[0],
+            self._get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
         )
 
         # DB and DB_STATISTICS is contained in DB_HOST
         # so they have to be deleted before
         self.assertLess(
-            _get_operation_num(DB, 'delete', invocations)[0],
-            _get_operation_num(DB_HOST, 'delete', invocations)[0]
+            self._get_operation_num(DB, 'delete', invocations)[0],
+            self._get_operation_num(DB_HOST, 'delete', invocations)[0]
         )
         self.assertLess(
-            _get_operation_num(DB_STATISTICS, 'delete', invocations)[0],
-            _get_operation_num(DB_HOST, 'delete', invocations)[0]
+            self._get_operation_num(DB_STATISTICS, 'delete', invocations)[0],
+            self._get_operation_num(DB_HOST, 'delete', invocations)[0]
         )
 
         # DB has two unlinks - one for db_host and one from webserver
         # Webserver unlinks from db after it is stopped
         self.assertLess(
-            _get_operation_num(DB, 'unlink', invocations)[0],
-            _get_operation_num(DB, 'delete', invocations)[0]
+            self._get_operation_num(DB, 'unlink', invocations)[0],
+            self._get_operation_num(DB, 'delete', invocations)[0]
         )
         self.assertLess(
-            _get_operation_num(DB, 'unlink', invocations)[1],
-            _get_operation_num(DB, 'delete', invocations)[0]
+            self._get_operation_num(DB, 'unlink', invocations)[1],
+            self._get_operation_num(DB, 'delete', invocations)[0]
         )
         self.assertLess(
-            _get_operation_num(WEBSERVER, 'unlink', invocations)[0],
-            _get_operation_num(DB, 'delete', invocations)[0]
+            self._get_operation_num(WEBSERVER, 'unlink', invocations)[0],
+            self._get_operation_num(DB, 'delete', invocations)[0]
         )
 
         # DB_HOST has to be started before the nodes that are contained
         # in it are created
         self.assertLess(
-            _get_operation_num(DB_HOST, 'start', invocations)[1],
-            _get_operation_num(DB, 'create', invocations)[1]
+            self._get_operation_num(DB_HOST, 'start', invocations)[1],
+            self._get_operation_num(DB, 'create', invocations)[1]
         )
         self.assertLess(
-            _get_operation_num(DB_HOST, 'start', invocations)[1],
-            _get_operation_num(DB_STATISTICS, 'create', invocations)[1]
+            self._get_operation_num(DB_HOST, 'start', invocations)[1],
+            self._get_operation_num(DB_STATISTICS, 'create', invocations)[1]
         )
 
         # configure operation is between preconfigure and postconfigure
         self.assertLess(
-            _get_operation_num(DB, 'preconfigure', invocations)[2],
-            _get_operation_num(DB, 'configure', invocations)[1]
+            self._get_operation_num(DB, 'preconfigure', invocations)[2],
+            self._get_operation_num(DB, 'configure', invocations)[1]
         )
         self.assertLess(
-            _get_operation_num(DB, 'configure', invocations)[1],
-            _get_operation_num(DB, 'postconfigure', invocations)[2]
+            self._get_operation_num(DB, 'configure', invocations)[1],
+            self._get_operation_num(DB, 'postconfigure', invocations)[2]
         )
 
         # preconfigure operations of both the source (DB_STATISTICS) and
         # the target (WEBSERVER) are executed before the configure
         # operation of the host
         self.assertLess(
-            _get_operation_num(DB_STATISTICS, 'preconfigure', invocations)[1],
-            _get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
+            self._get_operation_num(
+                DB_STATISTICS,
+                'preconfigure',
+                invocations
+            )[1],
+            self._get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
         )
         self.assertLess(
-            _get_operation_num(WEBSERVER, 'preconfigure', invocations)[2],
-            _get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
+            self._get_operation_num(WEBSERVER, 'preconfigure', invocations)[2],
+            self._get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
         )
         # It is the same for configure and postconfigure
         self.assertLess(
-            _get_operation_num(DB_STATISTICS, 'configure', invocations)[1],
-            _get_operation_num(DB_STATISTICS, 'postconfigure', invocations)[1]
+            self._get_operation_num(
+                DB_STATISTICS,
+                'configure',
+                invocations
+            )[1],
+            self._get_operation_num(
+                DB_STATISTICS,
+                'postconfigure',
+                invocations
+            )[1]
         )
         self.assertLess(
-            _get_operation_num(DB_STATISTICS, 'configure', invocations)[1],
-            _get_operation_num(WEBSERVER, 'postconfigure', invocations)[2]
+            self._get_operation_num(
+                DB_STATISTICS,
+                'configure',
+                invocations
+            )[1],
+            self._get_operation_num(
+                WEBSERVER,
+                'postconfigure',
+                invocations
+            )[2]
         )
 
         self.assertLess(
-            _get_operation_num(DB, 'start', invocations)[1],
-            _get_operation_num(DB, 'establish', invocations)[2]
+            self._get_operation_num(DB, 'start', invocations)[1],
+            self._get_operation_num(DB, 'establish', invocations)[2]
         )
 
         # Establishing relationship is after start of the source
         self.assertLess(
-            _get_operation_num(DB_STATISTICS, 'start', invocations)[1],
-            _get_operation_num(DB_STATISTICS, 'establish', invocations)[1]
+            self._get_operation_num(DB_STATISTICS, 'start', invocations)[1],
+            self._get_operation_num(
+                DB_STATISTICS,
+                'establish',
+                invocations
+            )[1]
         )
         self.assertLess(
-            _get_operation_num(DB_STATISTICS, 'start', invocations)[1],
-            _get_operation_num(WEBSERVER, 'establish', invocations)[2]
+            self._get_operation_num(DB_STATISTICS, 'start', invocations)[1],
+            self._get_operation_num(WEBSERVER, 'establish', invocations)[3]
         )
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
@@ -347,6 +378,188 @@ class TestAutohealPolicies(PoliciesTestsBase):
             time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
 
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+
+    def test_autoheal_policy_grandchild(self):
+        WEBSERVER = 'webserver'
+        WEBSERVER_CONSOLE = 'webserver_console'
+
+        # create, configure, start
+        NUM_OF_INITIAL_LIFECYCLE_OP = 3
+        # also stop and delete
+        NUM_OF_LIFECYCLE_OP = 5
+        # preconfigure, postconfigure, establish
+        NUM_OF_INITIAL_RELATIONSHIP_OP = 3
+        # also unlink
+        NUM_OF_RELATIONSHIP_OP = 4
+
+        NUM_OF_NODES_WITH_OP = 2
+
+        self.launch_deployment('dsl/auto_heal_grandchild.yaml', 3)
+        self._publish_heart_beat_event(WEBSERVER)
+        self._wait_for_event_expiration()
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        invocations = self.wait_for_invocations(
+            self.deployment.id,
+            (
+                NUM_OF_NODES_WITH_OP * NUM_OF_INITIAL_LIFECYCLE_OP +
+                NUM_OF_NODES_WITH_OP * NUM_OF_INITIAL_RELATIONSHIP_OP +
+                NUM_OF_NODES_WITH_OP * NUM_OF_LIFECYCLE_OP +
+                NUM_OF_NODES_WITH_OP * NUM_OF_RELATIONSHIP_OP
+            )
+        )
+
+        # WEBSERVER_CONSOLE is installed_on WEBSERVER
+        # so WEBSERVER needs to start before WEBSERVER_CONSOLE before and
+        # after failure
+        self.assertLess(
+            self._get_operation_num(WEBSERVER, 'start', invocations)[0],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'start',
+                invocations
+            )[0]
+        )
+        self.assertLess(
+            self._get_operation_num(WEBSERVER, 'start', invocations)[1],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'start',
+                invocations
+            )[1]
+        )
+
+        # WEBSERVER can't be stopped before WEBSERVER_CONSOLE is deleted
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'delete',
+                invocations
+            )[0],
+            self._get_operation_num(WEBSERVER, 'stop', invocations)[0]
+        )
+
+        # preconfigure and postconfigure are executed around configure of the
+        # source node in relationship (WEBSERVER_CONSOLE)
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER,
+                'preconfigure',
+                invocations
+            )[0],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'configure',
+                invocations
+            )[0]
+        )
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'preconfigure',
+                invocations
+            )[0],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'configure',
+                invocations
+            )[0]
+        )
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER,
+                'preconfigure',
+                invocations
+            )[1],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'configure',
+                invocations
+            )[1]
+        )
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'preconfigure',
+                invocations
+            )[1],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'configure',
+                invocations
+            )[1]
+        )
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'configure',
+                invocations
+            )[0],
+            self._get_operation_num(
+                WEBSERVER,
+                'postconfigure',
+                invocations
+            )[0]
+        )
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'configure',
+                invocations
+            )[0],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'postconfigure',
+                invocations
+            )[0]
+        )
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'configure',
+                invocations
+            )[1],
+            self._get_operation_num(
+                WEBSERVER,
+                'postconfigure',
+                invocations
+            )[1]
+        )
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'configure',
+                invocations
+            )[1],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'postconfigure',
+                invocations
+            )[1]
+        )
+
+        # After failure and restart of both nodes
+        # the connection must be established
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'start',
+                invocations
+            )[1],
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'establish',
+                invocations
+            )[1]
+        )
+        self.assertLess(
+            self._get_operation_num(
+                WEBSERVER_CONSOLE,
+                'start',
+                invocations
+            )[1],
+            self._get_operation_num(WEBSERVER, 'establish', invocations)[1]
+        )
 
     def test_autoheal_workflow(self):
         self.launch_deployment('dsl/customized_auto_heal_policy.yaml')
@@ -393,3 +606,13 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def _publish_event_and_wait_for_its_expiration(self, node_name='node'):
         self._publish_heart_beat_event(node_name)
         self._wait_for_event_expiration()
+
+    def _get_operation_num(self, node, operation, invocations):
+            op_nums = []
+            for invocation in invocations:
+                if (
+                    node == invocation['node'] and
+                    operation == invocation['operation']
+                ):
+                    op_nums.append(invocation['num'])
+            return op_nums
