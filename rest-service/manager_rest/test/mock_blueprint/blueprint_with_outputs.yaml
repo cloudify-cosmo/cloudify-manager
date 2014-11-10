@@ -2,11 +2,19 @@ tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
     - hello_world.yaml
+
+node_types:
+    NewWebServer:
+        derived_from: cloudify.nodes.WebServer
+        properties:
+            port2:
+                default: 81
+
 node_templates:
     vm:
         type: cloudify.nodes.Compute
     http_web_server:
-        type: cloudify.nodes.WebServer
+        type: NewWebServer
         properties:
             port: 80
         relationships:
@@ -24,3 +32,5 @@ outputs:
             type: http
             ip: { get_attribute: [ vm, ip ] }
             port: { get_attribute: [ http_web_server, port] }
+    port2:
+        value: { get_attribute: [ http_web_server, port2 ] }

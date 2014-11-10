@@ -69,6 +69,7 @@ def exceptions_handled(func):
                 manager_exceptions.UnknownModificationStageError,
                 manager_exceptions.UnknownDeploymentInputError,
                 manager_exceptions.DeploymentOutputsEvaluationError,
+                manager_exceptions.FunctionsEvaluationError,
                 manager_exceptions.DeploymentEnvironmentCreationInProgressError
         ) as e:
             abort_error(e)
@@ -206,6 +207,7 @@ def setup_resources(api):
     api.add_resource(Status, '/status')
     api.add_resource(ProviderContext, '/provider/context')
     api.add_resource(Version, '/version')
+    api.add_resource(EvaluateFunctions, '/evaluate/functions')
 
 
 class BlueprintsUpload(object):
@@ -868,6 +870,10 @@ class NodeInstances(Resource):
                                        type=str,
                                        required=False,
                                        location='args')
+        self._args_parser.add_argument('node_name',
+                                       type=str,
+                                       required=False,
+                                       location='args')
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.NodeInstance.__name__),
@@ -876,6 +882,12 @@ class NodeInstances(Resource):
               " parameters.",
         parameters=[{'name': 'deployment_id',
                      'description': 'Deployment id',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'},
+                    {'name': 'node_name',
+                     'description': 'node name',
                      'required': False,
                      'allowMultiple': False,
                      'dataType': 'string',
@@ -889,7 +901,9 @@ class NodeInstances(Resource):
         """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
+        node_name = args.get('node_name')
         nodes = get_storage_manager().get_node_instances(deployment_id,
+                                                         node_name,
                                                          include=_include)
         return [responses.NodeInstance(**node.to_dict()) for node in nodes]
 
@@ -1206,3 +1220,45 @@ class Version(Resource):
         Get version information
         """
         return responses.Version(**get_version_data())
+
+
+class EvaluateFunctions(Resource):
+
+    @swagger.operation(
+        responseClass=responses.EvaluatedFunctions,
+        nickname='evaluateFunctions',
+        notes="Evaluate provided payload for intrinsic functions",
+        parameters=[{'name': 'body',
+                     'description': '',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': requests_schema.EvaluateFunctionsRequest.__name__,  # noqa
+                     'paramType': 'body'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @exceptions_handled
+    @marshal_with(responses.EvaluatedFunctions.resource_fields)
+    def post(self):
+        """
+        Evaluate intrinsic in payload
+        """
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('deployment_id', request_json)
+        verify_parameter_in_request_body('context', request_json,
+                                         optional=True,
+                                         param_type=dict)
+        verify_parameter_in_request_body('payload', request_json,
+                                         param_type=dict)
+
+        deployment_id = request_json['deployment_id']
+        context = request_json.get('context', {})
+        payload = request_json.get('payload')
+        processed_payload = get_blueprints_manager().evaluate_functions(
+            deployment_id=deployment_id,
+            context=context,
+            payload=payload)
+        return responses.EvaluatedFunctions(deployment_id=deployment_id,
+                                            payload=processed_payload)

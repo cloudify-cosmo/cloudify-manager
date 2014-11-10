@@ -78,7 +78,7 @@ class BlueprintsManager(object):
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
                                    resources_base_url)
         except Exception, ex:
-            raise DslParseException(ex.message)
+            raise DslParseException(str(ex))
 
         now = str(datetime.now())
         parsed_plan = json.loads(plan)
@@ -371,19 +371,49 @@ class BlueprintsManager(object):
                 version=None)
             self.sm.put_node_instance(instance)
 
-    @staticmethod
-    def evaluate_deployment_outputs(deployment_id):
-        deployment = get_blueprints_manager().get_deployment(
+    def evaluate_deployment_outputs(self, deployment_id):
+        deployment = self.get_deployment(
             deployment_id, include=['outputs'])
 
-        def get_node_instances():
-            return get_storage_manager().get_node_instances(deployment_id)
+        def get_node_instances(node_id=None):
+            return self.sm.get_node_instances(deployment_id, node_id)
+
+        def get_node_instance(node_instance_id):
+            return self.sm.get_node_instance(node_instance_id)
+
+        def get_node(node_id):
+            return self.sm.get_node(deployment_id, node_id)
 
         try:
-            return functions.evaluate_outputs(deployment.outputs,
-                                              get_node_instances)
+            return functions.evaluate_outputs(
+                outputs_def=deployment.outputs,
+                get_node_instances_method=get_node_instances,
+                get_node_instance_method=get_node_instance,
+                get_node_method=get_node)
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.DeploymentOutputsEvaluationError(str(e))
+
+    def evaluate_functions(self, deployment_id, context, payload):
+        self.get_deployment(deployment_id, include=['id'])
+
+        def get_node_instances(node_id=None):
+            return self.sm.get_node_instances(deployment_id, node_id)
+
+        def get_node_instance(node_instance_id):
+            return self.sm.get_node_instance(node_instance_id)
+
+        def get_node(node_id):
+            return self.sm.get_node(deployment_id, node_id)
+
+        try:
+            return functions.evaluate_functions(
+                payload=payload,
+                context=context,
+                get_node_instances_method=get_node_instances,
+                get_node_instance_method=get_node_instance,
+                get_node_method=get_node)
+        except parser_exceptions.FunctionEvaluationError, e:
+            raise manager_exceptions.FunctionsEvaluationError(str(e))
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:

@@ -117,10 +117,14 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Node {0} not found".format(node_id))
 
-    def get_node_instances(self, deployment_id, **_):
+    def get_node_instances(self, deployment_id, node_id=None, **_):
         instances = [
             x for x in self._load_data()[NODE_INSTANCES].values()
             if not deployment_id or x.deployment_id == deployment_id]
+        instances = [
+            x for x in instances
+            if not node_id or x.node_id == node_id
+        ]
         return instances
 
     def get_nodes(self, deployment_id=None, **_):

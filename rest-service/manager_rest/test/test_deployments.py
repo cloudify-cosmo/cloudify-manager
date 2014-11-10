@@ -360,6 +360,7 @@ class DeploymentsTestCase(BaseServerTestCase):
         self.assertEqual('http', endpoint['type'])
         self.assertEqual('10.0.0.1', endpoint['ip'])
         self.assertEqual(8080, endpoint['port'])
+        self.assertEqual(81, outputs['port2'])
 
     def test_illegal_output(self):
         id_ = str(uuid.uuid4())

@@ -1,0 +1,27 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+
+node_types:
+    test_type:
+        derived_from: cloudify.nodes.Root
+        properties:
+            key6:
+                default: value6
+
+node_templates:
+    node1:
+        type: cloudify.nodes.Root
+    node2:
+        type: cloudify.nodes.Root
+    node3:
+        type: cloudify.nodes.Root
+    node4:
+        type: cloudify.nodes.Root
+    node5:
+        type: cloudify.nodes.Root
+        instances:
+            deploy: 2
+    node6:
+        type: test_type

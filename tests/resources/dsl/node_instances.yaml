@@ -1,0 +1,15 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify.types
+
+node_templates:
+    node1:
+        type: cloudify.nodes.Root
+        instances:
+            deploy: 2
+
+    node2:
+        type: cloudify.nodes.Root
+        instances:
+            deploy: 2

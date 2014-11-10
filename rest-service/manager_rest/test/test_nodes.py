@@ -192,6 +192,53 @@ class NodesTest(BaseServerTestCase):
         finally:
             sm.instance().update_node_instance = prev_update_node_func
 
+    def test_list_node_instances(self):
+        self.put_node_instance(node_id='1', instance_id='11',
+                               deployment_id='111')
+        self.put_node_instance(node_id='1', instance_id='12',
+                               deployment_id='111')
+        self.put_node_instance(node_id='2', instance_id='21',
+                               deployment_id='111')
+        self.put_node_instance(node_id='2', instance_id='22',
+                               deployment_id='111')
+        self.put_node_instance(node_id='3', instance_id='31',
+                               deployment_id='222')
+        self.put_node_instance(node_id='3', instance_id='32',
+                               deployment_id='222')
+        self.put_node_instance(node_id='4', instance_id='41',
+                               deployment_id='222')
+        self.put_node_instance(node_id='4', instance_id='42',
+                               deployment_id='222')
+
+        all_instances = self.client.node_instances.list()
+        dep1_instances = self.client.node_instances.list('111')
+        dep2_instances = self.client.node_instances.list('222')
+        dep1_n1_instances = self.client.node_instances.list('111', '1')
+        dep1_n2_instances = self.client.node_instances.list('111', '2')
+        dep2_n3_instances = self.client.node_instances.list('222', '3')
+        dep2_n4_instances = self.client.node_instances.list('222', '4')
+
+        self.assertEqual(8, len(all_instances))
+
+        def assert_dep(expected_len, dep, instances):
+            self.assertEqual(expected_len, len(instances))
+            for instance in instances:
+                self.assertEqual(instance.deployment_id, dep)
+
+        assert_dep(4, '111', dep1_instances)
+        assert_dep(4, '222', dep2_instances)
+
+        def assert_dep_and_node(expected_len, dep, node_id, instances):
+            self.assertEqual(expected_len, len(instances))
+            for instance in instances:
+                self.assertEqual(instance.deployment_id, dep)
+                self.assertEqual(instance.node_id, node_id)
+
+        assert_dep_and_node(2, '111', '1', dep1_n1_instances)
+        assert_dep_and_node(2, '111', '2', dep1_n2_instances)
+        assert_dep_and_node(2, '222', '3', dep2_n3_instances)
+        assert_dep_and_node(2, '222', '4', dep2_n4_instances)
+
     def test_patch_before_put(self):
         response = self.patch('/node-instances/1234',
                               {'runtime_properties': {'key': 'value'},
@@ -201,10 +248,12 @@ class NodesTest(BaseServerTestCase):
     def put_node_instance(self,
                           instance_id,
                           deployment_id,
-                          runtime_properties):
+                          runtime_properties=None,
+                          node_id=None):
+        runtime_properties = runtime_properties or {}
         from manager_rest.models import DeploymentNodeInstance
         node = DeploymentNodeInstance(id=instance_id,
-                                      node_id=None,
+                                      node_id=node_id,
                                       deployment_id=deployment_id,
                                       runtime_properties=runtime_properties,
                                       state=None,
