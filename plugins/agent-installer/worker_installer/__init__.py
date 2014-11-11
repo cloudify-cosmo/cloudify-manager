@@ -62,7 +62,7 @@ def init_worker_installer(func):
 
         if not agent_config.get('distro') or \
                 not agent_config.get('distro_codename'):
-            distro_info = json.loads(get_machine_distro())
+            distro_info = json.loads(get_machine_distro(kwargs['runner']))
             if not agent_config.get('distro'):
                 kwargs['agent_config']['distro'] = distro_info[0]
             if not agent_config.get('distro_codename'):
