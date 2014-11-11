@@ -17,10 +17,10 @@ def is_service(name):
         service = supervise.Service(name)
         service.status()
     except IOError as e:
-        if e.__str__() == UNKNOWN_SERVICE_EXCEPT_MSG.format(name):
+        if str(e) == UNKNOWN_SERVICE_EXCEPT_MSG.format(name):
             return False
         else:
-            raise e
+            raise
     return True
 
 
@@ -31,14 +31,12 @@ def get_service_details(name):
     :return: Service details.
     """
     if is_service(name):
-        props = dict()
-        props.update({'instances': get_instance_properties(name)})
-        return props
+        return {'instances': get_instance_properties(name)}
     else:
         return None
 
 
-def get_services(services, names=()):
+def get_services(services):
     """
     Returns service deployment details for all requested jobs.
     :param services: Service names
@@ -46,9 +44,9 @@ def get_services(services, names=()):
     :return: Service details.
     """
     output = []
-    for service, name in map(None, services, names):
+    for service, name in services.items():
         service_details = get_service_details(service)
-        display_name = {'display_name': name or service}
+        display_name = {'display_name': name}
         if service_details:
             service_details.update(display_name)
             output.append(service_details)
