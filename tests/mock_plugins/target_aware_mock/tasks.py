@@ -22,7 +22,8 @@ from testenv.utils import update_storage
 def create(ctx, **kwargs):
     with update_storage(ctx) as data:
         data[ctx.instance.id] = data.get(ctx.instance.id, {})
-        data[ctx.instance.id]['create'] = data[ctx.instance.id].get('create', {})
+        data[ctx.instance.id]['create'] = data[
+            ctx.instance.id].get('create', {})
         data[ctx.instance.id]['create'] = {'target': ctx.task_target}
 
 
