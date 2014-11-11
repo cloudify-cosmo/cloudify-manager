@@ -65,6 +65,6 @@ def get_instance_properties(name, keys=['uptime', 'status', 'pid']):
     for key in props.keys():
         if key not in keys:
             del props[key]
-    props.update('state', supervise._status2str(props['status']))
+    props.update('state', supervise.ServiceStatus._status2str(props['status']))
     out.append(props)
     return out
