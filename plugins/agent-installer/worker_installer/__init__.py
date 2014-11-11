@@ -66,7 +66,7 @@ def init_worker_installer(func):
             if not agent_config.get('distro'):
                 kwargs['agent_config']['distro'] = distro_info[0]
             if not agent_config.get('distro_codename'):
-                 kwargs['agent_config']['distro_codename'] = distro_info[2]
+                kwargs['agent_config']['distro_codename'] = distro_info[2]
         return func(*args, **kwargs)
     return wrapper
 
