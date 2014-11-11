@@ -1142,9 +1142,9 @@ class Status(Resource):
                 from manager_rest.runitsupervise import get_jobs
                 jobs = get_jobs(job_list.keys(), job_list.values())
             else:
-                job_list.update({'rsyslog': 'Syslog',
+                job_list.update({'manager': 'Cloudify Manager',
+                                 'rsyslog': 'Syslog',
                                  'ssh': 'SSH',
-                                 'manager': 'Cloudify Manager',
                                  })
                 from manager_rest.upstartdbus import get_jobs
                 jobs = get_jobs(job_list.keys(), job_list.values())
