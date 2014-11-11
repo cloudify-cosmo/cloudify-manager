@@ -1125,8 +1125,7 @@ class Status(Resource):
         """
         Get the status of running system services
         """
-        job_list = {'manager': 'Cloudify Manager',
-                    'riemann': 'Riemann',
+        job_list = {'riemann': 'Riemann',
                     'rabbitmq-server': 'RabbitMQ',
                     'celeryd-cloudify-management': 'Celery Managment',
                     'elasticsearch': 'Elasticsearch',
@@ -1137,11 +1136,17 @@ class Status(Resource):
 
         try:
             if self._is_docker_env():
+                job_list.update({'rest-service': 'Manager Rest-Service',
+                                 'amqp-influx': 'AMQP InfluxDB',
+                                 'ssh': 'SSH',
+                                 'manager': 'Cloudify Manager',
+                                 })
                 from manager_rest.runitsupervise import get_jobs
                 jobs = get_jobs(job_list.keys(), job_list.values())
             else:
                 job_list.update({'rsyslog': 'Syslog',
                                  'ssh': 'SSH',
+                                 'manager': 'Cloudify Manager',
                                  })
                 from manager_rest.upstartdbus import get_jobs
                 jobs = get_jobs(job_list.keys(), job_list.values())
