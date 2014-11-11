@@ -1134,16 +1134,15 @@ class Status(Resource):
                     'logstash': 'Logstash',
                     'nginx': 'Webserver'
                     }
-        if not self._is_docker_env():
-            job_list.update({'rsyslog': 'Syslog',
-                             'ssh': 'SSH',
-                             })
 
         try:
             if self._is_docker_env():
                 from manager_rest.runitsupervise import get_jobs
                 jobs = get_jobs(job_list.keys(), job_list.values())
             else:
+                job_list.update({'rsyslog': 'Syslog',
+                                 'ssh': 'SSH',
+                                 })
                 from manager_rest.upstartdbus import get_jobs
                 jobs = get_jobs(job_list.keys(), job_list.values())
         except ImportError:
