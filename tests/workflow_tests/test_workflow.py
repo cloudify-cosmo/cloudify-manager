@@ -447,6 +447,20 @@ class BasicWorkflowsTest(TestCase):
         expected_start_invocation = {'target': deployment.id}
         self.assertEqual(expected_start_invocation, start_invocation)
 
+        plugin_installer_data = self.get_plugin_data(
+            plugin_name='plugin_installer',
+            deployment_id=deployment.id
+        )
+
+        deployment_operations_worker_name = deployment.id
+        # target_aware_mock_plugin should have been installed
+        # on the deployment worker as well because 'start'
+        # overrides the executor
+        self.assertEqual(
+            plugin_installer_data[
+                deployment_operations_worker_name
+            ]['target_aware_mock_plugin'],
+            ['installed'])
         undeploy(deployment_id=deployment.id)
 
     def test_deployment_creation_workflow(self):
