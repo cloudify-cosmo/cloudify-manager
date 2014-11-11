@@ -7,8 +7,12 @@ UNKNOWN_SERVICE_EXCEPT_MSG = '[Errno 2] No such file or directory: \'' + \
 supervise.DEFAULT_SERVICE_DIR = DEFAULT_SERVICE_DIR
 
 
-def is_job(name):
-    """Return True if name is registred upstart job"""
+def is_service(name):
+    """
+    Check if service exists.
+    :param name: The service name.
+    :return: True if service exists. False if otherwise.
+    """
     try:
         service = supervise.Service(name)
         service.status()
@@ -20,9 +24,13 @@ def is_job(name):
     return True
 
 
-def get_job_details(name):
-    """Return job details (properties + instances)."""
-    if is_job(name):
+def get_service_details(name):
+    """
+    Returns service deployment details
+    :param name: The service name
+    :return: Service details.
+    """
+    if is_service(name):
         props = dict()
         props.update({'instances': get_instance_properties(name)})
         return props
@@ -30,42 +38,38 @@ def get_job_details(name):
         return None
 
 
-def get_jobs(jobs, names=[]):
+def get_services(services, names=()):
     """
-    Return list of jobs and their job details.
-
-    Args:
-        jobs (list): list of job names to return
-        names (list): list of display names for jobs
-
+    Returns service deployment details for all requested jobs.
+    :param services: Service names
+    :param name: Service screen name.
+    :return: Service details.
     """
     output = []
-    for job, name in map(None, jobs, names):
-        job_details = get_job_details(job)
-        display_name = {'display_name': name or job}
-        if job_details:
-            job_details.update(display_name)
-            output.append(job_details)
+    for service, name in map(None, services, names):
+        service_details = get_service_details(service)
+        display_name = {'display_name': name or service}
+        if service_details:
+            service_details.update(display_name)
+            output.append(service_details)
         else:
             output.append(display_name)
     return output
 
 
-def get_instance_properties(name, keys=['uptime', 'status', 'pid']):
+def get_instance_properties(name):
     """
-    Return instance properties.
-
-    Args:
-        name (str): job name
-        keys (list): list of property names to get
+    Returns service instance deployment properties.
+    :param name: Service screen name.
+    :return: Instance properties.
     """
     out = []
     s = supervise.Service(name)
     service_status = s.status()
-    props = service_status.__dict__
-    for key in props.keys():
-        if key not in keys:
-            del props[key]
-    props.update({'state': service_status._status2str(props['status'])})
+    props = {
+        'uptime': service_status.uptime,
+        'pid': service_status.pid,
+        'state': service_status._status2str(service_status.status)
+    }
     out.append(props)
     return out
