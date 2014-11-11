@@ -309,7 +309,7 @@ class TestEnvironment(object):
         if os.path.exists(self.test_working_dir):
             logger.info('Deleting test environment from: %s',
                         self.test_working_dir)
-            shutil.rmtree(self.test_working_dir, ignore_errors=True)
+            # shutil.rmtree(self.test_working_dir, ignore_errors=True)
 
     @classmethod
     def _get_riemann_config(cls):
