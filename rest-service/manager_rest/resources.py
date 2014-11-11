@@ -1152,8 +1152,6 @@ class Status(Resource):
             if self._is_docker_env():
                 job_list.update({'rest-service': 'Manager Rest-Service',
                                  'amqp-influx': 'AMQP InfluxDB',
-                                 'ssh': 'SSH',
-                                 'manager': 'Cloudify Manager',
                                  })
                 from manager_rest.runitsupervise import get_jobs
                 jobs = get_jobs(job_list.keys(), job_list.values())
