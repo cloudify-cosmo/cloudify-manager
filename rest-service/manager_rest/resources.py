@@ -1139,8 +1139,8 @@ class Status(Resource):
                 job_list.update({'rest-service': 'Manager Rest-Service',
                                  'amqp-influx': 'AMQP InfluxDB',
                                  })
-                from manager_rest.runitsupervise import get_jobs
-                jobs = get_jobs(job_list.keys(), job_list.values())
+                from manager_rest.runitsupervise import get_services
+                jobs = get_services(job_list.keys(), job_list.values())
             else:
                 job_list.update({'manager': 'Cloudify Manager',
                                  'rsyslog': 'Syslog',
