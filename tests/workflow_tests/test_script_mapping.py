@@ -30,7 +30,7 @@ class TestScriptMapping(TestCase):
         deployment, _ = deploy(dsl_path)
         execute_workflow('workflow', deployment.id)
 
-        data = self.get_plugin_data(plugin_name='script_runner',
+        data = self.get_plugin_data(plugin_name='script',
                                     deployment_id=deployment.id)
         self.assertEqual(data['op1_called_with_property'], 'op2_called')
         self.assertEqual(data['op2_prop'], 'op2_value')

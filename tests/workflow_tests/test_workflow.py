@@ -385,7 +385,7 @@ class BasicWorkflowsTest(TestCase):
         )[webserver_node.id]
 
         worker_installer_data = self.get_plugin_data(
-            plugin_name='worker_installer',
+            plugin_name='agent_installer',
             deployment_id=deployment.id
         )
 
@@ -420,13 +420,48 @@ class BasicWorkflowsTest(TestCase):
         # agent on host should have also
         # been stopped and uninstalled
         worker_installer_data = self.get_plugin_data(
-            plugin_name='worker_installer',
+            plugin_name='agent_installer',
             deployment_id=deployment.id
         )
         self.assertEqual(
             worker_installer_data[webserver_node.host_id]['states'],
             ['installed', 'started', 'stopped',
              'started', 'stopped', 'uninstalled'])
+
+    def test_deploy_with_operation_executor_override(self):
+        dsl_path = resource('dsl/operation_executor_override.yaml')
+        deployment, _ = deploy(dsl_path)
+        deployment_nodes = self.client.node_instances.list(
+            deployment_id=deployment.id
+        )
+
+        webserver_nodes = filter(lambda node: 'host' not in node.node_id,
+                                 deployment_nodes)
+        self.assertEquals(1, len(webserver_nodes))
+        webserver_node = webserver_nodes[0]
+        start_invocation = self.get_plugin_data(
+            plugin_name='target_aware_mock_plugin',
+            deployment_id=deployment.id
+        )[webserver_node.id]['start']
+
+        expected_start_invocation = {'target': deployment.id}
+        self.assertEqual(expected_start_invocation, start_invocation)
+
+        plugin_installer_data = self.get_plugin_data(
+            plugin_name='plugin_installer',
+            deployment_id=deployment.id
+        )
+
+        deployment_operations_worker_name = deployment.id
+        # target_aware_mock_plugin should have been installed
+        # on the deployment worker as well because 'start'
+        # overrides the executor
+        self.assertEqual(
+            plugin_installer_data[
+                deployment_operations_worker_name
+            ]['target_aware_mock_plugin'],
+            ['installed'])
+        undeploy(deployment_id=deployment.id)
 
     def test_deployment_creation_workflow(self):
 
@@ -452,7 +487,7 @@ class BasicWorkflowsTest(TestCase):
         deployment_workflows_worker_name = '{0}_workflows'\
             .format(deployment.id)
 
-        data = self.get_plugin_data(plugin_name='worker_installer',
+        data = self.get_plugin_data(plugin_name='agent_installer',
                                     deployment_id=deployment.id)
 
         # assert both deployment and workflows plugins
@@ -488,7 +523,7 @@ class BasicWorkflowsTest(TestCase):
 
         undeploy(deployment.id, delete_deployment=True)
 
-        data = self.get_plugin_data(plugin_name='worker_installer',
+        data = self.get_plugin_data(plugin_name='agent_installer',
                                     deployment_id=deployment.id)
 
         # assert both deployment and workflows plugins

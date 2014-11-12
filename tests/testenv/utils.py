@@ -323,7 +323,19 @@ def update_storage(ctx):
                            'Are you using this correctly?'
                            .format(CELERY_WORK_DIR_PATH_KEY))
     deployment_id = ctx.deployment.id
-    plugin_name = ctx.task_name.split('.')[0]
+
+    plugin_name = ctx.plugin
+    if plugin_name is None:
+
+        # hack for tasks that executed locally
+        # TODO - Aren't these tasks also a part of a plugin?
+        # TODO - the ctx in this case should include the plugin name
+        # TODO - as if it was a remote task.
+
+        if ctx.task_name.startswith('worker_installer'):
+            plugin_name = 'agent_installer'
+        if ctx.task_name.startswith('plugin_installer'):
+            plugin_name = 'plugin_installer'
     storage_file_path = os.path.join(
         os.environ[CELERY_WORK_DIR_PATH_KEY],
         '{0}.json'.format(plugin_name)

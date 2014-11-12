@@ -1,0 +1,38 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify.types
+    - cloudmock.yaml
+
+plugins:
+    target_aware_mock_plugin:
+        executor: host_agent
+        install: true
+        source: dummy
+
+node_templates:
+    webserver_host:
+        type: cloudify.nodes.Compute
+        properties:
+            install_agent: true
+        interfaces:
+            cloudify.interfaces.host:
+                get_state: cloudmock.cloudmock.tasks.get_state
+            cloudify.interfaces.lifecycle:
+                create: cloudmock.cloudmock.tasks.provision
+                start: cloudmock.cloudmock.tasks.start
+                stop: cloudmock.cloudmock.tasks.stop
+                delete: cloudmock.cloudmock.tasks.terminate
+    webserver:
+        type: cloudify.nodes.WebServer
+        relationships:
+            -   type: cloudify.relationships.contained_in
+                target: webserver_host
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: target_aware_mock_plugin.target_aware_mock.tasks.create
+                start:
+                    implementation: target_aware_mock_plugin.target_aware_mock.tasks.start
+                    executor: central_deployment_agent
+                stop: target_aware_mock_plugin.target_aware_mock.tasks.stop
+                delete: target_aware_mock_plugin.target_aware_mock.tasks.delete
