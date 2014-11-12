@@ -253,6 +253,18 @@ policy_types:
                 default: true
         source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
 
+    cloudify.policies.types.host_failure:
+        source: file://resources/rest-service/cloudify/policies/host_failure.clj
+
+    cloudify.policies.types.swap_usage:
+        properties:
+            swap_threshold:
+                description: |
+                    Swap usage percentage threshold defining
+                    when the triggers will be processed
+                default: 1
+        source: file://resources/rest-service/cloudify/policies/swap_usage.clj
+
 ##################################################################################
 # Policy triggers definitions
 ##################################################################################

@@ -48,3 +48,6 @@ nosetests.xml
 
 riemann.log
 .libs
+
+# vim
+*.swp
