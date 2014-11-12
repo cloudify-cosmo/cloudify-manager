@@ -72,9 +72,9 @@ def init_worker_installer(func):
 
 
 def get_machine_distro(runner):
-    out = runner.run('python -c "import platform; print(platform.dist())"')
-    return json.dumps(out)
-
+    return runner.run('python -c "import platform, json, sys; '
+                      'sys.stdout.write(\'{0}\\n\''
+                      '.format(json.dumps(platform.dist())))"')
 
 def get_machine_ip(ctx):
     if ctx.node.properties.get('ip'):
