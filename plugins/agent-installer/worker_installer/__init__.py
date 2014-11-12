@@ -72,7 +72,7 @@ def init_worker_installer(func):
 
 
 def get_machine_distro(runner):
-    out = runner.run('python -c "import platform; print platform.dist()"')
+    out = runner.run('python -c "import platform; print(platform.dist())"')
     return json.dumps(out)
 
 
