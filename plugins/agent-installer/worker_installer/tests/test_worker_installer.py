@@ -121,7 +121,8 @@ class WorkerInstallerTestCase(testtools.TestCase):
         properties = {
             'cloudify_agent': {
                 'disable_requiretty': False,
-                'distro': 'Ubuntu'
+                'distro': 'Ubuntu',
+                'distro_codename': 'trusty'
             }
         }
         ctx = get_remote_context(properties)
@@ -133,7 +134,8 @@ class WorkerInstallerTestCase(testtools.TestCase):
         properties = {
             'cloudify_agent': {
                 'disable_requiretty': False,
-                'distro': 'Ubuntu'
+                'distro': 'Ubuntu',
+                'distro_codename': 'trusty'
             }
         }
         ctx = get_remote_context(properties)
@@ -145,7 +147,8 @@ class WorkerInstallerTestCase(testtools.TestCase):
         properties = {
             'cloudify_agent': {
                 'disable_requiretty': False,
-                'distro': 'Ubuntu'
+                'distro': 'Ubuntu',
+                'distro_codename': 'trusty'
             }
         }
         ctx = get_remote_context(properties)
@@ -158,7 +161,8 @@ class WorkerInstallerTestCase(testtools.TestCase):
         properties = {
             'cloudify_agent': {
                 'disable_requiretty': False,
-                'distro': 'Ubuntu'
+                'distro': 'Ubuntu',
+                'distro_codename': 'trusty'
             }
         }
         ctx = get_remote_context(properties)
@@ -176,6 +180,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222,
                 'distro': 'Ubuntu',
+                'distro_codename': 'trusty',
                 'agent_package_path': 'some-agent.tar.gz'
             }
         }
@@ -196,6 +201,7 @@ class WorkerInstallerTestCase(testtools.TestCase):
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222,
                 'distro': 'Ubuntu',
+                'distro_codename': 'trusty',
                 'agent_package_path': 'some-agent.tar.gz'
             }
         }
@@ -307,7 +313,8 @@ class TestRemoteInstallerCase(WorkerInstallerTestCase):
                 'host': VAGRANT_MACHINE_IP,
                 'key': '~/.vagrant.d/insecure_private_key',
                 'port': 2222,
-                'distro': 'Ubuntu'
+                'distro': 'Ubuntu',
+                'distro_codename': 'trusty'
             }
         }
         ctx = get_remote_context(properties)

@@ -51,11 +51,13 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
     def test_vm_config_validation(self):
         ctx = MockCloudifyContext(node_id='node',
                                   properties={'cloudify_agent': {
-                                      'distro': 'Ubuntu', }})
+                                      'distro': 'Ubuntu',
+                                      'distro_codename': 'trusty'}})
         self.assertRaises(NonRecoverableError, m, ctx)
         ctx = MockCloudifyContext(node_id='node',
                                   properties={'cloudify_agent': {
                                       'distro': 'Ubuntu'},
+                                      'distro_codename': 'trusty',
                                       'ip': '192.168.0.1'
                                   })
         self.assertRaises(NonRecoverableError, m, ctx)
@@ -63,6 +65,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                   properties={
                                       'cloudify_agent': {
                                           'distro': 'Ubuntu',
+                                          'distro_codename': 'trusty',
                                           'user': getpass.getuser()},
                                       'ip': '192.168.0.1'
                                   })
@@ -73,6 +76,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                           'user': getpass.getuser(),
                                           'key': KEY_FILE_PATH,
                                           'distro': 'Ubuntu',
+                                          'distro_codename': 'trusty',
                                       },
                                       'ip': '192.168.0.1'
                                   })
@@ -91,6 +95,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': getpass.getuser(),
                     'key': KEY_FILE_PATH,
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 }
             }
         )
@@ -122,6 +127,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         config = {
             'disable_requiretty': value,
             'distro': 'Ubuntu',
+            'distro_codename': 'trusty'
         }
         if should_raise_exception:
             self.assertRaises(NonRecoverableError, m, ctx,
@@ -143,6 +149,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': getpass.getuser(),
                     'key': KEY_FILE_PATH,
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 }
             }
         )
@@ -162,6 +169,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'min_workers': 2,
                     'max_workers': 5,
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 }
             }
         )
@@ -184,6 +192,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'min_workers': 10,
                     'max_workers': 5,
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 }
             }
         )
@@ -201,6 +210,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'min_workers': 'aaa',
                     'max_workers': 5,
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 }
             }
         )
@@ -219,6 +229,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                     'user': getpass.getuser(),
                     'key': KEY_FILE_PATH,
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 }
             },
             bootstrap_context=BootstrapContext({
@@ -244,6 +255,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'cloudify_agent': {
                     'user': getpass.getuser(),
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 }
             },
             bootstrap_context=BootstrapContext({
@@ -266,6 +278,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 },
             },
             bootstrap_context=BootstrapContext({
@@ -290,6 +303,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 },
             },
             bootstrap_context=BootstrapContext({
@@ -313,6 +327,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 },
             },
             bootstrap_context=BootstrapContext({
@@ -335,6 +350,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
                 },
             },
             bootstrap_context=BootstrapContext({
@@ -360,6 +376,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'distro': 'Ubuntu',
+                    'distro_codename': 'trusty',
                     'port': 3333
                 },
             },
@@ -384,6 +401,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         config = {
             'workflows_worker': 'true',
             'distro': 'Ubuntu',
+            'distro_codename': 'trusty'
         }
         conf = m(ctx, cloudify_agent=config)
         self.assertEqual(conf['name'], 'test_workflows')

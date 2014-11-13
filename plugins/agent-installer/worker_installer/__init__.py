@@ -17,6 +17,7 @@
 import os
 import pwd
 from functools import wraps
+import json
 
 from cloudify import context
 from cloudify.exceptions import NonRecoverableError
@@ -59,15 +60,21 @@ def init_worker_installer(func):
         kwargs['agent_config'] = agent_config
         kwargs['runner'] = FabricRunner(ctx, agent_config)
 
-        if not agent_config.get('distro'):
-            kwargs['agent_config']['distro'] = get_machine_distro(
-                kwargs['runner'])
+        if not agent_config.get('distro') or \
+                not agent_config.get('distro_codename'):
+            distro_info = json.loads(get_machine_distro(kwargs['runner']))
+            if not agent_config.get('distro'):
+                kwargs['agent_config']['distro'] = distro_info[0]
+            if not agent_config.get('distro_codename'):
+                kwargs['agent_config']['distro_codename'] = distro_info[2]
         return func(*args, **kwargs)
     return wrapper
 
 
 def get_machine_distro(runner):
-    return runner.run('python -c "import platform; print platform.dist()[0]"')
+    return runner.run('python -c "import platform, json, sys; '
+                      'sys.stdout.write(\'{0}\\n\''
+                      '.format(json.dumps(platform.dist())))"')
 
 
 def get_machine_ip(ctx):
