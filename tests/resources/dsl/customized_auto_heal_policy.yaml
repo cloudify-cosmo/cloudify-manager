@@ -7,11 +7,11 @@ imports:
 
 node_templates:
     node:
-        type: cloudify.types.base
+        type: cloudify.nodes.Root
         interfaces:
             cloudify.interfaces.lifecycle:
-                - start: testmockoperations.testmockoperations.tasks.mock_start
-                - stop: testmockoperations.testmockoperations.tasks.mock_stop_with_arg
+                start: testmockoperations.testmockoperations.tasks.mock_start
+                stop: testmockoperations.testmockoperations.tasks.mock_stop_with_arg
 
 groups:
     autohealing_group:

@@ -1,51 +1,24 @@
 tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
-    - cloudify/types/types.yaml
-    - testmockoperations.yaml
     - mock_workflows.yaml
+    - mock_topology.yaml
 
 node_templates:
     webserver_host:
-        type: cloudify.types.host
+        type: cloudify.nodes.Compute
 
     webserver:
-        type: cloudify.types.base
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                - create: testmockoperations.testmockoperations.tasks.mock_create
-                - start: testmockoperations.testmockoperations.tasks.mock_start
-                - configure: testmockoperations.testmockoperations.tasks.mock_configure
-                - stop: testmockoperations.testmockoperations.tasks.mock_stop
-                - delete: testmockoperations.testmockoperations.tasks.mock_delete
+        type: mockRoot
         relationships:
             - type: cloudify.relationships.contained_in
               target: webserver_host
 
     webserver_console:
-        type: cloudify.types.base
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                - create: testmockoperations.testmockoperations.tasks.mock_create
-                - start: testmockoperations.testmockoperations.tasks.mock_start
-                - configure: testmockoperations.testmockoperations.tasks.mock_configure
-                - stop: testmockoperations.testmockoperations.tasks.mock_stop
-                - delete: testmockoperations.testmockoperations.tasks.mock_delete
+        type: mockRoot
         relationships:
             - type: cloudify.relationships.installed_on
               target: webserver
-              source_interfaces:
-                cloudify.interfaces.relationship_lifecycle:
-                    - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
-                    - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
-                    - establish: testmockoperations.testmockoperations.tasks.mock_establish
-                    - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
-              target_interfaces:
-                cloudify.interfaces.relationship_lifecycle:
-                    - preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
-                    - postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
-                    - establish: testmockoperations.testmockoperations.tasks.mock_establish
-                    - unlink: testmockoperations.testmockoperations.tasks.mock_unlink
 
 groups:
     autohealing_group:
@@ -72,4 +45,4 @@ workflows:
 
 relationships:
     cloudify.relationships.installed_on:
-        derived_from: cloudify.relationships.contained_in
+        derived_from: contained_in

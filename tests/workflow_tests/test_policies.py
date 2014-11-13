@@ -14,6 +14,8 @@
 #    * limitations under the License.
 
 
+from collections import namedtuple
+
 from testenv import TestCase
 from testenv import utils
 from testenv.utils import get_resource as resource
@@ -29,14 +31,17 @@ NUM_OF_INITIAL_WORKFLOWS = 2
 
 
 class PoliciesTestsBase(TestCase):
-    def launch_deployment(self, yaml_file, expectedNumOfNodeInstances=1):
+    def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
         deployment, _ = deploy(resource(yaml_file))
         self.deployment = deployment
         self.node_instances = self.client.node_instances.list(deployment.id)
-        self.assertEqual(expectedNumOfNodeInstances, len(self.node_instances))
+        self.assertEqual(
+            expected_num_of_node_instances,
+            len(self.node_instances)
+        )
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
 
-    def getNodeInstanceByName(self, name):
+    def get_node_instance_by_name(self, name):
         for nodeInstance in self.node_instances:
             if nodeInstance.node_id == name:
                 return nodeInstance
@@ -66,7 +71,7 @@ class PoliciesTestsBase(TestCase):
         self.publish_riemann_event(
             self.deployment.id,
             node_name=node_name,
-            node_id=self.getNodeInstanceByName(node_name).id,
+            node_id=self.get_node_instance_by_name(node_name).id,
             metric=metric,
             service=service,
             ttl=ttl
@@ -74,7 +79,6 @@ class PoliciesTestsBase(TestCase):
 
 
 class TestPolicies(PoliciesTestsBase):
-
     def test_policies_flow(self):
         self.launch_deployment('dsl/with_policies1.yaml')
 
@@ -85,7 +89,7 @@ class TestPolicies(PoliciesTestsBase):
         self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
         invocations = self.wait_for_invocations(self.deployment.id, 2)
         self.assertEqual(
-            self.getNodeInstanceByName('node').id,
+            self.get_node_instance_by_name('node').id,
             invocations[0]['node_id']
         )
         self.assertEqual(123, invocations[1]['metric'])
@@ -173,430 +177,54 @@ class TestAutohealPolicies(PoliciesTestsBase):
     OPERATIONAL_TIME_BUFFER = 1
     SIMPLE_AUTOHEAL_POLICY_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
-    def test_autoheal_policy_triggering(self):
-        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
-        self._publish_heart_beat_event()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
-        self._wait_for_event_expiration()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+    operation = namedtuple('Operation', ['nodes', 'name', 'positions'])
+    DB_HOST = 'db_host'
+    DB = 'db'
+    DB_STATISTICS = 'db_statistics'
+    WEBSERVER = 'webserver'
+    WEBSERVER_CONSOLE = 'webserver_console'
 
-        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+    # create, configure, start
+    NUM_OF_INITIAL_LIFECYCLE_OP = 3
+    # also stop and delete
+    NUM_OF_LIFECYCLE_OP = 5
+    # preconfigure, postconfigure, establish
+    NUM_OF_INITIAL_RELATIONSHIP_OP = 3
+    # also unlink
+    NUM_OF_RELATIONSHIP_OP = 4
+    # only unlink and establish
+    NUM_OF_RESTART_RELATIONSHIP_OP = 2
 
-        self.assertEqual('heart-beat-failure', invocation['diagnose'])
-        self.assertEqual(
-            self.getNodeInstanceByName('node').id,
-            invocation['failing_node']
-        )
+    def _get_non_rel_operation_num(self, node, op):
+        op_nums = []
+        for invocation in self.invocations:
+            if (node == invocation.get('node') and
+                    op == invocation['operation']):
+                op_nums.append(invocation['num'])
+        return op_nums
 
-    def test_autoheal_policy_triggering_for_two_nodes(self):
-        self.launch_deployment('dsl/simple_auto_heal_policy_two_nodes.yaml', 2)
+    def _get_rel_operation_num(self, source, target, op):
+        op_nums = []
+        for invocation in self.invocations:
+            if (source == invocation.get('source') and
+                    target == invocation.get('target') and
+                    op == invocation['operation']):
+                op_nums.append(invocation['num'])
+        return op_nums
 
-        self._publish_heart_beat_event(
-            'node_about_to_fail',
-            'service_on_failing_node'
-        )
-        for _ in range(5):
-            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
-            self._publish_heart_beat_event('ok_node')
+    def _get_operation_num(self, op):
+        if len(op.nodes) == 2:
+            return self._get_rel_operation_num(*op.nodes, op=op.name)
+        elif len(op.nodes) == 1:
+            return self._get_non_rel_operation_num(op.nodes[0], op.name)
 
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
-
-        self.assertEqual('heart-beat-failure', invocation['diagnose'])
-        self.assertEqual(
-            self.getNodeInstanceByName('node_about_to_fail').id,
-            invocation['failing_node']
-        )
-
-    #TODO:Needs fixing due to the source/target distinction by relationship ops
-    @nottest
-    def test_autoheal_policy_nested_nodes(self):
-
-        # create, configure, start
-        NUM_OF_INITIAL_LIFECYCLE_OP = 3
-        # also stop and delete
-        NUM_OF_LIFECYCLE_OP = 5
-        # preconfigure, postconfigure, establish
-        NUM_OF_INITIAL_RELATIONSHIP_OP = 3
-        # also unlink
-        NUM_OF_RELATIONSHIP_OP = 4
-        # only unlink and establish
-        NUM_OF_RESTART_RELATIONSHIP_OP = 2
-
-        NODES_WITH_LIFECYCLE_OP = 3
-        NODES_WITH_RELATIONSHIP_OP = 3
-        NODES_FROM_FAILING_SUBGRAPH_WITH_RELATIONSHIP_OP = 2
-        # For every node with relationship there are two lifecycles
-        # one for target and one for source
-        NUM_OF_RELATIONSHIP_LIFECYCLES = 2 * NODES_WITH_LIFECYCLE_OP
-        NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH = (
-            2 *
-            NODES_FROM_FAILING_SUBGRAPH_WITH_RELATIONSHIP_OP
-        )
-
-        DB_HOST = 'db_host'
-        DB = 'db'
-        DB_STATISTICS = 'db_statistics'
-        WEBSERVER = 'webserver'
-
-        self.launch_deployment('dsl/auto_heal_nested_nodes.yaml', 5)
-        self._publish_heart_beat_event(DB)
-        self._wait_for_event_expiration()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-
-        invocations = self.wait_for_invocations(
-            self.deployment.id,
-            (
-                NODES_WITH_LIFECYCLE_OP * NUM_OF_INITIAL_LIFECYCLE_OP +
-                NODES_WITH_RELATIONSHIP_OP * NUM_OF_LIFECYCLE_OP +
-                NUM_OF_RELATIONSHIP_LIFECYCLES *
-                NUM_OF_INITIAL_RELATIONSHIP_OP +
-                NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH *
-                NUM_OF_RELATIONSHIP_OP +
-                2 * NUM_OF_RESTART_RELATIONSHIP_OP
-            )
-        )
-
-        # unlink operation is executed before the source is deleted
-        self.assertLess(
-            self._get_operation_num(DB_STATISTICS, 'unlink', invocations)[0],
-            self._get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
-        )
-        self.assertLess(
-            self._get_operation_num(WEBSERVER, 'unlink', invocations)[0],
-            self._get_operation_num(DB_STATISTICS, 'delete', invocations)[0]
-        )
-
-        # DB and DB_STATISTICS is contained in DB_HOST
-        # so they have to be deleted before
-        self.assertLess(
-            self._get_operation_num(DB, 'delete', invocations)[0],
-            self._get_operation_num(DB_HOST, 'delete', invocations)[0]
-        )
-        self.assertLess(
-            self._get_operation_num(DB_STATISTICS, 'delete', invocations)[0],
-            self._get_operation_num(DB_HOST, 'delete', invocations)[0]
-        )
-
-        # DB has two unlinks - one for db_host and one from webserver
-        # Webserver unlinks from db after it is stopped
-        self.assertLess(
-            self._get_operation_num(DB, 'unlink', invocations)[0],
-            self._get_operation_num(DB, 'delete', invocations)[0]
-        )
-        self.assertLess(
-            self._get_operation_num(DB, 'unlink', invocations)[1],
-            self._get_operation_num(DB, 'delete', invocations)[0]
-        )
-        self.assertLess(
-            self._get_operation_num(WEBSERVER, 'unlink', invocations)[0],
-            self._get_operation_num(DB, 'delete', invocations)[0]
-        )
-
-        # DB_HOST has to be started before the nodes that are contained
-        # in it are created
-        self.assertLess(
-            self._get_operation_num(DB_HOST, 'start', invocations)[1],
-            self._get_operation_num(DB, 'create', invocations)[1]
-        )
-        self.assertLess(
-            self._get_operation_num(DB_HOST, 'start', invocations)[1],
-            self._get_operation_num(DB_STATISTICS, 'create', invocations)[1]
-        )
-
-        # configure operation is between preconfigure and postconfigure
-        self.assertLess(
-            self._get_operation_num(DB, 'preconfigure', invocations)[2],
-            self._get_operation_num(DB, 'configure', invocations)[1]
-        )
-        self.assertLess(
-            self._get_operation_num(DB, 'configure', invocations)[1],
-            self._get_operation_num(DB, 'postconfigure', invocations)[2]
-        )
-
-        # preconfigure operations of both the source (DB_STATISTICS) and
-        # the target (WEBSERVER) are executed before the configure
-        # operation of the host
-        self.assertLess(
-            self._get_operation_num(
-                DB_STATISTICS,
-                'preconfigure',
-                invocations
-            )[1],
-            self._get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
-        )
-        self.assertLess(
-            self._get_operation_num(WEBSERVER, 'preconfigure', invocations)[2],
-            self._get_operation_num(DB_STATISTICS, 'configure', invocations)[1]
-        )
-        # It is the same for configure and postconfigure
-        self.assertLess(
-            self._get_operation_num(
-                DB_STATISTICS,
-                'configure',
-                invocations
-            )[1],
-            self._get_operation_num(
-                DB_STATISTICS,
-                'postconfigure',
-                invocations
-            )[1]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                DB_STATISTICS,
-                'configure',
-                invocations
-            )[1],
-            self._get_operation_num(
-                WEBSERVER,
-                'postconfigure',
-                invocations
-            )[2]
-        )
-
-        self.assertLess(
-            self._get_operation_num(DB, 'start', invocations)[1],
-            self._get_operation_num(DB, 'establish', invocations)[2]
-        )
-
-        # Establishing relationship is after start of the source
-        self.assertLess(
-            self._get_operation_num(DB_STATISTICS, 'start', invocations)[1],
-            self._get_operation_num(
-                DB_STATISTICS,
-                'establish',
-                invocations
-            )[1]
-        )
-        self.assertLess(
-            self._get_operation_num(DB_STATISTICS, 'start', invocations)[1],
-            self._get_operation_num(WEBSERVER, 'establish', invocations)[3]
-        )
-
-    def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
-        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
-
-        for _ in range(5):
-            self._publish_heart_beat_event()
-            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
-
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
-
-    #TODO: fix blueprint to conform to version 3.1
-    @nottest
-    def test_autoheal_policy_grandchild(self):
-        WEBSERVER = 'webserver'
-        WEBSERVER_CONSOLE = 'webserver_console'
-
-        # create, configure, start
-        NUM_OF_INITIAL_LIFECYCLE_OP = 3
-        # also stop and delete
-        NUM_OF_LIFECYCLE_OP = 5
-        # preconfigure, postconfigure, establish
-        NUM_OF_INITIAL_RELATIONSHIP_OP = 3
-        # also unlink
-        NUM_OF_RELATIONSHIP_OP = 4
-
-        NUM_OF_NODES_WITH_OP = 2
-
-        self.launch_deployment('dsl/auto_heal_grandchild.yaml', 3)
-        self._publish_heart_beat_event(WEBSERVER)
-        self._wait_for_event_expiration()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-
-        invocations = self.wait_for_invocations(
-            self.deployment.id,
-            (
-                NUM_OF_NODES_WITH_OP * NUM_OF_INITIAL_LIFECYCLE_OP +
-                NUM_OF_NODES_WITH_OP * NUM_OF_INITIAL_RELATIONSHIP_OP +
-                NUM_OF_NODES_WITH_OP * NUM_OF_LIFECYCLE_OP +
-                NUM_OF_NODES_WITH_OP * NUM_OF_RELATIONSHIP_OP
-            )
-        )
-
-        # WEBSERVER_CONSOLE is installed_on WEBSERVER
-        # so WEBSERVER needs to start before WEBSERVER_CONSOLE before and
-        # after failure
-        self.assertLess(
-            self._get_operation_num(WEBSERVER, 'start', invocations)[0],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'start',
-                invocations
-            )[0]
-        )
-        self.assertLess(
-            self._get_operation_num(WEBSERVER, 'start', invocations)[1],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'start',
-                invocations
-            )[1]
-        )
-
-        # WEBSERVER can't be stopped before WEBSERVER_CONSOLE is deleted
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'delete',
-                invocations
-            )[0],
-            self._get_operation_num(WEBSERVER, 'stop', invocations)[0]
-        )
-
-        # preconfigure and postconfigure are executed around configure of the
-        # source node in relationship (WEBSERVER_CONSOLE)
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER,
-                'preconfigure',
-                invocations
-            )[0],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'configure',
-                invocations
-            )[0]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'preconfigure',
-                invocations
-            )[0],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'configure',
-                invocations
-            )[0]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER,
-                'preconfigure',
-                invocations
-            )[1],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'configure',
-                invocations
-            )[1]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'preconfigure',
-                invocations
-            )[1],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'configure',
-                invocations
-            )[1]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'configure',
-                invocations
-            )[0],
-            self._get_operation_num(
-                WEBSERVER,
-                'postconfigure',
-                invocations
-            )[0]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'configure',
-                invocations
-            )[0],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'postconfigure',
-                invocations
-            )[0]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'configure',
-                invocations
-            )[1],
-            self._get_operation_num(
-                WEBSERVER,
-                'postconfigure',
-                invocations
-            )[1]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'configure',
-                invocations
-            )[1],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'postconfigure',
-                invocations
-            )[1]
-        )
-
-        # After failure and restart of both nodes
-        # the connection must be established
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'start',
-                invocations
-            )[1],
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'establish',
-                invocations
-            )[1]
-        )
-        self.assertLess(
-            self._get_operation_num(
-                WEBSERVER_CONSOLE,
-                'start',
-                invocations
-            )[1],
-            self._get_operation_num(WEBSERVER, 'establish', invocations)[1]
-        )
-
-    #TODO: fix blueprint to conform to version 3.1
-    @nottest
-    def test_autoheal_workflow(self):
-        self.launch_deployment('dsl/customized_auto_heal_policy.yaml')
-        self._publish_event_and_wait_for_its_expiration()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-
-        # One start invocation occurs during the test env deployment creation
-        invocations = self.wait_for_invocations(self.deployment.id, 3)
-        invocation_stop = invocations[1]
-        invocation_start = invocations[2]
-
-        self.assertEqual('start', invocation_start['operation'])
-        self.assertEqual('stop', invocation_stop['operation'])
-        self.assertEqual(20, invocation_stop['const_arg_stop'])
-
-    #TODO: fix blueprint to conform to version 3.1
-    @nottest
-    def test_swap_policy(self):
-        try:
-            self.launch_deployment('dsl/swap_policy.yaml')
-            self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
-            invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
-            self.assertEqual('restart', invocation['operation'])
-        finally:
-            try:
-                undeploy(self.deployment.id)
-            except BaseException as e:
-                if e.message:
-                    self.logger.warning(e.message)
+    def _assert_op_order(self, op1, op2):
+        for pos1 in op1.positions:
+            for pos2 in op2.positions:
+                self.assertLess(
+                    self._get_operation_num(op1)[pos1],
+                    self._get_operation_num(op2)[pos2]
+                )
 
     def _publish_heart_beat_event(self, node_name='node', service='service'):
         self.publish(
@@ -617,12 +245,258 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_heart_beat_event(node_name)
         self._wait_for_event_expiration()
 
-    def _get_operation_num(self, node, operation, invocations):
-            op_nums = []
-            for invocation in invocations:
-                if (
-                    node == invocation['node'] and
-                    operation == invocation['operation']
-                ):
-                    op_nums.append(invocation['num'])
-            return op_nums
+    def test_autoheal_policy_triggering(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event()
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+        self._wait_for_event_expiration()
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+
+        self.assertEqual('heart-beat-failure', invocation['diagnose'])
+        self.assertEqual(
+            self.get_node_instance_by_name('node').id,
+            invocation['failing_node']
+        )
+
+    def test_autoheal_policy_triggering_for_two_nodes(self):
+        self.launch_deployment('dsl/simple_auto_heal_policy_two_nodes.yaml', 2)
+
+        self._publish_heart_beat_event(
+            'node_about_to_fail',
+            'service_on_failing_node'
+        )
+        for _ in range(5):
+            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+            self._publish_heart_beat_event('ok_node')
+
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+
+        self.assertEqual('heart-beat-failure', invocation['diagnose'])
+        self.assertEqual(
+            self.get_node_instance_by_name('node_about_to_fail').id,
+            invocation['failing_node']
+        )
+
+    def test_autoheal_policy_nested_nodes(self):
+        NODES_WITH_LIFECYCLE_OP = 3
+        NODES_WITH_RELATIONSHIP_OP = 3
+        NODES_FROM_FAILING_SUBGRAPH_WITH_RELATIONSHIP_OP = 2
+        # For every node with relationship there are two lifecycles
+        # one for target and one for source
+        NUM_OF_RELATIONSHIP_LIFECYCLES = 2 * NODES_WITH_LIFECYCLE_OP
+        NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH = (
+            2 *
+            NODES_FROM_FAILING_SUBGRAPH_WITH_RELATIONSHIP_OP
+        )
+
+        self.launch_deployment('dsl/auto_heal_nested_nodes.yaml', 5)
+        self._publish_heart_beat_event(self.DB)
+        self._wait_for_event_expiration()
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        self.invocations = self.wait_for_invocations(
+            self.deployment.id,
+            (
+                NODES_WITH_LIFECYCLE_OP * self.NUM_OF_INITIAL_LIFECYCLE_OP +
+                NODES_WITH_RELATIONSHIP_OP * self.NUM_OF_LIFECYCLE_OP +
+                NUM_OF_RELATIONSHIP_LIFECYCLES *
+                self.NUM_OF_INITIAL_RELATIONSHIP_OP +
+                NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH *
+                self.NUM_OF_RELATIONSHIP_OP +
+                2 * self.NUM_OF_RESTART_RELATIONSHIP_OP
+            )
+        )
+
+        # unlink operation is executed before the source is deleted
+        self._assert_op_order(
+            self.operation(
+                (self.DB_STATISTICS, self.WEBSERVER),
+                'unlink',
+                [0, 1]
+            ),
+            self.operation((self.DB_STATISTICS, ), 'delete', [0])
+        )
+
+        # DB and DB_STATISTICS is contained in DB_HOST
+        # so they have to be deleted before
+        self._assert_op_order(
+            self.operation((self.DB, ), 'delete', [0]),
+            self.operation((self.DB_HOST, ), 'delete', [0])
+        )
+        self._assert_op_order(
+            self.operation((self.DB_STATISTICS, ), 'delete', [0]),
+            self.operation((self.DB_HOST, ), 'delete', [0])
+        )
+
+        # DB has two unlinks - one for db_host and one from webserver
+        # Webserver unlinks from db after it is stopped
+        self._assert_op_order(
+            self.operation((self.DB, self.DB_HOST), 'unlink', [0, 1]),
+            self.operation((self.DB, ), 'delete', [0])
+        )
+        self._assert_op_order(
+            self.operation((self.WEBSERVER, self.DB), 'unlink', [0, 1]),
+            self.operation((self.DB, ), 'delete', [0])
+        )
+
+        # DB_HOST has to be started before the nodes that are contained
+        # in it are created
+        self._assert_op_order(
+            self.operation((self.DB_HOST, ), 'start', [1]),
+            self.operation((self.DB, ), 'create', [1])
+        )
+        self._assert_op_order(
+            self.operation((self.DB_HOST, ), 'start', [1]),
+            self.operation((self.DB_STATISTICS, ), 'create', [1])
+        )
+
+        # configure operation is between preconfigure and postconfigure
+        self._assert_op_order(
+            self.operation((self.DB, self.DB_HOST), 'preconfigure', [2, 3]),
+            self.operation((self.DB, ), 'configure', [1])
+        )
+        self._assert_op_order(
+            self.operation((self.DB, ), 'configure', [1]),
+            self.operation((self.DB, self.DB_HOST), 'postconfigure', [2, 3])
+        )
+
+        # preconfigure self.operations of both the source (DB_STATISTICS) and
+        # the target (WEBSERVER) are executed before the configure
+        # self.operation of the host
+        self._assert_op_order(
+            self.operation(
+                (self.DB_STATISTICS, self.WEBSERVER),
+                'preconfigure',
+                [2, 3]
+            ),
+            self.operation((self.DB_STATISTICS, ), 'configure', [1])
+        )
+        # It is the same for configure and postconfigure
+        self._assert_op_order(
+            self.operation((self.DB_STATISTICS, ), 'configure', [1]),
+            self.operation(
+                (self.DB_STATISTICS, self.WEBSERVER),
+                'postconfigure',
+                [2, 3]
+            )
+        )
+
+        self._assert_op_order(
+            self.operation((self.DB, ), 'start', [1]),
+            self.operation((self.DB, self.DB_HOST), 'establish', [2, 3])
+        )
+
+        # Establishing relationship is after start of the source
+        self._assert_op_order(
+            self.operation((self.DB_STATISTICS, ), 'start', [1]),
+            self.operation(
+                (self.DB_STATISTICS, self.WEBSERVER),
+                'establish',
+                [2, 3]
+            )
+        )
+
+    def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+
+        for _ in range(5):
+            self._publish_heart_beat_event()
+            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+
+    def test_autoheal_policy_grandchild(self):
+        NUM_OF_NODES_WITH_OP = 2
+
+        self.launch_deployment('dsl/auto_heal_grandchild.yaml', 3)
+        self._publish_heart_beat_event(self.WEBSERVER)
+        self._wait_for_event_expiration()
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        self.invocations = self.wait_for_invocations(
+            self.deployment.id,
+            (
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_INITIAL_LIFECYCLE_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_INITIAL_RELATIONSHIP_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_LIFECYCLE_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_RELATIONSHIP_OP
+            )
+        )
+
+        # WEBSERVER_CONSOLE is installed_on WEBSERVER
+        # so WEBSERVER needs to start before WEBSERVER_CONSOLE before and
+        # after failure
+        self._assert_op_order(
+            self.operation((self.WEBSERVER, ), 'start', [0]),
+            self.operation((self.WEBSERVER_CONSOLE, ), 'start', [0])
+        )
+        self._assert_op_order(
+            self.operation((self.WEBSERVER, ), 'start',  [1]),
+            self.operation((self.WEBSERVER_CONSOLE, ), 'start', [1])
+        )
+
+        # WEBSERVER can't be stopped before WEBSERVER_CONSOLE is deleted
+        self._assert_op_order(
+            self.operation((self.WEBSERVER_CONSOLE, ), 'delete', [0]),
+            self.operation((self.WEBSERVER, ), 'stop', [0])
+        )
+
+        # preconfigure and postconfigure are executed around configure of the
+        # source node in relationship (WEBSERVER_CONSOLE)
+        self._assert_op_order(
+            self.operation(
+                (self.WEBSERVER_CONSOLE, self.WEBSERVER),
+                'preconfigure',
+                [0, 1]
+            ),
+            self.operation((self.WEBSERVER_CONSOLE, ), 'configure', [0])
+        )
+        self._assert_op_order(
+            self.operation((self.WEBSERVER_CONSOLE, ), 'configure', [0]),
+            self.operation(
+                (self.WEBSERVER_CONSOLE, self.WEBSERVER),
+                'postconfigure',
+                [0, 1]
+            )
+        )
+
+        # After failure and restart of both nodes
+        # the connection must be established
+        self._assert_op_order(
+            self.operation((self.WEBSERVER_CONSOLE, ), 'start',  [1]),
+            self.operation(
+                (self.WEBSERVER_CONSOLE, self.WEBSERVER),
+                'establish',
+                [2, 3]
+            )
+        )
+
+    def test_autoheal_workflow(self):
+        self.launch_deployment('dsl/customized_auto_heal_policy.yaml')
+        self._publish_event_and_wait_for_its_expiration()
+        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        # One start invocation occurs during the test env deployment creation
+        invocations = self.wait_for_invocations(self.deployment.id, 3)
+        invocation_stop = invocations[1]
+        invocation_start = invocations[2]
+
+        self.assertEqual('start', invocation_start['operation'])
+        self.assertEqual('stop', invocation_stop['operation'])
+        self.assertEqual(20, invocation_stop['const_arg_stop'])
+
+    def test_swap_policy(self):
+        try:
+            self.launch_deployment('dsl/swap_policy.yaml')
+            self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+            invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+            self.assertEqual('restart', invocation['operation'])
+        finally:
+            try:
+                undeploy(self.deployment.id)
+            except BaseException as e:
+                if e.message:
+                    self.logger.warning(e.message)
