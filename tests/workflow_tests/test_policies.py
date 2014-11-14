@@ -16,6 +16,8 @@
 
 from collections import namedtuple
 
+import time
+
 from testenv import TestCase
 from testenv import utils
 from testenv.utils import get_resource as resource
@@ -23,14 +25,10 @@ from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
 from riemann_controller.config_constants import Constants
 
-import time
-from nose.tools import nottest
-
-
-NUM_OF_INITIAL_WORKFLOWS = 2
-
 
 class PoliciesTestsBase(TestCase):
+    NUM_OF_INITIAL_WORKFLOWS = 2
+
     def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
         deployment, _ = deploy(resource(yaml_file))
         self.deployment = deployment
@@ -39,7 +37,7 @@ class PoliciesTestsBase(TestCase):
             expected_num_of_node_instances,
             len(self.node_instances)
         )
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     def get_node_instance_by_name(self, name):
         for nodeInstance in self.node_instances:
@@ -86,7 +84,7 @@ class TestPolicies(PoliciesTestsBase):
 
         self.publish(metric=metric_value)
 
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         invocations = self.wait_for_invocations(self.deployment.id, 2)
         self.assertEqual(
             self.get_node_instance_by_name('node').id,
@@ -98,7 +96,7 @@ class TestPolicies(PoliciesTestsBase):
         try:
             self.launch_deployment('dsl/with_policies_and_diamond.yaml')
             expected_metric_value = 42
-            self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+            self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
             invocations = self.wait_for_invocations(self.deployment.id, 1)
             self.assertEqual(expected_metric_value, invocations[0]['metric'])
         finally:
@@ -248,9 +246,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_autoheal_policy_triggering(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
         self._publish_heart_beat_event()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
         self._wait_for_event_expiration()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
 
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
@@ -271,7 +269,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
             self._publish_heart_beat_event('ok_node')
 
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
         self.assertEqual('heart-beat-failure', invocation['diagnose'])
@@ -295,7 +293,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.launch_deployment('dsl/auto_heal_nested_nodes.yaml', 5)
         self._publish_heart_beat_event(self.DB)
         self._wait_for_event_expiration()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
 
         self.invocations = self.wait_for_invocations(
             self.deployment.id,
@@ -406,7 +404,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             self._publish_heart_beat_event()
             time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
 
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     def test_autoheal_policy_grandchild(self):
         NUM_OF_NODES_WITH_OP = 2
@@ -414,7 +412,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.launch_deployment('dsl/auto_heal_grandchild.yaml', 3)
         self._publish_heart_beat_event(self.WEBSERVER)
         self._wait_for_event_expiration()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
 
         self.invocations = self.wait_for_invocations(
             self.deployment.id,
@@ -477,7 +475,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_autoheal_workflow(self):
         self.launch_deployment('dsl/customized_auto_heal_policy.yaml')
         self._publish_event_and_wait_for_its_expiration()
-        self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
 
         # One start invocation occurs during the test env deployment creation
         invocations = self.wait_for_invocations(self.deployment.id, 3)
@@ -491,7 +489,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_swap_policy(self):
         try:
             self.launch_deployment('dsl/swap_policy.yaml')
-            self.wait_for_executions(NUM_OF_INITIAL_WORKFLOWS + 1)
+            self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
             invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
             self.assertEqual('restart', invocation['operation'])
         finally:
