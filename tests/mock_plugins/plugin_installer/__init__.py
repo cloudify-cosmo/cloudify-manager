@@ -23,5 +23,3 @@ class PluginInstaller(object):
     @abc.abstractmethod
     def install(self, plugins):
         pass
-
-

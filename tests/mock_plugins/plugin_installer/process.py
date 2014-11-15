@@ -49,4 +49,3 @@ class ProcessBackedPluginInstaller(PluginInstaller):
                 dst=target_plugin_path,
                 ignore=shutil.ignore_patterns('*.pyc')
             )
-

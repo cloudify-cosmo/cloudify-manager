@@ -14,8 +14,10 @@
 #    * limitations under the License.
 
 import os
-from mock_plugins.worker_installer.consumer import ConsumerBackedWorkerInstaller
-from mock_plugins.worker_installer.process import ProcessBackedWorkerInstaller
+from mock_plugins.worker_installer.consumer import \
+    ConsumerBackedWorkerInstaller
+from mock_plugins.worker_installer.process import \
+    ProcessBackedWorkerInstaller
 
 from testenv.utils import update_storage
 from testenv.utils import task_exists

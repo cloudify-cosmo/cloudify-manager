@@ -17,8 +17,10 @@ import os
 
 from cloudify import ctx
 from cloudify.decorators import operation
-from mock_plugins.plugin_installer.consumer import ConsumerBackedPluginInstaller
-from mock_plugins.plugin_installer.process import ProcessBackedPluginInstaller
+from mock_plugins.plugin_installer.consumer import \
+    ConsumerBackedPluginInstaller
+from mock_plugins.plugin_installer.process import \
+    ProcessBackedPluginInstaller
 
 from testenv.utils import update_storage
 

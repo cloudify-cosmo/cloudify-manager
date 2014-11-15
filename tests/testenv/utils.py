@@ -24,7 +24,6 @@ from contextlib import contextmanager
 from functools import wraps
 from celery import Celery
 from multiprocessing import Process
-from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import setup_default_logger
 from cloudify_rest_client import CloudifyClient
