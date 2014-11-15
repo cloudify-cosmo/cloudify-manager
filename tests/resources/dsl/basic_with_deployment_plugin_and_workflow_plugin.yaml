@@ -2,6 +2,8 @@ tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
     - cloudify.types
+    - plugins/cloudmock.yaml
+    - plugins/mock_workflows.yaml
 
 inputs:
     install_agent:
@@ -13,16 +15,6 @@ workflows:
     test_simple:
         mapping: mock_workflows.mock_workflows.workflows.test_simple
         parameters: {do_get: {}, key: {}, value: {}}
-
-plugins:
-    cloudmock:
-        executor: central_deployment_agent
-        install: true
-        source: dummy
-    mock_workflows:
-        executor: central_deployment_agent
-        install: true
-        source: dummy
 
 node_templates:
     webserver_host:

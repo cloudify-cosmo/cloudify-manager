@@ -25,9 +25,13 @@ import unittest
 import json
 import pika
 import yaml
-
 from os.path import dirname
 from os import path
+
+from cloudify.utils import setup_default_logger
+from cloudify.logs import create_event_message_prefix
+
+import mock_plugins
 from testenv.constants import MANAGER_REST_PORT
 from testenv.constants import RABBITMQ_VERBOSE_MESSAGES_ENABLED
 from testenv.constants import RABBITMQ_POLLING_ENABLED
@@ -37,10 +41,8 @@ from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 from testenv.processes.elastic import ElasticSearchProcess
 from testenv.processes.manager_rest import ManagerRestProcess
 from testenv.processes.riemann import RiemannProcess
-from testenv import utils
-from cloudify.utils import setup_default_logger
 from testenv.processes.celery import CeleryWorkerProcess
-from cloudify.logs import create_event_message_prefix
+from testenv import utils
 
 logger = setup_default_logger('TESTENV')
 setup_default_logger('cloudify.rest_client', logging.INFO)
@@ -63,9 +65,11 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         TestEnvironment.reset_elasticsearch_data()
         TestEnvironment.stop_celery_management_worker()
+        TestEnvironment.stop_all_celery_processes()
 
-    def get_plugin_data(self, plugin_name,
-                        deployment_id=None):
+    def get_plugin_data(self,
+                        plugin_name,
+                        deployment_id):
 
         """
         Retrieve the plugin state for a certain deployment.
@@ -76,20 +80,9 @@ class TestCase(unittest.TestCase):
         :rtype dict
         """
 
-        global testenv_instance
-
-        # create worker instance to
-        # get the workdir
-
-        worker = CeleryWorkerProcess(
-            queues=['cloudify.management'],
-            test_working_dir=testenv_instance.test_working_dir
-        )
-
         return self._get_plugin_data(
             plugin_name=plugin_name,
-            deployment_id=deployment_id,
-            worker_work_dir=worker.workdir
+            deployment_id=deployment_id
         )
 
     def clear_plugin_data(self, plugin_name):
@@ -98,23 +91,15 @@ class TestCase(unittest.TestCase):
 
         :param plugin_name: the plugin in question.
         """
-        global testenv_instance
-        # create worker instance to
-        # get the workdir
-        worker = CeleryWorkerProcess(
-            queues=['cloudify.management'],
-            test_working_dir=testenv_instance.test_working_dir)
         return self._clear_plugin_data(
-            plugin_name=plugin_name,
-            worker_work_dir=worker.workdir
+            plugin_name=plugin_name
         )
 
     def _get_plugin_data(self,
                          plugin_name,
-                         deployment_id,
-                         worker_work_dir):
+                         deployment_id):
         storage_file_path = os.path.join(
-            worker_work_dir,
+            testenv_instance.plugins_storage_dir,
             '{0}.json'.format(plugin_name)
         )
         if not os.path.exists(storage_file_path):
@@ -126,10 +111,9 @@ class TestCase(unittest.TestCase):
             return data.get(deployment_id)
 
     def _clear_plugin_data(self,
-                           plugin_name,
-                           worker_work_dir):
+                           plugin_name):
         storage_file_path = os.path.join(
-            worker_work_dir,
+            testenv_instance.plugins_storage_dir,
             '{0}.json'.format(plugin_name)
         )
         if os.path.exists(storage_file_path):
@@ -170,6 +154,13 @@ class TestCase(unittest.TestCase):
                             event)
 
 
+class ProcessModeTestCase(TestCase):
+
+    def setUp(self):
+        os.environ['PROCESS_MODE'] = 'True'
+        super(ProcessModeTestCase, self).setUp()
+
+
 class TestEnvironment(object):
 
     manager_rest_process = None
@@ -181,6 +172,11 @@ class TestEnvironment(object):
     def __init__(self, test_working_dir):
         super(TestEnvironment, self).__init__()
         self.test_working_dir = test_working_dir
+        self.plugins_storage_dir = os.path.join(
+            self.test_working_dir,
+            'plugins-storage'
+        )
+        os.makedirs(self.plugins_storage_dir)
         self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
 
     def create(self):
@@ -208,6 +204,9 @@ class TestEnvironment(object):
 
     def create_management_worker(self):
 
+        mock_plugins_path = os.path.dirname(mock_plugins.__file__)
+        os.environ['MOCK_PLUGINS_PATH'] = mock_plugins_path
+
         self.celery_management_worker_process = CeleryWorkerProcess(
             queues=['cloudify.management'],
             test_working_dir=self.test_working_dir,
@@ -234,7 +233,6 @@ class TestEnvironment(object):
         )
 
         # copy plugins to worker env
-        import mock_plugins
         mock_plugins_path = os.path.dirname(mock_plugins.__file__)
 
         shutil.copytree(
@@ -309,7 +307,7 @@ class TestEnvironment(object):
         if os.path.exists(self.test_working_dir):
             logger.info('Deleting test environment from: %s',
                         self.test_working_dir)
-            shutil.rmtree(self.test_working_dir, ignore_errors=True)
+            # shutil.rmtree(self.test_working_dir, ignore_errors=True)
 
     @classmethod
     def _get_riemann_config(cls):
@@ -334,6 +332,11 @@ class TestEnvironment(object):
     def stop_celery_management_worker():
         global testenv_instance
         testenv_instance.celery_management_worker_process.stop()
+
+    @classmethod
+    def stop_all_celery_processes(cls):
+        logger.info('Shutting down all celery processes')
+        os.system('pkill -f celery')
 
     @staticmethod
     def start_celery_management_worker():

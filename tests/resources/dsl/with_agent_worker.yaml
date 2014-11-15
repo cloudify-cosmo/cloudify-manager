@@ -2,8 +2,8 @@ tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
     - cloudify.types
-    - cloudmock.yaml
-    - mock_agent_plugin.yaml
+    - plugins/cloudmock.yaml
+    - plugins/mock_agent_plugin.yaml
 
 node_templates:
     webserver_host:

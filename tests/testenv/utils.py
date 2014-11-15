@@ -203,7 +203,8 @@ def wait_for_execution_to_end(execution, timeout_seconds=240):
         time.sleep(0.5)
         execution = client.executions.get(execution.id)
         if time.time() > deadline:
-            raise TimeoutException()
+            raise TimeoutException('Execution timed out: \n{0}'
+                                   .format(json.dumps(execution, indent=2)))
     if execution.status == Execution.FAILED:
         raise RuntimeError(
             'Workflow execution failed: {0} [{1}]'.format(execution.error,
@@ -316,18 +317,11 @@ def update_storage(ctx):
     :param ctx: task invocation context
     """
 
-    if CELERY_WORK_DIR_PATH_KEY not in os.environ:
-        raise RuntimeError('Missing {0} in os.environ. '
-                           'This method can only be '
-                           'called from within a plugin. '
-                           'Are you using this correctly?'
-                           .format(CELERY_WORK_DIR_PATH_KEY))
     deployment_id = ctx.deployment.id
-
     plugin_name = ctx.plugin
     if plugin_name is None:
 
-        # hack for tasks that executed locally
+        # hack for tasks that are executed locally.
         # TODO - Aren't these tasks also a part of a plugin?
         # TODO - the ctx in this case should include the plugin name
         # TODO - as if it was a remote task.
@@ -336,8 +330,10 @@ def update_storage(ctx):
             plugin_name = 'agent_installer'
         if ctx.task_name.startswith('plugin_installer'):
             plugin_name = 'plugin_installer'
+
     storage_file_path = os.path.join(
-        os.environ[CELERY_WORK_DIR_PATH_KEY],
+        os.environ['TEST_WORKING_DIR'],
+        'plugins-storage',
         '{0}.json'.format(plugin_name)
     )
 
@@ -353,9 +349,14 @@ def update_storage(ctx):
             data[deployment_id] = {}
         yield data.get(deployment_id)
     with open(storage_file_path, 'w') as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=2)
+        f.write(os.linesep)
 
 
 class TimeoutException(Exception):
-    def __init__(self, *args):
-        Exception.__init__(self, args)
+
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+    def __str__(self):
+        return self.message

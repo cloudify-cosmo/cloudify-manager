@@ -13,18 +13,32 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import os
+
+from cloudify import ctx
 from cloudify.decorators import operation
+from mock_plugins.plugin_installer.consumer import ConsumerBackedPluginInstaller
+from mock_plugins.plugin_installer.process import ProcessBackedPluginInstaller
+
 from testenv.utils import update_storage
 
 
 @operation
-def install(ctx, plugins, **kwargs):
+def install(plugins, **kwargs):
+
+    plugin_installer = get_backend()
 
     for plugin in plugins:
-        plugin_name = plugin['name']
-        ctx.logger.info('Installing plugin {0}'.format(plugin_name))
         with update_storage(ctx) as data:
+            plugin_installer.install(plugin)
+            plugin_name = plugin['name']
             data[ctx.task_target] = data.get(ctx.task_target, {})
             data[ctx.task_target][plugin_name] = \
                 data[ctx.task_target].get(plugin_name, [])
             data[ctx.task_target][plugin_name].append('installed')
+
+
+def get_backend():
+    if os.environ.get('PROCESS_MODE'):
+        return ProcessBackedPluginInstaller()
+    return ConsumerBackedPluginInstaller()

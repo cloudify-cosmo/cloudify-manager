@@ -121,10 +121,9 @@ class CeleryWorkerProcess(object):
             MANAGER_REST_PORT=str(self.manager_rest_port),
             MANAGEMENT_IP='localhost',
             MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL='http://localhost:{0}/{1}'
-            .format(FILE_SERVER_PORT,
-                    FILE_SERVER_BLUEPRINTS_FOLDER),
-            MANAGER_FILE_SERVER_URL='http://localhost:{0}'.format(
-                FILE_SERVER_PORT),
+            .format(FILE_SERVER_PORT, FILE_SERVER_BLUEPRINTS_FOLDER),
+            MANAGER_FILE_SERVER_URL='http://localhost:{0}'
+            .format(FILE_SERVER_PORT),
             AGENT_IP='localhost',
             VIRTUALENV=dirname(dirname(python_path))
         )
@@ -133,10 +132,12 @@ class CeleryWorkerProcess(object):
         environment.update(env_conf)
 
         logger.info('Starting worker {0}. [command={1} | env='
-                    '{2} | cwd={3}]'.format(self.name,
-                                            celery_command,
-                                            env_conf,
-                                            self.envdir))
+                    '{2} | cwd={3}] | process_mode={4}'
+                    .format(self.name,
+                            celery_command,
+                            env_conf,
+                            self.envdir,
+                            bool(os.environ.get('PROCESS_MODE'))))
 
         subprocess.Popen(celery_command,
                          env=environment,
@@ -175,11 +176,17 @@ class CeleryWorkerProcess(object):
 
     def stop(self):
         if self.pids:
+            # we are using the same instance we started
             logger.info('Shutting down {0} worker [pid={1}]'
                         .format(self.name, self.pids))
             os.system('kill -9 {0}'.format(' '.join(self.pids)))
             time.sleep(0.5)
             self.pids = []
+        else:
+            # different instance, same worker
+            # retrieve pid from the pid file
+            self.pids = self._get_celery_process_ids()
+            self.stop()
 
     def _get_celery_process_ids(self):
         from subprocess import CalledProcessError
@@ -213,12 +220,3 @@ class CeleryWorkerProcess(object):
                                 os.path.splitext(module_name)[0])
                     includes.append(full_module_path)
         return includes
-
-    def _copy_plugins(self):
-
-        if self.plugins_dir:
-            shutil.copytree(
-                src=self.plugins_dir,
-                dst=self.envdir,
-                ignore=shutil.ignore_patterns('*.pyc')
-            )

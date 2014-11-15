@@ -16,8 +16,11 @@
 import uuid
 import time
 import errno
+from os import path
 
 import cloudify.context
+from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.executions import Execution
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
@@ -25,10 +28,7 @@ from testenv.utils import do_retries
 from testenv.utils import timeout
 from testenv.utils import verify_deployment_environment_creation_complete
 from testenv.utils import deploy_application as deploy
-from cloudify_rest_client.exceptions import CloudifyClientError
-from cloudify_rest_client.executions import Execution
 from testenv.utils import undeploy_application as undeploy
-from os import path
 
 
 class BasicWorkflowsTest(TestCase):
@@ -392,7 +392,7 @@ class BasicWorkflowsTest(TestCase):
         # agent on host should have been started and restarted
         self.assertEqual(
             worker_installer_data[webserver_node.host_id]['states'],
-            ['installed', 'started', 'stopped', 'started'])
+            ['installed', 'started', 'restarted'])
 
         plugin_installer_data = self.get_plugin_data(
             plugin_name='plugin_installer',
@@ -425,8 +425,7 @@ class BasicWorkflowsTest(TestCase):
         )
         self.assertEqual(
             worker_installer_data[webserver_node.host_id]['states'],
-            ['installed', 'started', 'stopped',
-             'started', 'stopped', 'uninstalled'])
+            ['installed', 'started', 'restarted', 'stopped', 'uninstalled'])
 
     def test_deploy_with_operation_executor_override(self):
         dsl_path = resource('dsl/operation_executor_override.yaml')
@@ -495,9 +494,9 @@ class BasicWorkflowsTest(TestCase):
         # this is because we both install a custom
         # workflow and a deployment plugin
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['installed', 'started', 'stopped', 'started'])
+                         ['installed', 'started', 'restarted'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['installed', 'started', 'stopped', 'started'])
+                         ['installed', 'started', 'restarted'])
 
         # assert plugin installer installed
         # the necessary plugins.
@@ -529,11 +528,11 @@ class BasicWorkflowsTest(TestCase):
         # assert both deployment and workflows plugins
         # were stopped and uninstalled
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['installed', 'started', 'stopped',
-                          'started', 'stopped', 'uninstalled'])
+                         ['installed', 'started', 'restarted',
+                          'stopped', 'uninstalled'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['installed', 'started', 'stopped',
-                          'started', 'stopped', 'uninstalled'])
+                         ['installed', 'started', 'restarted',
+                          'stopped', 'uninstalled'])
 
         self.assertFalse(_is_riemann_core_up())
 

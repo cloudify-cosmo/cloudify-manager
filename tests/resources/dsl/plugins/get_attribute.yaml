@@ -1,4 +1,4 @@
 plugins:
-    testmockoperations:
+    get_attribute:
         executor: central_deployment_agent
-        install: false
+        source: get_attribute

@@ -2,12 +2,8 @@ tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
     - cloudify.types
-    - testmockoperations.yaml
-
-plugins:
-    get_attribute:
-        executor: central_deployment_agent
-        install: false
+    - plugins/testmockoperations.yaml
+    - plugins/get_attribute.yaml
 
 node_templates:
     node1:

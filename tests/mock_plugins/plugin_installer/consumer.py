@@ -13,15 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import abc
+from cloudify import ctx
+
+from mock_plugins.plugin_installer import PluginInstaller
 
 
-class PluginInstaller(object):
+class ConsumerBackedPluginInstaller(PluginInstaller):
 
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def install(self, plugins):
-        pass
-
-
+    def install(self, plugin):
+        plugin_name = plugin['name']
+        ctx.logger.info('Installing plugin {0}'.format(plugin_name))
