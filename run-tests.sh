@@ -119,6 +119,7 @@ run_plugin_installer_py26()
     pip install tox
     cd plugins/plugin-installer && tox -e py26
 }
+
 case $1 in
     test-plugins         ) test_plugins;;
     test-rest-service    ) test_rest_service;;
