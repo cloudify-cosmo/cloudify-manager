@@ -45,7 +45,7 @@ class PluginInstallerTestCase(testtools.TestCase):
     MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'localhost/blueprints'
 
     def setUp(self):
-
+        super(PluginInstallerTestCase, self).setUp()
         self.temp_folder = tempfile.mkdtemp()
 
         # Create a virtualenv in a temp folder.
