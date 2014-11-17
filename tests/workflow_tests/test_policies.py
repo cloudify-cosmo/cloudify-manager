@@ -485,16 +485,3 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.assertEqual('start', invocation_start['operation'])
         self.assertEqual('stop', invocation_stop['operation'])
         self.assertEqual(20, invocation_stop['const_arg_stop'])
-
-    def test_swap_policy(self):
-        try:
-            self.launch_deployment('dsl/swap_policy.yaml')
-            self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
-            invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
-            self.assertEqual('restart', invocation['operation'])
-        finally:
-            try:
-                undeploy(self.deployment.id)
-            except BaseException as e:
-                if e.message:
-                    self.logger.warning(e.message)
