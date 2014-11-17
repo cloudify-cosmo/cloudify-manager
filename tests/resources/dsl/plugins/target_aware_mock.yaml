@@ -1,0 +1,4 @@
+plugins:
+    target_aware_mock_plugin:
+        executor: host_agent
+        source: target_aware_mock

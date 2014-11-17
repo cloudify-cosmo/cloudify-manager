@@ -15,7 +15,7 @@
 
 import uuid
 
-from testenv import TestCase
+from testenv import TestCase, ProcessModeTestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import delete_provider_context
@@ -112,3 +112,129 @@ class TaskRetriesTest(TestCase):
         for i in range(len(invocations) - 1):
             self.assertLessEqual(expected_interval,
                                  invocations[i+1] - invocations[i])
+
+
+class ProcessModeTaskRetriesTest(ProcessModeTestCase):
+
+    def setUp(self):
+        super(ProcessModeTaskRetriesTest, self).setUp()
+        delete_provider_context()
+        self.addCleanup(restore_provider_context)
+
+    def configure(self, retries, retry_interval):
+        context = {'cloudify': {'workflows': {
+            'task_retries': retries,
+            'task_retry_interval': retry_interval
+        }}}
+        self.client.manager.create_context(self._testMethodName, context)
+
+    def _test_retries_and_retry_interval_impl(self,
+                                              blueprint,
+                                              retries,
+                                              retry_interval,
+                                              expected_interval,
+                                              expected_retries,
+                                              invocations_type,
+                                              expect_failure=False,
+                                              inputs=None):
+        self.configure(retries=retries, retry_interval=retry_interval)
+        deployment_id = str(uuid.uuid4())
+        if expect_failure:
+            self.assertRaises(RuntimeError, deploy,
+                              dsl_path=resource(blueprint),
+                              deployment_id=deployment_id,
+                              inputs=inputs)
+        else:
+            deploy(resource(blueprint),
+                   deployment_id=deployment_id,
+                   inputs=inputs)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )[invocations_type]
+        self.assertEqual(expected_retries + 1, len(invocations))
+        for i in range(len(invocations) - 1):
+            self.assertLessEqual(expected_interval,
+                                 invocations[i+1] - invocations[i])
+
+    def test_user_exception(self):
+
+        """
+        CFY-1473
+        --------
+
+        Tests that a custom exception is treated as a
+        RecoverableError. And does not cause a
+        de-serialization problem (which caused
+        every user exception to be treated as
+        NonRecoverableError)
+
+        """
+
+        self._test_retries_and_retry_interval_impl(
+            blueprint='dsl/user_exception.yaml',
+            retries=1,
+            retry_interval=5,
+            expected_interval=5,
+            expected_retries=1,
+            invocations_type='failure_invocation',
+            expect_failure=True,
+            inputs={
+                'exception_type': 'user_exception'
+            })
+
+    def test_user_exception_non_recoverable(self):
+
+        """
+        CFY-1473
+        --------
+
+        Tests that a custom exception that
+        extends NonRecoverableError is treated as a
+        NonRecoverableError. And does not cause a
+        de-serialization problem (which caused
+        every user exception to be treated as
+        NonRecoverableError)
+
+        """
+
+        self._test_retries_and_retry_interval_impl(
+            blueprint='dsl/user_exception.yaml',
+            retries=1,
+            retry_interval=5,
+            expected_interval=5,
+            # non recoverable exception
+            # should be retried
+            expected_retries=0,
+            invocations_type='failure_invocation',
+            expect_failure=True,
+            inputs={
+                'exception_type': 'user_exception_non_recoverable'
+            })
+
+    def test_user_exception_recoverable(self):
+
+        """
+        CFY-1473
+        --------
+
+        Tests that a custom exception that
+        extends RecoverableError is treated as a
+        RecoverableError. And does not cause a
+        de-serialization problem (which caused
+        every user exception to be treated as
+        NonRecoverableError)
+
+        """
+
+        self._test_retries_and_retry_interval_impl(
+            blueprint='dsl/user_exception.yaml',
+            retries=1,
+            retry_interval=5,
+            expected_interval=5,
+            expected_retries=1,
+            invocations_type='failure_invocation',
+            expect_failure=True,
+            inputs={
+                'exception_type': 'user_exception_recoverable'
+            })
