@@ -176,6 +176,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
     SIMPLE_AUTOHEAL_POLICY_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
     operation = namedtuple('Operation', ['nodes', 'name', 'positions'])
+
     DB_HOST = 'db_host'
     DB = 'db'
     DB_STATISTICS = 'db_statistics'
@@ -257,6 +258,15 @@ class TestAutohealPolicies(PoliciesTestsBase):
             self.get_node_instance_by_name('node').id,
             invocation['failing_node']
         )
+
+    def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+
+        for _ in range(5):
+            self._publish_heart_beat_event()
+            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     def test_autoheal_policy_triggering_for_two_nodes(self):
         self.launch_deployment('dsl/simple_auto_heal_policy_two_nodes.yaml', 2)
@@ -397,15 +407,6 @@ class TestAutohealPolicies(PoliciesTestsBase):
             )
         )
 
-    def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
-        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
-
-        for _ in range(5):
-            self._publish_heart_beat_event()
-            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
-
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
-
     def test_autoheal_policy_grandchild(self):
         NUM_OF_NODES_WITH_OP = 2
 
@@ -471,17 +472,3 @@ class TestAutohealPolicies(PoliciesTestsBase):
                 [2, 3]
             )
         )
-
-    def test_autoheal_workflow(self):
-        self.launch_deployment('dsl/customized_auto_heal_policy.yaml')
-        self._publish_event_and_wait_for_its_expiration()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
-
-        # One start invocation occurs during the test env deployment creation
-        invocations = self.wait_for_invocations(self.deployment.id, 3)
-        invocation_stop = invocations[1]
-        invocation_start = invocations[2]
-
-        self.assertEqual('start', invocation_start['operation'])
-        self.assertEqual('stop', invocation_stop['operation'])
-        self.assertEqual(20, invocation_stop['const_arg_stop'])
