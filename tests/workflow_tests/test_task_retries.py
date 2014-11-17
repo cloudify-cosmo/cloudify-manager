@@ -158,6 +158,19 @@ class ProcessModeTaskRetriesTest(ProcessModeTestCase):
                                  invocations[i+1] - invocations[i])
 
     def test_user_exception(self):
+
+        """
+        CFY-1473
+        --------
+
+        Tests that a custom exception is treated as a
+        RecoverableError. And does not cause a
+        de-serialization problem (which caused
+        every user exception to be treated as
+        NonRecoverableError)
+
+        """
+
         self._test_retries_and_retry_interval_impl(
             blueprint='dsl/user_exception.yaml',
             retries=1,
@@ -171,6 +184,20 @@ class ProcessModeTaskRetriesTest(ProcessModeTestCase):
             })
 
     def test_user_exception_non_recoverable(self):
+
+        """
+        CFY-1473
+        --------
+
+        Tests that a custom exception that
+        extends NonRecoverableError is treated as a
+        NonRecoverableError. And does not cause a
+        de-serialization problem (which caused
+        every user exception to be treated as
+        NonRecoverableError)
+
+        """
+
         self._test_retries_and_retry_interval_impl(
             blueprint='dsl/user_exception.yaml',
             retries=1,
@@ -186,6 +213,20 @@ class ProcessModeTaskRetriesTest(ProcessModeTestCase):
             })
 
     def test_user_exception_recoverable(self):
+
+        """
+        CFY-1473
+        --------
+
+        Tests that a custom exception that
+        extends RecoverableError is treated as a
+        RecoverableError. And does not cause a
+        de-serialization problem (which caused
+        every user exception to be treated as
+        NonRecoverableError)
+
+        """
+
         self._test_retries_and_retry_interval_impl(
             blueprint='dsl/user_exception.yaml',
             retries=1,
