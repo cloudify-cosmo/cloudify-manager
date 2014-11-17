@@ -38,8 +38,8 @@ class ProcessBackedWorkerInstaller(WorkerInstaller):
             test_working_dir=os.environ['TEST_WORKING_DIR']
         )
         process.create_dirs()
-        self._install_plugin('plugin_installer', process)
-        self._install_plugin('worker_installer', process)
+        self._install_plugin('plugin_installer', process.envdir)
+        self._install_plugin('worker_installer', process.envdir)
 
         ctx.logger.info('Installed worker {0}'.format(self.agent_name))
 
@@ -85,14 +85,14 @@ class ProcessBackedWorkerInstaller(WorkerInstaller):
 
     @staticmethod
     def _install_plugin(plugin,
-                        process):
+                        env_dir):
         source_plugin_path = os.path.join(
             os.environ['MOCK_PLUGINS_PATH'],
             plugin
         )
 
         target_plugin_path = os.path.join(
-            process.envdir,
+            env_dir,
             plugin
         )
 
