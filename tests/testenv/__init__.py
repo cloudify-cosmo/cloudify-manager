@@ -56,6 +56,11 @@ class TestCase(unittest.TestCase):
     """
 
     def setUp(self):
+
+        # empty string is False
+        # with this env variable
+        os.environ['PROCESS_MODE'] = ''
+
         self.logger = setup_default_logger(self._testMethodName,
                                            logging.INFO)
         self.client = utils.create_rest_client()
@@ -66,6 +71,9 @@ class TestCase(unittest.TestCase):
         TestEnvironment.reset_elasticsearch_data()
         TestEnvironment.stop_celery_management_worker()
         TestEnvironment.stop_all_celery_processes()
+
+    def process_mode(self):
+        os.environ['PROCESS_MODE'] = 'True'
 
     def get_plugin_data(self,
                         plugin_name,
@@ -157,6 +165,9 @@ class TestCase(unittest.TestCase):
 class ProcessModeTestCase(TestCase):
 
     def setUp(self):
+
+        # can actually be any string
+        # besides the empty one
         os.environ['PROCESS_MODE'] = 'True'
         super(ProcessModeTestCase, self).setUp()
 

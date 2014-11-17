@@ -131,8 +131,8 @@ class CeleryWorkerProcess(object):
         environment = os.environ.copy()
         environment.update(env_conf)
 
-        logger.info('Starting worker {0}. [command={1} | env='
-                    '{2} | cwd={3}] | process_mode={4}'
+        logger.info('Starting worker {0}. [command={1} | env={2} '
+                    '| cwd={3}] | process_mode={4}'
                     .format(self.name,
                             celery_command,
                             env_conf,

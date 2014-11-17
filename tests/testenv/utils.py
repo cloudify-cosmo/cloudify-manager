@@ -66,7 +66,8 @@ def deploy_application(dsl_path,
                        timeout_seconds=30,
                        blueprint_id=None,
                        deployment_id=None,
-                       wait_for_execution=True):
+                       wait_for_execution=True,
+                       inputs=None):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
@@ -75,17 +76,21 @@ def deploy_application(dsl_path,
                                        timeout_seconds=timeout_seconds,
                                        blueprint_id=blueprint_id,
                                        deployment_id=deployment_id,
-                                       wait_for_execution=wait_for_execution)
+                                       wait_for_execution=wait_for_execution,
+                                       inputs=inputs)
 
 
-def deploy(dsl_path, blueprint_id=None, deployment_id=None):
+def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
     client = create_rest_client()
     if not blueprint_id:
         blueprint_id = str(uuid.uuid4())
     blueprint = client.blueprints.upload(dsl_path, blueprint_id)
     if deployment_id is None:
         deployment_id = str(uuid.uuid4())
-    deployment = client.deployments.create(blueprint.id, deployment_id)
+    deployment = client.deployments.create(
+        blueprint.id,
+        deployment_id,
+        inputs=inputs)
 
     wait_for_deployment_creation_to_complete(
         deployment_id=deployment_id)
@@ -105,12 +110,13 @@ def deploy_and_execute_workflow(dsl_path,
                                 blueprint_id=None,
                                 deployment_id=None,
                                 wait_for_execution=True,
-                                parameters=None):
+                                parameters=None,
+                                inputs=None):
     """
     A blocking method which deploys an application from the provided dsl path.
     and runs the requested workflows
     """
-    deployment = deploy(dsl_path, blueprint_id, deployment_id)
+    deployment = deploy(dsl_path, blueprint_id, deployment_id, inputs)
     execution = execute_workflow(workflow_name, deployment.id, parameters,
                                  timeout_seconds, wait_for_execution)
     return deployment, execution.id
