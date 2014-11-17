@@ -63,6 +63,7 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.temp_folder)
+        super(PluginInstallerTestCase, self).tearDown()
 
     def _assert_plugin_installed(self, package_name,
                                  plugin, dependencies=None):
