@@ -333,6 +333,21 @@ def deployment_modification(ctx, nodes, **_):
     modification.finish()
 
 
+@workflow
+def deployment_modification_operations(ctx, **_):
+    modification = ctx.deployment.start_modification(
+        {'compute': {'instances': 2}})
+    for node in modification.added.nodes:
+        for instance in node.instances:
+            if instance.node_id == 'compute':
+                instance.execute_operation('test.op')
+            else:
+                for rel in instance.relationships:
+                    rel.execute_source_operation('test.op')
+                    rel.execute_target_operation('test.op')
+    modification.finish()
+
+
 def get_instance(ctx):
     return next(next(ctx.nodes).instances)
 

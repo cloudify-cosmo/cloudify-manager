@@ -21,6 +21,15 @@ from testenv.utils import execute_workflow
 
 class TestDeploymentModification(TestCase):
 
+    def test_modification_operations(self):
+        dsl_path = resource("dsl/deployment_modification_operations.yaml")
+        deployment, _ = deploy(dsl_path)
+        deployment_id = deployment.id
+        execute_workflow('deployment_modification', deployment_id)
+        invocations = self.get_plugin_data(
+            'testmockoperations', deployment_id)['mock_operation_invocation']
+        print invocations
+
     def test_deployment_modification_add_compute(self):
         nodes = {'compute': {'instances': 2}}
         return self._test_deployment_modification(
