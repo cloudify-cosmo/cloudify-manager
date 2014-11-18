@@ -1,24 +1,24 @@
-# ***************************************************************************
-# * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-# *
-# * Licensed under the Apache License, Version 2.0 (the "License");
-# * you may not use this file except in compliance with the License.
-# * You may obtain a copy of the License at
-# *
-# *       http://www.apache.org/licenses/LICENSE-2.0
-# *
-# * Unless required by applicable law or agreed to in writing, software
-# * distributed under the License is distributed on an "AS IS" BASIS,
+########
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-# ***************************************************************************/
 
 import os
 from os.path import dirname
 import tempfile
-import unittest
 import shutil
+
+import testtools
 
 from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
@@ -39,13 +39,13 @@ def _get_local_path(ctx, plugin):
                         plugin['source'])
 
 
-class PluginInstallerTestCase(unittest.TestCase):
+class PluginInstallerTestCase(testtools.TestCase):
 
     TEST_BLUEPRINT_ID = 'test_id'
     MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'localhost/blueprints'
 
     def setUp(self):
-
+        super(PluginInstallerTestCase, self).setUp()
         self.temp_folder = tempfile.mkdtemp()
 
         # Create a virtualenv in a temp folder.
@@ -63,6 +63,7 @@ class PluginInstallerTestCase(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.temp_folder)
+        super(PluginInstallerTestCase, self).tearDown()
 
     def _assert_plugin_installed(self, package_name,
                                  plugin, dependencies=None):
@@ -72,9 +73,9 @@ class PluginInstallerTestCase(unittest.TestCase):
         out = runner.run(
             '{0}/bin/pip list | grep {1}'
             .format(self.temp_folder, plugin['name'])).std_out
-        self.assertTrue(package_name in out)
+        self.assertIn(package_name, out)
         for dependency in dependencies:
-            self.assertTrue(dependency in out)
+            self.assertIn(dependency, out)
 
     def test_get_url_http(self):
         from plugin_installer.tasks import get_url
@@ -121,7 +122,7 @@ class PluginInstallerTestCase(unittest.TestCase):
             'cat {0}'.format(
                 os.path.join(self.temp_folder,
                              'celeryd-includes'))).std_out
-        self.assertTrue('mock_for_test.module' in out)
+        self.assertIn('mock_for_test.module', out)
 
     def test_install_with_dependencies(self):
 
@@ -144,7 +145,7 @@ class PluginInstallerTestCase(unittest.TestCase):
             'cat {0}'.format(
                 os.path.join(self.temp_folder,
                              'celeryd-includes'))).std_out
-        self.assertTrue('mock_with_dependencies_for_test.module' in out)
+        self.assertIn('mock_with_dependencies_for_test.module', out)
 
     def test_write_to_empty_includes(self):
 
