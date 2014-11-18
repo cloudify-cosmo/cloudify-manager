@@ -137,7 +137,8 @@ class TestCase(unittest.TestCase):
                               host='localhost',
                               service='service',
                               state='',
-                              metric=0):
+                              metric=0,
+                              ttl=60):
         event = {
             'host': host,
             'service': service,
@@ -145,7 +146,8 @@ class TestCase(unittest.TestCase):
             'metric': metric,
             'time': int(time.time()),
             'node_name': node_name,
-            'node_id': node_id
+            'node_id': node_id,
+            'ttl': ttl
         }
         queue = '{0}-riemann'.format(deployment_id)
         routing_key = deployment_id

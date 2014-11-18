@@ -15,6 +15,7 @@
 
 
 from jinja2 import Template
+from config_constants import Constants
 
 
 def create(ctx, policy_types, policy_triggers, groups, config_template):
@@ -39,4 +40,6 @@ def create(ctx, policy_types, policy_triggers, groups, config_template):
     return Template(config_template).render(
         streams=streams,
         policy_triggers=policy_triggers,
-        ctx=ctx)
+        ctx=ctx,
+        constants=Constants
+    )

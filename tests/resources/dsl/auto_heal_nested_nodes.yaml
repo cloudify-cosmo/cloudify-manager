@@ -1,0 +1,60 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - plugins/mock_workflows.yaml
+    - mock_topology.yaml
+
+
+node_templates:
+    db_host:
+        type: mockCompute
+
+    webserver_host:
+        type: cloudify.nodes.Compute
+
+    db:
+        type: mockRoot
+        relationships:
+            - type: contained_in
+              target: db_host
+
+    db_statistics:
+        type: mockRoot
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: db_host
+            - type: connected_to
+              target: webserver
+
+    webserver:
+        type: cloudify.nodes.Root
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: webserver_host
+            - type: connected_to
+              target: db
+
+
+groups:
+    autohealing_group:
+        members: [db]
+        policies:
+            simple_autoheal_policy:
+                type: cloudify.policies.types.host_failure
+                triggers:
+                    auto_heal_trigger:
+                        type: cloudify.policies.triggers.execute_workflow
+                        parameters:
+                            workflow: auto_heal_workflow
+                            allow_custom_parameters: true
+                            workflow_parameters:
+                                node_id: { get_property: [SELF, failing_node]}
+                                diagnose_value: { get_property: [SELF, diagnose] }
+
+
+workflows:
+    auto_heal_workflow:
+        mapping: default_workflows.cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph
+        parameters:
+            node_id:
+                description: Which node has failed

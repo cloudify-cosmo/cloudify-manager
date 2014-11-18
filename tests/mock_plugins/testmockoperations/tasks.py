@@ -116,13 +116,101 @@ def mock_operation(ctx, **kwargs):
 
 @operation
 def mock_operation_from_custom_workflow(ctx, key, value, **kwargs):
+    saving_multiple_params_op(ctx, {key: value}, **kwargs)
+
+
+@operation
+def saving_multiple_params_op(ctx, params, **_):
     with update_storage(ctx) as data:
-        data['mock_operation_invocation'] = data.get(
+        invocations = data['mock_operation_invocation'] = data.get(
             'mock_operation_invocation', []
         )
-        data['mock_operation_invocation'].append({
-            key: value
-        })
+        invocations.append(params)
+
+
+def saving_operation_info(ctx, op, main_node, second_node=None, **_):
+    with update_storage(ctx) as data:
+        invocations = data['mock_operation_invocation'] = data.get(
+            'mock_operation_invocation', []
+        )
+        num = data.get('num', 0) + 1
+        data['num'] = num
+
+        op_info = {'operation': op, 'num': num}
+        if second_node is None:
+            op_info.update({'node': main_node.name})
+        else:
+            op_info.update(
+                {'source': main_node.name, 'target': second_node.name}
+            )
+        invocations.append(op_info)
+
+
+def saving_rel_operation_info(ctx, op, **kwargs):
+    saving_operation_info(ctx, op, ctx.source.node, ctx.target.node, **kwargs)
+
+
+def saving_non_rel_operation_info(ctx, op, **kwargs):
+    saving_operation_info(ctx, op, ctx.node, **kwargs)
+
+
+@operation
+def mock_create(ctx, **kwargs):
+    saving_non_rel_operation_info(ctx, 'create', **kwargs)
+
+
+@operation
+def mock_configure(ctx, **kwargs):
+    saving_non_rel_operation_info(ctx, 'configure', **kwargs)
+
+
+@operation
+def mock_start(ctx, **kwargs):
+    saving_non_rel_operation_info(ctx, 'start', **kwargs)
+
+
+@operation
+def mock_stop(ctx, const_arg_stop=None, **kwargs):
+    saving_non_rel_operation_info(ctx, 'stop', **kwargs)
+
+
+@operation
+def mock_stop_with_arg(ctx, const_arg_stop=None, **kwargs):
+    saving_multiple_params_op(
+        ctx,
+        {'operation': 'stop', 'const_arg_stop': const_arg_stop},
+        **kwargs
+    )
+
+
+@operation
+def mock_delete(ctx, **kwargs):
+    saving_non_rel_operation_info(ctx, 'delete', **kwargs)
+
+
+@operation
+def mock_preconfigure(ctx, **kwargs):
+    saving_rel_operation_info(ctx, 'preconfigure', **kwargs)
+
+
+@operation
+def mock_postconfigure(ctx, **kwargs):
+    saving_rel_operation_info(ctx, 'postconfigure', **kwargs)
+
+
+@operation
+def mock_establish(ctx, **kwargs):
+    saving_rel_operation_info(ctx, 'establish', **kwargs)
+
+
+@operation
+def mock_unlink(ctx, **kwargs):
+    saving_rel_operation_info(ctx, 'unlink', **kwargs)
+
+
+@operation
+def mock_restart(ctx, **kwargs):
+    mock_operation_from_custom_workflow(ctx, 'operation', 'restart', **kwargs)
 
 
 @operation
