@@ -28,7 +28,12 @@ class TestDeploymentModification(TestCase):
         execute_workflow('deployment_modification', deployment_id)
         invocations = self.get_plugin_data(
             'testmockoperations', deployment_id)['mock_operation_invocation']
-        print invocations
+        self.assertEqual(1, len([i for i in invocations
+                                 if i['operation'] == 'create']))
+        self.assertEqual(1, len([i for i in invocations
+                                 if i['operation'] == 'preconfigure']))
+        self.assertEqual(1, len([i for i in invocations
+                                 if i['operation'] == 'preconfigure']))
 
     def test_deployment_modification_add_compute(self):
         nodes = {'compute': {'instances': 2}}

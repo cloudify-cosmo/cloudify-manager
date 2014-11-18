@@ -1,6 +1,6 @@
 -e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@master#egg=cloudify-dsl-parser==3.1rc2
 -e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.1rc2
--e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==3.1rc2
+-e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@CFY-1662-dep-mod-rel-ops#egg=cloudify-plugins-common==3.1rc2
 -e git+https://github.com/cloudify-cosmo/cloudify-diamond-plugin@master#egg=cloudify-diamond-plugin==1.1rc2
 -e git+https://github.com/cloudify-cosmo/cloudify-script-plugin@master#egg=cloudify-script-plugin==1.1rc2
 pyzmq
