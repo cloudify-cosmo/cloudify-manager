@@ -1,5 +1,4 @@
 plugins:
     mock_agent_plugin:
         executor: host_agent
-        install: true
-        source: dummy
+        source: mock_agent_plugin

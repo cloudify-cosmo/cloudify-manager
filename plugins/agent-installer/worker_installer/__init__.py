@@ -72,9 +72,18 @@ def init_worker_installer(func):
 
 
 def get_machine_distro(runner):
-    return runner.run('python -c "import platform, json, sys; '
-                      'sys.stdout.write(\'{0}\\n\''
-                      '.format(json.dumps(platform.dist())))"')
+    """retrieves the distribution information of the machine
+
+    To overcome the situation where additional info is printed
+    to stdout when a command execution occures, a string is
+    appended to the output. This will then search for the string
+    and the following closing brackets to retrieve the original
+    platform.dist().
+    """
+    stdout = runner.run('python -c "import platform, json, sys; '
+                        'sys.stdout.write(\'DISTROOPEN{0}DISTROCLOSE\\n\''
+                        '.format(json.dumps(platform.dist())))"')
+    return stdout[stdout.find("DISTROOPEN") + 10:stdout.find("DISTROCLOSE")]
 
 
 def get_machine_ip(ctx):

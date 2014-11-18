@@ -1,0 +1,34 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify.types
+    - plugins/testmockoperations.yaml
+
+inputs:
+    install_agent:
+        description: >
+            Determines whether to install a Cloudify agent
+        default: false
+    exception_type:
+        description: >
+            Specify the type of exception raised by the plugin
+
+            Possible values
+            ---------------
+            [user_exception, user_exception_recoverable, user_exception_non_recoverable]
+
+
+node_templates:
+    webserver_host:
+        type: cloudify.nodes.Compute
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.fail_user_exception
+                    inputs:
+                        exception_type: { get_input: exception_type }
+
+outputs:
+    ip_address:
+        description: Web server VM ip address.
+        value: { get_attribute: [ webserver_host, ip ] }
