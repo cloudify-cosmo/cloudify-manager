@@ -347,7 +347,7 @@ class TestEnvironment(object):
     @classmethod
     def stop_all_celery_processes(cls):
         logger.info('Shutting down all celery processes')
-        os.system("pkill -f 'celery worker'")
+        os.system("pkill -f 'celery worker' -9")
 
     @staticmethod
     def start_celery_management_worker():
