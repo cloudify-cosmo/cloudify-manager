@@ -320,7 +320,7 @@ def deployment_modification(ctx, nodes, **_):
                 'modification': instance.modification,
                 'relationships': [(instance.id, rel.target_id)
                                   for rel in instance.relationships]
-            })
+            }).get()
 
     for node in modification.removed.nodes:
         for instance in node.instances:
@@ -328,7 +328,7 @@ def deployment_modification(ctx, nodes, **_):
                 'modification': instance.modification,
                 'relationships': [rel.target_id
                                   for rel in instance.relationships]
-            })
+            }).get()
 
     modification.finish()
 
@@ -345,11 +345,11 @@ def deployment_modification_operations(ctx, **_):
                     raise RuntimeError(
                         'Expected one db contained instance, got {0}'
                         .format(instance.contained_instances))
-                instance.execute_operation('test.op')
+                instance.execute_operation('test.op').get()
             else:
                 for rel in instance.relationships:
-                    rel.execute_source_operation('test.op')
-                    rel.execute_target_operation('test.op')
+                    rel.execute_source_operation('test.op').get()
+                    rel.execute_target_operation('test.op').get()
     modification.finish()
 
 
