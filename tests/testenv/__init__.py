@@ -344,10 +344,16 @@ class TestEnvironment(object):
         global testenv_instance
         testenv_instance.celery_management_worker_process.stop()
 
+    @staticmethod
+    def read_celery_management_logs():
+        global testenv_instance
+        process = testenv_instance.celery_management_worker_process
+        return process.try_read_logfile()
+
     @classmethod
     def stop_all_celery_processes(cls):
         logger.info('Shutting down all celery processes')
-        os.system("pkill -f 'celery worker'")
+        os.system("pkill -9 -f 'celery worker'")
 
     @staticmethod
     def start_celery_management_worker():

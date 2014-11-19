@@ -269,16 +269,14 @@ class BlueprintsManager(object):
                                       deployment_id,
                                       deployment_plan)
 
-        self._create_deployment_environment(new_deployment, deployment_plan,
-                                            now)
-
         node_instances = deployment_plan['node_instances']
         self._create_deployment_node_instances(deployment_id,
                                                node_instances)
         self._wait_for_count(expected_count=len(node_instances),
                              query_method=self._get_node_instance_ids,
                              deployment_id=deployment_id)
-
+        self._create_deployment_environment(new_deployment, deployment_plan,
+                                            now)
         return new_deployment
 
     def start_deployment_modification(self, deployment_id, modified_nodes):
