@@ -90,7 +90,7 @@ class TestPolicies(PoliciesTestsBase):
             self.get_node_instance_by_name('node').id,
             invocations[0]['node_id']
         )
-        self.assertEqual(123, invocations[1]['metric'])
+        self.assertEqual(metric_value, invocations[1]['metric'])
 
     def test_policies_flow_with_diamond(self):
         try:
@@ -258,6 +258,28 @@ class TestAutohealPolicies(PoliciesTestsBase):
             self.get_node_instance_by_name('node').id,
             invocation['failing_node']
         )
+
+    def test_threshold_stabilized(self):
+        self.launch_deployment('dsl/stabilized_monitoring.yaml')
+        for _ in range(3):
+            self.publish(metric=10)
+            time.sleep(1)
+        for _ in range(9):
+            self.publish(metric=100)
+            time.sleep(1)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self.wait_for_invocations(self.deployment.id, 1)
+
+    def test_threshold_stabilized_doesnt_get_triggered_unnecessarily(self):
+        self.launch_deployment('dsl/stabilized_monitoring.yaml')
+        for _ in range(3):
+            self.publish(metric=10)
+            time.sleep(1)
+        self.publish(metric=100)
+        for _ in range(3):
+            self.publish(metric=10)
+            time.sleep(1)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)

@@ -16,12 +16,13 @@ groups:
     threshold_group:
         members: [node]
         policies:
-            threshold_policy_uppper_bound:
+            threshold_policy_upper_bound:
                 type: cloudify.policies.types.threshold
                 properties:
-                    metric: service
+                    service: service
                     threshold: 100
                     upper_bound: true
+                    stability_time: 0
                 triggers:
                     upper_bound_trigger:
                         type: cloudify.policies.triggers.execute_workflow
@@ -32,9 +33,10 @@ groups:
             threshold_policy_lower_bound:
                 type: cloudify.policies.types.threshold
                 properties:
-                    metric: service
+                    service: service
                     threshold: 100
                     upper_bound: false
+                    stability_time: 0
                 triggers:
                     lower_bound_trigger:
                         type: cloudify.policies.triggers.execute_workflow

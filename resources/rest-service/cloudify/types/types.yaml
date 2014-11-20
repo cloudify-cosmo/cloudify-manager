@@ -240,8 +240,8 @@ policy_types:
 
     cloudify.policies.types.threshold:
         properties:
-            metric:
-                description: The metric name
+            service:
+                description: The service name
             threshold:
                 description: The metric threshold value
             upper_bound:
@@ -251,6 +251,11 @@ policy_types:
                     will cause the triggers to be processed. if 'false': metrics
                     with values lower then the threshold will do so.
                 default: true
+            stability_time:
+                description: |
+                    How long a threshold must be breached
+                    before the triggers will be processed
+                default: 0
         source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
 
     cloudify.policies.types.host_failure:
