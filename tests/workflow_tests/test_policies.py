@@ -194,6 +194,34 @@ class TestAutohealPolicies(PoliciesTestsBase):
     # only unlink and establish
     NUM_OF_RESTART_RELATIONSHIP_OP = 2
 
+    class Threshold(object):
+        VALID_METRIC = 10
+        RISKY_METRIC = 100
+        LONG_TIME = 3
+        THRESHOLD_YAML = 'dsl/stabilized_monitoring.yaml'
+
+        def __init__(self, test_case):
+            self.test_case = test_case
+
+        def _publish_and_wait(self, metric):
+            self.test_case.publish(metric=metric)
+            time.sleep(1)
+
+        def significantly_breach_threshold(self):
+            self.test_case.launch_deployment(self.THRESHOLD_YAML)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.VALID_METRIC)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.RISKY_METRIC)
+
+        def breach_threshold_once(self):
+            self.test_case.launch_deployment(self.THRESHOLD_YAML)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.VALID_METRIC)
+            self._publish_and_wait(self.RISKY_METRIC)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.VALID_METRIC)
+
     def _get_non_rel_operation_num(self, node, op):
         op_nums = []
         for invocation in self.invocations:
@@ -260,25 +288,14 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
 
     def test_threshold_stabilized(self):
-        self.launch_deployment('dsl/stabilized_monitoring.yaml')
-        for _ in range(3):
-            self.publish(metric=10)
-            time.sleep(1)
-        for _ in range(9):
-            self.publish(metric=100)
-            time.sleep(1)
+        test = TestAutohealPolicies.Threshold(self)
+        test.significantly_breach_threshold()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
         self.wait_for_invocations(self.deployment.id, 1)
 
     def test_threshold_stabilized_doesnt_get_triggered_unnecessarily(self):
-        self.launch_deployment('dsl/stabilized_monitoring.yaml')
-        for _ in range(3):
-            self.publish(metric=10)
-            time.sleep(1)
-        self.publish(metric=100)
-        for _ in range(3):
-            self.publish(metric=10)
-            time.sleep(1)
+        test = TestAutohealPolicies.Threshold(self)
+        test.breach_threshold_once()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
