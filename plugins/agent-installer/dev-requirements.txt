@@ -1,2 +1,2 @@
--e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.1rc2
--e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==3.1rc2
+-e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.1ga
+-e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==3.1ga
