@@ -1,8 +1,5 @@
 # ***************************************************************************
-# * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
-# *
-# * Licensed under the Apache License, Version 2.0 (the "License");
-# * you may not use this file except in compliance with the License.
+# * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserveda
 # * You may obtain a copy of the License at
 # *
 # *       http://www.apache.org/licenses/LICENSE-2.0
@@ -20,7 +17,7 @@ from setuptools import setup
 
 setup(
     name='mock-plugin',
-    version='3.1ga',
+    version='3.1',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['mock_for_test'],
