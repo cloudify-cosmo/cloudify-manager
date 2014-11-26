@@ -183,7 +183,7 @@ def install(ctx, runner, agent_config, **kwargs):
 @init_worker_installer
 def uninstall(ctx, runner, agent_config, **kwargs):
     ctx.logger.info(
-        'Un-installing cloudify agent {0}. '
+        'Uninstalling cloudify agent {0}. '
         'Connection details --> {1}'
         .format(agent_config['name'],
                 connection_details(agent_config)))
@@ -261,7 +261,7 @@ def start(ctx, runner, agent_config, **kwargs):
 @init_worker_installer
 def restart(ctx, runner, agent_config, **kwargs):
     ctx.logger.info(
-        'Re-starting cloudify agent {0}. '
+        'Restarting cloudify agent {0}. '
         'Connection details --> {1}'
         .format(agent_config['name'],
                 connection_details(agent_config)))
