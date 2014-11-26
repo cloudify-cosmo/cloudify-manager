@@ -2,7 +2,8 @@ tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
     - cloudify.types
-    - cloudmock.yaml
+    - plugins/cloudmock.yaml
+    - plugins/mock_workflows.yaml
 
 node_templates:
     test_node:
@@ -21,8 +22,3 @@ workflows:
     retry_handler_on_not_exist_operation_workflow: mock_workflows.mock_workflows.workflows.retry_handler_on_not_exist_operation_workflow
     continue_handler_on_not_exist_operation_workflow: mock_workflows.mock_workflows.workflows.continue_handler_on_not_exist_operation_workflow
     fail_handler_on_not_exist_operation_workflow: mock_workflows.mock_workflows.workflows.fail_handler_on_not_exist_operation_workflow
-
-plugins:
-    mock_workflows:
-        executor: central_deployment_agent
-        install: false

@@ -1,6 +1,6 @@
 (amqp-queue-consumer "{{ctx.deployment.id}}-riemann" "{{ctx.deployment.id}}")
 
-(periodically-expire 5)
+(periodically-expire {{constants.PERIODICAL_EXPIRATION_INTERVAL}} {:keep-keys [:node_id :node_name :host :service]})
 
 {% for trigger_name, trigger in policy_triggers.iteritems()  %}
 

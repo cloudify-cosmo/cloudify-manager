@@ -1,0 +1,85 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations.yaml
+
+
+node_types:
+    mockRoot:
+        derived_from: cloudify.nodes.Root
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_create
+                start:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_start
+                configure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_configure
+                stop:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_stop
+                delete:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_delete
+
+    mockCompute:
+        derived_from: cloudify.nodes.Compute
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_create
+                start:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_start
+                configure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_configure
+                stop:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_stop
+                delete:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_delete
+
+relationships:
+    contained_in:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                postconfigure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                establish:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_establish
+                unlink:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_unlink
+        target_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                postconfigure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                establish:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_establish
+                unlink:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_unlink
+
+    connected_to:
+        derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                postconfigure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                establish:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_establish
+                unlink:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_unlink
+        target_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                postconfigure:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                establish:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_establish
+                unlink:
+                    implementation: testmockoperations.testmockoperations.tasks.mock_unlink
+

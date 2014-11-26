@@ -24,7 +24,6 @@ from contextlib import contextmanager
 from functools import wraps
 from celery import Celery
 from multiprocessing import Process
-from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import setup_default_logger
 from cloudify_rest_client import CloudifyClient
@@ -67,7 +66,8 @@ def deploy_application(dsl_path,
                        timeout_seconds=30,
                        blueprint_id=None,
                        deployment_id=None,
-                       wait_for_execution=True):
+                       wait_for_execution=True,
+                       inputs=None):
     """
     A blocking method which deploys an application from the provided dsl path.
     """
@@ -76,17 +76,21 @@ def deploy_application(dsl_path,
                                        timeout_seconds=timeout_seconds,
                                        blueprint_id=blueprint_id,
                                        deployment_id=deployment_id,
-                                       wait_for_execution=wait_for_execution)
+                                       wait_for_execution=wait_for_execution,
+                                       inputs=inputs)
 
 
-def deploy(dsl_path, blueprint_id=None, deployment_id=None):
+def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
     client = create_rest_client()
     if not blueprint_id:
         blueprint_id = str(uuid.uuid4())
     blueprint = client.blueprints.upload(dsl_path, blueprint_id)
     if deployment_id is None:
         deployment_id = str(uuid.uuid4())
-    deployment = client.deployments.create(blueprint.id, deployment_id)
+    deployment = client.deployments.create(
+        blueprint.id,
+        deployment_id,
+        inputs=inputs)
 
     wait_for_deployment_creation_to_complete(
         deployment_id=deployment_id)
@@ -106,12 +110,13 @@ def deploy_and_execute_workflow(dsl_path,
                                 blueprint_id=None,
                                 deployment_id=None,
                                 wait_for_execution=True,
-                                parameters=None):
+                                parameters=None,
+                                inputs=None):
     """
     A blocking method which deploys an application from the provided dsl path.
     and runs the requested workflows
     """
-    deployment = deploy(dsl_path, blueprint_id, deployment_id)
+    deployment = deploy(dsl_path, blueprint_id, deployment_id, inputs)
     execution = execute_workflow(workflow_name, deployment.id, parameters,
                                  timeout_seconds, wait_for_execution)
     return deployment, execution.id
@@ -144,11 +149,14 @@ def verify_deployment_environment_creation_complete(deployment_id):
     if not execs \
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
+        from testenv import TestEnvironment  # avoid cyclic import
+        logs = TestEnvironment.read_celery_management_logs()
+        logs = logs[len(logs) - 100000:]
         raise RuntimeError(
             "Expected a single execution for workflow "
             "'create_deployment_environment' with status 'terminated'; "
-            "Found these executions instead: {0}".format(
-                json.dumps(execs, indent=2)))
+            "Found these executions instead: {0}.\nCelery log:\n{1}".format(
+                json.dumps(execs, indent=2), logs))
 
 
 def undeploy_application(deployment_id,
@@ -203,7 +211,8 @@ def wait_for_execution_to_end(execution, timeout_seconds=240):
         time.sleep(0.5)
         execution = client.executions.get(execution.id)
         if time.time() > deadline:
-            raise TimeoutException()
+            raise TimeoutException('Execution timed out: \n{0}'
+                                   .format(json.dumps(execution, indent=2)))
     if execution.status == Execution.FAILED:
         raise RuntimeError(
             'Workflow execution failed: {0} [{1}]'.format(execution.error,
@@ -316,18 +325,11 @@ def update_storage(ctx):
     :param ctx: task invocation context
     """
 
-    if CELERY_WORK_DIR_PATH_KEY not in os.environ:
-        raise RuntimeError('Missing {0} in os.environ. '
-                           'This method can only be '
-                           'called from within a plugin. '
-                           'Are you using this correctly?'
-                           .format(CELERY_WORK_DIR_PATH_KEY))
     deployment_id = ctx.deployment.id
-
     plugin_name = ctx.plugin
     if plugin_name is None:
 
-        # hack for tasks that executed locally
+        # hack for tasks that are executed locally.
         # TODO - Aren't these tasks also a part of a plugin?
         # TODO - the ctx in this case should include the plugin name
         # TODO - as if it was a remote task.
@@ -336,8 +338,10 @@ def update_storage(ctx):
             plugin_name = 'agent_installer'
         if ctx.task_name.startswith('plugin_installer'):
             plugin_name = 'plugin_installer'
+
     storage_file_path = os.path.join(
-        os.environ[CELERY_WORK_DIR_PATH_KEY],
+        os.environ['TEST_WORKING_DIR'],
+        'plugins-storage',
         '{0}.json'.format(plugin_name)
     )
 
@@ -353,9 +357,14 @@ def update_storage(ctx):
             data[deployment_id] = {}
         yield data.get(deployment_id)
     with open(storage_file_path, 'w') as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=2)
+        f.write(os.linesep)
 
 
 class TimeoutException(Exception):
-    def __init__(self, *args):
-        Exception.__init__(self, args)
+
+    def __init__(self, message):
+        Exception.__init__(self, message)
+
+    def __str__(self):
+        return self.message

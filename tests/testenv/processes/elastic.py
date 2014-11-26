@@ -108,8 +108,7 @@ class ElasticSearchProcess(object):
         self._verify_service_started()
         self._verify_service_responsiveness()
         logger.info('elasticsearch service started [pid=%s]', self._pid)
-        self._remove_index_if_exists()
-        self._create_schema()
+        self.reset_data()
 
     def close(self):
         if self._pid:
@@ -117,6 +116,10 @@ class ElasticSearchProcess(object):
                         self._pid)
             os.system('kill {0}'.format(self._pid))
             self._verify_service_ended()
+
+    def reset_data(self):
+        self._remove_index_if_exists()
+        self._create_schema()
 
     @staticmethod
     def _remove_index_if_exists():
@@ -140,24 +143,6 @@ class ElasticSearchProcess(object):
             except BaseException as e:
                 logger.warn('Ignoring caught exception on Elasticsearch delete'
                             ' index - {0}: {1}'.format(e.__class__, e.message))
-
-    @staticmethod
-    def reset_data():
-        """
-        Empties the storage index.
-        """
-        try:
-            es = elasticsearch.Elasticsearch()
-            es.delete_by_query(index=STORAGE_INDEX_NAME, q='*')
-            deadline = time.time() + 45
-            while es.count(index=STORAGE_INDEX_NAME, q='*')['count'] != 0:
-                if time.time() > deadline:
-                    raise RuntimeError(
-                        'Elasticsearch data was not deleted after 30 seconds')
-                time.sleep(0.5)
-        except Exception as e:
-            logger.warn(
-                'Elasticsearch reset data failed: {0}'.format(e.message))
 
     @staticmethod
     def _create_schema():

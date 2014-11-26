@@ -237,8 +237,7 @@ def test_policies_1(ctx, key, value,
 
 
 @workflow
-def test_policies_2(ctx, key, value,
-                    **_):
+def test_policies_2(ctx, key, value, **_):
     instance = list(ctx.get_node('node').instances)[0]
     instance.execute_operation('test.op1', kwargs={
         'key': key,
@@ -252,6 +251,17 @@ def test_policies_3(ctx, key, value, **_):
     instance.execute_operation('test.op1', kwargs={
         'key': key,
         'value': value
+    })
+
+
+@workflow
+def auto_heal_vm(ctx, node_id, diagnose_value=None, **_):
+    instance = ctx.get_node_instance(node_id)
+    instance.execute_operation('test.op1', kwargs={
+        'params': {
+            'failing_node': node_id,
+            'diagnose': diagnose_value
+        }
     })
 
 
@@ -310,7 +320,7 @@ def deployment_modification(ctx, nodes, **_):
                 'modification': instance.modification,
                 'relationships': [(instance.id, rel.target_id)
                                   for rel in instance.relationships]
-            })
+            }).get()
 
     for node in modification.removed.nodes:
         for instance in node.instances:
@@ -318,8 +328,28 @@ def deployment_modification(ctx, nodes, **_):
                 'modification': instance.modification,
                 'relationships': [rel.target_id
                                   for rel in instance.relationships]
-            })
+            }).get()
 
+    modification.finish()
+
+
+@workflow
+def deployment_modification_operations(ctx, **_):
+    modification = ctx.deployment.start_modification(
+        {'compute': {'instances': 2}})
+    for node in modification.added.nodes:
+        for instance in node.instances:
+            if instance.node_id == 'compute':
+                if (len(instance.contained_instances) != 1 or
+                        instance.contained_instances[0].node_id != 'db'):
+                    raise RuntimeError(
+                        'Expected one db contained instance, got {0}'
+                        .format(instance.contained_instances))
+                instance.execute_operation('test.op').get()
+            else:
+                for rel in instance.relationships:
+                    rel.execute_source_operation('test.op').get()
+                    rel.execute_target_operation('test.op').get()
     modification.finish()
 
 

@@ -1,4 +1,4 @@
 plugins:
-    mock_workflows:
+    diamond:
         executor: central_deployment_agent
         install: false

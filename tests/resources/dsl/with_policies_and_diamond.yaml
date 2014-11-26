@@ -2,14 +2,10 @@ tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
     - cloudify/types/types.yaml
-    - testmockoperations.yaml
-    - mock_workflows.yaml
+    - plugins/testmockoperations.yaml
+    - plugins/mock_workflows.yaml
+    - plugins/diamond.yaml
     - policies/answer_to_life.yaml
-
-plugins:
-    diamond:
-        executor: central_deployment_agent
-        install: false
 
 node_types:
     monitor_type:

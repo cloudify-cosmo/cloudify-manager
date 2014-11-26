@@ -14,54 +14,101 @@
 #    * limitations under the License.
 
 
+from collections import namedtuple
+
+import time
+
 from testenv import TestCase
 from testenv import utils
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
+from riemann_controller.config_constants import Constants
 
 
-class TestPolicies(TestCase):
+class PoliciesTestsBase(TestCase):
+    NUM_OF_INITIAL_WORKFLOWS = 2
 
+    def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
+        deployment, _ = deploy(resource(yaml_file))
+        self.deployment = deployment
+        self.node_instances = self.client.node_instances.list(deployment.id)
+        self.assertEqual(
+            expected_num_of_node_instances,
+            len(self.node_instances)
+        )
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    def get_node_instance_by_name(self, name):
+        for nodeInstance in self.node_instances:
+            if nodeInstance.node_id == name:
+                return nodeInstance
+
+    def wait_for_executions(self, expected_count):
+        def assertion():
+            executions = self.client.executions.list(
+                deployment_id=self.deployment.id)
+            self.assertEqual(expected_count, len(executions))
+        self.do_assertions(assertion)
+
+    def wait_for_invocations(self, deployment_id, expected_count):
+        def assertion():
+            _invocations = self.get_plugin_data(
+                plugin_name='testmockoperations',
+                deployment_id=deployment_id
+            )['mock_operation_invocation']
+            self.assertEqual(expected_count, len(_invocations))
+        utils.do_retries(assertion)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['mock_operation_invocation']
+        return invocations
+
+    def publish(self, metric, ttl=60, node_name='node', service='service'):
+        self.publish_riemann_event(
+            self.deployment.id,
+            node_name=node_name,
+            node_id=self.get_node_instance_by_name(node_name).id,
+            metric=metric,
+            service=service,
+            ttl=ttl
+        )
+
+
+class TestPolicies(PoliciesTestsBase):
     def test_policies_flow(self):
-        dsl_path = resource('dsl/with_policies1.yaml')
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
-        self.instance_id = self.wait_for_node_instance().id
+        self.launch_deployment('dsl/with_policies1.yaml')
 
         metric_value = 123
 
         self.publish(metric=metric_value)
 
-        self.wait_for_executions(3)
-        invocations = self.wait_for_invocations(deployment.id, 2)
-        self.assertEqual(self.instance_id, invocations[0]['node_id'])
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        invocations = self.wait_for_invocations(self.deployment.id, 2)
+        self.assertEqual(
+            self.get_node_instance_by_name('node').id,
+            invocations[0]['node_id']
+        )
         self.assertEqual(123, invocations[1]['metric'])
 
     def test_policies_flow_with_diamond(self):
-        deployment = None
         try:
-            dsl_path = resource("dsl/with_policies_and_diamond.yaml")
-            deployment, _ = deploy(dsl_path)
-            self.deployment_id = deployment.id
-            self.instance_id = self.wait_for_node_instance().id
+            self.launch_deployment('dsl/with_policies_and_diamond.yaml')
             expected_metric_value = 42
-            self.wait_for_executions(3)
-            invocations = self.wait_for_invocations(deployment.id, 1)
+            self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+            invocations = self.wait_for_invocations(self.deployment.id, 1)
             self.assertEqual(expected_metric_value, invocations[0]['metric'])
         finally:
             try:
-                if deployment:
-                    undeploy(deployment.id)
+                if self.deployment:
+                    undeploy(self.deployment.id)
             except BaseException as e:
                 if e.message:
                     self.logger.warning(e.message)
 
     def test_threshold_policy(self):
-        dsl_path = resource("dsl/with_policies2.yaml")
-        deployment, _ = deploy(dsl_path)
-        self.deployment_id = deployment.id
-        self.instance_id = self.wait_for_node_instance().id
+        self.launch_deployment('dsl/with_policies2.yaml')
 
         class Tester(object):
 
@@ -115,43 +162,313 @@ class TestPolicies(TestCase):
                         current_invocations=0)
 
         for _ in range(2):
-            tester.publish_above_threshold(deployment.id, do_assert=True)
-            tester.publish_above_threshold(deployment.id, do_assert=False)
-            tester.publish_below_threshold(deployment.id, do_assert=True)
-            tester.publish_below_threshold(deployment.id, do_assert=False)
+            tester.publish_above_threshold(self.deployment.id, do_assert=True)
+            tester.publish_above_threshold(self.deployment.id, do_assert=False)
+            tester.publish_below_threshold(self.deployment.id, do_assert=True)
+            tester.publish_below_threshold(self.deployment.id, do_assert=False)
 
-    def wait_for_executions(self, expected_count):
-        def assertion():
-            executions = self.client.executions.list(
-                deployment_id=self.deployment_id)
-            self.assertEqual(expected_count, len(executions))
-        self.do_assertions(assertion)
 
-    def wait_for_invocations(self, deployment_id, expected_count):
-        def assertion():
-            _invocations = self.get_plugin_data(
-                plugin_name='testmockoperations',
-                deployment_id=deployment_id
-            )['mock_operation_invocation']
-            self.assertEqual(expected_count, len(_invocations))
-        utils.do_retries(assertion)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['mock_operation_invocation']
-        return invocations
+class TestAutohealPolicies(PoliciesTestsBase):
+    HEART_BEAT_METRIC = 'heart-beat'
+    EVENTS_TTL = 3  # in seconds
+    # in seconds, a kind of time buffer for messages to get delivered for sure
+    OPERATIONAL_TIME_BUFFER = 1
+    SIMPLE_AUTOHEAL_POLICY_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
-    def wait_for_node_instance(self):
-        def assertion():
-            instances = self.client.node_instances.list(self.deployment_id)
-            self.assertEqual(1, len(instances))
-        self.do_assertions(assertion)
-        return self.client.node_instances.list(self.deployment_id)[0]
+    operation = namedtuple('Operation', ['nodes', 'name', 'positions'])
 
-    def publish(self, metric):
-        self.publish_riemann_event(
-            self.deployment_id,
-            node_name='node',
-            node_id=self.instance_id,
-            metric=metric,
-            service='service')
+    DB_HOST = 'db_host'
+    DB = 'db'
+    DB_STATISTICS = 'db_statistics'
+    WEBSERVER = 'webserver'
+    WEBSERVER_CONSOLE = 'webserver_console'
+
+    # create, configure, start
+    NUM_OF_INITIAL_LIFECYCLE_OP = 3
+    # also stop and delete
+    NUM_OF_LIFECYCLE_OP = 5
+    # preconfigure, postconfigure, establish
+    NUM_OF_INITIAL_RELATIONSHIP_OP = 3
+    # also unlink
+    NUM_OF_RELATIONSHIP_OP = 4
+    # only unlink and establish
+    NUM_OF_RESTART_RELATIONSHIP_OP = 2
+
+    def _get_non_rel_operation_num(self, node, op):
+        op_nums = []
+        for invocation in self.invocations:
+            if (node == invocation.get('node') and
+                    op == invocation['operation']):
+                op_nums.append(invocation['num'])
+        return op_nums
+
+    def _get_rel_operation_num(self, source, target, op):
+        op_nums = []
+        for invocation in self.invocations:
+            if (source == invocation.get('source') and
+                    target == invocation.get('target') and
+                    op == invocation['operation']):
+                op_nums.append(invocation['num'])
+        return op_nums
+
+    def _get_operation_num(self, op):
+        if len(op.nodes) == 2:
+            return self._get_rel_operation_num(*op.nodes, op=op.name)
+        elif len(op.nodes) == 1:
+            return self._get_non_rel_operation_num(op.nodes[0], op.name)
+
+    def _assert_op_order(self, op1, op2):
+        for pos1 in op1.positions:
+            for pos2 in op2.positions:
+                self.assertLess(
+                    self._get_operation_num(op1)[pos1],
+                    self._get_operation_num(op2)[pos2]
+                )
+
+    def _publish_heart_beat_event(self, node_name='node', service='service'):
+        self.publish(
+            self.HEART_BEAT_METRIC,
+            self.EVENTS_TTL,
+            node_name,
+            service
+        )
+
+    def _wait_for_event_expiration(self):
+        time.sleep(
+            self.EVENTS_TTL +
+            Constants.PERIODICAL_EXPIRATION_INTERVAL +
+            self.OPERATIONAL_TIME_BUFFER
+        )
+
+    def _publish_event_and_wait_for_its_expiration(self, node_name='node'):
+        self._publish_heart_beat_event(node_name)
+        self._wait_for_event_expiration()
+
+    def test_autoheal_policy_triggering(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+
+        self.assertEqual('heart-beat-failure', invocation['diagnose'])
+        self.assertEqual(
+            self.get_node_instance_by_name('node').id,
+            invocation['failing_node']
+        )
+
+    def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+
+        for _ in range(5):
+            self._publish_heart_beat_event()
+            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    def test_autoheal_policy_triggering_for_two_nodes(self):
+        self.launch_deployment('dsl/simple_auto_heal_policy_two_nodes.yaml', 2)
+
+        self._publish_heart_beat_event(
+            'node_about_to_fail',
+            'service_on_failing_node'
+        )
+        for _ in range(5):
+            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+            self._publish_heart_beat_event('ok_node')
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+
+        self.assertEqual('heart-beat-failure', invocation['diagnose'])
+        self.assertEqual(
+            self.get_node_instance_by_name('node_about_to_fail').id,
+            invocation['failing_node']
+        )
+
+    def test_autoheal_policy_nested_nodes(self):
+        NODES_WITH_LIFECYCLE_OP = 3
+        NODES_WITH_RELATIONSHIP_OP = 3
+        NODES_FROM_FAILING_SUBGRAPH_WITH_RELATIONSHIP_OP = 2
+        # For every node with relationship there are two lifecycles
+        # one for target and one for source
+        NUM_OF_RELATIONSHIP_LIFECYCLES = 2 * NODES_WITH_LIFECYCLE_OP
+        NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH = (
+            2 *
+            NODES_FROM_FAILING_SUBGRAPH_WITH_RELATIONSHIP_OP
+        )
+
+        self.launch_deployment('dsl/auto_heal_nested_nodes.yaml', 5)
+        self._publish_heart_beat_event(self.DB)
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        self.invocations = self.wait_for_invocations(
+            self.deployment.id,
+            (
+                NODES_WITH_LIFECYCLE_OP * self.NUM_OF_INITIAL_LIFECYCLE_OP +
+                NODES_WITH_RELATIONSHIP_OP * self.NUM_OF_LIFECYCLE_OP +
+                NUM_OF_RELATIONSHIP_LIFECYCLES *
+                self.NUM_OF_INITIAL_RELATIONSHIP_OP +
+                NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH *
+                self.NUM_OF_RELATIONSHIP_OP +
+                2 * self.NUM_OF_RESTART_RELATIONSHIP_OP
+            )
+        )
+
+        # unlink operation is executed before the source is deleted
+        self._assert_op_order(
+            self.operation(
+                (self.DB_STATISTICS, self.WEBSERVER),
+                'unlink',
+                [0, 1]
+            ),
+            self.operation((self.DB_STATISTICS, ), 'delete', [0])
+        )
+
+        # DB and DB_STATISTICS is contained in DB_HOST
+        # so they have to be deleted before
+        self._assert_op_order(
+            self.operation((self.DB, ), 'delete', [0]),
+            self.operation((self.DB_HOST, ), 'delete', [0])
+        )
+        self._assert_op_order(
+            self.operation((self.DB_STATISTICS, ), 'delete', [0]),
+            self.operation((self.DB_HOST, ), 'delete', [0])
+        )
+
+        # DB has two unlinks - one for db_host and one from webserver
+        # Webserver unlinks from db after it is stopped
+        self._assert_op_order(
+            self.operation((self.DB, self.DB_HOST), 'unlink', [0, 1]),
+            self.operation((self.DB, ), 'delete', [0])
+        )
+        self._assert_op_order(
+            self.operation((self.WEBSERVER, self.DB), 'unlink', [0, 1]),
+            self.operation((self.DB, ), 'delete', [0])
+        )
+
+        # DB_HOST has to be started before the nodes that are contained
+        # in it are created
+        self._assert_op_order(
+            self.operation((self.DB_HOST, ), 'start', [1]),
+            self.operation((self.DB, ), 'create', [1])
+        )
+        self._assert_op_order(
+            self.operation((self.DB_HOST, ), 'start', [1]),
+            self.operation((self.DB_STATISTICS, ), 'create', [1])
+        )
+
+        # configure operation is between preconfigure and postconfigure
+        self._assert_op_order(
+            self.operation((self.DB, self.DB_HOST), 'preconfigure', [2, 3]),
+            self.operation((self.DB, ), 'configure', [1])
+        )
+        self._assert_op_order(
+            self.operation((self.DB, ), 'configure', [1]),
+            self.operation((self.DB, self.DB_HOST), 'postconfigure', [2, 3])
+        )
+
+        # preconfigure self.operations of both the source (DB_STATISTICS) and
+        # the target (WEBSERVER) are executed before the configure
+        # self.operation of the host
+        self._assert_op_order(
+            self.operation(
+                (self.DB_STATISTICS, self.WEBSERVER),
+                'preconfigure',
+                [2, 3]
+            ),
+            self.operation((self.DB_STATISTICS, ), 'configure', [1])
+        )
+        # It is the same for configure and postconfigure
+        self._assert_op_order(
+            self.operation((self.DB_STATISTICS, ), 'configure', [1]),
+            self.operation(
+                (self.DB_STATISTICS, self.WEBSERVER),
+                'postconfigure',
+                [2, 3]
+            )
+        )
+
+        self._assert_op_order(
+            self.operation((self.DB, ), 'start', [1]),
+            self.operation((self.DB, self.DB_HOST), 'establish', [2, 3])
+        )
+
+        # Establishing relationship is after start of the source
+        self._assert_op_order(
+            self.operation((self.DB_STATISTICS, ), 'start', [1]),
+            self.operation(
+                (self.DB_STATISTICS, self.WEBSERVER),
+                'establish',
+                [2, 3]
+            )
+        )
+
+    def test_autoheal_policy_grandchild(self):
+        NUM_OF_NODES_WITH_OP = 2
+
+        self.launch_deployment('dsl/auto_heal_grandchild.yaml', 3)
+        self._publish_heart_beat_event(self.WEBSERVER)
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        self.invocations = self.wait_for_invocations(
+            self.deployment.id,
+            (
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_INITIAL_LIFECYCLE_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_INITIAL_RELATIONSHIP_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_LIFECYCLE_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_RELATIONSHIP_OP
+            )
+        )
+
+        # WEBSERVER_CONSOLE is installed_on WEBSERVER
+        # so WEBSERVER needs to start before WEBSERVER_CONSOLE before and
+        # after failure
+        self._assert_op_order(
+            self.operation((self.WEBSERVER, ), 'start', [0]),
+            self.operation((self.WEBSERVER_CONSOLE, ), 'start', [0])
+        )
+        self._assert_op_order(
+            self.operation((self.WEBSERVER, ), 'start',  [1]),
+            self.operation((self.WEBSERVER_CONSOLE, ), 'start', [1])
+        )
+
+        # WEBSERVER can't be stopped before WEBSERVER_CONSOLE is deleted
+        self._assert_op_order(
+            self.operation((self.WEBSERVER_CONSOLE, ), 'delete', [0]),
+            self.operation((self.WEBSERVER, ), 'stop', [0])
+        )
+
+        # preconfigure and postconfigure are executed around configure of the
+        # source node in relationship (WEBSERVER_CONSOLE)
+        self._assert_op_order(
+            self.operation(
+                (self.WEBSERVER_CONSOLE, self.WEBSERVER),
+                'preconfigure',
+                [0, 1]
+            ),
+            self.operation((self.WEBSERVER_CONSOLE, ), 'configure', [0])
+        )
+        self._assert_op_order(
+            self.operation((self.WEBSERVER_CONSOLE, ), 'configure', [0]),
+            self.operation(
+                (self.WEBSERVER_CONSOLE, self.WEBSERVER),
+                'postconfigure',
+                [0, 1]
+            )
+        )
+
+        # After failure and restart of both nodes
+        # the connection must be established
+        self._assert_op_order(
+            self.operation((self.WEBSERVER_CONSOLE, ), 'start',  [1]),
+            self.operation(
+                (self.WEBSERVER_CONSOLE, self.WEBSERVER),
+                'establish',
+                [2, 3]
+            )
+        )
