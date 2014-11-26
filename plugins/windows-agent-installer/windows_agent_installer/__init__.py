@@ -49,8 +49,8 @@ def init_worker_installer(func):
         if not ctx:
             raise RuntimeError('CloudifyContext not found in invocation args')
 
-        # take cloudify_agent settings from the invocation input parameters, and if it's not there -
-        # take them from the static node properties
+        # take cloudify_agent settings from the invocation input parameters,
+        # and if it's not there - take them from the static node properties
         if 'cloudify_agent' in kwargs:
             cloudify_agent = kwargs['cloudify_agent']
         else:

@@ -74,8 +74,6 @@ class WinRMRunner(object):
             except Exception as e:
                 logger.info('WinRM connection failed: {0}'.format(str(e)))
 
-
-
     def _create_session(self):
 
         winrm_url = '{0}://{1}:{2}/{3}'.format(
