@@ -113,14 +113,19 @@ def install(ctx, runner, agent_config, **kwargs):
     runner.ping()
 
     ctx.logger.info(
-        "installing celery worker {0}".format(agent_config['name']))
+        'Installing cloudify agent {0}. '
+        'Connection details --> user: {1}, host: {2}, key: {3}'
+        .format(agent_config['name'],
+                agent_config['user'],
+                agent_config['host'],
+                agent_config['key']))
     if worker_exists(runner, agent_config):
         ctx.logger.info("Worker for deployment {0} "
                         "is already installed. nothing to do."
                         .format(ctx.deployment.id))
         return
 
-    ctx.logger.info(
+    ctx.logger.debug(
         'Installing celery worker [cloudify_agent={0}]'.format(agent_config))
     runner.run('mkdir -p {0}'.format(agent_config['base_dir']))
 
@@ -179,6 +184,13 @@ def install(ctx, runner, agent_config, **kwargs):
 @init_worker_installer
 def uninstall(ctx, runner, agent_config, **kwargs):
     ctx.logger.info(
+        'Uninstalling cloudify agent {0}. '
+        'Connection details --> user: {1}, host: {2}, key: {3}'
+        .format(agent_config['name'],
+                agent_config['user'],
+                agent_config['host'],
+                agent_config['key']))
+    ctx.logger.debug(
         'Uninstalling celery worker [cloudify_agent={0}]'.format(agent_config))
 
     files_to_delete = [
@@ -218,7 +230,13 @@ def delete_folders_if_exist(ctx, agent_config, runner, folders):
 @operation
 @init_worker_installer
 def stop(ctx, runner, agent_config, **kwargs):
-    ctx.logger.info("stopping celery worker {0}".format(agent_config['name']))
+    ctx.logger.info(
+        'Stopping cloudify agent {0}. '
+        'Connection details --> user: {1}, host: {2}, key: {3}'
+        .format(agent_config['name'],
+                agent_config['user'],
+                agent_config['host'],
+                agent_config['key']))
 
     if runner.exists(agent_config['init_file']):
         runner.run(
@@ -232,7 +250,13 @@ def stop(ctx, runner, agent_config, **kwargs):
 @operation
 @init_worker_installer
 def start(ctx, runner, agent_config, **kwargs):
-    ctx.logger.info("starting celery worker {0}".format(agent_config['name']))
+    ctx.logger.info(
+        'Starting cloudify agent {0}. '
+        'Connection details --> user: {1}, host: {2}, key: {3}'
+        .format(agent_config['name'],
+                agent_config['user'],
+                agent_config['host'],
+                agent_config['key']))
 
     runner.run("sudo service celeryd-{0} start".format(agent_config["name"]))
 
@@ -243,7 +267,12 @@ def start(ctx, runner, agent_config, **kwargs):
 @init_worker_installer
 def restart(ctx, runner, agent_config, **kwargs):
     ctx.logger.info(
-        "restarting celery worker {0}".format(agent_config['name']))
+        'Re-starting cloudify agent {0}. '
+        'Connection details --> user: {1}, host: {2}, key: {3}'
+        .format(agent_config['name'],
+                agent_config['user'],
+                agent_config['host'],
+                agent_config['key']))
 
     restart_celery_worker(runner, agent_config)
 

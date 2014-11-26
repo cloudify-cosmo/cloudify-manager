@@ -67,6 +67,7 @@ class FabricRunner(object):
         if not self.local:
             self.host_string = '%(user)s@%(host)s:%(port)s' % config
             self.key_filename = config['key']
+            ctx.logger.info('')
 
     def ping(self):
         self.run('echo "ping!"')
