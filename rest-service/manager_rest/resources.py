@@ -27,8 +27,11 @@ from functools import wraps
 from os import path
 
 import elasticsearch
-from flask import request
-from flask import make_response
+from flask import (
+    request,
+    make_response,
+    current_app as app
+)
 from flask.ext.restful import Resource, abort, marshal, reqparse
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
@@ -43,7 +46,6 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
 from manager_rest import get_version_data
-
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
@@ -118,6 +120,8 @@ class marshal_with(object):
 
 
 def abort_error(error):
+
+    app.logger.warn('{0}: {1}'.format(type(error).__name__, str(error)))
 
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
@@ -1055,7 +1059,6 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
 
 class Events(Resource):
 
-    @exceptions_handled
     def _query_events(self):
         """
         List events for the provided Elasticsearch query
@@ -1076,6 +1079,7 @@ class Events(Resource):
                      'paramType': 'body'}],
         consumes=['application/json']
     )
+    @exceptions_handled
     def get(self):
         """
         List events for the provided Elasticsearch query
@@ -1094,6 +1098,7 @@ class Events(Resource):
                      'paramType': 'body'}],
         consumes=['application/json']
     )
+    @exceptions_handled
     def post(self):
         """
         List events for the provided Elasticsearch query

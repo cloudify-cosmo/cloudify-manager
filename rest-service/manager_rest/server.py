@@ -22,8 +22,13 @@ import functools
 import traceback
 import os
 import yaml
+from logging.handlers import RotatingFileHandler
 
-from flask import Flask, jsonify
+from flask import (
+    Flask,
+    jsonify,
+    request
+)
 from flask_restful import Api
 
 from manager_rest import config
@@ -31,14 +36,31 @@ from manager_rest import config
 from manager_rest import storage_manager
 from manager_rest import resources
 from manager_rest import manager_exceptions
+from util import setup_logger
 
 
 # app factory
 def setup_app():
     app = Flask(__name__)
 
-    app.logger.setLevel(logging.DEBUG)
-    app.logger.addHandler(logging.StreamHandler(sys.stdout))
+    # setting up the app logger with a rotating file handler, in addition to
+    #  the built-in flask logger which can be helpful in debug mode.
+    additional_log_handlers = [
+        RotatingFileHandler(
+            '/home/ubuntu/cloudify-rest-service.log',
+            maxBytes=1024*1024*100,
+            backupCount=20)
+    ]
+
+    app.logger_name = 'manager-rest'
+    setup_logger(logger_name=app.logger.name,
+                 logger_level=logging.DEBUG,
+                 handlers=additional_log_handlers,
+                 remove_existing_handlers=False)
+
+
+    app.before_request(log_request)
+    app.after_request(log_response)
 
     # saving flask's original error handlers
     flask_handle_exception = app.handle_exception
@@ -71,6 +93,50 @@ def setup_app():
 
     resources.setup_resources(api)
     return app
+
+
+def log_request():
+    # form and args parameters are "multidicts", i.e. values are not
+    # flattened and will appear in a list (even if single value)
+    form_data = request.form.to_dict(False)
+    # args is the parsed query string data
+    args_data = request.args.to_dict(False)
+    # json data; other data (e.g. binary) is available via request.data,
+    #  but is not logged
+    json_data = request.json if hasattr(request, 'json') else None
+
+    # content-type and content-length are already included in headers
+
+    app.logger.debug(
+        '\nRequest:\n'
+        '\tpath: {0}\n'
+        '\thttp method: {1}\n'
+        '\theaders: {2}\n'
+        '\tjson data: {3}\n'
+        '\tquery string data: {4}\n'
+        '\tform data: {5}'.format(
+            request.path,  # includes "path parameters"
+            request.method,
+            request.headers,
+            json_data,
+            args_data,
+            form_data))
+
+
+def log_response(response):
+    # content-type and content-length are already included in headers
+
+    app.logger.debug(
+        '\nResponse:\n'
+        '\tstatus: {0}\n'
+        '\theaders: {1}\n'
+        # '\tdata: {2}\n'
+        .format(
+            response.status,
+            response.headers,
+            # response.data
+        ))
+    return response
 
 
 def reset_state(configuration=None):
@@ -106,6 +172,8 @@ app = setup_app()
 
 @app.errorhandler(500)
 def internal_error(e):
+
+    # app.logger.exception(e)  # gets logged automatically
 
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
