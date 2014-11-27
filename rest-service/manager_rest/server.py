@@ -106,13 +106,14 @@ def log_request():
     # content-type and content-length are already included in headers
 
     app.logger.debug(
-        '\nRequest:\n'
-        '\tpath: {0}\n'
-        '\thttp method: {1}\n'
-        '\tjson data: {2}\n'
-        '\tquery string data: {3}\n'
-        '\tform data: {4}\n'
-        '\theaders: {5}'.format(
+        '\nRequest ({0}):\n'
+        '\tpath: {1}\n'
+        '\thttp method: {2}\n'
+        '\tjson data: {3}\n'
+        '\tquery string data: {4}\n'
+        '\tform data: {5}\n'
+        '\theaders: {6}'.format(
+            id(request),
             request.path,  # includes "path parameters"
             request.method,
             json_data,
@@ -126,13 +127,13 @@ def log_response(response):
     # not logging response.data as volumes are massive
 
     app.logger.debug(
-        '\nResponse:\n'
-        '\tstatus: {0}\n'
-        '\theaders: {1}'
+        '\nResponse ({0}):\n'
+        '\tstatus: {1}\n'
+        '\theaders: {2}'
         .format(
+            id(request),
             response.status,
-            headers_pretty_print(response.headers),
-        ))
+            headers_pretty_print(response.headers)))
     return response
 
 
