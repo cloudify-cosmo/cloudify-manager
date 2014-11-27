@@ -24,6 +24,10 @@ groups:
         policies:
             simple_autoheal_policy:
                 type: cloudify.policies.types.host_failure
+                properties:
+                    service:
+                        - service_on_failing_node
+                        - service
                 triggers:
                     auto_heal_trigger:
                         type: cloudify.policies.triggers.execute_workflow

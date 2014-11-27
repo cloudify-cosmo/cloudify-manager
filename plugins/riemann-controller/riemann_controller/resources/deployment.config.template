@@ -49,7 +49,7 @@
                                  process-policy-triggers
                                  "{{constants.STABLE_STATE}}"
                                  "{{constants.TRIGGERING_STATE}}")]
-(where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
-   (exception-stream publish-policy-error
-      {{stream.data}}
+(where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
+  (exception-stream publish-policy-error
+    {{stream.data}}
 ))){% endfor %}))

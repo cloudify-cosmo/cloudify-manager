@@ -263,7 +263,8 @@ policy_types:
         properties:
             service:
                 description: The service name
-                default: service
+                default:
+                    - service
         source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/host_failure.clj
 
     cloudify.policies.types.ewma_stabilized:
