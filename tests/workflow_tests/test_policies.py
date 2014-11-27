@@ -222,6 +222,36 @@ class TestAutohealPolicies(PoliciesTestsBase):
             for _ in range(self.LONG_TIME):
                 self._publish_and_wait(self.VALID_METRIC)
 
+    class EwmaTimeless(object):
+        VALID_METRIC = 50
+        RISKY_METRIC = 150
+        LONG_TIME = 4
+        EWMA_YAML = 'dsl/ewma_stabilized.yaml'
+
+        def __init__(self, test_case):
+            self.test_case = test_case
+
+        def swinging_threshold_breach(self):
+            self.test_case.launch_deployment(self.EWMA_YAML)
+            for _ in range(self.LONG_TIME):
+                self.test_case.publish(self.VALID_METRIC)
+                self.test_case.publish(self.RISKY_METRIC)
+
+        def breach_threshold_once(self):
+            self.test_case.launch_deployment(self.EWMA_YAML)
+            for _ in range(self.LONG_TIME):
+                self.test_case.publish(self.VALID_METRIC)
+            self.test_case.publish(self.RISKY_METRIC)
+            for _ in range(self.LONG_TIME):
+                self.test_case.publish(self.VALID_METRIC)
+
+        def slowly_rise_metric(self):
+            self.test_case.launch_deployment(self.EWMA_YAML)
+            metric = 0
+            while metric < self.RISKY_METRIC:
+                self.test_case.publish(metric)
+                metric += 10
+
     def _get_non_rel_operation_num(self, node, op):
         op_nums = []
         for invocation in self.invocations:
@@ -281,7 +311,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
-        self.assertEqual('heart-beat-failure', invocation['diagnose'])
+        self.assertEqual(Constants.HEART_BEAT_FAILURE, invocation['diagnose'])
         self.assertEqual(
             self.get_node_instance_by_name('node').id,
             invocation['failing_node']
@@ -297,6 +327,23 @@ class TestAutohealPolicies(PoliciesTestsBase):
         test = TestAutohealPolicies.Threshold(self)
         test.breach_threshold_once()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    def test_ewma_timeless(self):
+        test = TestAutohealPolicies.EwmaTimeless(self)
+        test.swinging_threshold_breach()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self.wait_for_invocations(self.deployment.id, 1)
+
+    def test_ewma_timeless_doesnt_get_triggered_unnecessarily(self):
+        test = TestAutohealPolicies.EwmaTimeless(self)
+        test.breach_threshold_once()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    def test_ewma_stable_rise(self):
+        test = TestAutohealPolicies.EwmaTimeless(self)
+        test.slowly_rise_metric()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self.wait_for_invocations(self.deployment.id, 1)
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
@@ -321,7 +368,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
-        self.assertEqual('heart-beat-failure', invocation['diagnose'])
+        self.assertEqual(Constants.HEART_BEAT_FAILURE, invocation['diagnose'])
         self.assertEqual(
             self.get_node_instance_by_name('node_about_to_fail').id,
             invocation['failing_node']

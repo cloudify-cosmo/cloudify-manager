@@ -32,6 +32,7 @@ def create(ctx, policy_types, policy_triggers, groups, config_template):
             }
             template_vars = policy['properties']
             template_vars['_metadata'] = metadata
+            template_vars['constants'] = Constants
             data = template.render(**template_vars)
             streams.append({
                 'data': data,

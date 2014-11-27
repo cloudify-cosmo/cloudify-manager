@@ -1,13 +1,9 @@
 (where (service "{{service}}")
-  (let [upper-bound (parse-boolean "{{upper_bound}}")
-        inequality (if upper-bound >= <=)
-        downstream (sdo (changed-state {:init "ok"}
-                          (where (state "threshold_breached")
-                            process-policy-triggers))
-                        index)]
+  (letfn [(inequality [metric]
+            ((autohealing/inequality "{{upper_bound}}") metric {{threshold}}))]
     (stable {{stability_time}}
-      (fn [event] (inequality (:metric event) {{threshold}}))
-      (where (inequality metric {{threshold}})
-        (with :state "threshold_breached" downstream)
+      (fn [event] (inequality (:metric event)))
+      (where (inequality metric)
+        (with :state "{{constants.TRIGGERING_STATE}}" downstream)
         (else
-          (with :state "ok" downstream))))))
+          (with :state "{{constants.STABLE_STATE}}" downstream))))))

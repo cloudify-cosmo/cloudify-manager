@@ -242,6 +242,7 @@ policy_types:
         properties:
             service:
                 description: The service name
+                default: service
             threshold:
                 description: The metric threshold value
             upper_bound:
@@ -259,7 +260,32 @@ policy_types:
         source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
 
     cloudify.policies.types.host_failure:
+        properties:
+            service:
+                description: The service name
+                default: service
         source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/host_failure.clj
+
+    cloudify.policies.types.ewma_stabilized:
+        properties:
+            service:
+                description: The service name
+                default: service
+            threshold:
+                description: The metric threshold value
+            upper_bound:
+                description: |
+                    boolean value for describing the semantics of the threshold.
+                    if 'true': metrics whose value if bigger then the threshold
+                    will cause the triggers to be processed. if 'false': metrics
+                    with values lower then the threshold will do so.
+                default: true
+            ewma_timeless_r:
+                description: |
+                    r is the ratio between successive events. The smaller it is the
+                    smaller impact has the latest event
+                default: 0.5
+        source: file://resources/rest-service/cloudify/policies/ewma_stabilized.clj
 
 ##################################################################################
 # Policy triggers definitions

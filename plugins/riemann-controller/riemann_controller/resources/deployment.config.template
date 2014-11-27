@@ -43,8 +43,13 @@
         (publish-log* "{{ctx.blueprint.id}}"
                       "{{ctx.deployment.id}}"
                       "{{stream.metadata.group}}"
-                      "{{stream.metadata.policy}}")]
+                      "{{stream.metadata.policy}}")
+      downstream
+        (autohealing/downstream* index
+                                 process-policy-triggers
+                                 "{{constants.STABLE_STATE}}"
+                                 "{{constants.TRIGGERING_STATE}}")]
 (where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
-(exception-stream publish-policy-error
-{{stream.data}})))
-{% endfor %}))
+   (exception-stream publish-policy-error
+      {{stream.data}}
+))){% endfor %}))
