@@ -44,9 +44,10 @@ def setup_app():
 
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
+
     additional_log_handlers = [
         RotatingFileHandler(
-            '/home/ubuntu/cloudify-rest-service.log',
+            config.instance().rest_service_log_path,
             maxBytes=1024*1024*100,
             backupCount=20)
     ]
@@ -169,6 +170,9 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     if 'file_server_resources_uri' in yaml_conf:
         obj_conf.file_server_resources_uri = \
             yaml_conf['file_server_resources_uri']
+    if 'rest_service_log_path' in yaml_conf:
+        obj_conf.rest_service_log_path = \
+            yaml_conf['rest_service_log_path']
 
 app = setup_app()
 

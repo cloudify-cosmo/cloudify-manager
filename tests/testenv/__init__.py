@@ -189,6 +189,8 @@ class TestEnvironment(object):
         )
         os.makedirs(self.plugins_storage_dir)
         self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
+        self.rest_service_log_path = path.join(
+            self.test_working_dir, 'cloudify-rest-service.log')
 
     def create(self):
 
@@ -270,6 +272,7 @@ class TestEnvironment(object):
             FILE_SERVER_BLUEPRINTS_FOLDER,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
             FILE_SERVER_RESOURCES_URI,
+            self.rest_service_log_path,
             self.test_working_dir)
         self.manager_rest_process.start()
 
