@@ -121,7 +121,7 @@ class marshal_with(object):
 
 def abort_error(error):
 
-    app.logger.warn('{0}: {1}'.format(type(error).__name__, str(error)))
+    app.logger.info('{0}: {1}'.format(type(error).__name__, str(error)))
 
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)

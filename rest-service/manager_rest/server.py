@@ -17,7 +17,6 @@ import StringIO
 __author__ = 'dan'
 
 import logging
-import sys
 import functools
 import traceback
 import os
@@ -57,7 +56,6 @@ def setup_app():
                  logger_level=logging.DEBUG,
                  handlers=additional_log_handlers,
                  remove_existing_handlers=False)
-
 
     app.before_request(log_request)
     app.after_request(log_response)
@@ -111,32 +109,36 @@ def log_request():
         '\nRequest:\n'
         '\tpath: {0}\n'
         '\thttp method: {1}\n'
-        '\theaders: {2}\n'
-        '\tjson data: {3}\n'
-        '\tquery string data: {4}\n'
-        '\tform data: {5}'.format(
+        '\tjson data: {2}\n'
+        '\tquery string data: {3}\n'
+        '\tform data: {4}\n'
+        '\theaders: {5}'.format(
             request.path,  # includes "path parameters"
             request.method,
-            request.headers,
             json_data,
             args_data,
-            form_data))
+            form_data,
+            headers_pretty_print(request.headers)))
 
 
 def log_response(response):
     # content-type and content-length are already included in headers
+    # not logging response.data as volumes are massive
 
     app.logger.debug(
         '\nResponse:\n'
         '\tstatus: {0}\n'
-        '\theaders: {1}\n'
-        # '\tdata: {2}\n'
+        '\theaders: {1}'
         .format(
             response.status,
-            response.headers,
-            # response.data
+            headers_pretty_print(response.headers),
         ))
     return response
+
+
+def headers_pretty_print(headers):
+    pp_headers = ''.join(['\t\t{0}: {1}\n'.format(k, v) for k, v in headers])
+    return '\n' + pp_headers
 
 
 def reset_state(configuration=None):
