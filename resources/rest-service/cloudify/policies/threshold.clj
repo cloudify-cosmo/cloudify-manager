@@ -1,4 +1,5 @@
-(where (service "{{service}}")
+(where (and (service "{{service}}")
+            (not (expired? event)))
   (letfn [(inequality [metric]
             ((autohealing/inequality "{{upper_bound}}") metric {{threshold}}))]
     (stable {{stability_time}}

@@ -247,7 +247,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         def slowly_rise_metric(self):
             self.test_case.launch_deployment(self.EWMA_YAML)
-            metric = 0
+            metric = self.VALID_METRIC
             while metric < self.RISKY_METRIC:
                 self.test_case.publish(metric)
                 metric += 10
