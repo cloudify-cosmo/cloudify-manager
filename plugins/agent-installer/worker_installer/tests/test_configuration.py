@@ -21,7 +21,6 @@ from worker_installer import init_worker_installer
 from worker_installer import DEFAULT_MIN_WORKERS, DEFAULT_MAX_WORKERS
 from worker_installer import FabricRunner
 from worker_installer.tasks import create_celery_configuration
-# from worker_installer.tasks import CELERY_INIT_PATH, CELERY_CONFIG_PATH
 from cloudify.mocks import MockCloudifyContext
 from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
@@ -241,6 +240,31 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         )
         conf = m(ctx)
         self.assertEqual(conf['min_workers'], 2)
+        self.assertEqual(conf['max_workers'], 5)
+
+        ctx = MockCloudifyContext(
+            deployment_id='test',
+            node_id=node_id,
+            runtime_properties={
+                'ip': '192.168.0.1'
+            },
+            properties={
+                'cloudify_agent': {
+                    'user': getpass.getuser(),
+                    'key': KEY_FILE_PATH,
+                    'distro': 'Ubuntu',
+                    'distro_codename': 'trusty'
+                }
+            },
+            bootstrap_context=BootstrapContext({
+                'cloudify_agent': {
+                    'min_workers': 0,
+                    'max_workers': 5,
+                    }
+            })
+        )
+        conf = m(ctx)
+        self.assertEqual(conf['min_workers'], 0)
         self.assertEqual(conf['max_workers'], 5)
 
     def test_key_from_bootstrap_context(self):

@@ -98,11 +98,11 @@ def get_machine_ip(ctx):
 
 def _prepare_and_validate_autoscale_params(ctx, config):
     if 'min_workers' not in config and\
-            ctx.bootstrap_context.cloudify_agent.min_workers:
+            ctx.bootstrap_context.cloudify_agent.min_workers is not None:
         config['min_workers'] = \
             ctx.bootstrap_context.cloudify_agent.min_workers
     if 'max_workers' not in config and\
-            ctx.bootstrap_context.cloudify_agent.max_workers:
+            ctx.bootstrap_context.cloudify_agent.max_workers is not None:
         config['max_workers'] = \
             ctx.bootstrap_context.cloudify_agent.max_workers
 
