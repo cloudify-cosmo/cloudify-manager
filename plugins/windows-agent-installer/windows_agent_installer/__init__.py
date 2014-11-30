@@ -49,9 +49,15 @@ def init_worker_installer(func):
         if not ctx:
             raise RuntimeError('CloudifyContext not found in invocation args')
 
-        # take cloudify_agent settings from the invocation input parameters,
-        # and if it's not there - take them from the static node properties
+        # take cloudify_agent settings from the invocation input parameters
         if 'cloudify_agent' in kwargs:
+            # if cloudify_agent is also configured as a node property
+            # this is ambiguous, raise an exception
+            if ctx.node.properties and 'cloudify_agent' in ctx.node.properties:
+                raise NonRecoverableError("'cloudify_agent' is configured "
+                                          "both as a node property and as an "
+                                          "invocation input parameter for "
+                                          "operation '{}'".format(ctx.operation))
             cloudify_agent = kwargs['cloudify_agent']
         else:
             if ctx.node.properties and 'cloudify_agent' in ctx.node.properties:
@@ -67,7 +73,7 @@ def init_worker_installer(func):
                 logger=ctx.logger)
             return func(*args, **kwargs)
         except ValueError as e:
-            raise NonRecoverableError('Failed instantiating WinRMRunner: {0}'
+            raise NonRecoverableError('Failed to instantiate WinRMRunner: {0}'
                                       .format(e.message))
     return wrapper
 
