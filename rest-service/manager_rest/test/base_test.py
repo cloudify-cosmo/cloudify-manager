@@ -23,7 +23,7 @@ import tempfile
 import os
 import tarfile
 
-from manager_rest import server, util, config, storage_manager
+from manager_rest import util, config, storage_manager
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
@@ -85,10 +85,25 @@ class BaseServerTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
+        self.rest_service_log = tempfile.mkstemp()[1]
         self.file_server = FileServer(self.tmpdir)
         self.file_server.start()
         storage_manager.storage_manager_module_name = \
             STORAGE_MANAGER_MODULE_NAME
+
+        # workaround for setting the rest service log path, since it's
+        # needed when 'server' module is imported.
+        # right after the import the log path is set normally like the rest
+        # of the variables (used in the reset_state)
+        tmp_conf_file = tempfile.mkstemp()[1]
+        json.dump({'rest_service_log_path': self.rest_service_log},
+                  open(tmp_conf_file, 'w'))
+        os.environ['MANAGER_REST_CONFIG_PATH'] = tmp_conf_file
+        try:
+            from manager_rest import server
+        finally:
+            del(os.environ['MANAGER_REST_CONFIG_PATH'])
+
         server.reset_state(self.create_configuration())
         util.copy_resources(config.instance().file_server_root)
         server.setup_app()
@@ -122,6 +137,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.file_server_uploaded_blueprints_folder = \
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
+        test_config.rest_service_log_path = self.rest_service_log
         return test_config
 
     def post(self, resource_path, data, query_params=None):

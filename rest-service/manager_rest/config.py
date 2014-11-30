@@ -24,6 +24,7 @@ class Config(object):
         self._file_server_blueprints_folder = None
         self._file_server_uploaded_blueprints_folder = None
         self._file_server_resources_uri = None
+        self._rest_service_log_path = None
         self._test_mode = False
 
     @property
@@ -65,6 +66,14 @@ class Config(object):
     @file_server_resources_uri.setter
     def file_server_resources_uri(self, value):
         self._file_server_resources_uri = value
+
+    @property
+    def rest_service_log_path(self):
+        return self._rest_service_log_path
+
+    @rest_service_log_path.setter
+    def rest_service_log_path(self, value):
+        self._rest_service_log_path = value
 
     @property
     def test_mode(self):

@@ -13,11 +13,49 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os import path
+import sys
+import logging
 import shutil
+from os import path
 
 
 __author__ = 'dank'
+
+
+def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,
+                 remove_existing_handlers=True):
+    """
+    :param logger_name: Name of the logger.
+    :param logger_level: Level for the logger (not for specific handler).
+    :param handlers: An optional list of handlers (formatter will be
+                     overridden); If None, only a StreamHandler for
+                     sys.stdout will be used.
+    :param remove_existing_handlers: Determines whether to remove existing
+                                     handlers before adding new ones
+    :return: A logger instance.
+    :rtype: Logger
+    """
+
+    logger = logging.getLogger(logger_name)
+
+    if remove_existing_handlers:
+        for handler in logger.handlers:
+            logger.removeHandler(handler)
+
+    if not handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(logging.DEBUG)
+        handlers = [handler]
+
+    formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
+                                      '[%(name)s] %(message)s',
+                                  datefmt='%H:%M:%S')
+    for handler in handlers:
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+
+    logger.setLevel(logger_level)
+    return logger
 
 
 def copy_resources(file_server_root, resources_path=None):
