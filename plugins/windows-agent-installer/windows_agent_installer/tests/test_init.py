@@ -17,7 +17,7 @@ import unittest
 
 from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
-from cloudify.mocks import MockCloudifyContext, MockContext
+from cloudify.mocks import MockCloudifyContext
 
 from windows_agent_installer import constants, init_worker_installer
 
@@ -47,7 +47,8 @@ class InitTest(unittest.TestCase):
     def test_cloudify_agent_set_as_property(self):
         ctx = MockCloudifyContext(
             node_id='node_id',
-            properties={'cloudify_agent': {'user': 'user', 'password': 'password'},
+            properties={'cloudify_agent': {'user': 'user',
+                                           'password': 'password'},
                         'ip': 'ip'})
         cloudify_agent = init_cloudify_agent_configuration(ctx)
 
@@ -57,9 +58,8 @@ class InitTest(unittest.TestCase):
     def test_cloudify_agent_set_as_input(self):
         ctx = MockCloudifyContext(node_id='node_id', properties={'ip': 'ip'})
         cloudify_agent = init_cloudify_agent_configuration(
-            ctx, cloudify_agent=
-            {'user': 'user',
-             'password': 'password'})
+            ctx, cloudify_agent={'user': 'user',
+                                 'password': 'password'})
 
         self.assertEqual(cloudify_agent['user'], 'user')
         self.assertEqual(cloudify_agent['password'], 'password')
