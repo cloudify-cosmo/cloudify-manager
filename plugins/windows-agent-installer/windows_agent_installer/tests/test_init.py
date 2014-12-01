@@ -18,8 +18,10 @@ import unittest
 from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
+from mock import patch, MagicMock
 
 from windows_agent_installer import constants, init_worker_installer
+from windows_agent_installer.winrm_runner import WinRMRunner
 
 
 @init_worker_installer
@@ -48,20 +50,20 @@ class InitTest(unittest.TestCase):
 
         try:
             from windows_agent_installer import winrm_runner
-            real_test_connectivity = winrm_runner.test_connectivity
+            real_test_connectivity = winrm_runner.WinRMRunner.test_connectivity
 
-            def mock_test_connectivity(a, b):
+            def mock_test_connectivity(self):
                 pass
-            winrm_runner.test_connectivity = mock_test_connectivity
 
+            winrm_runner.WinRMRunner.test_connectivity = mock_test_connectivity
             ctx = MockCloudifyContext(
                 node_id='node_id',
                 properties={'cloudify_agent': {'user': 'user',
-                                               'password': 'password'},
+                                       'password': 'password'},
                             'ip': 'ip'})
             cloudify_agent = init_cloudify_agent_configuration(ctx)
         finally:
-            winrm_runner.test_connectivity = real_test_connectivity
+            winrm_runner.WinRMRunner.test_connectivity = real_test_connectivity
 
         self.assertEqual(cloudify_agent['user'], 'user')
         self.assertEqual(cloudify_agent['password'], 'password')
@@ -70,11 +72,11 @@ class InitTest(unittest.TestCase):
 
         try:
             from windows_agent_installer import winrm_runner
-            real_test_connectivity = winrm_runner.test_connectivity
+            real_test_connectivity = winrm_runner.WinRMRunner.test_connectivity
 
-            def mock_test_connectivity(a, b):
+            def mock_test_connectivity(self):
                 pass
-            winrm_runner.test_connectivity = mock_test_connectivity
+            winrm_runner.WinRMRunner.test_connectivity = mock_test_connectivity
 
             ctx = MockCloudifyContext(node_id='node_id',
                                       properties={'ip': 'ip'})
@@ -82,7 +84,7 @@ class InitTest(unittest.TestCase):
                 ctx, cloudify_agent={'user': 'user',
                                      'password': 'password'})
         finally:
-            winrm_runner.test_connectivity = real_test_connectivity
+            winrm_runner.WinRMRunner.test_connectivity = real_test_connectivity
 
         self.assertEqual(cloudify_agent['user'], 'user')
         self.assertEqual(cloudify_agent['password'], 'password')
