@@ -64,7 +64,7 @@ def init_worker_installer(func):
         try:
             if not (agent_config.get('distro') and
                     agent_config.get('distro_codename')):
-                distro_info = json.loads(get_machine_distro(runner))
+                distro_info = get_machine_distro(runner)
                 if not agent_config.get('distro'):
                     agent_config['distro'] = distro_info[0]
                 if not agent_config.get('distro_codename'):
@@ -87,7 +87,8 @@ def get_machine_distro(runner):
     stdout = runner.run('python -c "import platform, json, sys; '
                         'sys.stdout.write(\'DISTROOPEN{0}DISTROCLOSE\\n\''
                         '.format(json.dumps(platform.dist())))"')
-    return stdout[stdout.find("DISTROOPEN") + 10:stdout.find("DISTROCLOSE")]
+    jsonres = stdout[stdout.find("DISTROOPEN") + 10:stdout.find("DISTROCLOSE")]
+    return json.loads(jsonres)
 
 
 def get_machine_ip(ctx):
