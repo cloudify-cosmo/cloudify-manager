@@ -71,6 +71,7 @@ def init_worker_installer(func):
                     agent_config['distro_codename'] = distro_info[2]
             return func(*args, **kwargs)
         finally:
+            # Fixes CFY-1741 (clear fabric connection cache)
             runner.close()
     return wrapper
 
