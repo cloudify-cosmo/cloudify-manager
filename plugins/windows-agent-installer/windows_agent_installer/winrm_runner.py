@@ -50,6 +50,7 @@ class WinRMRunner(object):
 
     def __init__(self,
                  session_config,
+                 validate_connection=True,
                  logger=None):
 
         logger = logger or setup_default_logger('WinRMRunner')
@@ -63,6 +64,18 @@ class WinRMRunner(object):
         self.session_config = session_config
         self.session = self._create_session()
         self.logger = logger
+
+        if validate_connection:
+            self.test_connectivity()
+
+    def test_connectivity(self):
+        try:
+            self.logger.info('Validating WinRM connectivity...')
+            self.ping(quiet=True)
+            self.logger.info('connected successfully')
+        except Exception as e:
+            self.logger.warning('WinRM connection failed: {0}'.format(str(e)))
+            raise
 
     def _create_session(self):
 
@@ -107,11 +120,13 @@ class WinRMRunner(object):
                     raise error
                 self.logger.error(error)
 
-        self.logger.info(
-            '[{0}] run: {1}'.format(
-                self.session_config['host'],
-                command))
-        response = self.session.run_cmd(command)
+        if not quiet:
+            self.logger.info(
+                '[{0}] run: {1}'.format(
+                    self.session_config['host'],
+                    command))
+
+        response = self.session. run_cmd(command)
         _chk(response)
         return WinRMCommandExecutionResponse(
             command=command,
@@ -119,7 +134,7 @@ class WinRMRunner(object):
             std_out=response.std_out,
             return_code=response.status_code)
 
-    def ping(self):
+    def ping(self, quiet=False):
 
         """
         Tests that the winrm connection is working.
@@ -128,7 +143,7 @@ class WinRMRunner(object):
         :raise WinRMCommandExecutionException.
         """
 
-        return self.run('echo')
+        return self.run('echo', quiet=quiet)
 
     def download(self, url, output_path):
 
