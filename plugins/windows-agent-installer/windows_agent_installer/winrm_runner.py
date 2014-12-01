@@ -70,11 +70,11 @@ class WinRMRunner(object):
 
     def test_connectivity(self):
         try:
-            logger.info('Validating WinRM connectivity...')
+            self.logger.info('Validating WinRM connectivity...')
             self.ping(quiet=True)
-            logger.info('connected successfully')
+            self.logger.info('connected successfully')
         except Exception as e:
-            logger.warning('WinRM connection failed: {0}'.format(str(e)))
+            self.logger.warning('WinRM connection failed: {0}'.format(str(e)))
             raise
 
     def _create_session(self):
