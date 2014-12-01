@@ -57,7 +57,7 @@ def init_worker_installer(func):
                 raise NonRecoverableError("'cloudify_agent' is configured "
                                           "both as a node property and as an "
                                           "invocation input parameter for "
-                                          "operation '{}'"
+                                          "operation '{0}'"
                                           .format(ctx.operation))
             cloudify_agent = kwargs['cloudify_agent']
         else:

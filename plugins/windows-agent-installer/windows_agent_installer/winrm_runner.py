@@ -46,6 +46,16 @@ def validate(session_config):
         raise ValueError('Missing password in session_config')
 
 
+def test_connectivity(ping, logger):
+    try:
+        logger.info('Validating WinRM connectivity...')
+        ping(quiet=True)
+        logger.info('connected successfully')
+    except Exception as e:
+        logger.warning('WinRM connection failed: {0}'.format(str(e)))
+        raise
+
+
 class WinRMRunner(object):
 
     def __init__(self,
@@ -66,14 +76,7 @@ class WinRMRunner(object):
         self.logger = logger
 
         if validate_connection:
-            # test WinRM connectivity
-            try:
-                logger.info('Validating WinRM connectivity...')
-                self.ping(quiet=True)
-                logger.info('connected successfully')
-            except Exception as e:
-                logger.info('WinRM connection failed: {0}'.format(str(e)))
-                raise
+            test_connectivity(self.ping, logger)
 
     def _create_session(self):
 
