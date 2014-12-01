@@ -19,10 +19,79 @@ from cloudify.context import BootstrapContext
 from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 
-from windows_agent_installer import constants
+from windows_agent_installer import constants, init_worker_installer
+
+
+@init_worker_installer
+def init_cloudify_agent_configuration(*args, **kwargs):
+    if 'cloudify_agent' in kwargs:
+        return kwargs['cloudify_agent']
+    else:
+        raise ValueError("'cloudify_agent' not set by init_worker_installer")
 
 
 class InitTest(unittest.TestCase):
+
+    def test_cloudify_agent_config_duplication(self):
+        ctx = MockCloudifyContext(node_id='node_id',
+                                  properties={'cloudify_agent': {},
+                                              'ip': 'dummy_ip'},
+                                  operation='create')
+        expected_message = "'cloudify_agent' is configured both as a node " \
+                           "property and as an invocation input parameter" \
+                           " for operation 'create'"
+        self.assertRaisesRegexp(NonRecoverableError, expected_message,
+                                init_cloudify_agent_configuration, ctx,
+                                cloudify_agent={})
+
+    def test_cloudify_agent_set_as_property(self):
+
+        try:
+            from windows_agent_installer import winrm_runner
+            real_test_connectivity = winrm_runner.WinRMRunner.test_connectivity
+
+            def mock_test_connectivity(self):
+                pass
+
+            winrm_runner.WinRMRunner.test_connectivity = mock_test_connectivity
+            ctx = MockCloudifyContext(
+                node_id='node_id',
+                properties={'cloudify_agent': {'user': 'user',
+                                               'password': 'password'},
+                            'ip': 'ip'})
+            cloudify_agent = init_cloudify_agent_configuration(ctx)
+        finally:
+            winrm_runner.WinRMRunner.test_connectivity = real_test_connectivity
+
+        self.assertEqual(cloudify_agent['user'], 'user')
+        self.assertEqual(cloudify_agent['password'], 'password')
+
+    def test_cloudify_agent_set_as_input(self):
+
+        try:
+            from windows_agent_installer import winrm_runner
+            real_test_connectivity = winrm_runner.WinRMRunner.test_connectivity
+
+            def mock_test_connectivity(self):
+                pass
+            winrm_runner.WinRMRunner.test_connectivity = mock_test_connectivity
+
+            ctx = MockCloudifyContext(node_id='node_id',
+                                      properties={'ip': 'ip'})
+            cloudify_agent = init_cloudify_agent_configuration(
+                ctx, cloudify_agent={'user': 'user',
+                                     'password': 'password'})
+        finally:
+            winrm_runner.WinRMRunner.test_connectivity = real_test_connectivity
+
+        self.assertEqual(cloudify_agent['user'], 'user')
+        self.assertEqual(cloudify_agent['password'], 'password')
+
+    def test_cloudify_agent_not_set(self):
+        ctx = MockCloudifyContext(node_id='node_id', properties={'ip': 'ip'})
+        expected_message = "Missing user in session_config"
+        self.assertRaisesRegexp(NonRecoverableError, expected_message,
+                                init_cloudify_agent_configuration, ctx)
 
     def test_set_service_configuration_parameters_with_empty_service(self):  # NOQA
 
