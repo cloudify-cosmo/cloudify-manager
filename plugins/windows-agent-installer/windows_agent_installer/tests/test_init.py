@@ -209,6 +209,22 @@ class InitTest(unittest.TestCase):
         self.assertEqual(cloudify_agent[constants.MAX_WORKERS_KEY], 10)
         self.assertEqual(cloudify_agent[constants.MIN_WORKERS_KEY], 5)
 
+    def test_set_autoscale_parameters_with_bootstrap_context_zero_min(self):  # NOQA
+
+        from windows_agent_installer import set_autoscale_parameters
+
+        cloudify_agent = {}
+        bootstrap_context = BootstrapContext({'cloudify_agent': {
+            constants.MAX_WORKERS_KEY: 10,
+            constants.MIN_WORKERS_KEY: 0
+        }})
+        ctx = MockCloudifyContext(bootstrap_context=bootstrap_context)
+        set_autoscale_parameters(
+            ctx.bootstrap_context,
+            cloudify_agent)
+        self.assertEqual(cloudify_agent[constants.MAX_WORKERS_KEY], 10)
+        self.assertEqual(cloudify_agent[constants.MIN_WORKERS_KEY], 0)
+
     def test_set_autoscale_parameters_with_bootstrap_context_cloudify_agent(self):  # NOQA
 
         from windows_agent_installer import set_autoscale_parameters
