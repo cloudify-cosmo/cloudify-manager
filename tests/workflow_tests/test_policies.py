@@ -73,7 +73,12 @@ class PoliciesTestsBase(TestCase):
             node_name=node_name,
             node_id=node_id,
             metric=metric,
-            service='{}.{}.{}.{}'.format(deployment_id, service, node_name, node_id),
+            service='{}.{}.{}.{}'.format(
+                deployment_id,
+                service,
+                node_name,
+                node_id
+            ),
             ttl=ttl
         )
 
@@ -200,29 +205,42 @@ class TestAutohealPolicies(PoliciesTestsBase):
         VALID_METRIC = 10
         RISKY_METRIC = 100
         LONG_TIME = 3
+        MAIN_NODE = 'node'
+        SECOND_NODE = 'node2'
         THRESHOLD_YAML = 'dsl/stabilized_monitoring.yaml'
 
-        def __init__(self, test_case):
+        def __init__(self, test_case, yaml=THRESHOLD_YAML):
             self.test_case = test_case
+            self.yaml = yaml
 
-        def _publish_and_wait(self, metric):
-            self.test_case.publish(metric=metric)
-            time.sleep(1)
+        def _publish_and_wait(self, metric, node=MAIN_NODE, t=1):
+            self.test_case.publish(metric=metric, node_name=node)
+            time.sleep(t)
 
         def significantly_breach_threshold(self):
-            self.test_case.launch_deployment(self.THRESHOLD_YAML)
+            self.test_case.launch_deployment(self.yaml)
             for _ in range(self.LONG_TIME):
                 self._publish_and_wait(self.VALID_METRIC)
             for _ in range(self.LONG_TIME):
                 self._publish_and_wait(self.RISKY_METRIC)
 
         def breach_threshold_once(self):
-            self.test_case.launch_deployment(self.THRESHOLD_YAML)
+            self.test_case.launch_deployment(self.yaml)
             for _ in range(self.LONG_TIME):
                 self._publish_and_wait(self.VALID_METRIC)
             self._publish_and_wait(self.RISKY_METRIC)
             for _ in range(self.LONG_TIME):
                 self._publish_and_wait(self.VALID_METRIC)
+
+        def breach_threshold_on_one_node_from_two(self):
+            self.test_case.launch_deployment(self.yaml, 2)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.VALID_METRIC, t=0)
+                self._publish_and_wait(self.VALID_METRIC, self.SECOND_NODE)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(metric=self.RISKY_METRIC, node=self.SECOND_NODE, t=0)
+                self._publish_and_wait(metric=self.VALID_METRIC)
+            self._publish_and_wait(self.VALID_METRIC, self.SECOND_NODE)
 
     class EwmaTimeless(object):
         VALID_METRIC = 50
@@ -329,6 +347,14 @@ class TestAutohealPolicies(PoliciesTestsBase):
         test = TestAutohealPolicies.Threshold(self)
         test.breach_threshold_once()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    def test_threshold_stabilized_two_nodes(self):
+        test = TestAutohealPolicies.Threshold(
+            self,
+            'dsl/threshold_stabilized_two_nodes.yaml'
+        )
+        test.breach_threshold_on_one_node_from_two()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
 
     def test_ewma_timeless(self):
         test = TestAutohealPolicies.EwmaTimeless(self)

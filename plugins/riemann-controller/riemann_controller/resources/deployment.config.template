@@ -51,5 +51,10 @@
                                  "{{constants.TRIGGERING_STATE}}")]
 (where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
   (exception-stream publish-policy-error
-    {{stream.data}}
+    {%for m in stream.metadata.members%}
+      (where* (is-node-name-in "{{m}}")
+        (sdo
+          {{stream.data}}
+      ))
+    {%endfor%}
 ))){% endfor %}))
