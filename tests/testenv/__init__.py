@@ -49,6 +49,11 @@ setup_default_logger('cloudify.rest_client', logging.INFO)
 testenv_instance = None
 
 
+def riemann_cleanup(fn):
+    fn.riemann_cleanup = True
+    return fn
+
+
 class TestCase(unittest.TestCase):
 
     """
@@ -66,6 +71,11 @@ class TestCase(unittest.TestCase):
         TestEnvironment.reset_elasticsearch_data()
         TestEnvironment.stop_celery_management_worker()
         TestEnvironment.stop_all_celery_processes()
+
+        test_method = getattr(self, self._testMethodName)
+        if (hasattr(test_method, 'riemann_cleanup') and
+                test_method.riemann_cleanup is True):
+            TestEnvironment.riemann_cleanup()
 
     def get_plugin_data(self,
                         plugin_name,
@@ -362,6 +372,13 @@ class TestEnvironment(object):
     def start_celery_management_worker():
         global testenv_instance
         testenv_instance.celery_management_worker_process.start()
+
+    @staticmethod
+    def riemann_cleanup():
+        global testenv_instance
+        shutil.rmtree(TestEnvironment.riemann_workdir())
+        os.mkdir(TestEnvironment.riemann_workdir())
+        testenv_instance.riemann_process.restart()
 
     @staticmethod
     def riemann_workdir():

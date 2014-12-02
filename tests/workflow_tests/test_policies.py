@@ -18,6 +18,7 @@ from collections import namedtuple
 
 import time
 
+from testenv import riemann_cleanup
 from testenv import TestCase
 from testenv import utils
 from testenv.utils import get_resource as resource
@@ -77,6 +78,8 @@ class PoliciesTestsBase(TestCase):
 
 
 class TestPolicies(PoliciesTestsBase):
+
+    @riemann_cleanup
     def test_policies_flow(self):
         self.launch_deployment('dsl/with_policies1.yaml')
 
@@ -92,6 +95,7 @@ class TestPolicies(PoliciesTestsBase):
         )
         self.assertEqual(123, invocations[1]['metric'])
 
+    @riemann_cleanup
     def test_policies_flow_with_diamond(self):
         try:
             self.launch_deployment('dsl/with_policies_and_diamond.yaml')
@@ -107,6 +111,7 @@ class TestPolicies(PoliciesTestsBase):
                 if e.message:
                     self.logger.warning(e.message)
 
+    @riemann_cleanup
     def test_threshold_policy(self):
         self.launch_deployment('dsl/with_policies2.yaml')
 
@@ -244,6 +249,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_heart_beat_event(node_name)
         self._wait_for_event_expiration()
 
+    @riemann_cleanup
     def test_autoheal_policy_triggering(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
         self._publish_heart_beat_event()
@@ -259,6 +265,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             invocation['failing_node']
         )
 
+    @riemann_cleanup
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
 
@@ -268,6 +275,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
+    @riemann_cleanup
     def test_autoheal_policy_triggering_for_two_nodes(self):
         self.launch_deployment('dsl/simple_auto_heal_policy_two_nodes.yaml', 2)
 
@@ -288,6 +296,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             invocation['failing_node']
         )
 
+    @riemann_cleanup
     def test_autoheal_policy_nested_nodes(self):
         NODES_WITH_LIFECYCLE_OP = 3
         NODES_WITH_RELATIONSHIP_OP = 3
@@ -407,6 +416,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             )
         )
 
+    @riemann_cleanup
     def test_autoheal_policy_grandchild(self):
         NUM_OF_NODES_WITH_OP = 2
 
