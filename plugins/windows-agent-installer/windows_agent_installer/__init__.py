@@ -53,7 +53,8 @@ def init_worker_installer(func):
         if 'cloudify_agent' in kwargs:
             # if cloudify_agent is also configured as a node property
             # this is ambiguous, raise an exception
-            if ctx.node.properties and ctx.node.properties.get('cloudify_agent'):
+            if ctx.node.properties and \
+                    ctx.node.properties.get('cloudify_agent'):
                 raise NonRecoverableError("'cloudify_agent' is configured "
                                           "both as a node property and as an "
                                           "invocation input parameter for "
