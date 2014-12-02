@@ -160,11 +160,11 @@ def set_service_configuration_parameters(cloudify_agent):
 
 def set_autoscale_parameters(bootstrap_context, cloudify_agent):
     if constants.MIN_WORKERS_KEY not in cloudify_agent and\
-       bootstrap_context.cloudify_agent.min_workers:
+       bootstrap_context.cloudify_agent.min_workers is not None:
         cloudify_agent[constants.MIN_WORKERS_KEY] =\
             bootstrap_context.cloudify_agent.min_workers
     if constants.MAX_WORKERS_KEY not in cloudify_agent and\
-       bootstrap_context.cloudify_agent.max_workers:
+       bootstrap_context.cloudify_agent.max_workers is not None:
         cloudify_agent[constants.MAX_WORKERS_KEY] =\
             bootstrap_context.cloudify_agent.max_workers
 
