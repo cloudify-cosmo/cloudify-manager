@@ -34,7 +34,9 @@ class InitTest(unittest.TestCase):
 
     def test_cloudify_agent_config_duplication(self):
         ctx = MockCloudifyContext(node_id='node_id',
-                                  properties={'cloudify_agent': {},
+                                  properties={'cloudify_agent':
+                                              {'user': 'prop_user',
+                                               'password': 'prop_password'},
                                               'ip': 'dummy_ip'},
                                   operation='create')
         expected_message = "'cloudify_agent' is configured both as a node " \
@@ -42,7 +44,8 @@ class InitTest(unittest.TestCase):
                            " for operation 'create'"
         self.assertRaisesRegexp(NonRecoverableError, expected_message,
                                 init_cloudify_agent_configuration, ctx,
-                                cloudify_agent={})
+                                cloudify_agent={'user': 'input_user',
+                                                'password': 'input_password'})
 
     def test_cloudify_agent_set_as_property(self):
 
@@ -56,15 +59,15 @@ class InitTest(unittest.TestCase):
             winrm_runner.WinRMRunner.test_connectivity = mock_test_connectivity
             ctx = MockCloudifyContext(
                 node_id='node_id',
-                properties={'cloudify_agent': {'user': 'user',
-                                               'password': 'password'},
+                properties={'cloudify_agent': {'user': 'prop_user',
+                                               'password': 'prop_password'},
                             'ip': 'ip'})
             cloudify_agent = init_cloudify_agent_configuration(ctx)
         finally:
             winrm_runner.WinRMRunner.test_connectivity = real_test_connectivity
 
-        self.assertEqual(cloudify_agent['user'], 'user')
-        self.assertEqual(cloudify_agent['password'], 'password')
+        self.assertEqual(cloudify_agent['user'], 'prop_user')
+        self.assertEqual(cloudify_agent['password'], 'prop_password')
 
     def test_cloudify_agent_set_as_input(self):
 
@@ -79,13 +82,13 @@ class InitTest(unittest.TestCase):
             ctx = MockCloudifyContext(node_id='node_id',
                                       properties={'ip': 'ip'})
             cloudify_agent = init_cloudify_agent_configuration(
-                ctx, cloudify_agent={'user': 'user',
-                                     'password': 'password'})
+                ctx, cloudify_agent={'user': 'input_user',
+                                     'password': 'input_password'})
         finally:
             winrm_runner.WinRMRunner.test_connectivity = real_test_connectivity
 
-        self.assertEqual(cloudify_agent['user'], 'user')
-        self.assertEqual(cloudify_agent['password'], 'password')
+        self.assertEqual(cloudify_agent['user'], 'input_user')
+        self.assertEqual(cloudify_agent['password'], 'input_password')
 
     def test_cloudify_agent_not_set(self):
         ctx = MockCloudifyContext(node_id='node_id', properties={'ip': 'ip'})
