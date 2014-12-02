@@ -66,12 +66,14 @@ class PoliciesTestsBase(TestCase):
         return invocations
 
     def publish(self, metric, ttl=60, node_name='node', service='service'):
+        node_id = self.get_node_instance_by_name(node_name).id
+        deployment_id = self.deployment.id
         self.publish_riemann_event(
-            self.deployment.id,
+            deployment_id,
             node_name=node_name,
-            node_id=self.get_node_instance_by_name(node_name).id,
+            node_id=node_id,
             metric=metric,
-            service=service,
+            service='{}.{}.{}.{}'.format(deployment_id, service, node_name, node_id),
             ttl=ttl
         )
 

@@ -1,4 +1,4 @@
-(where* (is-service-name-in {%for s in service%} "{{s}}" {%endfor%})
+(where* (is-service-name-contained {%for s in service%} "{{s}}" {%endfor%})
   (where* expired?
           (fn [event]
             ((with {:failing_node (:node_id event)
