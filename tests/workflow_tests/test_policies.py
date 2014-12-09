@@ -243,7 +243,11 @@ class TestAutohealPolicies(PoliciesTestsBase):
                 self._publish_and_wait(self.VALID_METRIC, t=0)
                 self._publish_and_wait(self.VALID_METRIC, self.SECOND_NODE)
             for _ in range(self.LONG_TIME):
-                self._publish_and_wait(metric=self.RISKY_METRIC, node=self.SECOND_NODE, t=0)
+                self._publish_and_wait(
+                    metric=self.RISKY_METRIC,
+                    node=self.SECOND_NODE,
+                    t=0
+                )
                 self._publish_and_wait(metric=self.VALID_METRIC)
             self._publish_and_wait(self.VALID_METRIC, self.SECOND_NODE)
 
