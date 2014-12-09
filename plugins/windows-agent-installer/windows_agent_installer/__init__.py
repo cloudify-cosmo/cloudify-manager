@@ -48,10 +48,25 @@ def init_worker_installer(func):
                                         kwargs.values() + list(args))
         if not ctx:
             raise RuntimeError('CloudifyContext not found in invocation args')
-        if ctx.node.properties and 'cloudify_agent' in ctx.node.properties:
-            cloudify_agent = ctx.node.properties['cloudify_agent']
+
+        # take cloudify_agent settings from the invocation input parameters
+        if 'cloudify_agent' in kwargs:
+            # if cloudify_agent is also configured as a node property
+            # this is ambiguous, raise an exception
+            if ctx.node.properties and \
+                    ctx.node.properties.get('cloudify_agent'):
+                raise NonRecoverableError("'cloudify_agent' is configured "
+                                          "both as a node property and as an "
+                                          "invocation input parameter for "
+                                          "operation '{0}'"
+                                          .format(ctx.operation))
+            cloudify_agent = kwargs['cloudify_agent']
         else:
-            cloudify_agent = {}
+            if ctx.node.properties and 'cloudify_agent' in ctx.node.properties:
+                cloudify_agent = ctx.node.properties['cloudify_agent']
+            else:
+                cloudify_agent = {}
+
         prepare_configuration(ctx, cloudify_agent)
         kwargs['cloudify_agent'] = cloudify_agent
         try:
@@ -60,7 +75,7 @@ def init_worker_installer(func):
                 logger=ctx.logger)
             return func(*args, **kwargs)
         except ValueError as e:
-            raise NonRecoverableError('Failed instantiating WinRMRunner: {0}'
+            raise NonRecoverableError('Failed to instantiate WinRMRunner: {0}'
                                       .format(e.message))
     return wrapper
 
@@ -145,11 +160,11 @@ def set_service_configuration_parameters(cloudify_agent):
 
 def set_autoscale_parameters(bootstrap_context, cloudify_agent):
     if constants.MIN_WORKERS_KEY not in cloudify_agent and\
-       bootstrap_context.cloudify_agent.min_workers:
+       bootstrap_context.cloudify_agent.min_workers is not None:
         cloudify_agent[constants.MIN_WORKERS_KEY] =\
             bootstrap_context.cloudify_agent.min_workers
     if constants.MAX_WORKERS_KEY not in cloudify_agent and\
-       bootstrap_context.cloudify_agent.max_workers:
+       bootstrap_context.cloudify_agent.max_workers is not None:
         cloudify_agent[constants.MAX_WORKERS_KEY] =\
             bootstrap_context.cloudify_agent.max_workers
 

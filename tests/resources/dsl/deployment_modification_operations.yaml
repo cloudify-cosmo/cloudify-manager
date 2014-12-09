@@ -1,0 +1,29 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations.yaml
+    - plugins/mock_workflows.yaml
+
+node_templates:
+    compute:
+        type: cloudify.nodes.Compute
+        properties:
+            install_agent: false
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.mock_create
+    db:
+        type: cloudify.nodes.DBMS
+        relationships:
+            - target: compute
+              type: cloudify.relationships.contained_in
+              source_interfaces:
+                  test:
+                      op: testmockoperations.testmockoperations.tasks.mock_preconfigure
+              target_interfaces:
+                  test:
+                      op: testmockoperations.testmockoperations.tasks.mock_postconfigure
+
+workflows:
+    deployment_modification: mock_workflows.mock_workflows.workflows.deployment_modification_operations

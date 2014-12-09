@@ -49,6 +49,11 @@ setup_default_logger('cloudify.rest_client', logging.INFO)
 testenv_instance = None
 
 
+def riemann_cleanup(fn):
+    fn.riemann_cleanup = True
+    return fn
+
+
 class TestCase(unittest.TestCase):
 
     """
@@ -66,6 +71,11 @@ class TestCase(unittest.TestCase):
         TestEnvironment.reset_elasticsearch_data()
         TestEnvironment.stop_celery_management_worker()
         TestEnvironment.stop_all_celery_processes()
+
+        test_method = getattr(self, self._testMethodName)
+        if (hasattr(test_method, 'riemann_cleanup') and
+                test_method.riemann_cleanup is True):
+            TestEnvironment.riemann_cleanup()
 
     def get_plugin_data(self,
                         plugin_name,
@@ -189,6 +199,8 @@ class TestEnvironment(object):
         )
         os.makedirs(self.plugins_storage_dir)
         self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
+        self.rest_service_log_path = path.join(
+            self.test_working_dir, 'cloudify-rest-service.log')
 
     def create(self):
 
@@ -270,6 +282,7 @@ class TestEnvironment(object):
             FILE_SERVER_BLUEPRINTS_FOLDER,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
             FILE_SERVER_RESOURCES_URI,
+            self.rest_service_log_path,
             self.test_working_dir)
         self.manager_rest_process.start()
 
@@ -344,15 +357,28 @@ class TestEnvironment(object):
         global testenv_instance
         testenv_instance.celery_management_worker_process.stop()
 
+    @staticmethod
+    def read_celery_management_logs():
+        global testenv_instance
+        process = testenv_instance.celery_management_worker_process
+        return process.try_read_logfile()
+
     @classmethod
     def stop_all_celery_processes(cls):
         logger.info('Shutting down all celery processes')
-        os.system("pkill -f 'celery worker'")
+        os.system("pkill -9 -f 'celery worker'")
 
     @staticmethod
     def start_celery_management_worker():
         global testenv_instance
         testenv_instance.celery_management_worker_process.start()
+
+    @staticmethod
+    def riemann_cleanup():
+        global testenv_instance
+        shutil.rmtree(TestEnvironment.riemann_workdir())
+        os.mkdir(TestEnvironment.riemann_workdir())
+        testenv_instance.riemann_process.restart()
 
     @staticmethod
     def riemann_workdir():

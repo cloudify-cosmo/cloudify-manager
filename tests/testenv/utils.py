@@ -149,11 +149,14 @@ def verify_deployment_environment_creation_complete(deployment_id):
     if not execs \
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
+        from testenv import TestEnvironment  # avoid cyclic import
+        logs = TestEnvironment.read_celery_management_logs()
+        logs = logs[len(logs) - 100000:]
         raise RuntimeError(
             "Expected a single execution for workflow "
             "'create_deployment_environment' with status 'terminated'; "
-            "Found these executions instead: {0}".format(
-                json.dumps(execs, indent=2)))
+            "Found these executions instead: {0}.\nCelery log:\n{1}".format(
+                json.dumps(execs, indent=2), logs))
 
 
 def undeploy_application(deployment_id,

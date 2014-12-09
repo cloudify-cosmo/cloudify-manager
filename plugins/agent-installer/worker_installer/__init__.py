@@ -58,16 +58,21 @@ def init_worker_installer(func):
             agent_config = kwargs.get('cloudify_agent', {})
         prepare_configuration(ctx, agent_config)
         kwargs['agent_config'] = agent_config
-        kwargs['runner'] = FabricRunner(ctx, agent_config)
+        runner = FabricRunner(ctx, agent_config)
+        kwargs['runner'] = runner
 
-        if not agent_config.get('distro') or \
-                not agent_config.get('distro_codename'):
-            distro_info = json.loads(get_machine_distro(kwargs['runner']))
-            if not agent_config.get('distro'):
-                kwargs['agent_config']['distro'] = distro_info[0]
-            if not agent_config.get('distro_codename'):
-                kwargs['agent_config']['distro_codename'] = distro_info[2]
-        return func(*args, **kwargs)
+        try:
+            if not (agent_config.get('distro') and
+                    agent_config.get('distro_codename')):
+                distro_info = get_machine_distro(runner)
+                if not agent_config.get('distro'):
+                    agent_config['distro'] = distro_info[0]
+                if not agent_config.get('distro_codename'):
+                    agent_config['distro_codename'] = distro_info[2]
+            return func(*args, **kwargs)
+        finally:
+            # Fixes CFY-1741 (clear fabric connection cache)
+            runner.close()
     return wrapper
 
 
@@ -83,7 +88,8 @@ def get_machine_distro(runner):
     stdout = runner.run('python -c "import platform, json, sys; '
                         'sys.stdout.write(\'DISTROOPEN{0}DISTROCLOSE\\n\''
                         '.format(json.dumps(platform.dist())))"')
-    return stdout[stdout.find("DISTROOPEN") + 10:stdout.find("DISTROCLOSE")]
+    jsonres = stdout[stdout.find("DISTROOPEN") + 10:stdout.find("DISTROCLOSE")]
+    return json.loads(jsonres)
 
 
 def get_machine_ip(ctx):
@@ -98,11 +104,11 @@ def get_machine_ip(ctx):
 
 def _prepare_and_validate_autoscale_params(ctx, config):
     if 'min_workers' not in config and\
-            ctx.bootstrap_context.cloudify_agent.min_workers:
+            ctx.bootstrap_context.cloudify_agent.min_workers is not None:
         config['min_workers'] = \
             ctx.bootstrap_context.cloudify_agent.min_workers
     if 'max_workers' not in config and\
-            ctx.bootstrap_context.cloudify_agent.max_workers:
+            ctx.bootstrap_context.cloudify_agent.max_workers is not None:
         config['max_workers'] = \
             ctx.bootstrap_context.cloudify_agent.max_workers
 

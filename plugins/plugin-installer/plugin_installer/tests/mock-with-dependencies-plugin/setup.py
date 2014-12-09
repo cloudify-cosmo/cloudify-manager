@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='mock-with-dependencies-plugin',
-    version='3.1rc2',
+    version='3.1',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['mock_with_dependencies_for_test'],

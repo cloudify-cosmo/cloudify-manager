@@ -18,6 +18,7 @@ import os
 import tempfile
 from StringIO import StringIO
 
+import fabric.network
 from fabric.api import run, put, get, local, sudo
 from fabric.context_managers import settings
 from fabric.contrib.files import exists
@@ -146,6 +147,11 @@ class FabricRunner(object):
                           disable_known_hosts=True):
                 get(file_path, output)
                 return output.getvalue()
+
+    def close(self):
+        if self.local:
+            return
+        fabric.network.disconnect_all()
 
 
 class FabricRunnerException(Exception):
