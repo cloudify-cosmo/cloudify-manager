@@ -14,6 +14,13 @@
         (processing-queue "{{ctx.deployment.id}}" {:queue-size     1000
                                                    :core-pool-size 1
                                                    :max-pool-size  4})]
+
+(def node-instances-stream {
+  {% for stream in streams%}
+    "{{stream.metadata.group}}.{{stream.metadata.policy}}" {}
+  {%endfor%}
+})
+
 (streams
 
 (default :ttl 60 index)
@@ -48,13 +55,25 @@
         (autohealing/downstream* index
                                  process-policy-triggers
                                  "{{constants.STABLE_STATE}}"
-                                 "{{constants.TRIGGERING_STATE}}")]
+                                 "{{constants.TRIGGERING_STATE}}")
+      stream_id "{{stream.metadata.group}}.{{stream.metadata.policy}}"]
+
 (where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
   (exception-stream publish-policy-error
+    (fn [event]
+      (def node-instances-stream
+        (if (contains? (node-instances-stream stream_id) (:node_id event))
+          node-instances-stream
+          (assoc node-instances-stream
+                 stream_id
+                 (assoc (node-instances-stream stream_id)
+                        (:node_id event)
+                        (sdo
+                          {{stream.data}}
+                        ))))))
     {%for m in stream.metadata.members%}
       (where* (is-node-name-in "{{m}}")
-        (sdo
-          {{stream.data}}
-      ))
+        (fn [event] (((node-instances-stream stream_id) (:node_id event)) event))
+      )
     {%endfor%}
 ))){% endfor %}))
