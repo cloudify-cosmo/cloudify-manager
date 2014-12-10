@@ -65,8 +65,10 @@ class PoliciesTestsBase(TestCase):
         )['mock_operation_invocation']
         return invocations
 
-    def publish(self, metric, ttl=60, node_name='node', service='service'):
-        node_id = self.get_node_instance_by_name(node_name).id
+    def publish(self, metric, ttl=60, node_name='node',
+                service='service', node_id=''):
+        if node_id == '':
+            node_id = self.get_node_instance_by_name(node_name).id
         deployment_id = self.deployment.id
         self.publish_riemann_event(
             deployment_id,
@@ -177,7 +179,7 @@ class TestPolicies(PoliciesTestsBase):
 
 class TestAutohealPolicies(PoliciesTestsBase):
     HEART_BEAT_METRIC = 'heart-beat'
-    EVENTS_TTL = 3  # in seconds
+    EVENTS_TTL = 4  # in seconds
     # in seconds, a kind of time buffer for messages to get delivered for sure
     OPERATIONAL_TIME_BUFFER = 1
     SIMPLE_AUTOHEAL_POLICY_YAML = 'dsl/simple_auto_heal_policy.yaml'
@@ -336,6 +338,45 @@ class TestAutohealPolicies(PoliciesTestsBase):
             self.get_node_instance_by_name('node').id,
             invocation['failing_node']
         )
+
+    def test_autoheal_policy_triggering_two_instances(self):
+        self.launch_deployment('dsl/two_instances_auto_heal.yaml', 2)
+        node_a = self.node_instances[0]
+        node_b = self.node_instances[1]
+        self.publish(
+            Constants.HEART_BEAT_FAILURE,
+            ttl=self.EVENTS_TTL,
+            node_id=node_a.id
+        )
+        for _ in range(7):
+            self.publish(Constants.HEART_BEAT_FAILURE, node_id=node_b.id)
+            time.sleep(1)
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+        self.assertEqual(
+            node_a.id,
+            invocation['failing_node']
+        )
+
+    def test_autoheal_ignoring_unwatched_services(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event()
+        for _ in range(5):
+            self._publish_heart_beat_event(service='unwatched_service')
+            time.sleep(1)
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+
+    def test_autoheal_ignoring_unwatched_services_expiration(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event(service='unwatched_service')
+        time.sleep(1)
+        for _ in range(5):
+            self._publish_heart_beat_event()
+            time.sleep(1)
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     def test_threshold_stabilized(self):
         test = TestAutohealPolicies.Threshold(self)
