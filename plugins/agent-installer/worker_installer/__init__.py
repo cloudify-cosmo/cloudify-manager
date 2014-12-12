@@ -179,6 +179,19 @@ def _set_home_dir(ctx, config):
         config['home_dir'] = home_dir
 
 
+def _get_bool(config, key, default):
+    if key not in config:
+        return default
+    strValue = str(config[key])
+    if strValue.lower() == 'true':
+        return True
+    if strValue.lower() == 'false':
+        return False
+    raise NonRecoverableError(
+        'Value for {0} property should be true/false '
+        'but is: {1}'.format(key, strValue))
+
+
 def prepare_configuration(ctx, agent_config):
     if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
@@ -218,17 +231,11 @@ def prepare_configuration(ctx, agent_config):
     agent_config['includes_file'] = '{0}/work/celeryd-includes'.format(
         agent_config['base_dir'])
 
-    disable_requiretty = True
-    if 'disable_requiretty' in agent_config:
-        disable_requiretty_value = str(
-            agent_config['disable_requiretty']).lower()
-        if disable_requiretty_value.lower() == 'true':
-            disable_requiretty = True
-        elif disable_requiretty_value.lower() == 'false':
-            disable_requiretty = False
-        else:
-            raise NonRecoverableError(
-                'Value for disable_requiretty property should be true/false '
-                'but is: {0}'.format(disable_requiretty_value))
-    agent_config['disable_requiretty'] = disable_requiretty
+    agent_config['disable_requiretty'] = _get_bool(agent_config,
+                                                   'disable_requiretty',
+                                                   True)
+    agent_config['delete_amqp_queues'] = _get_bool(agent_config,
+                                                   'delete_amqp_queues',
+                                                   True)
+
     _prepare_and_validate_autoscale_params(ctx, agent_config)

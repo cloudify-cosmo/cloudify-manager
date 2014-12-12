@@ -18,6 +18,7 @@ import time
 import os
 import jinja2
 
+from cloudify import amqp_client
 from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -123,6 +124,9 @@ def install(ctx, runner, agent_config, **kwargs):
                         "is already installed. nothing to do."
                         .format(ctx.deployment.id))
         return
+
+    if agent_config.get('delete_amqp_queues'):
+        _delete_amqp_queues(agent_config['name'])
 
     ctx.logger.debug(
         'Installing celery worker [cloudify_agent={0}]'.format(agent_config))
@@ -342,6 +346,25 @@ def restart_celery_worker(runner, agent_config):
     runner.run("sudo service celeryd-{0} restart".format(
         agent_config['name']))
     _wait_for_started(runner, agent_config)
+
+
+def _delete_amqp_queues(worker_name):
+    # FIXME: this function deletes amqp queues that will be used by worker.
+    # The amqp queues used by celery worker are determined by worker name
+    # and if there are multiple workers with same name celery gets confused.
+    #
+    # Currently the worker name is based solely on hostname, so it will be
+    # re-used if vm gets re-created by auto-heal.
+    # Deleting the queues is a workaround for celery problems this creates.
+    # Having unique worker names is probably a better long-term strategy.
+    client = amqp_client.create_client()
+    channel = client.connection.channel()
+
+    # celery worker queue
+    channel.queue_delete(worker_name)
+
+    # celery management queue
+    channel.queue_delete('celery.{}.celery.pidbox'.format(worker_name))
 
 
 def _verify_no_celery_error(runner, agent_config):
