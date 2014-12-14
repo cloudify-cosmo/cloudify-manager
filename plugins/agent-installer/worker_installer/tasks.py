@@ -364,7 +364,9 @@ def _delete_amqp_queues(worker_name):
     channel.queue_delete(worker_name)
 
     # celery management queue
-    channel.queue_delete('celery.{}.celery.pidbox'.format(worker_name))
+    channel.queue_delete('celery.{0}.celery.pidbox'.format(worker_name))
+
+    client.close()
 
 
 def _verify_no_celery_error(runner, agent_config):
