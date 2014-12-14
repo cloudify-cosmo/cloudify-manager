@@ -182,14 +182,14 @@ def _set_home_dir(ctx, config):
 def _get_bool(config, key, default):
     if key not in config:
         return default
-    strValue = str(config[key])
-    if strValue.lower() == 'true':
+    str_value = str(config[key])
+    if str_value.lower() == 'true':
         return True
-    if strValue.lower() == 'false':
+    if str_value.lower() == 'false':
         return False
     raise NonRecoverableError(
         'Value for {0} property should be true/false '
-        'but is: {1}'.format(key, strValue))
+        'but is: {1}'.format(key, str_value))
 
 
 def prepare_configuration(ctx, agent_config):
