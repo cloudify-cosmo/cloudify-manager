@@ -15,7 +15,8 @@
 
 """
 This plugin does the exact same thing as the regular plugin installer.
-It exists only for the sake of mapping to windows_installer_plugin in the blueprint.
+It exists only for the sake of mapping to
+windows_installer_plugin in the blueprint.
 This allows for testing the workflows with windows DSL types.
 
 """
