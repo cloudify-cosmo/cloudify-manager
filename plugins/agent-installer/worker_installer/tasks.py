@@ -358,15 +358,19 @@ def _delete_amqp_queues(worker_name):
     # Deleting the queues is a workaround for celery problems this creates.
     # Having unique worker names is probably a better long-term strategy.
     client = amqp_client.create_client()
-    channel = client.connection.channel()
+    try:
+        channel = client.connection.channel()
 
-    # celery worker queue
-    channel.queue_delete(worker_name)
+        # celery worker queue
+        channel.queue_delete(worker_name)
 
-    # celery management queue
-    channel.queue_delete('celery.{0}.celery.pidbox'.format(worker_name))
-
-    client.close()
+        # celery management queue
+        channel.queue_delete('celery.{0}.celery.pidbox'.format(worker_name))
+    finally:
+        try:
+            client.close()
+        except Exception:
+            pass
 
 
 def _verify_no_celery_error(runner, agent_config):
