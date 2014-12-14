@@ -1,1 +1,1 @@
--e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==3.1gaga
+-e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@3.1#egg=cloudify-plugins-common==3.1gaga
