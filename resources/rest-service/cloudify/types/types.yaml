@@ -222,7 +222,7 @@ plugins:
         install: false
 
     windows_plugin_installer:
-        executor: central_deployment_agent
+        executor: host_agent
         install: false
 
     default_workflows:
