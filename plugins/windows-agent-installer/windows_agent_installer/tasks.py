@@ -157,12 +157,7 @@ def start(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param cloudify_agent: Injected by the @init_worker_installer
     """
 
-    ctx.logger.info('Starting agent {0}'.format(cloudify_agent['name']))
-
-    runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
-
-    ctx.logger.info('Waiting for {0} to start...'.format(AGENT_SERVICE_NAME))
-    _wait_for_started(runner, cloudify_agent)
+    _start(cloudify_agent, ctx, runner)
 
 
 @operation
@@ -177,9 +172,7 @@ def stop(ctx, runner=None, cloudify_agent=None, **kwargs):
     :param cloudify_agent: Injected by the @init_worker_installer
     """
 
-    ctx.logger.info('Stopping agent {0}'.format(cloudify_agent['name']))
-    runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
-    _wait_for_stopped(runner, cloudify_agent)
+    _stop(cloudify_agent, ctx, runner)
 
 
 @operation
@@ -199,8 +192,8 @@ def restart(ctx, runner=None, cloudify_agent=None, **kwargs):
 
     ctx.logger.info('Restarting agent {0}'.format(cloudify_agent['name']))
 
-    stop(ctx=ctx, runner=runner, cloudify_agent=cloudify_agent)
-    start(ctx=ctx, runner=runner, cloudify_agent=cloudify_agent)
+    _stop(ctx=ctx, runner=runner, cloudify_agent=cloudify_agent)
+    _start(ctx=ctx, runner=runner, cloudify_agent=cloudify_agent)
 
 
 @operation
@@ -311,3 +304,16 @@ def get_worker_stats(worker_name):
     inspect = celery_client.control.inspect(destination=[worker_name])
     stats = (inspect.stats() or {}).get(worker_name)
     return stats
+
+
+def _stop(cloudify_agent, ctx, runner):
+    ctx.logger.info('Stopping agent {0}'.format(cloudify_agent['name']))
+    runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
+    _wait_for_stopped(runner, cloudify_agent)
+
+
+def _start(cloudify_agent, ctx, runner):
+    ctx.logger.info('Starting agent {0}'.format(cloudify_agent['name']))
+    runner.run('sc start {}'.format(AGENT_SERVICE_NAME))
+    ctx.logger.info('Waiting for {0} to start...'.format(AGENT_SERVICE_NAME))
+    _wait_for_started(runner, cloudify_agent)
