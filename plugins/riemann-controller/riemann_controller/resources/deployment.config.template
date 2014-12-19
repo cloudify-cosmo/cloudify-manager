@@ -13,7 +13,19 @@
       deployment-processing-queue
         (processing-queue "{{ctx.deployment.id}}" {:queue-size     1000
                                                    :core-pool-size 1
-                                                   :max-pool-size  4})]
+                                                   :max-pool-size  4})
+      is-started (fn [ctx]
+        (let [node-id           (:node-id ctx)
+              manager-ip            (or (System/getenv "MANAGEMENT_IP") "127.0.0.1")
+              raw-manager-rest-port (or (System/getenv "MANAGER_REST_PORT") "80")
+              manager-rest-port     (Integer/parseInt raw-manager-rest-port)
+              base-uri          (str "http://" manager-ip ":" manager-rest-port)
+              node-endpoint     (str "/node-instances/" node-id)
+              node-resource-uri (str base-uri node-endpoint)
+              get-node          (fn [] (clj-http.client/get node-resource-uri {
+                                         :accept         :json
+                                         }))]
+          (= (:state (cheshire.core/parse-string (:body (get-node)) true)) "started")))]
 
 (def node-instances-stream {
   {% for stream in streams%}
@@ -30,30 +42,21 @@
 ; policy={{stream.metadata.policy}}
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
-(let [process-policy-triggers
-        (process-policy-triggers-stream "{{ctx.blueprint.id}}"
-                                        "{{ctx.deployment.id}}"
-                                        "{{stream.metadata.group}}"
-                                        "{{stream.metadata.policy}}"
-                                        deployment-processing-queue)
-      publish-policy-event
-        (publish-policy-event* "{{ctx.blueprint.id}}"
-                               "{{ctx.deployment.id}}"
-                               "{{stream.metadata.group}}"
-                               "{{stream.metadata.policy}}")
-      publish-policy-error
-        (publish-policy-error* "{{ctx.blueprint.id}}"
-                               "{{ctx.deployment.id}}"
-                               "{{stream.metadata.group}}"
-                               "{{stream.metadata.policy}}")
-      publish-log
-        (publish-log* "{{ctx.blueprint.id}}"
-                      "{{ctx.deployment.id}}"
-                      "{{stream.metadata.group}}"
-                      "{{stream.metadata.policy}}")
+(let [ctx {:blueprint-id  "{{ctx.blueprint.id}}"
+           :deployment-id "{{ctx.deployment.id}}"
+           :group         "{{stream.metadata.group}}"
+           :policy        "{{stream.metadata.policy}}"}
+      process-policy-triggers      (process-policy-triggers-stream
+                                     ctx deployment-processing-queue)
+      publish-policy-event         (publish-policy-event* ctx)
+      publish-policy-error         (publish-policy-error* ctx)
+      publish-log                  (publish-log* ctx)
+      check-restraints-and-process (fn [restraints]
+        (check-restraints-and-process* ctx deployment-processing-queue restraints))
       downstream
         (autohealing/downstream* index
-                                 process-policy-triggers
+                                 ;process-policy-triggers
+                                 (check-restraints-and-process [is-started])
                                  "{{constants.STABLE_STATE}}"
                                  "{{constants.TRIGGERING_STATE}}")
       stream_id "{{stream.metadata.group}}.{{stream.metadata.policy}}"]
