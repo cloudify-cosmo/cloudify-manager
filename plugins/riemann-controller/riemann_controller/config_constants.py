@@ -20,3 +20,4 @@ class Constants:
     TRIGGERING_STATE = "triggering_state"
     STABLE_STATE = "ok"
     HEART_BEAT_FAILURE = "heart-beat-failure"
+    MIN_INTERVAL_BETWEEN_WORKFLOWS = 5

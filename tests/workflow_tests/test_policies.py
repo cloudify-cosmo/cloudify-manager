@@ -465,6 +465,14 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
 
     @riemann_cleanup
+    def test_multiple_autoheal_policies(self):
+        self.launch_deployment('dsl/auto_heal_multiple_policies.yaml')
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        self.wait_for_invocations(self.deployment.id, 1)
+
+    @riemann_cleanup
     def test_autoheal_policy_nested_nodes(self):
         NODES_WITH_LIFECYCLE_OP = 3
         NODES_WITH_RELATIONSHIP_OP = 3
