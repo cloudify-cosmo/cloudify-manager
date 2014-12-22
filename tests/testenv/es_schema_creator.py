@@ -56,6 +56,9 @@ NODE_SCHEMA = {
             },
             'properties': {
                 'enabled': False
+            },
+            'operations': {
+                'enabled': False
             }
         }
     }
