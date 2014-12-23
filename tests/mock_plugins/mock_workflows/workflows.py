@@ -47,7 +47,7 @@ def sleep(ctx, **kwargs):
 
 
 @workflow
-def sleep_with_cancel_support(ctx, **kwargs):
+def sleep_with_cancel_support(ctx, use_legacy_cancel, **kwargs):
     node_instance = get_instance(ctx)
 
     node_instance.execute_operation(
@@ -64,7 +64,10 @@ def sleep_with_cancel_support(ctx, **kwargs):
         time.sleep(1)
 
     if is_cancelled:
-        return api.EXECUTION_CANCELLED_RESULT
+        if use_legacy_cancel:
+            return api.EXECUTION_CANCELLED_RESULT
+        else:
+            raise api.ExecutionCancelled()
 
     node_instance.execute_operation(
         'test_interface.operation',
