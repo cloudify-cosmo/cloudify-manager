@@ -1,287 +1,320 @@
 ##################################################################################
 # Base type definitions
 ##################################################################################
+
 node_types:
-    # base type for provided cloudify types
-    cloudify.nodes.Root:
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                create: {}
-                configure: {}
-                start: {}
-                stop: {}
-                delete: {}
-            cloudify.interfaces.validation:
-                creation: {}
-                deletion: {}
-            cloudify.interfaces.monitoring:
-                start: {}
-                stop: {}
 
-    # A tier in a topology
-    cloudify.nodes.Tier:
-        derived_from: cloudify.nodes.Root
+  # base type for provided cloudify types
+  cloudify.nodes.Root:
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: {}
+        configure: {}
+        start: {}
+        stop: {}
+        delete: {}
+      cloudify.interfaces.validation:
+        creation: {}
+        deletion: {}
+      cloudify.interfaces.monitoring:
+        start: {}
+        stop: {}
 
-    # A host (physical / virtual or LXC) in a topology
-    cloudify.nodes.Compute:
-        derived_from: cloudify.nodes.Root
-        interfaces:
-            cloudify.interfaces.worker_installer:
-                install:
-                    implementation: agent_installer.worker_installer.tasks.install
-                    inputs: {}
-                start:
-                    implementation: agent_installer.worker_installer.tasks.start
-                    inputs: {}
-                stop:
-                    implementation: agent_installer.worker_installer.tasks.stop
-                    inputs: {}
-                uninstall:
-                    implementation: agent_installer.worker_installer.tasks.uninstall
-                    inputs: {}
-                restart:
-                    implementation: agent_installer.worker_installer.tasks.restart
-                    inputs: {}
-            cloudify.interfaces.plugin_installer:
-                install:
-                    implementation: plugin_installer.plugin_installer.tasks.install
-                    inputs: {}
-            cloudify.interfaces.host:
-                get_state: {}
-            cloudify.interfaces.monitoring_agent:
-                install: {}
-                start: {}
-                stop: {}
-                uninstall: {}
-        properties:
-            install_agent:
-                default: true
-            cloudify_agent:
-                default: {}
-            ip:
-                default: ''
+  # A tier in a topology
+  cloudify.nodes.Tier:
+    derived_from: cloudify.nodes.Root
 
-    # A Linux container with or without docker
-    cloudify.nodes.Container:
-        derived_from: cloudify.nodes.Compute
+  # A host (physical / virtual or LXC) in a topology
+  cloudify.nodes.Compute:
+    derived_from: cloudify.nodes.Root
+    properties:
+      install_agent:
+        default: true
+      cloudify_agent:
+        default: {}
+      ip:
+        default: ''
+    interfaces:
+      cloudify.interfaces.worker_installer:
+        install:
+          implementation: agent_installer.worker_installer.tasks.install
+          inputs: {}
+        start:
+          implementation: agent_installer.worker_installer.tasks.start
+          inputs: {}
+        stop:
+          implementation: agent_installer.worker_installer.tasks.stop
+          inputs: {}
+        uninstall:
+          implementation: agent_installer.worker_installer.tasks.uninstall
+          inputs: {}
+        restart:
+          implementation: agent_installer.worker_installer.tasks.restart
+          inputs: {}
+      cloudify.interfaces.plugin_installer:
+        install:
+          implementation: plugin_installer.plugin_installer.tasks.install
+          inputs: {}
+      cloudify.interfaces.host:
+        get_state: {}
+          cloudify.interfaces.monitoring_agent:
+            install: {}
+            start: {}
+            stop: {}
+            uninstall: {}
 
-    # A storage volume in a topology
-    cloudify.nodes.Volume:
-        derived_from: cloudify.nodes.Root
+  # A Linux container with or without docker
+  cloudify.nodes.Container:
+    derived_from: cloudify.nodes.Compute
 
-    # A storage Container (Object Store segment)
-    cloudify.nodes.ObjectStorage:
-        derived_from: cloudify.nodes.Root
+  # A storage volume in a topology
+  cloudify.nodes.Volume:
+    derived_from: cloudify.nodes.Root
 
-    # An isolated virtual layer 2 domain or a logical / virtual switch
-    cloudify.nodes.Network:
-        derived_from: cloudify.nodes.Root
+  # A file system a volume should be formatted to
+  cloudify.nodes.FileSystem:
+    derived_from: cloudify.nodes.Root
+    properties:
+      use_external_resource:
+        default: false
+        description: >
+          Enables the use of already foramtted volumes.
+      device_name:
+        description: >
+          The device name assigned to the will be used volume.
+      partition_type:
+        default: 83
+        description: >
+          The partiton type. 83 is a Linux Native Partition.
+      partition_number:
+        default: 1
+        description: >
+          The phsical partition number.
+      fs_type:
+        description: >
+          The type of the File System.
+          Supported types are [ext2, ext3, ext4, fat, ntfs, swap]
+      fs_mount_path:
+        description: >
+          The path of the mount point.
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/create.sh
+        delete: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/delete.sh
 
-    # An isolated virtual layer 3 subnet with IP range
-    cloudify.nodes.Subnet:
-        derived_from: cloudify.nodes.Root
+  # A storage Container (Object Store segment)
+  cloudify.nodes.ObjectStorage:
+    derived_from: cloudify.nodes.Root
 
-    cloudify.nodes.Port:
-        derived_from: cloudify.nodes.Root
+  # An isolated virtual layer 2 domain or a logical / virtual switch
+  cloudify.nodes.Network:
+    derived_from: cloudify.nodes.Root
 
-    # A network router
-    cloudify.nodes.Router:
-        derived_from: cloudify.nodes.Root
+  # An isolated virtual layer 3 subnet with IP range
+  cloudify.nodes.Subnet:
+    derived_from: cloudify.nodes.Root
 
-    # A virtual Load Balancer
-    cloudify.nodes.LoadBalancer:
-        derived_from: cloudify.nodes.Root
+  cloudify.nodes.Port:
+    derived_from: cloudify.nodes.Root
 
-    # A virtual floating IP
-    cloudify.nodes.VirtualIP:
-        derived_from: cloudify.nodes.Root
+  # A network router
+  cloudify.nodes.Router:
+    derived_from: cloudify.nodes.Root
 
-    # A security group
-    cloudify.nodes.SecurityGroup:
-        derived_from: cloudify.nodes.Root
+  # A virtual Load Balancer
+  cloudify.nodes.LoadBalancer:
+    derived_from: cloudify.nodes.Root
 
-    # A middleware component in a topology
-    cloudify.nodes.SoftwareComponent:
-        derived_from: cloudify.nodes.Root
+  # A virtual floating IP
+  cloudify.nodes.VirtualIP:
+    derived_from: cloudify.nodes.Root
 
-    cloudify.nodes.DBMS:
-        derived_from: cloudify.nodes.SoftwareComponent
+  # A security group
+  cloudify.nodes.SecurityGroup:
+    derived_from: cloudify.nodes.Root
 
-    cloudify.nodes.Database:
-        derived_from: cloudify.nodes.Root
+  # A middleware component in a topology
+  cloudify.nodes.SoftwareComponent:
+    derived_from: cloudify.nodes.Root
 
-    cloudify.nodes.WebServer:
-        derived_from: cloudify.nodes.SoftwareComponent
-        properties:
-            port:
-                default: 80
+  cloudify.nodes.DBMS:
+    derived_from: cloudify.nodes.SoftwareComponent
 
-    cloudify.nodes.ApplicationServer:
-        derived_from: cloudify.nodes.SoftwareComponent
+  cloudify.nodes.Database:
+    derived_from: cloudify.nodes.Root
 
-    cloudify.nodes.MessageBusServer:
-        derived_from: cloudify.nodes.SoftwareComponent
+  cloudify.nodes.WebServer:
+    derived_from: cloudify.nodes.SoftwareComponent
+    properties:
+      port:
+        default: 80
 
-    # An application artifact to deploy
-    cloudify.nodes.ApplicationModule:
-        derived_from: cloudify.nodes.Root
+  cloudify.nodes.ApplicationServer:
+    derived_from: cloudify.nodes.SoftwareComponent
 
-    # A type for a Cloudify Manager, to be used in manager blueprints
-    cloudify.nodes.CloudifyManager:
-        derived_from: cloudify.nodes.SoftwareComponent
-        properties:
-            cloudify:
-                description: >
-                    Configuration for Cloudify Manager
-                default:
-                    resources_prefix: ''
+  cloudify.nodes.MessageBusServer:
+    derived_from: cloudify.nodes.SoftwareComponent
 
-                    cloudify_agent:
-                        min_workers: 2
-                        max_workers: 5
-                        remote_execution_port: 22
-                        user: ubuntu
+  # An application artifact to deploy
+  cloudify.nodes.ApplicationModule:
+    derived_from: cloudify.nodes.Root
 
-                    workflows:
-                        task_retries: -1  # this means forever
-                        task_retry_interval: 30
+  # A type for a Cloudify Manager, to be used in manager blueprints
+  cloudify.nodes.CloudifyManager:
+    derived_from: cloudify.nodes.SoftwareComponent
+    properties:
+      cloudify:
+        description: >
+          Configuration for Cloudify Manager
+        default:
+          resources_prefix: ''
 
-                    policy_engine:
-                        start_timeout: 30
-            cloudify_packages:
-                description: >
-                    Links to Cloudify packages to be installed on the manager
+        cloudify_agent:
+          min_workers: 2
+          max_workers: 5
+          remote_execution_port: 22
+          user: ubuntu
 
+        workflows:
+          task_retries: -1  # this means forever
+          task_retry_interval: 30
+
+        policy_engine:
+          start_timeout: 30
+        cloudify_packages:
+          description: >
+            Links to Cloudify packages to be installed on the manager
 
 ##################################################################################
 # Base relationship definitions
 ##################################################################################
 relationships:
 
-    cloudify.relationships.depends_on:
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure: {}
-                postconfigure: {}
-                establish: {}
-                unlink: {}
-        target_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure: {}
-                postconfigure: {}
-                establish: {}
-                unlink: {}
-        properties:
-            connection_type:
-                default: all_to_all
+  cloudify.relationships.depends_on:
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure: {}
+        postconfigure: {}
+        establish: {}
+        unlink: {}
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure: {}
+        postconfigure: {}
+        establish: {}
+        unlink: {}
+    properties:
+      connection_type:
+        default: all_to_all
 
-    cloudify.relationships.connected_to:
-        derived_from: cloudify.relationships.depends_on
+  cloudify.relationships.connected_to:
+    derived_from: cloudify.relationships.depends_on
 
-    cloudify.relationships.contained_in:
-        derived_from: cloudify.relationships.depends_on
-
+  cloudify.relationships.contained_in:
+    derived_from: cloudify.relationships.depends_on
 
 ##################################################################################
 # Workflows
 ##################################################################################
 workflows:
-    install: default_workflows.cloudify.plugins.workflows.install
-    uninstall: default_workflows.cloudify.plugins.workflows.uninstall
-    execute_operation:
-        mapping: default_workflows.cloudify.plugins.workflows.execute_operation
-        parameters:
-            operation: {}
-            operation_kwargs:
-                default: {}
-            run_by_dependency_order:
-                default: false
-            type_names:
-                default: []
-            node_ids:
-                default: []
-            node_instance_ids:
-                default: []
 
+  install: default_workflows.cloudify.plugins.workflows.install
+
+  uninstall: default_workflows.cloudify.plugins.workflows.uninstall
+
+  execute_operation:
+    mapping: default_workflows.cloudify.plugins.workflows.execute_operation
+      parameters:
+        operation: {}
+        operation_kwargs:
+          default: {}
+        run_by_dependency_order:
+          default: false
+        type_names:
+          default: []
+        node_ids:
+          default: []
+        node_instance_ids:
+          default: []
 
 ##################################################################################
 # Base artifact definitions
 ##################################################################################
 plugins:
 
-    agent_installer:
-        executor: central_deployment_agent
-        install: false
+  agent_installer:
+    executor: central_deployment_agent
+    install: false
 
-    plugin_installer:
-        executor: host_agent
-        install: false
+  plugin_installer:
+    executor: host_agent
+    install: false
 
-    windows_agent_installer:
-        executor: central_deployment_agent
-        install: false
+  windows_agent_installer:
+    executor: central_deployment_agent
+    install: false
 
-    windows_plugin_installer:
-        executor: host_agent
-        install: false
+  windows_plugin_installer:
+    executor: host_agent
+    install: false
 
-    default_workflows:
-        executor: central_deployment_agent
-        install: false
+  default_workflows:
+    executor: central_deployment_agent
+    install: false
 
-    script:
-        executor: host_agent
-        install: false
+  script:
+    executor: host_agent
+    install: false
 
 ##################################################################################
 # Policy types definitions
 ##################################################################################
 policy_types:
 
-    cloudify.policies.types.threshold:
-        properties:
-            metric:
-                description: The metric name
-            threshold:
-                description: The metric threshold value
-            upper_bound:
-                description: |
-                    boolean value for describing the semantics of the threshold.
-                    if 'true': metrics whose value if bigger then the threshold
-                    will cause the triggers to be processed. if 'false': metrics
-                    with values lower then the threshold will do so.
-                default: true
-        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
+  cloudify.policies.types.threshold:
+    properties:
+      metric:
+        description: The metric name
+      threshold:
+        description: The metric threshold value
+      upper_bound:
+        description: |
+          boolean value for describing the semantics of the threshold.
+          if 'true': metrics whose value if bigger then the threshold
+          will cause the triggers to be processed. if 'false': metrics
+          with values lower then the threshold will do so.
+        default: true
+    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
 
-    cloudify.policies.types.host_failure:
-        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/host_failure.clj
+  cloudify.policies.types.host_failure:
+    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/host_failure.clj
 
 ##################################################################################
 # Policy triggers definitions
 ##################################################################################
 policy_triggers:
 
-    cloudify.policies.triggers.execute_workflow:
-        parameters:
-            workflow:
-                description: Workflow name to execute
-            workflow_parameters:
-                description: Workflow paramters
-                default: {}
-            force:
-                description: |
-                    Should the workflow be executed even when another execution
-                    for the same workflow is currently in progress
-                default: false
-            allow_custom_parameters:
-                description: |
-                    Should parameters not defined in the workflow parameters
-                    schema be accepted
-                default: false
-            socket_timeout:
-                description: Socket timeout when making request to manager REST in ms
-                default: 1000
-            conn_timeout:
-                description: Connection timeout when making request to manager REST in ms
-                default: 1000
-        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/triggers/execute_workflow.clj
+  cloudify.policies.triggers.execute_workflow:
+    parameters:
+      workflow:
+        description: Workflow name to execute
+      workflow_parameters:
+        description: Workflow paramters
+        default: {}
+      force:
+        description: |
+          Should the workflow be executed even when another execution
+          for the same workflow is currently in progress
+        default: false
+      allow_custom_parameters:
+        description: |
+          Should parameters not defined in the workflow parameters
+          schema be accepted
+        default: false
+      socket_timeout:
+        description: Socket timeout when making request to manager REST in ms
+        default: 1000
+      conn_timeout:
+        description: Connection timeout when making request to manager REST in ms
+        default: 1000
+    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/triggers/execute_workflow.clj
