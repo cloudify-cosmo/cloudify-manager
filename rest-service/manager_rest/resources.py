@@ -613,7 +613,7 @@ class ExecutionsId(Resource):
 
         if action in ('cancel', 'force-cancel'):
             return get_blueprints_manager().cancel_execution(
-                execution_id, action == 'force-cancel'), 201
+                execution_id, action == 'force-cancel')
 
     @swagger.operation(
         responseClass=responses.Execution,
