@@ -97,7 +97,7 @@ def sleep_with_graph_usage(ctx, **kwargs):
             kwargs={'key': 'after-sleep',
                     'value': None}))
 
-    return graph.execute()
+    graph.execute()
 
 
 @workflow
