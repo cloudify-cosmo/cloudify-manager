@@ -59,8 +59,8 @@ class ExecutionsTest(TestCase):
         # announces the cancel occurred by returning a value rather than by
         # raising an error
         execution, deployment_id = self._execute_and_cancel_execution(
-            'sleep_with_cancel_support', workflow_params={
-                'use_legacy_cancel': True}, allow_custom_params=True)
+            'sleep_with_cancel_support',
+            workflow_params={'use_legacy_cancel': True})
         self._assert_execution_cancelled(execution, deployment_id)
 
     def test_cancel_execution_before_it_started(self):
@@ -160,8 +160,7 @@ class ExecutionsTest(TestCase):
     def _execute_and_cancel_execution(self, workflow_id, force=False,
                                       wait_for_termination=True,
                                       is_wait_for_asleep_node=True,
-                                      workflow_params=None,
-                                      allow_custom_params=False):
+                                      workflow_params=None):
         dsl_path = resource('dsl/sleep_workflows.yaml')
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
@@ -171,8 +170,7 @@ class ExecutionsTest(TestCase):
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
         execution = self.client.executions.start(
-            deployment_id, workflow_id, parameters=workflow_params,
-            allow_custom_parameters=allow_custom_params)
+            deployment_id, workflow_id, parameters=workflow_params)
 
         node_inst_id = self.client.node_instances.list(deployment_id)[0].id
 

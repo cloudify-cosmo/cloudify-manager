@@ -299,7 +299,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                     ILLEGAL_ACTION_ERROR_CODE,
                     cancel_response.json['error_code'])
             else:
-                self.assertEquals(201, cancel_response.status_code)
+                self.assertEquals(200, cancel_response.status_code)
                 expected_status = models.Execution.FORCE_CANCELLING if force\
                     else models.Execution.CANCELLING
                 self.assertEquals(expected_status,

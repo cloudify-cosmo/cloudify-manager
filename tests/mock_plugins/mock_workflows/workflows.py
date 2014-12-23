@@ -47,7 +47,7 @@ def sleep(ctx, **kwargs):
 
 
 @workflow
-def sleep_with_cancel_support(ctx, use_legacy_cancel=False, **kwargs):
+def sleep_with_cancel_support(ctx, use_legacy_cancel, **kwargs):
     node_instance = get_instance(ctx)
 
     node_instance.execute_operation(
