@@ -224,18 +224,18 @@ workflows:
 
   execute_operation:
     mapping: default_workflows.cloudify.plugins.workflows.execute_operation
-      parameters:
-        operation: {}
-        operation_kwargs:
-          default: {}
-        run_by_dependency_order:
-          default: false
-        type_names:
-          default: []
-        node_ids:
-          default: []
-        node_instance_ids:
-          default: []
+    parameters:
+      operation: {}
+      operation_kwargs:
+        default: {}
+      run_by_dependency_order:
+        default: false
+      type_names:
+        default: []
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
 
 ##################################################################################
 # Base artifact definitions
