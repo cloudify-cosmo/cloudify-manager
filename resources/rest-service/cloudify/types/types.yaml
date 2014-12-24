@@ -105,8 +105,8 @@ node_types:
         type: string
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/create.sh
-        delete: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/delete.sh
+        create: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/create.sh
+        delete: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/delete.sh
 
   # A storage Container (Object Store segment)
   cloudify.nodes.ObjectStorage:
