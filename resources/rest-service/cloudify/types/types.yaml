@@ -76,27 +76,33 @@ node_types:
     derived_from: cloudify.nodes.Root
     properties:
       use_external_resource:
-        default: false
         description: >
           Enables the use of already foramtted volumes.
+        type: boolean
+        default: false
       device_name:
         description: >
-          The device name assigned to the will be used volume.
+          The device name to format.
+        type: string
       partition_type:
-        default: 83
         description: >
           The partiton type. 83 is a Linux Native Partition.
+        type: integer
+        default: 83
       partition_number:
-        default: 1
         description: >
           The phsical partition number.
+        type: integer
+        default: 1
       fs_type:
         description: >
           The type of the File System.
           Supported types are [ext2, ext3, ext4, fat, ntfs, swap]
+        type: string
       fs_mount_path:
         description: >
           The path of the mount point.
+        type: string
     interfaces:
       cloudify.interfaces.lifecycle:
         create: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/create.sh
