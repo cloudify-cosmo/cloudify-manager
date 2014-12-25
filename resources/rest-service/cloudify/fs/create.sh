@@ -7,7 +7,14 @@ partition_number=$(ctx node properties partition_number)
 fs_type=$(ctx node properties fs_type)
 fs_mount_path=$(ctx node properties fs_mount_path)
 
-if [ "$use_external_resource" == "false" ]; then
+ctx logger info "use_external_resource = ${use_external_resource}"
+ctx logger info "device_name = ${device_name}"
+ctx logger info "partition_type = ${partition_type}"
+ctx logger info "partition_number = ${partition_number}"
+ctx logger info "fs_type = ${fs_type}"
+ctx logger info "fs_mount_path = ${fs_mount_path}"
+
+if [ "${use_external_resource}" == "false" ]; then
     mkfs_executable=''
     case ${fs_type} in
         ext2 | ext3 | ext4 | fat | ntfs )
