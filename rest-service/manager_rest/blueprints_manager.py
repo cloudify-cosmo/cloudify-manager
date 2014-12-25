@@ -69,11 +69,8 @@ class BlueprintsManager(object):
     def get_execution(self, execution_id, include=None):
         return self.sm.get_execution(execution_id, include=include)
 
-    # TODO: call celery tasks instead of doing this directly here
-    # TODO: prepare multi instance plan should be called on workflow execution
     def publish_blueprint(self, dsl_location, alias_mapping_url,
                           resources_base_url, blueprint_id):
-        # TODO: error code if parsing fails (in one of the 2 tasks)
         try:
             plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
                                    resources_base_url)
@@ -85,13 +82,13 @@ class BlueprintsManager(object):
 
         new_blueprint = models.BlueprintState(plan=parsed_plan,
                                               id=blueprint_id,
-                                              created_at=now, updated_at=now)
+                                              created_at=now,
+                                              updated_at=now)
         self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
     def delete_blueprint(self, blueprint_id):
-        blueprint_deployments = get_storage_manager()\
-            .get_blueprint_deployments(blueprint_id)
+        blueprint_deployments = self.sm.get_blueprint_deployments(blueprint_id)
 
         if len(blueprint_deployments) > 0:
             raise manager_exceptions.DependentExistsError(
@@ -101,16 +98,14 @@ class BlueprintsManager(object):
                         ','.join([dep.id for dep
                                   in blueprint_deployments])))
 
-        return get_storage_manager().delete_blueprint(blueprint_id)
+        return self.sm.delete_blueprint(blueprint_id)
 
     def delete_deployment(self, deployment_id, ignore_live_nodes=False):
-        storage = get_storage_manager()
-
         # Verify deployment exists.
-        storage.get_deployment(deployment_id)
+        self.sm.get_deployment(deployment_id)
 
         # validate there are no running executions for this deployment
-        executions = storage.executions_list(deployment_id=deployment_id)
+        executions = self.sm.executions_list(deployment_id=deployment_id)
         if any(execution.status not in models.Execution.END_STATES for
            execution in executions):
             raise manager_exceptions.DependentExistsError(
@@ -123,7 +118,7 @@ class BlueprintsManager(object):
                               in models.Execution.END_STATES])))
 
         if not ignore_live_nodes:
-            node_instances = storage.get_node_instances(
+            node_instances = self.sm.get_node_instances(
                 deployment_id=deployment_id)
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
@@ -138,7 +133,7 @@ class BlueprintsManager(object):
                                      ('uninitialized', 'deleted')])))
 
         self._delete_deployment_environment(deployment_id)
-        return storage.delete_deployment(deployment_id)
+        return self.sm.delete_deployment(deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
@@ -155,11 +150,11 @@ class BlueprintsManager(object):
 
         # validate no execution is currently in progress
         if not force:
-            executions = get_storage_manager().executions_list(
+            executions = self.sm.executions_list(
                 deployment_id=deployment_id)
             running = [
                 e.id for e in executions if
-                get_storage_manager().get_execution(e.id).status
+                self.sm.get_execution(e.id).status
                 not in models.Execution.END_STATES]
             if len(running) > 0:
                 raise manager_exceptions.ExistingRunningExecutionError(
@@ -185,7 +180,7 @@ class BlueprintsManager(object):
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters))
 
-        get_storage_manager().put_execution(new_execution.id, new_execution)
+        self.sm.put_execution(new_execution.id, new_execution)
 
         workflow_client().execute_workflow(
             workflow_id,
@@ -238,7 +233,7 @@ class BlueprintsManager(object):
 
         new_status = models.Execution.CANCELLING if not force \
             else models.Execution.FORCE_CANCELLING
-        get_storage_manager().update_execution_status(
+        self.sm.update_execution_status(
             execution_id, new_status, '')
         return self.get_execution(execution_id)
 
@@ -512,7 +507,7 @@ class BlueprintsManager(object):
                                                             is_retry=False):
         deployment_env_creation_execution = next(
             (execution for execution in
-             get_storage_manager().executions_list(
+             self.sm.executions_list(
                  deployment_id=deployment_id) if execution.workflow_id ==
                 'create_deployment_environment'),
             None)
@@ -525,7 +520,7 @@ class BlueprintsManager(object):
         # Because of ES eventual consistency, we need to get the execution by
         # its id in order to make sure the read status is correct.
         deployment_env_creation_execution = \
-            get_storage_manager().get_execution(
+            self.sm.get_execution(
                 deployment_env_creation_execution.id)
 
         if deployment_env_creation_execution.status == \
@@ -615,7 +610,7 @@ class BlueprintsManager(object):
             deployment_id=deployment.id,
             error='',
             parameters=self._get_only_user_execution_parameters(kwargs))
-        get_storage_manager().put_execution(new_execution.id, new_execution)
+        self.sm.put_execution(new_execution.id, new_execution)
 
         celery_client().execute_task(
             deployment_env_creation_task_name,
@@ -623,7 +618,8 @@ class BlueprintsManager(object):
             deployment_env_creation_task_id,
             kwargs=kwargs)
 
-    def _build_context_from_deployment(self, deployment, task_id, wf_id,
+    @staticmethod
+    def _build_context_from_deployment(deployment, task_id, wf_id,
                                        task_name):
         return {
             'task_id': task_id,
@@ -636,7 +632,7 @@ class BlueprintsManager(object):
         }
 
     def _delete_deployment_environment(self, deployment_id):
-        deployment = get_storage_manager().get_deployment(deployment_id)
+        deployment = self.sm.get_deployment(deployment_id)
 
         deployment_env_deletion_task_id = str(uuid.uuid4())
         wf_id = 'delete_deployment_environment'
@@ -659,7 +655,7 @@ class BlueprintsManager(object):
             deployment_id=deployment_id,
             error='',
             parameters=self._get_only_user_execution_parameters(kwargs))
-        get_storage_manager().put_execution(new_execution.id, new_execution)
+        self.sm.put_execution(new_execution.id, new_execution)
 
         deployment_env_deletion_task_async_result = \
             celery_client().execute_task(
@@ -672,7 +668,7 @@ class BlueprintsManager(object):
         deployment_env_deletion_task_async_result.get(timeout=300,
                                                       propagate=True)
         # verify deployment environment deletion completed successfully
-        execution = get_storage_manager().get_execution(
+        execution = self.sm.get_execution(
             deployment_env_deletion_task_id)
         if execution.status != models.Execution.TERMINATED:
             raise RuntimeError('Failed to delete environment for deployment '
