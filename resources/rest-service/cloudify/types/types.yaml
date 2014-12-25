@@ -80,10 +80,6 @@ node_types:
           Enables the use of already foramtted volumes.
         type: boolean
         default: false
-      device_name:
-        description: >
-          The device name to format.
-        type: string
       partition_type:
         description: >
           The partiton type. 83 is a Linux Native Partition.
@@ -223,6 +219,16 @@ relationships:
 
   cloudify.relationships.contained_in:
     derived_from: cloudify.relationships.depends_on
+
+  cloudify.relationships.file_system_contained_in_volume:
+    derived_from: cloudify.relationships.contained_in
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: script.script_runner.tasks.run
+          inputs:
+            script_path:
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/partition.py
 
 ##################################################################################
 # Workflows
