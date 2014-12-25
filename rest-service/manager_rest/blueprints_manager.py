@@ -267,9 +267,6 @@ class BlueprintsManager(object):
         node_instances = deployment_plan['node_instances']
         self._create_deployment_node_instances(deployment_id,
                                                node_instances)
-        self._wait_for_count(expected_count=len(node_instances),
-                             query_method=self._get_node_instance_ids,
-                             deployment_id=deployment_id)
         self._create_deployment_environment(new_deployment, deployment_plan,
                                             now)
         return new_deployment
@@ -289,10 +286,6 @@ class BlueprintsManager(object):
                                 if instance.get('modification') == 'added']
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
-        self._wait_for_count(expected_count=(len(node_instances) +
-                                             len(added_node_instances)),
-                             query_method=self._get_node_instance_ids,
-                             deployment_id=deployment_id)
         return {
             'node_instances': node_instances_modification,
             'modified_nodes': modified_nodes
@@ -425,10 +418,6 @@ class BlueprintsManager(object):
                 plugins_to_install=raw_node.get('plugins_to_install'),
                 relationships=self._prepare_node_relationships(raw_node)
             ))
-
-        self._wait_for_count(expected_count=len(plan['nodes']),
-                             query_method=self.sm.get_nodes,
-                             deployment_id=deployment_id)
 
     @staticmethod
     def _merge_and_validate_execution_parameters(
@@ -674,22 +663,10 @@ class BlueprintsManager(object):
             raise RuntimeError('Failed to delete environment for deployment '
                                '{0}'.format(deployment_id))
 
-    def _get_only_user_execution_parameters(self, execution_parameters):
+    @staticmethod
+    def _get_only_user_execution_parameters(execution_parameters):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
-
-    @staticmethod
-    def _wait_for_count(expected_count, query_method, deployment_id):
-        import time
-        timeout = time.time() + 30
-        # workaround ES eventual consistency
-        # TODO check if there is a count query and do that
-        actual_count = len(query_method(deployment_id))
-        while actual_count < expected_count and time.time() < timeout:
-            time.sleep(1)
-            actual_count = len(query_method(deployment_id))
-        if actual_count < expected_count:
-            raise RuntimeError('Timed out while waiting for nodes count')
 
 
 def teardown_blueprints_manager(exception):
