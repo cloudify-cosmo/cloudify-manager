@@ -108,11 +108,13 @@ node_types:
         create:
           implementation: script.script_runner.tasks.run
           inputs:
-            script_path: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/create.sh
+            script_path:
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/create.sh
         create:
           implementation: script.script_runner.tasks.run
           inputs:
-            script_path: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/delete.sh
+            script_path:
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/delete.sh
 
   # A storage Container (Object Store segment)
   cloudify.nodes.ObjectStorage:
