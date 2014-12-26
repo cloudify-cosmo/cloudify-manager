@@ -61,8 +61,6 @@ class WorkflowsAPITest(TestCase):
         # testing workflow local task
         instance = self.client.node_instances.list(
             deployment_id=deployment.id)[0]
-        # I am in love with eventual consistency
-        instance = self.client.node_instances.get(instance.id)
         self.assertEqual('test_state', instance.state)
 
     def test_fail_remote_task_eventual_success(self):
