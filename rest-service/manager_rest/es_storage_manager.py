@@ -37,7 +37,7 @@ PROVIDER_CONTEXT_ID = 'CONTEXT'
 DEFAULT_SEARCH_SIZE = 10000
 
 MUTATE_PARAMS = {
-    'refresh': False
+    'refresh': True
 }
 
 
