@@ -506,12 +506,6 @@ class BlueprintsManager(object):
                                ' execution for deployment {0}'.format(
                                    deployment_id))
 
-        # Because of ES eventual consistency, we need to get the execution by
-        # its id in order to make sure the read status is correct.
-        deployment_env_creation_execution = \
-            self.sm.get_execution(
-                deployment_env_creation_execution.id)
-
         if deployment_env_creation_execution.status == \
                 models.Execution.TERMINATED:
             # deployment environment creation is complete
