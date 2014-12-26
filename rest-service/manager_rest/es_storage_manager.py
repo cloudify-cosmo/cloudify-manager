@@ -36,6 +36,10 @@ PROVIDER_CONTEXT_ID = 'CONTEXT'
 
 DEFAULT_SEARCH_SIZE = 10000
 
+MUTATE_PARAMS = {
+    'refresh': False
+}
+
 
 class ESStorageManager(object):
 
@@ -94,7 +98,7 @@ class ESStorageManager(object):
             self._connection.create(index=STORAGE_INDEX_NAME,
                                     doc_type=doc_type, id=doc_id,
                                     body=value,
-                                    refresh=True)
+                                    **MUTATE_PARAMS)
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
@@ -103,7 +107,7 @@ class ESStorageManager(object):
         try:
             res = self._connection.delete(STORAGE_INDEX_NAME, doc_type,
                                           doc_id,
-                                          refresh=True)
+                                          **MUTATE_PARAMS)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "{0} {1} not found".format(doc_type, doc_id))
@@ -276,7 +280,7 @@ class ESStorageManager(object):
                                     doc_type=EXECUTION_TYPE,
                                     id=str(execution_id),
                                     body=update_doc,
-                                    refresh=True)
+                                    **MUTATE_PARAMS)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Execution {0} not found".format(execution_id))
@@ -308,7 +312,7 @@ class ESStorageManager(object):
                                     doc_type=NODE_TYPE,
                                     id=storage_node_id,
                                     body=update_doc,
-                                    refresh=True)
+                                    **MUTATE_PARAMS)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))
@@ -342,7 +346,7 @@ class ESStorageManager(object):
                                doc_type=NODE_INSTANCE_TYPE,
                                id=node.id,
                                body=updated,
-                               refresh=True)
+                               **MUTATE_PARAMS)
 
     def put_provider_context(self, provider_context):
         doc_data = provider_context.to_dict()
