@@ -15,13 +15,13 @@ Its best to create a dedicated directory for all of these packages, we will be u
 
 ## Step 1: Install RabbitMQ Server
 
-RabbitMQ is a Message broker written in Erlang.
-So we need to [install Erlang](https://www.erlang-solutions.com/downloads/download-erlang-otp) first.
+RabbitMQ is a Message broker written in Erlang. It servers as the message broker for our remote task execution engine (celery),
+So, we need to [install Erlang](https://www.erlang-solutions.com/downloads/download-erlang-otp) first.
 
 Now we can install rabbit: <br>
 
 ```bash
-~/dev/tools$ curl --silent --show-error --retry 5 https://www.rabbitmq.com/releases/rabbitmq-server/v3.4.2/rabbitmq-server-generic-unix-3.4.2.tar.gz -o rabbitmq-server-generic-unix-3.4.2.tar.gz
+~/dev/tools$ curl -L -O https://www.rabbitmq.com/releases/rabbitmq-server/v3.4.2/rabbitmq-server-generic-unix-3.4.2.tar.gz
 ~/dev/tools$ tar -xvf rabbitmq-server-generic-unix-3.4.2.tar.gz
 ```
 
@@ -30,3 +30,28 @@ Add the `~/dev/tools/rabbitmq_server-3.4.2/sbin` directory to your path. Verify 
 ```bash
 ~/dev/tools$ which rabbitmq-server
 ```
+
+## Step 2: Install Elasticsearch
+
+Elasticsearch is our storage data store, we use it to store:
+
+- Events
+- Logs
+- Static/Runtime blueprints data.
+
+```bash
+~/dev/tools$ curl -L -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.2.tar.gz
+tar -xvf elasticsearch-1.4.2.tar.gz
+```
+
+Add the `~/dev/tools/elasticsearch-1.4.2/bin` directory to your path. Verify this by starting a new shell and running: <br>
+
+```bash
+~/dev/tools$ which elasticsearch
+```
+
+By default, Elasticsearch is started with multicast enabled,
+this can cause some strange behaviour when other instances of elasticsearch are running on the same network.
+We want to disable this. To do so you need to uncomment the `discovery.zen.ping.multicast.enabled: false` in the `~/dev/tools/elasticsearch-1.4.2/config/elasticsearch.yml`
+
+![Disable Multicast](disable_multicast.png)
