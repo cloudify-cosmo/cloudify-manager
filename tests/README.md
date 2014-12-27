@@ -13,6 +13,7 @@ However, in order to make this tutorial as agnostic as possible to different lin
 we will not be using Linux package managers, but rather compressed all-in-one distributions.
 This also has the benefit of not adding and manipulating system wide configuration files.
 Its best to create a dedicated directory for all of these packages, we will be using `~/dev/tools`
+Also, make sure you activate the virtualenv dedicated for cloudify prior to running any install commands.
 
 ## Step 1: Install RabbitMQ Server
 
@@ -62,8 +63,8 @@ We want to disable this. To do so you need to uncomment the `discovery.zen.ping.
 Riemann is a policy and event processing engine. We use to create monitoring policies.
 
 ```bash
-wget http://aphyr.com/riemann/riemann-0.2.6.tar.bz2
-tar xvfj riemann-0.2.6.tar.bz2
+~/dev/tools$ wget http://aphyr.com/riemann/riemann-0.2.6.tar.bz2
+~/dev/tools$ tar xvfj riemann-0.2.6.tar.bz2
 ```
 
 Add the `~/dev/tools/riemann-0.2.6/bin` directory to your path. Verify this by starting a new shell and running: <br>
@@ -71,3 +72,52 @@ Add the `~/dev/tools/riemann-0.2.6/bin` directory to your path. Verify this by s
 ```bash
 ~/dev/tools$ which riemann
 ```
+
+## Step 4: Installing riemann controller
+
+The riemann controller is a cloudify plugin to configure riemann for our usage.
+cd into the directory containing this file and run:
+
+```bash
+pip install -e ../plugins/riemann-controller
+```
+
+## Step 5: Installing Workflows
+
+The *workflows* project contains cloudify system workflows, i.e, workflows that we use for managerial configuration.
+Specifically, it contains workflows that create/delete deployments.
+cd into the directory containing this file and run:
+
+```bash
+pip install -e ../workflows
+```
+
+## Step 6: Installing REST service
+
+The *rest-service* project is the REST gateway all clients connect to.
+We will be running it as part of the tests, so we need install its dependencies.
+cd into the directory containing this file and run:
+
+```bash
+pip install -r ../rest-service/dev-requirements.txt -e ../rest-service
+```
+
+## Installing tests framework
+
+These tests fork celery processes, we want these processes to have access to code written in the project (utility methods and such),
+that's why we need to install it as well.
+cd into the directory containing this file and run:
+
+```bash
+pip install -r dev-requirements.txt -e .
+```
+
+# Step 7: Verify installation.
+
+Lets verify everything works by running a test. cd into the directory containing this file and run:
+
+```bash
+nosetests -s workflow_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
+```
+
+# Usage
