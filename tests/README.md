@@ -6,12 +6,12 @@ Cloudify Integration Tests
 This project aims to emulate a Cloudify Manager environment.
 By doing that we can test a full cloudify pipeline in an isolated environment, without using mocks (almost...).
 
-**Note** <br><br>
+**Note** <br>
 In this tutorial we will be installing a few Linux packages.
 However, in order to make this tutorial as agnostic as possible to different linux distributions,
 we will not be using Linux package managers, but rather compressed all-in-one distributions.
 This also has the benefit of not adding and manipulating system wide configuration files.
-Its best to create a dedicated directory for all of these packages, we will be using `~/dev/tools
+Its best to create a dedicated directory for all of these packages, we will be using `~/dev/tools`
 
 ## Step 1: Install RabbitMQ Server
 
