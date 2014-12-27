@@ -1,41 +1,32 @@
-Cosmo Workflows
----------------
+Cloudify Integration Tests
+==========================
 
 ## Goal
 
-The purpose of this project is to test cosmo workflows logic.
-The tests are written in python and the test environment starts a celery worker and a riemann server before running the tests.
+This project aims to emulate a Cloudify Manager environment.
+By doing that we can test a full cloudify pipeline in an isolated environment, without using mocks (almost...).
 
-For a test example see: `workflow_tests/test_workflow.py`
+**Note** <br><br>
+In this tutorial we will be installing a few Linux packages.
+However, in order to make this tutorial as agnostic as possible to different linux distributions,
+we will not be using Linux package managers, but rather compressed all-in-one distributions.
+This also has the benefit of not adding and manipulating system wide configuration files.
+Its best to create a dedicated directory for all of these packages, we will be using `~/dev/tools
 
+## Step 1: Install RabbitMQ Server
 
-## Requirements
+RabbitMQ is a Message broker written in Erlang.
+So we need to [install Erlang](https://www.erlang-solutions.com/downloads/download-erlang-otp) first.
 
-* Python 2.7 runtime.
-* A running rabbitmq server.
-* Riemann server installed (riemann executable available in path).
+Now we can install rabbit: <br>
 
-
-## Installation
-
-The project's dependencies installation is done using setup.py:
-
-```
-virtualenv venv
-source venv/bin/activate
-python setup.py install
-```
-
-
-## Running The Tests
-
-```
-nosetests workflow_tests
+```bash
+~/dev/tools$ curl --silent --show-error --retry 5 https://www.rabbitmq.com/releases/rabbitmq-server/v3.4.2/rabbitmq-server-generic-unix-3.4.2.tar.gz -o rabbitmq-server-generic-unix-3.4.2.tar.gz
+~/dev/tools$ tar -xvf rabbitmq-server-generic-unix-3.4.2.tar.gz
 ```
 
+Add the `~/dev/tools/rabbitmq_server-3.4.2/sbin` directory to your path. Verify this by starting a new shell and running: <br>
 
-## Plugins
-
-Plugins used by tests should be stored in `plugins` (folder per plugin).
-
-If a plugin needs to write files to disk, these should be written to a temporary directory available from `os.environ["TEMP_DIR"]`.
+```bash
+~/dev/tools$ which rabbitmq-server
+```
