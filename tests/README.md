@@ -75,7 +75,7 @@ Add the `~/dev/tools/riemann-0.2.6/bin` directory to your path. Verify this by s
 
 ## Step 4: Installing riemann controller
 
-The riemann controller is a cloudify plugin to configure riemann for our usage.
+The *riemann-controller* is a cloudify plugin to configure riemann for our usage.
 cd into the directory containing this file and run:
 
 ```bash
@@ -102,7 +102,7 @@ cd into the directory containing this file and run:
 pip install -r ../rest-service/dev-requirements.txt -e ../rest-service
 ```
 
-## Installing tests framework
+## Step 7: Installing tests framework
 
 These tests fork celery processes, we want these processes to have access to code written in the project (utility methods and such),
 that's why we need to install it as well.
@@ -112,7 +112,7 @@ cd into the directory containing this file and run:
 pip install -r dev-requirements.txt -e .
 ```
 
-# Step 7: Verify installation.
+## Step 8: Verify installation.
 
 Lets verify everything works by running a test. cd into the directory containing this file and run:
 
@@ -121,3 +121,4 @@ nosetests -s workflow_tests/test_workflow.py:BasicWorkflowsTest.test_execute_ope
 ```
 
 # Usage
+
