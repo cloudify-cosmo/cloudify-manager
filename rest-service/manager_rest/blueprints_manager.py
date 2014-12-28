@@ -533,17 +533,20 @@ class BlueprintsManager(object):
                 "deployment {0} has been cancelled [status={1}]".format(
                     deployment_id, deployment_env_creation_execution.status))
 
-        # status is 'pending'. Waiting for a few seconds and retrying to
-        # verify (to avoid eventual consistency issues). If this is already a
-        # failed retry, it might mean there was a problem with the Celery task
+        # status is 'pending'. Waiting for a few seconds and retrying
+        # verification. It could be the case that some workflow execution was
+        # called immediately after deployment creation.
+        # If this is already a failed retry, it might mean there was a
+        # problem with the Celery task
         if not is_retry:
             time.sleep(5)
             self._verify_deployment_environment_created_successfully(
                 deployment_id, True)
         else:
-            # deployment environment creation failed but not on the workflow
-            # level - retrieving the celery task's status for the error
-            # message, and the error object from celery if one is available
+            # deployment environment creation probably failed but not on the
+            # workflow level.
+            # retrieving the celery task's status for the error message,
+            # and the error object from celery if one is available
             celery_task_status = celery_client().get_task_status(
                 deployment_env_creation_execution.id)
             error_message = \
