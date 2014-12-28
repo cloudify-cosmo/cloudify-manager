@@ -119,6 +119,3 @@ Lets verify everything works by running a test. cd into the directory containing
 ```bash
 nosetests -s workflow_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
 ```
-
-# Usage
-
