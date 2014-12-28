@@ -80,6 +80,11 @@ node_types:
           Enables the use of already foramtted volumes.
         type: boolean
         default: false
+      device_name:
+        description: >
+          The device name this filesystem will be formatted on.
+        type: string
+        default: /dev/vda
       partition_type:
         description: >
           The partiton type. 83 is a Linux Native Partition.
