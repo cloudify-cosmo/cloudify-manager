@@ -72,7 +72,7 @@ class FabricRunner(object):
     def ping(self):
         self.run('echo "ping!"')
 
-    def run(self, command):
+    def run(self, command, shell_escape=None):
         self.ctx.logger.debug('Running command: {0}'.format(command))
         if self.local:
             try:
@@ -90,7 +90,8 @@ class FabricRunner(object):
                       key_filename=self.key_filename,
                       disable_known_hosts=True):
             try:
-                return run(command, stdout=out, stderr=out)
+                return run(command, stdout=out, stderr=out,
+                           shell_escape=shell_escape)
             except SystemExit, e:
                 raise FabricRunnerException(command, e.code, out.getvalue())
 

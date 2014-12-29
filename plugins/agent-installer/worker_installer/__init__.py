@@ -178,7 +178,7 @@ def _set_wait_started_config(config):
 
 def _set_home_dir(runner, config):
     if 'home_dir' not in config:
-        home_dir = runner.run('echo $HOME')
+        home_dir = runner.run('echo $HOME', False)
         config['home_dir'] = home_dir
 
 
