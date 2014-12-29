@@ -16,7 +16,7 @@ groups:
     autohealing_group:
         members: [node]
         policies:
-            simple_autoheal_policy:
+            simple_autoheal_policy: &POLICY
                 type: cloudify.policies.types.host_failure
                 properties:
                     service:
@@ -30,20 +30,7 @@ groups:
                             workflow_parameters:
                                 node_id: { get_property: [SELF, failing_node]}
                                 diagnose_value: { get_property: [SELF, diagnose] }
-            second_autoheal_policy:
-                type: cloudify.policies.types.host_failure
-                properties:
-                    service:
-                        - service
-                triggers:
-                    auto_heal_trigger:
-                        type: cloudify.policies.triggers.execute_workflow
-                        parameters:
-                            workflow: auto_heal_workflow
-                            allow_custom_parameters: true
-                            workflow_parameters:
-                                node_id: { get_property: [SELF, failing_node]}
-                                diagnose_value: { get_property: [SELF, diagnose] }
+            second_autoheal_policy: *POLICY
 workflows:
     auto_heal_workflow:
         mapping: mock_workflows.mock_workflows.workflows.auto_heal_vm
