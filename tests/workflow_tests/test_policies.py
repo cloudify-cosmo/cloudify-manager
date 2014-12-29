@@ -16,6 +16,7 @@
 
 from collections import namedtuple
 
+import nose
 import time
 
 from testenv import riemann_cleanup
@@ -120,7 +121,7 @@ class TestPolicies(PoliciesTestsBase):
                 if e.message:
                     self.logger.warning(e.message)
 
-    @riemann_cleanup
+    @nose.tools.nottest
     def test_threshold_policy(self):
         self.launch_deployment('dsl/with_policies2.yaml')
 
