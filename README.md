@@ -1,5 +1,7 @@
 # Cloudify Manager
 
+* Master Branch [![Build Status](https://travis-ci.org/cloudify-cosmo/cloudify-manager.svg?branch=master)](https://travis-ci.org/cloudify-cosmo/cloudify-manager)
+
 This repository contains the following Cloudify components:
 
 * Cloudify's manager REST service.
