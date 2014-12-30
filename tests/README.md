@@ -35,11 +35,7 @@ Add the `~/dev/tools/rabbitmq_server-3.4.2/sbin` directory to your path. Verify 
 
 ## Step 2: Install Elasticsearch
 
-Elasticsearch is our storage data store, we use it to store:
-
-- Events
-- Logs
-- Static/Runtime blueprints data.
+Elasticsearch is our storage data store. To install it run:
 
 ```bash
 ~/dev/tools$ curl -L -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.2.tar.gz
