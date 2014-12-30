@@ -80,11 +80,6 @@ node_types:
           Enables the use of already foramtted volumes.
         type: boolean
         default: false
-      device_name:
-        description: >
-          The device name this filesystem will be formatted on.
-        type: string
-        default: /dev/vda
       partition_type:
         description: >
           The partiton type. 83 is a Linux Native Partition.
@@ -106,16 +101,11 @@ node_types:
         type: string
     interfaces:
       cloudify.interfaces.lifecycle:
-        create:
+        conifugre:
           implementation: script.script_runner.tasks.run
           inputs:
             script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/create.sh
-        delete:
-          implementation: script.script_runner.tasks.run
-          inputs:
-            script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/delete.sh
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/mkfs.sh
 
   # A storage Container (Object Store segment)
   cloudify.nodes.ObjectStorage:
@@ -225,7 +215,21 @@ relationships:
   cloudify.relationships.contained_in:
     derived_from: cloudify.relationships.depends_on
 
-  cloudify.relationships.file_system_contained_in_volume:
+  cloudify.relationships.file_system_depends_on_volume:
+    derived_from: cloudify.relationships.depends_on
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure:
+          implementation: script.script_runner.tasks.run
+          inputs:
+            script_path:
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/fdisk.sh
+            process:
+              default:
+                env:
+                  DEVICE_NAME: { get_attribute: [TARGET, device_name] }
+
+  cloudify.relationships.file_system_contained_in_compute:
     derived_from: cloudify.relationships.contained_in
     source_interfaces:
       cloudify.interfaces.relationship_lifecycle:
@@ -233,7 +237,13 @@ relationships:
           implementation: script.script_runner.tasks.run
           inputs:
             script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/partition.py
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/mount.sh
+        unlink:
+          implementation: script.script_runner.tasks.run
+          inputs:
+            script_path:
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/unmount.sh
+
 
 ##################################################################################
 # Workflows
