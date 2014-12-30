@@ -49,7 +49,7 @@ def install(ctx, plugins, **kwargs):
 
     for plugin in plugins:
         logger.info('Installing plugin {0}'.format(plugin['name']))
-        url = get_url(ctx.blueprint_id, plugin)
+        url = get_url(ctx.blueprint.id, plugin)
         install_celery_plugin(url)
 
 

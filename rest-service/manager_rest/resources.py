@@ -55,25 +55,7 @@ def exceptions_handled(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (
-                manager_exceptions.ConflictError,
-                manager_exceptions.NotFoundError,
-                manager_exceptions.DependentExistsError,
-                manager_exceptions.NonexistentWorkflowError,
-                manager_exceptions.BadParametersError,
-                manager_exceptions.UnsupportedContentTypeError,
-                manager_exceptions.InvalidBlueprintError,
-                manager_exceptions.ExistingRunningExecutionError,
-                manager_exceptions.IllegalExecutionParametersError,
-                manager_exceptions.IllegalActionError,
-                manager_exceptions.NoSuchIncludeFieldError,
-                manager_exceptions.MissingRequiredDeploymentInputError,
-                manager_exceptions.UnknownModificationStageError,
-                manager_exceptions.UnknownDeploymentInputError,
-                manager_exceptions.DeploymentOutputsEvaluationError,
-                manager_exceptions.FunctionsEvaluationError,
-                manager_exceptions.DeploymentEnvironmentCreationInProgressError
-        ) as e:
+        except manager_exceptions.ManagerException as e:
             abort_error(e)
     return wrapper
 
@@ -182,28 +164,20 @@ def setup_resources(api):
     api = swagger.docs(api,
                        apiVersion='0.1',
                        basePath='http://localhost:8100')
-    api.add_resource(Blueprints,
-                     '/blueprints')
-    api.add_resource(BlueprintsId,
-                     '/blueprints/<string:blueprint_id>')
+    api.add_resource(Blueprints, '/blueprints')
+    api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
     api.add_resource(BlueprintsIdArchive,
                      '/blueprints/<string:blueprint_id>/archive')
-    api.add_resource(Executions,
-                     '/executions')
-    api.add_resource(ExecutionsId,
-                     '/executions/<string:execution_id>')
-    api.add_resource(Deployments,
-                     '/deployments')
-    api.add_resource(DeploymentsId,
-                     '/deployments/<string:deployment_id>')
+    api.add_resource(Executions, '/executions')
+    api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
+    api.add_resource(Deployments, '/deployments')
+    api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
     api.add_resource(DeploymentsIdOutputs,
                      '/deployments/<string:deployment_id>/outputs')
     api.add_resource(DeploymentsIdModify,
                      '/deployments/<string:deployment_id>/modify')
-    api.add_resource(Nodes,
-                     '/nodes')
-    api.add_resource(NodeInstances,
-                     '/node-instances')
+    api.add_resource(Nodes, '/nodes')
+    api.add_resource(NodeInstances, '/node-instances')
     api.add_resource(NodeInstancesId,
                      '/node-instances/<string:node_instance_id>')
     api.add_resource(Events, '/events')
@@ -266,7 +240,8 @@ class BlueprintsUpload(object):
                                         'plugins', final_zip_name)
             self._zip_dir(plugin_dir, target_zip_path)
 
-    def _zip_dir(self, dir_to_zip, target_zip_path):
+    @staticmethod
+    def _zip_dir(dir_to_zip, target_zip_path):
         zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
         try:
             plugin_dir_base_name = path.basename(dir_to_zip)
@@ -278,7 +253,8 @@ class BlueprintsUpload(object):
         finally:
             zipf.close()
 
-    def _save_file_locally(self, archive_file_name):
+    @staticmethod
+    def _save_file_locally(archive_file_name):
         # save uploaded file
         if 'Transfer-Encoding' in request.headers:
             with open(archive_file_name, 'w') as f:
@@ -292,7 +268,8 @@ class BlueprintsUpload(object):
             with open(archive_file_name, 'w') as f:
                 f.write(uploaded_file_data)
 
-    def _extract_file_to_file_server(self, file_server_root,
+    @staticmethod
+    def _extract_file_to_file_server(file_server_root,
                                      archive_target_path):
         # extract application to file server
         tar = tarfile.open(archive_target_path)
@@ -352,7 +329,8 @@ class BlueprintsUpload(object):
             raise manager_exceptions.InvalidBlueprintError(
                 'Invalid blueprint - {0}'.format(ex.message))
 
-    def _extract_application_file(self, file_server_root, application_dir):
+    @staticmethod
+    def _extract_application_file(file_server_root, application_dir):
         if 'application_file_name' in request.args:
             application_file = urllib.unquote(
                 request.args['application_file_name']).decode('utf-8')
@@ -613,7 +591,7 @@ class ExecutionsId(Resource):
 
         if action in ('cancel', 'force-cancel'):
             return get_blueprints_manager().cancel_execution(
-                execution_id, action == 'force-cancel'), 201
+                execution_id, action == 'force-cancel')
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -1172,7 +1150,8 @@ class Status(Resource):
 
         return responses.Status(status='running', services=jobs)
 
-    def _is_docker_env(self):
+    @staticmethod
+    def _is_docker_env():
         return os.getenv('DOCKER_ENV') is not None
 
 

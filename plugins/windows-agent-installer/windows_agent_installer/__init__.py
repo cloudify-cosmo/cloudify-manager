@@ -118,6 +118,10 @@ def set_bootstrap_context_parameters(bootstrap_context, cloudify_agent):
     """
     set_autoscale_parameters(bootstrap_context, cloudify_agent)
 
+    cloudify_agent['delete_amqp_queues'] = _get_bool(cloudify_agent,
+                                                     'delete_amqp_queues',
+                                                     True)
+
 
 def set_agent_configuration_parameters(cloudify_agent):
 
@@ -207,3 +211,16 @@ def _get_machine_ip(ctx):
     raise NonRecoverableError(
         'ip property is not set for node: {0}. This is mandatory'
         ' for manipulating a remote agent.'.format(ctx.instance.id))
+
+
+def _get_bool(config, key, default):
+    if key not in config:
+        return default
+    str_value = str(config[key])
+    if str_value.lower() == 'true':
+        return True
+    if str_value.lower() == 'false':
+        return False
+    raise NonRecoverableError(
+        'Value for {0} property should be true/false '
+        'but is: {1}'.format(key, str_value))

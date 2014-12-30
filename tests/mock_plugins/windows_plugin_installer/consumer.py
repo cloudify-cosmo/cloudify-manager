@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,25 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'elip'
+from cloudify import ctx
 
-from setuptools import setup
+from mock_plugins.plugin_installer import PluginInstaller
 
 
-setup(
-    name='cloudify-windows-plugin-installer-plugin',
-    version='3.2a1',
-    author='elip',
-    author_email='elip@gigaspaces.com',
-    packages=['windows_plugin_installer'],
-    license='LICENSE',
-    description='Plugin for installing plugins into an '
-                'existing celery windows worker',
-    zip_safe=False,
-    install_requires=[
-        "cloudify-plugins-common==3.2a1"
-    ],
-    tests_require=[
-        "nose"
-    ]
-)
+class ConsumerBackedPluginInstaller(PluginInstaller):
+
+    def install(self, plugin):
+        plugin_name = plugin['name']
+        ctx.logger.info('Installing plugin {0}'.format(plugin_name))

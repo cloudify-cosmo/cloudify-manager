@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2014 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,25 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = 'elip'
-
-from setuptools import setup
+import abc
 
 
-setup(
-    name='cloudify-windows-plugin-installer-plugin',
-    version='3.2a1',
-    author='elip',
-    author_email='elip@gigaspaces.com',
-    packages=['windows_plugin_installer'],
-    license='LICENSE',
-    description='Plugin for installing plugins into an '
-                'existing celery windows worker',
-    zip_safe=False,
-    install_requires=[
-        "cloudify-plugins-common==3.2a1"
-    ],
-    tests_require=[
-        "nose"
-    ]
-)
+class PluginInstaller(object):
+
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def install(self, plugins):
+        pass

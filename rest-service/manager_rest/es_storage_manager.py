@@ -36,19 +36,24 @@ PROVIDER_CONTEXT_ID = 'CONTEXT'
 
 DEFAULT_SEARCH_SIZE = 10000
 
+MUTATE_PARAMS = {
+    'refresh': True
+}
+
 
 class ESStorageManager(object):
 
-    def _get_es_conn(self):
+    @property
+    def _connection(self):
         return Elasticsearch()
 
     def _list_docs(self, doc_type, model_class, query=None, fields=None):
         include = list(fields) if fields else True
-        search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
-                                                   doc_type=doc_type,
-                                                   size=DEFAULT_SEARCH_SIZE,
-                                                   body=query,
-                                                   _source=include)
+        search_result = self._connection.search(index=STORAGE_INDEX_NAME,
+                                                doc_type=doc_type,
+                                                size=DEFAULT_SEARCH_SIZE,
+                                                body=query,
+                                                _source=include)
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
 
         # ES doesn't return _version if using its search API.
@@ -61,14 +66,14 @@ class ESStorageManager(object):
     def _get_doc(self, doc_type, doc_id, fields=None):
         try:
             if fields:
-                return self._get_es_conn().get(index=STORAGE_INDEX_NAME,
-                                               doc_type=doc_type,
-                                               id=doc_id,
-                                               _source=[f for f in fields])
+                return self._connection.get(index=STORAGE_INDEX_NAME,
+                                            doc_type=doc_type,
+                                            id=doc_id,
+                                            _source=[f for f in fields])
             else:
-                return self._get_es_conn().get(index=STORAGE_INDEX_NAME,
-                                               doc_type=doc_type,
-                                               id=doc_id)
+                return self._connection.get(index=STORAGE_INDEX_NAME,
+                                            doc_type=doc_type,
+                                            id=doc_id)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
@@ -90,17 +95,19 @@ class ESStorageManager(object):
 
     def _put_doc_if_not_exists(self, doc_type, doc_id, value):
         try:
-            self._get_es_conn().create(index=STORAGE_INDEX_NAME,
-                                       doc_type=doc_type, id=doc_id,
-                                       body=value)
+            self._connection.create(index=STORAGE_INDEX_NAME,
+                                    doc_type=doc_type, id=doc_id,
+                                    body=value,
+                                    **MUTATE_PARAMS)
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
 
     def _delete_doc(self, doc_type, doc_id, model_class, id_field='id'):
         try:
-            res = self._get_es_conn().delete(STORAGE_INDEX_NAME, doc_type,
-                                             doc_id)
+            res = self._connection.delete(STORAGE_INDEX_NAME, doc_type,
+                                          doc_id,
+                                          **MUTATE_PARAMS)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "{0} {1} not found".format(doc_type, doc_id))
@@ -112,11 +119,12 @@ class ESStorageManager(object):
                                                          model_class)
 
     def _delete_doc_by_query(self, doc_type, query):
-        self._get_es_conn().delete_by_query(index=STORAGE_INDEX_NAME,
-                                            doc_type=doc_type,
-                                            body=query)
+        self._connection.delete_by_query(index=STORAGE_INDEX_NAME,
+                                         doc_type=doc_type,
+                                         body=query)
 
-    def _fill_missing_fields_and_deserialize(self, fields_data, model_class):
+    @staticmethod
+    def _fill_missing_fields_and_deserialize(fields_data, model_class):
         for field in model_class.fields:
             if field not in fields_data:
                 fields_data[field] = None
@@ -144,10 +152,10 @@ class ESStorageManager(object):
         }
 
     def node_instances_list(self, include=None):
-        search_result = self._get_es_conn().search(index=STORAGE_INDEX_NAME,
-                                                   doc_type=NODE_INSTANCE_TYPE,
-                                                   size=DEFAULT_SEARCH_SIZE,
-                                                   _source=include or True)
+        search_result = self._connection.search(index=STORAGE_INDEX_NAME,
+                                                doc_type=NODE_INSTANCE_TYPE,
+                                                size=DEFAULT_SEARCH_SIZE,
+                                                _source=include or True)
         docs_with_versions = \
             map(lambda hit: (hit['_source'], hit['_version']),
                 search_result['hits']['hits'])
@@ -268,10 +276,11 @@ class ESStorageManager(object):
         update_doc = {'doc': update_doc_data}
 
         try:
-            self._get_es_conn().update(index=STORAGE_INDEX_NAME,
-                                       doc_type=EXECUTION_TYPE,
-                                       id=str(execution_id),
-                                       body=update_doc)
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=EXECUTION_TYPE,
+                                    id=str(execution_id),
+                                    body=update_doc,
+                                    **MUTATE_PARAMS)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Execution {0} not found".format(execution_id))
@@ -299,10 +308,11 @@ class ESStorageManager(object):
         update_doc_data = {'number_of_instances': number_of_instances}
         update_doc = {'doc': update_doc_data}
         try:
-            self._get_es_conn().update(index=STORAGE_INDEX_NAME,
-                                       doc_type=NODE_TYPE,
-                                       id=storage_node_id,
-                                       body=update_doc)
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=NODE_TYPE,
+                                    id=storage_node_id,
+                                    body=update_doc,
+                                    **MUTATE_PARAMS)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))
@@ -332,10 +342,11 @@ class ESStorageManager(object):
         updated = current.to_dict()
         del updated['version']
 
-        self._get_es_conn().index(index=STORAGE_INDEX_NAME,
-                                  doc_type=NODE_INSTANCE_TYPE,
-                                  id=node.id,
-                                  body=updated)
+        self._connection.index(index=STORAGE_INDEX_NAME,
+                               doc_type=NODE_INSTANCE_TYPE,
+                               id=node.id,
+                               body=updated,
+                               **MUTATE_PARAMS)
 
     def put_provider_context(self, provider_context):
         doc_data = provider_context.to_dict()
@@ -349,7 +360,8 @@ class ESStorageManager(object):
                                              ProviderContext,
                                              fields=include)
 
-    def _storage_node_id(self, deployment_id, node_id):
+    @staticmethod
+    def _storage_node_id(deployment_id, node_id):
         return '{0}_{1}'.format(deployment_id, node_id)
 
 

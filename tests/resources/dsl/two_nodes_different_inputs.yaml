@@ -1,0 +1,30 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+  - cloudify.types
+  - plugins/cloudmock.yaml
+
+inputs:
+  install_agent:
+    description: >
+      Determines whether to install a Cloudify agent
+    default: false
+
+node_templates:
+  node1:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: cloudmock.cloudmock.tasks.start
+          inputs:
+            key: value
+  node2:
+    type: cloudify.nodes.Root
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: cloudmock.cloudmock.tasks.start
+          inputs:
+            key:
+              complex: aaa

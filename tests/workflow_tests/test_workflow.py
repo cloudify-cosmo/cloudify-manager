@@ -427,6 +427,65 @@ class BasicWorkflowsTest(TestCase):
             worker_installer_data[webserver_node.host_id]['states'],
             ['installed', 'started', 'restarted', 'stopped', 'uninstalled'])
 
+    def test_deploy_with_agent_worker_windows(self):
+        dsl_path = resource('dsl/with_agent_worker_windows.yaml')
+        deployment, _ = deploy(dsl_path)
+        deployment_nodes = self.client.node_instances.list(
+            deployment_id=deployment.id
+        )
+
+        webserver_nodes = filter(lambda node: 'host' not in node.node_id,
+                                 deployment_nodes)
+        self.assertEquals(1, len(webserver_nodes))
+        webserver_node = webserver_nodes[0]
+        invocations = self.get_plugin_data(
+            plugin_name='mock_agent_plugin',
+            deployment_id=deployment.id
+        )[webserver_node.id]
+
+        worker_installer_data = self.get_plugin_data(
+            plugin_name='agent_installer',
+            deployment_id=deployment.id
+        )
+
+        # agent on host should have been started and restarted
+        self.assertEqual(
+            worker_installer_data[webserver_node.host_id]['states'],
+            ['installed', 'started', 'restarted'])
+
+        plugin_installer_data = self.get_plugin_data(
+            plugin_name='windows_plugin_installer',
+            deployment_id=deployment.id
+        )
+
+        self.assertEqual(
+            plugin_installer_data[
+                webserver_node.host_id
+            ]['mock_agent_plugin'],
+            ['installed'])
+
+        expected_invocations = ['create', 'start']
+        self.assertListEqual(invocations, expected_invocations)
+
+        undeploy(deployment_id=deployment.id)
+        invocations = self.get_plugin_data(
+            plugin_name='mock_agent_plugin',
+            deployment_id=deployment.id
+        )[webserver_node.id]
+
+        expected_invocations = ['create', 'start', 'stop', 'delete']
+        self.assertListEqual(invocations, expected_invocations)
+
+        # agent on host should have also
+        # been stopped and uninstalled
+        worker_installer_data = self.get_plugin_data(
+            plugin_name='agent_installer',
+            deployment_id=deployment.id
+        )
+        self.assertEqual(
+            worker_installer_data[webserver_node.host_id]['states'],
+            ['installed', 'started', 'restarted', 'stopped', 'uninstalled'])
+
     def test_deploy_with_operation_executor_override(self):
         dsl_path = resource('dsl/operation_executor_override.yaml')
         deployment, _ = deploy(dsl_path)

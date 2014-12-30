@@ -16,6 +16,7 @@
 import unittest
 import os
 import getpass
+import pwd
 from os import path
 from worker_installer import init_worker_installer
 from worker_installer import DEFAULT_MIN_WORKERS, DEFAULT_MAX_WORKERS
@@ -74,6 +75,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                                       'cloudify_agent': {
                                           'user': getpass.getuser(),
                                           'key': KEY_FILE_PATH,
+                                          'home_dir': self._get_home_dir(),
                                           'distro': 'Ubuntu',
                                           'distro_codename': 'trusty',
                                       },
@@ -93,6 +95,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'cloudify_agent': {
                     'user': getpass.getuser(),
                     'key': KEY_FILE_PATH,
+                    'home_dir': self._get_home_dir(),
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
                 }
@@ -147,6 +150,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'cloudify_agent': {
                     'user': getpass.getuser(),
                     'key': KEY_FILE_PATH,
+                    'home_dir': self._get_home_dir(),
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
                 }
@@ -164,6 +168,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
+                    'home_dir': self._get_home_dir(),
                     'key': KEY_FILE_PATH,
                     'min_workers': 2,
                     'max_workers': 5,
@@ -187,6 +192,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
+                    'home_dir': self._get_home_dir(),
                     'key': KEY_FILE_PATH,
                     'min_workers': 10,
                     'max_workers': 5,
@@ -205,6 +211,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
+                    'home_dir': self._get_home_dir(),
                     'key': KEY_FILE_PATH,
                     'min_workers': 'aaa',
                     'max_workers': 5,
@@ -226,6 +233,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
+                    'home_dir': self._get_home_dir(),
                     'key': KEY_FILE_PATH,
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
@@ -251,6 +259,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
+                    'home_dir': self._get_home_dir(),
                     'key': KEY_FILE_PATH,
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
@@ -278,6 +287,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             properties={
                 'cloudify_agent': {
                     'user': getpass.getuser(),
+                    'home_dir': self._get_home_dir(),
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
                 }
@@ -301,6 +311,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
+                    'home_dir': self._get_home_dir(),
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
                 },
@@ -309,7 +320,6 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
                 'cloudify_agent': {
                     'agent_key_path': KEY_FILE_PATH,
                     'user': getpass.getuser()
-
                 }
             })
         )
@@ -326,6 +336,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
+                    'home_dir': self._get_home_dir(),
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
                 },
@@ -350,6 +361,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
+                    'home_dir': self._get_home_dir(),
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
                 },
@@ -373,6 +385,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
+                    'home_dir': self._get_home_dir(),
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty'
                 },
@@ -399,6 +412,7 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
             },
             properties={
                 'cloudify_agent': {
+                    'home_dir': self._get_home_dir(),
                     'distro': 'Ubuntu',
                     'distro_codename': 'trusty',
                     'port': 3333
@@ -429,6 +443,9 @@ class CeleryWorkerConfigurationTest(unittest.TestCase):
         }
         conf = m(ctx, cloudify_agent=config)
         self.assertEqual(conf['name'], 'test_workflows')
+
+    def _get_home_dir(self):
+        return pwd.getpwnam(getpass.getuser()).pw_dir
 
 
 class MockFabricRunner(FabricRunner):

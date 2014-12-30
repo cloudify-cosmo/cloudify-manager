@@ -61,3 +61,15 @@ class TestStorage(TestCase):
         self.assertEqual(1, len(deployment.inputs))
         self.assertTrue('install_agent' in deployment.inputs)
         self.assertFalse(deployment.inputs['install_agent'])
+
+    def test_node_operation_different_inputs(self):
+        """
+        Tests storing different nodes with different structured inputs for
+        the same operation.
+        """
+        blueprint_id = str(uuid.uuid4())
+        blueprint = self.client.blueprints.upload(
+            resource("dsl/two_nodes_different_inputs.yaml"),
+            blueprint_id)
+        deployment_id = str(uuid.uuid4())
+        self.client.deployments.create(blueprint.id, deployment_id)
