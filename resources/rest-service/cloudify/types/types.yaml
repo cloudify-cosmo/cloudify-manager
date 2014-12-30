@@ -245,9 +245,9 @@ policy_types:
                 default: true
             interval_between_workflows:
                 description: |
-                    Trigger workflow only if the last workflow was earlier then interval-between-workflows minutes ago.
+                    Trigger workflow only if the last workflow was earlier then interval-between-workflows seconds ago.
                     if < 0  workflows can run concurrently.
-                default: 10
+                default: 300
             service:
                 description: The service name
                 default: service
@@ -274,9 +274,9 @@ policy_types:
                 default: true
             interval_between_workflows:
                 description: |
-                    Trigger workflow only if the last workflow was earlier then interval-between-workflows minutes ago.
+                    Trigger workflow only if the last workflow was earlier then interval-between-workflows seconds ago.
                     if < 0  workflows can run concurrently.
-                default: 10
+                default: 300
             service:
                 description: The service name
                 default:
@@ -290,9 +290,9 @@ policy_types:
                 default: true
             interval_between_workflows:
                 description: |
-                    Trigger workflow only if the last workflow was earlier then interval-between-workflows minutes ago.
+                    Trigger workflow only if the last workflow was earlier then interval-between-workflows seconds ago.
                     if < 0  workflows can run concurrently.
-                default: 10
+                default: 300
             service:
                 description: The service name
                 default: service

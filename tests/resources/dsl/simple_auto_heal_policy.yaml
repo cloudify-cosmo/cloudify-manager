@@ -18,6 +18,9 @@ groups:
         policies:
             simple_autoheal_policy:
                 type: cloudify.policies.types.host_failure
+                properties:
+                    is_node_started_before_workflow: false
+                    interval_between_workflows: -1
                 triggers:
                     auto_heal_trigger:
                         type: cloudify.policies.triggers.execute_workflow

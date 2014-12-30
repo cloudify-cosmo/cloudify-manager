@@ -116,7 +116,7 @@ class TestPolicies(PoliciesTestsBase):
             except BaseException as e:
                 if e.message:
                     self.logger.warning(e.message)
-
+    @nose.tools.nottest
     def test_threshold_policy(self):
         self.launch_deployment('dsl/with_policies2.yaml')
 
@@ -450,6 +450,20 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         self.wait_for_invocations(self.deployment.id, 1)
+
+    def test_multiple_workflows(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        # Wait for interval between workflows pass
+        time.sleep(5)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
+
+        self.wait_for_invocations(self.deployment.id, 2)
 
     def test_autoheal_policy_nested_nodes(self):
         NODES_WITH_LIFECYCLE_OP = 3
