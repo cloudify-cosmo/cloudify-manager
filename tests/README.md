@@ -114,7 +114,13 @@ pip install -r dev-requirements.txt -e .
 
 ## Step 8: Verify installation.
 
-Lets verify everything works by running a test. cd into the directory containing this file and run:
+Lets verify everything works by running a test. First we need to start our RabbitMQ Server:
+
+```bash
+rabbitmq-server -detached
+```
+
+Noe, cd into the directory containing this file and run:
 
 ```bash
 nosetests -s workflow_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
