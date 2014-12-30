@@ -52,11 +52,15 @@ Add the `~/dev/tools/elasticsearch-1.4.2/bin` directory to your path. Verify thi
 ~/dev/tools$ which elasticsearch
 ```
 
+## Step 2.1 : Disable Elasticsearch multicast
+
 By default, Elasticsearch is started with multicast enabled,
 this can cause some strange behaviour when other instances of elasticsearch are running on the same network.
-We want to disable this. To do so you need to uncomment the `discovery.zen.ping.multicast.enabled: false` in the `~/dev/tools/elasticsearch-1.4.2/config/elasticsearch.yml`
+We want to disable this. To do, open the `~/dev/tools/elasticsearch-1.4.2/config/elasticsearch.yml` file and uncomment this:
 
-![Disable Multicast](disable_multicast.png)
+````yaml
+discovery.zen.ping.multicast.enabled: false
+```
 
 ## Step 3: Installing Riemann
 
