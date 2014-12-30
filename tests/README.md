@@ -120,7 +120,7 @@ Lets verify everything works by running a test. First we need to start our Rabbi
 rabbitmq-server -detached
 ```
 
-Noe, cd into the directory containing this file and run:
+Now, cd into the directory containing this file and run:
 
 ```bash
 nosetests -s workflow_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
