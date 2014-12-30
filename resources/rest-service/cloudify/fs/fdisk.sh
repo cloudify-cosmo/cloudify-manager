@@ -1,9 +1,9 @@
 #!/bin/bash -e
 
-use_external_resource=$(ctx node properties use_external_resource)
-partition_type=$(ctx node properties partition_type)
-partition_number=$(ctx node properties partition_number)
-fs_type=$(ctx node properties fs_type)
+use_external_resource=$(ctx source node properties use_external_resource)
+partition_type=$(ctx source node properties partition_type)
+partition_number=$(ctx source node properties partition_number)
+fs_type=$(ctx source node properties fs_type)
 
 device_name=${DEVICE_NAME}
 
