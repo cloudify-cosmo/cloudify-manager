@@ -23,6 +23,7 @@ groups:
                     threshold: 100
                     upper_bound: true
                     stability_time: 0
+                    interval_between_workflows: -1
                 triggers:
                     upper_bound_trigger:
                         type: cloudify.policies.triggers.execute_workflow
@@ -37,6 +38,7 @@ groups:
                     threshold: 100
                     upper_bound: false
                     stability_time: 0
+                    interval_between_workflows: -1
                 triggers:
                     lower_bound_trigger:
                         type: cloudify.policies.triggers.execute_workflow

@@ -27,6 +27,7 @@ def create(ctx, policy_types, policy_triggers, groups, config_template):
                 'group': group_name,
                 'policy': policy_name,
                 'policy_type': policy['type'],
+                'policy_properties': policy['properties'],
                 'members': group['members'],
                 'ctx': ctx
             }
