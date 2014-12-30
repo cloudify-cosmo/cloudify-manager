@@ -80,19 +80,36 @@ def init_worker_installer(func):
 
 
 def get_machine_distro(runner):
-    """retrieves the distribution information of the machine
+    """retrieves the distribution information of the machine"""
 
-    To overcome the situation where additional info is printed
-    to stdout when a command execution occures, a string is
-    appended to the output. This will then search for the string
-    and the following closing brackets to retrieve the original
-    platform.dist().
+    stdout = _run_py_cmd_with_output(runner,
+                                     'import platform, json',
+                                     'json.dumps(platform.dist())')
+    return json.loads(stdout)
+
+
+def _run_py_cmd_with_output(runner, imports_line, command):
     """
-    stdout = runner.run('python -c "import platform, json, sys; '
-                        'sys.stdout.write(\'DISTROOPEN{0}DISTROCLOSE\\n\''
-                        '.format(json.dumps(platform.dist())))"')
-    jsonres = stdout[stdout.find("DISTROOPEN") + 10:stdout.find("DISTROCLOSE")]
-    return json.loads(jsonres)
+    To overcome the situation where additional info is printed
+    to stdout when a command execution occurs, a string is
+    appended to the output. This will then search for the string
+    and the following closing brackets to retrieve the original output.
+    """
+
+    delim_start = '###CLOUDIFYDISTROOPEN'
+    delim_end = 'CLOUDIFYDISTROCLOSE###'
+
+    stdout = runner.run('python -c "import sys; {0}; '
+                        'sys.stdout.write(\'{1}{2}{3}\\n\''
+                        '.format({4}))"'
+                        .format(imports_line,
+                                delim_start,
+                                '{0}',
+                                delim_end,
+                                command))
+    result = stdout[stdout.find(delim_start) + len(delim_start):
+                    stdout.find(delim_end)]
+    return result
 
 
 def get_machine_ip(ctx):
@@ -178,7 +195,11 @@ def _set_wait_started_config(config):
 
 def _set_home_dir(runner, config):
     if 'home_dir' not in config:
-        home_dir = runner.run('echo $HOME', False)
+        home_dir = _run_py_cmd_with_output(
+            runner,
+            'import pwd',
+            'pwd.getpwnam(\'{0}\').pw_dir'.format(config['user']))
+
         config['home_dir'] = home_dir
 
 
