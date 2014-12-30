@@ -31,8 +31,7 @@
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
 (let [ctx {:blueprint-id  "{{ctx.blueprint.id}}"
-           ;TODO logging requires it to be deployment_id
-           :deployment-id "{{ctx.deployment.id}}"
+           :deployment_id "{{ctx.deployment.id}}"
            :group         "{{stream.metadata.group}}"
            :policy        "{{stream.metadata.policy}}"}
       process-policy-triggers      (process-policy-triggers-stream
