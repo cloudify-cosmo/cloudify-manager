@@ -36,25 +36,13 @@ node_types:
         default: ''
     interfaces:
       cloudify.interfaces.worker_installer:
-        install:
-          implementation: agent_installer.worker_installer.tasks.install
-          inputs: {}
-        start:
-          implementation: agent_installer.worker_installer.tasks.start
-          inputs: {}
-        stop:
-          implementation: agent_installer.worker_installer.tasks.stop
-          inputs: {}
-        uninstall:
-          implementation: agent_installer.worker_installer.tasks.uninstall
-          inputs: {}
-        restart:
-          implementation: agent_installer.worker_installer.tasks.restart
-          inputs: {}
+        install: agent_installer.worker_installer.tasks.install
+        start: agent_installer.worker_installer.tasks.start
+        stop: agent_installer.worker_installer.tasks.stop
+        uninstall: agent_installer.worker_installer.tasks.uninstall
+        restart: agent_installer.worker_installer.tasks.restart
       cloudify.interfaces.plugin_installer:
-        install:
-          implementation: plugin_installer.plugin_installer.tasks.install
-          inputs: {}
+        install: plugin_installer.plugin_installer.tasks.install
       cloudify.interfaces.host:
         get_state: {}
       cloudify.interfaces.monitoring_agent:
