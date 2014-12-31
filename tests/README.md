@@ -76,40 +76,40 @@ Add the `~/dev/tools/riemann-0.2.6/bin` directory to your path. Verify this by s
 ## Step 4: Installing riemann controller
 
 The *riemann-controller* is a Cloudify plugin that configures riemann for our usage.
-`cd` into the directory containing this file and run:
+`cd` into the root directory of this repo (*cloudify-manager*) and run:
 
 ```bash
-pip install -e ../plugins/riemann-controller
+pip install -e plugins/riemann-controller/
 ```
 
 ## Step 5: Installing Workflows
 
 The *workflows* project contains Cloudify system workflows, i.e, workflows that we use for managerial configuration.
 Specifically, it contains workflows that create/delete deployments.
-`cd` into the directory containing this file and run:
+`cd` into the root directory of this repo (*cloudify-manager*) and run:
 
 ```bash
-pip install -e ../workflows
+pip install -e workflows/
 ```
 
 ## Step 6: Installing REST service
 
 The *rest-service* project is the REST gateway all clients connect to.
 We will be running it as part of the tests, so we need install It's dependencies.
-`cd` into the directory containing this file and run:
+`cd` into the root directory of this repo (*cloudify-manager*) and run:
 
 ```bash
-pip install -r ../rest-service/dev-requirements.txt -e ../rest-service
+pip install -r rest-service/dev-requirements.txt -e ../rest-service/
 ```
 
 ## Step 7: Installing tests framework
 
 These tests fork celery processes, we want these processes to have access to code written in the project (utility methods and such),
 that's why we need to install it as well.
-`cd` into the directory containing this file and run:
+`cd` into the root directory of this repo (*cloudify-manager*) and run:
 
 ```bash
-pip install -r dev-requirements.txt -e .
+pip install -r dev-requirements.txt -e tests/
 ```
 
 ## Step 8: Verify installation.
@@ -120,8 +120,8 @@ Lets verify everything works by running a test. First we need to start our Rabbi
 rabbitmq-server -detached
 ```
 
-Now, `cd` into the directory containing this file and run:
+Now, `cd` into the root directory of this repo (*cloudify-manager*) and run:
 
 ```bash
-nosetests -s workflow_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
+nosetests -s tests/workflow_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
 ```
