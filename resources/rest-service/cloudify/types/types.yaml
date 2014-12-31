@@ -99,12 +99,6 @@ node_types:
           inputs:
             script_path:
               default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/mkfs.sh
-        delete:
-          implementation: script.script_runner.tasks.run
-          inputs:
-            script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/format.sh
-
 
   # A storage Container (Object Store segment)
   cloudify.nodes.ObjectStorage:
