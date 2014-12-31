@@ -12,7 +12,7 @@ In this tutorial we will be installing a few Linux packages.
 However, in order to make this tutorial as agnostic as possible to different linux distributions,
 we will not be using Linux package managers, but rather compressed all-in-one distributions.
 This also has the benefit of not adding and manipulating system wide configuration files.
-Its best to create a dedicated directory for all of these packages, we will be using `~/dev/tools`.
+It's best to create a dedicated directory for all of these packages, we will be using `~/dev/tools`.
 Also, make sure you activate the virtualenv dedicated for Cloudify prior to running any install commands.
 
 ## Step 1: Install RabbitMQ Server
@@ -95,7 +95,7 @@ pip install -e ../workflows
 ## Step 6: Installing REST service
 
 The *rest-service* project is the REST gateway all clients connect to.
-We will be running it as part of the tests, so we need install its dependencies.
+We will be running it as part of the tests, so we need install It's dependencies.
 cd into the directory containing this file and run:
 
 ```bash
