@@ -95,7 +95,7 @@ pip install -e workflows/
 ## Step 6: Installing REST service
 
 The *rest-service* project is the REST gateway all clients connect to.
-We will be running it as part of the tests, so we need install It's dependencies.
+We will be running it as part of the tests, so we need install its dependencies.
 `cd` into the root directory of this repo (*cloudify-manager*) and run:
 
 ```bash
