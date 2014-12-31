@@ -104,7 +104,7 @@ pip install -r rest-service/dev-requirements.txt -e rest-service/
 
 ## Step 7: Installing tests framework
 
-The tests in this project forks celery processes and we want these processes to have access to code written in the project (utility methods and such),
+The tests in this project fork celery processes and we want these processes to have access to code written in the project (utility methods and such),
 that's why we need to install it as well.
 `cd` into the root directory of this repo (*cloudify-manager*) and run:
 
