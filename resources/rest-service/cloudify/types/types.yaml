@@ -94,11 +94,17 @@ node_types:
         type: string
     interfaces:
       cloudify.interfaces.lifecycle:
-        conifugre:
+        configure:
           implementation: script.script_runner.tasks.run
           inputs:
             script_path:
               default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/mkfs.sh
+        delete:
+          implementation: script.script_runner.tasks.run
+          inputs:
+            script_path:
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/format.sh
+
 
   # A storage Container (Object Store segment)
   cloudify.nodes.ObjectStorage:
@@ -225,7 +231,7 @@ relationships:
           implementation: script.script_runner.tasks.run
           inputs:
             script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/unmount_and_format.sh
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/unmount.sh
             process:
               default:
                 env:

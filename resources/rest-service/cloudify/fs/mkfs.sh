@@ -1,8 +1,6 @@
 #!/bin/bash -e
 
 use_external_resource=$(ctx node properties use_external_resource)
-partition_type=$(ctx node properties partition_type)
-partition_number=$(ctx node properties partition_number)
 fs_type=$(ctx node properties fs_type)
 filesys=$(ctx node instance runtime-properties filesys)
 
