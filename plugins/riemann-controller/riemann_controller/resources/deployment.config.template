@@ -40,7 +40,7 @@
       publish-policy-error         (publish-policy-error* ctx)
       publish-log                  (publish-log* ctx)
       restraints                   (get-workflow-restraints
-                                     (and "{{stream.metadata.policy_properties.is_node_started_before_workflow}}" true)
+                                     (parse-boolean "{{stream.metadata.policy_properties.is_node_started_before_workflow}}")
                                      (or {{stream.metadata.policy_properties.interval_between_workflows}} 300))
       check-restraints-and-process (fn [restraints]
         (check-restraints-and-process* ctx deployment-processing-queue restraints))
