@@ -13,16 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-__author__ = "idanmo"
-
 from setuptools import setup
 
-
 setup(
-    name='cloudify-tests',
+    name='cloudify-integration-tests',
     version='3.2a1',
-    author='Idan Moyal',
-    author_email='idan@gigaspaces.com',
+    author='Gigaspaces',
+    author_email='cosmo-admin@gigaspaces.com',
     packages=['testenv',
               'testenv.processes',
               'mock_plugins',
@@ -34,16 +31,16 @@ setup(
               'mock_plugins.testmockoperations',
               'mock_plugins.worker_installer',
               'mock_plugins.mock_workflows'],
-    license='LICENSE',
-    description='Cloudify workflow python tests',
+    description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
-        "cloudify-dsl-parser==3.2a1",
-        "cloudify-rest-client==3.2a1",
-        "cloudify-plugins-common==3.2a1",
-        "cloudify-diamond-plugin==1.2a1",
-        "cloudify-script-plugin==1.2a1",
-        "pika==0.9.13",
-        'elasticsearch==1.0.0'
+        'cloudify-dsl-parser==3.2a1',
+        'cloudify-rest-client==3.2a1',
+        'cloudify-plugins-common==3.2a1',
+        'cloudify-diamond-plugin==1.2a1',
+        'cloudify-script-plugin==1.2a1',
+        'pika==0.9.13',
+        'elasticsearch==1.0.0',
+        'celery==3.0.24'
     ]
 )

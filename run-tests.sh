@@ -90,7 +90,6 @@ run_intergration_tests()
 
     # make utils and such
     # available as python packages
-    pushd tests && pip install . && popd
     pushd plugins/riemann-controller && pip install . && popd
     pushd workflows && pip install . && popd
     pushd tests && pip install . && popd
