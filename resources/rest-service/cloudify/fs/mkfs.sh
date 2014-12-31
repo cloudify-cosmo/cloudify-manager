@@ -2,7 +2,7 @@
 
 use_external_resource=$(ctx node properties use_external_resource)
 fs_type=$(ctx node properties fs_type)
-filesys=$(ctx node instance runtime-properties filesys)
+filesys=$(ctx instance runtime-properties filesys)
 
 if [ -z "${use_external_resource}" ]; then
     mkfs_executable=''
