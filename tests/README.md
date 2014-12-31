@@ -99,7 +99,7 @@ We will be running it as part of the tests, so we need install its dependencies.
 `cd` into the root directory of this repo (*cloudify-manager*) and run:
 
 ```bash
-pip install -r rest-service/dev-requirements.txt -e ../rest-service/
+pip install -r rest-service/dev-requirements.txt -e rest-service/
 ```
 
 ## Step 7: Installing tests framework
