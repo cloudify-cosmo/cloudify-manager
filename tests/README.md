@@ -60,7 +60,7 @@ We want to disable this. To do so, open the `~/dev/tools/elasticsearch-1.4.2/con
 
 ## Step 3: Installing Riemann
 
-Riemann is a policy and event processing engine. We use to create monitoring policies.
+Riemann is a policy and event processing engine. We use it to create monitoring policies.
 
 ```bash
 ~/dev/tools$ wget http://aphyr.com/riemann/riemann-0.2.6.tar.bz2
