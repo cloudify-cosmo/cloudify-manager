@@ -24,6 +24,7 @@ from testenv import utils
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
+from testenv.utils import execute_workflow
 from riemann_controller.config_constants import Constants
 
 
@@ -490,6 +491,22 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
 
         self.wait_for_invocations(self.deployment.id, 2)
+
+    @riemann_cleanup
+    def test_autoheal_doesnt_get_triggered_after_regular_uninstall(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        execute_workflow('uninstall', self.deployment.id)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+
+    @riemann_cleanup
+    def test_workflow_gets_triggered_with_isstarted_check_turned_off(self):
+        self.launch_deployment('dsl/isstarted_check_turned_off.yaml')
+        execute_workflow('uninstall', self.deployment.id)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
 
     @riemann_cleanup
     def test_autoheal_policy_nested_nodes(self):
