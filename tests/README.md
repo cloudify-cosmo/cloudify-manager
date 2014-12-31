@@ -52,7 +52,7 @@ Add the `~/dev/tools/elasticsearch-1.4.2/bin` directory to your path. Verify thi
 
 By default, Elasticsearch is started with multicast enabled,
 this can cause some strange behaviour when other instances of elasticsearch are running on the same network.
-We want to disable this. To do, open the `~/dev/tools/elasticsearch-1.4.2/config/elasticsearch.yml` file and **uncomment** this:
+We want to disable this. To do so, open the `~/dev/tools/elasticsearch-1.4.2/config/elasticsearch.yml` file and **uncomment** this:
 
 ````yaml
 #discovery.zen.ping.multicast.enabled: false
