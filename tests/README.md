@@ -17,7 +17,7 @@ Also, make sure you activate the virtualenv dedicated for Cloudify prior to runn
 
 ## Step 1: Install RabbitMQ Server
 
-RabbitMQ is a Message broker written in Erlang. It servers as the message broker for our remote task execution engine (celery),
+RabbitMQ is a Message broker written in Erlang. It serves as the message broker for our remote task execution engine (celery),
 So, we need to [install Erlang](https://www.erlang-solutions.com/downloads/download-erlang-otp) first.
 
 Now we can install rabbit: <br>
