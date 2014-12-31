@@ -75,7 +75,7 @@ Add the `~/dev/tools/riemann-0.2.6/bin` directory to your path. Verify this by s
 
 ## Step 4: Installing riemann controller
 
-The *riemann-controller* is a Cloudify plugin to configure riemann for our usage.
+The *riemann-controller* is a Cloudify plugin that configures riemann for our usage.
 cd into the directory containing this file and run:
 
 ```bash
