@@ -4,7 +4,7 @@ Cloudify Integration Tests
 ## Goal
 
 This project aims to emulate a Cloudify Manager environment.
-By doing that we can test a full cloudify pipeline in an isolated environment, without using mocks (almost...).
+By doing that we can test a full Cloudify pipeline in an isolated environment, without using mocks (almost...).
 
 # Setup
 
@@ -13,7 +13,7 @@ However, in order to make this tutorial as agnostic as possible to different lin
 we will not be using Linux package managers, but rather compressed all-in-one distributions.
 This also has the benefit of not adding and manipulating system wide configuration files.
 Its best to create a dedicated directory for all of these packages, we will be using `~/dev/tools`.
-Also, make sure you activate the virtualenv dedicated for cloudify prior to running any install commands.
+Also, make sure you activate the virtualenv dedicated for Cloudify prior to running any install commands.
 
 ## Step 1: Install RabbitMQ Server
 
@@ -75,7 +75,7 @@ Add the `~/dev/tools/riemann-0.2.6/bin` directory to your path. Verify this by s
 
 ## Step 4: Installing riemann controller
 
-The *riemann-controller* is a cloudify plugin to configure riemann for our usage.
+The *riemann-controller* is a Cloudify plugin to configure riemann for our usage.
 cd into the directory containing this file and run:
 
 ```bash
@@ -84,7 +84,7 @@ pip install -e ../plugins/riemann-controller
 
 ## Step 5: Installing Workflows
 
-The *workflows* project contains cloudify system workflows, i.e, workflows that we use for managerial configuration.
+The *workflows* project contains Cloudify system workflows, i.e, workflows that we use for managerial configuration.
 Specifically, it contains workflows that create/delete deployments.
 cd into the directory containing this file and run:
 
