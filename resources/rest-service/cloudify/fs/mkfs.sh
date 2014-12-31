@@ -18,4 +18,6 @@ if [ -z "${use_external_resource}" ]; then
 
     ctx logger info "Creating ${fs_type} file system using ${mkfs_executable}"
     sudo ${mkfs_executable} ${filesys}
+else
+    ctx logger info "Not making a filesystem since 'use_external_resource' is set to true"
 fi
