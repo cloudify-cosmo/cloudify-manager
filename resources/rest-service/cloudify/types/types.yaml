@@ -241,7 +241,7 @@ policy_types:
     cloudify.policies.types.threshold:
         properties:
             is_node_started_before_workflow:
-                description: Before triggering workflow, check if the node state is-started
+                description: Before triggering workflow, check if the node state is started
                 default: true
             interval_between_workflows:
                 description: |
@@ -270,7 +270,7 @@ policy_types:
     cloudify.policies.types.host_failure:
         properties:
             is_node_started_before_workflow:
-                description: Before triggering workflow, check if the node state is-started
+                description: Before triggering workflow, check if the node state is started
                 default: true
             interval_between_workflows:
                 description: |
@@ -286,7 +286,7 @@ policy_types:
     cloudify.policies.types.ewma_stabilized:
         properties:
             is_node_started_before_workflow:
-                description: Before triggering workflow, check if the node state is-started
+                description: Before triggering workflow, check if the node state is started
                 default: true
             interval_between_workflows:
                 description: |

@@ -16,7 +16,6 @@
 
 from collections import namedtuple
 
-import nose
 import time
 
 from testenv import TestCase
@@ -29,6 +28,8 @@ from riemann_controller.config_constants import Constants
 
 class PoliciesTestsBase(TestCase):
     NUM_OF_INITIAL_WORKFLOWS = 2
+    # In test's blueprint set this value decreased by 1 (1s safety time buffer)
+    MIN_INTERVAL_BETWEEN_WORKFLOWS = 2
 
     def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
         deployment, _ = deploy(resource(yaml_file))
@@ -116,7 +117,7 @@ class TestPolicies(PoliciesTestsBase):
             except BaseException as e:
                 if e.message:
                     self.logger.warning(e.message)
-    @nose.tools.nottest
+
     def test_threshold_policy(self):
         self.launch_deployment('dsl/with_policies2.yaml')
 
@@ -174,8 +175,10 @@ class TestPolicies(PoliciesTestsBase):
         for _ in range(2):
             tester.publish_above_threshold(self.deployment.id, do_assert=True)
             tester.publish_above_threshold(self.deployment.id, do_assert=False)
+            time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
             tester.publish_below_threshold(self.deployment.id, do_assert=True)
             tester.publish_below_threshold(self.deployment.id, do_assert=False)
+            time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
 
 
 class TestAutohealPolicies(PoliciesTestsBase):
@@ -241,7 +244,11 @@ class TestAutohealPolicies(PoliciesTestsBase):
                 self._publish_and_wait(self.VALID_METRIC, t=0)
                 self._publish_and_wait(self.VALID_METRIC, self.SECOND_NODE)
             for _ in range(self.LONG_TIME):
-                self._publish_and_wait(metric=self.RISKY_METRIC, node=self.SECOND_NODE, t=0)
+                self._publish_and_wait(
+                    metric=self.RISKY_METRIC,
+                    node=self.SECOND_NODE,
+                    t=0
+                )
                 self._publish_and_wait(metric=self.VALID_METRIC)
             self._publish_and_wait(self.VALID_METRIC, self.SECOND_NODE)
 
@@ -458,7 +465,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
 
         # Wait for interval between workflows pass
-        time.sleep(5)
+        time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
