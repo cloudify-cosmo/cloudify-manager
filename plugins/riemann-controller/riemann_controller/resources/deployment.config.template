@@ -14,31 +14,7 @@
       deployment-processing-queue
         (processing-queue "{{ctx.deployment.id}}" {:queue-size     1000
                                                    :core-pool-size 1
-                                                   :max-pool-size  4})
-      ;TODO those checks will be later moved to seperate files defined in blueprints
-      is-started (fn [ctx]
-        (let [node-id               (:node-id ctx)
-              manager-ip            (or (System/getenv "MANAGEMENT_IP") "127.0.0.1")
-              raw-manager-rest-port (or (System/getenv "MANAGER_REST_PORT") "80")
-              manager-rest-port     (Integer/parseInt raw-manager-rest-port)
-              base-uri              (str "http://" manager-ip ":" manager-rest-port)
-              node-endpoint         (str "/node-instances/" node-id)
-              node-resource-uri     (str base-uri node-endpoint)
-              get-node              (fn [] (clj-http.client/get node-resource-uri {:accept :json}))
-              get-state             (fn [node-response]
-                                      (:state (cheshire.core/parse-string (:body node-response) true)))]
-          (= (get-state (get-node)) "started")))
-      one-workflow (fn [ctx]
-        (let [node-id              (:node-id ctx)
-              trigger-timetable    (.get triggers-timetable (:deployment-id ctx))
-              last-trigger         (.get trigger-timetable node-id)
-              ;TODO the interval will be customised
-              min-interval         {{constants.MIN_INTERVAL_BETWEEN_WORKFLOWS}}
-              is-trigger-different (fn [] (> (time-core/in-minutes (time-core/interval last-trigger (time-core/now))) min-interval))]
-          (if (and last-trigger (is-trigger-different))
-            (.replace trigger-timetable node-id last-trigger (time-core/now))
-            (and (not last-trigger) (= nil (.putIfAbsent trigger-timetable node-id (time-core/now)))))))]
-
+                                                   :max-pool-size  4})]
 (def node-instances-stream {
   {% for stream in streams%}
     "{{stream.metadata.group}}.{{stream.metadata.policy}}" {}
@@ -55,8 +31,7 @@
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
 (let [ctx {:blueprint-id  "{{ctx.blueprint.id}}"
-           ;TODO logging requires it to be deployment_id
-           :deployment-id "{{ctx.deployment.id}}"
+           :deployment_id "{{ctx.deployment.id}}"
            :group         "{{stream.metadata.group}}"
            :policy        "{{stream.metadata.policy}}"}
       process-policy-triggers      (process-policy-triggers-stream
@@ -64,12 +39,14 @@
       publish-policy-event         (publish-policy-event* ctx)
       publish-policy-error         (publish-policy-error* ctx)
       publish-log                  (publish-log* ctx)
+      restraints                   (get-workflow-restraints
+                                     (parse-boolean "{{stream.metadata.policy_properties.is_node_started_before_workflow}}")
+                                     (or {{stream.metadata.policy_properties.interval_between_workflows}} 300))
       check-restraints-and-process (fn [restraints]
         (check-restraints-and-process* ctx deployment-processing-queue restraints))
       downstream
         (autohealing/downstream* index
-                                 ;TODO the list of restraints and whether to check them will be customised in workflow
-                                 (check-restraints-and-process [is-started one-workflow])
+                                 (check-restraints-and-process restraints)
                                  "{{constants.STABLE_STATE}}"
                                  "{{constants.TRIGGERING_STATE}}")
       stream_id "{{stream.metadata.group}}.{{stream.metadata.policy}}"]

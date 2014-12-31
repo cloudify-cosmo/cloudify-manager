@@ -16,7 +16,6 @@
 
 from collections import namedtuple
 
-import nose
 import time
 
 from testenv import riemann_cleanup
@@ -30,6 +29,8 @@ from riemann_controller.config_constants import Constants
 
 class PoliciesTestsBase(TestCase):
     NUM_OF_INITIAL_WORKFLOWS = 2
+    # In test's blueprint set this value decreased by 1 (1s safety time buffer)
+    MIN_INTERVAL_BETWEEN_WORKFLOWS = 2
 
     def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
         deployment, _ = deploy(resource(yaml_file))
@@ -121,7 +122,7 @@ class TestPolicies(PoliciesTestsBase):
                 if e.message:
                     self.logger.warning(e.message)
 
-    @nose.tools.nottest
+    @riemann_cleanup
     def test_threshold_policy(self):
         self.launch_deployment('dsl/with_policies2.yaml')
 
@@ -179,8 +180,10 @@ class TestPolicies(PoliciesTestsBase):
         for _ in range(2):
             tester.publish_above_threshold(self.deployment.id, do_assert=True)
             tester.publish_above_threshold(self.deployment.id, do_assert=False)
+            time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
             tester.publish_below_threshold(self.deployment.id, do_assert=True)
             tester.publish_below_threshold(self.deployment.id, do_assert=False)
+            time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
 
 
 class TestAutohealPolicies(PoliciesTestsBase):
@@ -472,6 +475,21 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         self.wait_for_invocations(self.deployment.id, 1)
+
+    @riemann_cleanup
+    def test_multiple_workflows(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        # Wait for interval between workflows pass
+        time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
+
+        self.wait_for_invocations(self.deployment.id, 2)
 
     @riemann_cleanup
     def test_autoheal_policy_nested_nodes(self):
