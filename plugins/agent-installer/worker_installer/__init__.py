@@ -15,7 +15,6 @@
 
 
 import os
-import pwd
 from functools import wraps
 import json
 
@@ -56,12 +55,16 @@ def init_worker_installer(func):
             agent_config = ctx.node.properties['cloudify_agent']
         else:
             agent_config = kwargs.get('cloudify_agent', {})
-        prepare_configuration(ctx, agent_config)
-        kwargs['agent_config'] = agent_config
-        runner = FabricRunner(ctx, agent_config)
-        kwargs['runner'] = runner
 
+        prepare_connection_configuration(ctx, agent_config)
+
+        runner = FabricRunner(ctx, agent_config)
         try:
+            prepare_additional_configuration(ctx, agent_config, runner)
+
+            kwargs['runner'] = runner
+            kwargs['agent_config'] = agent_config
+
             if not (agent_config.get('distro') and
                     agent_config.get('distro_codename')):
                 distro_info = get_machine_distro(runner)
@@ -77,19 +80,36 @@ def init_worker_installer(func):
 
 
 def get_machine_distro(runner):
-    """retrieves the distribution information of the machine
+    """retrieves the distribution information of the machine"""
 
-    To overcome the situation where additional info is printed
-    to stdout when a command execution occures, a string is
-    appended to the output. This will then search for the string
-    and the following closing brackets to retrieve the original
-    platform.dist().
+    stdout = _run_py_cmd_with_output(runner,
+                                     'import platform, json',
+                                     'json.dumps(platform.dist())')
+    return json.loads(stdout)
+
+
+def _run_py_cmd_with_output(runner, imports_line, command):
     """
-    stdout = runner.run('python -c "import platform, json, sys; '
-                        'sys.stdout.write(\'DISTROOPEN{0}DISTROCLOSE\\n\''
-                        '.format(json.dumps(platform.dist())))"')
-    jsonres = stdout[stdout.find("DISTROOPEN") + 10:stdout.find("DISTROCLOSE")]
-    return json.loads(jsonres)
+    To overcome the situation where additional info is printed
+    to stdout when a command execution occurs, a string is
+    appended to the output. This will then search for the string
+    and the following closing brackets to retrieve the original output.
+    """
+
+    delim_start = '###CLOUDIFYDISTROOPEN'
+    delim_end = 'CLOUDIFYDISTROCLOSE###'
+
+    stdout = runner.run('python -c "import sys; {0}; '
+                        'sys.stdout.write(\'{1}{2}{3}\\n\''
+                        '.format({4}))"'
+                        .format(imports_line,
+                                delim_start,
+                                '{0}',
+                                delim_end,
+                                command))
+    result = stdout[stdout.find(delim_start) + len(delim_start):
+                    stdout.find(delim_end)]
+    return result
 
 
 def get_machine_ip(ctx):
@@ -173,9 +193,13 @@ def _set_wait_started_config(config):
         config['wait_started_interval'] = DEFAULT_WAIT_STARTED_INTERVAL
 
 
-def _set_home_dir(ctx, config):
+def _set_home_dir(runner, config):
     if 'home_dir' not in config:
-        home_dir = pwd.getpwnam(config['user']).pw_dir
+        home_dir = _run_py_cmd_with_output(
+            runner,
+            'import pwd',
+            'pwd.getpwnam(\'{0}\').pw_dir'.format(config['user']))
+
         config['home_dir'] = home_dir
 
 
@@ -192,7 +216,7 @@ def _get_bool(config, key, default):
         'but is: {1}'.format(key, str_value))
 
 
-def prepare_configuration(ctx, agent_config):
+def prepare_connection_configuration(ctx, agent_config):
     if is_on_management_worker(ctx):
         # we are starting a worker dedicated for a deployment
         # (not specific node)
@@ -203,7 +227,7 @@ def prepare_configuration(ctx, agent_config):
             raise NonRecoverableError(
                 'Cannot determine user for deployment user:'
                 'MANAGEMENT_USER is not set')
-        workflows_worker = agent_config['workflows_worker']\
+        workflows_worker = agent_config['workflows_worker'] \
             if 'workflows_worker' in agent_config else False
         suffix = '_workflows' if workflows_worker else ''
         name = '{0}{1}'.format(ctx.deployment.id, suffix)
@@ -215,9 +239,12 @@ def prepare_configuration(ctx, agent_config):
         _set_remote_execution_port(ctx, agent_config)
         agent_config['name'] = ctx.instance.id
 
+
+def prepare_additional_configuration(ctx, agent_config, runner):
+
     _set_wait_started_config(agent_config)
 
-    _set_home_dir(ctx, agent_config)
+    _set_home_dir(runner, agent_config)
 
     home_dir = agent_config['home_dir']
     agent_config['celery_base_dir'] = home_dir
