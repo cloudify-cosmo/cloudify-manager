@@ -20,4 +20,3 @@ fi
 # Set this runtime property on the source (the filesystem)
 # its needed by subsequent scripts
 ctx source instance runtime-properties filesys ${device_name}${partition_number}
-ctx source instance runtime-properties device_name ${device_name}${partition_number}
