@@ -2,7 +2,7 @@
 
 use_external_resource=$(ctx source node properties use_external_resource)
 partition_type=$(ctx source node properties partition_type)
-partition_number=$(ctx source node properties partition_number)
+partition_number=1
 
 # This script is executed as part of a relationship to the volume
 # device name is injected by using get_attribute on the target node.
