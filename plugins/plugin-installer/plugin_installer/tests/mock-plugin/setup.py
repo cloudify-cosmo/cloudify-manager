@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='mock-plugin',
-    version='3.2a1',
+    version='3.2a2',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['mock_for_test'],
