@@ -68,21 +68,11 @@ node_types:
           Enables the use of already foramtted volumes.
         type: boolean
         default: false
-      format_after_unmount:
-        description: >
-          Format the partition after unmounting it.
-        type: boolean
-        default: false
       partition_type:
         description: >
           The partiton type. 83 is a Linux Native Partition.
         type: integer
         default: 83
-      partition_number:
-        description: >
-          The phsical partition number.
-        type: integer
-        default: 1
       fs_type:
         description: >
           The type of the File System.
@@ -221,15 +211,6 @@ relationships:
               default:
                 env:
                   DEVICE_NAME: { get_attribute: [TARGET, device_name] }
-        unlink:
-          implementation: script.script_runner.tasks.run
-          inputs:
-            script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/unmount.sh
-            process:
-              default:
-                env:
-                  DEVICE_NAME: { get_attribute: [TARGET, device_name] }
 
   cloudify.relationships.file_system_contained_in_compute:
     derived_from: cloudify.relationships.contained_in
@@ -240,6 +221,11 @@ relationships:
           inputs:
             script_path:
               default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/mount.sh
+        unlink:
+          implementation: script.script_runner.tasks.run
+          inputs:
+            script_path:
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/unmount.sh
 
 ##################################################################################
 # Workflows
