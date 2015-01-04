@@ -22,9 +22,11 @@ import shutil
 import uuid
 import traceback
 import StringIO
+import contextlib
 from functools import wraps
 from setuptools import archive_util
 from os import path
+from urllib2 import urlopen, URLError
 
 import elasticsearch
 from flask import (
@@ -255,6 +257,29 @@ class BlueprintsUpload(object):
 
     @staticmethod
     def _save_file_locally(archive_file_name):
+
+        if 'blueprint_archive_url' in request.args:
+
+            if request.data or 'Transfer-Encoding' in request.headers:
+                raise manager_exceptions.BadParametersError(
+                    "Can't pass both a blueprint URL via query parameters "
+                    "and blueprint data via the request body at the same time")
+
+            blueprint_url = request.args['blueprint_archive_url']
+            try:
+                with contextlib.closing(urlopen(blueprint_url)) as urlf:
+                    with open(archive_file_name, 'w') as f:
+                        f.write(urlf.read())
+                return
+            except URLError:
+                raise manager_exceptions.ParamUrlNotFoundError(
+                    "URL {0} not found - can't download blueprint archive"
+                    .format(blueprint_url))
+            except ValueError:
+                raise manager_exceptions.BadParametersError(
+                    "URL {0} is malformed - can't download blueprint archive"
+                    .format(blueprint_url))
+
         # save uploaded file
         if 'Transfer-Encoding' in request.headers:
             with open(archive_file_name, 'w') as f:
@@ -263,7 +288,8 @@ class BlueprintsUpload(object):
         else:
             if not request.data:
                 raise manager_exceptions.BadParametersError(
-                    'Missing application archive in request body')
+                    'Missing application archive in request body or '
+                    '"blueprint_archive_url" in query parameters')
             uploaded_file_data = request.data
             with open(archive_file_name, 'w') as f:
                 f.write(uploaded_file_data)
@@ -422,8 +448,11 @@ class BlueprintsId(Resource):
     @swagger.operation(
         responseClass=responses.BlueprintState,
         nickname="upload",
-        notes="Submitted blueprint should be a tar "
-              "gzipped directory containing the blueprint.",
+        notes="Submitted blueprint should be an archive "
+              "containing the directory which contains the blueprint. "
+              "Archive format may be zip, tar, tar.gz or tar.bz2."
+              " Blueprint archive may be submitted via either URL or by "
+              "direct upload.",
         parameters=[{'name': 'application_file_name',
                      'description': 'File name of yaml '
                                     'containing the "main" blueprint.',
@@ -432,6 +461,12 @@ class BlueprintsId(Resource):
                      'dataType': 'string',
                      'paramType': 'query',
                      'defaultValue': 'blueprint.yaml'},
+                    {'name': 'blueprint_archive_url',
+                     'description': 'url of a blueprint archive file',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'},
                     {
                         'name': 'body',
                         'description': 'Binary form of the tar '
@@ -456,7 +491,7 @@ class BlueprintsId(Resource):
     @swagger.operation(
         responseClass=responses.BlueprintState,
         nickname="deleteById",
-        notes="deletes a blueprint by its id."
+        notes="deletes a blueprint by 2its id."
     )
     @exceptions_handled
     @marshal_with(responses.BlueprintState.resource_fields)

@@ -15,6 +15,7 @@
 
 __author__ = 'dan'
 
+import os
 
 import archiving
 from base_test import BaseServerTestCase
@@ -106,6 +107,61 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.put_file(*self.put_blueprint_args())
         self.check_if_resource_on_fileserver('hello_world',
                                              'plugins/stub-installer.zip')
+
+    def test_put_blueprint_from_url(self):
+        port = 54321
+        blueprint_id = 'new_blueprint_id'
+        resource_path = '/blueprints/{0}'.format(blueprint_id)
+
+        archive_path = self.archive_mock_blueprint()
+        archive_filename = os.path.basename(archive_path)
+        archive_dir = os.path.dirname(archive_path)
+
+        from manager_rest.file_server import FileServer
+
+        fs = FileServer(archive_dir, False, port)
+        fs.start()
+        try:
+            response = self.put(
+                resource_path,
+                None,
+                {'blueprint_archive_url': 'http://localhost:{0}/{'
+                                          '1}'.format(port, archive_filename)})
+            self.assertEqual(blueprint_id, response.json['id'])
+        finally:
+            fs.stop()
+
+    def test_put_blueprint_from_unavailable_url(self):
+        blueprint_id = 'new_blueprint_id'
+        resource_path = '/blueprints/{0}'.format(blueprint_id)
+        response = self.put(
+            resource_path,
+            None,
+            {'blueprint_archive_url': 'http://www.fake.url/does/not/exist'})
+        self.assertTrue("not found - can't download blueprint archive" in
+                        response.json['message'])
+        self.assertEqual(400, response.status_code)
+
+    def test_put_blueprint_from_malformed_url(self):
+        blueprint_id = 'new_blueprint_id'
+        resource_path = '/blueprints/{0}'.format(blueprint_id)
+        response = self.put(
+            resource_path,
+            None,
+            {'blueprint_archive_url': 'malformed/url_is.bad'})
+        self.assertTrue("is malformed - can't download blueprint archive" in
+                        response.json['message'])
+        self.assertEqual(400, response.status_code)
+
+    def test_put_blueprint_from_url_and_data(self):
+        blueprint_id = 'new_blueprint_id'
+        resource_path = '/blueprints/{0}'.format(blueprint_id)
+        response = self.put(
+            resource_path,
+            'data pretending to be the actual blueprint archive data',
+            {'blueprint_archive_url': 'malformed/url_is.bad'})
+        self.assertTrue("Can't pass both" in response.json['message'])
+        self.assertEqual(400, response.status_code)
 
     def test_put_zip_blueprint(self):
         self._test_put_blueprint(archiving.make_zipfile)

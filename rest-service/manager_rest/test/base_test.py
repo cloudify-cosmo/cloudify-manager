@@ -163,10 +163,11 @@ class BaseServerTestCase(unittest.TestCase):
             result.json = json.loads(result.data)
             return result
 
-    def put(self, resource_path, data):
-        result = self.app.put(urllib.quote(resource_path),
-                              content_type='application/json',
-                              data=json.dumps(data))
+    def put(self, resource_path, data=None, query_params=None):
+        result = self.app.put(
+            self._build_url(urllib.quote(resource_path), query_params),
+            content_type='application/json',
+            data=json.dumps(data) if data else None)
         result.json = json.loads(result.data)
         return result
 
@@ -201,21 +202,21 @@ class BaseServerTestCase(unittest.TestCase):
         except urllib2.HTTPError:
             return False
 
+    def archive_mock_blueprint(self, archive_func=archiving.make_targzfile):
+        archive_path = tempfile.mktemp()
+        source_dir = os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), 'mock_blueprint')
+        archive_func(archive_path, source_dir)
+        return archive_path
+
     def put_blueprint_args(self, blueprint_file_name=None,
                            blueprint_id='blueprint',
-                           archive_func=archiving.make_tarfile):
-
-        def archive_mock_blueprint():
-            archive_path = tempfile.mktemp()
-            source_dir = os.path.join(os.path.dirname(
-                os.path.abspath(__file__)), 'mock_blueprint')
-            archive_func(archive_path, source_dir)
-            return archive_path
+                           archive_func=archiving.make_targzfile):
 
         resource_path = '/blueprints/{0}'.format(blueprint_id)
         result = [
             resource_path,
-            archive_mock_blueprint(),
+            self.archive_mock_blueprint(archive_func),
         ]
 
         if blueprint_file_name:
