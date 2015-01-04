@@ -15,7 +15,6 @@
 #
 
 import os
-import tarfile
 import zipfile
 import urllib
 import tempfile
@@ -24,6 +23,7 @@ import uuid
 import traceback
 import StringIO
 from functools import wraps
+from setuptools import archive_util
 from os import path
 
 import elasticsearch
@@ -272,10 +272,9 @@ class BlueprintsUpload(object):
     def _extract_file_to_file_server(file_server_root,
                                      archive_target_path):
         # extract application to file server
-        tar = tarfile.open(archive_target_path)
         tempdir = tempfile.mkdtemp('-blueprint-submit')
         try:
-            tar.extractall(tempdir)
+            archive_util.unpack_archive(archive_target_path, tempdir)
             archive_file_list = os.listdir(tempdir)
             if len(archive_file_list) != 1 or not path.isdir(
                     path.join(tempdir, archive_file_list[0])):

@@ -21,12 +21,13 @@ import urllib
 import urllib2
 import tempfile
 import os
-import tarfile
 
 from manager_rest import util, config, storage_manager
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
+
+import archiving
 
 
 STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
@@ -201,22 +202,20 @@ class BaseServerTestCase(unittest.TestCase):
             return False
 
     def put_blueprint_args(self, blueprint_file_name=None,
-                           blueprint_id='blueprint'):
-        def make_tarfile(output_filename, source_dir):
-            with tarfile.open(output_filename, "w:gz") as tar:
-                tar.add(source_dir, arcname=os.path.basename(source_dir))
+                           blueprint_id='blueprint',
+                           archive_func=archiving.make_tarfile):
 
-        def tar_mock_blueprint():
-            tar_path = tempfile.mktemp()
+        def archive_mock_blueprint():
+            archive_path = tempfile.mktemp()
             source_dir = os.path.join(os.path.dirname(
                 os.path.abspath(__file__)), 'mock_blueprint')
-            make_tarfile(tar_path, source_dir)
-            return tar_path
+            archive_func(archive_path, source_dir)
+            return archive_path
 
         resource_path = '/blueprints/{0}'.format(blueprint_id)
         result = [
             resource_path,
-            tar_mock_blueprint(),
+            archive_mock_blueprint(),
         ]
 
         if blueprint_file_name:

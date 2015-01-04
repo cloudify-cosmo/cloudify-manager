@@ -16,6 +16,7 @@
 __author__ = 'dan'
 
 
+import archiving
 from base_test import BaseServerTestCase
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -54,10 +55,7 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEqual(409, post_blueprints_response.status_code)
 
     def test_put_blueprint(self):
-        blueprint_id = 'new_blueprint_id'
-        put_blueprints_response = self.put_file(
-            *self.put_blueprint_args(blueprint_id=blueprint_id)).json
-        self.assertEqual(blueprint_id, put_blueprints_response['id'])
+        self._test_put_blueprint(archiving.make_targzfile)
 
     def test_post_without_application_file_form_data(self):
         post_blueprints_response = self.put_file(
@@ -108,3 +106,19 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.put_file(*self.put_blueprint_args())
         self.check_if_resource_on_fileserver('hello_world',
                                              'plugins/stub-installer.zip')
+
+    def test_put_zip_blueprint(self):
+        self._test_put_blueprint(archiving.make_zipfile)
+
+    def test_put_tar_blueprint(self):
+        self._test_put_blueprint(archiving.make_tarfile)
+
+    def test_put_bz2_blueprint(self):
+        self._test_put_blueprint(archiving.make_tarbz2file)
+
+    def _test_put_blueprint(self, archive_func):
+        blueprint_id = 'new_blueprint_id'
+        put_blueprints_response = self.put_file(
+            *self.put_blueprint_args(blueprint_id=blueprint_id,
+                                     archive_func=archive_func)).json
+        self.assertEqual(blueprint_id, put_blueprints_response['id'])
