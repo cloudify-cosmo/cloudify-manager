@@ -16,6 +16,9 @@
 import uuid
 import time
 import errno
+import os
+import tempfile
+import tarfile
 from os import path
 
 import cloudify.context
@@ -177,6 +180,48 @@ class BasicWorkflowsTest(TestCase):
         blueprint = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, blueprint.id)
         self.assertTrue(len(blueprint['plan']) > 0)
+
+    def test_publish_tar_archive(self):
+        archive_location = self._make_archive_file("dsl/basic.yaml")
+
+        blueprint_id = self.client.blueprints.publish_archive(
+            archive_location, str(uuid.uuid4()), 'basic.yaml').id
+        # verifying blueprint exists
+        result = self.client.blueprints.get(blueprint_id)
+        self.assertEqual(blueprint_id, result.id)
+
+    def test_publish_bz2_archive_from_url(self):
+        port = 53230
+
+        archive_location = self._make_archive_file("dsl/basic.yaml", 'w:bz2')
+
+        archive_filename = os.path.basename(archive_location)
+        archive_dir = os.path.dirname(archive_location)
+
+        from manager_rest.file_server import FileServer
+
+        fs = FileServer(archive_dir, False, port)
+        fs.start()
+        try:
+            blueprint_id = self.client.blueprints.publish_archive(
+                'http://localhost:{0}/{'
+                '1}'.format(port, archive_filename),
+                str(uuid.uuid4()),
+                'basic.yaml').id
+            # verifying blueprint exists
+            result = self.client.blueprints.get(blueprint_id)
+            self.assertEqual(blueprint_id, result.id)
+        finally:
+            fs.stop()
+
+    def _make_archive_file(self, blueprint_path, write_mode='w'):
+        dsl_path = resource(blueprint_path)
+        blueprint_dir = os.path.dirname(dsl_path)
+        archive_location = tempfile.mkstemp()[1]
+        arcname = os.path.basename(blueprint_dir)
+        with tarfile.open(archive_location, write_mode) as tar:
+            tar.add(blueprint_dir, arcname=arcname)
+        return archive_location
 
     def test_delete_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")

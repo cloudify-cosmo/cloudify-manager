@@ -108,7 +108,7 @@ class BlueprintsTestCase(BaseServerTestCase):
                                              'plugins/stub-installer.zip')
 
     def test_put_blueprint_from_url(self):
-        port = 54321
+        port = 53230
         blueprint_id = 'new_blueprint_id'
         resource_path = '/blueprints/{0}'.format(blueprint_id)
 
