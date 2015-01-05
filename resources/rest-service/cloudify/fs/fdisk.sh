@@ -6,7 +6,7 @@ partition_number=1
 
 # This script is executed as part of a relationship to the volume
 # device name is injected by using get_attribute on the target node.
-device_name=${DEVICE_NAME}
+device_name=${device_name}
 
 if [ -z "${use_external_resource}" ]; then
 

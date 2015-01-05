@@ -207,10 +207,7 @@ relationships:
           inputs:
             script_path:
               default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/CFY-1761-add-fs-type/resources/rest-service/cloudify/fs/fdisk.sh
-            process:
-              default:
-                env:
-                  DEVICE_NAME: { get_attribute: [TARGET, device_name] }
+            device_name: { get_attribute: [TARGET, device_name] }
 
   cloudify.relationships.file_system_contained_in_compute:
     derived_from: cloudify.relationships.contained_in
