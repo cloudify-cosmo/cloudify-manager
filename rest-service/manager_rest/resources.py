@@ -43,6 +43,7 @@ from manager_rest import models
 from manager_rest import responses
 from manager_rest import requests_schema
 from manager_rest import chunked
+from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
@@ -50,6 +51,8 @@ from manager_rest.blueprints_manager import (DslParseException,
 from manager_rest import get_version_data
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
+
+SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
 
 
 def exceptions_handled(func):
@@ -222,7 +225,8 @@ class BlueprintsUpload(object):
             config.instance().file_server_uploaded_blueprints_folder,
             blueprint_id)
         os.makedirs(uploaded_blueprint_dir)
-        archive_file_name = '{0}.tar.gz'.format(blueprint_id)
+        archive_type = archiving.get_archive_type(archive_path)
+        archive_file_name = '{0}.{1}'.format(blueprint_id, archive_type)
         shutil.move(archive_path,
                     os.path.join(uploaded_blueprint_dir, archive_file_name))
 
@@ -300,7 +304,13 @@ class BlueprintsUpload(object):
         # extract application to file server
         tempdir = tempfile.mkdtemp('-blueprint-submit')
         try:
-            archive_util.unpack_archive(archive_target_path, tempdir)
+            try:
+                archive_util.unpack_archive(archive_target_path, tempdir)
+            except archive_util.UnrecognizedFormat:
+                raise manager_exceptions.BadParametersError(
+                    'Blueprint archive is of an unrecognized format. '
+                    'Supported formats are: {0}'.format(
+                        SUPPORTED_ARCHIVE_TYPES))
             archive_file_list = os.listdir(tempdir)
             if len(archive_file_list) != 1 or not path.isdir(
                     path.join(tempdir, archive_file_list[0])):
@@ -388,23 +398,33 @@ class BlueprintsIdArchive(Resource):
         """
         # Verify blueprint exists.
         get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
-        blueprint_path = '{0}/{1}/{2}/{2}.tar.gz'.format(
+
+        for archive_type in SUPPORTED_ARCHIVE_TYPES:
+            # attempting to find the archive file on the file system
+            local_path = os.path.join(
+                config.instance().file_server_root,
+                config.instance().file_server_uploaded_blueprints_folder,
+                blueprint_id,
+                '{0}.{1}'.format(blueprint_id, archive_type))
+
+            if os.path.isfile(local_path):
+                break
+        else:
+            raise RuntimeError("Could not find blueprint's archive; "
+                               "Blueprint ID: {0}".format(blueprint_id))
+
+        blueprint_path = '{0}/{1}/{2}/{2}.{3}'.format(
             config.instance().file_server_resources_uri,
             config.instance().file_server_uploaded_blueprints_folder,
-            blueprint_id)
-
-        local_path = os.path.join(
-            config.instance().file_server_root,
-            config.instance().file_server_uploaded_blueprints_folder,
             blueprint_id,
-            '%s.tar.gz' % blueprint_id)
+            archive_type)
 
         response = make_response()
         response.headers['Content-Description'] = 'File Transfer'
         response.headers['Cache-Control'] = 'no-cache'
         response.headers['Content-Type'] = 'application/octet-stream'
         response.headers['Content-Disposition'] = \
-            'attachment; filename=%s.tar.gz' % blueprint_id
+            'attachment; filename={0}.{1}'.format(blueprint_id, archive_type)
         response.headers['Content-Length'] = os.path.getsize(local_path)
         response.headers['X-Accel-Redirect'] = blueprint_path
         response.headers['X-Accel-Buffering'] = 'yes'

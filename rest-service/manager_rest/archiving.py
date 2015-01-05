@@ -19,6 +19,31 @@ import tarfile
 import zipfile
 
 
+TAR_MAGIC_DICT = {
+    "\x1f\x8b\x08": "tar.gz",
+    "\x42\x5a\x68": "tar.bz2",
+    # "\x75\x73\x74\x61\x72": "tar"
+}
+
+
+def get_archive_type(archive_path):
+    if zipfile.is_zipfile(archive_path):
+        return 'zip'
+
+    if tarfile.is_tarfile(archive_path):
+        max_len = max(len(x) for x in TAR_MAGIC_DICT)
+
+        with open(archive_path) as f:
+            file_start = f.read(max_len)
+        for magic, ext in TAR_MAGIC_DICT.items():
+            if file_start.startswith(magic):
+                return ext
+        return 'tar'
+
+    raise RuntimeError("Can't recognize archive type; Archive path {0}"
+                       .format(archive_path))
+
+
 def make_tarfile(output_filename, source_dir):
     _make_tarfile(output_filename, source_dir)
 

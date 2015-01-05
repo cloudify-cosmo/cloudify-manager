@@ -22,12 +22,10 @@ import urllib2
 import tempfile
 import os
 
-from manager_rest import util, config, storage_manager
+from manager_rest import util, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
-
-import archiving
 
 
 STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
@@ -203,7 +201,7 @@ class BaseServerTestCase(unittest.TestCase):
             return False
 
     def archive_mock_blueprint(self, archive_func=archiving.make_targzfile):
-        archive_path = tempfile.mktemp()
+        archive_path = tempfile.mkstemp()[1]
         source_dir = os.path.join(os.path.dirname(
             os.path.abspath(__file__)), 'mock_blueprint')
         archive_func(archive_path, source_dir)

@@ -16,8 +16,9 @@
 __author__ = 'dan'
 
 import os
+import tempfile
 
-import archiving
+from manager_rest import archiving
 from base_test import BaseServerTestCase
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -56,7 +57,7 @@ class BlueprintsTestCase(BaseServerTestCase):
         self.assertEqual(409, post_blueprints_response.status_code)
 
     def test_put_blueprint(self):
-        self._test_put_blueprint(archiving.make_targzfile)
+        self._test_put_blueprint(archiving.make_targzfile, 'tar.gz')
 
     def test_post_without_application_file_form_data(self):
         post_blueprints_response = self.put_file(
@@ -149,8 +150,8 @@ class BlueprintsTestCase(BaseServerTestCase):
             resource_path,
             None,
             {'blueprint_archive_url': 'malformed/url_is.bad'})
-        self.assertTrue("is malformed - can't download blueprint archive" in
-                        response.json['message'])
+        self.assertIn("is malformed - can't download blueprint archive",
+                      response.json['message'])
         self.assertEqual(400, response.status_code)
 
     def test_put_blueprint_from_url_and_data(self):
@@ -160,21 +161,41 @@ class BlueprintsTestCase(BaseServerTestCase):
             resource_path,
             'data pretending to be the actual blueprint archive data',
             {'blueprint_archive_url': 'malformed/url_is.bad'})
-        self.assertTrue("Can't pass both" in response.json['message'])
+        self.assertIn("Can't pass both", response.json['message'])
         self.assertEqual(400, response.status_code)
 
     def test_put_zip_blueprint(self):
-        self._test_put_blueprint(archiving.make_zipfile)
+        self._test_put_blueprint(archiving.make_zipfile, 'zip')
 
     def test_put_tar_blueprint(self):
-        self._test_put_blueprint(archiving.make_tarfile)
+        self._test_put_blueprint(archiving.make_tarfile, 'tar')
 
     def test_put_bz2_blueprint(self):
-        self._test_put_blueprint(archiving.make_tarbz2file)
+        self._test_put_blueprint(archiving.make_tarbz2file, 'tar.bz2')
 
-    def _test_put_blueprint(self, archive_func):
+    def test_put_unsupported_archive_blueprint(self):
+        archive_path = tempfile.mkstemp()[1]
+        with open(archive_path, 'w') as f:
+            f.write('this is not a valid archive obviously')
+
+        response = self.put_file(
+            '/blueprints/unsupported_archive_bp',
+            archive_path)
+        self.assertIn("Blueprint archive is of an unrecognized format.",
+                      response.json['message'])
+        self.assertEqual(400, response.status_code)
+
+    def _test_put_blueprint(self, archive_func, archive_type):
         blueprint_id = 'new_blueprint_id'
         put_blueprints_response = self.put_file(
             *self.put_blueprint_args(blueprint_id=blueprint_id,
                                      archive_func=archive_func)).json
         self.assertEqual(blueprint_id, put_blueprints_response['id'])
+
+        response = self.app.get('/blueprints/{0}/archive'.format(blueprint_id))
+
+        archive_filename = '{0}.{1}'.format(blueprint_id, archive_type)
+        self.assertTrue(archive_filename in
+                        response.headers['Content-Disposition'])
+        self.assertTrue(archive_filename in
+                        response.headers['X-Accel-Redirect'])
