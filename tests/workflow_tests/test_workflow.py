@@ -24,6 +24,7 @@ from os import path
 import cloudify.context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
+from manager_rest.file_server import FileServer
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
@@ -197,8 +198,6 @@ class BasicWorkflowsTest(TestCase):
 
         archive_filename = os.path.basename(archive_location)
         archive_dir = os.path.dirname(archive_location)
-
-        from manager_rest.file_server import FileServer
 
         fs = FileServer(archive_dir, False, port)
         fs.start()

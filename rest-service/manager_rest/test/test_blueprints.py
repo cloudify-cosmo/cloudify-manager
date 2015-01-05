@@ -17,6 +17,7 @@ import os
 import tempfile
 
 from manager_rest import archiving
+from manager_rest.file_server import FileServer
 from base_test import BaseServerTestCase
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -115,8 +116,6 @@ class BlueprintsTestCase(BaseServerTestCase):
         archive_path = self.archive_mock_blueprint()
         archive_filename = os.path.basename(archive_path)
         archive_dir = os.path.dirname(archive_path)
-
-        from manager_rest.file_server import FileServer
 
         fs = FileServer(archive_dir, False, port)
         fs.start()
