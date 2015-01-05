@@ -399,15 +399,16 @@ class BlueprintsIdArchive(Resource):
         # Verify blueprint exists.
         get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
 
-        for archive_type in SUPPORTED_ARCHIVE_TYPES:
+        for arc_type in SUPPORTED_ARCHIVE_TYPES:
             # attempting to find the archive file on the file system
             local_path = os.path.join(
                 config.instance().file_server_root,
                 config.instance().file_server_uploaded_blueprints_folder,
                 blueprint_id,
-                '{0}.{1}'.format(blueprint_id, archive_type))
+                '{0}.{1}'.format(blueprint_id, arc_type))
 
             if os.path.isfile(local_path):
+                archive_type = arc_type
                 break
         else:
             raise RuntimeError("Could not find blueprint's archive; "
@@ -511,7 +512,7 @@ class BlueprintsId(Resource):
     @swagger.operation(
         responseClass=responses.BlueprintState,
         nickname="deleteById",
-        notes="deletes a blueprint by 2its id."
+        notes="deletes a blueprint by its id."
     )
     @exceptions_handled
     @marshal_with(responses.BlueprintState.resource_fields)
