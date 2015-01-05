@@ -245,7 +245,7 @@ policy_types:
                 default: true
             interval_between_workflows:
                 description: |
-                    Trigger workflow only if the last workflow was earlier then interval-between-workflows seconds ago.
+                    Trigger workflow only if the last workflow was triggered earlier than interval-between-workflows seconds ago.
                     if < 0  workflows can run concurrently.
                 default: 300
             service:
@@ -274,11 +274,11 @@ policy_types:
                 default: true
             interval_between_workflows:
                 description: |
-                    Trigger workflow only if the last workflow was earlier then interval-between-workflows seconds ago.
+                    Trigger workflow only if the last workflow was triggered earlier than interval-between-workflows seconds ago.
                     if < 0  workflows can run concurrently.
                 default: 300
             service:
-                description: The service name
+                description: Service names whose events should be taken into consideration
                 default:
                     - service
         source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/host_failure.clj
@@ -290,7 +290,7 @@ policy_types:
                 default: true
             interval_between_workflows:
                 description: |
-                    Trigger workflow only if the last workflow was earlier then interval-between-workflows seconds ago.
+                    Trigger workflow only if the last workflow was triggered earlier than interval-between-workflows seconds ago.
                     if < 0  workflows can run concurrently.
                 default: 300
             service:
