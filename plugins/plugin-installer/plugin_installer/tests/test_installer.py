@@ -29,7 +29,8 @@ from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.constants import VIRTUALENV_PATH_KEY
 from cloudify.constants import LOCAL_IP_KEY
 from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
-
+from plugin_installer.tests.file_server import FileServer
+from plugin_installer.tests.file_server import PORT
 
 logger = setup_default_logger('test_plugin_installer')
 
@@ -41,9 +42,8 @@ def _get_local_path(ctx, plugin):
 
 class PluginInstallerTestCase(testtools.TestCase):
 
-    # TEST_BLUEPRINT_ID = 'test_id'
-    TEST_BLUEPRINT_ID = '11'
-    # MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'localhost/blueprints'
+    TEST_BLUEPRINT_ID = 'test_id'
+    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = "http://localhost:{0}".format(PORT)
 
     def setUp(self):
         super(PluginInstallerTestCase, self).setUp()
@@ -59,11 +59,35 @@ class PluginInstallerTestCase(testtools.TestCase):
             blueprint_id=self.TEST_BLUEPRINT_ID
         )
         os.environ[CELERY_WORK_DIR_PATH_KEY] = self.temp_folder
-        # os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] \
-        #     = self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL
+        os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] \
+            = self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL
+
+        try:
+            # start file server
+            local_dir = dirname(__file__)
+            test_file_server = FileServer(local_dir)
+            test_file_server.start()
+        except:
+            if test_file_server:
+                try:
+                    test_file_server.stop()
+                except:
+                    # TODO: log "failed to stop file server"
+                    print 'failed to stop file server'
 
     def tearDown(self):
-        shutil.rmtree(self.temp_folder)
+        if os.path.exists(self.temp_folder):
+            shutil.rmtree(self.temp_folder)
+
+        local_dir = dirname(__file__)
+        test_file_server = FileServer(local_dir)
+        if test_file_server:
+            try:
+                test_file_server.stop()
+            except:
+                # TODO: log "failed to stop file server"
+                print 'failed to stop file server'
+
         super(PluginInstallerTestCase, self).tearDown()
 
     def _assert_plugin_installed(self, package_name,
@@ -110,8 +134,7 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def test_get_url_folder(self):
         from plugin_installer.tasks import get_url_and_args
-        # url = get_url_and_args(self.ctx.blueprint.id, {'source': 'plugin'})
-        url = get_url_and_args(self.ctx.blueprint.id, {'source': 'cloudify-softlayer-plugin-nk_test/'})
+        url = get_url_and_args(self.ctx.blueprint.id, {'source': 'mock-plugin'})
         self.assertEqual(url,
                          '{0}/{1}/plugins/plugin.zip'
                          .format(
@@ -120,22 +143,13 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def test_install(self):
 
-        # override get_url to return local paths
-        from plugin_installer import tasks
-
-        def _get_local_path_and_empty_args(blueprint_id, plugin):
-            localpath = _get_local_path(blueprint_id, plugin)
-            return localpath, ""
-
-        # monkey patch tasks.get_url_and_args to return local paths
-        tasks.get_url_and_args = _get_local_path_and_empty_args
-
         plugin = {
             'name': 'mock-plugin',
             'source': 'mock-plugin'
         }
 
-        install(plugins=[plugin])
+        ctx = MockCloudifyContext(blueprint_id=self.TEST_BLUEPRINT_ID)
+        install(ctx, plugins=[plugin])
         self._assert_plugin_installed('mock-plugin', plugin)
 
         # Assert includes file was written
