@@ -54,11 +54,21 @@ def install(ctx, plugins, **kwargs):
 def install_plugin(blueprint_id, plugin):
     name = plugin['name']
     logger.info('Installing {0}'.format(name))
-    url = get_url(blueprint_id, plugin)
-    logger.debug('Installing {0} from {1}'.format(name, url))
-    install_package(url)
-    module_paths = extract_module_paths(url)
+    url, installation_args = get_url_and_args(blueprint_id, plugin)
+    logger.debug('Installing {0} from {1} with args: {2}'.format(name, url, installation_args))
+
+    fetch_plugin_from_pip_by_url = not os.path.isdir(url)
+    if fetch_plugin_from_pip_by_url:
+        plugin_dir = extract_plugin_dir(url)
+    else:
+        plugin_dir = url
+
+    install_package(url, installation_args, plugin_dir)
+    module_paths = extract_module_paths(plugin_dir)
     update_includes(module_paths)
+
+    if fetch_plugin_from_pip_by_url and os.path.exists(plugin_dir):
+        shutil.rmtree(plugin_dir)
 
 
 def update_includes(module_paths, includes_path=None):
@@ -79,23 +89,34 @@ def update_includes(module_paths, includes_path=None):
         f.write('INCLUDES={0}\n'.format(new_includes))
 
 
-def install_package(url):
+def install_package(url, installation_args, plugin_dir):
 
     """
     Installs a package onto the worker's virtualenv.
 
-    :param url: A URL to the package archive.
+    :param url:                 A URL to the package archive.
+    :param installation_args:   Arguments passed to pip install.
+                                e.g.: -r requirements.txt
+    :param plugin_dir:          The directory containing the plugin. If the
+                                plugin's source property is a URL, this is
+                                the temp directory the plugin was unpacked to.
     """
 
-    command = '{0} install {1}'.format(_pip(), url)
-    LocalCommandRunner(
-        host=utils.get_local_ip()
-    ).run(command)
+    previous_cwd = os.getcwd()
+
+    try:
+        os.chdir(plugin_dir)
+
+        # command = '{0} install {1} {2}'.format(_pip(), url, installation_args)
+        command = '{0} install . {1}'.format(_pip(), installation_args)
+        LocalCommandRunner(host=utils.get_local_ip()).run(command)
+    finally:
+        os.chdir(previous_cwd)
 
 
-def extract_module_paths(url):
+def extract_module_paths(plugin_dir):
 
-    plugin_name = extract_plugin_name(url)
+    plugin_name = extract_plugin_name(plugin_dir)
 
     module_paths = []
     files = LocalCommandRunner(host=utils.get_local_ip()).run(
@@ -110,57 +131,107 @@ def extract_module_paths(url):
     return module_paths
 
 
-def extract_plugin_name(plugin_url):
-    previous_cwd = os.getcwd()
-    fetch_plugin_from_pip_by_url = not os.path.isdir(plugin_url)
-    plugin_dir = plugin_url
+def extract_plugin_dir(plugin_url):
     try:
-        if fetch_plugin_from_pip_by_url:
-            plugin_dir = tempfile.mkdtemp()
-            req_set = pip.req.RequirementSet(build_dir=None,
-                                             src_dir=None,
-                                             download_dir=None)
-            req_set.unpack_url(link=pip.index.Link(plugin_url),
-                               location=plugin_dir,
-                               download_dir=None,
-                               only_download=False)
-        runner = LocalCommandRunner(host=utils.get_local_ip())
+        # download and unpack plugin_url
+        plugin_dir = tempfile.mkdtemp()
+        req_set = pip.req.RequirementSet(build_dir=None,
+                                         src_dir=None,
+                                         download_dir=None)
+        req_set.unpack_url(link=pip.index.Link(plugin_url),
+                           location=plugin_dir,
+                           download_dir=None,
+                           only_download=False)
+        return plugin_dir
+    except Exception as e:
+        if os.path.exists(plugin_dir):
+            shutil.rmtree(plugin_dir)
+        raise NonRecoverableError('Failed to download and unpack plugin from '
+                                  '{0}. Reported error: {1}'.format(plugin_url, e.message))
+
+
+def extract_plugin_name(plugin_dir):
+    previous_cwd = os.getcwd()
+
+    try:
         os.chdir(plugin_dir)
+        runner = LocalCommandRunner(host=utils.get_local_ip())
         plugin_name = runner.run(
             '{0} {1} {2}'.format(_python(),
                                  path.join(
                                      path.dirname(__file__),
                                      'extract_package_name.py'),
                                  plugin_dir)).std_out
-        runner.run('{0} install --no-deps {1}'.format(_pip(), plugin_dir))
         return plugin_name
     finally:
         os.chdir(previous_cwd)
-        if fetch_plugin_from_pip_by_url:
-            shutil.rmtree(plugin_dir)
 
 
-def get_url(blueprint_id, plugin):
+def get_url_and_args(blueprint_id, plugin_dict):
 
-    source = plugin['source']
+    source = plugin_dict['source']
+    if source:
+        source = str(source).strip()
+    else:
+        raise NonRecoverableError('Plugin source is missing')
+
+
+    install_args = ''
+    if 'installation_args' in plugin_dict:
+        install_args = plugin_dict['installation_args']
+
+    if install_args:
+        install_args = str(install_args).strip()
+
+    # validate source url
     if '://' in source:
         split = source.split('://')
         schema = split[0]
-        if schema in ['http', 'https']:
-            # in case of a URL, return as is.
-            return source
-        # invalid schema
-        raise NonRecoverableError('Invalid schema: {0}'.format(schema))
+        if not (schema in ['http', 'https']):
+            # invalid schema
+            raise NonRecoverableError('Invalid schema: {0}'.format(schema))
+        else:
+            # TODO: make head call to validate the url is reachable?
+            # in case of a URL, return source and args as is.
+            return source, install_args
 
-    # Else, assume its a relative path from <blueprint_home>/plugins
-    # to a directory containing the plugin project.
-    # in this case, the archived plugin will reside in the manager file server.
+    else:
+        # Else, assume its a relative path from <blueprint_home>/plugins
+        # to a directory containing the plugin project.
+        # in this case, the archived plugin will reside in the manager file server.
+        blueprints_root = utils.get_manager_file_server_blueprints_root_url()
+        if not blueprints_root or not os.path.exists(blueprints_root):
+            raise NonRecoverableError('blueprints root "{0}" is empty or '
+                                      'does not exist'.format(blueprints_root))
 
-    blueprint_plugins_url = '{0}/{1}/plugins'.format(
-        utils.get_manager_file_server_blueprints_root_url(),
-        blueprint_id
-    )
-    return '{0}/{1}.zip'.format(blueprint_plugins_url, source)
+        if blueprints_root.endswith('/'):
+            blueprints_root = blueprints_root[:-1]
+
+        blueprint_plugins_url = '{0}/{1}/plugins'.format(blueprints_root,
+                                                         blueprint_id)
+
+        if not os.path.exists(blueprint_plugins_url):
+            raise NonRecoverableError('plugins folder not found at the '
+                                      'expected location: "{0}"'
+                                      .format(blueprint_plugins_url))
+
+        '''
+        blueprint_plugins_url_as_zip = '{0}/{1}.zip'.format(blueprint_plugins_url, source)
+        if not os.path.exists(blueprint_plugins_url_as_zip):
+            raise NonRecoverableError(
+                'plugin not found at the expected location: "{0}"'
+                .format(blueprint_plugins_url_as_zip))
+
+        return blueprint_plugins_url_as_zip, install_args
+        '''
+
+        plugin_source_as_dir = '{0}/{1}'.format(blueprint_plugins_url, source)
+        if not os.path.exists(plugin_source_as_dir):
+            raise NonRecoverableError(
+                'plugin not found at the expected location: "{0}"'
+                .format(plugin_source_as_dir))
+
+        return plugin_source_as_dir, install_args
 
 
 def _python():
@@ -175,3 +246,15 @@ def _virtualenv(command):
     return os.path.join(os.environ[VIRTUALENV_PATH_KEY],
                         'bin',
                         command)
+
+
+'''
+plugin = {}
+plugin['name'] = "test-softlayer"
+# plugin['source'] = 'https://github.com/cloudify-cosmo/cloudify-softlayer-plugin/archive/nk_test.zip'
+plugin['source'] = 'cloudify-softlayer-plugin-nk_test'
+plugin['installation_args'] = "-r requirements.txt"
+plugin['executor'] = 'central_deployment_agent'
+install_plugin("11", plugin)
+print 'done'
+'''

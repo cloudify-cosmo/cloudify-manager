@@ -41,8 +41,9 @@ def _get_local_path(ctx, plugin):
 
 class PluginInstallerTestCase(testtools.TestCase):
 
-    TEST_BLUEPRINT_ID = 'test_id'
-    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'localhost/blueprints'
+    # TEST_BLUEPRINT_ID = 'test_id'
+    TEST_BLUEPRINT_ID = '11'
+    # MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'localhost/blueprints'
 
     def setUp(self):
         super(PluginInstallerTestCase, self).setUp()
@@ -58,8 +59,8 @@ class PluginInstallerTestCase(testtools.TestCase):
             blueprint_id=self.TEST_BLUEPRINT_ID
         )
         os.environ[CELERY_WORK_DIR_PATH_KEY] = self.temp_folder
-        os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] \
-            = self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL
+        # os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] \
+        #     = self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL
 
     def tearDown(self):
         shutil.rmtree(self.temp_folder)
@@ -77,26 +78,40 @@ class PluginInstallerTestCase(testtools.TestCase):
         for dependency in dependencies:
             self.assertIn(dependency, out)
 
-    def test_get_url_http(self):
-        from plugin_installer.tasks import get_url
-        url = get_url(self.ctx.blueprint.id, {'source': 'http://google.com'})
+    def test_get_url_and_args_http_no_args(self):
+        from plugin_installer.tasks import get_url_and_args
+        url, args = get_url_and_args(self.ctx.blueprint.id, {'source': 'http://google.com'})
         self.assertEqual(url, 'http://google.com')
+        self.assertEqual(args, '')
+
+    def test_get_url_and_args_http_empty_args(self):
+        from plugin_installer.tasks import get_url_and_args
+        url, args = get_url_and_args(self.ctx.blueprint.id, {'source': 'http://google.com', 'installation_args': ''})
+        self.assertEqual(url, 'http://google.com')
+        self.assertEqual(args, '')
+
+    def test_get_url_and_args_http_with_args(self):
+        from plugin_installer.tasks import get_url_and_args
+        url, args = get_url_and_args(self.ctx.blueprint.id, {'source': 'http://google.com', 'installation_args': '-r requirements.txt'})
+        self.assertEqual(url, 'http://google.com')
+        self.assertEqual(args, '-r requirements.txt')
 
     def test_get_url_https(self):
-        from plugin_installer.tasks import get_url
-        url = get_url(self.ctx.blueprint.id, {'source': 'https://google.com'})
+        from plugin_installer.tasks import get_url_and_args
+        url = get_url_and_args(self.ctx.blueprint.id, {'source': 'https://google.com'})
         self.assertEqual(url, 'https://google.com')
 
     def test_get_url_faulty_schema(self):
-        from plugin_installer.tasks import get_url
+        from plugin_installer.tasks import get_url_and_args
         self.assertRaises(NonRecoverableError,
-                          get_url,
+                          get_url_and_args,
                           self.ctx.blueprint.id,
                           {'source': 'bla://google.com'})
 
     def test_get_url_folder(self):
-        from plugin_installer.tasks import get_url
-        url = get_url(self.ctx.blueprint.id, {'source': 'plugin'})
+        from plugin_installer.tasks import get_url_and_args
+        # url = get_url_and_args(self.ctx.blueprint.id, {'source': 'plugin'})
+        url = get_url_and_args(self.ctx.blueprint.id, {'source': 'cloudify-softlayer-plugin-nk_test/'})
         self.assertEqual(url,
                          '{0}/{1}/plugins/plugin.zip'
                          .format(
@@ -107,7 +122,13 @@ class PluginInstallerTestCase(testtools.TestCase):
 
         # override get_url to return local paths
         from plugin_installer import tasks
-        tasks.get_url = _get_local_path
+
+        def _get_local_path_and_empty_args(blueprint_id, plugin):
+            localpath = _get_local_path(blueprint_id, plugin)
+            return localpath, ""
+
+        # monkey patch tasks.get_url_and_args to return local paths
+        tasks.get_url_and_args = _get_local_path_and_empty_args
 
         plugin = {
             'name': 'mock-plugin',

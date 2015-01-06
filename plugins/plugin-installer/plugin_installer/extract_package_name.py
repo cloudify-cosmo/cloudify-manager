@@ -11,6 +11,7 @@ if __name__ == '__main__':
     # patch for setuptools.py that prints the package name
     # to stdout (also supports pbr packages)
     def patch_setup(name=None, pbr=False, *args, **kwargs):
+        # print '***** name: ', name
         if pbr:
             import ConfigParser
             config = ConfigParser.ConfigParser()
