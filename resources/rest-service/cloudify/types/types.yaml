@@ -65,12 +65,12 @@ node_types:
     properties:
       use_external_resource:
         description: >
-          Enables the use of already foramtted volumes.
+          Enables the use of already formatted volumes.
         type: boolean
         default: false
       partition_type:
         description: >
-          The partiton type. 83 is a Linux Native Partition.
+          The partition type. 83 is a Linux Native Partition.
         type: integer
         default: 83
       fs_type:
