@@ -57,18 +57,13 @@ def install_plugin(blueprint_id, plugin):
     url, installation_args = get_url_and_args(blueprint_id, plugin)
     logger.debug('Installing {0} from {1} with args: {2}'.format(name, url, installation_args))
 
-    fetch_plugin_from_pip_by_url = not os.path.isdir(url)
-    if fetch_plugin_from_pip_by_url:
-        plugin_dir = extract_plugin_dir(url)
-    else:
-        plugin_dir = url
+    plugin_temp_dir = extract_plugin_dir(url)
 
-    install_package(url, installation_args, plugin_dir)
-    module_paths = extract_module_paths(plugin_dir)
+    install_package(url, installation_args, plugin_temp_dir)
+    module_paths = extract_module_paths(plugin_temp_dir)
     update_includes(module_paths)
 
-    if fetch_plugin_from_pip_by_url and os.path.exists(plugin_dir):
-        shutil.rmtree(plugin_dir)
+    shutil.rmtree(plugin_temp_dir)
 
 
 def update_includes(module_paths, includes_path=None):
@@ -200,31 +195,17 @@ def get_url_and_args(blueprint_id, plugin_dict):
         # to a directory containing the plugin project.
         # in this case, the archived plugin will reside in the manager file server.
         blueprints_root = utils.get_manager_file_server_blueprints_root_url()
-        if not blueprints_root or not os.path.exists(blueprints_root):
-            raise NonRecoverableError('blueprints root "{0}" is empty or '
-                                      'does not exist'.format(blueprints_root))
-
-        if blueprints_root.endswith('/'):
-            blueprints_root = blueprints_root[:-1]
+        if not blueprints_root:
+            raise NonRecoverableError('blueprints root "{0}" is empty'
+                                      .format(blueprints_root))
 
         blueprint_plugins_url = '{0}/{1}/plugins'.format(blueprints_root,
                                                          blueprint_id)
 
-        if not os.path.exists(blueprint_plugins_url):
-            raise NonRecoverableError('plugins folder not found at the '
-                                      'expected location: "{0}"'
-                                      .format(blueprint_plugins_url))
-
-        '''
         blueprint_plugins_url_as_zip = '{0}/{1}.zip'.format(blueprint_plugins_url, source)
-        if not os.path.exists(blueprint_plugins_url_as_zip):
-            raise NonRecoverableError(
-                'plugin not found at the expected location: "{0}"'
-                .format(blueprint_plugins_url_as_zip))
-
         return blueprint_plugins_url_as_zip, install_args
-        '''
 
+        '''
         plugin_source_as_dir = '{0}/{1}'.format(blueprint_plugins_url, source)
         if not os.path.exists(plugin_source_as_dir):
             raise NonRecoverableError(
@@ -232,6 +213,7 @@ def get_url_and_args(blueprint_id, plugin_dict):
                 .format(plugin_source_as_dir))
 
         return plugin_source_as_dir, install_args
+        '''
 
 
 def _python():

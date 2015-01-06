@@ -42,7 +42,7 @@ def _get_local_path(ctx, plugin):
 
 class PluginInstallerTestCase(testtools.TestCase):
 
-    TEST_BLUEPRINT_ID = 'test_id'
+    TEST_BLUEPRINT_ID = 'mock_blueprint_id'
     MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = "http://localhost:{0}".format(PORT)
 
     def setUp(self):
@@ -120,10 +120,11 @@ class PluginInstallerTestCase(testtools.TestCase):
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '-r requirements.txt')
 
-    def test_get_url_https(self):
+    def test_get_url_and_args_https(self):
         from plugin_installer.tasks import get_url_and_args
-        url = get_url_and_args(self.ctx.blueprint.id, {'source': 'https://google.com'})
+        url, args = get_url_and_args(self.ctx.blueprint.id, {'source': 'https://google.com', 'installation_args': '--pre'})
         self.assertEqual(url, 'https://google.com')
+        self.assertEqual(args, '--pre')
 
     def test_get_url_faulty_schema(self):
         from plugin_installer.tasks import get_url_and_args
@@ -132,14 +133,18 @@ class PluginInstallerTestCase(testtools.TestCase):
                           self.ctx.blueprint.id,
                           {'source': 'bla://google.com'})
 
-    def test_get_url_folder(self):
+    def test_get_url_and_args_local_plugin(self):
         from plugin_installer.tasks import get_url_and_args
-        url = get_url_and_args(self.ctx.blueprint.id, {'source': 'mock-plugin'})
+        url, args = get_url_and_args(self.ctx.blueprint.id,
+                                     {'source': 'mock-plugin',
+                                      'installation_args': '-r requirements'})
         self.assertEqual(url,
-                         '{0}/{1}/plugins/plugin.zip'
+                         '{0}/{1}/plugins/mock-plugin.zip'
                          .format(
                              self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL,
                              self.TEST_BLUEPRINT_ID))
+
+        self.assertEqual(args, '-r requirements')
 
     def test_install(self):
 
@@ -161,16 +166,13 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def test_install_with_dependencies(self):
 
-        # override get_url to return local paths
-        from plugin_installer import tasks
-        tasks.get_url = _get_local_path
-
         plugin = {
             'name': 'mock-with-dependencies-plugin',
             'source': 'mock-with-dependencies-plugin'
         }
 
-        install(plugins=[plugin])
+        ctx = MockCloudifyContext(blueprint_id=self.TEST_BLUEPRINT_ID)
+        install(ctx, plugins=[plugin])
         self._assert_plugin_installed('mock-with-dependencies-plugin',
                                       plugin,
                                       dependencies=['simplejson'])
