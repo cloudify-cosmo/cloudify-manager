@@ -7,7 +7,7 @@ imports:
 
 node_templates:
     node:
-        type: mockBasic
+        type: mockBasicRoot
 
 groups:
     autohealing_group:

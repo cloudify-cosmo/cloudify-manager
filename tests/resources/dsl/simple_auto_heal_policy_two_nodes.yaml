@@ -7,10 +7,10 @@ imports:
 
 node_templates:
     ok_node:
-        type: mockBasic
+        type: mockBasicRoot
 
     node_about_to_fail:
-        type: mockBasic
+        type: mockBasicRoot
 
 groups:
     autohealing_group:

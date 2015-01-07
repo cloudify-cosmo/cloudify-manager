@@ -6,7 +6,7 @@ imports:
 
 
 node_types:
-    mockBasic:
+    mockBasicRoot:
         derived_from: cloudify.nodes.Root
         interfaces:
             test:
