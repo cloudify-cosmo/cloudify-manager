@@ -30,10 +30,11 @@ FNULL = open(os.devnull, 'w')
 
 class FileServer(object):
 
-    def __init__(self, root_path, use_subprocess=False):
+    def __init__(self, root_path, use_subprocess=False, port=PORT):
         self.root_path = root_path
         self.process = Process(target=self.start_impl)
         self.use_subprocess = use_subprocess
+        self.port = port
 
     def start(self):
         if self.use_subprocess:
@@ -62,14 +63,14 @@ class FileServer(object):
 
         class TCPServer(SocketServer.TCPServer):
             allow_reuse_address = True
-        httpd = TCPServer(('0.0.0.0', PORT),
+        httpd = TCPServer(('0.0.0.0', self.port),
                           SimpleHTTPServer.SimpleHTTPRequestHandler)
         httpd.serve_forever()
 
     def is_alive(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            s.connect(('localhost', PORT))
+            s.connect(('localhost', self.port))
             s.close()
             return True
         except socket.error:

@@ -12,15 +12,7 @@ test_plugins()
     pip install testtools
     pip install celery==3.0.24
 
-    git clone https://github.com/cloudify-cosmo/cloudify-rest-client --depth=1
-    cd cloudify-rest-client; pip install .; cd ..
-
-    git clone https://github.com/cloudify-cosmo/cloudify-plugins-common --depth=1
-    cd cloudify-plugins-common; pip install .; cd ..
-
-    git clone https://github.com/cloudify-cosmo/cloudify-script-plugin --depth=1
-    cd cloudify-script-plugin; pip install .; cd ..
-
+    pip install -r tests/dev-requirements.txt
     pushd plugins/agent-installer && pip install . && popd
     pushd plugins/windows-agent-installer && pip install . && popd
     pushd plugins/plugin-installer && pip install . && popd
@@ -90,7 +82,6 @@ run_intergration_tests()
 
     # make utils and such
     # available as python packages
-    pushd tests && pip install . && popd
     pushd plugins/riemann-controller && pip install . && popd
     pushd workflows && pip install . && popd
     pushd tests && pip install . && popd
