@@ -55,7 +55,8 @@ def install_plugin(blueprint_id, plugin):
     name = plugin['name']
     logger.info('Installing {0}'.format(name))
     url, installation_args = get_url_and_args(blueprint_id, plugin)
-    logger.debug('Installing {0} from {1} with args: {2}'.format(name, url, installation_args))
+    logger.debug('Installing {0} from {1} with args: {2}'
+                 .format(name, url, installation_args))
 
     plugin_temp_dir = extract_plugin_dir(url)
 
@@ -102,7 +103,6 @@ def install_package(url, installation_args, plugin_dir):
     try:
         os.chdir(plugin_dir)
 
-        # command = '{0} install {1} {2}'.format(_pip(), url, installation_args)
         command = '{0} install . {1}'.format(_pip(), installation_args)
         LocalCommandRunner(host=utils.get_local_ip()).run(command)
     finally:
@@ -142,7 +142,8 @@ def extract_plugin_dir(plugin_url):
         if os.path.exists(plugin_dir):
             shutil.rmtree(plugin_dir)
         raise NonRecoverableError('Failed to download and unpack plugin from '
-                                  '{0}. Reported error: {1}'.format(plugin_url, e.message))
+                                  '{0}. Reported error: {1}'
+                                  .format(plugin_url, e.message))
 
 
 def extract_plugin_name(plugin_dir):
@@ -170,7 +171,6 @@ def get_url_and_args(blueprint_id, plugin_dict):
     else:
         raise NonRecoverableError('Plugin source is missing')
 
-
     install_args = ''
     if 'installation_args' in plugin_dict:
         install_args = plugin_dict['installation_args']
@@ -186,14 +186,14 @@ def get_url_and_args(blueprint_id, plugin_dict):
             # invalid schema
             raise NonRecoverableError('Invalid schema: {0}'.format(schema))
         else:
-            # TODO: make head call to validate the url is reachable?
             # in case of a URL, return source and args as is.
             return source, install_args
 
     else:
         # Else, assume its a relative path from <blueprint_home>/plugins
-        # to a directory containing the plugin project.
-        # in this case, the archived plugin will reside in the manager file server.
+        # to a directory containing the plugin archive.
+        # in this case, the archived plugin is expected to reside on the
+        # manager file server as a zip file.
         blueprints_root = utils.get_manager_file_server_blueprints_root_url()
         if not blueprints_root:
             raise NonRecoverableError('blueprints root "{0}" is empty'
@@ -202,18 +202,9 @@ def get_url_and_args(blueprint_id, plugin_dict):
         blueprint_plugins_url = '{0}/{1}/plugins'.format(blueprints_root,
                                                          blueprint_id)
 
-        blueprint_plugins_url_as_zip = '{0}/{1}.zip'.format(blueprint_plugins_url, source)
+        blueprint_plugins_url_as_zip = '{0}/{1}.zip'.\
+                                       format(blueprint_plugins_url, source)
         return blueprint_plugins_url_as_zip, install_args
-
-        '''
-        plugin_source_as_dir = '{0}/{1}'.format(blueprint_plugins_url, source)
-        if not os.path.exists(plugin_source_as_dir):
-            raise NonRecoverableError(
-                'plugin not found at the expected location: "{0}"'
-                .format(plugin_source_as_dir))
-
-        return plugin_source_as_dir, install_args
-        '''
 
 
 def _python():
@@ -228,15 +219,3 @@ def _virtualenv(command):
     return os.path.join(os.environ[VIRTUALENV_PATH_KEY],
                         'bin',
                         command)
-
-
-'''
-plugin = {}
-plugin['name'] = "test-softlayer"
-# plugin['source'] = 'https://github.com/cloudify-cosmo/cloudify-softlayer-plugin/archive/nk_test.zip'
-plugin['source'] = 'cloudify-softlayer-plugin-nk_test'
-plugin['installation_args'] = "-r requirements.txt"
-plugin['executor'] = 'central_deployment_agent'
-install_plugin("11", plugin)
-print 'done'
-'''

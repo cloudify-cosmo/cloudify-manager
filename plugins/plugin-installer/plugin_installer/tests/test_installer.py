@@ -43,7 +43,8 @@ def _get_local_path(ctx, plugin):
 class PluginInstallerTestCase(testtools.TestCase):
 
     TEST_BLUEPRINT_ID = 'mock_blueprint_id'
-    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = "http://localhost:{0}".format(PORT)
+    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = "http://localhost:{0}"\
+                                              .format(PORT)
 
     def setUp(self):
         super(PluginInstallerTestCase, self).setUp()
@@ -104,25 +105,33 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def test_get_url_and_args_http_no_args(self):
         from plugin_installer.tasks import get_url_and_args
-        url, args = get_url_and_args(self.ctx.blueprint.id, {'source': 'http://google.com'})
+        url, args = get_url_and_args(self.ctx.blueprint.id,
+                                     {'source': 'http://google.com'})
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '')
 
     def test_get_url_and_args_http_empty_args(self):
         from plugin_installer.tasks import get_url_and_args
-        url, args = get_url_and_args(self.ctx.blueprint.id, {'source': 'http://google.com', 'installation_args': ''})
+        url, args = get_url_and_args(self.ctx.blueprint.id,
+                                     {'source': 'http://google.com',
+                                      'installation_args': ''})
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '')
 
     def test_get_url_and_args_http_with_args(self):
         from plugin_installer.tasks import get_url_and_args
-        url, args = get_url_and_args(self.ctx.blueprint.id, {'source': 'http://google.com', 'installation_args': '-r requirements.txt'})
+        url, args = get_url_and_args(self.ctx.blueprint.id,
+                                     {'source': 'http://google.com',
+                                      'installation_args':
+                                          '-r requirements.txt'})
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '-r requirements.txt')
 
     def test_get_url_and_args_https(self):
         from plugin_installer.tasks import get_url_and_args
-        url, args = get_url_and_args(self.ctx.blueprint.id, {'source': 'https://google.com', 'installation_args': '--pre'})
+        url, args = get_url_and_args(self.ctx.blueprint.id,
+                                     {'source': 'https://google.com',
+                                      'installation_args': '--pre'})
         self.assertEqual(url, 'https://google.com')
         self.assertEqual(args, '--pre')
 
