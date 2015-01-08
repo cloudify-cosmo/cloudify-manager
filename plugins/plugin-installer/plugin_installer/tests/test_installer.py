@@ -68,13 +68,15 @@ class PluginInstallerTestCase(testtools.TestCase):
             local_dir = dirname(__file__)
             test_file_server = FileServer(local_dir)
             test_file_server.start()
-        except:
+        except Exception as e:
+            logger.info('Failed to start local file server, '
+                        'reported error: {0}'.format(e.message))
             if test_file_server:
                 try:
                     test_file_server.stop()
-                except:
-                    # TODO: log "failed to stop file server"
-                    print 'failed to stop file server'
+                except Exception as e:
+                    logger.info('failed to stop local file server: {0}'
+                                .format(e.message))
 
     def tearDown(self):
         if os.path.exists(self.temp_folder):
@@ -85,9 +87,9 @@ class PluginInstallerTestCase(testtools.TestCase):
         if test_file_server:
             try:
                 test_file_server.stop()
-            except:
-                # TODO: log "failed to stop file server"
-                print 'failed to stop file server'
+            except Exception as e:
+                logger.info('failed to stop local file server: {0}'
+                            .format(e.message))
 
         super(PluginInstallerTestCase, self).tearDown()
 
@@ -123,7 +125,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'http://google.com',
                                       'installation_args':
-                                          '-r requirements.txt'})
+                                      '-r requirements.txt'})
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '-r requirements.txt')
 
