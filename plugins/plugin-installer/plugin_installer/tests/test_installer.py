@@ -18,7 +18,6 @@ from os.path import dirname
 import tempfile
 import shutil
 import zipfile
-import glob
 
 import testtools
 
@@ -43,6 +42,7 @@ TEST_BLUEPRINT_ID = 'mock_blueprint_id'
 PLUGINS_DIR = '{0}/plugins'.format(TEST_BLUEPRINT_ID)
 MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'http://localhost:{0}' \
     .format(PORT)
+
 
 def _get_local_path(ctx, plugin):
     return os.path.join(dirname(__file__),
@@ -249,6 +249,7 @@ class PluginInstallerTestCase(testtools.TestCase):
                 for root, dirs, files in os.walk(plugin_name):
                     for file_name in files:
                         abs_path = os.path.join(root, file_name)
-                        file_in_zip = abs_path[len(plugin_name)+len(os.sep):] #XXX: relative path
-                        plugin_zip_file.write(abs_path, file_in_zip, zipfile.ZIP_DEFLATED)
+                        file_in_zip = abs_path[len(plugin_name)+len(os.sep):]
+                        plugin_zip_file.write(abs_path, file_in_zip,
+                                              zipfile.ZIP_DEFLATED)
                 plugin_zip_file.close()
