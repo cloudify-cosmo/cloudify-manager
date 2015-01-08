@@ -17,6 +17,8 @@ import os
 from os.path import dirname
 import tempfile
 import shutil
+import zipfile
+import glob
 
 import testtools
 
@@ -34,6 +36,13 @@ from plugin_installer.tests.file_server import PORT
 
 logger = setup_default_logger('test_plugin_installer')
 
+MOCK_PLUGIN = 'mock-plugin'
+MOCK_PLUGIN_WITH_DEPENDENCIES = 'mock-with-dependencies-plugin'
+ZIP_SUFFIX = 'zip'
+TEST_BLUEPRINT_ID = 'mock_blueprint_id'
+PLUGINS_DIR = '{0}/plugins'.format(TEST_BLUEPRINT_ID)
+MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'http://localhost:{0}' \
+    .format(PORT)
 
 def _get_local_path(ctx, plugin):
     return os.path.join(dirname(__file__),
@@ -42,9 +51,36 @@ def _get_local_path(ctx, plugin):
 
 class PluginInstallerTestCase(testtools.TestCase):
 
-    TEST_BLUEPRINT_ID = 'mock_blueprint_id'
-    MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = "http://localhost:{0}"\
-                                              .format(PORT)
+    @classmethod
+    def setUpClass(cls):
+        # create zip files for the mock plugins used by the tests
+        cls.create_plugin_zip(MOCK_PLUGIN)
+        cls.create_plugin_zip(MOCK_PLUGIN_WITH_DEPENDENCIES)
+
+        test_file_server = None
+        try:
+            # start file server
+            test_file_server = FileServer(".")
+            test_file_server.start()
+        except Exception as e:
+            logger.info('Failed to start local file server, '
+                        'reported error: {0}'.format(e.message))
+            if test_file_server:
+                try:
+                    test_file_server.stop()
+                except Exception as e:
+                    logger.info('failed to stop local file server: {0}'
+                                .format(e.message))
+
+    @classmethod
+    def tearDownClass(cls):
+        test_file_server = FileServer(".")
+        if test_file_server:
+            try:
+                test_file_server.stop()
+            except Exception as e:
+                logger.info('failed to stop local file server: {0}'
+                            .format(e.message))
 
     def setUp(self):
         super(PluginInstallerTestCase, self).setUp()
@@ -57,40 +93,15 @@ class PluginInstallerTestCase(testtools.TestCase):
         os.environ[VIRTUALENV_PATH_KEY] = self.temp_folder
 
         self.ctx = MockCloudifyContext(
-            blueprint_id=self.TEST_BLUEPRINT_ID
+            blueprint_id=TEST_BLUEPRINT_ID
         )
         os.environ[CELERY_WORK_DIR_PATH_KEY] = self.temp_folder
         os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] \
-            = self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL
-
-        local_dir = dirname(__file__)
-        test_file_server = None
-        try:
-            # start file server
-            test_file_server = FileServer(local_dir)
-            test_file_server.start()
-        except Exception as e:
-            logger.info('Failed to start local file server, '
-                        'reported error: {0}'.format(e.message))
-            if test_file_server:
-                try:
-                    test_file_server.stop()
-                except Exception as e:
-                    logger.info('failed to stop local file server: {0}'
-                                .format(e.message))
+            = MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL
 
     def tearDown(self):
         if os.path.exists(self.temp_folder):
             shutil.rmtree(self.temp_folder)
-
-        local_dir = dirname(__file__)
-        test_file_server = FileServer(local_dir)
-        if test_file_server:
-            try:
-                test_file_server.stop()
-            except Exception as e:
-                logger.info('failed to stop local file server: {0}'
-                            .format(e.message))
 
         super(PluginInstallerTestCase, self).tearDown()
 
@@ -148,26 +159,27 @@ class PluginInstallerTestCase(testtools.TestCase):
     def test_get_url_and_args_local_plugin(self):
         from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
-                                     {'source': 'mock-plugin',
+                                     {'source': MOCK_PLUGIN,
                                       'installation_args': '-r requirements'})
         self.assertEqual(url,
-                         '{0}/{1}/plugins/mock-plugin.zip'
+                         '{0}/{1}/{2}.{3}'
                          .format(
-                             self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL,
-                             self.TEST_BLUEPRINT_ID))
+                             MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL,
+                             PLUGINS_DIR,
+                             MOCK_PLUGIN, ZIP_SUFFIX))
 
         self.assertEqual(args, '-r requirements')
 
     def test_install(self):
 
         plugin = {
-            'name': 'mock-plugin',
-            'source': 'mock-plugin'
+            'name': MOCK_PLUGIN,
+            'source': MOCK_PLUGIN
         }
 
-        ctx = MockCloudifyContext(blueprint_id=self.TEST_BLUEPRINT_ID)
+        ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
         install(ctx, plugins=[plugin])
-        self._assert_plugin_installed('mock-plugin', plugin)
+        self._assert_plugin_installed(MOCK_PLUGIN, plugin)
 
         # Assert includes file was written
         out = LocalCommandRunner().run(
@@ -183,7 +195,7 @@ class PluginInstallerTestCase(testtools.TestCase):
             'source': 'mock-with-dependencies-plugin'
         }
 
-        ctx = MockCloudifyContext(blueprint_id=self.TEST_BLUEPRINT_ID)
+        ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
         install(ctx, plugins=[plugin])
         self._assert_plugin_installed('mock-with-dependencies-plugin',
                                       plugin,
@@ -220,3 +232,23 @@ class PluginInstallerTestCase(testtools.TestCase):
             self.assertEquals(
                 "INCLUDES=test.tasks,a.tasks,b.tasks\n",
                 includes)
+
+    @staticmethod
+    def create_plugin_zip(plugin_name):
+        # create the plugins directory if doesn't exist
+        if not os.path.exists(PLUGINS_DIR):
+            os.makedirs(PLUGINS_DIR)
+
+        plugin_zip_file_path = '{0}/{1}.{2}'.format(PLUGINS_DIR,
+                                                    plugin_name,
+                                                    ZIP_SUFFIX)
+
+        # remove the file, if exists
+        if not os.path.exists(plugin_zip_file_path):
+            with zipfile.ZipFile(plugin_zip_file_path, "w") as plugin_zip_file:
+                for root, dirs, files in os.walk(plugin_name):
+                    for file_name in files:
+                        abs_path = os.path.join(root, file_name)
+                        file_in_zip = abs_path[len(plugin_name)+len(os.sep):] #XXX: relative path
+                        plugin_zip_file.write(abs_path, file_in_zip, zipfile.ZIP_DEFLATED)
+                plugin_zip_file.close()
