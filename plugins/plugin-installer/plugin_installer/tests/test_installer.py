@@ -63,9 +63,10 @@ class PluginInstallerTestCase(testtools.TestCase):
         os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] \
             = self.MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL
 
+        local_dir = dirname(__file__)
+        test_file_server = None
         try:
             # start file server
-            local_dir = dirname(__file__)
             test_file_server = FileServer(local_dir)
             test_file_server.start()
         except Exception as e:
