@@ -6,6 +6,7 @@
 
 (register-policy-trigger "{{ctx.deployment.id}}" "{{trigger_name}}"
 {{trigger.source}}
+;New line is needed so there can be a comment in the last line of trigger source
 )
 
 {% endfor %}
@@ -40,6 +41,9 @@
       publish-policy-error         (publish-policy-error* ctx)
       publish-log                  (publish-log* ctx)
       restraints                   (get-workflow-restraints
+                                     ;Default restraints values are:
+                                     ;is_node_started_before_workflow: true
+                                     ;interval_between_workflows: 300
                                      (parse-boolean "{{stream.metadata.policy_properties.is_node_started_before_workflow}}")
                                      (or {{stream.metadata.policy_properties.interval_between_workflows}} 300))
       check-restraints-and-process (fn [restraints]
@@ -63,6 +67,8 @@
                         (:node_id event)
                         (sdo
                           {{stream.data}}
+                          ;New line is needed so there can be a comment
+                          ;in the last line of policy source
                         ))))))
     {%for m in stream.metadata.members%}
       (where* (is-node-name-in "{{m}}")
