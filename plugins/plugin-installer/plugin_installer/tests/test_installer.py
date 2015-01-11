@@ -269,11 +269,11 @@ class PluginInstallerTestCase(testtools.TestCase):
 
         # remove the file, if exists
         if not os.path.exists(plugin_zip_file_path):
-            with zipfile.ZipFile(plugin_zip_file_path, "w") as plugin_zip_file:
-                for root, dirs, files in os.walk(plugin_name):
-                    for file_name in files:
-                        abs_path = os.path.join(root, file_name)
-                        file_in_zip = abs_path[len(plugin_name)+len(os.sep):]
-                        plugin_zip_file.write(abs_path, file_in_zip,
-                                              zipfile.ZIP_DEFLATED)
-                plugin_zip_file.close()
+            plugin_zip_file = zipfile.ZipFile(plugin_zip_file_path, "w")
+            for root, dirs, files in os.walk(plugin_name):
+                for file_name in files:
+                    abs_path = os.path.join(root, file_name)
+                    file_in_zip = abs_path[len(plugin_name)+len(os.sep):]
+                    plugin_zip_file.write(abs_path, file_in_zip,
+                                          zipfile.ZIP_DEFLATED)
+            plugin_zip_file.close()

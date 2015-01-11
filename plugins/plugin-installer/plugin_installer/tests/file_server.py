@@ -23,13 +23,13 @@ import sys
 import socket
 import time
 
-from cloudify.tests import get_logger
+from cloudify.utils import setup_default_logger
 
 PORT = 53229
 FNULL = open(os.devnull, 'w')
 
 
-logger = get_logger('FileServer')
+logger = setup_default_logger('test_plugin_installer_file_server')
 
 
 class FileServer(object):
