@@ -1,0 +1,1 @@
+https://github.com/cloudify-cosmo/softlayer-python/archive/master.zip

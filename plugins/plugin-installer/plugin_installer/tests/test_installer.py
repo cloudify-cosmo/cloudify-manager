@@ -37,6 +37,7 @@ logger = setup_default_logger('test_plugin_installer')
 
 MOCK_PLUGIN = 'mock-plugin'
 MOCK_PLUGIN_WITH_DEPENDENCIES = 'mock-with-dependencies-plugin'
+MOCK_PLUGIN_WITH_INSTALL_ARGS = 'mock-with-install-args-plugin'
 ZIP_SUFFIX = 'zip'
 TEST_BLUEPRINT_ID = 'mock_blueprint_id'
 PLUGINS_DIR = '{0}/plugins'.format(TEST_BLUEPRINT_ID)
@@ -56,6 +57,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         # create zip files for the mock plugins used by the tests
         cls.create_plugin_zip(MOCK_PLUGIN)
         cls.create_plugin_zip(MOCK_PLUGIN_WITH_DEPENDENCIES)
+        cls.create_plugin_zip(MOCK_PLUGIN_WITH_INSTALL_ARGS)
 
         test_file_server = None
         try:
@@ -128,7 +130,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'http://google.com',
-                                      'installation_args': ''})
+                                      'install_arguments': ''})
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '')
 
@@ -136,7 +138,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'http://google.com',
-                                      'installation_args':
+                                      'install_arguments':
                                       '-r requirements.txt'})
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '-r requirements.txt')
@@ -145,7 +147,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'https://google.com',
-                                      'installation_args': '--pre'})
+                                      'install_arguments': '--pre'})
         self.assertEqual(url, 'https://google.com')
         self.assertEqual(args, '--pre')
 
@@ -160,7 +162,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': MOCK_PLUGIN,
-                                      'installation_args': '-r requirements'})
+                                      'install_arguments': '-r requirements'})
         self.assertEqual(url,
                          '{0}/{1}/{2}.{3}'
                          .format(
@@ -191,13 +193,13 @@ class PluginInstallerTestCase(testtools.TestCase):
     def test_install_with_dependencies(self):
 
         plugin = {
-            'name': 'mock-with-dependencies-plugin',
-            'source': 'mock-with-dependencies-plugin'
+            'name':  MOCK_PLUGIN_WITH_DEPENDENCIES,
+            'source': MOCK_PLUGIN_WITH_DEPENDENCIES
         }
 
         ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
         install(ctx, plugins=[plugin])
-        self._assert_plugin_installed('mock-with-dependencies-plugin',
+        self._assert_plugin_installed(MOCK_PLUGIN_WITH_DEPENDENCIES,
                                       plugin,
                                       dependencies=['simplejson'])
 
@@ -207,6 +209,26 @@ class PluginInstallerTestCase(testtools.TestCase):
                 os.path.join(self.temp_folder,
                              'celeryd-includes'))).std_out
         self.assertIn('mock_with_dependencies_for_test.module', out)
+
+    def test_install_with_install_args(self):
+
+        plugin = {
+            'name': MOCK_PLUGIN_WITH_INSTALL_ARGS,
+            'source': MOCK_PLUGIN_WITH_INSTALL_ARGS,
+            'install_arguments': '-r requirements.txt'
+        }
+
+        ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
+        install(ctx, plugins=[plugin])
+        self._assert_plugin_installed(MOCK_PLUGIN_WITH_INSTALL_ARGS,
+                                      plugin)
+
+        # Assert includes file was written
+        out = LocalCommandRunner().run(
+            'cat {0}'.format(
+                os.path.join(self.temp_folder,
+                             'celeryd-includes'))).std_out
+        self.assertIn('mock_with_install_args_for_test.module', out)
 
     def test_write_to_empty_includes(self):
 
