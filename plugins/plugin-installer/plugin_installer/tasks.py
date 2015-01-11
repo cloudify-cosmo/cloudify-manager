@@ -52,6 +52,7 @@ def install(ctx, plugins, **kwargs):
 
 
 def install_plugin(blueprint_id, plugin):
+    plugin_temp_dir = None
     try:
         name = plugin['name']
         logger.info('Installing {0}'.format(name))
