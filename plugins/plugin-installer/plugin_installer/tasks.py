@@ -52,19 +52,21 @@ def install(ctx, plugins, **kwargs):
 
 
 def install_plugin(blueprint_id, plugin):
-    name = plugin['name']
-    logger.info('Installing {0}'.format(name))
-    url, installation_args = get_url_and_args(blueprint_id, plugin)
-    logger.debug('Installing {0} from {1} with args: {2}'
-                 .format(name, url, installation_args))
+    try:
+        name = plugin['name']
+        logger.info('Installing {0}'.format(name))
+        url, install_args = get_url_and_args(blueprint_id, plugin)
+        logger.debug('Installing {0} from {1} with args: {2}'
+                     .format(name, url, install_args))
 
-    plugin_temp_dir = extract_plugin_dir(url)
+        plugin_temp_dir = extract_plugin_dir(url)
 
-    install_package(url, installation_args, plugin_temp_dir)
-    module_paths = extract_module_paths(plugin_temp_dir)
-    update_includes(module_paths)
-
-    shutil.rmtree(plugin_temp_dir)
+        install_package(plugin_temp_dir, install_args)
+        module_paths = extract_module_paths(plugin_temp_dir)
+        update_includes(module_paths)
+    finally:
+        if plugin_temp_dir:
+            shutil.rmtree(plugin_temp_dir)
 
 
 def update_includes(module_paths, includes_path=None):
@@ -85,17 +87,16 @@ def update_includes(module_paths, includes_path=None):
         f.write('INCLUDES={0}\n'.format(new_includes))
 
 
-def install_package(url, installation_args, plugin_dir):
+def install_package(plugin_dir, install_args):
 
     """
     Installs a package onto the worker's virtualenv.
 
-    :param url:                 A URL to the package archive.
-    :param installation_args:   Arguments passed to pip install.
-                                e.g.: -r requirements.txt
     :param plugin_dir:          The directory containing the plugin. If the
                                 plugin's source property is a URL, this is
                                 the temp directory the plugin was unpacked to.
+    :param install_args:       Arguments passed to pip install.
+                                e.g.: -r requirements.txt
     """
 
     previous_cwd = os.getcwd()
@@ -103,7 +104,7 @@ def install_package(url, installation_args, plugin_dir):
     try:
         os.chdir(plugin_dir)
 
-        command = '{0} install . {1}'.format(_pip(), installation_args)
+        command = '{0} install . {1}'.format(_pip(), install_args)
         LocalCommandRunner(host=utils.get_local_ip()).run(command)
     finally:
         os.chdir(previous_cwd)
@@ -139,11 +140,10 @@ def extract_plugin_dir(plugin_url):
                            only_download=False)
         return plugin_dir
     except Exception as e:
-        if os.path.exists(plugin_dir):
+        if plugin_dir and os.path.exists(plugin_dir):
             shutil.rmtree(plugin_dir)
         raise NonRecoverableError('Failed to download and unpack plugin from '
-                                  '{0}. Reported error: {1}'
-                                  .format(plugin_url, e.message))
+                                  '{0}: {1}'.format(plugin_url, str(e)))
 
 
 def extract_plugin_name(plugin_dir):
@@ -165,24 +165,20 @@ def extract_plugin_name(plugin_dir):
 
 def get_url_and_args(blueprint_id, plugin_dict):
 
-    source = plugin_dict['source']
+    source = plugin_dict.get('source') or ''
     if source:
-        source = str(source).strip()
+        source = source.strip()
     else:
-        raise NonRecoverableError('Plugin source is missing')
+        raise NonRecoverableError('Plugin source is not defined')
 
-    install_args = ''
-    if 'installation_args' in plugin_dict:
-        install_args = plugin_dict['installation_args']
-
-    if install_args:
-        install_args = str(install_args).strip()
+    install_args = plugin_dict.get('install_arguments') or ''
+    install_args = install_args.strip()
 
     # validate source url
     if '://' in source:
         split = source.split('://')
         schema = split[0]
-        if not (schema in ['http', 'https']):
+        if schema not in ['http', 'https']:
             # invalid schema
             raise NonRecoverableError('Invalid schema: {0}'.format(schema))
         else:
