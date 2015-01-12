@@ -17,7 +17,4 @@
 class Constants:
     """ Constants that can be used in policies """
     PERIODICAL_EXPIRATION_INTERVAL = 5  # in seconds
-    TRIGGERING_STATE = "triggering_state"
-    STABLE_STATE = "ok"
     HEART_BEAT_FAILURE = "heart-beat-failure"
-    MIN_INTERVAL_BETWEEN_WORKFLOWS = 5

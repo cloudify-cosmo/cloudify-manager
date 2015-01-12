@@ -48,11 +48,6 @@
                                      (or {{stream.metadata.policy_properties.interval_between_workflows}} 300))
       check-restraints-and-process (fn [workflow-trigger-restraints]
         (check-restraints-and-process* ctx deployment-processing-queue workflow-trigger-restraints))
-      downstream
-        (autohealing/downstream* index
-                                 (check-restraints-and-process workflow-trigger-restraints)
-                                 "{{constants.STABLE_STATE}}"
-                                 "{{constants.TRIGGERING_STATE}}")
       metadata_stream_id "{{stream.metadata.group}}.{{stream.metadata.policy}}"]
 
 (where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
