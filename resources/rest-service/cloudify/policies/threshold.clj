@@ -1,7 +1,7 @@
 (where (and (service #"{{service}}")
             (not (expired? event)))
   (letfn [(inequality [metric]
-            ((autohealing/inequality "{{upper_bound}}") metric {{threshold}}))]
+            ((threshold-computing/inequality "{{upper_bound}}") metric {{threshold}}))]
     (stable {{stability_time}}
       (fn [event] (inequality (:metric event)))
       (where (inequality metric)
