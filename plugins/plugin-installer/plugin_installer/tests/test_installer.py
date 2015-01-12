@@ -24,7 +24,8 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 from cloudify.utils import LocalCommandRunner
 from cloudify.utils import setup_default_logger
-from plugin_installer.tasks import install, update_includes
+from plugin_installer.tasks import install, update_includes, \
+    parse_pip_version, is_pip6_or_higher
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.constants import VIRTUALENV_PATH_KEY
 from cloudify.constants import LOCAL_IP_KEY
@@ -171,3 +172,60 @@ class PluginInstallerTestCase(testtools.TestCase):
             self.assertEquals(
                 "INCLUDES=test.tasks,a.tasks,b.tasks\n",
                 includes)
+
+
+class PipVersionParserTestCase(testtools.TestCase):
+
+    def test_parse_long_format_version(self):
+        version_tupple = parse_pip_version('1.5.4')
+        self.assertEqual(('1', '5', '4'), version_tupple)
+
+    def test_parse_short_format_version(self):
+        version_tupple = parse_pip_version('6.0')
+        self.assertEqual(('6', '0', ''), version_tupple)
+
+    def test_pip6_not_higher(self):
+        result = is_pip6_or_higher('1.5.4')
+        self.assertEqual(result, False)
+
+    def test_pip6_exactly(self):
+        result = is_pip6_or_higher('6.0')
+        self.assertEqual(result, True)
+
+    def test_pip6_is_higher(self):
+        result = is_pip6_or_higher('6.0.6')
+        self.assertEqual(result, True)
+
+    def test_parse_invalid_major_version(self):
+        expected_err_msg = 'Invalid pip version: "a.5.4", major version is ' \
+                           '"a" while expected to be a number'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, 'a.5.4')
+
+    def test_parse_invalid_minor_version(self):
+        expected_err_msg = 'Invalid pip version: "1.a.4", minor version is ' \
+                           '"a" while expected to be a number'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, '1.a.4')
+
+    def test_parse_too_short_version(self):
+        expected_err_msg = 'Unknown formatting of pip version: "6", expected ' \
+                           'dot-delimited numbers \(e.g. "1.5.4", "6.0"\)'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, '6')
+
+    def test_parse_numeric_version(self):
+        expected_err_msg = 'Invalid pip version: 6 is not a string'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, 6)
+
+    def test_parse_alpha_version(self):
+        expected_err_msg = 'Unknown formatting of pip version: "a", expected ' \
+                           'dot-delimited numbers \(e.g. "1.5.4", "6.0"\)'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, 'a')
+
+    def test_parse_wrong_obj(self):
+        expected_err_msg = 'Invalid pip version: \[6\] is not a string'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, [6])
