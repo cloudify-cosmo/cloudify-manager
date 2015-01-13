@@ -116,21 +116,8 @@ def extract_plugin_name(plugin_url):
     plugin_dir = plugin_url
     try:
         if fetch_plugin_from_pip_by_url:
-            plugin_dir = tempfile.mkdtemp()
-            # check pip version and unpack plugin_url accordingly
-            if is_pip6_or_higher():
-                pip.download.unpack_url(link=pip.index.Link(plugin_url),
-                                        location=plugin_dir,
-                                        download_dir=None,
-                                        only_download=False)
-            else:
-                req_set = pip.req.RequirementSet(build_dir=None,
-                                                 src_dir=None,
-                                                 download_dir=None)
-                req_set.unpack_url(link=pip.index.Link(plugin_url),
-                                   location=plugin_dir,
-                                   download_dir=None,
-                                   only_download=False)
+            plugin_dir = extract_plugin_dir(plugin_url)
+
         runner = LocalCommandRunner(host=utils.get_local_ip())
         os.chdir(plugin_dir)
         plugin_name = runner.run(
@@ -145,6 +132,35 @@ def extract_plugin_name(plugin_url):
         os.chdir(previous_cwd)
         if fetch_plugin_from_pip_by_url:
             shutil.rmtree(plugin_dir)
+
+
+def extract_plugin_dir(plugin_url):
+    plugin_dir = None
+
+    try:
+        plugin_dir = tempfile.mkdtemp()
+        # check pip version and unpack plugin_url accordingly
+        if is_pip6_or_higher():
+            pip.download.unpack_url(link=pip.index.Link(plugin_url),
+                                    location=plugin_dir,
+                                    download_dir=None,
+                                    only_download=False)
+        else:
+            req_set = pip.req.RequirementSet(build_dir=None,
+                                             src_dir=None,
+                                             download_dir=None)
+            req_set.unpack_url(link=pip.index.Link(plugin_url),
+                               location=plugin_dir,
+                               download_dir=None,
+                               only_download=False)
+
+    except Exception as e:
+        if plugin_dir and os.path.exists(plugin_dir):
+            shutil.rmtree(plugin_dir)
+        raise NonRecoverableError('Failed to download and unpack plugin from '
+                                  '{0}: {1}'.format(plugin_url, str(e)))
+
+    return plugin_dir
 
 
 def get_url(blueprint_id, plugin):
