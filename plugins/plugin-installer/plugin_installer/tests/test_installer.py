@@ -17,9 +17,8 @@ import os
 from os.path import dirname
 import tempfile
 import shutil
-import zipfile
+import tarfile
 import filecmp
-import struct
 
 import testtools
 
@@ -42,6 +41,7 @@ logger = setup_default_logger('test_plugin_installer')
 MOCK_PLUGIN = 'mock-plugin'
 MOCK_PLUGIN_WITH_DEPENDENCIES = 'mock-with-dependencies-plugin'
 ZIP_SUFFIX = 'zip'
+TAR_SUFFIX = 'tar'
 TEST_BLUEPRINT_ID = 'mock_blueprint_id'
 PLUGINS_DIR = '{0}/plugins'.format(TEST_BLUEPRINT_ID)
 MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'http://localhost:{0}' \
@@ -57,9 +57,9 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # create zip files for the mock plugins used by the tests
-        cls.create_plugin_zip(MOCK_PLUGIN)
-        cls.create_plugin_zip(MOCK_PLUGIN_WITH_DEPENDENCIES)
+        # create tar files for the mock plugins used by the tests
+        cls.create_plugin_tar(MOCK_PLUGIN)
+        cls.create_plugin_tar(MOCK_PLUGIN_WITH_DEPENDENCIES)
 
         test_file_server = None
         try:
@@ -157,10 +157,12 @@ class PluginInstallerTestCase(testtools.TestCase):
                         are_dir_trees_equal(MOCK_PLUGIN, extracted_plugin_dir))
 
     def test_install(self):
-
+        plugin_source = '{0}/{1}/{2}.{3}'.format(
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
+            MOCK_PLUGIN, TAR_SUFFIX)
         plugin = {
             'name': MOCK_PLUGIN,
-            'source': MOCK_PLUGIN
+            'source': plugin_source
         }
 
         ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
@@ -176,9 +178,13 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def test_install_with_dependencies(self):
 
+        plugin_source = '{0}/{1}/{2}.{3}'.format(
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
+            MOCK_PLUGIN_WITH_DEPENDENCIES, TAR_SUFFIX)
+
         plugin = {
-            'name':  MOCK_PLUGIN_WITH_DEPENDENCIES,
-            'source': MOCK_PLUGIN_WITH_DEPENDENCIES
+            'name': MOCK_PLUGIN_WITH_DEPENDENCIES,
+            'source': plugin_source
         }
 
         ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
@@ -220,48 +226,20 @@ class PluginInstallerTestCase(testtools.TestCase):
                 includes)
 
     @staticmethod
-    def create_plugin_zip(plugin_name):
+    def create_plugin_tar(plugin_dir_name):
         # create the plugins directory if doesn't exist
         if not os.path.exists(PLUGINS_DIR):
             os.makedirs(PLUGINS_DIR)
 
-        zip_file_path = '{0}/{1}.{2}'.format(PLUGINS_DIR,
-                                             plugin_name,
-                                             ZIP_SUFFIX)
+        tar_file_path = '{0}/{1}.{2}'.format(PLUGINS_DIR,
+                                             plugin_dir_name,
+                                             TAR_SUFFIX)
 
-        # remove the file, if exists
-        if not os.path.exists(zip_file_path):
-            plugin_zip_file = zipfile.ZipFile(zip_file_path, "w")
-            for root, dirs, files in os.walk(plugin_name):
-                for file_name in files:
-                    abs_path = os.path.join(root, file_name)
-                    file_in_zip = abs_path[len(plugin_name)+len(os.sep):]
-                    plugin_zip_file.write(abs_path, file_in_zip,
-                                          zipfile.ZIP_DEFLATED)
-            plugin_zip_file.close()
-            PluginInstallerTestCase.\
-                remove_end_archive_signature_from_zip_file(zip_file_path)
-
-    @staticmethod
-    def remove_end_archive_signature_from_zip_file(zip_file_path):
-        signature_len = 0
-
-        f = open(zip_file_path, 'r+b')
-        data = f.read()
-        pos = data.find(zipfile.stringEndArchive)
-        if pos > 0:
-            signature_len = struct.calcsize(zipfile.structEndArchive)
-        else:
-            pos = data.find(zipfile.stringEndArchive64)
-            if pos > 0:
-                signature_len = struct.calcsize(zipfile.structEndArchive64)
-
-        if signature_len > 0:
-            logger.debug('Truncating End of central directory signature from '
-                         'zip file "{0}"'.format(zip_file_path))
-            f.seek(pos + signature_len)
-            f.truncate()
-            f.close()
+        # create the file, if it doesn't exist
+        if not os.path.exists(tar_file_path):
+            plugin_tar_file = tarfile.TarFile(tar_file_path, 'w')
+            plugin_tar_file.add(plugin_dir_name)
+            plugin_tar_file.close()
 
     @staticmethod
     def are_dir_trees_equal(dir1, dir2):
@@ -281,7 +259,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         # or "funny" files (failed to compare) - return false
         dirs_cmp = filecmp.dircmp(dir1, dir2)
         if len(dirs_cmp.left_only) > 0 or len(dirs_cmp.right_only) > 0 or \
-                len(dirs_cmp.funny_files) > 0:
+           len(dirs_cmp.funny_files) > 0:
             return False
 
         # compare the common files between dir1 and dir2
