@@ -19,6 +19,7 @@ import tempfile
 import shutil
 import zipfile
 import filecmp
+import struct
 
 import testtools
 
@@ -224,13 +225,13 @@ class PluginInstallerTestCase(testtools.TestCase):
         if not os.path.exists(PLUGINS_DIR):
             os.makedirs(PLUGINS_DIR)
 
-        plugin_zip_file_path = '{0}/{1}.{2}'.format(PLUGINS_DIR,
-                                                    plugin_name,
-                                                    ZIP_SUFFIX)
+        zip_file_path = '{0}/{1}.{2}'.format(PLUGINS_DIR,
+                                             plugin_name,
+                                             ZIP_SUFFIX)
 
         # remove the file, if exists
-        if not os.path.exists(plugin_zip_file_path):
-            plugin_zip_file = zipfile.ZipFile(plugin_zip_file_path, "w")
+        if not os.path.exists(zip_file_path):
+            plugin_zip_file = zipfile.ZipFile(zip_file_path, "w")
             for root, dirs, files in os.walk(plugin_name):
                 for file_name in files:
                     abs_path = os.path.join(root, file_name)
@@ -238,6 +239,29 @@ class PluginInstallerTestCase(testtools.TestCase):
                     plugin_zip_file.write(abs_path, file_in_zip,
                                           zipfile.ZIP_DEFLATED)
             plugin_zip_file.close()
+            PluginInstallerTestCase.\
+                remove_end_archive_signature_from_zip_file(zip_file_path)
+
+    @staticmethod
+    def remove_end_archive_signature_from_zip_file(zip_file_path):
+        signature_len = 0
+
+        f = open(zip_file_path, 'r+b')
+        data = f.read()
+        pos = data.find(zipfile.stringEndArchive)
+        if pos > 0:
+            signature_len = struct.calcsize(zipfile.structEndArchive)
+        else:
+            pos = data.find(zipfile.stringEndArchive64)
+            if pos > 0:
+                signature_len = struct.calcsize(zipfile.structEndArchive64)
+
+        if signature_len > 0:
+            logger.debug('Truncating End of central directory signature from '
+                         'zip file "{0}"'.format(zip_file_path))
+            f.seek(pos + signature_len)
+            f.truncate()
+            f.close()
 
     @staticmethod
     def are_dir_trees_equal(dir1, dir2):
