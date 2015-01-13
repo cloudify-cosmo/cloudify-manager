@@ -64,7 +64,8 @@ class PluginInstallerTestCase(testtools.TestCase):
         test_file_server = None
         try:
             # start file server
-            test_file_server = FileServer(".")
+            local_dir = dirname(__file__)
+            test_file_server = FileServer(local_dir)
             test_file_server.start()
         except Exception as e:
             logger.info('Failed to start local file server, '
@@ -78,7 +79,8 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        test_file_server = FileServer(".")
+        local_dir = dirname(__file__)
+        test_file_server = FileServer(local_dir)
         if test_file_server:
             try:
                 test_file_server.stop()
@@ -147,11 +149,15 @@ class PluginInstallerTestCase(testtools.TestCase):
                              PLUGINS_DIR,
                              MOCK_PLUGIN, ZIP_SUFFIX))
 
-    def test_extract_url_of_local_plugin(self):
-        mock_plugin = {
-            'source': MOCK_PLUGIN
+    def test_extract_url(self):
+        plugin_source = '{0}/{1}/{2}.{3}'.format(
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
+            MOCK_PLUGIN, TAR_SUFFIX)
+        plugin = {
+            'name': MOCK_PLUGIN,
+            'source': plugin_source
         }
-        url = get_url(self.ctx.blueprint.id, mock_plugin)
+        url = get_url(self.ctx.blueprint.id, plugin)
         extracted_plugin_dir = extract_plugin_dir(url)
         self.assertTrue(PluginInstallerTestCase.
                         are_dir_trees_equal(MOCK_PLUGIN, extracted_plugin_dir))
@@ -227,18 +233,24 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     @staticmethod
     def create_plugin_tar(plugin_dir_name):
+
+        plugin_path_abs = os.path.join(dirname(__file__), plugin_dir_name)
+
         # create the plugins directory if doesn't exist
         if not os.path.exists(PLUGINS_DIR):
             os.makedirs(PLUGINS_DIR)
 
-        tar_file_path = '{0}/{1}.{2}'.format(PLUGINS_DIR,
+        # the tar file will be created under mock_blueprint_id/plugins
+        plugins_dir_abs = os.path.join(dirname(__file__), PLUGINS_DIR, plugin_dir_name)
+        tar_file_path = '{0}/{1}/{2}.{3}'.format(dirname(__file__),
+                                             PLUGINS_DIR,
                                              plugin_dir_name,
                                              TAR_SUFFIX)
 
         # create the file, if it doesn't exist
         if not os.path.exists(tar_file_path):
             plugin_tar_file = tarfile.TarFile(tar_file_path, 'w')
-            plugin_tar_file.add(plugin_dir_name)
+            plugin_tar_file.add(plugin_path_abs)
             plugin_tar_file.close()
 
     @staticmethod
