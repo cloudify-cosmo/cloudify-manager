@@ -115,21 +115,22 @@ def extract_plugin_name(plugin_url):
     fetch_plugin_from_pip_by_url = not os.path.isdir(plugin_url)
     plugin_dir = plugin_url
     try:
-        plugin_dir = tempfile.mkdtemp()
-        # check pip version and unpack plugin_url accordingly
-        if is_pip6_or_higher():
-            pip.download.unpack_url(link=pip.index.Link(plugin_url),
-                                    location=plugin_dir,
-                                    download_dir=None,
-                                    only_download=False)
-        else:
-            req_set = pip.req.RequirementSet(build_dir=None,
-                                             src_dir=None,
-                                             download_dir=None)
-            req_set.unpack_url(link=pip.index.Link(plugin_url),
-                               location=plugin_dir,
-                               download_dir=None,
-                               only_download=False)
+        if fetch_plugin_from_pip_by_url:
+            plugin_dir = tempfile.mkdtemp()
+            # check pip version and unpack plugin_url accordingly
+            if is_pip6_or_higher():
+                pip.download.unpack_url(link=pip.index.Link(plugin_url),
+                                        location=plugin_dir,
+                                        download_dir=None,
+                                        only_download=False)
+            else:
+                req_set = pip.req.RequirementSet(build_dir=None,
+                                                 src_dir=None,
+                                                 download_dir=None)
+                req_set.unpack_url(link=pip.index.Link(plugin_url),
+                                   location=plugin_dir,
+                                   download_dir=None,
+                                   only_download=False)
         runner = LocalCommandRunner(host=utils.get_local_ip())
         os.chdir(plugin_dir)
         plugin_name = runner.run(
