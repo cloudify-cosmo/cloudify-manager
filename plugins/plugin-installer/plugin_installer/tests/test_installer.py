@@ -158,9 +158,10 @@ class PluginInstallerTestCase(testtools.TestCase):
             'source': plugin_source
         }
         url = get_url(self.ctx.blueprint.id, plugin)
-        extracted_plugin_dir = extract_plugin_dir(url)
-        self.assertTrue(PluginInstallerTestCase.
-                        are_dir_trees_equal(MOCK_PLUGIN, extracted_plugin_dir))
+        source_plugin_path = os.path.join(dirname(__file__), MOCK_PLUGIN)
+        extracted_plugin_path = extract_plugin_dir(url)
+        self.assertTrue(PluginInstallerTestCase.are_dir_trees_equal(
+            source_plugin_path, extracted_plugin_path))
 
     def test_install(self):
         plugin_source = '{0}/{1}/{2}.{3}'.format(
