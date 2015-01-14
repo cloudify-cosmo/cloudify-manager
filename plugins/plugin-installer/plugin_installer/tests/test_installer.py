@@ -234,22 +234,22 @@ class PluginInstallerTestCase(testtools.TestCase):
     @staticmethod
     def create_plugin_tar(plugin_dir_name):
 
-        plugin_path_abs = os.path.join(dirname(__file__), plugin_dir_name)
+        plugin_source_path = os.path.join(dirname(__file__), plugin_dir_name)
 
         # create the plugins directory if doesn't exist
-        if not os.path.exists(PLUGINS_DIR):
-            os.makedirs(PLUGINS_DIR)
+        plugins_dir_path = os.path.join(dirname(__file__), PLUGINS_DIR)
+        if not os.path.exists(plugins_dir_path):
+            os.makedirs(plugins_dir_path)
 
         # the tar file will be created under mock_blueprint_id/plugins
-        tar_file_path = '{0}/{1}/{2}.{3}'.format(dirname(__file__),
-                                                 PLUGINS_DIR,
-                                                 plugin_dir_name,
-                                                 TAR_SUFFIX)
+        target_tar_file_path = '{0}/{1}.{2}'.format(plugins_dir_path,
+                                                    plugin_dir_name,
+                                                    TAR_SUFFIX)
 
         # create the file, if it doesn't exist
-        if not os.path.exists(tar_file_path):
-            plugin_tar_file = tarfile.TarFile(tar_file_path, 'w')
-            plugin_tar_file.add(plugin_path_abs)
+        if not os.path.exists(target_tar_file_path):
+            plugin_tar_file = tarfile.TarFile(target_tar_file_path, 'w')
+            plugin_tar_file.add(plugin_source_path, plugin_dir_name)
             plugin_tar_file.close()
 
     @staticmethod
