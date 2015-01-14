@@ -37,6 +37,7 @@ from plugin_installer.tests.file_server import PORT
 
 
 logger = setup_default_logger('test_plugin_installer')
+runner = LocalCommandRunner()
 
 MOCK_PLUGIN = 'mock-plugin'
 MOCK_PLUGIN_WITH_DEPENDENCIES = 'mock-with-dependencies-plugin'
@@ -57,6 +58,10 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # install virtual env. this ensures the env that will be later created
+        # will use the python env the test is running in (e.g. might be 2.6)
+        runner.run('pip install virtualenv')
+
         # create tar files for the mock plugins used by the tests
         cls.create_plugin_tar(MOCK_PLUGIN)
         cls.create_plugin_tar(MOCK_PLUGIN_WITH_DEPENDENCIES)
