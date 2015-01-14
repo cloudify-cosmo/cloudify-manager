@@ -49,7 +49,6 @@
       check-restraints-and-process (fn [workflow-trigger-restraints]
         (check-restraints-and-process* ctx deployment-processing-queue workflow-trigger-restraints))
       metadata_stream_id "{{stream.metadata.group}}.{{stream.metadata.policy}}"]
-
 (where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
   (exception-stream publish-policy-error
     (fn [event]
