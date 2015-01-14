@@ -128,6 +128,23 @@ def extract_module_paths(plugin_dir):
     return module_paths
 
 
+def extract_plugin_name(plugin_dir):
+    previous_cwd = os.getcwd()
+
+    try:
+        os.chdir(plugin_dir)
+        runner = LocalCommandRunner(host=utils.get_local_ip())
+        plugin_name = runner.run(
+            '{0} {1} {2}'.format(_python(),
+                                 path.join(
+                                     path.dirname(__file__),
+                                     'extract_package_name.py'),
+                                 plugin_dir)).std_out
+        return plugin_name
+    finally:
+        os.chdir(previous_cwd)
+
+
 def extract_plugin_dir(plugin_url):
     try:
         # download and unpack plugin_url
@@ -145,23 +162,6 @@ def extract_plugin_dir(plugin_url):
             shutil.rmtree(plugin_dir)
         raise NonRecoverableError('Failed to download and unpack plugin from '
                                   '{0}: {1}'.format(plugin_url, str(e)))
-
-
-def extract_plugin_name(plugin_dir):
-    previous_cwd = os.getcwd()
-
-    try:
-        os.chdir(plugin_dir)
-        runner = LocalCommandRunner(host=utils.get_local_ip())
-        plugin_name = runner.run(
-            '{0} {1} {2}'.format(_python(),
-                                 path.join(
-                                     path.dirname(__file__),
-                                     'extract_package_name.py'),
-                                 plugin_dir)).std_out
-        return plugin_name
-    finally:
-        os.chdir(previous_cwd)
 
 
 def get_url_and_args(blueprint_id, plugin_dict):
