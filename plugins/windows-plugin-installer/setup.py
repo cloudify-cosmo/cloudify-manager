@@ -20,7 +20,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-windows-plugin-installer-plugin',
-    version='3.2a2',
+    version='3.2a3',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['windows_plugin_installer'],
@@ -29,7 +29,7 @@ setup(
                 'existing celery windows worker',
     zip_safe=False,
     install_requires=[
-        "cloudify-plugins-common==3.2a2"
+        "cloudify-plugins-common==3.2a3"
     ],
     tests_require=[
         "nose"
