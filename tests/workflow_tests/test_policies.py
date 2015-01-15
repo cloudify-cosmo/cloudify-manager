@@ -419,6 +419,15 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
 
     @riemann_cleanup
+    def test_threshold_compute_per_group(self):
+        test = TestAutohealPolicies.Threshold(
+            self,
+            'dsl/threshold_compute_per_node.yaml'
+        )
+        test.breach_threshold_on_one_node_from_two()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    @riemann_cleanup
     def test_ewma_timeless(self):
         test = TestAutohealPolicies.EwmaTimeless(self)
         test.swinging_threshold_breach()

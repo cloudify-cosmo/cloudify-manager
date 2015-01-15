@@ -48,25 +48,26 @@
                                      (or {{stream.metadata.policy_properties.interval_between_workflows}} 300))
       check-restraints-and-process (fn [workflow-trigger-restraints]
         (check-restraints-and-process* ctx deployment-processing-queue workflow-trigger-restraints))
-      metadata_stream_id "{{stream.metadata.group}}.{{stream.metadata.policy}}"]
-(where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
-  (exception-stream publish-policy-error
-    (fn [event]
-      (def node-instances-stream
-        (if (contains? (node-instances-stream metadata_stream_id) (:node_id event))
-          node-instances-stream
-          (assoc node-instances-stream
-                 metadata_stream_id
-                 (assoc (node-instances-stream metadata_stream_id)
-                        (:node_id event)
-                        (sdo
-                          {{stream.data}}
-                          ;New line is needed so there can be a comment
-                          ;in the last line of policy source
-                        ))))))
-    {%for m in stream.metadata.members%}
-      (where* (is-node-name-in "{{m}}")
-        (fn [event] (((node-instances-stream metadata_stream_id) (:node_id event)) event))
-      )
-    {%endfor%}
-))){% endfor %}))
+      metadata_stream_id           "{{stream.metadata.group}}.{{stream.metadata.policy}}"
+      policy_operates_on_group     (parse-boolean "{{stream.metadata.policy_properties.policy_operates_on_group}}")]
+  (where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
+    (exception-stream publish-policy-error
+      (where policy_operates_on_group
+             {{stream.data}}
+             ;New line is needed so there can be a comment
+             ;in the last line of policy source
+             (else (fn [event]
+                     (def node-instances-stream
+                       (if (contains? (node-instances-stream metadata_stream_id) (:node_id event))
+                         node-instances-stream
+                         (assoc node-instances-stream
+                                metadata_stream_id
+                                (assoc (node-instances-stream metadata_stream_id)
+                                       (:node_id event)
+                                       (sdo
+                                         {{stream.data}}
+                                         ;New line is needed so there can be a comment
+                                         ;in the last line of policy source
+                                       )))))))
+             (else (fn [event] (((node-instances-stream metadata_stream_id) (:node_id event)) event)))))))
+{% endfor %}))
