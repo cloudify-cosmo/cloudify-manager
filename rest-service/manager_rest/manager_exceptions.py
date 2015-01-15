@@ -40,6 +40,15 @@ class NotFoundError(ManagerException):
             404, NotFoundError.NOT_FOUND_ERROR_CODE, *args, **kwargs)
 
 
+class ParamUrlNotFoundError(ManagerException):
+    PARAM_URL_NOT_FOUND_ERROR_CODE = 'param_url_not_found_error'
+
+    def __init__(self, *args, **kwargs):
+        super(ParamUrlNotFoundError, self).__init__(
+            400, ParamUrlNotFoundError.PARAM_URL_NOT_FOUND_ERROR_CODE,
+            *args, **kwargs)
+
+
 class DependentExistsError(ManagerException):
     DEPENDENT_EXISTS_ERROR_CODE = 'dependent_exists_error'
 
