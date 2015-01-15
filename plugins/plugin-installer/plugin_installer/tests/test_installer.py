@@ -38,6 +38,7 @@ from plugin_installer.tests.file_server import PORT
 
 logger = setup_default_logger('test_plugin_installer')
 runner = LocalCommandRunner()
+test_file_server = FileServer(dirname(__file__))
 
 MOCK_PLUGIN = 'mock-plugin'
 MOCK_PLUGIN_WITH_DEPENDENCIES = 'mock-with-dependencies-plugin'
@@ -66,11 +67,8 @@ class PluginInstallerTestCase(testtools.TestCase):
         cls.create_plugin_tar(MOCK_PLUGIN)
         cls.create_plugin_tar(MOCK_PLUGIN_WITH_DEPENDENCIES)
 
-        test_file_server = None
         try:
             # start file server
-            local_dir = dirname(__file__)
-            test_file_server = FileServer(local_dir)
             test_file_server.start()
         except Exception as e:
             logger.info('Failed to start local file server, '
@@ -84,8 +82,6 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        local_dir = dirname(__file__)
-        test_file_server = FileServer(local_dir)
         if test_file_server:
             try:
                 test_file_server.stop()
