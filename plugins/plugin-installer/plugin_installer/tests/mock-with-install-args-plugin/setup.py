@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='mock-with-install-args-plugin',
-    version='3.2a2',
+    version='3.2a3',
     author='noak',
     author_email='noak@gigaspaces.com',
     packages=['mock_with_install_args_for_test'],
