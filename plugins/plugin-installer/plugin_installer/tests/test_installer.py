@@ -134,8 +134,8 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def test_get_url_https(self):
         url, args = get_url_and_args(self.ctx.blueprint.id,
-                                     {'source': 'http://google.com',
-                                      'install_arguments': ''})
+                                     {'source': 'https://google.com',
+                                      'install_arguments': '--pre'})
         self.assertEqual(url, 'https://google.com')
         self.assertEqual(args, '--pre')
 
