@@ -1,1 +1,1 @@
-https://github.com/cloudify-cosmo/softlayer-python/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip

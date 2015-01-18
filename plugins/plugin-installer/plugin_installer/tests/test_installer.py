@@ -231,10 +231,10 @@ class PluginInstallerTestCase(testtools.TestCase):
 
         ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
         install(ctx, plugins=[plugin])
-        # SoftLayer is specified as a requirement in requirements.txt
+        # cloudify-rest-client is specified in requirements.txt
         self._assert_plugin_installed(MOCK_PLUGIN_WITH_INSTALL_ARGS,
                                       plugin,
-                                      dependencies=['SoftLayer'])
+                                      dependencies=['cloudify-rest-client'])
 
         # Assert includes file was written
         out = LocalCommandRunner().run(
