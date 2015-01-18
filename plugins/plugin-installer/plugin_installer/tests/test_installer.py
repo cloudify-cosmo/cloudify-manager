@@ -132,25 +132,10 @@ class PluginInstallerTestCase(testtools.TestCase):
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '')
 
-    def test_get_url_and_args_http_empty_args(self):
+    def test_get_url_https(self):
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'http://google.com',
                                       'install_arguments': ''})
-        self.assertEqual(url, 'http://google.com')
-        self.assertEqual(args, '')
-
-    def test_get_url_and_args_http_with_args(self):
-        url, args = get_url_and_args(self.ctx.blueprint.id,
-                                     {'source': 'http://google.com',
-                                      'install_arguments':
-                                      '-r requirements.txt'})
-        self.assertEqual(url, 'http://google.com')
-        self.assertEqual(args, '-r requirements.txt')
-
-    def test_get_url_and_args_https(self):
-        url, args = get_url_and_args(self.ctx.blueprint.id,
-                                     {'source': 'https://google.com',
-                                      'install_arguments': '--pre'})
         self.assertEqual(url, 'https://google.com')
         self.assertEqual(args, '--pre')
 
@@ -191,6 +176,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         plugin_source = '{0}/{1}/{2}.{3}'.format(
             MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
             MOCK_PLUGIN, TAR_SUFFIX)
+        
         plugin = {
             'name': MOCK_PLUGIN,
             'source': plugin_source
