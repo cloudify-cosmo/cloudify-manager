@@ -26,7 +26,7 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 from cloudify.utils import LocalCommandRunner
 from cloudify.utils import setup_default_logger
-from plugin_installer.tasks import install, get_url, update_includes, \
+from plugin_installer.tasks import install, get_url_and_args, update_includes, \
     parse_pip_version, is_pip6_or_higher, extract_plugin_dir
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.constants import VIRTUALENV_PATH_KEY
@@ -42,6 +42,7 @@ test_file_server = FileServer(dirname(__file__))
 
 MOCK_PLUGIN = 'mock-plugin'
 MOCK_PLUGIN_WITH_DEPENDENCIES = 'mock-with-dependencies-plugin'
+MOCK_PLUGIN_WITH_INSTALL_ARGS = 'mock-with-install-args-plugin'
 ZIP_SUFFIX = 'zip'
 TAR_SUFFIX = 'tar'
 TEST_BLUEPRINT_ID = 'mock_blueprint_id'
@@ -66,6 +67,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         # create tar files for the mock plugins used by the tests
         cls.create_plugin_tar(MOCK_PLUGIN)
         cls.create_plugin_tar(MOCK_PLUGIN_WITH_DEPENDENCIES)
+        cls.create_plugin_tar(MOCK_PLUGIN_WITH_INSTALL_ARGS)
 
         try:
             # start file server
@@ -124,25 +126,31 @@ class PluginInstallerTestCase(testtools.TestCase):
         for dependency in dependencies:
             self.assertIn(dependency, out)
 
-    def test_get_url_http(self):
-        url = get_url(self.ctx.blueprint.id, {'source': 'http://google.com'})
+    def test_get_url_and_args_http_no_args(self):
+        url, args = get_url_and_args(self.ctx.blueprint.id,
+                                     {'source': 'http://google.com'})
         self.assertEqual(url, 'http://google.com')
+        self.assertEqual(args, '')
 
     def test_get_url_https(self):
-        url = get_url(self.ctx.blueprint.id, {'source': 'https://google.com'})
+        url, args = get_url_and_args(self.ctx.blueprint.id,
+                                     {'source': 'https://google.com',
+                                      'install_arguments': '--pre'})
         self.assertEqual(url, 'https://google.com')
+        self.assertEqual(args, '--pre')
 
     def test_get_url_faulty_schema(self):
         self.assertRaises(NonRecoverableError,
-                          get_url,
+                          get_url_and_args,
                           self.ctx.blueprint.id,
                           {'source': 'bla://google.com'})
 
-    def test_get_url_local_plugin(self):
+    def test_get_url_and_args_local_plugin(self):
         mock_plugin = {
-            'source': MOCK_PLUGIN
+            'source': MOCK_PLUGIN,
+            'install_arguments': '-r requirements'
         }
-        url = get_url(self.ctx.blueprint.id, mock_plugin)
+        url, args = get_url_and_args(self.ctx.blueprint.id, mock_plugin)
         self.assertEqual(url,
                          '{0}/{1}/{2}.{3}'
                          .format(
@@ -158,7 +166,7 @@ class PluginInstallerTestCase(testtools.TestCase):
             'name': MOCK_PLUGIN,
             'source': plugin_source
         }
-        url = get_url(self.ctx.blueprint.id, plugin)
+        url, args = get_url_and_args(self.ctx.blueprint.id, plugin)
         source_plugin_path = os.path.join(dirname(__file__), MOCK_PLUGIN)
         extracted_plugin_path = extract_plugin_dir(url)
         self.assertTrue(PluginInstallerTestCase.are_dir_trees_equal(
@@ -168,6 +176,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         plugin_source = '{0}/{1}/{2}.{3}'.format(
             MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
             MOCK_PLUGIN, TAR_SUFFIX)
+
         plugin = {
             'name': MOCK_PLUGIN,
             'source': plugin_source
@@ -191,7 +200,7 @@ class PluginInstallerTestCase(testtools.TestCase):
             MOCK_PLUGIN_WITH_DEPENDENCIES, TAR_SUFFIX)
 
         plugin = {
-            'name': MOCK_PLUGIN_WITH_DEPENDENCIES,
+            'name':  MOCK_PLUGIN_WITH_DEPENDENCIES,
             'source': plugin_source
         }
 
@@ -207,6 +216,32 @@ class PluginInstallerTestCase(testtools.TestCase):
                 os.path.join(self.temp_folder,
                              'celeryd-includes'))).std_out
         self.assertIn('mock_with_dependencies_for_test.module', out)
+
+    def test_install_with_install_args(self):
+
+        plugin_source = '{0}/{1}/{2}.{3}'.format(
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
+            MOCK_PLUGIN_WITH_INSTALL_ARGS, TAR_SUFFIX)
+
+        plugin = {
+            'name': MOCK_PLUGIN_WITH_INSTALL_ARGS,
+            'source': plugin_source,
+            'install_arguments': '-r requirements.txt'
+        }
+
+        ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
+        install(ctx, plugins=[plugin])
+        # cloudify-rest-client is specified in requirements.txt
+        self._assert_plugin_installed(MOCK_PLUGIN_WITH_INSTALL_ARGS,
+                                      plugin,
+                                      dependencies=['cloudify-rest-client'])
+
+        # Assert includes file was written
+        out = LocalCommandRunner().run(
+            'cat {0}'.format(
+                os.path.join(self.temp_folder,
+                             'celeryd-includes'))).std_out
+        self.assertIn('mock_with_install_args_for_test.module', out)
 
     def test_write_to_empty_includes(self):
 
