@@ -52,7 +52,7 @@ def install(ctx, plugins, **kwargs):
 
 
 def install_plugin(blueprint_id, plugin):
-    plugin_temp_dir = None
+    extracted_plugin_dir = None
     try:
         name = plugin['name']
         logger.info('Installing {0}'.format(name))
@@ -60,14 +60,14 @@ def install_plugin(blueprint_id, plugin):
         logger.debug('Installing {0} from {1} with args: {2}'
                      .format(name, url, install_args))
 
-        plugin_temp_dir = extract_plugin_dir(url)
+        extracted_plugin_dir = extract_plugin_dir(url)
 
-        install_package(plugin_temp_dir, install_args)
-        module_paths = extract_module_paths(plugin_temp_dir)
+        install_package(extracted_plugin_dir, install_args)
+        module_paths = extract_module_paths(extracted_plugin_dir)
         update_includes(module_paths)
     finally:
-        if plugin_temp_dir:
-            shutil.rmtree(plugin_temp_dir)
+        if extracted_plugin_dir:
+            shutil.rmtree(extracted_plugin_dir)
 
 
 def update_includes(module_paths, includes_path=None):
@@ -88,14 +88,14 @@ def update_includes(module_paths, includes_path=None):
         f.write('INCLUDES={0}\n'.format(new_includes))
 
 
-def install_package(plugin_dir, install_args):
+def install_package(extracted_plugin_dir, install_args):
 
     """
     Installs a package onto the worker's virtualenv.
 
-    :param plugin_dir:          The directory containing the plugin. If the
-                                plugin's source property is a URL, this is
-                                the temp directory the plugin was unpacked to.
+    :param extracted_plugin_dir:The directory containing the extracted plugin.
+                                If the plugin's source property is a URL, this
+                                is the directory the plugin was unpacked to.
     :param install_args:       Arguments passed to pip install.
                                 e.g.: -r requirements.txt
     """
@@ -103,7 +103,7 @@ def install_package(plugin_dir, install_args):
     previous_cwd = os.getcwd()
 
     try:
-        os.chdir(plugin_dir)
+        os.chdir(extracted_plugin_dir)
 
         command = '{0} install . {1}'.format(_pip(), install_args)
         LocalCommandRunner(host=utils.get_local_ip()).run(command)
@@ -146,22 +146,32 @@ def extract_plugin_name(plugin_dir):
 
 
 def extract_plugin_dir(plugin_url):
+    plugin_dir = None
+
     try:
-        # download and unpack plugin_url
         plugin_dir = tempfile.mkdtemp()
-        req_set = pip.req.RequirementSet(build_dir=None,
-                                         src_dir=None,
-                                         download_dir=None)
-        req_set.unpack_url(link=pip.index.Link(plugin_url),
-                           location=plugin_dir,
-                           download_dir=None,
-                           only_download=False)
-        return plugin_dir
+        # check pip version and unpack plugin_url accordingly
+        if is_pip6_or_higher():
+            pip.download.unpack_url(link=pip.index.Link(plugin_url),
+                                    location=plugin_dir,
+                                    download_dir=None,
+                                    only_download=False)
+        else:
+            req_set = pip.req.RequirementSet(build_dir=None,
+                                             src_dir=None,
+                                             download_dir=None)
+            req_set.unpack_url(link=pip.index.Link(plugin_url),
+                               location=plugin_dir,
+                               download_dir=None,
+                               only_download=False)
+
     except Exception as e:
         if plugin_dir and os.path.exists(plugin_dir):
             shutil.rmtree(plugin_dir)
         raise NonRecoverableError('Failed to download and unpack plugin from '
                                   '{0}: {1}'.format(plugin_url, str(e)))
+
+    return plugin_dir
 
 
 def get_url_and_args(blueprint_id, plugin_dict):
@@ -216,3 +226,51 @@ def _virtualenv(command):
     return os.path.join(os.environ[VIRTUALENV_PATH_KEY],
                         'bin',
                         command)
+
+
+def is_pip6_or_higher(pip_version=None):
+    major, minor, micro = parse_pip_version(pip_version)
+
+    if int(major) >= 6:
+        return True
+    else:
+        return False
+
+
+def parse_pip_version(pip_version=None):
+    if not pip_version:
+        try:
+            pip_version = pip.__version__
+        except AttributeError as e:
+            raise NonRecoverableError('Failed to get pip version: ', str(e))
+
+    if not pip_version:
+        raise NonRecoverableError('Failed to get pip version')
+
+    if not isinstance(pip_version, basestring):
+        raise NonRecoverableError('Invalid pip version: {0} is not a string'
+                                  .format(pip_version))
+
+    if not pip_version.__contains__("."):
+        raise NonRecoverableError('Unknown formatting of pip version: "{0}", '
+                                  'expected dot-delimited numbers (e.g. '
+                                  '"1.5.4", "6.0")'.format(pip_version))
+
+    version_parts = pip_version.split('.')
+    major = version_parts[0]
+    minor = version_parts[1]
+    micro = ''
+    if len(version_parts) > 2:
+        micro = version_parts[2]
+
+    if not str(major).isdigit():
+        raise NonRecoverableError('Invalid pip version: "{0}", major version '
+                                  'is "{1}" while expected to be a number'
+                                  .format(pip_version, major))
+
+    if not str(minor).isdigit():
+        raise NonRecoverableError('Invalid pip version: "{0}", minor version '
+                                  'is "{1}" while expected to be a number'
+                                  .format(pip_version, minor))
+
+    return major, minor, micro

@@ -17,7 +17,8 @@ import os
 from os.path import dirname
 import tempfile
 import shutil
-import zipfile
+import tarfile
+import filecmp
 
 import testtools
 
@@ -25,7 +26,8 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 from cloudify.utils import LocalCommandRunner
 from cloudify.utils import setup_default_logger
-from plugin_installer.tasks import install, update_includes
+from plugin_installer.tasks import install, get_url_and_args, update_includes, \
+    parse_pip_version, is_pip6_or_higher, extract_plugin_dir
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.constants import VIRTUALENV_PATH_KEY
 from cloudify.constants import LOCAL_IP_KEY
@@ -33,12 +35,16 @@ from cloudify.constants import MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY
 from plugin_installer.tests.file_server import FileServer
 from plugin_installer.tests.file_server import PORT
 
+
 logger = setup_default_logger('test_plugin_installer')
+runner = LocalCommandRunner()
+test_file_server = FileServer(dirname(__file__))
 
 MOCK_PLUGIN = 'mock-plugin'
 MOCK_PLUGIN_WITH_DEPENDENCIES = 'mock-with-dependencies-plugin'
 MOCK_PLUGIN_WITH_INSTALL_ARGS = 'mock-with-install-args-plugin'
 ZIP_SUFFIX = 'zip'
+TAR_SUFFIX = 'tar'
 TEST_BLUEPRINT_ID = 'mock_blueprint_id'
 PLUGINS_DIR = '{0}/plugins'.format(TEST_BLUEPRINT_ID)
 MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL = 'http://localhost:{0}' \
@@ -54,15 +60,17 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # create zip files for the mock plugins used by the tests
-        cls.create_plugin_zip(MOCK_PLUGIN)
-        cls.create_plugin_zip(MOCK_PLUGIN_WITH_DEPENDENCIES)
-        cls.create_plugin_zip(MOCK_PLUGIN_WITH_INSTALL_ARGS)
+        # install virtual env. this ensures the env that will be later created
+        # will use the python env the test is running in (e.g. might be 2.6)
+        runner.run('pip install virtualenv')
 
-        test_file_server = None
+        # create tar files for the mock plugins used by the tests
+        cls.create_plugin_tar(MOCK_PLUGIN)
+        cls.create_plugin_tar(MOCK_PLUGIN_WITH_DEPENDENCIES)
+        cls.create_plugin_tar(MOCK_PLUGIN_WITH_INSTALL_ARGS)
+
         try:
             # start file server
-            test_file_server = FileServer(".")
             test_file_server.start()
         except Exception as e:
             logger.info('Failed to start local file server, '
@@ -76,7 +84,6 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        test_file_server = FileServer(".")
         if test_file_server:
             try:
                 test_file_server.stop()
@@ -120,14 +127,12 @@ class PluginInstallerTestCase(testtools.TestCase):
             self.assertIn(dependency, out)
 
     def test_get_url_and_args_http_no_args(self):
-        from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'http://google.com'})
         self.assertEqual(url, 'http://google.com')
         self.assertEqual(args, '')
 
     def test_get_url_and_args_http_empty_args(self):
-        from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'http://google.com',
                                       'install_arguments': ''})
@@ -135,7 +140,6 @@ class PluginInstallerTestCase(testtools.TestCase):
         self.assertEqual(args, '')
 
     def test_get_url_and_args_http_with_args(self):
-        from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'http://google.com',
                                       'install_arguments':
@@ -144,7 +148,6 @@ class PluginInstallerTestCase(testtools.TestCase):
         self.assertEqual(args, '-r requirements.txt')
 
     def test_get_url_and_args_https(self):
-        from plugin_installer.tasks import get_url_and_args
         url, args = get_url_and_args(self.ctx.blueprint.id,
                                      {'source': 'https://google.com',
                                       'install_arguments': '--pre'})
@@ -152,17 +155,17 @@ class PluginInstallerTestCase(testtools.TestCase):
         self.assertEqual(args, '--pre')
 
     def test_get_url_faulty_schema(self):
-        from plugin_installer.tasks import get_url_and_args
         self.assertRaises(NonRecoverableError,
                           get_url_and_args,
                           self.ctx.blueprint.id,
                           {'source': 'bla://google.com'})
 
     def test_get_url_and_args_local_plugin(self):
-        from plugin_installer.tasks import get_url_and_args
-        url, args = get_url_and_args(self.ctx.blueprint.id,
-                                     {'source': MOCK_PLUGIN,
-                                      'install_arguments': '-r requirements'})
+        mock_plugin = {
+            'source': MOCK_PLUGIN,
+            'install_arguments': '-r requirements'
+        }
+        url, args = get_url_and_args(self.ctx.blueprint.id, mock_plugin)
         self.assertEqual(url,
                          '{0}/{1}/{2}.{3}'
                          .format(
@@ -170,13 +173,27 @@ class PluginInstallerTestCase(testtools.TestCase):
                              PLUGINS_DIR,
                              MOCK_PLUGIN, ZIP_SUFFIX))
 
-        self.assertEqual(args, '-r requirements')
-
-    def test_install(self):
-
+    def test_extract_url(self):
+        plugin_source = '{0}/{1}/{2}.{3}'.format(
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
+            MOCK_PLUGIN, TAR_SUFFIX)
         plugin = {
             'name': MOCK_PLUGIN,
-            'source': MOCK_PLUGIN
+            'source': plugin_source
+        }
+        url, args = get_url_and_args(self.ctx.blueprint.id, plugin)
+        source_plugin_path = os.path.join(dirname(__file__), MOCK_PLUGIN)
+        extracted_plugin_path = extract_plugin_dir(url)
+        self.assertTrue(PluginInstallerTestCase.are_dir_trees_equal(
+            source_plugin_path, extracted_plugin_path))
+
+    def test_install(self):
+        plugin_source = '{0}/{1}/{2}.{3}'.format(
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
+            MOCK_PLUGIN, TAR_SUFFIX)
+        plugin = {
+            'name': MOCK_PLUGIN,
+            'source': plugin_source
         }
 
         ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
@@ -192,9 +209,13 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def test_install_with_dependencies(self):
 
+        plugin_source = '{0}/{1}/{2}.{3}'.format(
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
+            MOCK_PLUGIN_WITH_DEPENDENCIES, TAR_SUFFIX)
+
         plugin = {
             'name':  MOCK_PLUGIN_WITH_DEPENDENCIES,
-            'source': MOCK_PLUGIN_WITH_DEPENDENCIES
+            'source': plugin_source
         }
 
         ctx = MockCloudifyContext(blueprint_id=TEST_BLUEPRINT_ID)
@@ -212,9 +233,13 @@ class PluginInstallerTestCase(testtools.TestCase):
 
     def test_install_with_install_args(self):
 
+        plugin_source = '{0}/{1}/{2}.{3}'.format(
+            MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
+            MOCK_PLUGIN_WITH_INSTALL_ARGS, TAR_SUFFIX)
+
         plugin = {
             'name': MOCK_PLUGIN_WITH_INSTALL_ARGS,
-            'source': MOCK_PLUGIN_WITH_INSTALL_ARGS,
+            'source': plugin_source,
             'install_arguments': '-r requirements.txt'
         }
 
@@ -258,22 +283,116 @@ class PluginInstallerTestCase(testtools.TestCase):
                 includes)
 
     @staticmethod
-    def create_plugin_zip(plugin_name):
+    def create_plugin_tar(plugin_dir_name):
+
+        plugin_source_path = os.path.join(dirname(__file__), plugin_dir_name)
+
         # create the plugins directory if doesn't exist
-        if not os.path.exists(PLUGINS_DIR):
-            os.makedirs(PLUGINS_DIR)
+        plugins_dir_path = os.path.join(dirname(__file__), PLUGINS_DIR)
+        if not os.path.exists(plugins_dir_path):
+            os.makedirs(plugins_dir_path)
 
-        plugin_zip_file_path = '{0}/{1}.{2}'.format(PLUGINS_DIR,
-                                                    plugin_name,
-                                                    ZIP_SUFFIX)
+        # the tar file will be created under mock_blueprint_id/plugins
+        target_tar_file_path = '{0}/{1}.{2}'.format(plugins_dir_path,
+                                                    plugin_dir_name,
+                                                    TAR_SUFFIX)
 
-        # remove the file, if exists
-        if not os.path.exists(plugin_zip_file_path):
-            plugin_zip_file = zipfile.ZipFile(plugin_zip_file_path, "w")
-            for root, dirs, files in os.walk(plugin_name):
-                for file_name in files:
-                    abs_path = os.path.join(root, file_name)
-                    file_in_zip = abs_path[len(plugin_name)+len(os.sep):]
-                    plugin_zip_file.write(abs_path, file_in_zip,
-                                          zipfile.ZIP_DEFLATED)
-            plugin_zip_file.close()
+        # create the file, if it doesn't exist
+        if not os.path.exists(target_tar_file_path):
+            plugin_tar_file = tarfile.TarFile(target_tar_file_path, 'w')
+            plugin_tar_file.add(plugin_source_path, plugin_dir_name)
+            plugin_tar_file.close()
+
+    @staticmethod
+    def are_dir_trees_equal(dir1, dir2):
+        """
+        Compare two directories recursively. Files in each directory are
+        assumed to be equal if their names and contents are equal.
+
+        @param dir1: First directory path
+        @param dir2: Second directory path
+
+        @return: True if the directory trees are the same and
+            there were no errors while accessing the directories or files,
+            False otherwise.
+       """
+
+        # compare file lists in both dirs. If found different lists
+        # or "funny" files (failed to compare) - return false
+        dirs_cmp = filecmp.dircmp(dir1, dir2)
+        if len(dirs_cmp.left_only) > 0 or len(dirs_cmp.right_only) > 0 or \
+           len(dirs_cmp.funny_files) > 0:
+            return False
+
+        # compare the common files between dir1 and dir2
+        (match, mismatch, errors) = filecmp.cmpfiles(
+            dir1, dir2, dirs_cmp.common_files, shallow=False)
+        if len(mismatch) > 0 or len(errors) > 0:
+            return False
+
+        # continue to compare sub-directories, recursively
+        for common_dir in dirs_cmp.common_dirs:
+            new_dir1 = os.path.join(dir1, common_dir)
+            new_dir2 = os.path.join(dir2, common_dir)
+            if not PluginInstallerTestCase.are_dir_trees_equal(
+                    new_dir1, new_dir2):
+                return False
+
+        return True
+
+
+class PipVersionParserTestCase(testtools.TestCase):
+
+    def test_parse_long_format_version(self):
+        version_tupple = parse_pip_version('1.5.4')
+        self.assertEqual(('1', '5', '4'), version_tupple)
+
+    def test_parse_short_format_version(self):
+        version_tupple = parse_pip_version('6.0')
+        self.assertEqual(('6', '0', ''), version_tupple)
+
+    def test_pip6_not_higher(self):
+        result = is_pip6_or_higher('1.5.4')
+        self.assertEqual(result, False)
+
+    def test_pip6_exactly(self):
+        result = is_pip6_or_higher('6.0')
+        self.assertEqual(result, True)
+
+    def test_pip6_is_higher(self):
+        result = is_pip6_or_higher('6.0.6')
+        self.assertEqual(result, True)
+
+    def test_parse_invalid_major_version(self):
+        expected_err_msg = 'Invalid pip version: "a.5.4", major version is ' \
+                           '"a" while expected to be a number'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, 'a.5.4')
+
+    def test_parse_invalid_minor_version(self):
+        expected_err_msg = 'Invalid pip version: "1.a.4", minor version is ' \
+                           '"a" while expected to be a number'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, '1.a.4')
+
+    def test_parse_too_short_version(self):
+        expected_err_msg = 'Unknown formatting of pip version: "6", expected ' \
+                           'dot-delimited numbers \(e.g. "1.5.4", "6.0"\)'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, '6')
+
+    def test_parse_numeric_version(self):
+        expected_err_msg = 'Invalid pip version: 6 is not a string'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, 6)
+
+    def test_parse_alpha_version(self):
+        expected_err_msg = 'Unknown formatting of pip version: "a", expected ' \
+                           'dot-delimited numbers \(e.g. "1.5.4", "6.0"\)'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, 'a')
+
+    def test_parse_wrong_obj(self):
+        expected_err_msg = 'Invalid pip version: \[6\] is not a string'
+        self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
+                               parse_pip_version, [6])
