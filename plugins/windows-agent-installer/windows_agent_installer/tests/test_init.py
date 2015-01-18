@@ -38,7 +38,7 @@ class InitTest(unittest.TestCase):
                                               {'user': 'prop_user',
                                                'password': 'prop_password'},
                                               'ip': 'dummy_ip'},
-                                  operation='create')
+                                  operation={'name': 'create'})
         expected_message = "'cloudify_agent' is configured both as a node " \
                            "property and as an invocation input parameter" \
                            " for operation 'create'"
