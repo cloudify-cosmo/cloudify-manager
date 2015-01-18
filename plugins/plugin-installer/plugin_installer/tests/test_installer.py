@@ -176,7 +176,7 @@ class PluginInstallerTestCase(testtools.TestCase):
         plugin_source = '{0}/{1}/{2}.{3}'.format(
             MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL, PLUGINS_DIR,
             MOCK_PLUGIN, TAR_SUFFIX)
-        
+
         plugin = {
             'name': MOCK_PLUGIN,
             'source': plugin_source
