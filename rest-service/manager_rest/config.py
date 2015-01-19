@@ -13,12 +13,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'dan'
-
 
 class Config(object):
 
     def __init__(self):
+        self._db_address = 'localhost'
+        self._db_port = 9200
         self._file_server_root = None
         self._file_server_base_uri = None
         self._file_server_blueprints_folder = None
@@ -26,6 +26,22 @@ class Config(object):
         self._file_server_resources_uri = None
         self._rest_service_log_path = None
         self._test_mode = False
+
+    @property
+    def db_address(self):
+        return self._db_address
+
+    @db_address.setter
+    def db_address(self, value):
+        self._db_address = value
+
+    @property
+    def db_port(self):
+        return self._db_port
+
+    @db_port.setter
+    def db_port(self, value):
+        self._db_port = value
 
     @property
     def file_server_root(self):
