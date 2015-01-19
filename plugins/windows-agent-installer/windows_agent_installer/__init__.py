@@ -59,7 +59,7 @@ def init_worker_installer(func):
                                           "both as a node property and as an "
                                           "invocation input parameter for "
                                           "operation '{0}'"
-                                          .format(ctx.operation))
+                                          .format(ctx.operation.name))
             cloudify_agent = kwargs['cloudify_agent']
         else:
             if ctx.node.properties and 'cloudify_agent' in ctx.node.properties:

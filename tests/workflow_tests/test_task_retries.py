@@ -87,6 +87,17 @@ class TaskRetriesTest(TestCase):
             expected_retries=1,
             invocations_type='failure_invocation')
 
+    def test_operation_retry(self):
+        self.configure(retries=5, retry_interval=5)
+        deployment_id = str(uuid.uuid4())
+        deploy(resource('dsl/test-operation-retry-blueprint.yaml'),
+               deployment_id=deployment_id)
+        invocations = self.get_plugin_data(
+            plugin_name='testmockoperations',
+            deployment_id=deployment_id
+        )['retry_invocations']
+        self.assertEqual(4, invocations)
+
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
                                               retries,

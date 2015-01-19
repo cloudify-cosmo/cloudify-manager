@@ -1,4 +1,4 @@
-# ***************************************************************************
+# **************************************************************************
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
 # * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,14 +16,4 @@
 
 __author__ = 'elip'
 
-from setuptools import setup
-
-setup(
-    name='mock-plugin',
-    version='3.2a3',
-    author='elip',
-    author_email='elip@gigaspaces.com',
-    packages=['mock_for_test'],
-    license='LICENSE',
-    description='Mock plugin for test',
-)
+var = "var"

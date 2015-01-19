@@ -1,4 +1,4 @@
-# ***************************************************************************
+# **************************************************************************
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
 # * Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +12,16 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
-# ***************************************************************************/
-
-__author__ = 'elip'
+# **************************************************************************/
 
 from setuptools import setup
 
 setup(
-    name='mock-plugin',
+    name='mock-with-install-args-plugin',
     version='3.2a3',
-    author='elip',
-    author_email='elip@gigaspaces.com',
-    packages=['mock_for_test'],
+    author='noak',
+    author_email='noak@gigaspaces.com',
+    packages=['mock_with_install_args_for_test'],
     license='LICENSE',
     description='Mock plugin for test',
 )
