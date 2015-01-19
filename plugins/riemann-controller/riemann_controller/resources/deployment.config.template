@@ -17,6 +17,9 @@
                                                    :core-pool-size 1
                                                    :max-pool-size  4})]
 (def node-instances-stream {
+  ; A map where the policies sources are stored for each
+  ; group and policy and node instance.
+  ; It is not thread safe
   {% for stream in streams%}
     "{{stream.metadata.group}}.{{stream.metadata.policy}}" {}
   {%endfor%}
@@ -56,18 +59,18 @@
              {{stream.data}}
              ;New line is needed so there can be a comment
              ;in the last line of policy source
-             (else (fn [event]
-                     (def node-instances-stream
-                       (if (contains? (node-instances-stream metadata_stream_id) (:node_id event))
-                         node-instances-stream
-                         (assoc node-instances-stream
-                                metadata_stream_id
-                                (assoc (node-instances-stream metadata_stream_id)
-                                       (:node_id event)
-                                       (sdo
-                                         {{stream.data}}
-                                         ;New line is needed so there can be a comment
-                                         ;in the last line of policy source
-                                       )))))))
-             (else (fn [event] (((node-instances-stream metadata_stream_id) (:node_id event)) event)))))))
+             (else (sdo (fn [event]
+                          (def node-instances-stream
+                            (if (contains? (node-instances-stream metadata_stream_id) (:node_id event))
+                              node-instances-stream
+                              (assoc node-instances-stream
+                                     metadata_stream_id
+                                     (assoc (node-instances-stream metadata_stream_id)
+                                            (:node_id event)
+                                            (sdo
+                                              {{stream.data}}
+                                              ;New line is needed so there can be a comment
+                                              ;in the last line of policy source
+                                            ))))))
+                        (fn [event] (((node-instances-stream metadata_stream_id) (:node_id event)) event))))))))
 {% endfor %}))
