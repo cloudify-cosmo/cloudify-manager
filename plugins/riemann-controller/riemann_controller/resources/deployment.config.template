@@ -48,31 +48,26 @@
                                      (or {{stream.metadata.policy_properties.interval_between_workflows}} 300))
       check-restraints-and-process (fn [workflow-trigger-restraints]
         (check-restraints-and-process* ctx deployment-processing-queue workflow-trigger-restraints))
-      metadata-stream-id           "{{stream.metadata.group}}.{{stream.metadata.policy}}"
-      policy-operates-on-group     (parse-boolean "{{stream.metadata.policy_properties.policy_operates_on_group}}")
-      get-policy-source-location   (fn [sources-map] (if policy-operates-on-group
-                                                         sources-map
-                                                         (sources-map metadata-stream-id)))
-      get-policy-source-id         (fn [event] (if policy-operates-on-group
-                                                   metadata-stream-id
-                                                   (:node_id event)))
-      add-policy-source-to-map     (fn [sources-map event] (assoc (get-policy-source-location sources-map)
-                                                                  (get-policy-source-id event)
-                                                                  (sdo
-                                                                    {{stream.data}}
-                                                                    ;New line is needed so there can be a comment
-                                                                    ;in the last line of policy source
-                                                                  )))]
+      metadata_stream_id           "{{stream.metadata.group}}.{{stream.metadata.policy}}"
+      policy_operates_on_group     (parse-boolean "{{stream.metadata.policy_properties.policy_operates_on_group}}")]
   (where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
     (exception-stream publish-policy-error
-      (fn [event]
-        (def node-instances-stream
-          (if (contains? (get-policy-source-location node-instances-stream) (get-policy-source-id event))
-            node-instances-stream
-            (if policy-operates-on-group
-                (add-policy-source-to-map node-instances-stream event)
-                (assoc node-instances-stream
-                       metadata-stream-id
-                       (add-policy-source-to-map node-instances-stream event))))))
-      (fn [event] (((get-policy-source-location node-instances-stream) (get-policy-source-id event)) event)))))
+      (where policy_operates_on_group
+             {{stream.data}}
+             ;New line is needed so there can be a comment
+             ;in the last line of policy source
+             (else (fn [event]
+                     (def node-instances-stream
+                       (if (contains? (node-instances-stream metadata_stream_id) (:node_id event))
+                         node-instances-stream
+                         (assoc node-instances-stream
+                                metadata_stream_id
+                                (assoc (node-instances-stream metadata_stream_id)
+                                       (:node_id event)
+                                       (sdo
+                                         {{stream.data}}
+                                         ;New line is needed so there can be a comment
+                                         ;in the last line of policy source
+                                       )))))))
+             (else (fn [event] (((node-instances-stream metadata_stream_id) (:node_id event)) event)))))))
 {% endfor %}))
