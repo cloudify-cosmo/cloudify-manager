@@ -10,7 +10,7 @@ test_plugins()
     source package/linux/env/bin/activate
 
     pip install testtools
-    pip install celery==3.0.24
+    pip install celery==3.1.17
 
     pip install -r tests/dev-requirements.txt
     pushd plugins/agent-installer && pip install . && popd
@@ -25,7 +25,7 @@ test_plugins()
     source ~/env/bin/activate
 
     pip install testtools
-    pip install celery==3.0.24
+    pip install celery==3.1.17
     pip install -r tests/dev-requirements.txt
 
     pushd plugins/agent-installer && pip install . && popd
