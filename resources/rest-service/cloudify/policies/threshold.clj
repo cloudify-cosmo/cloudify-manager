@@ -2,9 +2,7 @@
             (not (expired? event)))
   (let [inequality (fn [metric]
                      ((threshold-computing/inequality "{{upper_bound}}") metric {{threshold}}))
-        downstream
-          (autohealing/downstream* index
-                                   (check-restraints-and-process workflow-trigger-restraints))]
+        downstream (autohealing/downstream* index check-restraints-and-process)]
     (stable {{stability_time}}
       (fn [event] (inequality (:metric event)))
       (where (inequality metric)

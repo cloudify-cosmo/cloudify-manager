@@ -38,8 +38,10 @@
            :deployment_id "{{ctx.deployment.id}}"
            :group         "{{stream.metadata.group}}"
            :policy        "{{stream.metadata.policy}}"}
-      process-policy-triggers      (process-policy-triggers-stream
-                                     ctx deployment-processing-queue)
+      node-started-before-workflow "{{stream.metadata.policy_properties.is_node_started_before_workflow}}"
+      metadata_stream_id           "{{stream.metadata.group}}.{{stream.metadata.policy}}"
+      policy_operates_on_group     (parse-boolean "{{stream.metadata.policy_properties.policy_operates_on_group}}")
+      process-policy-triggers      (process-policy-triggers-stream ctx deployment-processing-queue)
       publish-policy-event         (publish-policy-event* ctx)
       publish-policy-error         (publish-policy-error* ctx)
       publish-log                  (publish-log* ctx)
@@ -47,12 +49,9 @@
                                      ;Default restraints values are:
                                      ;is_node_started_before_workflow: true
                                      ;interval_between_workflows: 300
-                                     (parse-boolean "{{stream.metadata.policy_properties.is_node_started_before_workflow}}")
+                                     (or (empty? node-started-before-workflow) (parse-boolean node-started-before-workflow))
                                      (or {{stream.metadata.policy_properties.interval_between_workflows}} 300))
-      check-restraints-and-process (fn [workflow-trigger-restraints]
-        (check-restraints-and-process* ctx deployment-processing-queue workflow-trigger-restraints))
-      metadata_stream_id           "{{stream.metadata.group}}.{{stream.metadata.policy}}"
-      policy_operates_on_group     (parse-boolean "{{stream.metadata.policy_properties.policy_operates_on_group}}")]
+      check-restraints-and-process (check-restraints-and-process* ctx deployment-processing-queue workflow-trigger-restraints)]
   (where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
     (exception-stream publish-policy-error
       (where policy_operates_on_group

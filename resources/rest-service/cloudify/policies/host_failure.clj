@@ -1,7 +1,5 @@
 (where* (is-service-name-contained {%for s in service%} "{{s}}" {%endfor%})
-  (let [downstream
-         (autohealing/downstream* index
-                                  (check-restraints-and-process workflow-trigger-restraints))]
+  (let [downstream (autohealing/downstream* index check-restraints-and-process)]
     (where* expired?
             (fn [event]
               ((with {:failing_node (:node_id event)
