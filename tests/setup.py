@@ -41,6 +41,6 @@ setup(
         'cloudify-script-plugin==1.2a3',
         'pika==0.9.13',
         'elasticsearch==1.0.0',
-        'celery==3.0.24'
+        'celery==3.1.17'
     ]
 )
