@@ -32,7 +32,7 @@ class ConsumerBackedWorkerInstaller(WorkerInstaller):
         ctx.logger.info('Starting worker {0}'.format(worker_name))
         celery.control.add_consumer(
             queue=worker_name,
-            destination=['celery.cloudify.management']
+            destination=['celery@celery.cloudify.management']
         )
         ctx.logger.info('Started worker {0}'.format(worker_name))
 
