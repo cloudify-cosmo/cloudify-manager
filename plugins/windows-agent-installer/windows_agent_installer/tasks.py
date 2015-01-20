@@ -266,7 +266,7 @@ def _verify_no_celery_error(runner):
 
 def _wait_for_started(runner, cloudify_agent):
     _verify_no_celery_error(runner)
-    worker_name = 'celery.{0}'.format(cloudify_agent['name'])
+    worker_name = 'celery@celery.{0}'.format(cloudify_agent['name'])
     wait_started_timeout = cloudify_agent[
         win_constants.AGENT_START_TIMEOUT_KEY
     ]
