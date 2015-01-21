@@ -249,6 +249,17 @@ workflows:
       node_instance_ids:
         default: []
 
+  heal:
+    mapping: default_workflows.cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph
+    parameters:
+      node_id:
+        description: Which node has failed
+      diagnose_value:
+        description: Diagnosed reason of failure
+        default: Not provided
+
+
+
 ##################################################################################
 # Base artifact definitions
 ##################################################################################
