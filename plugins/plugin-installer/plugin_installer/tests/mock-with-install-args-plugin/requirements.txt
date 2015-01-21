@@ -1,0 +1,1 @@
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
