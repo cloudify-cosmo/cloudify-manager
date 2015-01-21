@@ -1179,7 +1179,7 @@ class Status(Resource):
         """
         job_list = {'riemann': 'Riemann',
                     'rabbitmq-server': 'RabbitMQ',
-                    'celeryd-cloudify-management': 'Celery Managment',
+                    'celeryd-cloudify-management': 'Celery Management',
                     'elasticsearch': 'Elasticsearch',
                     'cloudify-ui': 'Cloudify UI',
                     'logstash': 'Logstash',
