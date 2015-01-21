@@ -8,6 +8,8 @@ imports:
 node_templates:
     node:
         type: mockBasicRoot
+        instances:
+            deploy: 2
 
 groups:
     autohealing_group:
@@ -16,12 +18,13 @@ groups:
             simple_autoheal_policy:
                 type: cloudify.policies.types.host_failure
                 properties:
-                    interval_between_workflows: 1
+                    service:
+                        - service
                 triggers:
                     auto_heal_trigger:
                         type: cloudify.policies.triggers.execute_workflow
                         parameters:
                             workflow: auto_heal_workflow
                             workflow_parameters:
-                                node_id: { get_property: [SELF, failing_node] }
+                                node_id: { get_property: [SELF, failing_node]}
                                 diagnose_value: { get_property: [SELF, diagnose] }
