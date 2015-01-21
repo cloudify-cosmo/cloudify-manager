@@ -249,7 +249,7 @@ workflows:
       node_instance_ids:
         default: []
 
-  autoheal:
+  heal:
     mapping: default_workflows.cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph
     parameters:
       node_id:
