@@ -294,23 +294,54 @@ plugins:
 ##################################################################################
 policy_types:
 
-  cloudify.policies.types.threshold:
-    properties:
-      metric:
-        description: The metric name
-      threshold:
-        description: The metric threshold value
-      upper_bound:
-        description: |
-          boolean value for describing the semantics of the threshold.
-          if 'true': metrics whose value if bigger then the threshold
-          will cause the triggers to be processed. if 'false': metrics
-          with values lower then the threshold will do so.
-        default: true
-    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
+    cloudify.policies.types.host_failure:
+        properties: &BASIC_AH_POLICY_PROPERTIES
+            policy_operates_on_group:
+                description: |
+                    If the policy should maintain it's state for for the whole group
+                    or each node instance individually.
+                default: false
+            is_node_started_before_workflow:
+                description: Before triggering workflow, check if the node state is started
+                default: true
+            interval_between_workflows:
+                description: |
+                    Trigger workflow only if the last workflow was triggered earlier than interval-between-workflows seconds ago.
+                    if < 0  workflows can run concurrently.
+                default: 300
+            service:
+                description: Service names whose events should be taken into consideration
+                default:
+                    - service
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/host_failure.clj
 
-  cloudify.policies.types.host_failure:
-    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/host_failure.clj
+    cloudify.policies.types.threshold:
+        properties: &THRESHOLD_BASED_POLICY_PROPERTIES
+            <<: *BASIC_AH_POLICY_PROPERTIES
+            service:
+                description: The service name
+                default: service
+            threshold:
+                description: The metric threshold value
+            upper_bound:
+                description: |
+                    boolean value for describing the semantics of the threshold.
+                    if 'true': metrics whose value is bigger than the threshold will cause the triggers to be processed.
+                    if 'false': metrics with values lower than the threshold will do so.
+                default: true
+            stability_time:
+                description: How long a threshold must be breached before the triggers will be processed
+                default: 0
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
+
+    cloudify.policies.types.ewma_stabilized:
+        properties:
+            <<: *THRESHOLD_BASED_POLICY_PROPERTIES
+            ewma_timeless_r:
+                description: |
+                    r is the ratio between successive events. The smaller it is, the smaller impact on the computed value the most recent event has.
+                default: 0.5
+        source: https://raw.githubusercontent.com/codilime/cloudify-manager/failure_healing_policies/resources/rest-service/cloudify/policies/ewma_stabilized.clj
 
 ##################################################################################
 # Policy triggers definitions
