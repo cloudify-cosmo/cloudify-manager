@@ -30,7 +30,7 @@ class TestDeploymentWorkflows(TestCase):
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
         workflows = self.client.deployments.get(deployment_id).workflows
-        self.assertEqual(4, len(workflows))
+        self.assertEqual(5, len(workflows))
         wf_ids = [x.name for x in workflows]
         self.assertIn('uninstall', wf_ids)
         self.assertIn('install', wf_ids)
