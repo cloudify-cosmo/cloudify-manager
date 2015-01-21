@@ -254,6 +254,10 @@ workflows:
     parameters:
       node_id:
         description: Which node has failed
+      diagnose_value:
+        description: Diagnosed reason of failure
+        default: Not provided
+
 
 
 ##################################################################################
