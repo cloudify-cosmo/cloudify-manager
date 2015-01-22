@@ -389,7 +389,7 @@ def _verify_no_celery_error(runner, agent_config):
 
 def _wait_for_started(runner, agent_config):
     _verify_no_celery_error(runner, agent_config)
-    worker_name = 'celery@celery.{0}'.format(agent_config['name'])
+    worker_name = 'celery@{0}'.format(agent_config['name'])
     inspect = celery_client.control.inspect(destination=[worker_name])
     wait_started_timeout = agent_config['wait_started_timeout']
     timeout = time.time() + wait_started_timeout

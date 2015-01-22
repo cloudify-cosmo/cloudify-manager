@@ -103,7 +103,7 @@ class CeleryWorkerProcess(object):
             '-Ofair',
             '--events',
             '--loglevel=debug',
-            '--hostname=celery.{0}'.format(self.hostname),
+            '--hostname={0}'.format(self.hostname),
             '--purge',
             '--app=cloudify',
             '--logfile={0}'.format(self.celery_log_file),
@@ -145,7 +145,7 @@ class CeleryWorkerProcess(object):
                          cwd=self.envdir)
 
         timeout = 60
-        worker_name = 'celery@celery.{0}'.format(self.name)
+        worker_name = 'celery@{0}'.format(self.name)
         inspect = celery_client.control.inspect(destination=[worker_name])
         end_time = time.time() + timeout
         while time.time() < end_time:

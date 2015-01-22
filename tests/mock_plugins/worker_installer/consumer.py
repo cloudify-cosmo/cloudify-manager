@@ -32,7 +32,7 @@ class ConsumerBackedWorkerInstaller(WorkerInstaller):
         ctx.logger.info('Starting worker {0}'.format(worker_name))
         celery.control.add_consumer(
             queue=worker_name,
-            destination=['celery@celery.cloudify.management']
+            destination=['celery@cloudify.management']
         )
         ctx.logger.info('Started worker {0}'.format(worker_name))
 
@@ -41,7 +41,7 @@ class ConsumerBackedWorkerInstaller(WorkerInstaller):
                         .format(self.agent_name))
         celery.control.cancel_consumer(
             queue=self.agent_name,
-            destination=['celery.cloudify.management']
+            destination=['celery@cloudify.management']
         )
         ctx.logger.info('Stopped worker {0}'
                         .format(self.agent_name))
