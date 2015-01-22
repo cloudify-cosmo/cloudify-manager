@@ -111,10 +111,11 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
                quiet=True)
 
     params = ('--broker=amqp://guest:guest@{0}:5672// '
+              '-Ofair '
               '--events '
               '--app=cloudify '
               '-Q {1} '
-              '-n celery.{1} '
+              '--hostname={1} '
               '--logfile={2}\celery.log '
               '--pidfile={2}\celery.pid '
               '--autoscale={3},{4} '
