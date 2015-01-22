@@ -100,6 +100,7 @@ class CeleryWorkerProcess(object):
         celery_command = [
             '{0}/celery'.format(dirname(python_path)),
             'worker',
+            '-Ofair',
             '--events',
             '--loglevel=debug',
             '--hostname=celery.{0}'.format(self.hostname),
