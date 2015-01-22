@@ -13,6 +13,8 @@ export AGENT_IP="{{ agent_ip }}"
 export VIRTUALENV="${CELERY_BASE_DIR}/cloudify.${WORKER_MODIFIER}/env"
 export MANAGER_FILE_SERVER_URL="http://${MANAGEMENT_IP}:53229"
 export MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL="${MANAGER_FILE_SERVER_URL}/blueprints"
+# enable running celery as root
+export C_FORCE_ROOT="true"
 
 
 CELERYD_MULTI="${VIRTUALENV}/bin/celeryd-multi"
