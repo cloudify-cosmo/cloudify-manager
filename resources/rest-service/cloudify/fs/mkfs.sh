@@ -4,7 +4,11 @@ use_external_resource=$(ctx node properties use_external_resource)
 fs_type=$(ctx node properties fs_type)
 filesys=$(ctx instance runtime-properties filesys)
 
-if [ -z "${use_external_resource}" ]; then
+created=$(ctx instance runtime-properties created)
+
+ctx logger info "Created: ${created}"
+
+if [[ -z "${use_external_resource}" && -z "${created}" ]]; then
     mkfs_executable=''
     case ${fs_type} in
         ext2 | ext3 | ext4 | fat | ntfs )
@@ -18,6 +22,8 @@ if [ -z "${use_external_resource}" ]; then
 
     ctx logger info "Creating ${fs_type} file system using ${mkfs_executable}"
     sudo ${mkfs_executable} ${filesys}
+    ctx logger info "Marking this instance as created"
+    ctx instance runtime-properties created "True"
 else
-    ctx logger info "Not making a filesystem since 'use_external_resource' is set to true"
+    ctx logger info "Not making a filesystem since is already created"
 fi
