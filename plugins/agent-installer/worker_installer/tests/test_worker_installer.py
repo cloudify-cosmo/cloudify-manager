@@ -76,7 +76,7 @@ def _extract_registered_plugins(worker_name):
         return set()
 
     plugins = set()
-    full_worker_name = "celery.{0}".format(worker_name)
+    full_worker_name = "celery@{0}".format(worker_name)
     if full_worker_name in tasks:
         worker_tasks = tasks.get(full_worker_name)
         for worker_task in worker_tasks:
