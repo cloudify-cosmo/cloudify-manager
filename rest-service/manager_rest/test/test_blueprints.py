@@ -120,11 +120,14 @@ class BlueprintsTestCase(BaseServerTestCase):
         fs = FileServer(archive_dir, False, port)
         fs.start()
         try:
+            archive_url = 'http://localhost:{0}/{1}'.format(
+                port, archive_filename)
+            self.wait_for_url(archive_url)
+
             response = self.put(
                 resource_path,
                 None,
-                {'blueprint_archive_url': 'http://localhost:{0}/{'
-                                          '1}'.format(port, archive_filename)})
+                {'blueprint_archive_url': archive_url})
             self.assertEqual(blueprint_id, response.json['id'])
         finally:
             fs.stop()

@@ -111,10 +111,11 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
                quiet=True)
 
     params = ('--broker=amqp://guest:guest@{0}:5672// '
+              '-Ofair '
               '--events '
               '--app=cloudify '
               '-Q {1} '
-              '-n celery.{1} '
+              '--hostname={1} '
               '--logfile={2}\celery.log '
               '--pidfile={2}\celery.pid '
               '--autoscale={3},{4} '
@@ -239,7 +240,7 @@ def _delete_amqp_queues(worker_name):
         channel.queue_delete(worker_name)
 
         # celery management queue
-        channel.queue_delete('celery.{0}.celery.pidbox'.format(worker_name))
+        channel.queue_delete('celery@{0}.celery.pidbox'.format(worker_name))
     finally:
         try:
             client.close()
@@ -266,7 +267,7 @@ def _verify_no_celery_error(runner):
 
 def _wait_for_started(runner, cloudify_agent):
     _verify_no_celery_error(runner)
-    worker_name = 'celery.{0}'.format(cloudify_agent['name'])
+    worker_name = 'celery@{0}'.format(cloudify_agent['name'])
     wait_started_timeout = cloudify_agent[
         win_constants.AGENT_START_TIMEOUT_KEY
     ]
@@ -284,7 +285,7 @@ def _wait_for_started(runner, cloudify_agent):
 
 def _wait_for_stopped(runner, cloudify_agent):
     _verify_no_celery_error(runner)
-    worker_name = 'celery.{0}'.format(cloudify_agent['name'])
+    worker_name = 'celery@{0}'.format(cloudify_agent['name'])
     wait_started_timeout = cloudify_agent[
         win_constants.AGENT_STOP_TIMEOUT_KEY
     ]
