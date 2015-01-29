@@ -151,10 +151,13 @@ class ProcessModeTaskRetriesTest(ProcessModeTestCase):
         self.configure(retries=retries, retry_interval=retry_interval)
         deployment_id = str(uuid.uuid4())
         if expect_failure:
-            self.assertRaises(RuntimeError, deploy,
-                              dsl_path=resource(blueprint),
-                              deployment_id=deployment_id,
-                              inputs=inputs)
+            with self.assertRaises(RuntimeError) as cm:
+                deploy(
+                    dsl_path=resource(blueprint),
+                    deployment_id=deployment_id,
+                    inputs=inputs)
+            self.assertIn('Failing task on user defined exception',
+                          str(cm.exception))
         else:
             deploy(resource(blueprint),
                    deployment_id=deployment_id,
