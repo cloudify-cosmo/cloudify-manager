@@ -364,7 +364,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             ttl=self.EVENTS_TTL,
             node_id=node_a.id
         )
-        for _ in range(7):
+        for _ in range(Constants.PERIODICAL_EXPIRATION_INTERVAL + self.EVENTS_TTL):
             self.publish(Constants.HEART_BEAT_FAILURE, node_id=node_b.id)
             time.sleep(1)
 
@@ -379,21 +379,16 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_autoheal_ignoring_unwatched_services(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
         self._publish_heart_beat_event()
-        for _ in range(5):
-            self._publish_heart_beat_event(service='unwatched_service')
+        for _ in range(Constants.PERIODICAL_EXPIRATION_INTERVAL + self.EVENTS_TTL):
+            self._publish_heart_beat_event(service='unwatched')
             time.sleep(1)
-
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
 
     @riemann_cleanup
     def test_autoheal_ignoring_unwatched_services_expiration(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
-        self._publish_heart_beat_event(service='unwatched_service')
-        time.sleep(1)
-        for _ in range(5):
-            self._publish_heart_beat_event()
-            time.sleep(1)
-
+        self._publish_heart_beat_event(service='unwatched')
+        self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     @riemann_cleanup
@@ -451,9 +446,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
 
-        for _ in range(5):
+        for _ in range(Constants.PERIODICAL_EXPIRATION_INTERVAL + self.EVENTS_TTL):
             self._publish_heart_beat_event()
-            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+            time.sleep(1)
 
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
@@ -465,9 +460,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
             'node_about_to_fail',
             'service_on_failing_node'
         )
-        for _ in range(5):
-            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+        for _ in range(Constants.PERIODICAL_EXPIRATION_INTERVAL + self.EVENTS_TTL):
             self._publish_heart_beat_event('ok_node')
+            time.sleep(1)
 
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
