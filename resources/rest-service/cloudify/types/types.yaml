@@ -343,7 +343,7 @@ policy_types:
                 description: |
                     r is the ratio between successive events. The smaller it is, the smaller impact on the computed value the most recent event has.
                 default: 0.5
-        source: https://raw.githubusercontent.com/codilime/cloudify-manager/failure_healing_policies/resources/rest-service/cloudify/policies/ewma_stabilized.clj
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/ewma_stabilized.clj
 
 ##################################################################################
 # Policy triggers definitions
