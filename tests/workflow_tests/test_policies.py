@@ -192,6 +192,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
     EVENTS_TTL = 4  # in seconds
     # in seconds, a kind of time buffer for messages to get delivered for sure
     OPERATIONAL_TIME_BUFFER = 1
+    TIME_TO_EXPIRATION = (Constants.PERIODICAL_EXPIRATION_INTERVAL +
+                          EVENTS_TTL +
+                          OPERATIONAL_TIME_BUFFER)
     SIMPLE_AUTOHEAL_POLICY_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
     operation = namedtuple('Operation', ['nodes', 'name', 'positions'])
@@ -328,11 +331,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
 
     def _wait_for_event_expiration(self):
-        time.sleep(
-            self.EVENTS_TTL +
-            Constants.PERIODICAL_EXPIRATION_INTERVAL +
-            self.OPERATIONAL_TIME_BUFFER
-        )
+        time.sleep(self.TIME_TO_EXPIRATION)
 
     def _publish_event_and_wait_for_its_expiration(self, node_name='node'):
         self._publish_heart_beat_event(node_name)
@@ -364,7 +363,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             ttl=self.EVENTS_TTL,
             node_id=node_a.id
         )
-        for _ in range(Constants.PERIODICAL_EXPIRATION_INTERVAL + self.EVENTS_TTL):
+        for _ in range(self.TIME_TO_EXPIRATION):
             self.publish(Constants.HEART_BEAT_FAILURE, node_id=node_b.id)
             time.sleep(1)
 
@@ -379,7 +378,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_autoheal_ignoring_unwatched_services(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
         self._publish_heart_beat_event()
-        for _ in range(Constants.PERIODICAL_EXPIRATION_INTERVAL + self.EVENTS_TTL):
+        for _ in range(self.TIME_TO_EXPIRATION):
             self._publish_heart_beat_event(service='unwatched')
             time.sleep(1)
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
@@ -446,7 +445,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
 
-        for _ in range(Constants.PERIODICAL_EXPIRATION_INTERVAL + self.EVENTS_TTL):
+        for _ in range(self.TIME_TO_EXPIRATION):
             self._publish_heart_beat_event()
             time.sleep(1)
 
@@ -460,7 +459,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             'node_about_to_fail',
             'service_on_failing_node'
         )
-        for _ in range(Constants.PERIODICAL_EXPIRATION_INTERVAL + self.EVENTS_TTL):
+        for _ in range(self.TIME_TO_EXPIRATION):
             self._publish_heart_beat_event('ok_node')
             time.sleep(1)
 
