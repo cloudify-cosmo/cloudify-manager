@@ -300,7 +300,7 @@ policy_types:
         properties: &BASIC_AH_POLICY_PROPERTIES
             policy_operates_on_group:
                 description: |
-                    If the policy should maintain it's state for for the whole group
+                    If the policy should maintain its state for the whole group
                     or each node instance individually.
                 default: false
             is_node_started_before_workflow:
