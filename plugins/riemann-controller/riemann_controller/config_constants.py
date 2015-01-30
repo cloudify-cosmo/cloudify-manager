@@ -19,4 +19,4 @@ class Constants:
     PERIODICAL_EXPIRATION_INTERVAL = 5  # in seconds
     HEART_BEAT_FAILURE = 'heart-beat-failure'
     THRESHOLD_FAILURE = 'threshold-breached'
-    EWMA_TIMELESS_FAILURE = 'ewma-threshold-breached'
+    EWMA_FAILURE = 'ewma-threshold-breached'
