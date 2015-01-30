@@ -17,4 +17,6 @@
 class Constants:
     """ Constants that can be used in policies """
     PERIODICAL_EXPIRATION_INTERVAL = 5  # in seconds
-    HEART_BEAT_FAILURE = "heart-beat-failure"
+    HEART_BEAT_FAILURE = 'heart-beat-failure'
+    THRESHOLD_FAILURE = 'threshold-breached'
+    EWMA_TIMELESS_FAILURE = 'ewma-threshold-breached'

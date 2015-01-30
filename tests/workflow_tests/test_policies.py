@@ -395,7 +395,8 @@ class TestAutohealPolicies(PoliciesTestsBase):
         test = TestAutohealPolicies.Threshold(self)
         test.significantly_breach_threshold()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
-        self.wait_for_invocations(self.deployment.id, 1)
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+        self.assertEqual(Constants.THRESHOLD_FAILURE, invocation['diagnose'])
 
     @riemann_cleanup
     def test_threshold_stabilized_doesnt_get_triggered_unnecessarily(self):
@@ -426,7 +427,8 @@ class TestAutohealPolicies(PoliciesTestsBase):
         test = TestAutohealPolicies.EwmaTimeless(self)
         test.swinging_threshold_breach()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
-        self.wait_for_invocations(self.deployment.id, 1)
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+        self.assertEqual(Constants.EWMA_TIMELESS_FAILURE, invocation['diagnose'])
 
     @riemann_cleanup
     def test_ewma_timeless_doesnt_get_triggered_unnecessarily(self):

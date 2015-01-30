@@ -6,6 +6,8 @@
     (stable {{stability_time}}
       (fn [event] (inequality (:metric event)))
       (where (inequality metric)
-        (with :state EVENT-TRIGGERING-STATE downstream)
+        (with {:state EVENT-TRIGGERING-STATE
+               :diagnose "{{constants.THRESHOLD_FAILURE}}"}
+              downstream)
         (else
           (with :state EVENT-STABLE-STATE downstream))))))
