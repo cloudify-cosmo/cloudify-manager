@@ -2,7 +2,7 @@
 
 fs_mount_path=$(ctx source node properties fs_mount_path)
 filesys=$(ctx source instance runtime-properties filesys)
-fs_type=$(ctx node properties fs_type)
+fs_type=ext4
 
 if [ ! -f ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
