@@ -28,6 +28,16 @@ from setuptools import archive_util
 from os import path
 from urllib2 import urlopen, URLError
 
+# import for security implementation
+from flask import Flask, abort, request, jsonify, g, url_for
+from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.mongoengine import MongoEngine
+from flask.ext.security import MongoEngineUserDatastore, UserMixin, RoleMixin
+from flask.ext.httpauth import HTTPBasicAuth
+from passlib.apps import custom_app_context as pwd_context
+from itsdangerous import (TimedJSONWebSignatureSerializer
+                          as Serializer, BadSignature, SignatureExpired)
+
 import elasticsearch
 from flask import (
     request,
@@ -54,8 +64,35 @@ CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
 SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
 
+# initializing flask app
+app = Flask(__name__)
+# MongoDB Config
+app.config['MONGODB_DB'] = 'mydatabase'
+app.config['MONGODB_HOST'] = 'localhost'
+app.config['MONGODB_PORT'] = 27017
+
+app.config['SECRET_KEY'] = 'the quick brown fox jumps over the lazy dog'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+# app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+
+# extensions
+db = MongoEngine(app)
+
+# db = SQLAlchemy(app)
+auth = HTTPBasicAuth()
+
 
 def exceptions_handled(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except manager_exceptions.ManagerException as e:
+            abort_error(e)
+    return wrapper
+
+
+def login_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
@@ -188,9 +225,152 @@ def setup_resources(api):
     api.add_resource(Events, '/events')
     api.add_resource(Search, '/search')
     api.add_resource(Status, '/status')
+    api.add_resource(Users, '/users')
+    api.add_resource(Tokens, '/tokens')
     api.add_resource(ProviderContext, '/provider/context')
     api.add_resource(Version, '/version')
     api.add_resource(EvaluateFunctions, '/evaluate/functions')
+
+
+class User(db.Document, UserMixin):  # for SQLAlchemy this is db.Model
+
+    email = db.StringField(max_length=255)
+    password = db.StringField(max_length=255)   # this password is hashed
+    active = db.BooleanField(default=True)
+    confirmed_at = db.DateTimeField()
+
+    '''
+    code for SQLAlchemy:
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(32), index=True)
+    password_hash = db.Column(db.String(128))
+    '''
+    def hash_password(self, clear_password):
+        self.password = pwd_context.encrypt(clear_password)
+
+    def verify_password(self, password):
+        # the pass we got here is clear text, but
+        # the one on the user object is hashed. this is ok.
+        return pwd_context.verify(password, self.password)
+
+    def generate_auth_token(self, expiration=600):
+        s = Serializer(app.config['SECRET_KEY'], expires_in=expiration)
+        return s.dumps({'email': self.email})
+        # for the SQLAlchemy model: return s.dumps({'id': self.id})
+
+    @staticmethod
+    def verify_auth_token(token):
+        print '***** verifying auth token: ', token
+        print '***** app config: '
+        for item in app.config:
+            print '***** app config item: {0} has value: {1}'.format(item, app.config[item])
+
+        print '***** initializing serializer with secret key: ', app.config['SECRET_KEY']
+        s = Serializer(app.config['SECRET_KEY'])
+        print '***** serializer: ', s
+        try:
+            print '***** attempting to deserialize the token'
+            data = s.loads(token)
+        except SignatureExpired:
+            print '***** exception SignatureExpired, returning None'
+            return None  # valid token, but expired
+        except BadSignature:
+            print '***** exception BadSignature, returning None'
+            return None  # invalid token
+
+        print '***** token loaded successfully, user email from token is: ', data['email']
+        user = user_datastore.find_user(email=data['email'])
+        # for the SQLAlchemy model: user = User.query.get(data['id'])
+        return user
+
+
+class Role(db.Document, RoleMixin):
+    name = db.StringField(max_length=80, unique=True)
+    description = db.StringField(max_length=255)
+
+user_datastore = MongoEngineUserDatastore(db, User, Role)
+
+
+class Users(Resource):
+
+    @swagger.operation(
+        responseClass=responses.Users,
+        nickname="get user by email",
+    )
+    @exceptions_handled
+    @marshal_with(responses.Users.resource_fields)
+    def get(self, email):
+        """
+        Get user by email
+        """
+        user = user_datastore.find_user(email=email)
+        return jsonify({'email': user.email, 'password': user.password, 'is_active': user.is_active}), 201
+
+    @swagger.operation(
+        responseClass=responses.Users,
+        nickname="create user",
+        notes="create a user in the DB",
+        parameters=[{'name': 'user name',
+                     'password': 'user password'}],
+        consumes=[
+            "application/json"
+        ]
+    )
+    @exceptions_handled
+    @marshal_with(responses.Users.resource_fields)
+    def post(self):
+        print '***** starting POST users'
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('email', request_json)
+        verify_parameter_in_request_body('password', request_json)
+        email = request.json.get('email')
+        password = request.json.get('password')
+        print '***** posting user with email: ', email
+        print '***** posting user with password: ', password
+        if email is None or password is None:
+            abort(400)  # missing arguments
+
+        if user_datastore.find_user(email=email) is not None:
+            abort(400)  # existing user
+
+        hashed = pwd_context.encrypt(password)
+        # user = db.create_user(email='admin@cloudify.org', password='password')
+
+        user = user_datastore.create_user(email=email, password=hashed, roles=['admin'])
+        return jsonify({'email': user.email}), 201
+
+        '''
+        code for SQLAlchemy:
+        if User.query.filter_by(username=username).first() is not None:
+            abort(400)  # existing user
+        user = User(username=username)
+        user.hash_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        return jsonify({'username': user.username}), 201, {'Location': url_for('get_user', id=user.id, _external=True)}
+        '''
+
+
+class Tokens(Resource):
+    @swagger.operation(
+        responseClass=responses.Tokens,
+        nickname="get auth token for the authenticated user",
+    )
+    @exceptions_handled
+    @auth.login_required
+    @marshal_with(responses.Tokens.resource_fields)
+    def get(self):
+        """
+        Get auth token
+        """
+        print '***** generating token for user: ', g.user
+        token = g.user.generate_auth_token()
+        print '***** returning token: ', token
+        return responses.Tokens(token=token.decode('ascii'))
+        # return jsonify({'token': token.decode('ascii')})
 
 
 class BlueprintsUpload(object):
@@ -1172,6 +1352,7 @@ class Status(Resource):
         notes="Returns state of running system services"
     )
     @exceptions_handled
+    @auth.login_required
     @marshal_with(responses.Status.resource_fields)
     def get(self):
         """
@@ -1312,3 +1493,22 @@ class EvaluateFunctions(Resource):
             payload=payload)
         return responses.EvaluatedFunctions(deployment_id=deployment_id,
                                             payload=processed_payload)
+
+
+@auth.verify_password
+def verify_password(username_or_token, password):
+    print '***** trying to find user with id: ', username_or_token
+    # first try to authenticate by token
+    user = User.verify_auth_token(username_or_token)
+    if not user:
+        # try to authenticate with username/password
+        print '***** loading user from db by id: ', username_or_token
+        user = user_datastore.find_user(email=username_or_token)
+        print '***** loaded user: ', user
+        # for SQLAlchemy: user = User.query.filter_by(username = username_or_token).first()
+        print '***** verifying password'
+        if not user or not user.verify_password(password):
+            print '***** bad password: ', user
+            return False
+    g.user = user
+    return True

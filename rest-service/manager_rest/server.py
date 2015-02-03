@@ -45,9 +45,11 @@ def setup_app():
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
 
+
     additional_log_handlers = [
         RotatingFileHandler(
-            config.instance().rest_service_log_path,
+            # config.instance().rest_service_log_path,
+            '/tmp/tmplog',
             maxBytes=1024*1024*100,
             backupCount=20)
     ]
@@ -152,8 +154,8 @@ def reset_state(configuration=None):
     storage_manager.reset()
     app = setup_app()
 
-
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
+    print '***** os.environ MANAGER_REST_CONFIG_PATH: ', os.environ['MANAGER_REST_CONFIG_PATH']
     with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
         yaml_conf = yaml.load(f.read())
     obj_conf = config.instance()
@@ -173,7 +175,8 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     if 'rest_service_log_path' in yaml_conf:
         obj_conf.rest_service_log_path = \
             yaml_conf['rest_service_log_path']
-
+else:
+    print '***** no MANAGER_REST_CONFIG_PATH in os.environ'
 app = setup_app()
 
 
