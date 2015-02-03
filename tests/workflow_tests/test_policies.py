@@ -192,6 +192,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
     EVENTS_TTL = 4  # in seconds
     # in seconds, a kind of time buffer for messages to get delivered for sure
     OPERATIONAL_TIME_BUFFER = 1
+    TIME_TO_EXPIRATION = (Constants.PERIODICAL_EXPIRATION_INTERVAL +
+                          EVENTS_TTL +
+                          OPERATIONAL_TIME_BUFFER)
     SIMPLE_AUTOHEAL_POLICY_YAML = 'dsl/simple_auto_heal_policy.yaml'
 
     operation = namedtuple('Operation', ['nodes', 'name', 'positions'])
@@ -328,11 +331,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         )
 
     def _wait_for_event_expiration(self):
-        time.sleep(
-            self.EVENTS_TTL +
-            Constants.PERIODICAL_EXPIRATION_INTERVAL +
-            self.OPERATIONAL_TIME_BUFFER
-        )
+        time.sleep(self.TIME_TO_EXPIRATION)
 
     def _publish_event_and_wait_for_its_expiration(self, node_name='node'):
         self._publish_heart_beat_event(node_name)
@@ -364,7 +363,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             ttl=self.EVENTS_TTL,
             node_id=node_a.id
         )
-        for _ in range(7):
+        for _ in range(self.TIME_TO_EXPIRATION):
             self.publish(Constants.HEART_BEAT_FAILURE, node_id=node_b.id)
             time.sleep(1)
 
@@ -379,21 +378,16 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_autoheal_ignoring_unwatched_services(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
         self._publish_heart_beat_event()
-        for _ in range(5):
-            self._publish_heart_beat_event(service='unwatched_service')
+        for _ in range(self.TIME_TO_EXPIRATION):
+            self._publish_heart_beat_event(service='unwatched')
             time.sleep(1)
-
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
 
     @riemann_cleanup
     def test_autoheal_ignoring_unwatched_services_expiration(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
-        self._publish_heart_beat_event(service='unwatched_service')
-        time.sleep(1)
-        for _ in range(5):
-            self._publish_heart_beat_event()
-            time.sleep(1)
-
+        self._publish_heart_beat_event(service='unwatched')
+        self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     @riemann_cleanup
@@ -401,7 +395,8 @@ class TestAutohealPolicies(PoliciesTestsBase):
         test = TestAutohealPolicies.Threshold(self)
         test.significantly_breach_threshold()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
-        self.wait_for_invocations(self.deployment.id, 1)
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+        self.assertEqual(Constants.THRESHOLD_FAILURE, invocation['diagnose'])
 
     @riemann_cleanup
     def test_threshold_stabilized_doesnt_get_triggered_unnecessarily(self):
@@ -432,7 +427,8 @@ class TestAutohealPolicies(PoliciesTestsBase):
         test = TestAutohealPolicies.EwmaTimeless(self)
         test.swinging_threshold_breach()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
-        self.wait_for_invocations(self.deployment.id, 1)
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+        self.assertEqual(Constants.EWMA_FAILURE, invocation['diagnose'])
 
     @riemann_cleanup
     def test_ewma_timeless_doesnt_get_triggered_unnecessarily(self):
@@ -451,9 +447,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
 
-        for _ in range(5):
+        for _ in range(self.TIME_TO_EXPIRATION):
             self._publish_heart_beat_event()
-            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+            time.sleep(1)
 
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
@@ -465,9 +461,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
             'node_about_to_fail',
             'service_on_failing_node'
         )
-        for _ in range(5):
-            time.sleep(self.EVENTS_TTL - self.OPERATIONAL_TIME_BUFFER)
+        for _ in range(self.TIME_TO_EXPIRATION):
             self._publish_heart_beat_event('ok_node')
+            time.sleep(1)
 
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
