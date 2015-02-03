@@ -68,9 +68,9 @@ class TestCase(unittest.TestCase):
         TestEnvironment.start_celery_management_worker()
 
     def tearDown(self):
-        TestEnvironment.reset_elasticsearch_data()
         TestEnvironment.stop_celery_management_worker()
         TestEnvironment.stop_all_celery_processes()
+        TestEnvironment.reset_elasticsearch_data()
 
         test_method = getattr(self, self._testMethodName)
         if (hasattr(test_method, 'riemann_cleanup') and

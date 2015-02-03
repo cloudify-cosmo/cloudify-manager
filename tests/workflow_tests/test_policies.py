@@ -24,11 +24,14 @@ from testenv import utils
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
+from testenv.utils import execute_workflow
 from riemann_controller.config_constants import Constants
 
 
 class PoliciesTestsBase(TestCase):
     NUM_OF_INITIAL_WORKFLOWS = 2
+    # In test's blueprint set this value decreased by 1 (1s safety time buffer)
+    MIN_INTERVAL_BETWEEN_WORKFLOWS = 2
 
     def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
         deployment, _ = deploy(resource(yaml_file))
@@ -66,13 +69,22 @@ class PoliciesTestsBase(TestCase):
         )['mock_operation_invocation']
         return invocations
 
-    def publish(self, metric, ttl=60, node_name='node', service='service'):
+    def publish(self, metric, ttl=60, node_name='node',
+                service='service', node_id=''):
+        if node_id == '':
+            node_id = self.get_node_instance_by_name(node_name).id
+        deployment_id = self.deployment.id
         self.publish_riemann_event(
-            self.deployment.id,
+            deployment_id,
             node_name=node_name,
-            node_id=self.get_node_instance_by_name(node_name).id,
+            node_id=node_id,
             metric=metric,
-            service=service,
+            service='{}.{}.{}.{}'.format(
+                deployment_id,
+                service,
+                node_name,
+                node_id
+            ),
             ttl=ttl
         )
 
@@ -93,7 +105,7 @@ class TestPolicies(PoliciesTestsBase):
             self.get_node_instance_by_name('node').id,
             invocations[0]['node_id']
         )
-        self.assertEqual(123, invocations[1]['metric'])
+        self.assertEqual(metric_value, invocations[1]['metric'])
 
     @riemann_cleanup
     def test_policies_flow_with_diamond(self):
@@ -169,13 +181,15 @@ class TestPolicies(PoliciesTestsBase):
         for _ in range(2):
             tester.publish_above_threshold(self.deployment.id, do_assert=True)
             tester.publish_above_threshold(self.deployment.id, do_assert=False)
+            time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
             tester.publish_below_threshold(self.deployment.id, do_assert=True)
             tester.publish_below_threshold(self.deployment.id, do_assert=False)
+            time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
 
 
 class TestAutohealPolicies(PoliciesTestsBase):
     HEART_BEAT_METRIC = 'heart-beat'
-    EVENTS_TTL = 3  # in seconds
+    EVENTS_TTL = 4  # in seconds
     # in seconds, a kind of time buffer for messages to get delivered for sure
     OPERATIONAL_TIME_BUFFER = 1
     SIMPLE_AUTOHEAL_POLICY_YAML = 'dsl/simple_auto_heal_policy.yaml'
@@ -198,6 +212,81 @@ class TestAutohealPolicies(PoliciesTestsBase):
     NUM_OF_RELATIONSHIP_OP = 4
     # only unlink and establish
     NUM_OF_RESTART_RELATIONSHIP_OP = 2
+
+    class Threshold(object):
+        VALID_METRIC = 10
+        RISKY_METRIC = 100
+        LONG_TIME = 3
+        MAIN_NODE = 'node'
+        SECOND_NODE = 'node2'
+        THRESHOLD_YAML = 'dsl/stabilized_monitoring.yaml'
+
+        def __init__(self, test_case, yaml=THRESHOLD_YAML):
+            self.test_case = test_case
+            self.yaml = yaml
+
+        def _publish_and_wait(self, metric, node=MAIN_NODE, t=1):
+            self.test_case.publish(metric=metric, node_name=node)
+            time.sleep(t)
+
+        def significantly_breach_threshold(self):
+            self.test_case.launch_deployment(self.yaml)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.VALID_METRIC)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.RISKY_METRIC)
+
+        def breach_threshold_once(self):
+            self.test_case.launch_deployment(self.yaml)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.VALID_METRIC)
+            self._publish_and_wait(self.RISKY_METRIC)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.VALID_METRIC)
+
+        def breach_threshold_on_one_node_from_two(self):
+            self.test_case.launch_deployment(self.yaml, 2)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(self.VALID_METRIC, t=0)
+                self._publish_and_wait(self.VALID_METRIC, self.SECOND_NODE)
+            for _ in range(self.LONG_TIME):
+                self._publish_and_wait(
+                    metric=self.RISKY_METRIC,
+                    node=self.SECOND_NODE,
+                    t=0
+                )
+                self._publish_and_wait(metric=self.VALID_METRIC)
+            self._publish_and_wait(self.VALID_METRIC, self.SECOND_NODE)
+
+    class EwmaTimeless(object):
+        VALID_METRIC = 50
+        RISKY_METRIC = 150
+        LONG_TIME = 4
+        EWMA_YAML = 'dsl/ewma_stabilized.yaml'
+
+        def __init__(self, test_case):
+            self.test_case = test_case
+
+        def swinging_threshold_breach(self):
+            self.test_case.launch_deployment(self.EWMA_YAML)
+            for _ in range(self.LONG_TIME):
+                self.test_case.publish(self.VALID_METRIC)
+                self.test_case.publish(self.RISKY_METRIC)
+
+        def breach_threshold_once(self):
+            self.test_case.launch_deployment(self.EWMA_YAML)
+            for _ in range(self.LONG_TIME):
+                self.test_case.publish(self.VALID_METRIC)
+            self.test_case.publish(self.RISKY_METRIC)
+            for _ in range(self.LONG_TIME):
+                self.test_case.publish(self.VALID_METRIC)
+
+        def slowly_rise_metric(self):
+            self.test_case.launch_deployment(self.EWMA_YAML)
+            metric = self.VALID_METRIC
+            while metric < self.RISKY_METRIC:
+                self.test_case.publish(metric)
+                metric += 10
 
     def _get_non_rel_operation_num(self, node, op):
         op_nums = []
@@ -259,11 +348,104 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
-        self.assertEqual('heart-beat-failure', invocation['diagnose'])
+        self.assertEqual(Constants.HEART_BEAT_FAILURE, invocation['diagnose'])
         self.assertEqual(
             self.get_node_instance_by_name('node').id,
             invocation['failing_node']
         )
+
+    @riemann_cleanup
+    def test_autoheal_policy_triggering_two_instances(self):
+        self.launch_deployment('dsl/two_instances_auto_heal.yaml', 2)
+        node_a = self.node_instances[0]
+        node_b = self.node_instances[1]
+        self.publish(
+            Constants.HEART_BEAT_FAILURE,
+            ttl=self.EVENTS_TTL,
+            node_id=node_a.id
+        )
+        for _ in range(7):
+            self.publish(Constants.HEART_BEAT_FAILURE, node_id=node_b.id)
+            time.sleep(1)
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
+        self.assertEqual(
+            node_a.id,
+            invocation['failing_node']
+        )
+
+    @riemann_cleanup
+    def test_autoheal_ignoring_unwatched_services(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event()
+        for _ in range(5):
+            self._publish_heart_beat_event(service='unwatched_service')
+            time.sleep(1)
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+
+    @riemann_cleanup
+    def test_autoheal_ignoring_unwatched_services_expiration(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event(service='unwatched_service')
+        time.sleep(1)
+        for _ in range(5):
+            self._publish_heart_beat_event()
+            time.sleep(1)
+
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    @riemann_cleanup
+    def test_threshold_stabilized(self):
+        test = TestAutohealPolicies.Threshold(self)
+        test.significantly_breach_threshold()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self.wait_for_invocations(self.deployment.id, 1)
+
+    @riemann_cleanup
+    def test_threshold_stabilized_doesnt_get_triggered_unnecessarily(self):
+        test = TestAutohealPolicies.Threshold(self)
+        test.breach_threshold_once()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    @riemann_cleanup
+    def test_threshold_stabilized_two_nodes(self):
+        test = TestAutohealPolicies.Threshold(
+            self,
+            'dsl/threshold_stabilized_two_nodes.yaml'
+        )
+        test.breach_threshold_on_one_node_from_two()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+
+    @riemann_cleanup
+    def test_threshold_compute_per_group(self):
+        test = TestAutohealPolicies.Threshold(
+            self,
+            'dsl/threshold_compute_per_node.yaml'
+        )
+        test.breach_threshold_on_one_node_from_two()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    @riemann_cleanup
+    def test_ewma_timeless(self):
+        test = TestAutohealPolicies.EwmaTimeless(self)
+        test.swinging_threshold_breach()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self.wait_for_invocations(self.deployment.id, 1)
+
+    @riemann_cleanup
+    def test_ewma_timeless_doesnt_get_triggered_unnecessarily(self):
+        test = TestAutohealPolicies.EwmaTimeless(self)
+        test.breach_threshold_once()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+
+    @riemann_cleanup
+    def test_ewma_stable_rise(self):
+        test = TestAutohealPolicies.EwmaTimeless(self)
+        test.slowly_rise_metric()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self.wait_for_invocations(self.deployment.id, 1)
 
     @riemann_cleanup
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
@@ -290,11 +472,50 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
-        self.assertEqual('heart-beat-failure', invocation['diagnose'])
+        self.assertEqual(Constants.HEART_BEAT_FAILURE, invocation['diagnose'])
         self.assertEqual(
             self.get_node_instance_by_name('node_about_to_fail').id,
             invocation['failing_node']
         )
+
+    @riemann_cleanup
+    def test_multiple_autoheal_policies(self):
+        self.launch_deployment('dsl/auto_heal_multiple_policies.yaml')
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        self.wait_for_invocations(self.deployment.id, 1)
+
+    @riemann_cleanup
+    def test_multiple_workflows(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+
+        # Wait for interval between workflows pass
+        time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
+
+        self.wait_for_invocations(self.deployment.id, 2)
+
+    @riemann_cleanup
+    def test_autoheal_doesnt_get_triggered_after_regular_uninstall(self):
+        self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        execute_workflow('uninstall', self.deployment.id)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+
+    @riemann_cleanup
+    def test_workflow_gets_triggered_with_isstarted_check_turned_off(self):
+        self.launch_deployment('dsl/isstarted_check_turned_off.yaml')
+        execute_workflow('uninstall', self.deployment.id)
+        self._publish_heart_beat_event()
+        self._wait_for_event_expiration()
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
 
     @riemann_cleanup
     def test_autoheal_policy_nested_nodes(self):

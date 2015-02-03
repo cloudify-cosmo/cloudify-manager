@@ -2,21 +2,15 @@ tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
     - cloudify/types/types.yaml
-    - plugins/testmockoperations.yaml
-    - plugins/mock_workflows.yaml
+    - mock_autoheal.yaml
+    - mock_topology.yaml
 
 node_templates:
     ok_node:
-        type: cloudify.nodes.Root
-        interfaces:
-            test:
-                op1: testmockoperations.testmockoperations.tasks.saving_multiple_params_op
+        type: mockBasicRoot
 
     node_about_to_fail:
-        type: cloudify.nodes.Root
-        interfaces:
-            test:
-                op1: testmockoperations.testmockoperations.tasks.saving_multiple_params_op
+        type: mockBasicRoot
 
 groups:
     autohealing_group:
@@ -24,19 +18,15 @@ groups:
         policies:
             simple_autoheal_policy:
                 type: cloudify.policies.types.host_failure
+                properties:
+                    service:
+                        - service_on_failing_node
+                        - service
                 triggers:
                     auto_heal_trigger:
                         type: cloudify.policies.triggers.execute_workflow
                         parameters:
                             workflow: auto_heal_workflow
-                            allow_custom_parameters: true
                             workflow_parameters:
                                 node_id: { get_property: [SELF, failing_node]}
                                 diagnose_value: { get_property: [SELF, diagnose] }
-
-workflows:
-    auto_heal_workflow:
-        mapping: mock_workflows.mock_workflows.workflows.auto_heal_vm
-        parameters:
-            node_id:
-                description: Which node has failed

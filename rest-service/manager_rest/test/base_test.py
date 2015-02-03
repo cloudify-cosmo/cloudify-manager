@@ -20,6 +20,7 @@ import json
 import urllib
 import urllib2
 import tempfile
+import time
 import os
 
 from manager_rest import util, config, storage_manager, archiving
@@ -243,6 +244,20 @@ class BaseServerTestCase(unittest.TestCase):
                                                     deployment_id,
                                                     inputs=inputs)
         return blueprint_id, deployment.id, blueprint_response, deployment
+
+    def wait_for_url(self, url, timeout=5):
+        end = time.time() + timeout
+
+        while end >= time.time():
+            try:
+                status = urllib.urlopen(url).getcode()
+                if status == 200:
+                    return
+            except IOError:
+                time.sleep(1)
+
+        raise RuntimeError('Url {0} is not available (waited {1} '
+                           'seconds)'.format(url, timeout))
 
     def _build_url(self, resource_path, query_params):
         query_string = ''
