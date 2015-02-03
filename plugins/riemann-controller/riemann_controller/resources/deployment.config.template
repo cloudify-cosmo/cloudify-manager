@@ -5,7 +5,9 @@
 {% for trigger_name, trigger in policy_triggers.iteritems()  %}
 
 (register-policy-trigger "{{ctx.deployment.id}}" "{{trigger_name}}"
-{{trigger.source}})
+{{trigger.source}}
+;New line is needed so there can be a comment in the last line of trigger source
+)
 
 {% endfor %}
 
@@ -14,6 +16,15 @@
         (processing-queue "{{ctx.deployment.id}}" {:queue-size     1000
                                                    :core-pool-size 1
                                                    :max-pool-size  4})]
+(def node-instances-stream {
+  ; A map where the policies sources are stored for each
+  ; group and policy and node instance.
+  ; It is not thread safe
+  {% for stream in streams%}
+    "{{stream.metadata.group}}.{{stream.metadata.policy}}" {}
+  {%endfor%}
+})
+
 (streams
 
 (default :ttl 60 index)
@@ -23,28 +34,42 @@
 ; policy={{stream.metadata.policy}}
 ; policy_type={{stream.metadata.policy_type}}
 ; members={{stream.metadata.members | join(", ")}}
-(let [process-policy-triggers
-        (process-policy-triggers-stream "{{ctx.blueprint.id}}"
-                                        "{{ctx.deployment.id}}"
-                                        "{{stream.metadata.group}}"
-                                        "{{stream.metadata.policy}}"
-                                        deployment-processing-queue)
-      publish-policy-event
-        (publish-policy-event* "{{ctx.blueprint.id}}"
-                               "{{ctx.deployment.id}}"
-                               "{{stream.metadata.group}}"
-                               "{{stream.metadata.policy}}")
-      publish-policy-error
-        (publish-policy-error* "{{ctx.blueprint.id}}"
-                               "{{ctx.deployment.id}}"
-                               "{{stream.metadata.group}}"
-                               "{{stream.metadata.policy}}")
-      publish-log
-        (publish-log* "{{ctx.blueprint.id}}"
-                      "{{ctx.deployment.id}}"
-                      "{{stream.metadata.group}}"
-                      "{{stream.metadata.policy}}")]
-(where* (is-node-name-in {%for m in stream.metadata.members%}"{{m}}" {%endfor%})
-(exception-stream publish-policy-error
-{{stream.data}})))
+(let [ctx {:blueprint-id  "{{ctx.blueprint.id}}"
+           :deployment_id "{{ctx.deployment.id}}"
+           :group         "{{stream.metadata.group}}"
+           :policy        "{{stream.metadata.policy}}"}
+      node-started-before-workflow "{{stream.metadata.policy_properties.is_node_started_before_workflow}}"
+      metadata_stream_id           "{{stream.metadata.group}}.{{stream.metadata.policy}}"
+      policy_operates_on_group     (parse-boolean "{{stream.metadata.policy_properties.policy_operates_on_group}}")
+      process-policy-triggers      (process-policy-triggers-stream ctx deployment-processing-queue)
+      publish-policy-event         (publish-policy-event* ctx)
+      publish-policy-error         (publish-policy-error* ctx)
+      publish-log                  (publish-log* ctx)
+      workflow-trigger-restraints  (get-workflow-restraints
+                                     ;Default restraints values are:
+                                     ;is_node_started_before_workflow: true
+                                     ;interval_between_workflows: 300
+                                     (or (empty? node-started-before-workflow) (parse-boolean node-started-before-workflow))
+                                     (or {{stream.metadata.policy_properties.interval_between_workflows}} 300))
+      check-restraints-and-process (check-restraints-and-process* ctx deployment-processing-queue workflow-trigger-restraints)]
+  (where* (is-node-name-in {%for m in stream.metadata.members%} "{{m}}" {%endfor%})
+    (exception-stream publish-policy-error
+      (where policy_operates_on_group
+             {{stream.data}}
+             ;New line is needed so there can be a comment
+             ;in the last line of policy source
+             (else (sdo (fn [event]
+                          (def node-instances-stream
+                            (if (contains? (node-instances-stream metadata_stream_id) (:node_id event))
+                              node-instances-stream
+                              (assoc node-instances-stream
+                                     metadata_stream_id
+                                     (assoc (node-instances-stream metadata_stream_id)
+                                            (:node_id event)
+                                            (sdo
+                                              {{stream.data}}
+                                              ;New line is needed so there can be a comment
+                                              ;in the last line of policy source
+                                            ))))))
+                        (fn [event] (((node-instances-stream metadata_stream_id) (:node_id event)) event))))))))
 {% endfor %}))

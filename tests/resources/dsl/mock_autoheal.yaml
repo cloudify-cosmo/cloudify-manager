@@ -1,0 +1,15 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/mock_workflows.yaml
+
+workflows:
+    auto_heal_workflow:
+        mapping: mock_workflows.mock_workflows.workflows.auto_heal_vm
+        parameters:
+            node_id:
+                description: Which node has failed
+            diagnose_value:
+                description: Why node has failed
+                default: unknown-failure

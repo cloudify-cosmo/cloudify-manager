@@ -6,6 +6,12 @@ imports:
 
 
 node_types:
+    mockBasicRoot:
+        derived_from: cloudify.nodes.Root
+        interfaces:
+            test:
+                op1: testmockoperations.testmockoperations.tasks.saving_multiple_params_op
+
     mockRoot:
         derived_from: cloudify.nodes.Root
         interfaces:

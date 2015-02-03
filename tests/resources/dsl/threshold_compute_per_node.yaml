@@ -9,19 +9,25 @@ node_templates:
     node:
         type: mockBasicRoot
 
+    node2:
+        type: mockBasicRoot
+
 groups:
     autohealing_group:
-        members: [node]
+        members: [node, node2]
         policies:
             simple_autoheal_policy:
-                type: cloudify.policies.types.host_failure
+                type: cloudify.policies.types.threshold
                 properties:
-                    interval_between_workflows: 1
+                    policy_operates_on_group: true
+                    threshold: 100
+                    upper_bound: true
+                    stability_time: 3
                 triggers:
                     auto_heal_trigger:
                         type: cloudify.policies.triggers.execute_workflow
                         parameters:
                             workflow: auto_heal_workflow
                             workflow_parameters:
-                                node_id: { get_property: [SELF, failing_node] }
+                                node_id: { get_property: [SELF, failing_node]}
                                 diagnose_value: { get_property: [SELF, diagnose] }
