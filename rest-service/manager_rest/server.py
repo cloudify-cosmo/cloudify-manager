@@ -48,7 +48,7 @@ def setup_app():
     additional_log_handlers = [
         RotatingFileHandler(
             config.instance().rest_service_log_path,
-            maxBytes=1024*1024*100,
+            maxBytes=1024 * 1024 * 100,
             backupCount=20)
     ]
 
@@ -157,6 +157,10 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
         yaml_conf = yaml.load(f.read())
     obj_conf = config.instance()
+    if 'db_address' in yaml_conf:
+        obj_conf.db_address = yaml_conf['db_address']
+    if 'db_port' in yaml_conf:
+        obj_conf.db_address = yaml_conf['db_port']
     if 'file_server_root' in yaml_conf:
         obj_conf.file_server_root = yaml_conf['file_server_root']
     if 'file_server_base_uri' in yaml_conf:

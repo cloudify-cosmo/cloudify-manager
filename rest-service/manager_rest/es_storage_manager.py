@@ -17,6 +17,7 @@
 import elasticsearch.exceptions
 from elasticsearch import Elasticsearch
 
+from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
                                  Deployment,
@@ -43,9 +44,13 @@ MUTATE_PARAMS = {
 
 class ESStorageManager(object):
 
+    def __init__(self, host, port):
+        self.es_host = host
+        self.es_port = port
+
     @property
     def _connection(self):
-        return Elasticsearch()
+        return Elasticsearch(host=self.es_host, port=self.es_port)
 
     def _list_docs(self, doc_type, model_class, query=None, fields=None):
         include = list(fields) if fields else True
@@ -366,4 +371,7 @@ class ESStorageManager(object):
 
 
 def create():
-    return ESStorageManager()
+    return ESStorageManager(
+        config.instance().db_address,
+        config.intsance().db_port
+    )
