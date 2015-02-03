@@ -8,5 +8,5 @@ sudo umount ${fs_mount_path}
 ctx logger info "Removing ${fs_mount_path} directory"
 sudo rmdir ${fs_mount_path}
 
-ctx logger info "Removing mount point ${fs_mount_path} from /etc/fstab"
-sudo sed -i '/'"$fs_mount_path" '/d' /etc/fstab
+ctx logger info "Removing mount point ${fs_mount_path} from file system table"
+sudo sed -i '\?^'"$fs_mount_path "'?d' /etc/fstab
