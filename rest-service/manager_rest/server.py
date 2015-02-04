@@ -16,30 +16,25 @@ import StringIO
 
 __author__ = 'dan'
 
-import base64
 import logging
 import functools
 import traceback
 import os
 import yaml
 from logging.handlers import RotatingFileHandler
-import datetime
 
 from flask import (
     Flask,
     jsonify,
-    request,
-    abort
+    request
 )
 from flask_restful import Api
-from flask.ext.mongoengine import MongoEngine
-from flask.ext.security import Security, MongoEngineUserDatastore, UserMixin, \
-    RoleMixin
 
 from manager_rest import config
 # from manager_rest import blueprints_manager
 from manager_rest import storage_manager
 from manager_rest import resources
+from manager_rest.rest_security import RestSecurity
 from manager_rest import manager_exceptions
 from util import setup_logger
 
@@ -100,92 +95,7 @@ def setup_app():
 
     resources.setup_resources(api)
 
-    app.config['MONGODB_DB'] = 'mydatabase'
-    app.config['MONGODB_HOST'] = 'localhost'
-    app.config['MONGODB_PORT'] = 27017
-
-    app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(seconds=30)
-    app.config['SECRET_KEY'] = 'the quick brown fox jumps over the lazy dog'
-    # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
-    # app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
-
-    db = MongoEngine(app)
-
-    class Role(db.Document, RoleMixin):
-        name = db.StringField(max_length=80, unique=True)
-        description = db.StringField(max_length=255)
-
-    class User(db.Document, UserMixin):  # for SQLAlchemy this is db.Model
-
-        email = db.StringField(max_length=255)
-        password = db.StringField(max_length=255)   # this password is hashed
-        active = db.BooleanField(default=True)
-        confirmed_at = db.DateTimeField()
-        roles = db.ListField(db.ReferenceField(Role), default=[])
-
-    user_datastore = MongoEngineUserDatastore(db, User, Role)
-    security = Security(app, user_datastore)
-
-    def _request_loader(request):
-        user = None
-
-        # first, try to login using the api_key url arg
-        api_key = request.args.get('api_key')
-        if api_key:
-            # TODO should use find or get here?
-            api_key_parts = api_key.split(':')
-            username = api_key_parts[0]
-            password = api_key_parts[1]
-            user = security.datastore.get_user(username)
-
-        if not user:
-            # next, try to login using Basic Auth
-            api_key = request.headers.get('Authorization')
-            if api_key:
-                api_key = api_key.replace('Basic ', '', 1)
-                try:
-                    from itsdangerous import base64_decode
-                    api_key = base64_decode(api_key)
-                    # api_key = base64.b64decode(api_key)
-                except TypeError:
-                    pass
-                print '***** HERE, api_key: ', api_key
-                api_key_parts = api_key.split(':')
-                username = api_key_parts[0]
-                password = api_key_parts[1]
-                user = security.datastore.get_user(username)
-                # user = User.query.filter_by(api_key=api_key).first()
-
-            # validate...
-            if not user:
-                # self.email.errors.append(get_message('USER_DOES_NOT_EXIST')[0])
-                print '***** error: USER_DOES_NOT_EXIST'
-                abort(401)
-            if not user.password:
-                # self.password.errors.append(get_message('PASSWORD_NOT_SET')[0])
-                print '***** error: PASSWORD_NOT_SET'
-                abort(401)
-                # TODO maybe use verify_and_update()?
-            if not security.pwd_context.verify(password, getattr(user, 'password')):
-                # self.password.errors.append(get_message('INVALID_PASSWORD')[0])
-                print '***** error: INVALID_PASSWORD'
-                abort(401)
-            if not user.is_active():
-                # self.email.errors.append(get_message('DISABLED_ACCOUNT')[0])
-                print '***** error: DISABLED_ACCOUNT'
-                abort(401)
-
-            return user
-
-        # finally, return None if both methods did not login the user
-        return None
-
-    security.login_manager.request_loader(_request_loader)
-
-    def _unauthorized_handler():
-        abort(401)
-
-    security.login_manager.unauthorized_handler(_unauthorized_handler)
+    RestSecurity(app)
 
     return app
 
