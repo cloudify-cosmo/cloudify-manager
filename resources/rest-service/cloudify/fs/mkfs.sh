@@ -6,8 +6,6 @@ filesys=$(ctx instance runtime-properties filesys)
 
 created=$(ctx instance runtime-properties created)
 
-ctx logger info "Created: ${created}"
-
 if [[ -z "${use_external_resource}" && -z "${created}" ]]; then
     mkfs_executable=''
     case ${fs_type} in
