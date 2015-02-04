@@ -98,7 +98,7 @@ def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
 
 
 def wait_for_deployment_creation_to_complete(
-        deployment_id, timeout_seconds=30):
+        deployment_id, timeout_seconds=60):
     do_retries(func=verify_deployment_environment_creation_complete,
                timeout_seconds=timeout_seconds,
                deployment_id=deployment_id)
@@ -150,7 +150,7 @@ def verify_deployment_environment_creation_complete(deployment_id):
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
         from testenv import TestEnvironment  # avoid cyclic import
-        logs = TestEnvironment.read_celery_management_logs()
+        logs = TestEnvironment.read_celery_management_logs() or []
         logs = logs[len(logs) - 100000:]
         raise RuntimeError(
             "Expected a single execution for workflow "

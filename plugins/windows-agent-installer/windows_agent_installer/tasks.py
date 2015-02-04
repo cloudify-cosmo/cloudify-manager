@@ -311,6 +311,8 @@ def _stop(cloudify_agent, ctx, runner):
     ctx.logger.info('Stopping agent {0}'.format(cloudify_agent['name']))
     runner.run('sc stop {}'.format(AGENT_SERVICE_NAME))
     _wait_for_stopped(runner, cloudify_agent)
+    runner.delete('{0}\celery.pid'.format(RUNTIME_AGENT_PATH),
+                  ignore_missing=True)
 
 
 def _start(cloudify_agent, ctx, runner):
