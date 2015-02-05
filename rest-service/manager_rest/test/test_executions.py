@@ -14,10 +14,14 @@
 #  * limitations under the License.
 
 
-from base_test import BaseServerTestCase
+import mock
+
 from cloudify_rest_client import exceptions
+
 from manager_rest import manager_exceptions
 from manager_rest import models
+
+from base_test import BaseServerTestCase
 
 
 class ExecutionsTestCase(BaseServerTestCase):
@@ -395,14 +399,9 @@ class ExecutionsTestCase(BaseServerTestCase):
             exceptions.DeploymentEnvironmentCreationInProgressError)
 
     def _test_start_execution_dep_env(self, task_state, expected_ex):
-        from manager_rest.test import mocks
-        original = mocks.task_state
-        mocks.task_state = lambda: task_state
-        try:
-            (blueprint_id, deployment_id, blueprint_response,
-             deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-        finally:
-            mocks.task_state = original
+        with mock.patch('manager_rest.test.mocks.task_state',
+                        return_value=task_state):
+            _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
         self.assertRaises(expected_ex, self.client.executions.start,
                           deployment_id, 'install')
 
