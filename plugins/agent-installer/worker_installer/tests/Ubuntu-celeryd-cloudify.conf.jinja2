@@ -13,6 +13,8 @@ export AGENT_IP="{{ agent_ip }}"
 export VIRTUALENV="${CELERY_BASE_DIR}/cloudify.${WORKER_MODIFIER}/env"
 export MANAGER_FILE_SERVER_URL="http://${MANAGEMENT_IP}:53229"
 export MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL="${MANAGER_FILE_SERVER_URL}/blueprints"
+# enable running celery as root
+export C_FORCE_ROOT="true"
 
 
 CELERYD_MULTI="${VIRTUALENV}/bin/celeryd-multi"
@@ -23,4 +25,4 @@ CELERY_RESULT_SERIALIZER="json"
 CELERY_RESULT_BACKEND="$BROKER_URL"
 DEFAULT_PID_FILE="${CELERY_WORK_DIR}/celery.pid"
 DEFAULT_LOG_FILE="${CELERY_WORK_DIR}/celery.log"
-CELERYD_OPTS="--events --loglevel=debug --app=cloudify --include=${INCLUDES} -Q ${WORKER_MODIFIER} --broker=${BROKER_URL} --hostname=${WORKER_MODIFIER}"
+CELERYD_OPTS="-Ofair --events --loglevel=debug --app=cloudify --include=${INCLUDES} -Q ${WORKER_MODIFIER} --broker=${BROKER_URL} --hostname=${WORKER_MODIFIER}"
