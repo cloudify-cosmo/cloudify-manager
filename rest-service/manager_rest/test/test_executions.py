@@ -402,7 +402,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             (blueprint_id, deployment_id, blueprint_response,
              deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
         finally:
-            mocks.test_state = original
+            mocks.task_state = original
         self.assertRaises(expected_ex, self.client.executions.start,
                           deployment_id, 'install')
 
