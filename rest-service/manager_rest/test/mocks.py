@@ -19,11 +19,15 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.models import Execution
 
 
+def task_state():
+    return Execution.TERMINATED
+
+
 class MockCeleryClient(object):
 
     def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
         get_storage_manager().update_execution_status(task_id,
-                                                      Execution.TERMINATED,
+                                                      task_state(),
                                                       '')
         return MockAsyncResult()
 

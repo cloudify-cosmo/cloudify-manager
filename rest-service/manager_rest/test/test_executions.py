@@ -384,6 +384,28 @@ class ExecutionsTestCase(BaseServerTestCase):
         response = self.get(resource_path)
         self.assertEqual(response.status_code, 404)
 
+    def test_start_execution_dep_env_pending(self):
+        self._test_start_execution_dep_env(
+            models.Execution.PENDING,
+            exceptions.DeploymentEnvironmentCreationPendingError)
+
+    def test_start_execution_dep_env_in_progress(self):
+        self._test_start_execution_dep_env(
+            models.Execution.STARTED,
+            exceptions.DeploymentEnvironmentCreationInProgressError)
+
+    def _test_start_execution_dep_env(self, task_state, expected_ex):
+        from manager_rest.test import mocks
+        original = mocks.task_state
+        mocks.task_state = lambda: task_state
+        try:
+            (blueprint_id, deployment_id, blueprint_response,
+             deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
+        finally:
+            mocks.test_state = original
+        self.assertRaises(expected_ex, self.client.executions.start,
+                          deployment_id, 'install')
+
     def _modify_execution_status(self, execution_id, new_status):
         execution = self.client.executions.update(execution_id, new_status)
         self.assertEquals(new_status, execution.status)
