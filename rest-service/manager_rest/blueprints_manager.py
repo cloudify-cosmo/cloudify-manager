@@ -501,30 +501,35 @@ class BlueprintsManager(object):
             raise RuntimeError('Failed to find "create_deployment_environment"'
                                ' execution for deployment {0}'.format(
                                    deployment_id))
-        elif env_creation.status == models.Execution.TERMINATED:
+        status = env_creation.status
+        if status == models.Execution.TERMINATED:
             return
-        elif env_creation.status == models.Execution.PENDING:
+        elif status == models.Execution.PENDING:
             raise manager_exceptions \
-                .DeploymentEnvironmentCreationInProgressError(
+                .DeploymentEnvironmentCreationPendingError(
                     'Deployment environment creation is still pending, '
                     'try again in a minute')
-        elif env_creation.status == models.Execution.STARTED:
+        elif status == models.Execution.STARTED:
             raise manager_exceptions\
                 .DeploymentEnvironmentCreationInProgressError(
                     'Deployment environment creation is still in progress, '
                     'try again in a minute')
-        elif env_creation.status == models.Execution.FAILED:
+        elif status == models.Execution.FAILED:
             raise RuntimeError(
                 "Can't launch executions since environment creation for "
                 "deployment {0} has failed: {1}".format(
                     deployment_id, env_creation.error))
-        elif env_creation.status in (
+        elif status in (
             models.Execution.CANCELLED, models.Execution.CANCELLING,
                 models.Execution.FORCE_CANCELLING):
             raise RuntimeError(
                 "Can't launch executions since the environment creation for "
                 "deployment {0} has been cancelled [status={1}]".format(
-                    deployment_id, env_creation.status))
+                    deployment_id, status))
+        else:
+            raise RuntimeError(
+                'Unexpected deployment status for deployment {0} '
+                '[status={1}]'.format(deployment_id, status))
 
     def _create_deployment_environment(self, deployment, deployment_plan, now):
         deployment_env_creation_task_id = str(uuid.uuid4())
