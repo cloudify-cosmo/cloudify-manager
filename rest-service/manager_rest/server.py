@@ -62,6 +62,7 @@ def setup_app():
                  remove_existing_handlers=False)
 
     app.before_request(log_request)
+    app.before_request(load_user_from_request)
     app.after_request(log_response)
 
     # saving flask's original error handlers
@@ -95,12 +96,19 @@ def setup_app():
 
     resources.setup_resources(api)
 
-    RestSecurity(app)
+    rest_security = RestSecurity(app)
+    rest_security.unauthorized_handler(
+        resources.abort_error(Exception(401, 'UNAUTHORIZED')))
 
     return app
 
 
+def load_user_from_request():
+    print '***** STARTING BEFORE_REQUEST FUNC LOG_REQUEST'
+
+
 def log_request():
+    print '***** STARTING BEFORE_REQUEST FUNC LOG_REQUEST'
     # form and args parameters are "multidicts", i.e. values are not
     # flattened and will appear in a list (even if single value)
     form_data = request.form.to_dict(False)

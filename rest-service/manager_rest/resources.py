@@ -29,10 +29,7 @@ from os import path
 from urllib2 import urlopen, URLError
 
 # import for security implementation
-from flask import Flask, jsonify, g
-from flask_login import login_required
-from flask.ext.mongoengine import MongoEngine
-from flask.ext.security import Security, MongoEngineUserDatastore, UserMixin, RoleMixin, login_required
+# from flask.ext.security import login_required
 
 import elasticsearch
 from flask import (

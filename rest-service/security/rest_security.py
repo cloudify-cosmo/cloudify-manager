@@ -1,6 +1,12 @@
 import datetime
+import StringIO
+import traceback
+from functools import wraps
 
-from flask import abort
+# TODO decide which of the below 'abort' is better,
+# TODO the werkzeug is referred to by flask
+from werkzeug.exceptions import abort
+# from flask import abort
 from flask.ext.security import Security
 
 from security.datastores.datastore_manager import DatastoreManager
@@ -24,34 +30,21 @@ class RestSecurity():
         user_datastore = DatastoreManager().get_datastore_driver(self.app)
         self.security = Security(self.app, user_datastore)
 
-        self.security.login_manager.request_loader(self._request_loader)
+        self.security.login_manager.header_loader(self._header_loader)
         self.security.login_manager.unauthorized_handler(self._unauthorized_handler)
 
-    def _request_loader(self, request):
+    # TODO can be called on a wsgi hook (_on_before_request)
+    # TODO or by
+    def _header_loader(self, auth_header):
         user = None
 
-        '''
-        # first, try to login using the api_key url arg
-        api_key = request.args.get('api_key')
-        if api_key:
-            # TODO should use find or get here?
-            api_key_parts = api_key.split(':')
-            username = api_key_parts[0]
-            password = api_key_parts[1]
-            user = self.security.datastore.get_user(username)
-        '''
-
-        # next, try to login using Basic Auth
-        # if not user:
-
-        api_key = request.headers.get('Authorization')
-        if not api_key:
+        if not auth_header:
             raise Exception('Authorization header not found on request')
 
-        api_key = api_key.replace('Basic ', '', 1)
+        auth_header = auth_header.replace('Basic ', '', 1)
         try:
             from itsdangerous import base64_decode
-            api_key = base64_decode(api_key)
+            api_key = base64_decode(auth_header)
         except TypeError:
             pass
 
@@ -74,5 +67,22 @@ class RestSecurity():
         return user
 
     @staticmethod
-    def _unauthorized_handler(self):
-        abort(401)
+    @property
+    def unauthorized_handler(self, unauthorized):
+        unauthorized()
+
+    def login_required(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                if is_authenticated():
+                    result = func(*args, **kwargs)
+                    return filter_results(result)
+                else:
+                    if self.unauthorized_handler:
+                        self.unauthorized_handler()
+                    else:
+                        abort(401)
+            except Exception as e:
+                self.abort_error(e)
+        return wrapper
