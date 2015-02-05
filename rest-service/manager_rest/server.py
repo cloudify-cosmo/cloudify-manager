@@ -34,7 +34,7 @@ from manager_rest import config
 # from manager_rest import blueprints_manager
 from manager_rest import storage_manager
 from manager_rest import resources
-from manager_rest.rest_security import RestSecurity
+from security.rest_security import RestSecurity
 from manager_rest import manager_exceptions
 from util import setup_logger
 
