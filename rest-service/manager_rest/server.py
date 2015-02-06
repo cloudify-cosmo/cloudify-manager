@@ -34,7 +34,7 @@ from manager_rest import config
 # from manager_rest import blueprints_manager
 from manager_rest import storage_manager
 from manager_rest import resources
-from security.rest_security import RestSecurity
+from security import rest_security
 from manager_rest import manager_exceptions
 from util import setup_logger
 
@@ -62,7 +62,7 @@ def setup_app():
                  remove_existing_handlers=False)
 
     app.before_request(log_request)
-    app.before_request(load_user_from_request)
+    app.before_request(authenticate_request_user_if_needed)
     app.after_request(log_response)
 
     # saving flask's original error handlers
@@ -96,19 +96,19 @@ def setup_app():
 
     resources.setup_resources(api)
 
-    rest_security = RestSecurity(app)
-    rest_security.unauthorized_handler(
-        resources.abort_error(Exception(401, 'UNAUTHORIZED')))
-
     return app
 
 
-def load_user_from_request():
-    print '***** STARTING BEFORE_REQUEST FUNC LOG_REQUEST'
+def authenticate_request_user_if_needed():
+    # TODO check if the resource is secured or not, maybe through the api/resources
+    # with something that gets the resource for the "request.path" from the api
+    # and checks if it's an instance of SecuredResource.
+    # TODO otherwise use a mapping list like in Spring-Security
+    if True:
+        rest_security.authenticate_request_user()
 
 
 def log_request():
-    print '***** STARTING BEFORE_REQUEST FUNC LOG_REQUEST'
     # form and args parameters are "multidicts", i.e. values are not
     # flattened and will appear in a list (even if single value)
     form_data = request.form.to_dict(False)
@@ -165,6 +165,9 @@ def reset_state(configuration=None):
     # blueprints_manager.reset()
     storage_manager.reset()
     app = setup_app()
+    # rest_security.load_security_config()
+    # TODO maybe we should move abort_error to utils.py and avoid this?
+    # rest_security.set_unauthorized_user_handler(resources.abort_error)
 
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     print '***** os.environ MANAGER_REST_CONFIG_PATH: ', os.environ['MANAGER_REST_CONFIG_PATH']
@@ -189,7 +192,11 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
             yaml_conf['rest_service_log_path']
 else:
     print '***** no MANAGER_REST_CONFIG_PATH in os.environ'
+
 app = setup_app()
+# rest_security.load_security_config()
+# TODO maybe we should move abort_error to utils.py and avoid this?
+# rest_security.set_unauthorized_user_handler(resources.abort_error)
 
 
 @app.errorhandler(500)

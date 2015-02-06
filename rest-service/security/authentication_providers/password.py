@@ -1,54 +1,55 @@
 from base_authentication_provider import BaseAuthenticationProvider
+from passlib.context import CryptContext
+from flask.globals import current_app
+
+
+DEFAULT_PASSWORD_HASH = 'plaintext'
+DEFAULT_PASSWORD_SCHEMES = [
+                                'bcrypt',
+                                'des_crypt',
+                                'pbkdf2_sha256',
+                                'pbkdf2_sha512',
+                                'sha256_crypt',
+                                'sha512_crypt',
+                                'plaintext'
+                            ]
+DEFAULT_DEPRECATED_PASSWORD_SCHEMES = ['auto']
+
+
+def _get_crypt_context():
+    config = current_app.config
+    pw_hash = config.get('PASSWORD_HASH', DEFAULT_PASSWORD_HASH)
+    schemes = config.get('PASSWORD_SCHEMES', DEFAULT_PASSWORD_SCHEMES)
+    deprecated = config.get('DEPRECATED_PASSWORD_SCHEMES',
+                            DEFAULT_DEPRECATED_PASSWORD_SCHEMES)
+    if pw_hash not in schemes:
+        allowed = (', '.join(schemes[:-1]) + ' and ' + schemes[-1])
+        raise ValueError("Invalid hash scheme %r. Allowed values are %s" % (pw_hash, allowed))
+    try:
+        cc = CryptContext(schemes=schemes, default=pw_hash, deprecated=deprecated)
+    except Exception as e:
+        print 'Failed to initialize password crypt context: ', e
+    return cc
 
 
 class PasswordAuthenticator(BaseAuthenticationProvider):
 
     @staticmethod
-    def authenticate(user_id, password, datastore, pwd_context):
-
-        PasswordAuthenticator._validate_input(user_id, password, datastore, pwd_context)
-
-        # TODO should use find or get here?
-        user = datastore.get_user(user_id)
-        # user = User.query.filter_by(api_key=api_key).first()
-
-        # validate...
+    def authenticate(user, auth_info):
         if not user:
             # self.email.errors.append(get_message('USER_DOES_NOT_EXIST')[0])
-            print '***** error: USER_DOES_NOT_EXIST'
             # Always throw the same general failure to avoid revealing account information
-            raise Exception('Authentication failed')
+            return False
         if not user.password:
             # self.password.errors.append(get_message('PASSWORD_NOT_SET')[0])
-            print '***** error: PASSWORD_NOT_SET'
-            raise Exception('Authentication failed')
+            return False
             # TODO maybe use verify_and_update()?
-        if not pwd_context.verify(password, getattr(user, 'password')):
+        # TODO break this line:
+        if not _get_crypt_context().verify(auth_info.password, getattr(user, 'password')):
             # self.password.errors.append(get_message('INVALID_PASSWORD')[0])
-            print '***** error: INVALID_PASSWORD'
-            raise Exception('Authentication failed')
+            return False
         if not user.is_active():
             # self.email.errors.append(get_message('DISABLED_ACCOUNT')[0])
-            raise Exception('Authentication failed')
+            return False
 
-        return user
-
-    @staticmethod
-    def _validate_input(user_id, password, datastore, pwd_context):
-        if not user_id:
-            raise Exception('user_id is missing or empty')
-
-        if not password:
-            raise Exception('password is missing or empty')
-
-        if not datastore:
-            raise Exception('datastore is missing or empty')
-
-        if not pwd_context:
-            raise Exception('pwd_context is missing or empty')
-
-        if not isinstance(user_id, basestring):
-            raise Exception('user_id is not a string')
-
-        if not isinstance(password, basestring):
-            raise Exception('password is not a string')
+        return True

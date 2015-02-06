@@ -16,14 +16,16 @@ class MongoDatastore(BaseDatastore):
         app.config['MONGODB_DB'] = 'mydatabase'
         app.config['MONGODB_HOST'] = 'localhost'
         app.config['MONGODB_PORT'] = 27017
+        app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'email'
 
         self.db = MongoEngine(app)
         self.store = MongoEngineUserDatastore(self.db, User, Role)
 
     def get_user(self, identifier):
-        print '***** GETTING USER BY IDENTIFIER: ', identifier
         return self.store.get_user(identifier)
 
+
+# TODO find a way to externalize the user/role models
 
 class Role(Document, RoleMixin):
     name = mongo_fields.StringField(max_length=80, unique=True)

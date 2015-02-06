@@ -52,6 +52,7 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
 from manager_rest import get_version_data
+from security import rest_security
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
@@ -1175,7 +1176,7 @@ class Status(Resource):
         notes="Returns state of running system services"
     )
     @exceptions_handled
-    @login_required
+    @rest_security.login_required
     @marshal_with(responses.Status.resource_fields)
     def get(self):
         """
