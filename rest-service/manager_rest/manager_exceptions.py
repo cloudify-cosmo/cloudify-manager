@@ -118,6 +118,18 @@ class DeploymentEnvironmentCreationInProgressError(ManagerException):
             *args, **kwargs)
 
 
+class DeploymentEnvironmentCreationPendingError(ManagerException):
+    DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE = \
+        'deployment_environment_creation_pending_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentEnvironmentCreationPendingError, self).__init__(
+            400,
+            DeploymentEnvironmentCreationPendingError
+            .DEPLOYMENT_ENVIRONMENT_CREATION_PENDING_ERROR_CODE,
+            *args, **kwargs)
+
+
 class IllegalActionError(ManagerException):
     ILLEGAL_ACTION_ERROR_CODE = 'illegal_action_error'
 

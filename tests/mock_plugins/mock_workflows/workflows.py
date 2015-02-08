@@ -14,8 +14,6 @@
 #    * limitations under the License.
 
 
-__author__ = 'dan'
-
 import time
 from cloudify.decorators import workflow
 from cloudify.workflows import api

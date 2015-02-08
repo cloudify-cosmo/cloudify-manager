@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
-
 from datetime import datetime
 from manager_rest import storage_manager, models
 import base_test

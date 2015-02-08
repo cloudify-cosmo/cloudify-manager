@@ -30,18 +30,10 @@ groups:
                     auto_heal_trigger:
                         type: cloudify.policies.triggers.execute_workflow
                         parameters:
-                            workflow: auto_heal_workflow
-                            allow_custom_parameters: true
+                            workflow: heal
                             workflow_parameters:
-                                node_id: { get_property: [SELF, failing_node]}
+                                node_id: { get_property: [SELF, node_id] }
                                 diagnose_value: { get_property: [SELF, diagnose] }
-
-workflows:
-    auto_heal_workflow:
-        mapping: default_workflows.cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph
-        parameters:
-            node_id:
-                description: Which node has failed
 
 relationships:
     cloudify.relationships.installed_on:

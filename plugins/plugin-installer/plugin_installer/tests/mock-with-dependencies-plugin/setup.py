@@ -14,8 +14,6 @@
 #    * limitations under the License.
 # **************************************************************************/
 
-__author__ = 'elip'
-
 from setuptools import setup
 
 setup(

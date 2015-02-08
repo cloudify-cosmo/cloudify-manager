@@ -33,6 +33,7 @@ from testenv.utils import timeout
 from testenv.utils import verify_deployment_environment_creation_complete
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
+from testenv.utils import wait_for_url
 
 
 class BasicWorkflowsTest(TestCase):
@@ -199,12 +200,15 @@ class BasicWorkflowsTest(TestCase):
         archive_filename = os.path.basename(archive_location)
         archive_dir = os.path.dirname(archive_location)
 
+        archive_url = 'http://localhost:{0}/{1}'.format(
+            port, archive_filename)
+
         fs = FileServer(archive_dir, False, port)
         fs.start()
         try:
+            wait_for_url(archive_url)
             blueprint_id = self.client.blueprints.publish_archive(
-                'http://localhost:{0}/{'
-                '1}'.format(port, archive_filename),
+                archive_url,
                 str(uuid.uuid4()),
                 'basic.yaml').id
             # verifying blueprint exists
