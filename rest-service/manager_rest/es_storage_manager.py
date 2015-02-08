@@ -373,5 +373,5 @@ class ESStorageManager(object):
 def create():
     return ESStorageManager(
         config.instance().db_address,
-        config.intsance().db_port
+        config.instance().db_port
     )
