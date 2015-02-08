@@ -158,7 +158,7 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     if 'db_address' in yaml_conf:
         obj_conf.db_address = yaml_conf['db_address']
     if 'db_port' in yaml_conf:
-        obj_conf.db_address = yaml_conf['db_port']
+        obj_conf.db_port = yaml_conf['db_port']
     if 'file_server_root' in yaml_conf:
         obj_conf.file_server_root = yaml_conf['file_server_root']
     if 'file_server_base_uri' in yaml_conf:
