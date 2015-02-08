@@ -19,6 +19,7 @@ import uuid
 import pika
 import requests
 import time
+import urllib
 
 from contextlib import contextmanager
 from functools import wraps
@@ -309,6 +310,21 @@ def restore_provider_context():
     delete_provider_context()
     client = create_rest_client()
     client.manager.create_context(PROVIDER_NAME, PROVIDER_CONTEXT)
+
+
+def wait_for_url(url, timeout=15):
+    end = time.time() + timeout
+
+    while end >= time.time():
+        try:
+            status = urllib.urlopen(url).getcode()
+            if status == 200:
+                return
+        except IOError:
+            time.sleep(1)
+
+    raise RuntimeError('Url {0} is not available (waited {1} '
+                       'seconds)'.format(url, timeout))
 
 
 def timestamp():
