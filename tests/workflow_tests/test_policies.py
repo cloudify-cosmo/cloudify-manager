@@ -337,6 +337,15 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_heart_beat_event(node_name)
         self._wait_for_event_expiration()
 
+    def _wait_for_terminated_execution(self, timeout=30, workflow_id='heal'):
+        def is_terminated():
+            for e in self.client.executions.list(
+                    deployment_id=self.deployment.id):
+                if e.workflow_id == workflow_id and e.status == 'terminated':
+                    return True
+            return False
+        utils.do_retries_boolean(is_terminated, timeout)
+
     @riemann_cleanup
     def test_autoheal_policy_triggering(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
@@ -530,6 +539,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_heart_beat_event(self.DB)
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        self._wait_for_terminated_execution()
 
         self.invocations = self.wait_for_invocations(
             self.deployment.id,
@@ -641,6 +651,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_heart_beat_event(self.WEBSERVER)
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        self._wait_for_terminated_execution()
 
         self.invocations = self.wait_for_invocations(
             self.deployment.id,
