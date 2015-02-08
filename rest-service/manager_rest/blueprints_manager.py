@@ -14,9 +14,9 @@
 #  * limitations under the License.
 
 import json
-import time
 import uuid
 from datetime import datetime
+
 from flask import g, current_app
 
 from dsl_parser import exceptions as parser_exceptions
@@ -29,8 +29,6 @@ from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.util import maybe_register_teardown
 from manager_rest.celery_client import celery_client
-from manager_rest.celery_client import TASK_STATE_FAILURE as \
-    CELERY_TASK_STATE_FAILURE
 
 
 class DslParseException(Exception):
@@ -492,78 +490,46 @@ class BlueprintsManager(object):
         return prepared_relationships
 
     def _verify_deployment_environment_created_successfully(self,
-                                                            deployment_id,
-                                                            is_retry=False):
-        deployment_env_creation_execution = next(
+                                                            deployment_id):
+        env_creation = next(
             (execution for execution in
-             self.sm.executions_list(
-                 deployment_id=deployment_id) if execution.workflow_id ==
-                'create_deployment_environment'),
+             self.sm.executions_list(deployment_id=deployment_id)
+             if execution.workflow_id == 'create_deployment_environment'),
             None)
 
-        if not deployment_env_creation_execution:
+        if not env_creation:
             raise RuntimeError('Failed to find "create_deployment_environment"'
                                ' execution for deployment {0}'.format(
                                    deployment_id))
-
-        if deployment_env_creation_execution.status == \
-                models.Execution.TERMINATED:
-            # deployment environment creation is complete
+        status = env_creation.status
+        if status == models.Execution.TERMINATED:
             return
-        elif deployment_env_creation_execution.status == \
-                models.Execution.STARTED:
-            # deployment environment creation is still in process
+        elif status == models.Execution.PENDING:
+            raise manager_exceptions \
+                .DeploymentEnvironmentCreationPendingError(
+                    'Deployment environment creation is still pending, '
+                    'try again in a minute')
+        elif status == models.Execution.STARTED:
             raise manager_exceptions\
                 .DeploymentEnvironmentCreationInProgressError(
                     'Deployment environment creation is still in progress, '
                     'try again in a minute')
-        elif deployment_env_creation_execution.status == \
-                models.Execution.FAILED:
-            # deployment environment creation execution failed
+        elif status == models.Execution.FAILED:
             raise RuntimeError(
                 "Can't launch executions since environment creation for "
                 "deployment {0} has failed: {1}".format(
-                    deployment_id, deployment_env_creation_execution.error))
-        elif deployment_env_creation_execution.status in (
+                    deployment_id, env_creation.error))
+        elif status in (
             models.Execution.CANCELLED, models.Execution.CANCELLING,
                 models.Execution.FORCE_CANCELLING):
-            # deployment environment creation execution got cancelled
             raise RuntimeError(
                 "Can't launch executions since the environment creation for "
                 "deployment {0} has been cancelled [status={1}]".format(
-                    deployment_id, deployment_env_creation_execution.status))
-
-        # status is 'pending'. Waiting for a few seconds and retrying
-        # verification. It could be the case that some workflow execution was
-        # called immediately after deployment creation.
-        # If this is already a failed retry, it might mean there was a
-        # problem with the Celery task
-        if not is_retry:
-            time.sleep(5)
-            self._verify_deployment_environment_created_successfully(
-                deployment_id, True)
+                    deployment_id, status))
         else:
-            # deployment environment creation probably failed but not on the
-            # workflow level.
-            # retrieving the celery task's status for the error message,
-            # and the error object from celery if one is available
-            celery_task_status = celery_client().get_task_status(
-                deployment_env_creation_execution.id)
-            error_message = \
-                "Can't launch executions since environment for deployment {" \
-                "0} hasn't been created (Execution status is still '{1}'). " \
-                "Celery task status is ".format(
-                    deployment_id, deployment_env_creation_execution.status)
-            if celery_task_status != CELERY_TASK_STATE_FAILURE:
-                raise RuntimeError(
-                    "{0} {1}".format(error_message, celery_task_status))
-            else:
-                celery_error = celery_client().get_failed_task_error(
-                    deployment_env_creation_execution.id)
-                raise RuntimeError(
-                    "{0} {1}; Error is of type {2}; Error message: {3}"
-                    .format(error_message, celery_task_status,
-                            celery_error.__class__.__name__, celery_error))
+            raise RuntimeError(
+                'Unexpected deployment status for deployment {0} '
+                '[status={1}]'.format(deployment_id, status))
 
     def _create_deployment_environment(self, deployment, deployment_plan, now):
         deployment_env_creation_task_id = str(uuid.uuid4())

@@ -14,17 +14,18 @@
 #    * limitations under the License.
 
 import os
-from mock_plugins.worker_installer.consumer import \
-    ConsumerBackedWorkerInstaller
-from mock_plugins.worker_installer.process import \
-    ProcessBackedWorkerInstaller
-
-from testenv.utils import update_storage
-from testenv.utils import task_exists
 
 from cloudify.decorators import operation
 from cloudify import context
 from cloudify.workflows import tasks
+from cloudify import ctx
+
+from mock_plugins.worker_installer.consumer import \
+    ConsumerBackedWorkerInstaller
+from mock_plugins.worker_installer.process import \
+    ProcessBackedWorkerInstaller
+from testenv.utils import update_storage
+from testenv.utils import task_exists
 
 
 # This is needed because in this
@@ -34,9 +35,6 @@ from cloudify.workflows import tasks
 # asserts that tasks are being sent to
 # different workers,
 tasks.verify_task_registered = task_exists
-
-
-from cloudify import ctx
 
 
 @operation

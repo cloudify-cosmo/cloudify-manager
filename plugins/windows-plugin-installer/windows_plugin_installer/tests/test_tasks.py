@@ -16,8 +16,6 @@
 
 import unittest
 
-__author__ = 'elip'
-
 
 class TasksTest(unittest.TestCase):
 
@@ -34,9 +32,13 @@ class TasksTest(unittest.TestCase):
             'mock_plugin.tasks',
             app_parameters)
 
-        expected_app_parameters = '--broker=amqp://guest:guest@127.0.0.1:5672// '\
-                                  '--include=plugin_installer.tasks,mock_plugin.tasks --events '\
-                                  '--app=cloudify -Q test-node-id -n test-node-id '\
+        expected_app_parameters = '--broker=amqp://' \
+                                  'guest:guest@127.0.0.1:5672// '\
+                                  '--include=plugin_installer.tasks,' \
+                                  'mock_plugin.tasks ' \
+                                  '--events '\
+                                  '--app=cloudify -Q test-node-id -n ' \
+                                  'test-node-id '\
                                   '--logfile=C:\CloudifyAgent\celery.log '\
                                   '--pidfile=C:\CloudifyAgent\celery.pid'
 

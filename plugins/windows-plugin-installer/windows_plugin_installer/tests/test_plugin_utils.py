@@ -14,8 +14,6 @@
 #    * limitations under the License.
 # ***************************************************************************/
 
-__author__ = 'elip'
-
 import unittest
 import os
 
