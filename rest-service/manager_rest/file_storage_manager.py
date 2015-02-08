@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
-
 import os
 import json
 from manager_rest.models import (BlueprintState,
