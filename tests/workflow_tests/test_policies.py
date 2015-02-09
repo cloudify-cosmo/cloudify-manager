@@ -337,14 +337,18 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_heart_beat_event(node_name)
         self._wait_for_event_expiration()
 
-    def _wait_for_terminated_execution(self, timeout=30, workflow_id='heal'):
-        def is_terminated():
+    def _wait_for_terminated_execution(self,
+                                       timeout=30,
+                                       workflow_id='heal',
+                                       num_of_workflows=1):
+        def is_workflow_terminated():
+            found_workflows = 0
             for e in self.client.executions.list(
                     deployment_id=self.deployment.id):
                 if e.workflow_id == workflow_id and e.status == 'terminated':
-                    return True
-            return False
-        utils.do_retries_boolean(is_terminated, timeout)
+                    found_workflows += 1
+            return found_workflows == num_of_workflows
+        utils.do_retries_boolean(is_workflow_terminated, timeout)
 
     @riemann_cleanup
     def test_autoheal_policy_triggering(self):
@@ -352,8 +356,8 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_heart_beat_event()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
         self._wait_for_event_expiration()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
 
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
         self.assertEqual(Constants.HEART_BEAT_FAILURE, invocation['diagnose'])
@@ -376,7 +380,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             self.publish(Constants.HEART_BEAT_FAILURE, node_id=node_b.id)
             time.sleep(1)
 
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
         self.assertEqual(
             node_a.id,
@@ -390,7 +394,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         for _ in range(self.TIME_TO_EXPIRATION):
             self._publish_heart_beat_event(service='unwatched')
             time.sleep(1)
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
 
     @riemann_cleanup
     def test_autoheal_ignoring_unwatched_services_expiration(self):
@@ -403,7 +407,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_threshold_stabilized(self):
         test = TestAutohealPolicies.Threshold(self)
         test.significantly_breach_threshold()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
         self.assertEqual(Constants.THRESHOLD_FAILURE, invocation['diagnose'])
 
@@ -420,7 +424,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             'dsl/threshold_stabilized_two_nodes.yaml'
         )
         test.breach_threshold_on_one_node_from_two()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
 
     @riemann_cleanup
     def test_threshold_compute_per_group(self):
@@ -435,7 +439,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_ewma_timeless(self):
         test = TestAutohealPolicies.EwmaTimeless(self)
         test.swinging_threshold_breach()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
         self.assertEqual(Constants.EWMA_FAILURE, invocation['diagnose'])
 
@@ -449,7 +453,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
     def test_ewma_stable_rise(self):
         test = TestAutohealPolicies.EwmaTimeless(self)
         test.slowly_rise_metric()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS+1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         self.wait_for_invocations(self.deployment.id, 1)
 
     @riemann_cleanup
@@ -474,7 +478,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
             self._publish_heart_beat_event('ok_node')
             time.sleep(1)
 
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
 
         self.assertEqual(Constants.HEART_BEAT_FAILURE, invocation['diagnose'])
@@ -488,7 +492,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.launch_deployment('dsl/auto_heal_multiple_policies.yaml')
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         self.wait_for_invocations(self.deployment.id, 1)
 
     @riemann_cleanup
@@ -496,13 +500,17 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
 
         # Wait for interval between workflows pass
         time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
+        self._wait_for_terminated_execution(
+            workflow_id='auto_heal_workflow',
+            num_of_workflows=2
+        )
 
         self.wait_for_invocations(self.deployment.id, 2)
 
@@ -521,6 +529,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
+        self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
 
     @riemann_cleanup
     def test_autoheal_policy_nested_nodes(self):
