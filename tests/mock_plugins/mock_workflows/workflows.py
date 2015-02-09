@@ -348,6 +348,7 @@ def deployment_modification_operations(ctx, **_):
                         .format(instance.contained_instances))
                 instance.execute_operation('test.op').get()
             else:
+                instance.execute_operation('test.op').get()
                 for rel in instance.relationships:
                     rel.execute_source_operation('test.op').get()
                     rel.execute_target_operation('test.op').get()
