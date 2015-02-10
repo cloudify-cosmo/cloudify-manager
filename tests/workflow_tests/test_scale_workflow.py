@@ -116,8 +116,9 @@ class TestScaleWorkflow(TestCase):
                     existing_instance.id: expected_invocations(
                         existing_expectation)})
 
-        invocations = self.get_plugin_data('testmockoperations',
-               self.deployment_id)['mock_operation_invocation']
+        invocations = self.get_plugin_data(
+            'testmockoperations', self.deployment_id)[
+            'mock_operation_invocation']
         total_expected_count = 0
         for instance_id, operations in calculated_expected.items():
             for operation, expected_count in operations.items():
@@ -157,4 +158,3 @@ class TestScaleWorkflow(TestCase):
     def scale(self, parameters):
         execute_workflow('scale', self.deployment_id, parameters=parameters)
         return self.expectations()
-
