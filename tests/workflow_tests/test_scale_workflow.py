@@ -22,52 +22,46 @@ from testenv.utils import execute_workflow
 
 class TestScaleWorkflow(TestCase):
 
-    def test_compute_scale_up_compute(self):
-        self.deploy('scale1')
-        expected = self.expectations()
-        expected['compute']['new']['install'] = 1
-        self.deployment_assertions(expected=expected)
+    def test_compute_scale_out_compute(self):
+        expectations = self.deploy('scale1')
+        expectations['compute']['new']['install'] = 1
+        self.deployment_assertions(expectations)
 
-        self.execute(params={'node_id': 'compute'})
-        expected = self.expectations()
-        expected['compute']['new']['install'] = 1
-        expected['compute']['existing']['install'] = 1
-        self.deployment_assertions(expected=expected)
+        expectations = self.scale(parameters={'node_id': 'compute'})
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['existing']['install'] = 1
+        self.deployment_assertions(expectations)
 
-    def test_db_contained_in_compute_scale_up_compute(self):
-        self.deploy('scale2')
-        expected = self.expectations()
-        expected['compute']['new']['install'] = 1
-        expected['db']['new']['install'] = 1
-        expected['db']['new']['rel_install'] = 2
-        self.deployment_assertions(expected)
+    def test_db_contained_in_compute_scale_out_compute(self):
+        expectations = self.deploy('scale2')
+        expectations['compute']['new']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        self.deployment_assertions(expectations)
 
-        self.execute(params={'node_id': 'compute'})
-        expected = self.expectations()
-        expected['compute']['new']['install'] = 1
-        expected['compute']['existing']['install'] = 1
-        expected['db']['new']['install'] = 1
-        expected['db']['new']['rel_install'] = 2
-        expected['db']['existing']['install'] = 1
-        expected['db']['existing']['rel_install'] = 2
-        self.deployment_assertions(expected)
+        expectations = self.scale(parameters={'node_id': 'compute'})
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['existing']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['rel_install'] = 2
+        self.deployment_assertions(expectations)
 
-    def test_db_connected_to_compute_scale_up_compute(self):
-        self.deploy('scale3')
-        expected = self.expectations()
-        expected['compute']['new']['install'] = 1
-        expected['db']['new']['install'] = 1
-        expected['db']['new']['rel_install'] = 2
-        self.deployment_assertions(expected)
+    def test_db_connected_to_compute_scale_out_compute(self):
+        expectations = self.deploy('scale3')
+        expectations['compute']['new']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        self.deployment_assertions(expectations)
 
-        self.execute(params={'node_id': 'compute'})
-        expected = self.expectations()
-        expected['compute']['new']['install'] = 1
-        expected['compute']['existing']['install'] = 1
-        expected['db']['existing']['install'] = 1
-        expected['db']['existing']['rel_install'] = 2
-        expected['db']['existing']['scale_rel_install'] = 2
-        self.deployment_assertions(expected)
+        expectations = self.scale(parameters={'node_id': 'compute'})
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['existing']['install'] = 1
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['rel_install'] = 2
+        expectations['db']['existing']['scale_rel_install'] = 2
+        self.deployment_assertions(expectations)
 
     def setUp(self):
         super(TestScaleWorkflow, self).setUp()
@@ -158,6 +152,9 @@ class TestScaleWorkflow(TestCase):
     def deploy(self, resource_name):
         deployment, _ = deploy(resource('dsl/{0}.yaml'.format(resource_name)))
         self.deployment_id = deployment.id
+        return self.expectations()
 
-    def execute(self, params):
-        execute_workflow('scale', self.deployment_id, parameters=params)
+    def scale(self, parameters):
+        execute_workflow('scale', self.deployment_id, parameters=parameters)
+        return self.expectations()
+
