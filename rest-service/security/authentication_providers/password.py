@@ -1,4 +1,4 @@
-from base_authentication_provider import BaseAuthenticationProvider
+from abstract_authentication_provider import AbstractAuthenticationProvider
 from passlib.context import CryptContext
 from flask.globals import current_app
 
@@ -32,12 +32,7 @@ def _get_crypt_context():
     return cc
 
 
-class PasswordAuthenticator(BaseAuthenticationProvider):
-
-    @staticmethod
-    def get_identifier_from_auth_info(auth_info):
-        return auth_info.user_id
-
+class PasswordAuthenticator(AbstractAuthenticationProvider):
 
     @staticmethod
     def authenticate(user, auth_info):

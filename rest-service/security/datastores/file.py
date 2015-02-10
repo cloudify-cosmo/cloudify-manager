@@ -1,4 +1,4 @@
-from base_datastore import BaseDatastore
+from abstract_datastore import AbstractDatastore
 
 
 # This is supposedly read from a file:
@@ -9,7 +9,7 @@ credentials = {
 }
 
 
-class FileDatastore(BaseDatastore):
+class FileDatastore(AbstractDatastore):
 
     def get_user(self, identifier):
         user = None

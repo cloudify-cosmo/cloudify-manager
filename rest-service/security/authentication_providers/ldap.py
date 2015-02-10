@@ -1,7 +1,7 @@
-from base_authentication_provider import BaseAuthenticationProvider
+from abstract_authentication_provider import AbstractAuthenticationProvider
 
 
-class LdapAuthenticator(BaseAuthenticationProvider):
+class LdapAuthenticator(AbstractAuthenticationProvider):
 
     @staticmethod
     def authenticate(user, auth_info):
