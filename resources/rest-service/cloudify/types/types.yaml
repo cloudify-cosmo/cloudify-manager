@@ -260,7 +260,11 @@ workflows:
         description: Diagnosed reason of failure
         default: Not provided
 
-
+  scale:
+    mapping: default_workflows.cloudify.plugins.workflows.scale
+    parameters:
+      node_id:
+        description: Which node (not node instance) to scale
 
 ##################################################################################
 # Base artifact definitions
