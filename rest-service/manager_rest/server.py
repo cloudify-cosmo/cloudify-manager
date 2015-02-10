@@ -105,7 +105,7 @@ def authenticate_request_user_if_needed():
     # and checks if it's an instance of SecuredResource.
     # TODO otherwise use a mapping list like in Spring-Security
     if True:
-        rest_security.authenticate_request_user()
+        rest_security.authenticate_request()
 
 
 def log_request():

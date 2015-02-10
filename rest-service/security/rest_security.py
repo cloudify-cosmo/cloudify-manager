@@ -23,6 +23,9 @@ def load_security_config():
     # TODO read only once
     flask_globals.current_app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(seconds=30)
     flask_globals.current_app.config['SECRET_KEY'] = 'the quick brown fox jumps over the lazy dog'
+    flask_globals.current_app.config['AUTHENTICATION_METHODS'] = \
+        ['security.authentication_providers.password:PasswordAuthenticator',
+         'security.authentication_providers.token:TokenAuthenticator']
     global datastore
     datastore = DatastoreManager().get_datastore_driver(flask_globals.current_app)
 
@@ -90,35 +93,29 @@ def get_auth_info_from_request(auth_header_name):
     return auth_info(user_id, password, token)
 
 
-def authenticate_request_user():
+def authenticate_request():
     # TODO call 'load_security_context" once, after app context is available
     load_security_config()
-    auth_header_name = flask_globals.current_app.config.get('AUTH_HEADER_NAME', AUTH_HEADER_NAME)
+    current_app = flask_globals.current_app
+    auth_header_name = current_app.config.get('AUTH_HEADER_NAME', AUTH_HEADER_NAME)
     # auth_header_name = self.app.config.get('AUTH_HEADER_NAME', AUTH_HEADER_NAME)
     auth_info = get_auth_info_from_request(auth_header_name)
 
-    # TODO should use find or get here?
-    user = datastore.get_user(auth_info.user_id)
+    auth_manager = AuthenticationManager(current_app)
+
+    # authentication_provider = auth_manager.get_authentication_provider()
+
+    # user_id = authentication_provider.get_identifier_from_auth_info(auth_info)
+    user_id = auth_info.user_id     # TODO the identity field should be configurable?
+    user_obj = datastore.get_user(user_id)
     # user = User.query.filter_by(api_key=api_key).first()
     try:
-        if authenticate_user(user, auth_info):
-            # TODO is the place to keep the loaded user? flask login does so.
-            # TODO verify this is nullified for new requests
-            flask_globals._request_ctx_stack.top.user = user
-        else:
-            if unauthorized_user_handler:
-                unauthorized_user_handler()
-            else:
-                abort(401)
+        auth_manager.authenticate(user_obj, auth_info)
     except Exception as e:
         if unauthorized_user_handler:
             unauthorized_user_handler(e)
         else:
             abort(401)
-
-
-def authenticate_user(user, auth_info):
-    authentication_provider = \
-        AuthenticationManager().get_authentication_provider()
-
-    return authentication_provider.authenticate(user, auth_info)
+    else:
+        # TODO is the place to keep the loaded user? flask login does so.
+        flask_globals._request_ctx_stack.top.user = user_obj

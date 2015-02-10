@@ -8,25 +8,46 @@ AUTHENTICATE_METHOD = 'authenticate'
 # TODO or maybe this shouldn't be a class at all? just static utility methods?
 class AuthenticationManager():
 
-    def __init__(self):
-        # TODO: read from config file
-        self.provider_path = \
-            'security.authentication_providers.password:PasswordAuthenticator'
-            # 'security.datastores.file_driver:FileDatastore'
+    def __init__(self, current_app):
+        # TODO: read from config file,
+        # TODO: Verify the list is unique (a set) and maintains order
+        self.authentication_methods = current_app.config.get('AUTHENTICATION_METHODS', [])
+        if not self.authentication_methods:
+            raise Exception('Authentication methods not set')
 
-    def get_authentication_provider(self, *args, **kwargs):
+        # self.provider_path = \
+        #     'security.authentication_providers.password:PasswordAuthenticator'
+
+    def authenticate(self, user_obj, auth_info):
+        authenticated = False
+        for provider_path in self.authentication_methods:
+            try:
+                provider = self.get_authentication_provider(provider_path)
+                provider.authenticate(user_obj, auth_info)
+            except Exception as e:
+                #  TODO use the caught exception?
+                continue
+            else:
+                authenticated = True
+                break
+
+        if not authenticated:
+            raise Exception('Unauthorized')
+
+    @staticmethod
+    def get_authentication_provider(provider_path):
         # TODO instantiate only if not done already, keep instance in globals?
 
         """Returns a class from a string formatted as module:class"""
         #TODO use a more specific exception type and messages
 
-        if not self.provider_path:
+        if not provider_path:
             raise Exception('authentication provider path is missing or empty')
 
-        if not isinstance(self.provider_path, basestring):
+        if not isinstance(provider_path, basestring):
             raise Exception('authentication provider is not a string')
 
-        provider_path = self.provider_path.strip()
+        provider_path = provider_path.strip()
         if not ':' in provider_path or provider_path.count(':') > 1:
             raise Exception('Invalid authentication provider path, expected '
                             'format: module:class')

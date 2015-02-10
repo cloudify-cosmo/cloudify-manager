@@ -35,21 +35,25 @@ def _get_crypt_context():
 class PasswordAuthenticator(BaseAuthenticationProvider):
 
     @staticmethod
+    def get_identifier_from_auth_info(auth_info):
+        return auth_info.user_id
+
+
+    @staticmethod
     def authenticate(user, auth_info):
+
         if not user:
             # self.email.errors.append(get_message('USER_DOES_NOT_EXIST')[0])
             # Always throw the same general failure to avoid revealing account information
-            return False
+            raise Exception('Unauthorized')
         if not user.password:
             # self.password.errors.append(get_message('PASSWORD_NOT_SET')[0])
-            return False
+            raise Exception('Unauthorized')
             # TODO maybe use verify_and_update()?
         # TODO break this line:
         if not _get_crypt_context().verify(auth_info.password, getattr(user, 'password')):
             # self.password.errors.append(get_message('INVALID_PASSWORD')[0])
-            return False
+            raise Exception('Unauthorized')
         if not user.is_active():
             # self.email.errors.append(get_message('DISABLED_ACCOUNT')[0])
-            return False
-
-        return True
+            raise Exception('Unauthorized')

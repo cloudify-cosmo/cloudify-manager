@@ -1,7 +1,7 @@
 from base_authentication_provider import BaseAuthenticationProvider
 
 
-class LdapAuthenticator(BaseAuthenticationProvider):
+class TokenAuthenticator(BaseAuthenticationProvider):
 
     @staticmethod
     def authenticate(user, auth_info):
