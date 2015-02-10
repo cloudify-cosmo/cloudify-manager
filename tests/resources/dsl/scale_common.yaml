@@ -26,16 +26,6 @@ node_types:
                 start: testmockoperations.testmockoperations.tasks.mock_start
                 stop: testmockoperations.testmockoperations.tasks.mock_stop
                 delete: testmockoperations.testmockoperations.tasks.mock_delete
-    webserver:
-        derived_from: cloudify.nodes.WebServer
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                create: testmockoperations.testmockoperations.tasks.mock_create
-                configure: testmockoperations.testmockoperations.tasks.mock_configure
-                start: testmockoperations.testmockoperations.tasks.mock_start
-                stop: testmockoperations.testmockoperations.tasks.mock_stop
-                delete: testmockoperations.testmockoperations.tasks.mock_delete
-
 
 relationships:
     contained_in:
