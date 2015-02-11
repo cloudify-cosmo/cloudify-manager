@@ -189,6 +189,23 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['existing']['scale_rel_install'] = 2
         self.deployment_assertions(expectations)
 
+    def test_db_connected_to_compute_scale_in_compute(self):
+        expectations = self.deploy('scale6')
+        expectations['compute']['new']['install'] = 2
+        expectations['db']['new']['install'] = 2
+        expectations['db']['new']['rel_install'] = 8
+        self.deployment_assertions(expectations)
+
+        expectations = self.scale(parameters={'node_id': 'compute',
+                                              'delta': -1})
+        expectations['compute']['existing']['install'] = 1
+        expectations['compute']['removed']['install'] = 1
+        expectations['compute']['removed']['uninstall'] = 1
+        expectations['db']['existing']['install'] = 2
+        expectations['db']['existing']['rel_install'] = 8
+        expectations['db']['existing']['rel_uninstall'] = 4
+        self.deployment_assertions(expectations)
+
     def test_db_connected_to_compute_scale_out_db(self):
         expectations = self.deploy('scale3')
         expectations['compute']['new']['install'] = 1
@@ -202,6 +219,24 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 2
         expectations['db']['existing']['install'] = 1
         expectations['db']['existing']['rel_install'] = 2
+        self.deployment_assertions(expectations)
+
+    def test_db_connected_to_compute_scale_in_db(self):
+        expectations = self.deploy('scale6')
+        expectations['compute']['new']['install'] = 2
+        expectations['db']['new']['install'] = 2
+        expectations['db']['new']['rel_install'] = 8
+        self.deployment_assertions(expectations)
+
+        expectations = self.scale(parameters={'node_id': 'db',
+                                              'delta': -1})
+        expectations['compute']['existing']['install'] = 2
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['rel_install'] = 4
+        expectations['db']['removed']['install'] = 1
+        expectations['db']['removed']['uninstall'] = 1
+        expectations['db']['removed']['rel_install'] = 4
+        expectations['db']['removed']['rel_uninstall'] = 4
         self.deployment_assertions(expectations)
 
     def setUp(self):
