@@ -139,7 +139,7 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['removed']['rel_uninstall'] = 4
         self.deployment_assertions(expectations)
 
-    def test_db_contained_in_compute_scale_out_db_operate_on_db(self):
+    def test_db_contained_in_compute_scale_out_db_scale_db(self):
         expectations = self.deploy('scale2')
         expectations['compute']['new']['install'] = 1
         expectations['db']['new']['install'] = 1
@@ -147,7 +147,7 @@ class TestScaleWorkflow(TestCase):
         self.deployment_assertions(expectations)
 
         expectations = self.scale(parameters={
-            'node_id': 'db', 'operate_on_compute': False})
+            'node_id': 'db', 'scale_compute': False})
         expectations['compute']['existing']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -155,7 +155,7 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['existing']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-    def test_db_contained_in_compute_scale_in_db_operate_on_db(self):
+    def test_db_contained_in_compute_scale_in_db_scale_db(self):
         expectations = self.deploy('scale5')
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 4
@@ -164,7 +164,7 @@ class TestScaleWorkflow(TestCase):
 
         expectations = self.scale(parameters={'node_id': 'db',
                                               'delta': -1,
-                                              'operate_on_compute': False})
+                                              'scale_compute': False})
         expectations['compute']['existing']['install'] = 2
         expectations['db']['existing']['install'] = 2
         expectations['db']['existing']['rel_install'] = 4

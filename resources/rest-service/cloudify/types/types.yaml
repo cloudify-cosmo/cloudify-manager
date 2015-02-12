@@ -271,8 +271,7 @@ workflows:
             A positive number denotes increase of instances.
             A negative number denotes decrease of instances.
         default: 1
-      operate_on_compute:
-        # todo: fix typo
+      scale_compute:
         description: >
             If node is contained (transitively) within a compute node
             and this property is 'true', operate on compute node instead
