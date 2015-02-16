@@ -6,6 +6,7 @@ from functools import wraps
 # TODO the werkzeug abort is referred to by flask's
 # from werkzeug.exceptions import abort
 from flask import abort, request, globals as flask_globals
+from models import UserModel
 
 from security.datastores.datastore_manager import DatastoreManager
 from security.authentication_providers.authentication_manager \
@@ -13,6 +14,7 @@ from security.authentication_providers.authentication_manager \
 
 #: Default name of the auth header (``Authorization``)
 AUTH_HEADER_NAME = 'Authorization'
+AUTH_TOKEN_HEADER_NAME = 'Authentication-Token'
 
 unauthorized_user_handler = None
 datastore = None
@@ -56,7 +58,7 @@ def login_required(func):
                 return filter_results(result)
             else:
                 if unauthorized_user_handler:
-                    unauthorized_user_handler(Exception(401, 'UNAUTHORIZED'))
+                    unauthorized_user_handler()
                 else:
                     abort(401)
         except Exception as e:
@@ -68,24 +70,40 @@ def login_required(func):
     return wrapper
 
 
-def get_auth_info_from_request(auth_header_name):
-    # TODO remember this is configurable - document
-    auth_header = request.headers.get(auth_header_name)
-    if not auth_header:
-        raise Exception('Authorization header not found on request')
-
-    auth_header = auth_header.replace('Basic ', '', 1)
-    try:
-        from itsdangerous import base64_decode
-        api_key = base64_decode(auth_header)
-    except TypeError:
-        pass
-
-    # TODO parse better, with checks and all, this is shaky
-    api_key_parts = api_key.split(':')
-    user_id = api_key_parts[0]
-    password = api_key_parts[1]
+def get_auth_info_from_request():
+    user_id = None
+    password = None
     token = None
+
+    # TODO remember this is configurable - document
+    app_config = flask_globals.current_app.config
+
+    auth_header_name = app_config.get('AUTH_HEADER_NAME', AUTH_HEADER_NAME)
+    auth_header = request.headers.get(auth_header_name) \
+        if auth_header_name else None
+
+    auth_token_header_name = app_config.get('AUTH_TOKEN_HEADER_NAME',
+                                            AUTH_TOKEN_HEADER_NAME)
+    if auth_token_header_name:
+        token = request.headers.get(auth_token_header_name) \
+
+    if not auth_header and not token:
+        raise Exception('Failed to get authentication information from '
+                        'request, headers not found: {0}, {1}'
+                        .format(auth_header_name, auth_token_header_name))
+
+    if auth_header:
+        auth_header = auth_header.replace('Basic ', '', 1)
+        try:
+            from itsdangerous import base64_decode
+            api_key = base64_decode(auth_header)
+            # TODO parse better, with checks and all, this is shaky
+        except TypeError:
+            pass
+        else:
+            api_key_parts = api_key.split(':')
+            user_id = api_key_parts[0]
+            password = api_key_parts[1]
 
     auth_info = namedtuple('auth_info_type',
                            ['user_id', 'password', 'token'])
@@ -96,26 +114,24 @@ def get_auth_info_from_request(auth_header_name):
 def authenticate_request():
     # TODO call 'load_security_context" once, after app context is available
     load_security_config()
-    current_app = flask_globals.current_app
-    auth_header_name = current_app.config.get('AUTH_HEADER_NAME', AUTH_HEADER_NAME)
-    # auth_header_name = self.app.config.get('AUTH_HEADER_NAME', AUTH_HEADER_NAME)
-    auth_info = get_auth_info_from_request(auth_header_name)
 
-    auth_manager = AuthenticationManager(current_app)
-
-    # authentication_provider = auth_manager.get_authentication_provider()
-
-    # user_id = authentication_provider.get_identifier_from_auth_info(auth_info)
-    user_id = auth_info.user_id     # TODO the identity field should be configurable?
-    user_obj = datastore.get_user(user_id)
-    # user = User.query.filter_by(api_key=api_key).first()
+    auth_info = get_auth_info_from_request()
+    auth_manager = AuthenticationManager(flask_globals.current_app)
     try:
-        auth_manager.authenticate(user_obj, auth_info)
+        user = auth_manager.authenticate(auth_info, datastore)
     except Exception as e:
-        if unauthorized_user_handler:
-            unauthorized_user_handler(e)
-        else:
-            abort(401)
-    else:
-        # TODO is the place to keep the loaded user? flask login does so.
-        flask_globals._request_ctx_stack.top.user = user_obj
+        user = AnonymousUser()
+
+    # TODO is the place to keep the loaded user? flask login does so.
+    flask_globals._request_ctx_stack.top.user = user
+
+
+class AnonymousUser(UserModel):
+    def is_active(self):
+        return False
+
+    def is_anonymous(self):
+        return True
+
+    def get_roles(self):
+        return []

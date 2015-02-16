@@ -18,21 +18,23 @@ class AuthenticationManager():
         # self.provider_path = \
         #     'security.authentication_providers.password:PasswordAuthenticator'
 
-    def authenticate(self, user_obj, auth_info):
-        authenticated = False
+    def authenticate(self, auth_info, datastore):
+
+        user = None
+
         for provider_path in self.authentication_methods:
             try:
                 provider = self.get_authentication_provider(provider_path)
-                provider.authenticate(user_obj, auth_info)
+                user = provider.authenticate(auth_info, datastore)
+                break
             except Exception as e:
                 #  TODO use the caught exception?
-                continue
-            else:
-                authenticated = True
-                break
+                continue  # try the next authentication method until successful
 
-        if not authenticated:
+        if not user:
             raise Exception('Unauthorized')
+
+        return user
 
     @staticmethod
     def get_authentication_provider(provider_path):

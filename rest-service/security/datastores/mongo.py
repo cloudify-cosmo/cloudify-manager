@@ -2,7 +2,7 @@ from flask.ext.mongoengine import MongoEngine
 from mongoengine import Document, fields as mongo_fields
 from flask.ext.security import MongoEngineUserDatastore, UserMixin, \
     RoleMixin
-from flask import globals as flask_g
+from security.models import UserModel, RoleModel
 from abstract_datastore import AbstractDatastore
 
 
@@ -27,16 +27,20 @@ class MongoDatastore(AbstractDatastore):
 
 # TODO find a way to externalize the user/role models
 
-class Role(Document, RoleMixin):
+class Role(Document, RoleMixin, RoleModel):
     name = mongo_fields.StringField(max_length=80, unique=True)
     description = mongo_fields.StringField(max_length=255)
 
+    def get_name(self):
+        return Role.name
 
-class User(Document, UserMixin):
+
+class User(Document, UserMixin, UserModel):
     email = mongo_fields.StringField(max_length=255)
     password = mongo_fields.StringField(max_length=255)
     active = mongo_fields.BooleanField(default=True)
     confirmed_at = mongo_fields.DateTimeField()
     roles = mongo_fields.ListField(mongo_fields.ReferenceField(Role), default=[])
 
-
+    def get_roles(self):
+        return (role.name for role in User.roles)

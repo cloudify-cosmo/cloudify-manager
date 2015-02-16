@@ -1324,7 +1324,7 @@ class Tokens(Resource):
     @swagger.operation(
         responseClass=responses.Tokens,
         nickname="get auth token for the authenticated user",
-        )
+    )
     @exceptions_handled
     @rest_security.login_required
     @marshal_with(responses.Tokens.resource_fields)
@@ -1336,4 +1336,3 @@ class Tokens(Resource):
         token = g.user.generate_auth_token()
         print '***** returning token: ', token
         return responses.Tokens(token=token.decode('ascii'))
-        # return jsonify({'token': token.decode('ascii')})

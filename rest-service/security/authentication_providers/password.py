@@ -35,7 +35,10 @@ def _get_crypt_context():
 class PasswordAuthenticator(AbstractAuthenticationProvider):
 
     @staticmethod
-    def authenticate(user, auth_info):
+    def authenticate(auth_info, datastore):
+
+        user_id = auth_info.user_id     # TODO the identity field should be configurable?
+        user = datastore.get_user(user_id)
 
         if not user:
             # self.email.errors.append(get_message('USER_DOES_NOT_EXIST')[0])
@@ -52,3 +55,5 @@ class PasswordAuthenticator(AbstractAuthenticationProvider):
         if not user.is_active():
             # self.email.errors.append(get_message('DISABLED_ACCOUNT')[0])
             raise Exception('Unauthorized')
+
+        return user
