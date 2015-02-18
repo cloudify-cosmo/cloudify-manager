@@ -287,8 +287,8 @@ class TestScaleWorkflow(TestCase):
             existing_instances = [i for i in node_instances
                                   if i.id in self.previous_ids]
             removed_instances = [i for i in self.previous_instances
-                                 if i.id not in instance_ids
-                                 and i.node_id == node_id]
+                                 if i.id not in instance_ids and
+                                 i.node_id == node_id]
             self.assertEqual(len(new_instances),
                              new_expectation.get('install') or 0,
                              'new_instances: {0}, install_expectations: {1}'
@@ -327,8 +327,8 @@ class TestScaleWorkflow(TestCase):
             for operation, expected_count in operations.items():
                 total_expected_count += expected_count
                 op_invocations = [i for i in invocations
-                                  if i['operation'] == operation
-                                  and i['id'] == instance_id]
+                                  if i['operation'] == operation and
+                                  i['id'] == instance_id]
                 self.assertEqual(expected_count, len(op_invocations),
                                  'expected_count: {0}, op_invocations: {1}'
                                  .format(expected_count, op_invocations))
