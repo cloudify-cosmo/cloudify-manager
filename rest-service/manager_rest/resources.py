@@ -1086,7 +1086,10 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
     Returns:
     Elasticsearch result as is (Python dict).
     """
-    es = elasticsearch.Elasticsearch()
+    es_host = config.instance().db_address
+    es_port = config.instance().db_port
+    es = elasticsearch.Elasticsearch(hosts=[{"host": es_host,
+                                             "port": es_port}])
     return es.search(index=index, doc_type=doc_type, body=body)
 
 

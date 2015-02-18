@@ -15,9 +15,26 @@ node_templates:
                 op: testmockoperations.testmockoperations.tasks.mock_create
     db:
         type: cloudify.nodes.DBMS
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.mock_configure
         relationships:
             - target: compute
               type: cloudify.relationships.contained_in
+              source_interfaces:
+                  test:
+                      op: testmockoperations.testmockoperations.tasks.mock_preconfigure
+              target_interfaces:
+                  test:
+                      op: testmockoperations.testmockoperations.tasks.mock_postconfigure
+    webserver:
+        type: cloudify.nodes.WebServer
+        interfaces:
+            test:
+                op: testmockoperations.testmockoperations.tasks.mock_start
+        relationships:
+            - target: compute
+              type: cloudify.relationships.connected_to
               source_interfaces:
                   test:
                       op: testmockoperations.testmockoperations.tasks.mock_preconfigure

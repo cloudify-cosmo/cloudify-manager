@@ -280,8 +280,23 @@ class BlueprintsManager(object):
             previous_node_instances=node_instances,
             modified_nodes=modified_nodes)
         added_and_related = node_instances_modification['added_and_related']
-        added_node_instances = [instance for instance in added_and_related
-                                if instance.get('modification') == 'added']
+        added_node_instances = []
+        for node_instance in added_and_related:
+            if node_instance.get('modification') == 'added':
+                added_node_instances.append(node_instance)
+            else:
+                current = self.sm.get_node_instance(node_instance['id'])
+                new_relationships = current.relationships
+                new_relationships += node_instance['relationships']
+                self.sm.update_node_instance(models.DeploymentNodeInstance(
+                    id=node_instance['id'],
+                    relationships=new_relationships,
+                    version=current.version,
+                    node_id=None,
+                    host_id=None,
+                    deployment_id=None,
+                    state=None,
+                    runtime_properties=None))
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
         return {
@@ -297,21 +312,6 @@ class BlueprintsManager(object):
             self.sm.update_node(deployment_id, node_id,
                                 modified_node['instances'])
         node_instances = modification['node_instances']
-        for node_instance in node_instances['added_and_related']:
-            if node_instance.get('modification') == 'added':
-                continue
-            current = self.sm.get_node_instance(node_instance['id'])
-            new_relationships = current.relationships
-            new_relationships += node_instance['relationships']
-            self.sm.update_node_instance(models.DeploymentNodeInstance(
-                id=node_instance['id'],
-                relationships=new_relationships,
-                version=current.version,
-                node_id=None,
-                host_id=None,
-                deployment_id=None,
-                state=None,
-                runtime_properties=None))
         for node_instance in node_instances['removed_and_related']:
             if node_instance.get('modification') == 'removed':
                 self.sm.delete_node_instance(node_instance['id'])
