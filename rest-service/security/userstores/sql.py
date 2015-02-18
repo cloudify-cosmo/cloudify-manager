@@ -6,7 +6,7 @@ from flask.ext.security import SQLAlchemyUserDatastore, UserMixin, \
     RoleMixin
 
 
-class SQLDatastore(SQLAlchemyUserDatastore):
+class SQLUserstore(SQLAlchemyUserDatastore):
 
     def __init__(self, app=None):
         if not app:

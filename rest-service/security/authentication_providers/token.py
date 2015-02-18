@@ -1,21 +1,24 @@
 from abstract_authentication_provider import AbstractAuthenticationProvider
+from flask import globals as flask_globals
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 
 
 class TokenAuthenticator(AbstractAuthenticationProvider):
 
     @staticmethod
-    def authenticate(user, auth_info):
+    def authenticate(auth_info, userstore):
+        token = auth_info.token
+        current_app = flask_globals.current_app
         print '***** verifying auth token: ', token
-        print '***** app config: '
-        for item in app.config:
-            print '***** app config item: {0} has value: {1}'.format(item, app.config[item])
 
-        print '***** initializing serializer with secret key: ', app.config['SECRET_KEY']
-        s = Serializer(app.config['SECRET_KEY'])
-        print '***** serializer: ', s
+        if not token:
+            raise Exception('token is missing or empty')
+
+        serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+
         try:
             print '***** attempting to deserialize the token'
-            data = s.loads(token)
+            data = serializer.loads(token)
         except SignatureExpired:
             print '***** exception SignatureExpired, returning None'
             return None  # valid token, but expired
@@ -24,7 +27,7 @@ class TokenAuthenticator(AbstractAuthenticationProvider):
             return None  # invalid token
 
         print '***** token loaded successfully, user email from token is: ', data['email']
-        user = user_datastore.find_user(email=data['email'])
+        user = userstore.find_user(email=data['email'])
         # for the SQLAlchemy model: user = User.query.get(data['id'])
         return user
 

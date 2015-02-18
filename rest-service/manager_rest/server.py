@@ -31,7 +31,6 @@ from flask import (
 from flask_restful import Api
 
 from manager_rest import config
-# from manager_rest import blueprints_manager
 from manager_rest import storage_manager
 from manager_rest import resources
 from security import rest_security
@@ -166,9 +165,8 @@ def reset_state(configuration=None):
     storage_manager.reset()
     app = setup_app()
     # rest_security.load_security_config()
-    # TODO maybe we should move abort_error to utils.py and avoid this?
-    rest_security.set_unauthorized_user_handler(
-        resources.abort_error(Exception(401, 'UNAUTHORIZED')))
+    # rest_security.set_unauthorized_user_handler(
+    #    resources.abort_error(Exception(401, 'UNAUTHORIZED')))
 
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     print '***** os.environ MANAGER_REST_CONFIG_PATH: ', os.environ['MANAGER_REST_CONFIG_PATH']
@@ -196,9 +194,8 @@ else:
 
 app = setup_app()
 # rest_security.load_security_config()
-# TODO maybe we should move abort_error to utils.py and avoid this?
-rest_security.set_unauthorized_user_handler(
-    resources.abort_error(Exception(401, 'UNAUTHORIZED')))
+# rest_security.set_unauthorized_user_handler(
+#    resources.abort_error(Exception(401, 'UNAUTHORIZED')))
 
 
 @app.errorhandler(500)

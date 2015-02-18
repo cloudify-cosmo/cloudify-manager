@@ -6,9 +6,9 @@ from functools import wraps
 # TODO the werkzeug abort is referred to by flask's
 # from werkzeug.exceptions import abort
 from flask import abort, request, globals as flask_globals
-from models import UserModel
+from models import AnonymousUser
 
-from security.datastores.datastore_manager import DatastoreManager
+from security.userstores.userstore_manager import UserstoreManager
 from security.authentication_providers.authentication_manager \
     import AuthenticationManager
 
@@ -17,7 +17,7 @@ AUTH_HEADER_NAME = 'Authorization'
 AUTH_TOKEN_HEADER_NAME = 'Authentication-Token'
 
 unauthorized_user_handler = None
-datastore = None
+userstore = None
 
 
 def load_security_config():
@@ -25,19 +25,23 @@ def load_security_config():
     # TODO read only once
     flask_globals.current_app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(seconds=30)
     flask_globals.current_app.config['SECRET_KEY'] = 'the quick brown fox jumps over the lazy dog'
+    # The order of authentication methods is important!
     flask_globals.current_app.config['AUTHENTICATION_METHODS'] = \
         ['security.authentication_providers.password:PasswordAuthenticator',
          'security.authentication_providers.token:TokenAuthenticator']
-    global datastore
-    datastore = DatastoreManager().get_datastore_driver(flask_globals.current_app)
+    global userstore
+    userstore = UserstoreManager().get_userstore_driver(flask_globals.current_app)
 
 
 def is_authenticated():
+    authenticated = False
     # TODO is there a nicer way to do it?
-    if hasattr(flask_globals._request_ctx_stack.top, 'user'):
-        return True
-    else:
-        return False
+    request_ctx = flask_globals._request_ctx_stack.top
+    if hasattr(request_ctx, 'user') and \
+            not isinstance(request_ctx.user, AnonymousUser):
+        authenticated = True
+
+    return authenticated
 
 
 def filter_results(results):
@@ -60,12 +64,14 @@ def login_required(func):
                 if unauthorized_user_handler:
                     unauthorized_user_handler()
                 else:
+                    # TODO verify this ends up in resources.abort_error
                     abort(401)
         except Exception as e:
-            # TODO raise 'failed to authenticate' or something..
+            # TODO decide if this mean user is unauthorized or a different exception ('authentication check failed')
             if unauthorized_user_handler:
                 unauthorized_user_handler(e)
             else:
+                # TODO verify this ends up in resources.abort_error
                 abort(401)
     return wrapper
 
@@ -118,20 +124,9 @@ def authenticate_request():
     auth_info = get_auth_info_from_request()
     auth_manager = AuthenticationManager(flask_globals.current_app)
     try:
-        user = auth_manager.authenticate(auth_info, datastore)
-    except Exception as e:
+        user = auth_manager.authenticate(auth_info, userstore)
+    except Exception:
         user = AnonymousUser()
 
     # TODO is the place to keep the loaded user? flask login does so.
     flask_globals._request_ctx_stack.top.user = user
-
-
-class AnonymousUser(UserModel):
-    def is_active(self):
-        return False
-
-    def is_anonymous(self):
-        return True
-
-    def get_roles(self):
-        return []

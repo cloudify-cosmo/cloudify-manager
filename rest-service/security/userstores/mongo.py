@@ -3,10 +3,10 @@ from mongoengine import Document, fields as mongo_fields
 from flask.ext.security import MongoEngineUserDatastore, UserMixin, \
     RoleMixin
 from security.models import UserModel, RoleModel
-from abstract_datastore import AbstractDatastore
+from abstract_userstore import AbstractUserstore
 
 
-class MongoDatastore(AbstractDatastore):
+class MongoUserstore(AbstractUserstore):
 
     def __init__(self, app=None):
         if not app:

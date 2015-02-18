@@ -35,25 +35,30 @@ def _get_crypt_context():
 class PasswordAuthenticator(AbstractAuthenticationProvider):
 
     @staticmethod
-    def authenticate(auth_info, datastore):
-
+    def authenticate(auth_info, userstore):
+        print '***** starting password authentication, got user and password: ', auth_info.user_id, auth_info.password
         user_id = auth_info.user_id     # TODO the identity field should be configurable?
-        user = datastore.get_user(user_id)
+        print '***** getting user from userstore'
+        user = userstore.get_user(user_id)
 
         if not user:
             # self.email.errors.append(get_message('USER_DOES_NOT_EXIST')[0])
             # Always throw the same general failure to avoid revealing account information
+            print '***** user not found'
             raise Exception('Unauthorized')
         if not user.password:
             # self.password.errors.append(get_message('PASSWORD_NOT_SET')[0])
+            print '***** user has no password'
             raise Exception('Unauthorized')
             # TODO maybe use verify_and_update()?
         # TODO break this line:
         if not _get_crypt_context().verify(auth_info.password, getattr(user, 'password')):
             # self.password.errors.append(get_message('INVALID_PASSWORD')[0])
+            print '***** password verification failed'
             raise Exception('Unauthorized')
         if not user.is_active():
             # self.email.errors.append(get_message('DISABLED_ACCOUNT')[0])
+            print '***** user is not active'
             raise Exception('Unauthorized')
 
         return user

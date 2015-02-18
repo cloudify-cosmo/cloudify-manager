@@ -9,10 +9,10 @@ class AbstractAuthenticationProvider(object):
 
     __metaclass__ = abc.ABCMeta
 
-    @staticmethod
     @abc.abstractmethod
-    def authenticate(user, auth_info):
+    def authenticate(self, user, auth_info):
         raise NotImplementedError
+
 
     @staticmethod
     def get_identifier_from_auth_info(auth_info):
