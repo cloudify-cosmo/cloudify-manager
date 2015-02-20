@@ -20,7 +20,8 @@ import sys
 import time
 from os import path
 
-from cloudify import amqp_client
+import pika
+
 from cloudify.celery import celery as celery_client
 from cloudify.utils import setup_default_logger
 
@@ -218,14 +219,15 @@ class CeleryWorkerProcess(object):
 
 # copied from worker_installer/tasks.py:_delete_amqp_queues
 def _delete_amqp_queues(worker_name, queues):
-    client = amqp_client.create_client()
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost'))
     try:
-        channel = client.connection.channel()
+        channel = connection.channel()
         for queue in queues:
             channel.queue_delete(queue)
         channel.queue_delete('celery@{0}.celery.pidbox'.format(worker_name))
     finally:
         try:
-            client.close()
+            connection.close()
         except Exception:
             pass
