@@ -87,7 +87,7 @@ run_intergration_tests()
     pushd tests && pip install . && popd
 
     pip install nose
-    nosetests tests/workflow_tests --nologcapture --nocapture -v
+    nosetests tests/workflow_tests --nologcapture --nocapture -v -e wf_api
 
 }
 
