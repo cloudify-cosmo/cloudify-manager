@@ -109,7 +109,7 @@ class CeleryWorkerProcess(object):
             '--logfile={0}'.format(self.celery_log_file),
             '--pidfile={0}'.format(self.celery_pid_file),
             '--queues={0}'.format(self.queues),
-            '--concurrency={0}'.format(self.concurrency),
+            '--autoscale={0},1'.format(self.concurrency),
             '--include={0}'.format(','.join(includes))
         ]
 
