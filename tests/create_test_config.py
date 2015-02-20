@@ -24,11 +24,7 @@ def extract_tests(tests_dir):
                                  test.test._testMethodName) for test in tests]
 
 
-def create_test_config(tests_dir,
-                       number_of_suites,
-                       suite_number,
-                       config_path):
-    tests = extract_tests(tests_dir)
+def build_suites(tests, number_of_suites):
     number_of_tests = len(tests)
     number_of_suite_tests, remainder = divmod(number_of_tests,
                                               number_of_suites)
@@ -44,11 +40,24 @@ def create_test_config(tests_dir,
         suites.append(tests[start:end])
     # sanity
     assert [t for s in suites for t in s] == tests
+    return suites
+
+
+def write_config(suite, config_path):
     config = ConfigParser()
     config.add_section('nosetests')
-    config.set('nosetests', 'tests', ','.join(suites[suite_number]))
+    config.set('nosetests', 'tests', ','.join(suite))
     with open(path.expanduser(config_path), 'w') as f:
         config.write(f)
+
+
+def create_test_config(tests_dir,
+                       number_of_suites,
+                       suite_number,
+                       config_path):
+    tests = extract_tests(tests_dir)
+    suites = build_suites(tests, number_of_suites)
+    write_config(suites[suite_number], config_path)
 
 
 def parse_args():
