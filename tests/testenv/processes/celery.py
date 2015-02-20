@@ -18,14 +18,15 @@ import shutil
 import subprocess
 import sys
 import time
-
 from os import path
-from os.path import dirname
+
+from cloudify import amqp_client
+from cloudify.celery import celery as celery_client
 from cloudify.utils import setup_default_logger
+
 from testenv.constants import FILE_SERVER_PORT
 from testenv.constants import MANAGER_REST_PORT
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
-from cloudify.celery import celery as celery_client
 
 
 logger = setup_default_logger('celery_worker_process')
@@ -84,6 +85,8 @@ class CeleryWorkerProcess(object):
 
     def start(self):
 
+        _delete_amqp_queues(self.name, self.queues.split(','))
+
         self.create_dirs()
 
         # includes should always have
@@ -94,7 +97,7 @@ class CeleryWorkerProcess(object):
         python_path = sys.executable
 
         celery_command = [
-            '{0}/celery'.format(dirname(python_path)),
+            '{0}/celery'.format(path.dirname(python_path)),
             'worker',
             '-Ofair',
             '--events',
@@ -122,7 +125,7 @@ class CeleryWorkerProcess(object):
             MANAGER_FILE_SERVER_URL='http://localhost:{0}'
             .format(FILE_SERVER_PORT),
             AGENT_IP='localhost',
-            VIRTUALENV=dirname(dirname(python_path))
+            VIRTUALENV=path.dirname(path.dirname(python_path))
         )
 
         environment = os.environ.copy()
@@ -211,3 +214,18 @@ class CeleryWorkerProcess(object):
                                 os.path.splitext(module_name)[0])
                     includes.append(full_module_path)
         return includes
+
+
+# copied from worker_installer/tasks.py:_delete_amqp_queues
+def _delete_amqp_queues(worker_name, queues):
+    client = amqp_client.create_client()
+    try:
+        channel = client.connection.channel()
+        for queue in queues:
+            channel.queue_delete(queue)
+        channel.queue_delete('celery@{0}.celery.pidbox'.format(worker_name))
+    finally:
+        try:
+            client.close()
+        except Exception:
+            pass
