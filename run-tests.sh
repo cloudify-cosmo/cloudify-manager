@@ -87,8 +87,11 @@ run_intergration_tests()
     pushd tests && pip install . && popd
 
     pip install nose
-    nosetests tests/workflow_tests --nologcapture --nocapture -v -e wf_api
 
+    pushd tests
+    python create_test_config.py --number-of-suites=$NUMBER_OF_SUITES --suite-number=$SUITE_NUMBER
+    popd
+    nosetests --nologcapture --nocapture -v -c tests/nose.config
 }
 
 run_flake8()
