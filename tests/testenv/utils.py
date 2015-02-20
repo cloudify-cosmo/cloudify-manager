@@ -151,8 +151,8 @@ def verify_deployment_environment_creation_complete(deployment_id):
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
         from testenv import TestEnvironment  # avoid cyclic import
-        logs = TestEnvironment.read_celery_management_logs() or []
-        logs = logs[len(logs) - 500:]
+        logs = TestEnvironment.read_celery_management_logs() or ''
+        logs = logs[len(logs) - 100000:]
         raise RuntimeError(
             "Expected a single execution for workflow "
             "'create_deployment_environment' with status 'terminated'; "

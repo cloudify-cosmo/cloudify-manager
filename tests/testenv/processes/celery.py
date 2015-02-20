@@ -165,7 +165,9 @@ class CeleryWorkerProcess(object):
                 time.sleep(0.5)
         celery_log = self.try_read_logfile()
         if celery_log:
-            logger.error('Celery log:\n {0}'.format(celery_log))
+            celery_log = celery_log[len(celery_log) - 100000:]
+            logger.error('Celery log ({0}):\n {1}'.format(
+                self.celery_log_file, celery_log))
         self.stop()
         raise RuntimeError('Failed starting worker {0}. '
                            'waited for {1} seconds.'
