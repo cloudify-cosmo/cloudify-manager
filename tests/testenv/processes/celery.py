@@ -33,9 +33,6 @@ logger = setup_default_logger('celery_worker_process')
 
 class CeleryWorkerProcess(object):
 
-    # populated by start
-    pids = []
-
     def __init__(self,
                  queues,
                  test_working_dir,
@@ -72,7 +69,6 @@ class CeleryWorkerProcess(object):
                                          'celery-{0}.pid'.format(self.name))
         self.celery_log_file = path.join(self.workdir,
                                          'celery-{0}.log'.format(self.name))
-        self.pids = self._get_celery_process_ids()
 
     def create_dirs(self):
         if not os.path.exists(self.workdir):
@@ -152,10 +148,9 @@ class CeleryWorkerProcess(object):
             try:
                 stats = (inspect.stats() or {}).get(worker_name)
                 if stats:
-                    # save celery pids for easy access
-                    self.pids = self._get_celery_process_ids()
-                    logger.info('Celery worker started [pids=%s]',
-                                ','.join(self.pids))
+                    pids = self._get_celery_process_ids()
+                    logger.info('Celery worker {0} started [pids={1}]'
+                                .format(self.name, pids))
                     return
                 time.sleep(0.5)
             except BaseException as e:
@@ -178,18 +173,11 @@ class CeleryWorkerProcess(object):
         self.start()
 
     def stop(self):
-        if self.pids:
-            # we are using the same instance we started
-            logger.info('Shutting down {0} worker [pid={1}]'
-                        .format(self.name, self.pids))
-            os.system('kill -9 {0}'.format(' '.join(self.pids)))
-            time.sleep(0.5)
-            self.pids = []
-        else:
-            # different instance, same worker
-            # retrieve pid from the pid file
-            self.pids = self._get_celery_process_ids()
-            self.stop()
+        pids = self._get_celery_process_ids()
+        logger.info('Shutting down Celery worker {0} [pids={1}]'
+                    .format(self.name, pids))
+        os.system('kill -9 {0}'.format(' '.join(pids)))
+        time.sleep(0.5)
 
     def _get_celery_process_ids(self):
         from subprocess import CalledProcessError
