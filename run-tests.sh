@@ -88,11 +88,10 @@ run_intergration_tests()
 
     pip install nose
 
-    pushd tests
     local config_path=$(mktemp)
     # flags that relate to test collection should follow this command
     # e.g.: -e, -i, etc...
-    nosetests workflow_tests \
+    nosetests tests/workflow_tests \
         --with-suitesplitter \
         --suite-total=${NUMBER_OF_SUITES} \
         --suite-number=${SUITE_NUMBER} \
