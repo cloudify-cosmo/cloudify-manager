@@ -67,10 +67,6 @@ class TestCase(unittest.TestCase):
         TestEnvironment.stop_all_celery_processes()
         TestEnvironment.reset_elasticsearch_data()
 
-        test_method = getattr(self, self._testMethodName)
-        if getattr(test_method, 'riemann_cleanup', False) is True:
-            TestEnvironment.riemann_cleanup()
-
     def get_plugin_data(self,
                         plugin_name,
                         deployment_id):
