@@ -84,14 +84,15 @@ run_intergration_tests()
     # available as python packages
     pushd plugins/riemann-controller && pip install . && popd
     pushd workflows && pip install . && popd
-    pushd tests && pip install . && popd
+    pushd tests && pip install -e . && popd
 
     pip install nose
 
     local config_path=$(mktemp)
     # flags that relate to test collection should follow this command
     # e.g.: -e, -i, etc...
-    nosetests tests/workflow_tests \
+    nosetests \
+        tests/workflow_tests \
         --with-suitesplitter \
         --suite-total=${NUMBER_OF_SUITES} \
         --suite-number=${SUITE_NUMBER} \
@@ -100,7 +101,7 @@ run_intergration_tests()
     # the generated ${config_path} contains tests that were collected
     # in the previous command
     # e.g. --nocapture, --cov, etc..
-    PYTHONPATH=${PWD}/tests:${PYTHONPATH} nosetests \
+    nosetests \
         --nologcapture \
         --nocapture \
         -v -c ${config_path}
