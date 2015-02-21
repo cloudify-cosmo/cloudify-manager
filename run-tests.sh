@@ -89,8 +89,19 @@ run_intergration_tests()
     pip install nose
 
     pushd tests
-    python create_test_config.py --number-of-suites=$NUMBER_OF_SUITES --suite-number=$SUITE_NUMBER
-    nosetests --nologcapture --nocapture -v -c nose.config
+    local config_path=$(mktemp)
+    # flags that relate to test collection should follow this command
+    # e.g.: -e, -i, etc...
+    nosetests workflow_tests \
+        --with-suitesplitter \
+        --suite-total=${NUMBER_OF_SUITES} \
+        --suite-number=${SUITE_NUMBER} \
+        --suite-config-path=${config_path}
+    # flags that affect test execution should follow this command
+    # the generated ${config_path} contains tests that were collected
+    # in the previous command
+    # e.g. --nocapture, --cov, etc..
+    nosetests --nologcapture --nocapture -v -c ${config_path}
 }
 
 run_flake8()
