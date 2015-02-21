@@ -8,17 +8,17 @@ from nose.case import Test
 
 
 def extract_tests(tests_dir):
-    tests = []
-
     def _extract(suite):
+        result = []
         for item in suite:
             if isinstance(item, ContextSuite):
-                _extract(item)
+                result += _extract(item)
             elif isinstance(item, Test):
-                tests.append(item)
+                result.append(item)
             else:
                 raise RuntimeError('Unhandled type: {0}'.format(item))
-    _extract(TestLoader().loadTestsFromDir(tests_dir))
+        return result
+    tests = _extract(TestLoader().loadTestsFromDir(tests_dir))
     return ['{0}:{1}.{2}'.format(test.test.__module__,
                                  type(test.test).__name__,
                                  test.test._testMethodName) for test in tests]
@@ -38,44 +38,39 @@ def build_suites(tests, number_of_suites):
             end += 1
             remainder -= 1
         suites.append(tests[start:end])
-    # sanity
-    assert [t for s in suites for t in s] == tests
     return suites
 
 
 def write_config(suite, config_path):
     config = ConfigParser()
-    config.add_section('nosetests')
-    config.set('nosetests', 'tests', ','.join(suite))
+    section = 'nosetests'
+    config.add_section(section)
+    config.set(section, 'tests', ','.join(suite))
     with open(path.expanduser(config_path), 'w') as f:
         config.write(f)
 
 
-def create_test_config(tests_dir,
-                       number_of_suites,
+def create_test_config(number_of_suites,
                        suite_number,
+                       tests_dir,
                        config_path):
     tests = extract_tests(tests_dir)
     suites = build_suites(tests, number_of_suites)
+    assert tests == [test for suite in suites for test in suite]
     write_config(suites[suite_number], config_path)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config-path', default='nose.config')
-    parser.add_argument('--suite-number', default=0, type=int)
-    parser.add_argument('--tests-dir', default='workflow_tests')
     parser.add_argument('--number-of-suites', default=1, type=int)
+    parser.add_argument('--suite-number',     default=0, type=int)
+    parser.add_argument('--config-path',      default='nose.config')
+    parser.add_argument('--tests-dir',        default='workflow_tests')
     return parser.parse_args()
 
 
 def main():
-    args = parse_args()
-    create_test_config(
-        tests_dir=args.tests_dir,
-        number_of_suites=args.number_of_suites,
-        suite_number=args.suite_number,
-        config_path=args.config_path)
+    create_test_config(**vars(parse_args()))
 
 if __name__ == '__main__':
     main()
