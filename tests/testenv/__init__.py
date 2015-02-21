@@ -49,11 +49,6 @@ setup_default_logger('cloudify.rest_client', logging.INFO)
 testenv_instance = None
 
 
-def riemann_cleanup(fn):
-    fn.riemann_cleanup = True
-    return fn
-
-
 class TestCase(unittest.TestCase):
 
     """
@@ -73,8 +68,7 @@ class TestCase(unittest.TestCase):
         TestEnvironment.reset_elasticsearch_data()
 
         test_method = getattr(self, self._testMethodName)
-        if (hasattr(test_method, 'riemann_cleanup') and
-                test_method.riemann_cleanup is True):
+        if getattr(test_method, 'riemann_cleanup', False) is True:
             TestEnvironment.riemann_cleanup()
 
     def get_plugin_data(self,
