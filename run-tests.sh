@@ -100,7 +100,10 @@ run_intergration_tests()
     # the generated ${config_path} contains tests that were collected
     # in the previous command
     # e.g. --nocapture, --cov, etc..
-    nosetests --nologcapture --nocapture -v -c ${config_path}
+    PYTHONPATH=${PWD}/tests:${PYTHONPATH} nosetests \
+        --nologcapture \
+        --nocapture \
+        -v -c ${config_path}
 }
 
 run_flake8()

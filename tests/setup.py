@@ -30,9 +30,7 @@ setup(
               'mock_plugins.plugin_installer',
               'mock_plugins.testmockoperations',
               'mock_plugins.worker_installer',
-              'mock_plugins.mock_workflows',
-              'resources',
-              'workflow_tests'],
+              'mock_plugins.mock_workflows'],
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
