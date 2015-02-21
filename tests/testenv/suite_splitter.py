@@ -40,11 +40,12 @@ class SuiteSplitter(collect.CollectOnly):
 
     name = 'suitesplitter'
 
-    def __init__(self, *args, **kwargs):
-        super(SuiteSplitter, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(SuiteSplitter, self).__init__()
         self.accumulated_tests = []
         self.suite_number = None
         self.suite_total = None
+        self.suite_config_path = None
 
     def options(self, parser, env):
         super(collect.CollectOnly, self).options(parser, env=env)
