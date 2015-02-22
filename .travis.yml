@@ -6,11 +6,16 @@ services:
     - rabbitmq
 
 env:
-    - ACTION="run-integration-tests"
-    - ACTION="test-plugins"
-    - ACTION="test-rest-service"
-    - ACTION="flake8"
-    - ACTION="plugin-installer-py26"
+    global:
+        - NUMBER_OF_SUITES=3
+    matrix:
+        - ACTION="run-integration-tests" SUITE_NUMBER=0
+        - ACTION="run-integration-tests" SUITE_NUMBER=1
+        - ACTION="run-integration-tests" SUITE_NUMBER=2
+        - ACTION="test-plugins"
+        - ACTION="test-rest-service"
+        - ACTION="flake8"
+        - ACTION="plugin-installer-py26"
 
 install:
     - pip install tox

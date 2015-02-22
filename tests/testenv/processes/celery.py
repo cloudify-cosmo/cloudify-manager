@@ -18,23 +18,22 @@ import shutil
 import subprocess
 import sys
 import time
-
 from os import path
-from os.path import dirname
+
+import pika
+
+from cloudify.celery import celery as celery_client
 from cloudify.utils import setup_default_logger
+
 from testenv.constants import FILE_SERVER_PORT
 from testenv.constants import MANAGER_REST_PORT
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
-from cloudify.celery import celery as celery_client
 
 
 logger = setup_default_logger('celery_worker_process')
 
 
 class CeleryWorkerProcess(object):
-
-    # populated by start
-    pids = []
 
     def __init__(self,
                  queues,
@@ -72,7 +71,6 @@ class CeleryWorkerProcess(object):
                                          'celery-{0}.pid'.format(self.name))
         self.celery_log_file = path.join(self.workdir,
                                          'celery-{0}.log'.format(self.name))
-        self.pids = self._get_celery_process_ids()
 
     def create_dirs(self):
         if not os.path.exists(self.workdir):
@@ -88,6 +86,8 @@ class CeleryWorkerProcess(object):
 
     def start(self):
 
+        _delete_amqp_queues(self.name, self.queues.split(','))
+
         self.create_dirs()
 
         # includes should always have
@@ -98,7 +98,7 @@ class CeleryWorkerProcess(object):
         python_path = sys.executable
 
         celery_command = [
-            '{0}/celery'.format(dirname(python_path)),
+            '{0}/celery'.format(path.dirname(python_path)),
             'worker',
             '-Ofair',
             '--events',
@@ -109,7 +109,7 @@ class CeleryWorkerProcess(object):
             '--logfile={0}'.format(self.celery_log_file),
             '--pidfile={0}'.format(self.celery_pid_file),
             '--queues={0}'.format(self.queues),
-            '--concurrency={0}'.format(self.concurrency),
+            '--autoscale={0},1'.format(self.concurrency),
             '--include={0}'.format(','.join(includes))
         ]
 
@@ -126,7 +126,7 @@ class CeleryWorkerProcess(object):
             MANAGER_FILE_SERVER_URL='http://localhost:{0}'
             .format(FILE_SERVER_PORT),
             AGENT_IP='localhost',
-            VIRTUALENV=dirname(dirname(python_path))
+            VIRTUALENV=path.dirname(path.dirname(python_path))
         )
 
         environment = os.environ.copy()
@@ -152,10 +152,9 @@ class CeleryWorkerProcess(object):
             try:
                 stats = (inspect.stats() or {}).get(worker_name)
                 if stats:
-                    # save celery pids for easy access
-                    self.pids = self._get_celery_process_ids()
-                    logger.info('Celery worker started [pids=%s]',
-                                ','.join(self.pids))
+                    pids = self._get_celery_process_ids()
+                    logger.info('Celery worker {0} started [pids={1}]'
+                                .format(self.name, pids))
                     return
                 time.sleep(0.5)
             except BaseException as e:
@@ -165,7 +164,9 @@ class CeleryWorkerProcess(object):
                 time.sleep(0.5)
         celery_log = self.try_read_logfile()
         if celery_log:
-            logger.error('Celery log:\n {0}'.format(celery_log))
+            celery_log = celery_log[len(celery_log) - 100000:]
+            logger.error('Celery log ({0}):\n {1}'.format(
+                self.celery_log_file, celery_log))
         self.stop()
         raise RuntimeError('Failed starting worker {0}. '
                            'waited for {1} seconds.'
@@ -176,18 +177,11 @@ class CeleryWorkerProcess(object):
         self.start()
 
     def stop(self):
-        if self.pids:
-            # we are using the same instance we started
-            logger.info('Shutting down {0} worker [pid={1}]'
-                        .format(self.name, self.pids))
-            os.system('kill -9 {0}'.format(' '.join(self.pids)))
-            time.sleep(0.5)
-            self.pids = []
-        else:
-            # different instance, same worker
-            # retrieve pid from the pid file
-            self.pids = self._get_celery_process_ids()
-            self.stop()
+        pids = self._get_celery_process_ids()
+        logger.info('Shutting down Celery worker {0} [pids={1}]'
+                    .format(self.name, pids))
+        os.system('kill -9 {0}'.format(' '.join(pids)))
+        time.sleep(0.5)
 
     def _get_celery_process_ids(self):
         from subprocess import CalledProcessError
@@ -221,3 +215,19 @@ class CeleryWorkerProcess(object):
                                 os.path.splitext(module_name)[0])
                     includes.append(full_module_path)
         return includes
+
+
+# copied from worker_installer/tasks.py:_delete_amqp_queues
+def _delete_amqp_queues(worker_name, queues):
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost'))
+    try:
+        channel = connection.channel()
+        for queue in queues:
+            channel.queue_delete(queue)
+        channel.queue_delete('celery@{0}.celery.pidbox'.format(worker_name))
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass

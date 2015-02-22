@@ -260,7 +260,23 @@ workflows:
         description: Diagnosed reason of failure
         default: Not provided
 
-
+  scale:
+    mapping: default_workflows.cloudify.plugins.workflows.scale
+    parameters:
+      node_id:
+        description: Which node (not node instance) to scale
+      delta:
+        description: >
+            How many nodes should be added/removed.
+            A positive number denotes increase of instances.
+            A negative number denotes decrease of instances.
+        default: 1
+      scale_compute:
+        description: >
+            If node is contained (transitively) within a compute node
+            and this property is 'true', operate on compute node instead
+            of 'node_id'
+        default: true
 
 ##################################################################################
 # Base artifact definitions
