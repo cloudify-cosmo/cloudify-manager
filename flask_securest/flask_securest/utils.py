@@ -1,8 +1,4 @@
 import importlib
-import traceback
-import StringIO
-from flask import globals as flask_globals
-from flask.ext.restful import abort
 
 
 def get_class(class_path):
@@ -33,17 +29,14 @@ def get_class(class_path):
 
     return getattr(module, class_name)
 
-'''
-def abort_error(error):
 
-    current_app = flask_globals.current_app
-    current_app.logger.info('{0}: {1}'.format(type(error).__name__, str(error)))
+def get_class_instance(class_path, *args, **kwargs):
+    """Returns an instance of a class from a string formatted as module:class
+    the given *args, **kwargs are passed to the instance's __init__"""
 
-    s_traceback = StringIO.StringIO()
-    traceback.print_exc(file=s_traceback)
+    clazz = get_class(class_path)
+    return clazz(*args, **kwargs)
 
-    abort(error.http_code,
-          message=str(error),
-          error_code=error.error_code,
-          server_traceback=s_traceback.getvalue())
-'''
+
+def get_runtime_class_fqn(instance):
+    return type(instance).__module__ + '.' + type(instance).__name__

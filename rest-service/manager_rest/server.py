@@ -14,6 +14,9 @@
 #  * limitations under the License.
 import StringIO
 
+from flask_securest.rest_security import SecuREST
+
+
 __author__ = 'dan'
 
 import logging
@@ -33,18 +36,32 @@ from flask_restful import Api
 from manager_rest import config
 from manager_rest import storage_manager
 from manager_rest import resources
-from security import rest_security
 from manager_rest import manager_exceptions
 from util import setup_logger
+
+
+def log_current_app(current_stage):
+    from flask import globals as fg
+    current_app = fg.current_app
+    if not current_app:
+        print '***** {0} and current_app is not available through flask.globals'.format(current_stage)
+    else:
+        print '***** {0} and current_app is: {1}'.format(current_stage, current_app)
 
 
 # app factory
 def setup_app():
     app = Flask(__name__)
+    secure_app = SecuREST(app)
+
+    log_current_app('before calling with app.app_context')
+    with app.app_context():
+        log_current_app('in with app.app_context()')
+
+    log_current_app('after exiting with app.app_context')
 
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
-
 
     additional_log_handlers = [
         RotatingFileHandler(
@@ -61,7 +78,6 @@ def setup_app():
                  remove_existing_handlers=False)
 
     app.before_request(log_request)
-    app.before_request(authenticate_request_user_if_needed)
     app.after_request(log_response)
 
     # saving flask's original error handlers
@@ -94,17 +110,8 @@ def setup_app():
         flask_restful_handle_user_exception)
 
     resources.setup_resources(api)
-
+    log_current_app('ending setup_app')
     return app
-
-
-def authenticate_request_user_if_needed():
-    # TODO check if the resource is secured or not, maybe through the api/resources
-    # with something that gets the resource for the "request.path" from the api
-    # and checks if it's an instance of SecuredResource.
-    # TODO otherwise use a mapping list like in Spring-Security
-    if True:
-        rest_security.authenticate_request()
 
 
 def log_request():
@@ -164,6 +171,7 @@ def reset_state(configuration=None):
     # blueprints_manager.reset()
     storage_manager.reset()
     app = setup_app()
+    log_current_app('after reset_state.setup_app')
     # rest_security.load_security_config()
     # rest_security.set_unauthorized_user_handler(
     #    resources.abort_error(Exception(401, 'UNAUTHORIZED')))
@@ -193,6 +201,7 @@ else:
     print '***** no MANAGER_REST_CONFIG_PATH in os.environ'
 
 app = setup_app()
+log_current_app('after server.setup_app')
 # rest_security.load_security_config()
 # rest_security.set_unauthorized_user_handler(
 #    resources.abort_error(Exception(401, 'UNAUTHORIZED')))

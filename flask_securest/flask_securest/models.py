@@ -10,7 +10,8 @@ class RoleModel(object):
 
     @property
     def name(self):
-        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE.format('name', get_runtime_class_fqn(self)))
+        raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE
+                                  .format('name', get_runtime_class_fqn(self)))
 
 
 class Role(RoleModel):

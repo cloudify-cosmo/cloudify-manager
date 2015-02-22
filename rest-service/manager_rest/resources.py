@@ -24,9 +24,11 @@ import traceback
 import StringIO
 import contextlib
 from functools import wraps
-from setuptools import archive_util
 from os import path
 from urllib2 import urlopen, URLError
+
+from setuptools import archive_util
+
 
 # import for security implementation
 # from flask.ext.security import login_required
@@ -40,6 +42,7 @@ from flask import (
 from flask.ext.restful import Resource, abort, marshal, reqparse
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
+from flask.ext.securest import rest_security
 
 from manager_rest import config
 from manager_rest import models
@@ -52,7 +55,6 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
 from manager_rest import get_version_data
-from security import rest_security
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
