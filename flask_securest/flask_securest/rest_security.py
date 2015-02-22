@@ -1,7 +1,8 @@
-import datetime
 from collections import namedtuple
 from functools import wraps
 from flask import _app_ctx_stack, current_app
+from flask_securest import default_settings
+
 
 # TODO decide which of the below 'abort' is better?
 # TODO the werkzeug abort is referred to by flask's
@@ -49,20 +50,11 @@ class SecuREST(object):
 
 def load_security_config(app):
     # TODO read all this from a configuration file
-    # app_config = current_app.config
-    app_config = app.config
-    app_config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(seconds=30)
-    app_config['SECRET_KEY'] = 'the quick brown fox jumps over the lazy dog'
-    # The order of authentication methods is important!
-    app_config['AUTHENTICATION_METHODS'] = \
-        ['flask_securest.authentication_providers.password:'
-         'PasswordAuthenticator',
-         'flask_securest.authentication_providers.token:'
-         'TokenAuthenticator']
-    app_config['USERSTORE_DRIVER'] = 'flask_securest.userstores.file:' \
-                                     'FileUserstore'
-    # 'security.userstores.mongo:MongoUserstore'
-    app_config['USERSTORE_IDENTIFIER_ATTRIBUTE'] = 'username'
+    app.config.from_object(default_settings)
+    print '***** app.config: '
+    for setting in app.config:
+        print '***** {0} = {1}'.format(setting, app.config[setting])
+    # app.config.from_envvar('YOURAPPLICATION_SETTINGS')
 
 
 def authenticate_request_user_if_needed():
