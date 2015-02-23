@@ -19,6 +19,7 @@ class Config(object):
     def __init__(self):
         self._db_address = 'localhost'
         self._db_port = 9200
+        self._amqp_address = 'localhost'
         self._file_server_root = None
         self._file_server_base_uri = None
         self._file_server_blueprints_folder = None
@@ -38,6 +39,14 @@ class Config(object):
     @property
     def db_port(self):
         return self._db_port
+
+    @property
+    def amqp_address(self):
+        return self._amqp_address
+
+    @amqp_address.setter
+    def amqp_address(self, value):
+        self._amqp_address = value
 
     @db_port.setter
     def db_port(self, value):

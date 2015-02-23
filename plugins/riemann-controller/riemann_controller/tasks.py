@@ -28,6 +28,7 @@ from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError, HttpException
 from cloudify.manager import get_resource
+from cloudify.utils import get_manager_ip
 
 from riemann_controller import config
 
@@ -79,7 +80,9 @@ def _deployment_config_dir():
 def _publish_configuration_event(state, deployment_config_dir_path):
     manager_queue = 'manager-riemann'
     exchange_name = 'cloudify-monitoring'
-    connection = pika.BlockingConnection()
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host=get_manager_ip())
+    )
     try:
         channel = connection.channel()
         channel.exchange_declare(exchange=exchange_name,
