@@ -42,5 +42,10 @@ setup(
         'pika==0.9.13',
         'elasticsearch==1.0.0',
         'celery==3.1.17'
-    ]
+    ],
+    entry_points={
+        'nose.plugins.0.10': [
+            'suitesplitter = testenv.suite_splitter:SuiteSplitter',
+        ]
+    },
 )
