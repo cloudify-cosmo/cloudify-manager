@@ -146,6 +146,7 @@ def saving_operation_info(ctx, op, main_node, second_node=None, **_):
             })
         else:
             op_info.update({
+                'id': main_node.instance.id,
                 'source': main_node.node.name,
                 'target': second_node.node.name
             })

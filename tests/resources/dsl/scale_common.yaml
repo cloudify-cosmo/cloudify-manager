@@ -1,0 +1,58 @@
+tosca_definitions_version: cloudify_dsl_1_0
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations.yaml
+
+node_types:
+    compute:
+        derived_from: cloudify.nodes.Compute
+        properties:
+            install_agent:
+                default: false
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: testmockoperations.testmockoperations.tasks.mock_create
+                configure: testmockoperations.testmockoperations.tasks.mock_configure
+                start: testmockoperations.testmockoperations.tasks.mock_start
+                stop: testmockoperations.testmockoperations.tasks.mock_stop
+                delete: testmockoperations.testmockoperations.tasks.mock_delete
+    db:
+        derived_from: cloudify.nodes.DBMS
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: testmockoperations.testmockoperations.tasks.mock_create
+                configure: testmockoperations.testmockoperations.tasks.mock_configure
+                start: testmockoperations.testmockoperations.tasks.mock_start
+                stop: testmockoperations.testmockoperations.tasks.mock_stop
+                delete: testmockoperations.testmockoperations.tasks.mock_delete
+
+relationships:
+    contained_in:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                establish: testmockoperations.testmockoperations.tasks.mock_establish
+                unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+        target_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                establish: testmockoperations.testmockoperations.tasks.mock_establish
+                unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+    connected_to:
+        derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                establish: testmockoperations.testmockoperations.tasks.mock_establish
+                unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+        target_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+                postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+                establish: testmockoperations.testmockoperations.tasks.mock_establish
+                unlink: testmockoperations.testmockoperations.tasks.mock_unlink

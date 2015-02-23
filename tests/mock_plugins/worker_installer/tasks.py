@@ -46,7 +46,6 @@ def install(cloudify_agent=None, **kwargs):
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('installed')
-        data[worker_name]['pids'] = []
 
 
 @operation
@@ -58,7 +57,6 @@ def start(cloudify_agent=None, **kwargs):
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('started')
-        data[worker_name]['pids'] = []
 
 
 @operation
@@ -81,7 +79,6 @@ def stop(cloudify_agent=None, **kwargs):
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('stopped')
-        data[worker_name]['pids'] = []
 
 
 @operation
@@ -93,7 +90,6 @@ def uninstall(cloudify_agent=None, **kwargs):
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('uninstalled')
-        data[worker_name]['pids'] = []
 
 
 def get_backend(cloudify_agent):
