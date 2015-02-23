@@ -1,7 +1,6 @@
 from collections import namedtuple
 from functools import wraps
 from flask import _app_ctx_stack, current_app
-from flask_securest import default_settings
 
 
 # TODO decide which of the below 'abort' is better?
@@ -18,22 +17,43 @@ from flask.ext.securest.authentication_providers.authentication_manager \
 AUTH_HEADER_NAME = 'Authorization'
 AUTH_TOKEN_HEADER_NAME = 'Authentication-Token'
 
-unauthorized_user_handler = None
+SECUREST_SECRET_KEY = 'SECUREST_SECRET_KEY'
+SECUREST_AUTHENTICATION_METHODS = 'SECUREST_AUTHENTICATION_METHODS'
+SECUREST_USERSTORE_DRIVER = 'SECUREST_USERSTORE_DRIVER'
+SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE = \
+    'SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE'
+
+# TODO is this required?
+# PERMANENT_SESSION_LIFETIME = datetime.timedelta(seconds=30)
+default_config = {
+    'SECUREST_SECRET_KEY': 'SECUREST_SECRET_KEY',
+    'SECUREST_AUTHENTICATION_METHODS': [
+        'flask_securest.authentication_providers.password:'
+        'PasswordAuthenticator'
+    ],
+    'SECUREST_USERSTORE_DRIVER': 'flask_securest.userstores.file:'
+                                 'FileUserstore',
+    'SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE': 'username',
+}
 
 
 class SecuREST(object):
 
     def __init__(self, app=None):
         self.app = app
+
         if app is not None:
             self.init_app(app)
 
     def init_app(self, app):
-        load_security_config(app)
-        app.userstore = UserstoreManager(app).get_userstore_driver()
-        app.authentication_manager = AuthenticationManager(app)
+        # setting default security settings
+        for key in default_config.keys():
+            app.config.setdefault(key, default_config[key])
+
         app.teardown_appcontext(self.teardown)
-        app.before_request(authenticate_request_user_if_needed)
+        app.before_first_request(self.init_providers)
+        app.before_request(self.authenticate_request_if_needed)
+        app.after_request(self.filter_response_if_needed)
 
     def teardown(self, exception):
         # TODO log the exception if not None?
@@ -47,25 +67,28 @@ class SecuREST(object):
     def unset_ssl_context(self):
         pass
 
+    def unauthorized_user_handler(self, unauthorized_user_handler):
+        self.app.securest_unauthorized_user_handler = unauthorized_user_handler
 
-def load_security_config(app):
-    # TODO read all this from a configuration file
-    app.config.from_object(default_settings)
-    print '***** app.config: '
-    for setting in app.config:
-        print '***** {0} = {1}'.format(setting, app.config[setting])
-    # app.config.from_envvar('YOURAPPLICATION_SETTINGS')
+    @staticmethod
+    def init_providers():
+        current_app.securest_userstore = \
+            UserstoreManager(current_app).get_userstore_driver()
+        current_app.securest_authentication_manager = \
+            AuthenticationManager(current_app)
 
+    @staticmethod
+    def authenticate_request_if_needed():
+        # TODO check if the resource is secured or not,
+        # maybe through the api/resources, with something that gets the
+        # resource for the "request.path" from the api and checks if it's
+        # an instance of SecuredResource.
+        # TODO otherwise use a mapping list like in Spring-Security
+        if True:
+            authenticate_request()
 
-def authenticate_request_user_if_needed():
-    print '***** starting authenticate_request_user_if_needed'
-    # TODO check if the resource is secured or not,
-    # maybe through the api/resources, with something that gets the resource
-    # for the "request.path" from the api and checks if it's an instance
-    # of SecuredResource.
-    # TODO otherwise use a mapping list like in Spring-Security
-    if True:
-        authenticate_request()
+    def filter_response_if_needed(self, response=None):
+        return response
 
 
 def is_authenticated():
@@ -83,11 +106,6 @@ def filter_results(results):
     return results
 
 
-def set_unauthorized_user_handler(unauthorized_handler):
-    global unauthorized_user_handler
-    unauthorized_user_handler = unauthorized_handler
-
-
 def login_required(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -96,20 +114,22 @@ def login_required(func):
                 result = func(*args, **kwargs)
                 return filter_results(result)
             else:
-                if unauthorized_user_handler:
-                    unauthorized_user_handler()
-                else:
-                    # TODO verify this ends up in resources.abort_error
-                    abort(401)
-        except Exception as e:
+                handle_user_unauth()
+        except Exception:
             # TODO decide if this mean user is unauthorized or a
             # TODO different exception ('authentication check failed')
-            if unauthorized_user_handler:
-                unauthorized_user_handler(e)
-            else:
-                # TODO verify this ends up in resources.abort_error
-                abort(401)
+            # TODO log this
+            handle_user_unauth()
     return wrapper
+
+
+def handle_user_unauth():
+    if hasattr(current_app, 'securest_unauthorized_user_handler') \
+            and current_app.securest_unauthorized_user_handler:
+        current_app.securest_unauthorized_user_handler()
+    else:
+        # TODO verify this ends up in resources.abort_error
+        abort(401)
 
 
 def get_auth_info_from_request():
@@ -157,7 +177,8 @@ def authenticate_request():
     auth_info = get_auth_info_from_request()
 
     try:
-        user = current_app.authentication_manager.authenticate(auth_info)
+        user = current_app.securest_authentication_manager.\
+            authenticate(auth_info)
     except Exception:
         user = AnonymousUser()
 

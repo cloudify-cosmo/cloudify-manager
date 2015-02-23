@@ -14,7 +14,7 @@
 #  * limitations under the License.
 import StringIO
 
-from flask_securest.rest_security import SecuREST
+from flask_securest.rest_security import *
 
 
 __author__ = 'dan'
@@ -40,26 +40,23 @@ from manager_rest import manager_exceptions
 from util import setup_logger
 
 
-def log_current_app(current_stage):
-    from flask import globals as fg
-    current_app = fg.current_app
-    if not current_app:
-        print '***** {0} and current_app is not available through flask.globals'.format(current_stage)
-    else:
-        print '***** {0} and current_app is: {1}'.format(current_stage, current_app)
+secure_app = None
 
 
 # app factory
 def setup_app():
     app = Flask(__name__)
-    secure_app = SecuREST(app)
+    secure_app = init_secure_app(app)
 
-    log_current_app('before calling with app.app_context')
-    with app.app_context():
-        log_current_app('in with app.app_context()')
+    for setting in app.config:
+        print '***** {0} = {1}'.format(setting, app.config[setting])
 
-    log_current_app('after exiting with app.app_context')
-
+    # TODO Additional security settings:
+    # 1. hooks - additional before/after request hooks
+    # 2. hook - unauthorized
+    # 3. authorization methods - place modules' files in a known location, update the json config file on bootstrap, and append to the rest's python path
+    # 4. userstore implementation
+    # 5. authorization implementation?
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
 
@@ -110,7 +107,6 @@ def setup_app():
         flask_restful_handle_user_exception)
 
     resources.setup_resources(api)
-    log_current_app('ending setup_app')
     return app
 
 
@@ -171,14 +167,44 @@ def reset_state(configuration=None):
     # blueprints_manager.reset()
     storage_manager.reset()
     app = setup_app()
-    log_current_app('after reset_state.setup_app')
-    # rest_security.load_security_config()
-    # rest_security.set_unauthorized_user_handler(
-    #    resources.abort_error(Exception(401, 'UNAUTHORIZED')))
 
-if 'MANAGER_REST_CONFIG_PATH' in os.environ:
-    print '***** os.environ MANAGER_REST_CONFIG_PATH: ', os.environ['MANAGER_REST_CONFIG_PATH']
-    with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
+
+def init_secure_app(app):
+    cfy_config = config.instance()
+    # TODO raise better exceptions
+    if not hasattr(cfy_config, 'securest_secret_key') or \
+            cfy_config.securest_secret_key is None:
+        raise Exception('securest_secret_key not set')
+
+    if not hasattr(cfy_config, 'securest_authentication_methods') or \
+            cfy_config.securest_authentication_methods is None:
+        raise Exception('securest_authentication_methods not set')
+
+    if not hasattr(cfy_config, 'securest_userstore_driver') or \
+            cfy_config.securest_userstore_driver is None:
+        raise Exception('securest_userstore_driver not set')
+
+    if not hasattr(cfy_config, 'securest_userstore_identifier_attribute') or \
+            cfy_config.securest_userstore_identifier_attribute is None:
+        raise Exception('securest_userstore_identifier_attribute not set')
+
+    app.config[SECUREST_SECRET_KEY] = cfy_config.securest_secret_key
+    app.config[SECUREST_AUTHENTICATION_METHODS] = \
+        cfy_config.securest_authentication_methods
+    app.config[SECUREST_USERSTORE_DRIVER] = \
+        cfy_config.securest_userstore_driver
+    app.config[SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE] = \
+        cfy_config.securest_userstore_identifier_attribute
+
+    return SecuREST(app)
+
+
+# if 'MANAGER_REST_CONFIG_PATH' in os.environ:
+config_file_path = os.path.dirname(__file__) + '/config.yaml'
+if True:
+    print '***** using {0} as MANAGER_REST_CONFIG_PATH'.format(config_file_path)
+    # with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
+    with open(config_file_path) as f:
         yaml_conf = yaml.load(f.read())
     obj_conf = config.instance()
     if 'file_server_root' in yaml_conf:
@@ -197,14 +223,28 @@ if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     if 'rest_service_log_path' in yaml_conf:
         obj_conf.rest_service_log_path = \
             yaml_conf['rest_service_log_path']
-else:
-    print '***** no MANAGER_REST_CONFIG_PATH in os.environ'
+    if 'securest_secret_key' in yaml_conf:
+        obj_conf.securest_secret_key = yaml_conf['securest_secret_key']
+    if 'securest_authentication_methods' in yaml_conf:
+        obj_conf.securest_authentication_methods = \
+            yaml_conf['securest_authentication_methods']
+    if 'securest_userstore_driver' in yaml_conf:
+        obj_conf.securest_userstore_driver = \
+            yaml_conf['securest_userstore_driver']
+    if 'securest_userstore_identifier_attribute' in yaml_conf:
+        obj_conf.securest_userstore_identifier_attribute = \
+            yaml_conf['securest_userstore_identifier_attribute']
+    # TODO Add security related config, probably hierarchically
+# else:
+#     print '***** no MANAGER_REST_CONFIG_PATH in os.environ'
 
 app = setup_app()
-log_current_app('after server.setup_app')
-# rest_security.load_security_config()
-# rest_security.set_unauthorized_user_handler(
-#    resources.abort_error(Exception(401, 'UNAUTHORIZED')))
+
+
+#@secure_app.unauthorized_user_handler
+#def unauthorized_user_handler():
+#    print '**** GOTCHA!'
+#    raise Exception(401)
 
 
 @app.errorhandler(500)
