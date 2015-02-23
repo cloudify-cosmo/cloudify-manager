@@ -69,6 +69,7 @@ class RiemannProcess(object):
             return
 
         env = os.environ.copy()
+        env['RABBITMQ_HOST'] = 'localhost'
         env['LANGOHR_JAR'] = self._langohr_jar_path()
         env['MANAGEMENT_IP'] = '127.0.0.1'
         env['MANAGER_REST_PORT'] = str(MANAGER_REST_PORT)
