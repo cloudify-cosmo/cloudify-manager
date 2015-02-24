@@ -463,8 +463,9 @@ class TestAutohealPolicies(PoliciesTestsBase):
     @riemann_cleanup
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self.EVENTS_TTL = 10
 
-        for _ in range(self.TIME_TO_EXPIRATION):
+        for _ in range(self.TIME_TO_EXPIRATION + self.EVENTS_TTL):
             self._publish_heart_beat_event()
             time.sleep(1)
 
@@ -473,12 +474,13 @@ class TestAutohealPolicies(PoliciesTestsBase):
     @riemann_cleanup
     def test_autoheal_policy_triggering_for_two_nodes(self):
         self.launch_deployment('dsl/simple_auto_heal_policy_two_nodes.yaml', 2)
+        self.EVENTS_TTL = 10
 
         self._publish_heart_beat_event(
             'node_about_to_fail',
             'service_on_failing_node'
         )
-        for _ in range(self.TIME_TO_EXPIRATION):
+        for _ in range(self.TIME_TO_EXPIRATION + self.EVENTS_TTL):
             self._publish_heart_beat_event('ok_node')
             time.sleep(1)
 
@@ -508,6 +510,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         # Wait for interval between workflows pass
         time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
+
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
