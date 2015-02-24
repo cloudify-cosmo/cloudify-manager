@@ -240,11 +240,12 @@ class TestAutohealPolicies(PoliciesTestsBase):
                 self._publish_and_wait(self.RISKY_METRIC)
 
         def breach_threshold_once(self):
+            LONG_TIME = 5
             self.test_case.launch_deployment(self.yaml)
-            for _ in range(self.LONG_TIME):
+            for _ in range(LONG_TIME):
                 self._publish_and_wait(self.VALID_METRIC)
             self._publish_and_wait(self.RISKY_METRIC)
-            for _ in range(self.LONG_TIME):
+            for _ in range(LONG_TIME):
                 self._publish_and_wait(self.VALID_METRIC)
 
         def breach_threshold_on_one_node_from_two(self):
@@ -413,7 +414,10 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
     @riemann_cleanup
     def test_threshold_stabilized_doesnt_get_triggered_unnecessarily(self):
-        test = TestAutohealPolicies.Threshold(self)
+        test = TestAutohealPolicies.Threshold(
+            self,
+            yaml='dsl/stabilized_monitoring2.yaml'
+        )
         test.breach_threshold_once()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
