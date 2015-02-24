@@ -466,8 +466,11 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.EVENTS_TTL = 10
 
         for _ in range(self.TIME_TO_EXPIRATION + self.EVENTS_TTL):
+            self.logger.info('Before publishing event')
             self._publish_heart_beat_event()
+            self.logger.info('After publishing event and before sleep')
             time.sleep(1)
+            self.logger.info('After sleep')
 
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
@@ -481,8 +484,11 @@ class TestAutohealPolicies(PoliciesTestsBase):
             'service_on_failing_node'
         )
         for _ in range(self.TIME_TO_EXPIRATION + self.EVENTS_TTL):
+            self.logger.info('Before publishing event')
             self._publish_heart_beat_event('ok_node')
+            self.logger.info('After publishing event and before sleep')
             time.sleep(1)
+            self.logger.info('After sleep')
 
         self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
