@@ -1,49 +1,28 @@
 from passlib.context import CryptContext
-from flask.globals import current_app
-
-from flask_securest.authentication_providers.abstract_authentication_provider \
-    import AbstractAuthenticationProvider
+from abstract_authentication_provider import AbstractAuthenticationProvider
 
 
 DEFAULT_PASSWORD_HASH = 'plaintext'
 DEFAULT_PASSWORD_SCHEMES = [
-                                'bcrypt',
-                                'des_crypt',
-                                'pbkdf2_sha256',
-                                'pbkdf2_sha512',
-                                'sha256_crypt',
-                                'sha512_crypt',
-                                'plaintext'
-                            ]
+    'bcrypt',
+    'des_crypt',
+    'pbkdf2_sha256',
+    'pbkdf2_sha512',
+    'sha256_crypt',
+    'sha512_crypt',
+    'plaintext'
+    ]
 DEFAULT_DEPRECATED_PASSWORD_SCHEMES = ['auto']
-
-
-def _get_crypt_context():
-    config = current_app.config
-    pw_hash = config.get('PASSWORD_HASH', DEFAULT_PASSWORD_HASH)
-    schemes = config.get('PASSWORD_SCHEMES', DEFAULT_PASSWORD_SCHEMES)
-    deprecated = config.get('DEPRECATED_PASSWORD_SCHEMES',
-                            DEFAULT_DEPRECATED_PASSWORD_SCHEMES)
-    if pw_hash not in schemes:
-        allowed = (', '.join(schemes[:-1]) + ' and ' + schemes[-1])
-        raise ValueError("Invalid hash scheme {0}. Allowed values are {1}"
-                         .format(pw_hash, allowed))
-    try:
-        crypt_ctx = CryptContext(schemes=schemes,
-                                 default=pw_hash,
-                                 deprecated=deprecated)
-    except Exception as e:
-        print 'Failed to initialize password crypt context: ', e
-        raise e
-
-    return crypt_ctx
 
 
 class PasswordAuthenticator(AbstractAuthenticationProvider):
 
     def __init__(self):
         print '----- INITING PasswordAuthenticator'
-        self.crypt_ctx = _get_crypt_context()
+        self.crypt_ctx = None
+
+    def init(self, app):
+        self.crypt_ctx = _get_crypt_context(app)
 
     def authenticate(self, auth_info, userstore):
         print '***** starting password authentication, user and password: ', \
@@ -76,3 +55,23 @@ class PasswordAuthenticator(AbstractAuthenticationProvider):
             raise Exception('Unauthorized')
 
         return user
+
+
+def _get_crypt_context(app):
+    pw_hash = app.config.get('PASSWORD_HASH', DEFAULT_PASSWORD_HASH)
+    schemes = app.config.get('PASSWORD_SCHEMES', DEFAULT_PASSWORD_SCHEMES)
+    deprecated = app.config.get('DEPRECATED_PASSWORD_SCHEMES',
+                                DEFAULT_DEPRECATED_PASSWORD_SCHEMES)
+    if pw_hash not in schemes:
+        allowed = (', '.join(schemes[:-1]) + ' and ' + schemes[-1])
+        raise ValueError("Invalid hash scheme {0}. Allowed values are {1}"
+                         .format(pw_hash, allowed))
+    try:
+        crypt_ctx = CryptContext(schemes=schemes,
+                                 default=pw_hash,
+                                 deprecated=deprecated)
+    except Exception as e:
+        print 'Failed to initialize password crypt context: ', e
+        raise e
+
+    return crypt_ctx

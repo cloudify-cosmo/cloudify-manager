@@ -1,5 +1,5 @@
-from flask.ext.securest import utils
 from flask.ext.securest.userstores.abstract_userstore import AbstractUserstore
+from flask_securest import utils
 
 
 GET_USER_METHOD = 'get_user'
@@ -28,7 +28,7 @@ class UserstoreManager():
 
         """Returns a class from a string formatted as module:class"""
         # TODO use a more specific exception type and messages
-
+        print '***** INITING class {0} with args {1} and kwargs {2}'.format(self.userstore_driver_path, args, kwargs)
         userstore_driver = \
             utils.get_class_instance(self.userstore_driver_path,
                                      *args, **kwargs)
@@ -37,7 +37,7 @@ class UserstoreManager():
         # TODO use a more specific exception type and messages
         # validate authentication provider
         if not isinstance(userstore_driver, AbstractUserstore):
-            raise Exception('userstore class "{0}" must extend {1}'
+            raise Exception('userstore class "{0}" must inherit {1}'
                             .format(utils.get_runtime_class_fqn
                                     (userstore_driver),
                                     utils.get_runtime_class_fqn

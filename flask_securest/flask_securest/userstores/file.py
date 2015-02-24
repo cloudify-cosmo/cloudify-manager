@@ -22,6 +22,7 @@ user_repo = [
 class FileUserstore(AbstractUserstore):
 
     def __init__(self):
+        print '***** INITING class FileUserstore with no args'
         self._identifying_attribute = None
 
     @property
@@ -44,8 +45,8 @@ class FileUserstore(AbstractUserstore):
 
         for user_entry in user_repo:
             print '***** user identifier value: ', \
-                user_entry[self._identifying_attribute]
-            if user_entry[self._identifying_attribute] == user_identifier:
+                user_entry.get(self._identifying_attribute)
+            if user_entry.get(self._identifying_attribute) == user_identifier:
                 print '***** found user!'
                 # a matching user was found, return as a User object
                 user_obj = FileUserstore._create_user_object(user_entry)

@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 import StringIO
+from flask_securest.authentication_providers.abstract_authentication_provider\
+    import AbstractAuthenticationProvider
 
 from flask_securest.rest_security import *
 
@@ -39,14 +41,13 @@ from manager_rest import resources
 from manager_rest import manager_exceptions
 from util import setup_logger
 
-
-secure_app = None
+AUTHENTICATE_METHOD_NAME = 'authenticate'
 
 
 # app factory
 def setup_app():
     app = Flask(__name__)
-    secure_app = init_secure_app(app)
+    init_secure_app(app)
 
     for setting in app.config:
         print '***** {0} = {1}'.format(setting, app.config[setting])
@@ -189,14 +190,43 @@ def init_secure_app(app):
         raise Exception('securest_userstore_identifier_attribute not set')
 
     app.config[SECUREST_SECRET_KEY] = cfy_config.securest_secret_key
-    app.config[SECUREST_AUTHENTICATION_METHODS] = \
-        cfy_config.securest_authentication_methods
     app.config[SECUREST_USERSTORE_DRIVER] = \
         cfy_config.securest_userstore_driver
     app.config[SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE] = \
         cfy_config.securest_userstore_identifier_attribute
 
-    return SecuREST(app)
+    secure_app = SecuREST(app)
+
+    register_authentication_methods(secure_app,
+                                    cfy_config.securest_authentication_methods)
+
+    @secure_app.unauthorized_user_handler
+    def unauthorized_user_handler():
+        print '**** GOTCHA!'
+        raise Exception(401)
+
+
+def register_authentication_methods(secure_app, authentication_providers):
+    # Note: the order of registration is important here
+    for auth_method_path in authentication_providers:
+        try:
+            print '***** getting instance of: ', auth_method_path
+            auth_provider = utils.get_class_instance(auth_method_path)
+            print '----- Got class instance'
+
+            '''
+            if not hasattr(auth_provider, AUTHENTICATE_METHOD_NAME):
+                # TODO use a more specific exception type
+                raise Exception('authentication provider "{0}" does not implement'
+                                ' {1}'.format(
+                                    utils.get_runtime_class_fqn(auth_provider),
+                                    AUTHENTICATE_METHOD_NAME))
+            '''
+            secure_app.authentication_provider(auth_provider)
+        except Exception as e:
+            print('Failed to register authentication method: ',
+                  authentication_providers, e)
+            raise e
 
 
 # if 'MANAGER_REST_CONFIG_PATH' in os.environ:
@@ -239,12 +269,6 @@ if True:
 #     print '***** no MANAGER_REST_CONFIG_PATH in os.environ'
 
 app = setup_app()
-
-
-#@secure_app.unauthorized_user_handler
-#def unauthorized_user_handler():
-#    print '**** GOTCHA!'
-#    raise Exception(401)
 
 
 @app.errorhandler(500)

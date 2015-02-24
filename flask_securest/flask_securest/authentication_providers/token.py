@@ -1,23 +1,28 @@
 from flask import globals as flask_globals
 from itsdangerous import \
     URLSafeTimedSerializer, SignatureExpired, BadSignature
-
-from flask_securest.authentication_providers.abstract_authentication_provider\
-    import AbstractAuthenticationProvider
+from abstract_authentication_provider import AbstractAuthenticationProvider
 
 
 class TokenAuthenticator(AbstractAuthenticationProvider):
 
-    @staticmethod
-    def authenticate(auth_info, userstore):
+    def __init__(self):
+        print '----- INITING TokenAuthenticator'
+        self.secret_key = None
+
+    def init(self, app):
+        self.secret_key = app.config['SECRET_KEY']
+
+    def authenticate(self, auth_info, userstore):
+        print '***** attempting to authenticate using TokenAuthenticator'
         token = auth_info.token
-        current_app = flask_globals.current_app
+        # current_app = flask_globals.current_app
         print '***** verifying auth token: ', token
 
         if not token:
             raise Exception('token is missing or empty')
 
-        serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+        serializer = URLSafeTimedSerializer(self.secret_key)
 
         try:
             print '***** attempting to deserialize the token'
