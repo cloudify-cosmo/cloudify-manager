@@ -54,7 +54,7 @@ def setup_app():
     # TODO Additional security settings:
     # 1. hooks - additional before/after request hooks
     # 2. hook - unauthorized
-    # 3. authorization methods - place modules' files in a known location, update the json config file on bootstrap, and append to the rest's python path
+    # 3. authentication methods - place modules' files in a known location, update the json config file on bootstrap, and append to the rest's python path
     # 4. userstore implementation
     # 5. authorization implementation?
     # setting up the app logger with a rotating file handler, in addition to
