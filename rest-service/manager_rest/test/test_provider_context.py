@@ -36,3 +36,20 @@ class ProviderContextTestCase(BaseServerTestCase):
         self.test_post_provider_context()
         self.assertRaises(self.failureException,
                           self.test_post_provider_context)
+
+    def test_update_provider_context(self):
+        self.test_post_provider_context()
+        result = self.post('/provider/context?update=true', data={
+            'name': 'test_provider',
+            'context': {'key': 'value'}
+        })
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json['status'], 'ok')
+
+    def test_update_empty_provider_context(self):
+        result = self.post('/provider/context?update=true', data={
+            'name': 'test_provider',
+            'context': {'key': 'value'}
+        })
+        self.assertEqual(result.status_code, 404)
+        self.assertEqual(result.json['message'], 'Provider Context not found')
