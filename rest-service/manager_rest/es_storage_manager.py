@@ -291,6 +291,18 @@ class ESStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 "Execution {0} not found".format(execution_id))
 
+    def update_provider_context(self, provider_context):
+        doc_data = {'doc': provider_context.to_dict()}
+        try:
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=PROVIDER_CONTEXT_TYPE,
+                                    id=PROVIDER_CONTEXT_ID,
+                                    body=doc_data,
+                                    **MUTATE_PARAMS)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                'Provider Context not found')
+
     def delete_deployment(self, deployment_id):
         query = {'query': {'term': {'deployment_id': deployment_id}}}
         self._delete_doc_by_query(EXECUTION_TYPE, query)

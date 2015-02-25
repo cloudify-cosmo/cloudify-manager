@@ -316,6 +316,14 @@ class FileStorageManager(object):
         data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID] = provider_context
         self._dump_data(data)
 
+    def update_provider_context(self, provider_context):
+        data = self._load_data()
+        if PROVIDER_CONTEXT_ID not in data[PROVIDER_CONTEXT]:
+            raise manager_exceptions.NotFoundError('Provider Context not '
+                                                   'found')
+        data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID] = provider_context
+        self._dump_data(data)
+
     def get_provider_context(self, **_):
         data = self._load_data()
         if PROVIDER_CONTEXT_ID in data[PROVIDER_CONTEXT]:
