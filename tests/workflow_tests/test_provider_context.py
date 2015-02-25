@@ -35,17 +35,12 @@ class TestProviderContext(TestCase):
                           self.client.manager.create_context, name, context)
 
     def test_update_provider_context(self):
-        try:
-            self.client.manager.update_context(
-                'test_update_provider_context', PROVIDER_CONTEXT)
-            context = self.client.manager.get_context()
-            self.assertEqual('test_update_provider_context',
-                             context['name'])
-            self.assertEqual(PROVIDER_CONTEXT, context['context'])
-        finally:
-            # re-create provider context to the previous value
-            # perhaps other tests rely on these values.
-            utils.restore_provider_context()
+        self.client.manager.update_context(
+            'test_update_provider_context', PROVIDER_CONTEXT)
+        context = self.client.manager.get_context()
+        self.assertEqual('test_update_provider_context',
+                         context['name'])
+        self.assertEqual(PROVIDER_CONTEXT, context['context'])
 
     def test_update_empty_provider_context(self):
         try:
@@ -57,7 +52,3 @@ class TestProviderContext(TestCase):
         except CloudifyClientError as e:
             self.assertEqual(e.status_code, 404)
             self.assertEqual(e.message, 'Provider Context not found')
-        finally:
-            # re-create provider context to the previous value
-            # perhaps other tests rely on these values.
-            utils.restore_provider_context()
