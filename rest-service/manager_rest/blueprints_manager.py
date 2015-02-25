@@ -279,6 +279,18 @@ class BlueprintsManager(object):
             nodes=nodes,
             previous_node_instances=node_instances,
             modified_nodes=modified_nodes)
+
+        now = str(datetime.now())
+        modification_id = str(uuid.uuid4())
+        modification = models.DeploymentModification(
+            id=modification_id,
+            created_at=now,
+            status=models.DeploymentModification.STARTED,
+            deployment_id=deployment_id,
+            modified_nodes=modified_nodes,
+            node_instances=node_instances_modification)
+        self.sm.put_deployment_modification(modification_id, modification)
+
         added_and_related = node_instances_modification['added_and_related']
         added_node_instances = []
         for node_instance in added_and_related:
@@ -299,19 +311,16 @@ class BlueprintsManager(object):
                     runtime_properties=None))
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
-        return {
-            'node_instances': node_instances_modification,
-            'modified_nodes': modified_nodes
-        }
+        return modification
 
-    def finish_deployment_modification(self, deployment_id, modification):
-        # verify deployment exists
-        self.sm.get_deployment(deployment_id)
-        modified_nodes = modification['modified_nodes']
+    def finish_deployment_modification(self, modification_id):
+        modification = self.sm.get_deployment_modification(modification_id)
+
+        modified_nodes = modification.modified_nodes
         for node_id, modified_node in modified_nodes.items():
-            self.sm.update_node(deployment_id, node_id,
-                                modified_node['instances'])
-        node_instances = modification['node_instances']
+            self.sm.update_node(modification.deployment_id, node_id,
+                                number_of_instances=modified_node['instances'])
+        node_instances = modification.node_instances
         for node_instance in node_instances['removed_and_related']:
             if node_instance.get('modification') == 'removed':
                 self.sm.delete_node_instance(node_instance['id'])
@@ -332,6 +341,9 @@ class BlueprintsManager(object):
                     deployment_id=None,
                     state=None,
                     runtime_properties=None))
+
+        self.sm.update_deployment_modification(
+            modification_id, models.DeploymentModification.FINISHED)
 
     def _get_node_instance_ids(self, deployment_id):
         return self.sm.get_node_instances(deployment_id, include=['id'])

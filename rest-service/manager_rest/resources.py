@@ -179,8 +179,13 @@ def setup_resources(api):
     api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
     api.add_resource(DeploymentsIdOutputs,
                      '/deployments/<string:deployment_id>/outputs')
-    api.add_resource(DeploymentsIdModify,
-                     '/deployments/<string:deployment_id>/modify')
+    api.add_resource(DeploymentModifications,
+                     '/deployment-modifications')
+    api.add_resource(DeploymentModificationsId,
+                     '/deployment-modifications/<string:modification_id>')
+    api.add_resource(
+        DeploymentModificationsIdFinish,
+        '/deployment-modifications/<string:modification_id>/finish')
     api.add_resource(Nodes, '/nodes')
     api.add_resource(NodeInstances, '/node-instances')
     api.add_resource(NodeInstancesId,
@@ -802,7 +807,14 @@ class DeploymentsId(Resource):
         return responses.Deployment(**deployment.to_dict()), 200
 
 
-class DeploymentsIdModify(Resource):
+class DeploymentModifications(Resource):
+
+    def __init__(self):
+        self._args_parser = reqparse.RequestParser()
+        self._args_parser.add_argument('deployment_id',
+                                       type=str,
+                                       required=False,
+                                       location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentModification,
@@ -821,37 +833,71 @@ class DeploymentsIdModify(Resource):
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification.resource_fields)
-    def patch(self, deployment_id):
+    def post(self):
         verify_json_content_type()
         request_json = request.json
-        verify_parameter_in_request_body('stage', request_json)
-        stage = request_json['stage']
-        if stage == 'start':
-            verify_parameter_in_request_body('nodes',
-                                             request_json,
-                                             param_type=dict,
-                                             optional=True)
-            nodes = request_json.get('nodes', {})
-            modification = get_blueprints_manager().\
-                start_deployment_modification(deployment_id, nodes)
-            return responses.DeploymentModification(
-                deployment_id=deployment_id,
-                node_instances=modification['node_instances'],
-                modified_nodes=modification['modified_nodes'])
-        elif stage == 'finish':
-            verify_parameter_in_request_body('modification',
-                                             request_json,
-                                             param_type=dict)
-            modification = request_json['modification']
-            get_blueprints_manager().finish_deployment_modification(
-                deployment_id, modification)
-            return responses.DeploymentModification(
-                deployment_id=deployment_id,
-                node_instances={},
-                modified_nodes={})
-        else:
-            raise manager_exceptions.UnknownModificationStageError(
-                'Unknown modification stage: {0}'.format(stage))
+        verify_parameter_in_request_body('deployment_id', request_json)
+        deployment_id = request_json['deployment_id']
+        verify_parameter_in_request_body('nodes',
+                                         request_json,
+                                         param_type=dict,
+                                         optional=True)
+        nodes = request_json.get('nodes', {})
+        modification = get_blueprints_manager().\
+            start_deployment_modification(deployment_id, nodes)
+        return responses.DeploymentModification(**modification.to_dict()), 201
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(
+            responses.DeploymentModification.__name__),
+        nickname="listDeploymentModifications",
+        notes="List deployment modifications.",
+        parameters=[{'name': 'deployment_id',
+                     'description': 'Deployment id',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'}]
+    )
+    @exceptions_handled
+    @marshal_with(responses.DeploymentModification.resource_fields)
+    def get(self, _include=None):
+        args = self._args_parser.parse_args()
+        deployment_id = args.get('deployment_id')
+        modifications = get_storage_manager().deployment_modifications_list(
+            deployment_id, include=_include)
+        return [responses.DeploymentModification(**m.to_dict())
+                for m in modifications]
+
+
+class DeploymentModificationsId(Resource):
+
+    @swagger.operation(
+        responseClass=responses.DeploymentModificationFinish,
+        nickname="getDeploymentModification",
+        notes="Get deployment modification."
+    )
+    @exceptions_handled
+    @marshal_with(responses.DeploymentModification.resource_fields)
+    def get(self, modification_id, _include=None):
+        modification = get_storage_manager().get_deployment_modification(
+            modification_id, include=_include)
+        return responses.DeploymentModification(**modification.to_dict())
+
+
+class DeploymentModificationsIdFinish(Resource):
+
+    @swagger.operation(
+        responseClass=responses.DeploymentModificationFinish,
+        nickname="finishDeploymentModification",
+        notes="Finish deployment modification."
+    )
+    @exceptions_handled
+    @marshal_with(responses.DeploymentModification.resource_fields)
+    def post(self, modification_id):
+        get_blueprints_manager().finish_deployment_modification(
+            modification_id)
+        return responses.DeploymentModificationFinish(id=modification_id)
 
 
 class Nodes(Resource):

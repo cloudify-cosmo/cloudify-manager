@@ -13,6 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+
+import datetime
+import dateutil.parser
+
+from cloudify_rest_client.deployment_modifications import (
+    DeploymentModification)
+
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
@@ -134,8 +141,33 @@ class TestDeploymentModification(TestCase):
             dsl_path = resource("dsl/deployment_modification.yaml")
             deployment, _ = deploy(dsl_path)
             deployment_id = deployment.id
+
+        before_modifications = self.client.deployment_modifications.list(
+            deployment_id)
+
         execute_workflow('deployment_modification', deployment_id,
                          parameters={'nodes': modified_nodes})
+
+        after_modifications = self.client.deployment_modifications.list(
+            deployment_id)
+
+        new_modifications = [
+            m for m in after_modifications
+            if m.id not in [m2.id for m2 in before_modifications]]
+        self.assertEqual(len(new_modifications), 1)
+        modification = list(new_modifications)[0]
+        self.assertEqual(self.client.deployment_modifications.get(
+            modification.id), modification)
+
+        self.assertEqual(modification.status,
+                         DeploymentModification.FINISHED)
+        self.assertEqual(modification.deployment_id, deployment_id)
+        self.assertEqual(modification.modified_nodes, modified_nodes)
+        created_at = dateutil.parser.parse(modification.created_at)
+        self.assertTrue(datetime.datetime.now() -
+                        datetime.timedelta(seconds=30) <=
+                        created_at <= datetime.datetime.now())
+
         state = self.get_plugin_data('testmockoperations',
                                      deployment_id)['state']
 

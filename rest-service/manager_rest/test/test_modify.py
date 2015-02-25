@@ -15,11 +15,45 @@
 
 import copy
 import uuid
+from datetime import datetime, timedelta
+import dateutil.parser
+
+from cloudify_rest_client.deployment_modifications import (
+    DeploymentModification)
 
 from base_test import BaseServerTestCase
 
 
 class ModifyTests(BaseServerTestCase):
+
+    def test_data_model(self):
+        _, _, _, deployment = self.put_deployment(
+            deployment_id=str(uuid.uuid4()),
+            blueprint_file_name='modify1.yaml')
+        modified_nodes = {'node1': {'instances': 2}}
+        modification = self.client.deployment_modifications.start(
+            deployment.id, nodes=modified_nodes)
+        modification_id = modification.id
+        self.assertEqual(modification.status,
+                         DeploymentModification.STARTED)
+        self.client.deployment_modifications.finish(modification_id)
+        modification = self.client.deployment_modifications.get(
+            modification.id)
+        self.assertEqual(modification.id, modification_id)
+        self.assertEqual(modification.status, DeploymentModification.FINISHED)
+        self.assertEqual(modification.deployment_id, deployment.id)
+        self.assertEqual(modification.modified_nodes, modified_nodes)
+        created_at = dateutil.parser.parse(modification.created_at)
+        self.assertTrue(datetime.now() - timedelta(seconds=5) <=
+                        created_at < datetime.now())
+        all_modifications = self.client.deployment_modifications.list()
+        dep_modifications = self.client.deployment_modifications.list(
+            deployment_id=deployment.id)
+        self.assertEqual(all_modifications, dep_modifications)
+        self.assertEqual(len(dep_modifications), 1)
+        self.assertEqual(dep_modifications[0], modification)
+        self.assertEqual([], self.client.deployment_modifications.list(
+            deployment_id='i_really_should_not_exist'))
 
     def test_modify_add_instance(self):
         _, _, _, deployment = self.put_deployment(
@@ -31,12 +65,11 @@ class ModifyTests(BaseServerTestCase):
         self._assert_number_of_instances(deployment.id, 'node1', 1, 1)
 
         modified_nodes = {'node1': {'instances': 2}}
-        modification = self.client.deployments.modify.start(
+        modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes)
 
         self._assert_number_of_instances(deployment.id, 'node1', 1, 1)
 
-        self.assertEqual(modified_nodes, modification.modified_nodes)
         node_instances2 = self.client.node_instances.list()
         self.assertEqual(3, len(node_instances2))
 
@@ -63,7 +96,7 @@ class ModifyTests(BaseServerTestCase):
         added_and_related = modification.node_instances.added_and_related
         self.assertEqual(2, len(added_and_related))
 
-        self.client.deployments.modify.finish(deployment.id, modification)
+        self.client.deployment_modifications.finish(modification.id)
 
         self._assert_number_of_instances(deployment.id, 'node1', 2, 1)
 
@@ -88,12 +121,11 @@ class ModifyTests(BaseServerTestCase):
         self._assert_number_of_instances(deployment.id, 'node1', 2, 2)
 
         modified_nodes = {'node1': {'instances': 1}}
-        modification = self.client.deployments.modify.start(
+        modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes)
 
         self._assert_number_of_instances(deployment.id, 'node1', 2, 2)
 
-        self.assertEqual(modified_nodes, modification.modified_nodes)
         node_instances2 = self.client.node_instances.list()
         self.assertEqual(3, len(node_instances2))
 
@@ -111,7 +143,7 @@ class ModifyTests(BaseServerTestCase):
         removed_and_related = modification.node_instances.removed_and_related
         self.assertEqual(2, len(removed_and_related))
 
-        self.client.deployments.modify.finish(deployment.id, modification)
+        self.client.deployment_modifications.finish(modification.id)
 
         self._assert_number_of_instances(deployment.id, 'node1', 1, 2)
 
@@ -136,12 +168,3 @@ class ModifyTests(BaseServerTestCase):
                          node.deploy_number_of_instances)
         self.assertEqual(expected_number_of_instances,
                          node.number_of_instances)
-
-    def test_illegal_modify_stage(self):
-        _, _, _, deployment = self.put_deployment(
-            deployment_id=str(uuid.uuid4()),
-            blueprint_file_name='modify1.yaml')
-        client = self.client._client
-        r = client.patch('/deployments/{0}/modify'.format(deployment.id),
-                         data={'stage': 'what?'}, expected_status_code=400)
-        self.assertIn('Unknown modification stage', r['message'])

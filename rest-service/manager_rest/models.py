@@ -60,6 +60,24 @@ class Deployment(SerializableObject):
         self.permalink = None  # TODO: implement
 
 
+class DeploymentModification(SerializableObject):
+
+    STARTED = 'started'
+    FINISHED = 'finished'
+    ROLLEDBACK = 'rolledback'
+
+    fields = {'id', 'deployment_id', 'modified_nodes', 'node_instances',
+              'status', 'created_at'}
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.created_at = kwargs['created_at']
+        self.status = kwargs['status']
+        self.deployment_id = kwargs['deployment_id']
+        self.modified_nodes = kwargs['modified_nodes']
+        self.node_instances = kwargs['node_instances']
+
+
 class Execution(SerializableObject):
 
     TERMINATED = 'terminated'

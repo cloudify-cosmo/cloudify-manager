@@ -110,15 +110,43 @@ class DeploymentOutputs(object):
 class DeploymentModification(object):
 
     resource_fields = {
+        'id': fields.String,
+        'status': fields.String,
         'deployment_id': fields.String,
         'node_instances': fields.Raw,
+        'created_at': fields.String,
         'modified_nodes': fields.Raw
     }
 
     def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
         self.node_instances = kwargs['node_instances']
+        self.created_at = kwargs['created_at']
         self.modified_nodes = kwargs['modified_nodes']
+
+
+@swagger.model
+class DeploymentModificationFinish(object):
+
+    resource_fields = {
+        'id': fields.String,
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+
+
+@swagger.model
+class DeploymentModificationRollback(object):
+
+    resource_fields = {
+        'id': fields.String,
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
 
 
 @swagger.model

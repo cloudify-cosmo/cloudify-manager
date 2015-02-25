@@ -21,6 +21,7 @@ from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
                                  Deployment,
+                                 DeploymentModification,
                                  Execution,
                                  DeploymentNode,
                                  DeploymentNodeInstance,
@@ -31,6 +32,7 @@ NODE_TYPE = 'node'
 NODE_INSTANCE_TYPE = 'node_instance'
 BLUEPRINT_TYPE = 'blueprint'
 DEPLOYMENT_TYPE = 'deployment'
+DEPLOYMENT_MODIFICATION_TYPE = 'deployment_modification'
 EXECUTION_TYPE = 'execution'
 PROVIDER_CONTEXT_TYPE = 'provider_context'
 PROVIDER_CONTEXT_ID = 'CONTEXT'
@@ -365,6 +367,45 @@ class ESStorageManager(object):
                                              PROVIDER_CONTEXT_ID,
                                              ProviderContext,
                                              fields=include)
+
+    def put_deployment_modification(self, modification_id, modification):
+        self._put_doc_if_not_exists(DEPLOYMENT_MODIFICATION_TYPE,
+                                    modification_id,
+                                    modification.to_dict())
+
+    def get_deployment_modification(self, modification_id, include=None):
+        return self._get_doc_and_deserialize(DEPLOYMENT_MODIFICATION_TYPE,
+                                             modification_id,
+                                             DeploymentModification,
+                                             fields=include)
+
+    def update_deployment_modification(self, modification_id, status):
+        update_doc_data = {'status': status}
+        update_doc = {'doc': update_doc_data}
+        try:
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=DEPLOYMENT_MODIFICATION_TYPE,
+                                    id=modification_id,
+                                    body=update_doc,
+                                    **MUTATE_PARAMS)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Modification {0} not found".format(modification_id))
+
+    def delete_deployment_modification(self, modification_id):
+        return self._delete_doc(DEPLOYMENT_MODIFICATION_TYPE,
+                                modification_id,
+                                DeploymentModification)
+
+    def deployment_modifications_list(self, deployment_id=None, include=None):
+        query = None
+        if deployment_id:
+            terms = [{'term': {'deployment_id': deployment_id}}]
+            query = {'query': {'bool': {'must': terms}}}
+        return self._list_docs(DEPLOYMENT_MODIFICATION_TYPE,
+                               DeploymentModification,
+                               query=query,
+                               fields=include)
 
     @staticmethod
     def _storage_node_id(deployment_id, node_id):
