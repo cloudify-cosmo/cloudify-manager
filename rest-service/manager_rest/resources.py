@@ -41,6 +41,7 @@ from flask import (
 )
 from flask.ext.restful import Resource, abort, marshal, reqparse
 from flask_restful_swagger import swagger
+from flask_securest.rest_security import SecuredResource
 from flask.ext.restful.utils import unpack
 from flask.ext.securest import rest_security
 
@@ -1171,7 +1172,7 @@ class Search(Resource):
                                      body=request.json)
 
 
-class Status(Resource):
+class Status(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.Status,

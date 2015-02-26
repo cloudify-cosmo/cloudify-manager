@@ -1,6 +1,8 @@
 from collections import namedtuple
 from functools import wraps
 from flask import _app_ctx_stack, current_app
+from flask_restful import Resource
+
 import utils
 from authentication_providers.abstract_authentication_provider \
     import AbstractAuthenticationProvider
@@ -107,6 +109,45 @@ def authenticate_request_if_needed():
     # an instance of SecuredResource.
     # TODO otherwise use a mapping list like in Spring-Security
     if True:
+        from flask import globals
+        g_request = globals.request
+        print '----- authenticating request...'
+        print '----- g_request.endpoint', g_request.endpoint
+        endpoint = g_request.endpoint
+        view_func = current_app.view_functions.get(endpoint)
+        print '----- view_functions.get(endpoint): ', view_func
+        if view_func is None:
+            raise Exception('view function not set for endpoint "{0}"'.format(endpoint))
+
+        view_class = getattr(view_func, 'view_class')
+
+        print '========='
+        print type(view_class)
+        print '========='
+
+        print '=======1'
+        print view_class.endpoint
+        print '=======2'
+        print view_class.methods
+        print '==========3'
+
+        print '----- view_class ', view_class
+        if isinstance(view_class, SecuredResource):
+            print '----- instance of SecuredResource'
+        else:
+            print '----- NOT instance of SecuredResource'
+
+        if type(view_class) == SecuredResource:
+            print '----- type is SecuredResource'
+        else:
+            print '----- type is NOT SecuredResource'
+
+        if hasattr(view_class, 'secured'):
+            print '----- has attribute secured'
+            print '----- secured value: ', getattr(view_class, 'secured')
+        else:
+            print '----- does NOT have attribute secured'
+
         authenticate_request()
 
 
@@ -137,20 +178,21 @@ def login_required(func):
                 result = func(*args, **kwargs)
                 return filter_results(result)
             else:
-                handle_user_unauth()
+                handle_unauthorized_user()
         except Exception:
             # TODO decide if this mean user is unauthorized or a
             # TODO different exception ('authentication check failed')
             # TODO log this
-            handle_user_unauth()
+            handle_unauthorized_user()
     return wrapper
 
 
-def handle_user_unauth():
+def handle_unauthorized_user():
     if current_app.securest_unauthorized_user_handler:
         current_app.securest_unauthorized_user_handler()
     else:
         # TODO verify this ends up in resources.abort_error
+        # TODO do this? from flask_restful import abort
         abort(401)
 
 
@@ -163,13 +205,13 @@ def get_auth_info_from_request():
     app_config = current_app.config
 
     auth_header_name = app_config.get('AUTH_HEADER_NAME', AUTH_HEADER_NAME)
-    auth_header = request.headers.get(auth_header_name) \
-        if auth_header_name else None
+    if auth_header_name:
+        auth_header = request.headers.get(auth_header_name)
 
     auth_token_header_name = app_config.get('AUTH_TOKEN_HEADER_NAME',
                                             AUTH_TOKEN_HEADER_NAME)
     if auth_token_header_name:
-        token = request.headers.get(auth_token_header_name) \
+        token = request.headers.get(auth_token_header_name)
 
     if not auth_header and not token:
         raise Exception('Failed to get authentication information from '
@@ -178,6 +220,7 @@ def get_auth_info_from_request():
 
     if auth_header:
         auth_header = auth_header.replace('Basic ', '', 1)
+        print '----- GOT AUTH_HEADER: ', auth_header
         try:
             from itsdangerous import base64_decode
             api_key = base64_decode(auth_header)
@@ -226,3 +269,7 @@ def authenticate(authentication_providers, auth_info):
 
     return user
 
+
+class SecuredResource(Resource):
+    method_decorators = [login_required]
+    secured = True

@@ -138,6 +138,15 @@ class BaseServerTestCase(unittest.TestCase):
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
         test_config.rest_service_log_path = self.rest_service_log
+
+        # security config
+        test_config.securest_secret_key = 'test_secret_key'
+        test_config.securest_authentication_methods = \
+            ['flask_securest.authentication_providers.password:PasswordAuthenticator',
+             'flask_securest.authentication_providers.token:TokenAuthenticator',]
+        test_config.securest_userstore_driver = 'flask_securest.userstores.file:FileUserstore'
+        test_config.securest_userstore_identifier_attribute = 'username'
+
         return test_config
 
     def post(self, resource_path, data, query_params=None):
@@ -179,6 +188,11 @@ class BaseServerTestCase(unittest.TestCase):
 
     def get(self, resource_path, query_params=None):
         result = self.app.get(self._build_url(resource_path, query_params))
+        result.json = json.loads(result.data)
+        return result
+
+    def get(self, resource_path, query_params=None, headers=None):
+        result = self.app.get(self._build_url(resource_path, query_params), headers=headers)
         result.json = json.loads(result.data)
         return result
 
