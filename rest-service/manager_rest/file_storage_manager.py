@@ -300,6 +300,12 @@ class FileStorageManager(object):
             if node.deployment_id == deployment_id:
                 node_id = '{0}_{1}'.format(deployment_id, node.id)
                 del data[NODES][node_id]
+        for execution in data[EXECUTIONS].values():
+            if execution.deployment_id == deployment_id:
+                del data[EXECUTIONS][execution.id]
+        for modification in data[DEPLOYMENT_MODIFICATIONS].values():
+            if modification.deployment_id == deployment_id:
+                del data[DEPLOYMENT_MODIFICATIONS][modification.id]
         self._dump_data(data)
         return self._delete_object(deployment_id, DEPLOYMENTS, 'Deployment')
 
@@ -362,10 +368,6 @@ class FileStorageManager(object):
         modification = data[DEPLOYMENT_MODIFICATIONS][modification_id]
         modification.status = status
         self._dump_data(data)
-
-    def delete_deployment_modification(self, modification_id):
-        return self._delete_object(modification_id, DEPLOYMENT_MODIFICATIONS,
-                                   'DeploymentModification')
 
     def deployment_modifications_list(self, deployment_id=None, include=None):
         return [

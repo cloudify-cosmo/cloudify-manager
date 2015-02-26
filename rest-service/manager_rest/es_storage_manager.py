@@ -298,6 +298,7 @@ class ESStorageManager(object):
         self._delete_doc_by_query(EXECUTION_TYPE, query)
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
         self._delete_doc_by_query(NODE_TYPE, query)
+        self._delete_doc_by_query(DEPLOYMENT_MODIFICATION_TYPE, query)
         return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
 
     def delete_execution(self, execution_id):
@@ -398,11 +399,6 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Modification {0} not found".format(modification_id))
-
-    def delete_deployment_modification(self, modification_id):
-        return self._delete_doc(DEPLOYMENT_MODIFICATION_TYPE,
-                                modification_id,
-                                DeploymentModification)
 
     def deployment_modifications_list(self, deployment_id=None, include=None):
         query = None

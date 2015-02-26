@@ -14,7 +14,6 @@
 #    * limitations under the License.
 
 import uuid
-import time
 import errno
 import os
 import tempfile
@@ -24,6 +23,8 @@ from os import path
 import cloudify.context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
+from cloudify_rest_client.deployment_modifications import (
+    DeploymentModification)
 from manager_rest.file_server import FileServer
 
 from testenv import TestCase
@@ -258,7 +259,6 @@ class BasicWorkflowsTest(TestCase):
 
         def change_execution_status(_execution_id, status):
             self.client.executions.update(_execution_id, status)
-            time.sleep(2)  # waiting for elasticsearch to update...
             executions = self.client.executions.list(deployment_id)
             updated_execution = next(execution for execution in executions
                                      if execution.id == _execution_id)
@@ -273,7 +273,6 @@ class BasicWorkflowsTest(TestCase):
                    deployment_id=deployment_id)
 
         self.client.deployments.delete(deployment_id, False)
-        time.sleep(5)  # elasticsearch...
         self.client.blueprints.delete(blueprint_id)
 
         # recreating the deployment, this time actually deploying it too
@@ -293,7 +292,6 @@ class BasicWorkflowsTest(TestCase):
         # retrieving deployment nodes
         nodes = self.client.node_instances.list(deployment_id=deployment_id)
         self.assertTrue(len(nodes) > 0)
-        nodes_ids = [node.id for node in nodes]
 
         # setting one node's state to 'started' (making it a 'live' node)
         # node must be read using get in order for it to have a version.
@@ -320,6 +318,21 @@ class BasicWorkflowsTest(TestCase):
         # setting the execution's status to 'terminated' so it won't prevent
         #  the deployment deletion
         change_execution_status(execution_id, Execution.TERMINATED)
+
+        modification = self.client.deployment_modifications.start(
+            deployment_id,
+            nodes={'webserver_host': {'instances': 2}})
+        self.client.deployment_modifications.finish(modification.id)
+        # sanity
+        modification['status'] = DeploymentModification.FINISHED
+        self.assertEqual(
+            modification,
+            self.client.deployment_modifications.get(modification.id))
+
+        # get updated node instances list
+        nodes = self.client.node_instances.list(deployment_id=deployment_id)
+        self.assertTrue(len(nodes) > 0)
+        nodes_ids = [node.id for node in nodes]
 
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
@@ -351,6 +364,15 @@ class BasicWorkflowsTest(TestCase):
             self.fail('execution {0} still exists even though it should have '
                       'been deleted when its deployment was deleted'
                       .format(execution_id))
+        except CloudifyClientError, e:
+            self.assertTrue('not found' in str(e))
+
+        # verifying deployment modification no longer exists
+        try:
+            self.client.deployment_modifications.get(modification.id)
+            self.fail('deployment modification {0} still exists even though '
+                      'it should have been deleted when its deployment was '
+                      'deleted')
         except CloudifyClientError, e:
             self.assertTrue('not found' in str(e))
 
