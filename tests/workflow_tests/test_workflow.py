@@ -332,7 +332,7 @@ class BasicWorkflowsTest(TestCase):
         # get updated node instances list
         nodes = self.client.node_instances.list(deployment_id=deployment_id)
         self.assertTrue(len(nodes) > 0)
-        nodes_ids = [node.id for node in nodes]
+        nodes_ids = [_node.id for _node in nodes]
 
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
