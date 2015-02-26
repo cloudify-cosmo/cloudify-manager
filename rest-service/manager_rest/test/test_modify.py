@@ -40,9 +40,12 @@ class ModifyTests(BaseServerTestCase):
 
         node_assertions(num=1, deploy_num=1, planned_num=1)
 
+        before_modification = self.client.node_instances.list(deployment.id)
         modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes)
+        self.assertEqual(modification.node_instances.before_modification,
+                         before_modification)
 
         node_assertions(num=1, deploy_num=1, planned_num=2)
 
@@ -70,6 +73,8 @@ class ModifyTests(BaseServerTestCase):
         self.assertEqual(dep_modifications[0], modification)
         self.assertEqual([], self.client.deployment_modifications.list(
             deployment_id='i_really_should_not_exist'))
+        self.assertEqual(modification.node_instances.before_modification,
+                         before_modification)
 
     def test_modify_add_instance(self):
         _, _, _, deployment = self.put_deployment(

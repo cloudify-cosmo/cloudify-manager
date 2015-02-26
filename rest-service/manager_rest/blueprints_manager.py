@@ -280,6 +280,10 @@ class BlueprintsManager(object):
             previous_node_instances=node_instances,
             modified_nodes=modified_nodes)
 
+        node_instances_modification['before_modification'] = [
+            instance.to_dict() for instance in
+            self.sm.get_node_instances(deployment_id)]
+
         now = str(datetime.now())
         modification_id = str(uuid.uuid4())
         modification = models.DeploymentModification(
