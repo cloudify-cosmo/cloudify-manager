@@ -353,6 +353,9 @@ class BlueprintsManager(object):
         self.sm.update_deployment_modification(
             modification_id, models.DeploymentModification.FINISHED)
 
+    def rollback_deployment_modification(self, modification_id):
+        self.sm.get_deployment_modification(modification_id)
+
     def _get_node_instance_ids(self, deployment_id):
         return self.sm.get_node_instances(deployment_id, include=['id'])
 

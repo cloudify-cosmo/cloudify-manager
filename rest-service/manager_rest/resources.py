@@ -186,6 +186,9 @@ def setup_resources(api):
     api.add_resource(
         DeploymentModificationsIdFinish,
         '/deployment-modifications/<string:modification_id>/finish')
+    api.add_resource(
+        DeploymentModificationsIdRollback,
+        '/deployment-modifications/<string:modification_id>/rollback')
     api.add_resource(Nodes, '/nodes')
     api.add_resource(NodeInstances, '/node-instances')
     api.add_resource(NodeInstancesId,
@@ -898,6 +901,21 @@ class DeploymentModificationsIdFinish(Resource):
         get_blueprints_manager().finish_deployment_modification(
             modification_id)
         return responses.DeploymentModificationFinish(id=modification_id)
+
+
+class DeploymentModificationsIdRollback(Resource):
+
+    @swagger.operation(
+        responseClass=responses.DeploymentModificationRollback,
+        nickname="rollbackDeploymentModification",
+        notes="Rollback deployment modification."
+    )
+    @exceptions_handled
+    @marshal_with(responses.DeploymentModification.resource_fields)
+    def post(self, modification_id):
+        get_blueprints_manager().rollback_deployment_modification(
+            modification_id)
+        return responses.DeploymentModificationRollback(id=modification_id)
 
 
 class Nodes(Resource):

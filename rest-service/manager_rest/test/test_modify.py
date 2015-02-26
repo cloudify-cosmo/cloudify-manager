@@ -18,6 +18,7 @@ import uuid
 from datetime import datetime, timedelta
 import dateutil.parser
 
+from cloudify_rest_client import exceptions
 from cloudify_rest_client.deployment_modifications import (
     DeploymentModification)
 
@@ -75,6 +76,19 @@ class ModifyTests(BaseServerTestCase):
             deployment_id='i_really_should_not_exist'))
         self.assertEqual(modification.node_instances.before_modification,
                          before_modification)
+
+    def test_finish_and_rollback_on_non_existent_modification(self):
+        with self.assertRaises(exceptions.CloudifyClientError) as scope:
+            self.client.deployment_modifications.finish('what')
+        self.assertEqual(scope.exception.status_code, 404)
+        self.assertRegexpMatches(str(scope.exception),
+                                 'Deployment modification.*not found', )
+
+        with self.assertRaises(exceptions.CloudifyClientError) as scope:
+            self.client.deployment_modifications.rollback('what')
+        self.assertEqual(scope.exception.status_code, 404)
+        self.assertRegexpMatches(str(scope.exception),
+                                 'Deployment modification.*not found', )
 
     def test_modify_add_instance(self):
         _, _, _, deployment = self.put_deployment(
