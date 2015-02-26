@@ -167,6 +167,12 @@ class TestDeploymentModification(TestCase):
         self.assertTrue(datetime.datetime.now() -
                         datetime.timedelta(seconds=30) <=
                         created_at <= datetime.datetime.now())
+        for node_id, modified_node in modified_nodes.items():
+            node = self.client.nodes.get(deployment_id, node_id)
+            self.assertEqual(node.planned_number_of_instances,
+                             modified_node['instances'])
+            self.assertEqual(node.number_of_instances,
+                             modified_node['instances'])
 
         state = self.get_plugin_data('testmockoperations',
                                      deployment_id)['state']
@@ -204,6 +210,7 @@ class TestDeploymentModification(TestCase):
                              len(webserver_instances[0]['relationships']))
 
         def assertion():
+
             node_instances = self.client.node_instances.list(deployment_id)
             self.assertEqual(expected_total, len(node_instances))
             for node_id, modification in modified_nodes.items():

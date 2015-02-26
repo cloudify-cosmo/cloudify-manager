@@ -311,9 +311,16 @@ class ESStorageManager(object):
                                 node_instance_id,
                                 DeploymentNodeInstance)
 
-    def update_node(self, deployment_id, node_id, number_of_instances):
+    def update_node(self, deployment_id, node_id,
+                    number_of_instances=None,
+                    planned_number_of_instances=None):
         storage_node_id = self._storage_node_id(deployment_id, node_id)
-        update_doc_data = {'number_of_instances': number_of_instances}
+        update_doc_data = {}
+        if number_of_instances is not None:
+            update_doc_data['number_of_instances'] = number_of_instances
+        if planned_number_of_instances is not None:
+            update_doc_data[
+                'planned_number_of_instances'] = planned_number_of_instances
         update_doc = {'doc': update_doc_data}
         try:
             self._connection.update(index=STORAGE_INDEX_NAME,

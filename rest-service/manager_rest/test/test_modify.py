@@ -27,16 +27,32 @@ from base_test import BaseServerTestCase
 class ModifyTests(BaseServerTestCase):
 
     def test_data_model(self):
+
+        def node_assertions(num, deploy_num, planned_num):
+            node = self.client.nodes.get(deployment.id, 'node1')
+            self.assertEqual(node.number_of_instances, num)
+            self.assertEqual(node.planned_number_of_instances, planned_num)
+            self.assertEqual(node.deploy_number_of_instances, deploy_num)
+
         _, _, _, deployment = self.put_deployment(
             deployment_id=str(uuid.uuid4()),
             blueprint_file_name='modify1.yaml')
+
+        node_assertions(num=1, deploy_num=1, planned_num=1)
+
         modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes)
+
+        node_assertions(num=1, deploy_num=1, planned_num=2)
+
         modification_id = modification.id
         self.assertEqual(modification.status,
                          DeploymentModification.STARTED)
         self.client.deployment_modifications.finish(modification_id)
+
+        node_assertions(num=2, deploy_num=1, planned_num=2)
+
         modification = self.client.deployment_modifications.get(
             modification.id)
         self.assertEqual(modification.id, modification_id)

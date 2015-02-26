@@ -184,6 +184,7 @@ class Node(object):
         'type': fields.String,
         'type_hierarchy': fields.Raw,
         'number_of_instances': fields.String,
+        'planned_number_of_instances': fields.String,
         'deploy_number_of_instances': fields.String,
         'host_id': fields.String,
         'properties': fields.Raw,
@@ -200,6 +201,8 @@ class Node(object):
         self.type = kwargs['type']
         self.type_hierarchy = kwargs['type_hierarchy']
         self.number_of_instances = kwargs['number_of_instances']
+        self.planned_number_of_instances = kwargs[
+            'planned_number_of_instances']
         self.deploy_number_of_instances = kwargs['deploy_number_of_instances']
         self.host_id = kwargs['host_id']
         self.properties = kwargs['properties']

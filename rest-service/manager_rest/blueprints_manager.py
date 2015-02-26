@@ -291,6 +291,10 @@ class BlueprintsManager(object):
             node_instances=node_instances_modification)
         self.sm.put_deployment_modification(modification_id, modification)
 
+        for node_id, modified_node in modified_nodes.items():
+            self.sm.update_node(
+                modification.deployment_id, node_id,
+                planned_number_of_instances=modified_node['instances'])
         added_and_related = node_instances_modification['added_and_related']
         added_node_instances = []
         for node_instance in added_and_related:
@@ -413,14 +417,16 @@ class BlueprintsManager(object):
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:
+            num_instances = raw_node['instances']['deploy']
             self.sm.put_node(models.DeploymentNode(
                 id=raw_node['name'],
                 deployment_id=deployment_id,
                 blueprint_id=blueprint_id,
                 type=raw_node['type'],
                 type_hierarchy=raw_node['type_hierarchy'],
-                number_of_instances=raw_node['instances']['deploy'],
-                deploy_number_of_instances=raw_node['instances']['deploy'],
+                number_of_instances=num_instances,
+                planned_number_of_instances=num_instances,
+                deploy_number_of_instances=num_instances,
                 host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],

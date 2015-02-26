@@ -181,14 +181,19 @@ class FileStorageManager(object):
         data[EXECUTIONS][execution_id] = execution
         self._dump_data(data)
 
-    def update_node(self, deployment_id, node_id, number_of_instances):
+    def update_node(self, deployment_id, node_id,
+                    number_of_instances=None,
+                    planned_number_of_instances=None):
         data = self._load_data()
         storage_node_id = '{0}_{1}'.format(deployment_id, node_id)
         if storage_node_id not in data[NODES]:
             raise manager_exceptions.NotFoundError(
                 'Node {0} not found'.format(node_id))
         node = data[NODES][storage_node_id]
-        node.number_of_instances = number_of_instances
+        if number_of_instances is not None:
+            node.number_of_instances = number_of_instances
+        if planned_number_of_instances is not None:
+            node.planned_number_of_instances = planned_number_of_instances
         self._dump_data(data)
 
     def update_node_instance(self, node_update):
