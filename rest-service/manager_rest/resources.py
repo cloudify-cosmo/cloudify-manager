@@ -1319,8 +1319,18 @@ class ProviderContext(Resource):
         verify_parameter_in_request_body('name', request_json)
         context = models.ProviderContext(name=request.json['name'],
                                          context=request.json['context'])
-        get_storage_manager().put_provider_context(context)
-        return responses.ProviderContextPostStatus(status='ok'), 201
+        update = verify_and_convert_bool(
+            'update',
+            request.args.get('update', 'false')
+        )
+
+        status_code = 200 if update else 201
+
+        if update:
+            get_storage_manager().update_provider_context(context)
+        else:
+            get_storage_manager().put_provider_context(context)
+        return responses.ProviderContextPostStatus(status='ok'), status_code
 
 
 class Version(Resource):

@@ -13,9 +13,11 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import copy
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from testenv import TestCase
+from testenv import utils
 from testenv.utils import PROVIDER_NAME
 from testenv.utils import PROVIDER_CONTEXT
 
@@ -32,3 +34,29 @@ class TestProviderContext(TestCase):
         self.assertEqual(context, response_context['context'])
         self.assertRaises(CloudifyClientError,
                           self.client.manager.create_context, name, context)
+
+    def test_update_provider_context(self):
+        new_context = copy.deepcopy(PROVIDER_CONTEXT)
+        new_context.update({
+            'workflows': {
+                'task_retries': 1,
+                'task_retry_interval': 1
+            }
+        })
+        self.client.manager.update_context(
+            PROVIDER_NAME, new_context)
+        context = self.client.manager.get_context()
+        self.assertEqual(PROVIDER_NAME,
+                         context['name'])
+        self.assertEqual(new_context, context['context'])
+
+    def test_update_non_existent_provider_context(self):
+        try:
+            utils.delete_provider_context()
+            self.client.manager.update_context(
+                PROVIDER_NAME,
+                PROVIDER_CONTEXT)
+            self.fail('Expected failure due to existing context')
+        except CloudifyClientError as e:
+            self.assertEqual(e.status_code, 404)
+            self.assertEqual(e.message, 'Provider Context not found')
