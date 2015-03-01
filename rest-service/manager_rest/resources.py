@@ -366,23 +366,31 @@ class BlueprintsUpload(object):
 
     @staticmethod
     def _extract_application_file(file_server_root, application_dir):
+
+        full_application_dir = path.join(file_server_root, application_dir)
+
         if 'application_file_name' in request.args:
-            application_file = urllib.unquote(
+            application_file_name = urllib.unquote(
                 request.args['application_file_name']).decode('utf-8')
-            application_file = '{0}/{1}'.format(application_dir,
-                                                application_file)
-            return application_file
+            application_file = path.join(full_application_dir,
+                                         application_file_name)
+            if not path.isfile(application_file):
+                raise manager_exceptions.BadParametersError(
+                    '{0} does not exist in the application '
+                    'directory'.format(application_file_name)
+                )
         else:
-            full_application_dir = path.join(file_server_root, application_dir)
-            full_application_file = path.join(
-                full_application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
-            if path.isfile(full_application_file):
-                application_file = path.join(
-                    application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
-                return application_file
-        raise manager_exceptions.BadParametersError(
-            'Missing application_file_name query parameter or '
-            'application directory is missing blueprint.yaml')
+            application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
+            application_file = path.join(full_application_dir,
+                                         application_file_name)
+            if not path.isfile(application_file):
+                raise manager_exceptions.BadParametersError(
+                    'application directory is missing blueprint.yaml and '
+                    'application_file_name query parameter was not passed')
+
+        # return relative path from the file server root since this path
+        # is appended to the file server base uri
+        return path.join(application_dir, application_file_name)
 
 
 class BlueprintsIdArchive(Resource):

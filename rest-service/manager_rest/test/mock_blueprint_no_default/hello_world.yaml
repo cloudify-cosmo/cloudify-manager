@@ -1,0 +1,22 @@
+imports:
+    - cloudify.types
+
+node_types:
+    openstack_host:
+        derived_from: cloudify.nodes.Compute
+        properties:
+            cloudify_agent:
+                default:
+                    user: ubuntu
+                    port: 22
+                    key: ~/.ssh/cloudify-agents.pem
+            nova_config:
+                default:
+                    region: az-2.region-a.geo-1
+                    instance:
+                        name: web_server_vm_idan
+                        image: 67074
+                        flavor: 101
+                        key_name: cloudify_agents_idan
+    web_server:
+        derived_from: cloudify.nodes.WebServer
