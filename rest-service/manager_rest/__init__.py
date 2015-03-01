@@ -14,10 +14,6 @@
 # limitations under the License.
 ############
 
-
-__author__ = 'dank'
-
-
 import json
 import pkgutil
 

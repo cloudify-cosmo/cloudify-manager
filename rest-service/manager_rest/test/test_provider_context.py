@@ -13,8 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'dan'
-
+from cloudify_rest_client import exceptions
 
 from base_test import BaseServerTestCase
 
@@ -39,3 +38,21 @@ class ProviderContextTestCase(BaseServerTestCase):
         self.test_post_provider_context()
         self.assertRaises(self.failureException,
                           self.test_post_provider_context)
+
+    def test_update_provider_context(self):
+        self.test_post_provider_context()
+        new_context = {'key': 'new-value'}
+        self.client.manager.update_context(
+            'test_provider', new_context)
+        context = self.client.manager.get_context()
+        self.assertEqual(context['context'], new_context)
+
+    def test_update_empty_provider_context(self):
+        try:
+            self.client.manager.update_context(
+                'test_provider',
+                {'key': 'value'})
+            self.fail('Expected failure due to existing context')
+        except exceptions.CloudifyClientError as e:
+            self.assertEqual(e.status_code, 404)
+            self.assertEqual(e.message, 'Provider Context not found')

@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
-
 import os
 import json
 from manager_rest.models import (BlueprintState,
@@ -315,6 +313,14 @@ class FileStorageManager(object):
         if PROVIDER_CONTEXT_ID in data[PROVIDER_CONTEXT]:
             raise manager_exceptions.ConflictError(
                 'Provider context already set')
+        data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID] = provider_context
+        self._dump_data(data)
+
+    def update_provider_context(self, provider_context):
+        data = self._load_data()
+        if PROVIDER_CONTEXT_ID not in data[PROVIDER_CONTEXT]:
+            raise manager_exceptions.NotFoundError('Provider Context not '
+                                                   'found')
         data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID] = provider_context
         self._dump_data(data)
 

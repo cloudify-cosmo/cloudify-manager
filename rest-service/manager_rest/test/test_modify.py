@@ -13,8 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'idanmo'
-
+import copy
 import uuid
 
 from base_test import BaseServerTestCase
@@ -51,8 +50,15 @@ class ModifyTests(BaseServerTestCase):
 
         new_instance = new_instances[0]
         self.assertEqual('node1', new_instance.node_id)
+        expected_old_instances = copy.deepcopy(node_instances1)
+        for instance in expected_old_instances:
+            if instance.node_id == 'node2':
+                current_relationship = instance.relationships[0]
+                new_relationship = copy.deepcopy(current_relationship)
+                new_relationship['target_id'] = new_instance.id
+                instance.relationships.append(new_relationship)
         self.assertEqual(sorted(old_instances, key=lambda _i: _i.id),
-                         sorted(node_instances1, key=lambda _i: _i.id))
+                         sorted(expected_old_instances, key=lambda _i: _i.id))
 
         added_and_related = modification.node_instances.added_and_related
         self.assertEqual(2, len(added_and_related))

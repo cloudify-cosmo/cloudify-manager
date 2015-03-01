@@ -18,7 +18,7 @@ Also, make sure you activate the virtualenv dedicated for Cloudify prior to runn
 ## Step 1: Install RabbitMQ Server
 
 RabbitMQ is a Message broker written in Erlang. It serves as the message broker for our remote task execution engine (celery),
-So, we need to [install Erlang](https://www.erlang-solutions.com/downloads/download-erlang-otp) first.
+So, we need to [Install Erlang](https://www.erlang-solutions.com/downloads/download-erlang-otp) first.
 
 Now we can install rabbit: <br>
 
@@ -39,7 +39,7 @@ Elasticsearch is our storage data store. To install it run:
 
 ```bash
 ~/dev/tools$ curl -L -O https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.4.2.tar.gz
-tar -xvf elasticsearch-1.4.2.tar.gz
+~/dev/tools$ tar -xvf elasticsearch-1.4.2.tar.gz
 ```
 
 Add the `~/dev/tools/elasticsearch-1.4.2/bin` directory to your path. Verify this by starting a new shell and running: <br>
@@ -109,7 +109,7 @@ that's why we need to install it as well.
 `cd` into the root directory of this repo (*cloudify-manager*) and run:
 
 ```bash
-pip install -r dev-requirements.txt -e tests/
+pip install -r tests/dev-requirements.txt -e tests/
 ```
 
 ## Step 8: Verify installation.

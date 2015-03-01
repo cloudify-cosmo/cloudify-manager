@@ -13,21 +13,19 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'nirc'
-
 from setuptools import setup
 
 
 setup(
     name='cloudify-windows-agent-installer-plugin',
-    version='3.2a4',
+    version='3.2a6',
     author='nirc',
     author_email='nirc@gigaspaces.com',
     packages=['windows_agent_installer'],
     license='LICENSE',
     description='Plugin for installing a Cloudify agent on a windows machine',
     install_requires=[
-        'cloudify-plugins-common==3.2a4',
+        'cloudify-plugins-common==3.2a6',
         'pywinrm==0.0.2dev',
     ],
     tests_require=[

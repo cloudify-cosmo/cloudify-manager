@@ -138,20 +138,28 @@ def saving_operation_info(ctx, op, main_node, second_node=None, **_):
 
         op_info = {'operation': op, 'num': num}
         if second_node is None:
-            op_info.update({'node': main_node.name})
+            op_info.update({
+                'node': main_node.node.name,
+                'id': main_node.instance.id,
+                'target_ids': [r.target.instance.id
+                               for r in main_node.instance.relationships]
+            })
         else:
-            op_info.update(
-                {'source': main_node.name, 'target': second_node.name}
-            )
+            op_info.update({
+                'id': main_node.instance.id,
+                'source': main_node.node.name,
+                'target': second_node.node.name
+            })
         invocations.append(op_info)
 
 
 def saving_rel_operation_info(ctx, op, **kwargs):
-    saving_operation_info(ctx, op, ctx.source.node, ctx.target.node, **kwargs)
+    saving_operation_info(ctx, op, ctx.source, ctx.target,
+                          **kwargs)
 
 
 def saving_non_rel_operation_info(ctx, op, **kwargs):
-    saving_operation_info(ctx, op, ctx.node, **kwargs)
+    saving_operation_info(ctx, op, ctx, **kwargs)
 
 
 @operation

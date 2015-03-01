@@ -11,13 +11,11 @@
 #    * limitations under the License.
 # ***************************************************************************/
 
-__author__ = 'elip'
-
 from setuptools import setup
 
 setup(
     name='mock-plugin',
-    version='3.2a4',
+    version='3.2a6',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['mock_for_test'],

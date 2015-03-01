@@ -17,7 +17,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-integration-tests',
-    version='3.2a4',
+    version='3.2a6',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=['testenv',
@@ -34,13 +34,18 @@ setup(
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
-        'cloudify-dsl-parser==3.2a4',
-        'cloudify-rest-client==3.2a4',
-        'cloudify-plugins-common==3.2a4',
-        'cloudify-diamond-plugin==1.2a4',
-        'cloudify-script-plugin==1.2a4',
+        'cloudify-dsl-parser==3.2a6',
+        'cloudify-rest-client==3.2a6',
+        'cloudify-plugins-common==3.2a6',
+        'cloudify-diamond-plugin==1.2a6',
+        'cloudify-script-plugin==1.2a6',
         'pika==0.9.13',
         'elasticsearch==1.0.0',
         'celery==3.1.17'
-    ]
+    ],
+    entry_points={
+        'nose.plugins.0.10': [
+            'suitesplitter = testenv.suite_splitter:SuiteSplitter',
+        ]
+    },
 )

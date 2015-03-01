@@ -1086,7 +1086,10 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
     Returns:
     Elasticsearch result as is (Python dict).
     """
-    es = elasticsearch.Elasticsearch()
+    es_host = config.instance().db_address
+    es_port = config.instance().db_port
+    es = elasticsearch.Elasticsearch(hosts=[{"host": es_host,
+                                             "port": es_port}])
     return es.search(index=index, doc_type=doc_type, body=body)
 
 
@@ -1252,8 +1255,18 @@ class ProviderContext(Resource):
         verify_parameter_in_request_body('name', request_json)
         context = models.ProviderContext(name=request.json['name'],
                                          context=request.json['context'])
-        get_storage_manager().put_provider_context(context)
-        return responses.ProviderContextPostStatus(status='ok'), 201
+        update = verify_and_convert_bool(
+            'update',
+            request.args.get('update', 'false')
+        )
+
+        status_code = 200 if update else 201
+
+        if update:
+            get_storage_manager().update_provider_context(context)
+        else:
+            get_storage_manager().put_provider_context(context)
+        return responses.ProviderContextPostStatus(status='ok'), status_code
 
 
 class Version(Resource):

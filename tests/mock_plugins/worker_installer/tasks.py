@@ -14,17 +14,18 @@
 #    * limitations under the License.
 
 import os
-from mock_plugins.worker_installer.consumer import \
-    ConsumerBackedWorkerInstaller
-from mock_plugins.worker_installer.process import \
-    ProcessBackedWorkerInstaller
-
-from testenv.utils import update_storage
-from testenv.utils import task_exists
 
 from cloudify.decorators import operation
 from cloudify import context
 from cloudify.workflows import tasks
+from cloudify import ctx
+
+from mock_plugins.worker_installer.consumer import \
+    ConsumerBackedWorkerInstaller
+from mock_plugins.worker_installer.process import \
+    ProcessBackedWorkerInstaller
+from testenv.utils import update_storage
+from testenv.utils import task_exists
 
 
 # This is needed because in this
@@ -36,9 +37,6 @@ from cloudify.workflows import tasks
 tasks.verify_task_registered = task_exists
 
 
-from cloudify import ctx
-
-
 @operation
 def install(cloudify_agent=None, **kwargs):
     installer = get_backend(cloudify_agent)
@@ -48,7 +46,6 @@ def install(cloudify_agent=None, **kwargs):
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('installed')
-        data[worker_name]['pids'] = []
 
 
 @operation
@@ -60,7 +57,6 @@ def start(cloudify_agent=None, **kwargs):
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('started')
-        data[worker_name]['pids'] = []
 
 
 @operation
@@ -83,7 +79,6 @@ def stop(cloudify_agent=None, **kwargs):
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('stopped')
-        data[worker_name]['pids'] = []
 
 
 @operation
@@ -95,7 +90,6 @@ def uninstall(cloudify_agent=None, **kwargs):
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('uninstalled')
-        data[worker_name]['pids'] = []
 
 
 def get_backend(cloudify_agent):

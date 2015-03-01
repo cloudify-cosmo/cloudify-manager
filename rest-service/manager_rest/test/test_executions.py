@@ -14,10 +14,14 @@
 #  * limitations under the License.
 
 
-from base_test import BaseServerTestCase
+import mock
+
 from cloudify_rest_client import exceptions
+
 from manager_rest import manager_exceptions
 from manager_rest import models
+
+from base_test import BaseServerTestCase
 
 
 class ExecutionsTestCase(BaseServerTestCase):
@@ -383,6 +387,23 @@ class ExecutionsTestCase(BaseServerTestCase):
         resource_path = '/executions/idonotexist'
         response = self.get(resource_path)
         self.assertEqual(response.status_code, 404)
+
+    def test_start_execution_dep_env_pending(self):
+        self._test_start_execution_dep_env(
+            models.Execution.PENDING,
+            exceptions.DeploymentEnvironmentCreationPendingError)
+
+    def test_start_execution_dep_env_in_progress(self):
+        self._test_start_execution_dep_env(
+            models.Execution.STARTED,
+            exceptions.DeploymentEnvironmentCreationInProgressError)
+
+    def _test_start_execution_dep_env(self, task_state, expected_ex):
+        with mock.patch('manager_rest.test.mocks.task_state',
+                        return_value=task_state):
+            _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
+        self.assertRaises(expected_ex, self.client.executions.start,
+                          deployment_id, 'install')
 
     def _modify_execution_status(self, execution_id, new_status):
         execution = self.client.executions.update(execution_id, new_status)

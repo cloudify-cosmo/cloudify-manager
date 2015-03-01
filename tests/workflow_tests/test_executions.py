@@ -101,7 +101,7 @@ class ExecutionsTest(TestCase):
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
-        do_retries(verify_deployment_environment_creation_complete, 30,
+        do_retries(verify_deployment_environment_creation_complete, 60,
                    deployment_id=deployment_id)
         execution_parameters = {
             'operation': 'test_interface.operation',
