@@ -185,6 +185,27 @@ class BlueprintsTestCase(BaseServerTestCase):
                       response.json['message'])
         self.assertEqual(400, response.status_code)
 
+    def test_put_blueprint_non_existing_filename(self):
+        blueprint_id = 'new_blueprint_id'
+        put_blueprints_response = self.put_file(
+            *self.put_blueprint_args(blueprint_id=blueprint_id,
+                                     blueprint_file_name='non-existing')).json
+        self.assertEqual(
+            put_blueprints_response['message'],
+            'non-existing does not exist in the application directory')
+
+    def test_put_blueprint_no_default_yaml(self):
+        blueprint_id = 'new_blueprint_id'
+        put_blueprints_response = self.put_file(
+            *self.put_blueprint_args(
+                blueprint_id=blueprint_id,
+                blueprint_dir='mock_blueprint_no_default')).json
+        self.assertEqual(
+            put_blueprints_response['message'],
+            'application directory is missing blueprint.yaml and '
+            'application_file_name query parameter was not passed'
+        )
+
     def _test_put_blueprint(self, archive_func, archive_type):
         blueprint_id = 'new_blueprint_id'
         put_blueprints_response = self.put_file(
