@@ -13,5 +13,6 @@ node_templates:
                     implementation: testmockoperations.testmockoperations.tasks.fail
                     inputs:
                         fail_count: 2
-                    retries: 2
-                    retry_interval: 1
+                    on_error:
+                        max_retries: 2
+                        retry_interval: 1
