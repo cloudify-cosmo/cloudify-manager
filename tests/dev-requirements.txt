@@ -4,10 +4,12 @@ git+https://github.com/cloudify-cosmo/cloudify-plugins-common@CFY-2047-deploymen
 git+https://github.com/cloudify-cosmo/cloudify-diamond-plugin@master#egg=cloudify-diamond-plugin==1.2a6
 git+https://github.com/cloudify-cosmo/cloudify-script-plugin@master#egg=cloudify-script-plugin==1.2a6
 pyzmq
-python-dateutil
 
 # Manually install:
 # cloudify-manager/workflows
 # cloudify-manager/plugins/agent-installer
 # cloudify-manager/plugins/plugin-installer
 # cloudify-manager/rest-service
+
+# test dependencies
+python-dateutil

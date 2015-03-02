@@ -23,8 +23,6 @@ from os import path
 import cloudify.context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
-from cloudify_rest_client.deployment_modifications import (
-    DeploymentModification)
 from manager_rest.file_server import FileServer
 
 from testenv import TestCase
@@ -323,11 +321,6 @@ class BasicWorkflowsTest(TestCase):
             deployment_id,
             nodes={'webserver_host': {'instances': 2}})
         self.client.deployment_modifications.finish(modification.id)
-        # sanity
-        modification['status'] = DeploymentModification.FINISHED
-        self.assertEqual(
-            modification,
-            self.client.deployment_modifications.get(modification.id))
 
         # get updated node instances list
         nodes = self.client.node_instances.list(deployment_id=deployment_id)
