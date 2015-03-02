@@ -241,11 +241,12 @@ class TestAutohealPolicies(PoliciesTestsBase):
                 self._publish_and_wait(self.RISKY_METRIC)
 
         def breach_threshold_once(self):
+            LONG_TIME = 5
             self.test_case.launch_deployment(self.yaml)
-            for _ in range(self.LONG_TIME):
+            for _ in range(LONG_TIME):
                 self._publish_and_wait(self.VALID_METRIC)
             self._publish_and_wait(self.RISKY_METRIC)
-            for _ in range(self.LONG_TIME):
+            for _ in range(LONG_TIME):
                 self._publish_and_wait(self.VALID_METRIC)
 
         def breach_threshold_on_one_node_from_two(self):
@@ -408,7 +409,10 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self.assertEqual(Constants.THRESHOLD_FAILURE, invocation['diagnose'])
 
     def test_threshold_stabilized_doesnt_get_triggered_unnecessarily(self):
-        test = TestAutohealPolicies.Threshold(self)
+        test = TestAutohealPolicies.Threshold(
+            self,
+            yaml='dsl/stabilized_monitoring2.yaml'
+        )
         test.breach_threshold_once()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
@@ -448,23 +452,31 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
     def test_autoheal_policy_doesnt_get_triggered_unnecessarily(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
+        self.EVENTS_TTL = 10
 
-        for _ in range(self.TIME_TO_EXPIRATION):
+        for _ in range(self.TIME_TO_EXPIRATION + self.EVENTS_TTL):
+            self.logger.info('Before publishing event')
             self._publish_heart_beat_event()
+            self.logger.info('After publishing event and before sleep')
             time.sleep(1)
+            self.logger.info('After sleep')
 
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
 
     def test_autoheal_policy_triggering_for_two_nodes(self):
         self.launch_deployment('dsl/simple_auto_heal_policy_two_nodes.yaml', 2)
+        self.EVENTS_TTL = 10
 
         self._publish_heart_beat_event(
             'node_about_to_fail',
             'service_on_failing_node'
         )
-        for _ in range(self.TIME_TO_EXPIRATION):
+        for _ in range(self.TIME_TO_EXPIRATION + self.EVENTS_TTL):
+            self.logger.info('Before publishing event')
             self._publish_heart_beat_event('ok_node')
+            self.logger.info('After publishing event and before sleep')
             time.sleep(1)
+            self.logger.info('After sleep')
 
         self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
         invocation = self.wait_for_invocations(self.deployment.id, 1)[0]
@@ -490,6 +502,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
 
         # Wait for interval between workflows pass
         time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
+
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
