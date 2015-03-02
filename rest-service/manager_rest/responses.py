@@ -115,6 +115,7 @@ class DeploymentModification(object):
         'deployment_id': fields.String,
         'node_instances': fields.Raw,
         'created_at': fields.String,
+        'ended_at': fields.String,
         'modified_nodes': fields.Raw,
         'context': fields.Raw
     }
@@ -125,6 +126,7 @@ class DeploymentModification(object):
         self.deployment_id = kwargs['deployment_id']
         self.node_instances = kwargs['node_instances']
         self.created_at = kwargs['created_at']
+        self.ended_at = kwargs['ended_at']
         self.modified_nodes = kwargs['modified_nodes']
         self.context = kwargs['context']
 

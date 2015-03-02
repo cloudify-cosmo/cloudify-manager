@@ -367,14 +367,18 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Deployment modification {0} not found".format(modification_id))
 
-    def update_deployment_modification(self, modification_id, status):
+    def update_deployment_modification(self, modification):
+        modification_id = modification.id
         data = self._load_data()
         if modification_id not in data[DEPLOYMENT_MODIFICATIONS]:
             raise manager_exceptions.NotFoundError(
                 'Deployment modification {0} not found'
                 .format(modification_id))
-        modification = data[DEPLOYMENT_MODIFICATIONS][modification_id]
-        modification.status = status
+        updated_modification = data[DEPLOYMENT_MODIFICATIONS][modification_id]
+        if modification.status is not None:
+            updated_modification.status = modification.status
+        if modification.ended_at is not None:
+            updated_modification.ended_at = modification.ended_at
         self._dump_data(data)
 
     def deployment_modifications_list(self, deployment_id=None, include=None):

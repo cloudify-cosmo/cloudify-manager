@@ -175,9 +175,10 @@ class TestDeploymentModification(TestCase):
             'blueprint_id': 'b_{0}'.format(deployment_id)},
             modification.context)
         created_at = dateutil.parser.parse(modification.created_at)
+        ended_at = dateutil.parser.parse(modification.ended_at)
         self.assertTrue(datetime.datetime.now() -
                         datetime.timedelta(seconds=30) <=
-                        created_at <= datetime.datetime.now())
+                        created_at <= ended_at <= datetime.datetime.now())
         for node_id, modified_node in modified_nodes.items():
             node = self.client.nodes.get(deployment_id, node_id)
             self.assertEqual(node.planned_number_of_instances,

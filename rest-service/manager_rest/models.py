@@ -67,11 +67,12 @@ class DeploymentModification(SerializableObject):
     ROLLEDBACK = 'rolledback'
 
     fields = {'id', 'deployment_id', 'modified_nodes', 'node_instances',
-              'status', 'created_at', 'context'}
+              'status', 'created_at', 'ended_at', 'context'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
         self.created_at = kwargs['created_at']
+        self.ended_at = kwargs['ended_at']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
         self.modified_nodes = kwargs['modified_nodes']

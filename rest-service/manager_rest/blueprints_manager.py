@@ -292,6 +292,7 @@ class BlueprintsManager(object):
         modification = models.DeploymentModification(
             id=modification_id,
             created_at=now,
+            ended_at=None,
             status=models.DeploymentModification.STARTED,
             deployment_id=deployment_id,
             modified_nodes=modified_nodes,
@@ -354,8 +355,17 @@ class BlueprintsManager(object):
                     state=None,
                     runtime_properties=None))
 
+        now = str(datetime.now())
         self.sm.update_deployment_modification(
-            modification_id, models.DeploymentModification.FINISHED)
+            models.DeploymentModification(
+                id=modification_id,
+                status=models.DeploymentModification.FINISHED,
+                ended_at=now,
+                created_at=None,
+                deployment_id=None,
+                modified_nodes=None,
+                node_instances=None,
+                context=None))
 
     def rollback_deployment_modification(self, modification_id):
         self.sm.get_deployment_modification(modification_id)

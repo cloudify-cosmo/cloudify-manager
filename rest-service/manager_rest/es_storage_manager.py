@@ -399,8 +399,15 @@ class ESStorageManager(object):
                                              DeploymentModification,
                                              fields=include)
 
-    def update_deployment_modification(self, modification_id, status):
-        update_doc_data = {'status': status}
+    def update_deployment_modification(self, modification):
+
+        modification_id = modification.id
+        update_doc_data = {}
+        if modification.status is not None:
+            update_doc_data['status'] = modification.status
+        if modification.ended_at is not None:
+            update_doc_data['ended_at'] = modification.ended_at
+
         update_doc = {'doc': update_doc_data}
         try:
             self._connection.update(index=STORAGE_INDEX_NAME,

@@ -49,6 +49,7 @@ class ModifyTests(BaseServerTestCase):
             deployment.id, nodes=modified_nodes, context=mock_context)
         self.assertEqual(modification.node_instances.before_modification,
                          before_modification)
+        self.assertIsNone(modification.ended_at)
 
         node_assertions(num=1, deploy_num=1, planned_num=2)
 
@@ -66,8 +67,9 @@ class ModifyTests(BaseServerTestCase):
         self.assertEqual(modification.deployment_id, deployment.id)
         self.assertEqual(modification.modified_nodes, modified_nodes)
         created_at = dateutil.parser.parse(modification.created_at)
+        ended_at = dateutil.parser.parse(modification.ended_at)
         self.assertTrue(datetime.now() - timedelta(seconds=5) <=
-                        created_at < datetime.now())
+                        created_at <= ended_at <= datetime.now())
         all_modifications = self.client.deployment_modifications.list()
         dep_modifications = self.client.deployment_modifications.list(
             deployment_id=deployment.id)
