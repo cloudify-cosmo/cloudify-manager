@@ -106,6 +106,16 @@ class ExistingRunningExecutionError(ManagerException):
             .EXISTING_RUNNING_EXECUTION_ERROR_CODE, *args, **kwargs)
 
 
+class ExistingStartedDeploymentModificationError(ManagerException):
+    EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR = \
+        'existing_started_deployment_modification_error'
+
+    def __init__(self, *args, **kwargs):
+        super(ExistingStartedDeploymentModificationError, self).__init__(
+            400, ExistingStartedDeploymentModificationError
+            .EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR, *args, **kwargs)
+
+
 class DeploymentEnvironmentCreationInProgressError(ManagerException):
     DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE = \
         'deployment_environment_creation_in_progress_error'

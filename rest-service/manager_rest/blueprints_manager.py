@@ -274,7 +274,21 @@ class BlueprintsManager(object):
                                       modified_nodes,
                                       context):
         # verify deployment exists
-        self.sm.get_deployment(deployment_id)
+        self.sm.get_deployment(deployment_id, include=['id'])
+
+        existing_modifications = self.sm.deployment_modifications_list(
+            deployment_id=deployment_id, include=['id', 'status'])
+        active_modifications = [
+            m.id for m in existing_modifications
+            if m.status == models.DeploymentModification.STARTED]
+        if active_modifications:
+            raise \
+                manager_exceptions.ExistingStartedDeploymentModificationError(
+                    'Cannot start deployment modification while there are '
+                    'existing started deployment modifications. Currently '
+                    'started deployment modifications: {0}'
+                    .format(active_modifications))
+
         nodes = [node.to_dict() for node in self.sm.get_nodes(deployment_id)]
         node_instances = [instance.to_dict() for instance
                           in self.sm.get_node_instances(deployment_id)]

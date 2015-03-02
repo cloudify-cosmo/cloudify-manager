@@ -82,6 +82,24 @@ class ModifyTests(BaseServerTestCase):
                          before_modification)
         self.assertEqual(modification.context, mock_context)
 
+    def test_no_concurrent_modifications(self):
+        _, _, _, deployment = self.put_deployment(
+            deployment_id=str(uuid.uuid4()),
+            blueprint_file_name='modify1.yaml')
+
+        modification = self.client.deployment_modifications.start(
+            deployment.id, nodes={})
+        # should not allow another deployment modification to start
+        with self.assertRaises(
+                exceptions.ExistingStartedDeploymentModificationError) as e:
+            self.client.deployment_modifications.start(deployment.id, nodes={})
+        self.assertIn(modification.id, str(e.exception))
+
+        self.client.deployment_modifications.finish(modification.id)
+        # should allow deployment modification to start after previous one
+        # finished
+        self.client.deployment_modifications.start(deployment.id, nodes={})
+
     def test_finish_and_rollback_on_non_existent_modification(self):
         with self.assertRaises(exceptions.CloudifyClientError) as scope:
             self.client.deployment_modifications.finish('what')
