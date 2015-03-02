@@ -115,7 +115,8 @@ class DeploymentModification(object):
         'deployment_id': fields.String,
         'node_instances': fields.Raw,
         'created_at': fields.String,
-        'modified_nodes': fields.Raw
+        'modified_nodes': fields.Raw,
+        'context': fields.Raw
     }
 
     def __init__(self, **kwargs):
@@ -125,6 +126,7 @@ class DeploymentModification(object):
         self.node_instances = kwargs['node_instances']
         self.created_at = kwargs['created_at']
         self.modified_nodes = kwargs['modified_nodes']
+        self.context = kwargs['context']
 
 
 @swagger.model

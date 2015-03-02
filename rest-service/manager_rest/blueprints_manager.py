@@ -269,7 +269,10 @@ class BlueprintsManager(object):
                                             now)
         return new_deployment
 
-    def start_deployment_modification(self, deployment_id, modified_nodes):
+    def start_deployment_modification(self,
+                                      deployment_id,
+                                      modified_nodes,
+                                      context):
         # verify deployment exists
         self.sm.get_deployment(deployment_id)
         nodes = [node.to_dict() for node in self.sm.get_nodes(deployment_id)]
@@ -292,7 +295,8 @@ class BlueprintsManager(object):
             status=models.DeploymentModification.STARTED,
             deployment_id=deployment_id,
             modified_nodes=modified_nodes,
-            node_instances=node_instances_modification)
+            node_instances=node_instances_modification,
+            context=context)
         self.sm.put_deployment_modification(modification_id, modification)
 
         for node_id, modified_node in modified_nodes.items():

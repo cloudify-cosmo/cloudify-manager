@@ -849,13 +849,18 @@ class DeploymentModifications(Resource):
         request_json = request.json
         verify_parameter_in_request_body('deployment_id', request_json)
         deployment_id = request_json['deployment_id']
+        verify_parameter_in_request_body('context',
+                                         request_json,
+                                         param_type=dict,
+                                         optional=True)
+        context = request_json.get('context', {})
         verify_parameter_in_request_body('nodes',
                                          request_json,
                                          param_type=dict,
                                          optional=True)
         nodes = request_json.get('nodes', {})
         modification = get_blueprints_manager().\
-            start_deployment_modification(deployment_id, nodes)
+            start_deployment_modification(deployment_id, nodes, context)
         return responses.DeploymentModification(**modification.to_dict()), 201
 
     @swagger.operation(

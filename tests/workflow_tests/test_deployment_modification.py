@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 
+import uuid
 import datetime
 import dateutil.parser
 
@@ -139,14 +140,18 @@ class TestDeploymentModification(TestCase):
                                       deployment_id=None):
         if not deployment_id:
             dsl_path = resource("dsl/deployment_modification.yaml")
-            deployment, _ = deploy(dsl_path)
+            test_id = str(uuid.uuid4())
+            deployment, _ = deploy(dsl_path,
+                                   deployment_id=test_id,
+                                   blueprint_id='b_{0}'.format(test_id))
             deployment_id = deployment.id
 
         before_modifications = self.client.deployment_modifications.list(
             deployment_id)
 
-        execute_workflow('deployment_modification', deployment_id,
-                         parameters={'nodes': modified_nodes})
+        execution = execute_workflow(
+            'deployment_modification', deployment_id,
+            parameters={'nodes': modified_nodes})
 
         after_modifications = self.client.deployment_modifications.list(
             deployment_id)
@@ -163,6 +168,12 @@ class TestDeploymentModification(TestCase):
                          DeploymentModification.FINISHED)
         self.assertEqual(modification.deployment_id, deployment_id)
         self.assertEqual(modification.modified_nodes, modified_nodes)
+        self.assertDictContainsSubset({
+            'workflow_id': 'deployment_modification',
+            'execution_id': execution.id,
+            'deployment_id': deployment_id,
+            'blueprint_id': 'b_{0}'.format(deployment_id)},
+            modification.context)
         created_at = dateutil.parser.parse(modification.created_at)
         self.assertTrue(datetime.datetime.now() -
                         datetime.timedelta(seconds=30) <=

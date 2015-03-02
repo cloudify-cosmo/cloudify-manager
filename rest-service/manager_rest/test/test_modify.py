@@ -41,10 +41,12 @@ class ModifyTests(BaseServerTestCase):
 
         node_assertions(num=1, deploy_num=1, planned_num=1)
 
+        mock_context = {'some': 'data'}
+
         before_modification = self.client.node_instances.list(deployment.id)
         modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployment_modifications.start(
-            deployment.id, nodes=modified_nodes)
+            deployment.id, nodes=modified_nodes, context=mock_context)
         self.assertEqual(modification.node_instances.before_modification,
                          before_modification)
 
@@ -76,6 +78,7 @@ class ModifyTests(BaseServerTestCase):
             deployment_id='i_really_should_not_exist'))
         self.assertEqual(modification.node_instances.before_modification,
                          before_modification)
+        self.assertEqual(modification.context, mock_context)
 
     def test_finish_and_rollback_on_non_existent_modification(self):
         with self.assertRaises(exceptions.CloudifyClientError) as scope:
