@@ -343,6 +343,12 @@ class BlueprintsManager(object):
     def finish_deployment_modification(self, modification_id):
         modification = self.sm.get_deployment_modification(modification_id)
 
+        if modification.status in models.DeploymentModification.END_STATES:
+            raise manager_exceptions.DeploymentModificationAlreadyEndedError(
+                'Cannot finish deployment modification: {0}. It is already in'
+                ' {1} status.'.format(modification_id,
+                                      modification.status))
+
         modified_nodes = modification.modified_nodes
         for node_id, modified_node in modified_nodes.items():
             self.sm.update_node(modification.deployment_id, node_id,
@@ -382,7 +388,25 @@ class BlueprintsManager(object):
                 context=None))
 
     def rollback_deployment_modification(self, modification_id):
-        self.sm.get_deployment_modification(modification_id)
+        modification = self.sm.get_deployment_modification(modification_id)
+
+        if modification.status in models.DeploymentModification.END_STATES:
+            raise manager_exceptions.DeploymentModificationAlreadyEndedError(
+                'Cannot rollback deployment modification: {0}. It is already '
+                'in {1} status.'.format(modification_id,
+                                        modification.status))
+
+        now = str(datetime.now())
+        self.sm.update_deployment_modification(
+            models.DeploymentModification(
+                id=modification_id,
+                status=models.DeploymentModification.ROLLEDBACK,
+                ended_at=now,
+                created_at=None,
+                deployment_id=None,
+                modified_nodes=None,
+                node_instances=None,
+                context=None))
 
     def _get_node_instance_ids(self, deployment_id):
         return self.sm.get_node_instances(deployment_id, include=['id'])

@@ -100,6 +100,26 @@ class ModifyTests(BaseServerTestCase):
         # finished
         self.client.deployment_modifications.start(deployment.id, nodes={})
 
+    def test_finish_and_rollback_on_ended_modification(self):
+        def test(end_function):
+            _, _, _, deployment = self.put_deployment(
+                deployment_id=str(uuid.uuid4()),
+                blueprint_id=str(uuid.uuid4()),
+                blueprint_file_name='modify1.yaml')
+            modification = self.client.deployment_modifications.start(
+                deployment.id, nodes={})
+            end_function(modification.id)
+
+            with self.assertRaises(
+                    exceptions.DeploymentModificationAlreadyEndedError):
+                self.client.deployment_modifications.finish(modification.id)
+            with self.assertRaises(
+                    exceptions.DeploymentModificationAlreadyEndedError):
+                self.client.deployment_modifications.rollback(modification.id)
+
+        test(self.client.deployment_modifications.finish)
+        test(self.client.deployment_modifications.rollback)
+
     def test_finish_and_rollback_on_non_existent_modification(self):
         with self.assertRaises(exceptions.CloudifyClientError) as scope:
             self.client.deployment_modifications.finish('what')

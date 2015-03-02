@@ -66,6 +66,8 @@ class DeploymentModification(SerializableObject):
     FINISHED = 'finished'
     ROLLEDBACK = 'rolledback'
 
+    END_STATES = [FINISHED, ROLLEDBACK]
+
     fields = {'id', 'deployment_id', 'modified_nodes', 'node_instances',
               'status', 'created_at', 'ended_at', 'context'}
 

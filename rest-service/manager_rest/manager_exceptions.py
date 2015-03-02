@@ -116,6 +116,16 @@ class ExistingStartedDeploymentModificationError(ManagerException):
             .EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR, *args, **kwargs)
 
 
+class DeploymentModificationAlreadyEndedError(ManagerException):
+    DEPLOYMENT_MODIFICATION_ALREADY_ENDED_ERROR = \
+        'deployment_modification_already_ended_error'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentModificationAlreadyEndedError, self).__init__(
+            400, DeploymentModificationAlreadyEndedError
+            .DEPLOYMENT_MODIFICATION_ALREADY_ENDED_ERROR, *args, **kwargs)
+
+
 class DeploymentEnvironmentCreationInProgressError(ManagerException):
     DEPLOYMENT_ENVIRONMENT_CREATION_IN_PROGRESS_ERROR_CODE = \
         'deployment_environment_creation_in_progress_error'
