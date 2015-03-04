@@ -407,6 +407,8 @@ class ESStorageManager(object):
             update_doc_data['status'] = modification.status
         if modification.ended_at is not None:
             update_doc_data['ended_at'] = modification.ended_at
+        if modification.node_instances is not None:
+            update_doc_data['node_instances'] = modification.node_instances
 
         update_doc = {'doc': update_doc_data}
         try:

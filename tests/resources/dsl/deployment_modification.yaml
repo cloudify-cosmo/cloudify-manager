@@ -31,7 +31,11 @@ node_templates:
                 op: testmockoperations.testmockoperations.tasks.put_workflow_node_instance
 
 workflows:
-    deployment_modification:
-        mapping: mock_workflows.mock_workflows.workflows.deployment_modification
+    deployment_modification_finish:
+        mapping: mock_workflows.mock_workflows.workflows.deployment_modification_finish
+        parameters:
+            nodes: {}
+    deployment_modification_rollback:
+        mapping: mock_workflows.mock_workflows.workflows.deployment_modification_rollback
         parameters:
             nodes: {}

@@ -396,6 +396,23 @@ class BlueprintsManager(object):
                 'in {1} status.'.format(modification_id,
                                         modification.status))
 
+        node_instances = self.sm.get_node_instances(modification.deployment_id)
+        modification.node_instances['before_rollback'] = [
+            instance.to_dict() for instance in node_instances]
+        for instance in node_instances:
+            self.sm.delete_node_instance(instance.id)
+        for instance in modification.node_instances['before_modification']:
+            self.sm.put_node_instance(
+                models.DeploymentNodeInstance(**instance))
+        nodes_num_instances = {node.id: node for node in self.sm.get_nodes(
+            deployment_id=modification.deployment_id,
+            include=['id', 'number_of_instances'])}
+        for node_id, modified_node in modification.modified_nodes.items():
+            self.sm.update_node(
+                modification.deployment_id, node_id,
+                planned_number_of_instances=nodes_num_instances[
+                    node_id].number_of_instances)
+
         now = str(datetime.now())
         self.sm.update_deployment_modification(
             models.DeploymentModification(
@@ -405,7 +422,7 @@ class BlueprintsManager(object):
                 created_at=None,
                 deployment_id=None,
                 modified_nodes=None,
-                node_instances=None,
+                node_instances=modification.node_instances,
                 context=None))
 
     def _get_node_instance_ids(self, deployment_id):

@@ -379,6 +379,8 @@ class FileStorageManager(object):
             updated_modification.status = modification.status
         if modification.ended_at is not None:
             updated_modification.ended_at = modification.ended_at
+        if modification.node_instances is not None:
+            updated_modification.node_instances = modification.node_instances
         self._dump_data(data)
 
     def deployment_modifications_list(self, deployment_id=None, include=None):

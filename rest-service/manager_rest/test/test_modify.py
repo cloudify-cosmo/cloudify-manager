@@ -27,7 +27,41 @@ from base_test import BaseServerTestCase
 
 class ModifyTests(BaseServerTestCase):
 
-    def test_data_model(self):
+    def test_data_model_with_finish(self):
+        def expected_after_end_func(_, before_end):
+            return before_end
+        self._test_data_model_impl(
+            end_func=self.client.deployment_modifications.finish,
+            expected_end_status=DeploymentModification.FINISHED,
+            expected_end_node_counts={
+                'num': 2, 'deploy_num': 1, 'planned_num': 2},
+            expected_before_end_func=lambda before_end: None,
+            expected_after_end_func=expected_after_end_func,
+            expected_after_end_count=3,
+            expected_after_end_runtime_property='after_start')
+
+    def test_data_model_with_rollback(self):
+        def expected_after_end_func(before_modification, _):
+            return before_modification
+        self._test_data_model_impl(
+            end_func=self.client.deployment_modifications.rollback,
+            expected_end_status=DeploymentModification.ROLLEDBACK,
+            expected_end_node_counts={
+                'num': 1, 'deploy_num': 1, 'planned_num': 1},
+            expected_before_end_func=lambda before_end: before_end,
+            expected_after_end_func=expected_after_end_func,
+            expected_after_end_count=2,
+            expected_after_end_runtime_property='before_start')
+
+    def _test_data_model_impl(
+            self,
+            end_func,
+            expected_end_status,
+            expected_end_node_counts,
+            expected_before_end_func,
+            expected_after_end_func,
+            expected_after_end_count,
+            expected_after_end_runtime_property):
 
         def node_assertions(num, deploy_num, planned_num):
             node = self.client.nodes.get(deployment.id, 'node1')
@@ -43,6 +77,19 @@ class ModifyTests(BaseServerTestCase):
 
         mock_context = {'some': 'data'}
 
+        node1_instance = self.client.node_instances.list(
+            deployment_id=deployment.id, node_name='node1')[0]
+        self.client.node_instances.update(
+            node1_instance.id,
+            runtime_properties={'test': 'before_start'},
+            version=0)
+        node2_instance = self.client.node_instances.list(
+            deployment_id=deployment.id, node_name='node2')[0]
+        self.client.node_instances.update(
+            node2_instance.id,
+            runtime_properties={'test': 'before_start'},
+            version=0)
+
         before_modification = self.client.node_instances.list(deployment.id)
         modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployment_modifications.start(
@@ -51,19 +98,33 @@ class ModifyTests(BaseServerTestCase):
                          before_modification)
         self.assertIsNone(modification.ended_at)
 
+        self.client.node_instances.update(
+            node1_instance.id,
+            runtime_properties={'test': 'after_start'},
+            version=1)
+        self.client.node_instances.update(
+            node2_instance.id,
+            runtime_properties={'test': 'after_start'},
+            version=1)
+
         node_assertions(num=1, deploy_num=1, planned_num=2)
 
         modification_id = modification.id
         self.assertEqual(modification.status,
                          DeploymentModification.STARTED)
-        self.client.deployment_modifications.finish(modification_id)
 
-        node_assertions(num=2, deploy_num=1, planned_num=2)
+        before_end = self.client.node_instances.list(deployment.id)
+
+        end_func(modification_id)
+
+        after_end = self.client.node_instances.list(deployment.id)
+
+        node_assertions(**expected_end_node_counts)
 
         modification = self.client.deployment_modifications.get(
             modification.id)
         self.assertEqual(modification.id, modification_id)
-        self.assertEqual(modification.status, DeploymentModification.FINISHED)
+        self.assertEqual(modification.status, expected_end_status)
         self.assertEqual(modification.deployment_id, deployment.id)
         self.assertEqual(modification.modified_nodes, modified_nodes)
         created_at = dateutil.parser.parse(modification.created_at)
@@ -80,7 +141,24 @@ class ModifyTests(BaseServerTestCase):
             deployment_id='i_really_should_not_exist'))
         self.assertEqual(modification.node_instances.before_modification,
                          before_modification)
+        self.assertEqual(modification.node_instances.before_rollback,
+                         expected_before_end_func(before_end))
+
+        self.assertEqual(after_end,
+                         expected_after_end_func(before_modification,
+                                                 before_end))
         self.assertEqual(modification.context, mock_context)
+
+        self.assertEqual(expected_after_end_count, len(after_end))
+
+        self.assertEqual(
+            self.client.node_instances.get(
+                node1_instance.id).runtime_properties['test'],
+            expected_after_end_runtime_property)
+        self.assertEqual(
+            self.client.node_instances.get(
+                node2_instance.id).runtime_properties['test'],
+            expected_after_end_runtime_property)
 
     def test_no_concurrent_modifications(self):
         _, _, _, deployment = self.put_deployment(
