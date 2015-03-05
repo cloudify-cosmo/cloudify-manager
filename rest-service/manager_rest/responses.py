@@ -110,15 +110,25 @@ class DeploymentOutputs(object):
 class DeploymentModification(object):
 
     resource_fields = {
+        'id': fields.String,
+        'status': fields.String,
         'deployment_id': fields.String,
         'node_instances': fields.Raw,
-        'modified_nodes': fields.Raw
+        'created_at': fields.String,
+        'ended_at': fields.String,
+        'modified_nodes': fields.Raw,
+        'context': fields.Raw
     }
 
     def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
         self.node_instances = kwargs['node_instances']
+        self.created_at = kwargs['created_at']
+        self.ended_at = kwargs['ended_at']
         self.modified_nodes = kwargs['modified_nodes']
+        self.context = kwargs['context']
 
 
 @swagger.model
@@ -156,6 +166,7 @@ class Node(object):
         'type': fields.String,
         'type_hierarchy': fields.Raw,
         'number_of_instances': fields.String,
+        'planned_number_of_instances': fields.String,
         'deploy_number_of_instances': fields.String,
         'host_id': fields.String,
         'properties': fields.Raw,
@@ -172,6 +183,8 @@ class Node(object):
         self.type = kwargs['type']
         self.type_hierarchy = kwargs['type_hierarchy']
         self.number_of_instances = kwargs['number_of_instances']
+        self.planned_number_of_instances = kwargs[
+            'planned_number_of_instances']
         self.deploy_number_of_instances = kwargs['deploy_number_of_instances']
         self.host_id = kwargs['host_id']
         self.properties = kwargs['properties']
