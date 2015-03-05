@@ -19,6 +19,7 @@ class Config(object):
     def __init__(self):
         self._db_address = 'localhost'
         self._db_port = 9200
+        self._amqp_address = 'localhost'
         self._file_server_root = None
         self._file_server_base_uri = None
         self._file_server_blueprints_folder = None
@@ -30,6 +31,30 @@ class Config(object):
         self._securest_authentication_methods = []
         self._securest_userstore_driver = None
         self._securest_userstore_identifier_attribute = None
+
+    @property
+    def db_address(self):
+        return self._db_address
+
+    @db_address.setter
+    def db_address(self, value):
+        self._db_address = value
+
+    @property
+    def db_port(self):
+        return self._db_port
+
+    @property
+    def amqp_address(self):
+        return self._amqp_address
+
+    @amqp_address.setter
+    def amqp_address(self, value):
+        self._amqp_address = value
+
+    @db_port.setter
+    def db_port(self, value):
+        self._db_port = value
 
     @property
     def db_address(self):

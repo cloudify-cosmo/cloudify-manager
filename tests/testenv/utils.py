@@ -19,6 +19,7 @@ import uuid
 import pika
 import requests
 import time
+import urllib
 
 from contextlib import contextmanager
 from functools import wraps
@@ -98,7 +99,7 @@ def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
 
 
 def wait_for_deployment_creation_to_complete(
-        deployment_id, timeout_seconds=60):
+        deployment_id, timeout_seconds=30):
     do_retries(func=verify_deployment_environment_creation_complete,
                timeout_seconds=timeout_seconds,
                deployment_id=deployment_id)
@@ -150,7 +151,7 @@ def verify_deployment_environment_creation_complete(deployment_id):
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
         from testenv import TestEnvironment  # avoid cyclic import
-        logs = TestEnvironment.read_celery_management_logs() or []
+        logs = TestEnvironment.read_celery_management_logs() or ''
         logs = logs[len(logs) - 100000:]
         raise RuntimeError(
             "Expected a single execution for workflow "
@@ -309,6 +310,21 @@ def restore_provider_context():
     delete_provider_context()
     client = create_rest_client()
     client.manager.create_context(PROVIDER_NAME, PROVIDER_CONTEXT)
+
+
+def wait_for_url(url, timeout=15):
+    end = time.time() + timeout
+
+    while end >= time.time():
+        try:
+            status = urllib.urlopen(url).getcode()
+            if status == 200:
+                return
+        except IOError:
+            time.sleep(1)
+
+    raise RuntimeError('Url {0} is not available (waited {1} '
+                       'seconds)'.format(url, timeout))
 
 
 def timestamp():

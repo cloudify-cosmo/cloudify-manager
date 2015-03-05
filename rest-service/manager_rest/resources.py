@@ -373,23 +373,31 @@ class BlueprintsUpload(object):
 
     @staticmethod
     def _extract_application_file(file_server_root, application_dir):
+
+        full_application_dir = path.join(file_server_root, application_dir)
+
         if 'application_file_name' in request.args:
-            application_file = urllib.unquote(
+            application_file_name = urllib.unquote(
                 request.args['application_file_name']).decode('utf-8')
-            application_file = '{0}/{1}'.format(application_dir,
-                                                application_file)
-            return application_file
+            application_file = path.join(full_application_dir,
+                                         application_file_name)
+            if not path.isfile(application_file):
+                raise manager_exceptions.BadParametersError(
+                    '{0} does not exist in the application '
+                    'directory'.format(application_file_name)
+                )
         else:
-            full_application_dir = path.join(file_server_root, application_dir)
-            full_application_file = path.join(
-                full_application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
-            if path.isfile(full_application_file):
-                application_file = path.join(
-                    application_dir, CONVENTION_APPLICATION_BLUEPRINT_FILE)
-                return application_file
-        raise manager_exceptions.BadParametersError(
-            'Missing application_file_name query parameter or '
-            'application directory is missing blueprint.yaml')
+            application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
+            application_file = path.join(full_application_dir,
+                                         application_file_name)
+            if not path.isfile(application_file):
+                raise manager_exceptions.BadParametersError(
+                    'application directory is missing blueprint.yaml and '
+                    'application_file_name query parameter was not passed')
+
+        # return relative path from the file server root since this path
+        # is appended to the file server base uri
+        return path.join(application_dir, application_file_name)
 
 
 class BlueprintsIdArchive(Resource):
@@ -1094,7 +1102,10 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
     Returns:
     Elasticsearch result as is (Python dict).
     """
-    es = elasticsearch.Elasticsearch()
+    es_host = config.instance().db_address
+    es_port = config.instance().db_port
+    es = elasticsearch.Elasticsearch(hosts=[{"host": es_host,
+                                             "port": es_port}])
     return es.search(index=index, doc_type=doc_type, body=body)
 
 
@@ -1262,8 +1273,18 @@ class ProviderContext(Resource):
         verify_parameter_in_request_body('name', request_json)
         context = models.ProviderContext(name=request.json['name'],
                                          context=request.json['context'])
-        get_storage_manager().put_provider_context(context)
-        return responses.ProviderContextPostStatus(status='ok'), 201
+        update = verify_and_convert_bool(
+            'update',
+            request.args.get('update', 'false')
+        )
+
+        status_code = 200 if update else 201
+
+        if update:
+            get_storage_manager().update_provider_context(context)
+        else:
+            get_storage_manager().put_provider_context(context)
+        return responses.ProviderContextPostStatus(status='ok'), status_code
 
 
 class Version(Resource):

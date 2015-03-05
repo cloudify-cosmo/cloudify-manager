@@ -30,10 +30,18 @@ class TestDeploymentModification(TestCase):
             'testmockoperations', deployment_id)['mock_operation_invocation']
         self.assertEqual(1, len([i for i in invocations
                                  if i['operation'] == 'create']))
-        self.assertEqual(1, len([i for i in invocations
+        self.assertEqual(2, len([i for i in invocations
                                  if i['operation'] == 'preconfigure']))
-        self.assertEqual(1, len([i for i in invocations
+        self.assertEqual(2, len([i for i in invocations
                                  if i['operation'] == 'preconfigure']))
+        configure_invocations = [i for i in invocations
+                                 if i['operation'] == 'configure']
+        self.assertEqual(1, len(configure_invocations))
+        self.assertEqual(1, len(configure_invocations[0]['target_ids']))
+        start_invocations = [i for i in invocations
+                             if i['operation'] == 'start']
+        self.assertEqual(1, len(start_invocations))
+        self.assertEqual(2, len(start_invocations[0]['target_ids']))
 
     def test_deployment_modification_add_compute(self):
         nodes = {'compute': {'instances': 2}}

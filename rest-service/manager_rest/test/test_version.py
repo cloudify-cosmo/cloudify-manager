@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
 from manager_rest import get_version_data
 
 from base_test import BaseServerTestCase

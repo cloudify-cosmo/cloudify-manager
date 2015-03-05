@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='mock-with-dependencies-plugin',
-    version='3.2a4',
+    version='3.2a6',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['mock_with_dependencies_for_test'],

@@ -212,21 +212,23 @@ class BaseServerTestCase(unittest.TestCase):
         except urllib2.HTTPError:
             return False
 
-    def archive_mock_blueprint(self, archive_func=archiving.make_targzfile):
+    def archive_mock_blueprint(self, archive_func=archiving.make_targzfile,
+                               blueprint_dir='mock_blueprint'):
         archive_path = tempfile.mkstemp()[1]
         source_dir = os.path.join(os.path.dirname(
-            os.path.abspath(__file__)), 'mock_blueprint')
+            os.path.abspath(__file__)), blueprint_dir)
         archive_func(archive_path, source_dir)
         return archive_path
 
     def put_blueprint_args(self, blueprint_file_name=None,
                            blueprint_id='blueprint',
-                           archive_func=archiving.make_targzfile):
+                           archive_func=archiving.make_targzfile,
+                           blueprint_dir='mock_blueprint'):
 
         resource_path = '/blueprints/{0}'.format(blueprint_id)
         result = [
             resource_path,
-            self.archive_mock_blueprint(archive_func),
+            self.archive_mock_blueprint(archive_func, blueprint_dir),
         ]
 
         if blueprint_file_name:

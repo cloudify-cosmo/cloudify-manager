@@ -12,8 +12,8 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-import StringIO
 
+import StringIO
 import logging
 import functools
 import traceback
@@ -35,6 +35,7 @@ from flask_securest.rest_security import (
     SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE)
 
 from manager_rest import config
+# from manager_rest import blueprints_manager
 from manager_rest import storage_manager
 from manager_rest import resources
 from manager_rest import utils
@@ -50,10 +51,6 @@ def setup_app():
     app = Flask(__name__)
     init_secure_app(app)
 
-    print 'in server.setup_app'
-    for setting in app.config:
-        print '***** {0} = {1}'.format(setting, app.config[setting])
-
     # TODO Additional security settings:
     # 1. hooks - additional before/after request hooks
     # 2. hook - unauthorized
@@ -62,14 +59,15 @@ def setup_app():
     #   python path
     # 4. userstore implementation
     # 5. authorization implementation?
+    
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
 
     additional_log_handlers = [
         RotatingFileHandler(
-            # config.instance().rest_service_log_path,
+            config.instance().rest_service_log_path,
             '/tmp/tmplog',
-            maxBytes=1024*1024*100,
+            maxBytes=1024 * 1024 * 100,
             backupCount=20)
     ]
 
@@ -242,36 +240,9 @@ if True:
     with open(config_file_path) as f:
         yaml_conf = yaml.load(f.read())
     obj_conf = config.instance()
-    if 'file_server_root' in yaml_conf:
-        obj_conf.file_server_root = yaml_conf['file_server_root']
-    if 'file_server_base_uri' in yaml_conf:
-        obj_conf.file_server_base_uri = yaml_conf['file_server_base_uri']
-    if 'file_server_blueprints_folder' in yaml_conf:
-        obj_conf.file_server_blueprints_folder = \
-            yaml_conf['file_server_blueprints_folder']
-    if 'file_server_uploaded_blueprints_folder' in yaml_conf:
-        obj_conf.file_server_uploaded_blueprints_folder = \
-            yaml_conf['file_server_uploaded_blueprints_folder']
-    if 'file_server_resources_uri' in yaml_conf:
-        obj_conf.file_server_resources_uri = \
-            yaml_conf['file_server_resources_uri']
-    if 'rest_service_log_path' in yaml_conf:
-        obj_conf.rest_service_log_path = \
-            yaml_conf['rest_service_log_path']
-    if 'securest_secret_key' in yaml_conf:
-        obj_conf.securest_secret_key = yaml_conf['securest_secret_key']
-    if 'securest_authentication_methods' in yaml_conf:
-        obj_conf.securest_authentication_methods = \
-            yaml_conf['securest_authentication_methods']
-    if 'securest_userstore_driver' in yaml_conf:
-        obj_conf.securest_userstore_driver = \
-            yaml_conf['securest_userstore_driver']
-    if 'securest_userstore_identifier_attribute' in yaml_conf:
-        obj_conf.securest_userstore_identifier_attribute = \
-            yaml_conf['securest_userstore_identifier_attribute']
-    # TODO Add security related config, probably hierarchically
-# else:
-#     print '***** no MANAGER_REST_CONFIG_PATH in os.environ'
+    for key, value in yaml_conf.iteritems():
+        if hasattr(obj_conf, key):
+            setattr(obj_conf, key, value)
 
 app = setup_app()
 

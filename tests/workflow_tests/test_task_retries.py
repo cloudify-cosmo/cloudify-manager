@@ -87,6 +87,18 @@ class TaskRetriesTest(TestCase):
             expected_retries=1,
             invocations_type='failure_invocation')
 
+    def test_operation_retry_in_operation_mapping(self):
+        self._test_retries_and_retry_interval_impl(
+            blueprint='dsl/workflow_task_retries_6.yaml',
+            # setting global values to something really big
+            retries=1000,
+            retry_interval=1000,
+            # blueprint operation mapping overrides retry_interval
+            # and retries
+            expected_interval=1,
+            expected_retries=2,
+            invocations_type='failure_invocation')
+
     def test_operation_retry(self):
         self.configure(retries=5, retry_interval=5)
         deployment_id = str(uuid.uuid4())
