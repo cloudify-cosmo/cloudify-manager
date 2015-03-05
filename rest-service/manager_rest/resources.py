@@ -889,7 +889,7 @@ class DeploymentModifications(Resource):
 class DeploymentModificationsId(Resource):
 
     @swagger.operation(
-        responseClass=responses.DeploymentModificationFinish,
+        responseClass=responses.DeploymentModification,
         nickname="getDeploymentModification",
         notes="Get deployment modification."
     )
@@ -904,31 +904,31 @@ class DeploymentModificationsId(Resource):
 class DeploymentModificationsIdFinish(Resource):
 
     @swagger.operation(
-        responseClass=responses.DeploymentModificationFinish,
+        responseClass=responses.DeploymentModification,
         nickname="finishDeploymentModification",
         notes="Finish deployment modification."
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification.resource_fields)
     def post(self, modification_id):
-        get_blueprints_manager().finish_deployment_modification(
+        modification = get_blueprints_manager().finish_deployment_modification(
             modification_id)
-        return responses.DeploymentModificationFinish(id=modification_id)
+        return responses.DeploymentModification(**modification.to_dict())
 
 
 class DeploymentModificationsIdRollback(Resource):
 
     @swagger.operation(
-        responseClass=responses.DeploymentModificationRollback,
+        responseClass=responses.DeploymentModification,
         nickname="rollbackDeploymentModification",
         notes="Rollback deployment modification."
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification.resource_fields)
     def post(self, modification_id):
-        get_blueprints_manager().rollback_deployment_modification(
-            modification_id)
-        return responses.DeploymentModificationRollback(id=modification_id)
+        modification = get_blueprints_manager(
+            ).rollback_deployment_modification(modification_id)
+        return responses.DeploymentModification(**modification.to_dict())
 
 
 class Nodes(Resource):

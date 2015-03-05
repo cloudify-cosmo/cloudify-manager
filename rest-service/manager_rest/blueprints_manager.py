@@ -387,6 +387,16 @@ class BlueprintsManager(object):
                 node_instances=None,
                 context=None))
 
+        return models.DeploymentModification(
+            id=modification_id,
+            status=models.DeploymentModification.FINISHED,
+            ended_at=None,
+            created_at=None,
+            deployment_id=None,
+            modified_nodes=None,
+            node_instances=None,
+            context=None)
+
     def rollback_deployment_modification(self, modification_id):
         modification = self.sm.get_deployment_modification(modification_id)
 
@@ -424,6 +434,16 @@ class BlueprintsManager(object):
                 modified_nodes=None,
                 node_instances=modification.node_instances,
                 context=None))
+
+        return models.DeploymentModification(
+            id=modification_id,
+            status=models.DeploymentModification.ROLLEDBACK,
+            ended_at=None,
+            created_at=None,
+            deployment_id=None,
+            modified_nodes=None,
+            node_instances=None,
+            context=None)
 
     def _get_node_instance_ids(self, deployment_id):
         return self.sm.get_node_instances(deployment_id, include=['id'])

@@ -132,28 +132,6 @@ class DeploymentModification(object):
 
 
 @swagger.model
-class DeploymentModificationFinish(object):
-
-    resource_fields = {
-        'id': fields.String,
-    }
-
-    def __init__(self, **kwargs):
-        self.id = kwargs['id']
-
-
-@swagger.model
-class DeploymentModificationRollback(object):
-
-    resource_fields = {
-        'id': fields.String,
-    }
-
-    def __init__(self, **kwargs):
-        self.id = kwargs['id']
-
-
-@swagger.model
 class Execution(object):
 
     resource_fields = {
