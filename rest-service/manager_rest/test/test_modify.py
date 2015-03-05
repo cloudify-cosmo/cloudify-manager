@@ -35,7 +35,7 @@ class ModifyTests(BaseServerTestCase):
             expected_end_status=DeploymentModification.FINISHED,
             expected_end_node_counts={
                 'num': 2, 'deploy_num': 1, 'planned_num': 2},
-            expected_before_end_func=lambda before_end: None,
+            expected_before_end_func=lambda before_end: [],
             expected_after_end_func=expected_after_end_func,
             expected_after_end_count=3,
             expected_after_end_runtime_property='after_start')
