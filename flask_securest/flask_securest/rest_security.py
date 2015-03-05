@@ -1,8 +1,6 @@
 from collections import namedtuple
 from functools import wraps
 from flask import _app_ctx_stack, current_app
-from flask_restful import Resource
-
 import utils
 from authentication_providers.abstract_authentication_provider \
     import AbstractAuthenticationProvider
@@ -34,6 +32,9 @@ default_config = {
                                  'FileUserstore',
     'SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE': 'username',
 }
+
+
+secured_resources = []
 
 
 class SecuREST(object):
@@ -104,51 +105,43 @@ def validate_configuration():
 
 def authenticate_request_if_needed():
     # TODO check if the resource is secured or not,
-    # maybe through the api/resources, with something that gets the
-    # resource for the "request.path" from the api and checks if it's
-    # an instance of SecuredResource.
-    # TODO otherwise use a mapping list like in Spring-Security
+
     if True:
         from flask import globals
         g_request = globals.request
         print '----- authenticating request...'
         print '----- g_request.endpoint', g_request.endpoint
+        print '----- secured_resources: ', secured_resources
         endpoint = g_request.endpoint
         view_func = current_app.view_functions.get(endpoint)
-        print '----- view_functions.get(endpoint): ', view_func
-        if view_func is None:
-            raise Exception('view function not set for endpoint "{0}"'.format(endpoint))
 
-        view_class = getattr(view_func, 'view_class')
+        if not view_func:
+            raise Exception('endpoint {0} is not mapped to a REST resource'
+                            .format(endpoint))
 
-        print '========='
-        print type(view_class)
-        print '========='
-
-        print '=======1'
-        print view_class.endpoint
-        print '=======2'
-        print view_class.methods
-        print '==========3'
-
-        print '----- view_class ', view_class
-        if isinstance(view_class, SecuredResource):
-            print '----- instance of SecuredResource'
+        global secured_resources
+        if not hasattr(view_func, 'view_class'):
+            print '----- view_class attribute not found on view func {0}'\
+                .format(view_func)
         else:
-            print '----- NOT instance of SecuredResource'
+            view_class = getattr(view_func, 'view_class')
+            if utils.get_class_fqn(view_class) in secured_resources:
+                print '----- accessing secured resource {0}, attempting ' \
+                      'authentication'.format(utils.get_class_fqn(view_class))
+                # accessing a secured resource, must authenticate
+                authenticate_request()
+            else:
+                print '----- accessing open resource {0}, not authenticating'\
+                    .format(utils.get_class_fqn(view_class))
 
-        if type(view_class) == SecuredResource:
-            print '----- type is SecuredResource'
-        else:
-            print '----- type is NOT SecuredResource'
 
-        if hasattr(view_class, 'secured'):
-            print '----- has attribute secured'
-            print '----- secured value: ', getattr(view_class, 'secured')
-        else:
-            print '----- does NOT have attribute secured'
+def secure(resource_class):
+    print '----- adding resource to secured_resources: ', \
+        utils.get_class_fqn(resource_class)
+    global secured_resources
+    secured_resources.append(utils.get_class_fqn(resource_class))
 
-        authenticate_request()
+    return resource_class
 
 
 def filter_response_if_needed(response=None):
@@ -268,8 +261,3 @@ def authenticate(authentication_providers, auth_info):
         raise Exception('Unauthorized')
 
     return user
-
-
-class SecuredResource(Resource):
-    method_decorators = [login_required]
-    secured = True

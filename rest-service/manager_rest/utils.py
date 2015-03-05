@@ -40,3 +40,7 @@ def get_class_instance(class_path, *args, **kwargs):
 
 def get_runtime_class_fqn(instance):
     return type(instance).__module__ + '.' + type(instance).__name__
+
+
+def get_class_fqn(clazz):
+    return clazz.__module__ + '.' + clazz.__name__

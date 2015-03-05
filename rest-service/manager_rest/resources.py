@@ -41,7 +41,6 @@ from flask import (
 )
 from flask.ext.restful import Resource, abort, marshal, reqparse
 from flask_restful_swagger import swagger
-from flask_securest.rest_security import SecuredResource
 from flask.ext.restful.utils import unpack
 from flask.ext.securest import rest_security
 
@@ -176,7 +175,7 @@ def setup_resources(api):
     api = swagger.docs(api,
                        apiVersion='0.1',
                        basePath='http://localhost:8100')
-    api.add_resource(Blueprints, '/blueprints')
+    api.add_resource(Blueprints, '/blueprints', endpoint='blue_endpoint')
     api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
     api.add_resource(BlueprintsIdArchive,
                      '/blueprints/<string:blueprint_id>/archive')
@@ -198,7 +197,7 @@ def setup_resources(api):
     api.add_resource(ProviderContext, '/provider/context')
     api.add_resource(Version, '/version')
     api.add_resource(EvaluateFunctions, '/evaluate/functions')
-    api.add_resource(Tokens, '/tokens')
+#    api.add_resource(Tokens, '/tokens')
 
 
 class BlueprintsUpload(object):
@@ -440,6 +439,7 @@ class BlueprintsIdArchive(Resource):
         return response
 
 
+@rest_security.secure
 class Blueprints(Resource):
 
     @swagger.operation(
@@ -1172,7 +1172,8 @@ class Search(Resource):
                                      body=request.json)
 
 
-class Status(SecuredResource):
+@rest_security.secure
+class Status(Resource):
 
     @swagger.operation(
         responseClass=responses.Status,
@@ -1322,7 +1323,7 @@ class EvaluateFunctions(Resource):
         return responses.EvaluatedFunctions(deployment_id=deployment_id,
                                             payload=processed_payload)
 
-
+'''
 class Tokens(Resource):
     @swagger.operation(
         responseClass=responses.Tokens,
@@ -1339,3 +1340,4 @@ class Tokens(Resource):
         token = g.user.generate_auth_token()
         print '***** returning token: ', token
         return responses.Tokens(token=token.decode('ascii'))
+'''

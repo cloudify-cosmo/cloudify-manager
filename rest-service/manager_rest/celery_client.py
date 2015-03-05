@@ -14,8 +14,6 @@
 #    * limitations under the License.
 
 
-__author__ = 'ran'
-
 from celery import Celery
 from manager_rest import config
 

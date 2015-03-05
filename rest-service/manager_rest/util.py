@@ -19,9 +19,6 @@ import shutil
 from os import path
 
 
-__author__ = 'dank'
-
-
 def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,
                  remove_existing_handlers=True):
     """

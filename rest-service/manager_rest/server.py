@@ -13,13 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 import StringIO
-from flask_securest.authentication_providers.abstract_authentication_provider\
-    import AbstractAuthenticationProvider
-
-from flask_securest.rest_security import *
-
-
-__author__ = 'dan'
 
 import logging
 import functools
@@ -35,11 +28,19 @@ from flask import (
 )
 from flask_restful import Api
 
+from flask_securest.rest_security import (
+    SecuREST,
+    SECUREST_SECRET_KEY,
+    SECUREST_USERSTORE_DRIVER,
+    SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE)
+
 from manager_rest import config
 from manager_rest import storage_manager
 from manager_rest import resources
+from manager_rest import utils
 from manager_rest import manager_exceptions
 from util import setup_logger
+
 
 AUTHENTICATE_METHOD_NAME = 'authenticate'
 
@@ -49,13 +50,16 @@ def setup_app():
     app = Flask(__name__)
     init_secure_app(app)
 
+    print 'in server.setup_app'
     for setting in app.config:
         print '***** {0} = {1}'.format(setting, app.config[setting])
 
     # TODO Additional security settings:
     # 1. hooks - additional before/after request hooks
     # 2. hook - unauthorized
-    # 3. authentication methods - place modules' files in a known location, update the json config file on bootstrap, and append to the rest's python path
+    # 3. authentication methods - place modules' files in a known location,
+    #   update the json config file on bootstrap, and append to the rest's
+    #   python path
     # 4. userstore implementation
     # 5. authorization implementation?
     # setting up the app logger with a rotating file handler, in addition to
@@ -217,8 +221,8 @@ def register_authentication_methods(secure_app, authentication_providers):
             '''
             if not hasattr(auth_provider, AUTHENTICATE_METHOD_NAME):
                 # TODO use a more specific exception type
-                raise Exception('authentication provider "{0}" does not implement'
-                                ' {1}'.format(
+                raise Exception('authentication provider "{0}" does not'
+                                ' implement {1}'.format(
                                     utils.get_runtime_class_fqn(auth_provider),
                                     AUTHENTICATE_METHOD_NAME))
             '''
@@ -232,7 +236,8 @@ def register_authentication_methods(secure_app, authentication_providers):
 # if 'MANAGER_REST_CONFIG_PATH' in os.environ:
 config_file_path = os.path.dirname(__file__) + '/config.yaml'
 if True:
-    print '***** using {0} as MANAGER_REST_CONFIG_PATH'.format(config_file_path)
+    print '***** using {0} as MANAGER_REST_CONFIG_PATH'\
+        .format(config_file_path)
     # with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
     with open(config_file_path) as f:
         yaml_conf = yaml.load(f.read())

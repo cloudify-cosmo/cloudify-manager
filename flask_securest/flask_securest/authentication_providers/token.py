@@ -1,4 +1,3 @@
-from flask import globals as flask_globals
 from itsdangerous import \
     URLSafeTimedSerializer, SignatureExpired, BadSignature
 from abstract_authentication_provider import AbstractAuthenticationProvider

@@ -26,8 +26,9 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 from cloudify.utils import LocalCommandRunner
 from cloudify.utils import setup_default_logger
-from plugin_installer.tasks import install, get_url_and_args, update_includes, \
-    parse_pip_version, is_pip6_or_higher, extract_plugin_dir
+from plugin_installer.tasks import install, get_url_and_args, \
+    update_includes, parse_pip_version, \
+    is_pip6_or_higher, extract_plugin_dir
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.constants import VIRTUALENV_PATH_KEY
 from cloudify.constants import LOCAL_IP_KEY
@@ -294,10 +295,8 @@ class PluginInstallerTestCase(testtools.TestCase):
         """
         Compare two directories recursively. Files in each directory are
         assumed to be equal if their names and contents are equal.
-
         @param dir1: First directory path
         @param dir2: Second directory path
-
         @return: True if the directory trees are the same and
             there were no errors while accessing the directories or files,
             False otherwise.
@@ -362,8 +361,10 @@ class PipVersionParserTestCase(testtools.TestCase):
                                parse_pip_version, '1.a.4')
 
     def test_parse_too_short_version(self):
-        expected_err_msg = 'Unknown formatting of pip version: "6", expected ' \
-                           'dot-delimited numbers \(e.g. "1.5.4", "6.0"\)'
+        expected_err_msg = 'Unknown formatting of pip version: ' \
+                           '"6", expected ' \
+                           'dot-delimited numbers ' \
+                           '\(e.g. "1.5.4", "6.0"\)'
         self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
                                parse_pip_version, '6')
 
@@ -373,8 +374,10 @@ class PipVersionParserTestCase(testtools.TestCase):
                                parse_pip_version, 6)
 
     def test_parse_alpha_version(self):
-        expected_err_msg = 'Unknown formatting of pip version: "a", expected ' \
-                           'dot-delimited numbers \(e.g. "1.5.4", "6.0"\)'
+        expected_err_msg = 'Unknown formatting of pip ' \
+                           'version: "a", expected ' \
+                           'dot-delimited ' \
+                           'numbers \(e.g. "1.5.4", "6.0"\)'
         self.assertRaisesRegex(NonRecoverableError, expected_err_msg,
                                parse_pip_version, 'a')
 

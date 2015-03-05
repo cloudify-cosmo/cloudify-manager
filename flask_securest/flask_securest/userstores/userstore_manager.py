@@ -28,7 +28,6 @@ class UserstoreManager():
 
         """Returns a class from a string formatted as module:class"""
         # TODO use a more specific exception type and messages
-        print '***** INITING class {0} with args {1} and kwargs {2}'.format(self.userstore_driver_path, args, kwargs)
         userstore_driver = \
             utils.get_class_instance(self.userstore_driver_path,
                                      *args, **kwargs)

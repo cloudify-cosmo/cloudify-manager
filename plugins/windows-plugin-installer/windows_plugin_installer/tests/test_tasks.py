@@ -1,3 +1,4 @@
+
 # ***************************************************************************
 # * Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 # *
@@ -16,16 +17,14 @@
 
 import unittest
 
-__author__ = 'elip'
-
 
 class TasksTest(unittest.TestCase):
 
     def test_add_module_paths_to_includes(self):
 
-        app_parameters = '--broker=amqp://guest:guest@127.0.0.1:5672// '\
+        app_parameters = '--broker=amqp://guest:guest@127.0.0.1:5672// ' \
                          '--include=plugin_installer.tasks --events ' \
-                         '--app=cloudify -Q test-node-id -n test-node-id '\
+                         '--app=cloudify -Q test-node-id -n test-node-id ' \
                          '--logfile=C:\CloudifyAgent\celery.log ' \
                          '--pidfile=C:\CloudifyAgent\celery.pid'
 
@@ -34,10 +33,14 @@ class TasksTest(unittest.TestCase):
             'mock_plugin.tasks',
             app_parameters)
 
-        expected_app_parameters = '--broker=amqp://guest:guest@127.0.0.1:5672// '\
-                                  '--include=plugin_installer.tasks,mock_plugin.tasks --events '\
-                                  '--app=cloudify -Q test-node-id -n test-node-id '\
-                                  '--logfile=C:\CloudifyAgent\celery.log '\
+        expected_app_parameters = '--broker=amqp://' \
+                                  'guest:guest@127.0.0.1:5672// ' \
+                                  '--include=plugin_installer.tasks,' \
+                                  'mock_plugin.tasks ' \
+                                  '--events ' \
+                                  '--app=cloudify -Q test-node-id -n ' \
+                                  'test-node-id ' \
+                                  '--logfile=C:\CloudifyAgent\celery.log ' \
                                   '--pidfile=C:\CloudifyAgent\celery.pid'
 
         self.assertEqual(new_app_parameters, expected_app_parameters)

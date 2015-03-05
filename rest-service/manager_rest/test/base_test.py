@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'dan'
-
 import unittest
 import json
 import urllib
@@ -142,9 +140,12 @@ class BaseServerTestCase(unittest.TestCase):
         # security config
         test_config.securest_secret_key = 'test_secret_key'
         test_config.securest_authentication_methods = \
-            ['flask_securest.authentication_providers.password:PasswordAuthenticator',
-             'flask_securest.authentication_providers.token:TokenAuthenticator',]
-        test_config.securest_userstore_driver = 'flask_securest.userstores.file:FileUserstore'
+            ['flask_securest.authentication_providers.password:\
+             PasswordAuthenticator',
+             'flask_securest.authentication_providers.token:\
+             TokenAuthenticator']
+        test_config.securest_userstore_driver = 'flask_securest.userstores.\
+        file:FileUserstore'
         test_config.securest_userstore_identifier_attribute = 'username'
 
         return test_config
@@ -186,13 +187,9 @@ class BaseServerTestCase(unittest.TestCase):
         result.json = json.loads(result.data)
         return result
 
-    def get(self, resource_path, query_params=None):
-        result = self.app.get(self._build_url(resource_path, query_params))
-        result.json = json.loads(result.data)
-        return result
-
     def get(self, resource_path, query_params=None, headers=None):
-        result = self.app.get(self._build_url(resource_path, query_params), headers=headers)
+        result = self.app.get(self._build_url(resource_path, query_params),
+                              headers=headers)
         result.json = json.loads(result.data)
         return result
 

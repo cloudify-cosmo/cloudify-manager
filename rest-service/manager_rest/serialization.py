@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-__author__ = 'ran'
-
 import json
 
 TYPE_FIELD_NAME = '_type'
@@ -113,6 +111,6 @@ class SerializableObjectBase(object):
         attr_and_values = ((attr, getattr(self, attr)) for attr in dir(self)
                            if not attr.startswith("__"))
         instance_attr_to_values = {attr: value for attr, value in
-                                   attr_and_values if not callable(value)
-                                   and not attr == 'resource_fields'}
+                                   attr_and_values if not callable(value) and
+                                   not attr == 'resource_fields'}
         return instance_attr_to_values
