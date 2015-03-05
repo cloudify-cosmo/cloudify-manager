@@ -389,6 +389,12 @@ def fail_user_exception(ctx, exception_type, **kwargs):
 
 
 @operation
+def fail_on_scale(ctx, **kwargs):
+    if ctx.workflow_id == 'scale':
+        raise NonRecoverableError('TEST_EXPECTED_FAIL')
+
+
+@operation
 def host_get_state(ctx, **kwargs):
     with update_storage(ctx) as data:
         data['host_get_state_invocation'] = data.get(

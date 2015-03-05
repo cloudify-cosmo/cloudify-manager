@@ -26,6 +26,12 @@ node_types:
                 start: testmockoperations.testmockoperations.tasks.mock_start
                 stop: testmockoperations.testmockoperations.tasks.mock_stop
                 delete: testmockoperations.testmockoperations.tasks.mock_delete
+    failing_node:
+        derived_from: cloudify.nodes.Root
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: testmockoperations.testmockoperations.tasks.fail_on_scale
+                delete: testmockoperations.testmockoperations.tasks.fail_on_scale
 
 relationships:
     contained_in:
