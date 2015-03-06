@@ -50,14 +50,25 @@ def init_worker_installer(func):
         if not ctx:
             raise NonRecoverableError(
                 'CloudifyContext not found in invocation args')
-        if ctx.type == context.NODE_INSTANCE and \
-                'cloudify_agent' in ctx.node.properties:
-            agent_config = ctx.node.properties['cloudify_agent']
+
+        if 'cloudify_agent' in kwargs:
+            if ctx.type == context.NODE_INSTANCE and \
+                    ctx.node.properties.get('cloudify_agent'):
+                raise NonRecoverableError("'cloudify_agent' is configured "
+                                          "both as a node property and as an "
+                                          "invocation input parameter for "
+                                          "operation '{0}'"
+                                          .format(ctx.operation.name))
+            agent_config = kwargs['cloudify_agent']
         else:
-            agent_config = kwargs.get('cloudify_agent', {})
+            if ctx.type == context.NODE_INSTANCE and \
+                    ctx.node.properties.get('cloudify_agent'):
+                agent_config = ctx.node.properties['cloudify_agent']
+            else:
+                agent_config = {}
 
         prepare_connection_configuration(ctx, agent_config)
-
+        kwargs['cloudify_agent'] = agent_config
         runner = FabricRunner(ctx, agent_config)
         try:
             prepare_additional_configuration(ctx, agent_config, runner)
