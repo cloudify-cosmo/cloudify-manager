@@ -44,6 +44,10 @@ class Config(object):
     def db_port(self):
         return self._db_port
 
+    @db_port.setter
+    def db_port(self, value):
+        self._db_port = value
+
     @property
     def amqp_address(self):
         return self._amqp_address
@@ -51,26 +55,6 @@ class Config(object):
     @amqp_address.setter
     def amqp_address(self, value):
         self._amqp_address = value
-
-    @db_port.setter
-    def db_port(self, value):
-        self._db_port = value
-
-    @property
-    def db_address(self):
-        return self._db_address
-
-    @db_address.setter
-    def db_address(self, value):
-        self._db_address = value
-
-    @property
-    def db_port(self):
-        return self._db_port
-
-    @db_port.setter
-    def db_port(self, value):
-        self._db_port = value
 
     @property
     def file_server_root(self):

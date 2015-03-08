@@ -58,7 +58,7 @@ def setup_app():
     #   python path
     # 4. userstore implementation
     # 5. authorization implementation?
-    
+
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
 
