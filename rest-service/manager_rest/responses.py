@@ -284,27 +284,3 @@ class EvaluatedFunctions():
     def __init__(self, **kwargs):
         self.deployment_id = kwargs['deployment_id']
         self.payload = kwargs['payload']
-
-
-@swagger.model
-class Users(object):
-
-    resource_fields = {
-        'name': fields.String,
-        'password': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.name = kwargs['name']
-        self.password = kwargs['password']
-
-
-@swagger.model
-class Tokens(object):
-
-    resource_fields = {
-        'token': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.token = kwargs['token']

@@ -29,10 +29,6 @@ from urllib2 import urlopen, URLError
 
 from setuptools import archive_util
 
-
-# import for security implementation
-# from flask.ext.security import login_required
-
 import elasticsearch
 from flask import (
     request,
@@ -175,7 +171,7 @@ def setup_resources(api):
     api = swagger.docs(api,
                        apiVersion='0.1',
                        basePath='http://localhost:8100')
-    api.add_resource(Blueprints, '/blueprints', endpoint='blue_endpoint')
+    api.add_resource(Blueprints, '/blueprints')
     api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
     api.add_resource(BlueprintsIdArchive,
                      '/blueprints/<string:blueprint_id>/archive')
@@ -205,7 +201,6 @@ def setup_resources(api):
     api.add_resource(ProviderContext, '/provider/context')
     api.add_resource(Version, '/version')
     api.add_resource(EvaluateFunctions, '/evaluate/functions')
-#    api.add_resource(Tokens, '/tokens')
 
 
 class BlueprintsUpload(object):
@@ -408,6 +403,7 @@ class BlueprintsUpload(object):
         return path.join(application_dir, application_file_name)
 
 
+@rest_security.secure
 class BlueprintsIdArchive(Resource):
 
     @swagger.operation(
@@ -473,6 +469,7 @@ class Blueprints(Resource):
         return get_blueprints_manager().blueprints_list(_include)
 
 
+@rest_security.secure
 class BlueprintsId(Resource):
 
     @swagger.operation(
@@ -565,6 +562,7 @@ class BlueprintsId(Resource):
         return responses.BlueprintState(**blueprint.to_dict()), 200
 
 
+@rest_security.secure
 class Executions(Resource):
 
     @swagger.operation(
@@ -616,6 +614,7 @@ class Executions(Resource):
         return responses.Execution(**execution.to_dict()), 201
 
 
+@rest_security.secure
 class ExecutionsId(Resource):
 
     @swagger.operation(
@@ -713,6 +712,7 @@ class ExecutionsId(Resource):
             execution_id).to_dict())
 
 
+@rest_security.secure
 class Deployments(Resource):
 
     @swagger.operation(
@@ -736,6 +736,7 @@ class Deployments(Resource):
         ]
 
 
+@rest_security.secure
 class DeploymentsId(Resource):
 
     def __init__(self):
@@ -826,6 +827,7 @@ class DeploymentsId(Resource):
         return responses.Deployment(**deployment.to_dict()), 200
 
 
+@rest_security.secure
 class DeploymentModifications(Resource):
 
     def __init__(self):
@@ -894,6 +896,7 @@ class DeploymentModifications(Resource):
                 for m in modifications]
 
 
+@rest_security.secure
 class DeploymentModificationsId(Resource):
 
     @swagger.operation(
@@ -909,6 +912,7 @@ class DeploymentModificationsId(Resource):
         return responses.DeploymentModification(**modification.to_dict())
 
 
+@rest_security.secure
 class DeploymentModificationsIdFinish(Resource):
 
     @swagger.operation(
@@ -924,6 +928,7 @@ class DeploymentModificationsIdFinish(Resource):
         return responses.DeploymentModification(**modification.to_dict())
 
 
+@rest_security.secure
 class DeploymentModificationsIdRollback(Resource):
 
     @swagger.operation(
@@ -939,6 +944,7 @@ class DeploymentModificationsIdRollback(Resource):
         return responses.DeploymentModification(**modification.to_dict())
 
 
+@rest_security.secure
 class Nodes(Resource):
 
     def __init__(self):
@@ -984,6 +990,7 @@ class Nodes(Resource):
         return [responses.Node(**node.to_dict()) for node in nodes]
 
 
+@rest_security.secure
 class NodeInstances(Resource):
 
     def __init__(self):
@@ -1030,6 +1037,7 @@ class NodeInstances(Resource):
         return [responses.NodeInstance(**node.to_dict()) for node in nodes]
 
 
+@rest_security.secure
 class NodeInstancesId(Resource):
 
     @swagger.operation(
@@ -1148,6 +1156,7 @@ class NodeInstancesId(Resource):
                 node_instance_id).to_dict())
 
 
+@rest_security.secure
 class DeploymentsIdOutputs(Resource):
 
     @swagger.operation(
@@ -1178,6 +1187,7 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
     return es.search(index=index, doc_type=doc_type, body=body)
 
 
+@rest_security.secure
 class Events(Resource):
 
     def _query_events(self):
@@ -1227,6 +1237,7 @@ class Events(Resource):
         return self._query_events()
 
 
+@rest_security.secure
 class Search(Resource):
 
     @swagger.operation(
@@ -1300,6 +1311,7 @@ class Status(Resource):
         return os.getenv('DOCKER_ENV') is not None
 
 
+@rest_security.secure
 class ProviderContext(Resource):
 
     @swagger.operation(
@@ -1372,6 +1384,7 @@ class Version(Resource):
         return responses.Version(**get_version_data())
 
 
+@rest_security.secure
 class EvaluateFunctions(Resource):
 
     @swagger.operation(
@@ -1412,22 +1425,3 @@ class EvaluateFunctions(Resource):
             payload=payload)
         return responses.EvaluatedFunctions(deployment_id=deployment_id,
                                             payload=processed_payload)
-
-'''
-class Tokens(Resource):
-    @swagger.operation(
-        responseClass=responses.Tokens,
-        nickname="get auth token for the authenticated user",
-    )
-    @exceptions_handled
-    @rest_security.login_required
-    @marshal_with(responses.Tokens.resource_fields)
-    def get(self):
-        """
-        Get auth token
-        """
-        print '***** generating token for user: ', g.user
-        token = g.user.generate_auth_token()
-        print '***** returning token: ', token
-        return responses.Tokens(token=token.decode('ascii'))
-'''
