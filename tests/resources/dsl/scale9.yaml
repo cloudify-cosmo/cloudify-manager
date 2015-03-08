@@ -10,3 +10,8 @@ inputs:
 node_templates:
     compute:
         type: compute
+    db:
+        type: db
+        relationships:
+            - target: compute
+              type: connected_to

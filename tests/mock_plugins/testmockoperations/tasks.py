@@ -152,6 +152,16 @@ def saving_operation_info(ctx, op, main_node, second_node=None, **_):
             })
         invocations.append(op_info)
 
+    client = get_rest_client()
+    fail_input = client.deployments.get(ctx.deployment.id).inputs.get(
+        'fail', [])
+    fail_input = [i for i in fail_input if
+                  i.get('workflow') == ctx.workflow_id and
+                  i.get('node') == main_node.node.id and
+                  i.get('operation') == ctx.operation.name]
+    if fail_input:
+        raise RuntimeError('TEST_EXPECTED_FAIL')
+
 
 def saving_rel_operation_info(ctx, op, **kwargs):
     saving_operation_info(ctx, op, ctx.source, ctx.target,
@@ -160,6 +170,17 @@ def saving_rel_operation_info(ctx, op, **kwargs):
 
 def saving_non_rel_operation_info(ctx, op, **kwargs):
     saving_operation_info(ctx, op, ctx, **kwargs)
+
+
+@operation
+def mock_lifecycle(ctx, **kwargs):
+    saving_non_rel_operation_info(ctx, ctx.operation.name.split('.')[-1],
+                                  **kwargs)
+
+
+@operation
+def mock_rel_lifecycle(ctx, **kwargs):
+    saving_rel_operation_info(ctx, ctx.operation.name.split('.')[-1], **kwargs)
 
 
 @operation
@@ -386,12 +407,6 @@ def fail_user_exception(ctx, exception_type, **kwargs):
         raise NonRecoverableUserException(
             'Failing task on user defined exception'
         )
-
-
-@operation
-def fail_on_scale(ctx, **kwargs):
-    if ctx.workflow_id == 'scale':
-        raise NonRecoverableError('TEST_EXPECTED_FAIL')
 
 
 @operation
