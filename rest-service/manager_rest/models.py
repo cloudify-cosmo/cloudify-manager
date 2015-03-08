@@ -60,6 +60,28 @@ class Deployment(SerializableObject):
         self.permalink = None  # TODO: implement
 
 
+class DeploymentModification(SerializableObject):
+
+    STARTED = 'started'
+    FINISHED = 'finished'
+    ROLLEDBACK = 'rolledback'
+
+    END_STATES = [FINISHED, ROLLEDBACK]
+
+    fields = {'id', 'deployment_id', 'modified_nodes', 'node_instances',
+              'status', 'created_at', 'ended_at', 'context'}
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.created_at = kwargs['created_at']
+        self.ended_at = kwargs['ended_at']
+        self.status = kwargs['status']
+        self.deployment_id = kwargs['deployment_id']
+        self.modified_nodes = kwargs['modified_nodes']
+        self.node_instances = kwargs['node_instances']
+        self.context = kwargs['context']
+
+
 class Execution(SerializableObject):
 
     TERMINATED = 'terminated'
@@ -93,8 +115,8 @@ class DeploymentNode(SerializableObject):
 
     fields = {
         'id', 'deployment_id', 'blueprint_id', 'type', 'type_hierarchy',
-        'number_of_instances', 'deploy_number_of_instances',
-        'host_id', 'properties',
+        'number_of_instances', 'planned_number_of_instances',
+        'deploy_number_of_instances', 'host_id', 'properties',
         'operations', 'plugins', 'relationships', 'plugins_to_install'
     }
 
@@ -104,8 +126,10 @@ class DeploymentNode(SerializableObject):
         self.blueprint_id = kwargs['blueprint_id']
         self.type = kwargs['type']
         self.type_hierarchy = kwargs['type_hierarchy']
-        self.deploy_number_of_instances = kwargs['deploy_number_of_instances']
         self.number_of_instances = kwargs['number_of_instances']
+        self.planned_number_of_instances = kwargs[
+            'planned_number_of_instances']
+        self.deploy_number_of_instances = kwargs['deploy_number_of_instances']
         self.host_id = kwargs['host_id']
         self.properties = kwargs['properties']
         self.operations = kwargs['operations']

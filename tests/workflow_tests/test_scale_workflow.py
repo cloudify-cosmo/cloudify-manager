@@ -239,6 +239,14 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['removed']['rel_uninstall'] = 4
         self.deployment_assertions(expectations)
 
+    def test_scale_rollback(self):
+        self.deploy('scale7')
+        with self.assertRaises(RuntimeError) as e:
+            self.scale(parameters={'node_id': 'node', 'delta': 1})
+        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        instances = self.client.node_instances.list(self.deployment_id)
+        self.assertEqual(len(instances), 1)
+
     def setUp(self):
         super(TestScaleWorkflow, self).setUp()
         self.previous_ids = []

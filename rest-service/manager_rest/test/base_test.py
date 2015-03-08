@@ -113,7 +113,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.client.blueprints.api = mock_http_client
         self.client.deployments.api = mock_http_client
         self.client.deployments.outputs.api = mock_http_client
-        self.client.deployments.modify.api = mock_http_client
+        self.client.deployment_modifications.api = mock_http_client
         self.client.executions.api = mock_http_client
         self.client.nodes.api = mock_http_client
         self.client.node_instances.api = mock_http_client

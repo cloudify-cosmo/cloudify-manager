@@ -21,6 +21,7 @@ from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
                                  Deployment,
+                                 DeploymentModification,
                                  Execution,
                                  DeploymentNode,
                                  DeploymentNodeInstance,
@@ -31,6 +32,7 @@ NODE_TYPE = 'node'
 NODE_INSTANCE_TYPE = 'node_instance'
 BLUEPRINT_TYPE = 'blueprint'
 DEPLOYMENT_TYPE = 'deployment'
+DEPLOYMENT_MODIFICATION_TYPE = 'deployment_modification'
 EXECUTION_TYPE = 'execution'
 PROVIDER_CONTEXT_TYPE = 'provider_context'
 PROVIDER_CONTEXT_ID = 'CONTEXT'
@@ -308,6 +310,7 @@ class ESStorageManager(object):
         self._delete_doc_by_query(EXECUTION_TYPE, query)
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
         self._delete_doc_by_query(NODE_TYPE, query)
+        self._delete_doc_by_query(DEPLOYMENT_MODIFICATION_TYPE, query)
         return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
 
     def delete_execution(self, execution_id):
@@ -321,9 +324,16 @@ class ESStorageManager(object):
                                 node_instance_id,
                                 DeploymentNodeInstance)
 
-    def update_node(self, deployment_id, node_id, number_of_instances):
+    def update_node(self, deployment_id, node_id,
+                    number_of_instances=None,
+                    planned_number_of_instances=None):
         storage_node_id = self._storage_node_id(deployment_id, node_id)
-        update_doc_data = {'number_of_instances': number_of_instances}
+        update_doc_data = {}
+        if number_of_instances is not None:
+            update_doc_data['number_of_instances'] = number_of_instances
+        if planned_number_of_instances is not None:
+            update_doc_data[
+                'planned_number_of_instances'] = planned_number_of_instances
         update_doc = {'doc': update_doc_data}
         try:
             self._connection.update(index=STORAGE_INDEX_NAME,
@@ -377,6 +387,49 @@ class ESStorageManager(object):
                                              PROVIDER_CONTEXT_ID,
                                              ProviderContext,
                                              fields=include)
+
+    def put_deployment_modification(self, modification_id, modification):
+        self._put_doc_if_not_exists(DEPLOYMENT_MODIFICATION_TYPE,
+                                    modification_id,
+                                    modification.to_dict())
+
+    def get_deployment_modification(self, modification_id, include=None):
+        return self._get_doc_and_deserialize(DEPLOYMENT_MODIFICATION_TYPE,
+                                             modification_id,
+                                             DeploymentModification,
+                                             fields=include)
+
+    def update_deployment_modification(self, modification):
+
+        modification_id = modification.id
+        update_doc_data = {}
+        if modification.status is not None:
+            update_doc_data['status'] = modification.status
+        if modification.ended_at is not None:
+            update_doc_data['ended_at'] = modification.ended_at
+        if modification.node_instances is not None:
+            update_doc_data['node_instances'] = modification.node_instances
+
+        update_doc = {'doc': update_doc_data}
+        try:
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=DEPLOYMENT_MODIFICATION_TYPE,
+                                    id=modification_id,
+                                    body=update_doc,
+                                    **MUTATE_PARAMS)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Modification {0} not found".format(modification_id))
+
+    def deployment_modifications_list(self, deployment_id=None, include=None):
+        query = None
+        if deployment_id:
+            terms = [{'term': {'deployment_id': deployment_id}}]
+            query = {'query': {'bool': {'must': terms}}}
+        return self._list_docs(DEPLOYMENT_MODIFICATION_TYPE,
+                               DeploymentModification,
+                               query=query,
+                               fields=include)
 
     @staticmethod
     def _storage_node_id(deployment_id, node_id):

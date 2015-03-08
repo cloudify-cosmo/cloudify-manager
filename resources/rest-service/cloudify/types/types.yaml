@@ -43,7 +43,7 @@ node_types:
         restart: agent_installer.worker_installer.tasks.restart
       cloudify.interfaces.plugin_installer:
         install: plugin_installer.plugin_installer.tasks.install
-      cloudify.interfaces.host:
+      cloudify.interfaces.host:  # DEPRECATED
         get_state: {}
       cloudify.interfaces.monitoring_agent:
         install: {}

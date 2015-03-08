@@ -269,9 +269,26 @@ class BlueprintsManager(object):
                                             now)
         return new_deployment
 
-    def start_deployment_modification(self, deployment_id, modified_nodes):
+    def start_deployment_modification(self,
+                                      deployment_id,
+                                      modified_nodes,
+                                      context):
         # verify deployment exists
-        self.sm.get_deployment(deployment_id)
+        self.sm.get_deployment(deployment_id, include=['id'])
+
+        existing_modifications = self.sm.deployment_modifications_list(
+            deployment_id=deployment_id, include=['id', 'status'])
+        active_modifications = [
+            m.id for m in existing_modifications
+            if m.status == models.DeploymentModification.STARTED]
+        if active_modifications:
+            raise \
+                manager_exceptions.ExistingStartedDeploymentModificationError(
+                    'Cannot start deployment modification while there are '
+                    'existing started deployment modifications. Currently '
+                    'started deployment modifications: {0}'
+                    .format(active_modifications))
+
         nodes = [node.to_dict() for node in self.sm.get_nodes(deployment_id)]
         node_instances = [instance.to_dict() for instance
                           in self.sm.get_node_instances(deployment_id)]
@@ -279,6 +296,28 @@ class BlueprintsManager(object):
             nodes=nodes,
             previous_node_instances=node_instances,
             modified_nodes=modified_nodes)
+
+        node_instances_modification['before_modification'] = [
+            instance.to_dict() for instance in
+            self.sm.get_node_instances(deployment_id)]
+
+        now = str(datetime.now())
+        modification_id = str(uuid.uuid4())
+        modification = models.DeploymentModification(
+            id=modification_id,
+            created_at=now,
+            ended_at=None,
+            status=models.DeploymentModification.STARTED,
+            deployment_id=deployment_id,
+            modified_nodes=modified_nodes,
+            node_instances=node_instances_modification,
+            context=context)
+        self.sm.put_deployment_modification(modification_id, modification)
+
+        for node_id, modified_node in modified_nodes.items():
+            self.sm.update_node(
+                modification.deployment_id, node_id,
+                planned_number_of_instances=modified_node['instances'])
         added_and_related = node_instances_modification['added_and_related']
         added_node_instances = []
         for node_instance in added_and_related:
@@ -299,19 +338,22 @@ class BlueprintsManager(object):
                     runtime_properties=None))
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
-        return {
-            'node_instances': node_instances_modification,
-            'modified_nodes': modified_nodes
-        }
+        return modification
 
-    def finish_deployment_modification(self, deployment_id, modification):
-        # verify deployment exists
-        self.sm.get_deployment(deployment_id)
-        modified_nodes = modification['modified_nodes']
+    def finish_deployment_modification(self, modification_id):
+        modification = self.sm.get_deployment_modification(modification_id)
+
+        if modification.status in models.DeploymentModification.END_STATES:
+            raise manager_exceptions.DeploymentModificationAlreadyEndedError(
+                'Cannot finish deployment modification: {0}. It is already in'
+                ' {1} status.'.format(modification_id,
+                                      modification.status))
+
+        modified_nodes = modification.modified_nodes
         for node_id, modified_node in modified_nodes.items():
-            self.sm.update_node(deployment_id, node_id,
-                                modified_node['instances'])
-        node_instances = modification['node_instances']
+            self.sm.update_node(modification.deployment_id, node_id,
+                                number_of_instances=modified_node['instances'])
+        node_instances = modification.node_instances
         for node_instance in node_instances['removed_and_related']:
             if node_instance.get('modification') == 'removed':
                 self.sm.delete_node_instance(node_instance['id'])
@@ -332,6 +374,76 @@ class BlueprintsManager(object):
                     deployment_id=None,
                     state=None,
                     runtime_properties=None))
+
+        now = str(datetime.now())
+        self.sm.update_deployment_modification(
+            models.DeploymentModification(
+                id=modification_id,
+                status=models.DeploymentModification.FINISHED,
+                ended_at=now,
+                created_at=None,
+                deployment_id=None,
+                modified_nodes=None,
+                node_instances=None,
+                context=None))
+
+        return models.DeploymentModification(
+            id=modification_id,
+            status=models.DeploymentModification.FINISHED,
+            ended_at=None,
+            created_at=None,
+            deployment_id=None,
+            modified_nodes=None,
+            node_instances=None,
+            context=None)
+
+    def rollback_deployment_modification(self, modification_id):
+        modification = self.sm.get_deployment_modification(modification_id)
+
+        if modification.status in models.DeploymentModification.END_STATES:
+            raise manager_exceptions.DeploymentModificationAlreadyEndedError(
+                'Cannot rollback deployment modification: {0}. It is already '
+                'in {1} status.'.format(modification_id,
+                                        modification.status))
+
+        node_instances = self.sm.get_node_instances(modification.deployment_id)
+        modification.node_instances['before_rollback'] = [
+            instance.to_dict() for instance in node_instances]
+        for instance in node_instances:
+            self.sm.delete_node_instance(instance.id)
+        for instance in modification.node_instances['before_modification']:
+            self.sm.put_node_instance(
+                models.DeploymentNodeInstance(**instance))
+        nodes_num_instances = {node.id: node for node in self.sm.get_nodes(
+            deployment_id=modification.deployment_id,
+            include=['id', 'number_of_instances'])}
+        for node_id, modified_node in modification.modified_nodes.items():
+            self.sm.update_node(
+                modification.deployment_id, node_id,
+                planned_number_of_instances=nodes_num_instances[
+                    node_id].number_of_instances)
+
+        now = str(datetime.now())
+        self.sm.update_deployment_modification(
+            models.DeploymentModification(
+                id=modification_id,
+                status=models.DeploymentModification.ROLLEDBACK,
+                ended_at=now,
+                created_at=None,
+                deployment_id=None,
+                modified_nodes=None,
+                node_instances=modification.node_instances,
+                context=None))
+
+        return models.DeploymentModification(
+            id=modification_id,
+            status=models.DeploymentModification.ROLLEDBACK,
+            ended_at=None,
+            created_at=None,
+            deployment_id=None,
+            modified_nodes=None,
+            node_instances=None,
+            context=None)
 
     def _get_node_instance_ids(self, deployment_id):
         return self.sm.get_node_instances(deployment_id, include=['id'])
@@ -401,14 +513,16 @@ class BlueprintsManager(object):
 
     def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
         for raw_node in plan['nodes']:
+            num_instances = raw_node['instances']['deploy']
             self.sm.put_node(models.DeploymentNode(
                 id=raw_node['name'],
                 deployment_id=deployment_id,
                 blueprint_id=blueprint_id,
                 type=raw_node['type'],
                 type_hierarchy=raw_node['type_hierarchy'],
-                number_of_instances=raw_node['instances']['deploy'],
-                deploy_number_of_instances=raw_node['instances']['deploy'],
+                number_of_instances=num_instances,
+                planned_number_of_instances=num_instances,
+                deploy_number_of_instances=num_instances,
                 host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],
