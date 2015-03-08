@@ -10,3 +10,6 @@ pyzmq
 # cloudify-manager/plugins/agent-installer
 # cloudify-manager/plugins/plugin-installer
 # cloudify-manager/rest-service
+
+# test dependencies
+python-dateutil

@@ -15,11 +15,201 @@
 
 import copy
 import uuid
+from datetime import datetime, timedelta
+import dateutil.parser
+
+from cloudify_rest_client import exceptions
+from cloudify_rest_client.deployment_modifications import (
+    DeploymentModification)
 
 from base_test import BaseServerTestCase
 
 
 class ModifyTests(BaseServerTestCase):
+
+    def test_data_model_with_finish(self):
+        def expected_after_end_func(_, before_end):
+            return before_end
+        self._test_data_model_impl(
+            end_func=self.client.deployment_modifications.finish,
+            expected_end_status=DeploymentModification.FINISHED,
+            expected_end_node_counts={
+                'num': 2, 'deploy_num': 1, 'planned_num': 2},
+            expected_before_end_func=lambda before_end: [],
+            expected_after_end_func=expected_after_end_func,
+            expected_after_end_count=3,
+            expected_after_end_runtime_property='after_start')
+
+    def test_data_model_with_rollback(self):
+        def expected_after_end_func(before_modification, _):
+            return before_modification
+        self._test_data_model_impl(
+            end_func=self.client.deployment_modifications.rollback,
+            expected_end_status=DeploymentModification.ROLLEDBACK,
+            expected_end_node_counts={
+                'num': 1, 'deploy_num': 1, 'planned_num': 1},
+            expected_before_end_func=lambda before_end: before_end,
+            expected_after_end_func=expected_after_end_func,
+            expected_after_end_count=2,
+            expected_after_end_runtime_property='before_start')
+
+    def _test_data_model_impl(
+            self,
+            end_func,
+            expected_end_status,
+            expected_end_node_counts,
+            expected_before_end_func,
+            expected_after_end_func,
+            expected_after_end_count,
+            expected_after_end_runtime_property):
+
+        def node_assertions(num, deploy_num, planned_num):
+            node = self.client.nodes.get(deployment.id, 'node1')
+            self.assertEqual(node.number_of_instances, num)
+            self.assertEqual(node.planned_number_of_instances, planned_num)
+            self.assertEqual(node.deploy_number_of_instances, deploy_num)
+
+        _, _, _, deployment = self.put_deployment(
+            deployment_id=str(uuid.uuid4()),
+            blueprint_file_name='modify1.yaml')
+
+        node_assertions(num=1, deploy_num=1, planned_num=1)
+
+        mock_context = {'some': 'data'}
+
+        node1_instance = self.client.node_instances.list(
+            deployment_id=deployment.id, node_name='node1')[0]
+        self.client.node_instances.update(
+            node1_instance.id,
+            runtime_properties={'test': 'before_start'},
+            version=0)
+        node2_instance = self.client.node_instances.list(
+            deployment_id=deployment.id, node_name='node2')[0]
+        self.client.node_instances.update(
+            node2_instance.id,
+            runtime_properties={'test': 'before_start'},
+            version=0)
+
+        before_modification = self.client.node_instances.list(deployment.id)
+        modified_nodes = {'node1': {'instances': 2}}
+        modification = self.client.deployment_modifications.start(
+            deployment.id, nodes=modified_nodes, context=mock_context)
+        self.assertEqual(modification.node_instances.before_modification,
+                         before_modification)
+        self.assertIsNone(modification.ended_at)
+
+        self.client.node_instances.update(
+            node1_instance.id,
+            runtime_properties={'test': 'after_start'},
+            version=1)
+        self.client.node_instances.update(
+            node2_instance.id,
+            runtime_properties={'test': 'after_start'},
+            version=1)
+
+        node_assertions(num=1, deploy_num=1, planned_num=2)
+
+        modification_id = modification.id
+        self.assertEqual(modification.status,
+                         DeploymentModification.STARTED)
+
+        before_end = self.client.node_instances.list(deployment.id)
+
+        end_func(modification_id)
+
+        after_end = self.client.node_instances.list(deployment.id)
+
+        node_assertions(**expected_end_node_counts)
+
+        modification = self.client.deployment_modifications.get(
+            modification.id)
+        self.assertEqual(modification.id, modification_id)
+        self.assertEqual(modification.status, expected_end_status)
+        self.assertEqual(modification.deployment_id, deployment.id)
+        self.assertEqual(modification.modified_nodes, modified_nodes)
+        created_at = dateutil.parser.parse(modification.created_at)
+        ended_at = dateutil.parser.parse(modification.ended_at)
+        self.assertTrue(datetime.now() - timedelta(seconds=5) <=
+                        created_at <= ended_at <= datetime.now())
+        all_modifications = self.client.deployment_modifications.list()
+        dep_modifications = self.client.deployment_modifications.list(
+            deployment_id=deployment.id)
+        self.assertEqual(all_modifications, dep_modifications)
+        self.assertEqual(len(dep_modifications), 1)
+        self.assertEqual(dep_modifications[0], modification)
+        self.assertEqual([], self.client.deployment_modifications.list(
+            deployment_id='i_really_should_not_exist'))
+        self.assertEqual(modification.node_instances.before_modification,
+                         before_modification)
+        self.assertEqual(modification.node_instances.before_rollback,
+                         expected_before_end_func(before_end))
+
+        self.assertEqual(after_end,
+                         expected_after_end_func(before_modification,
+                                                 before_end))
+        self.assertEqual(modification.context, mock_context)
+
+        self.assertEqual(expected_after_end_count, len(after_end))
+
+        self.assertEqual(
+            self.client.node_instances.get(
+                node1_instance.id).runtime_properties['test'],
+            expected_after_end_runtime_property)
+        self.assertEqual(
+            self.client.node_instances.get(
+                node2_instance.id).runtime_properties['test'],
+            expected_after_end_runtime_property)
+
+    def test_no_concurrent_modifications(self):
+        _, _, _, deployment = self.put_deployment(
+            deployment_id=str(uuid.uuid4()),
+            blueprint_file_name='modify1.yaml')
+
+        modification = self.client.deployment_modifications.start(
+            deployment.id, nodes={})
+        # should not allow another deployment modification to start
+        with self.assertRaises(
+                exceptions.ExistingStartedDeploymentModificationError) as e:
+            self.client.deployment_modifications.start(deployment.id, nodes={})
+        self.assertIn(modification.id, str(e.exception))
+
+        self.client.deployment_modifications.finish(modification.id)
+        # should allow deployment modification to start after previous one
+        # finished
+        self.client.deployment_modifications.start(deployment.id, nodes={})
+
+    def test_finish_and_rollback_on_ended_modification(self):
+        def test(end_function):
+            _, _, _, deployment = self.put_deployment(
+                deployment_id=str(uuid.uuid4()),
+                blueprint_id=str(uuid.uuid4()),
+                blueprint_file_name='modify1.yaml')
+            modification = self.client.deployment_modifications.start(
+                deployment.id, nodes={})
+            end_function(modification.id)
+
+            with self.assertRaises(
+                    exceptions.DeploymentModificationAlreadyEndedError):
+                self.client.deployment_modifications.finish(modification.id)
+            with self.assertRaises(
+                    exceptions.DeploymentModificationAlreadyEndedError):
+                self.client.deployment_modifications.rollback(modification.id)
+
+        test(self.client.deployment_modifications.finish)
+        test(self.client.deployment_modifications.rollback)
+
+    def test_finish_and_rollback_on_non_existent_modification(self):
+        with self.assertRaises(exceptions.CloudifyClientError) as scope:
+            self.client.deployment_modifications.finish('what')
+        self.assertEqual(scope.exception.status_code, 404)
+        self.assertRegexpMatches(str(scope.exception),
+                                 'Deployment modification.*not found', )
+
+        with self.assertRaises(exceptions.CloudifyClientError) as scope:
+            self.client.deployment_modifications.rollback('what')
+        self.assertEqual(scope.exception.status_code, 404)
+        self.assertRegexpMatches(str(scope.exception),
+                                 'Deployment modification.*not found', )
 
     def test_modify_add_instance(self):
         _, _, _, deployment = self.put_deployment(
@@ -31,12 +221,11 @@ class ModifyTests(BaseServerTestCase):
         self._assert_number_of_instances(deployment.id, 'node1', 1, 1)
 
         modified_nodes = {'node1': {'instances': 2}}
-        modification = self.client.deployments.modify.start(
+        modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes)
 
         self._assert_number_of_instances(deployment.id, 'node1', 1, 1)
 
-        self.assertEqual(modified_nodes, modification.modified_nodes)
         node_instances2 = self.client.node_instances.list()
         self.assertEqual(3, len(node_instances2))
 
@@ -63,7 +252,7 @@ class ModifyTests(BaseServerTestCase):
         added_and_related = modification.node_instances.added_and_related
         self.assertEqual(2, len(added_and_related))
 
-        self.client.deployments.modify.finish(deployment.id, modification)
+        self.client.deployment_modifications.finish(modification.id)
 
         self._assert_number_of_instances(deployment.id, 'node1', 2, 1)
 
@@ -88,12 +277,11 @@ class ModifyTests(BaseServerTestCase):
         self._assert_number_of_instances(deployment.id, 'node1', 2, 2)
 
         modified_nodes = {'node1': {'instances': 1}}
-        modification = self.client.deployments.modify.start(
+        modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes)
 
         self._assert_number_of_instances(deployment.id, 'node1', 2, 2)
 
-        self.assertEqual(modified_nodes, modification.modified_nodes)
         node_instances2 = self.client.node_instances.list()
         self.assertEqual(3, len(node_instances2))
 
@@ -111,7 +299,7 @@ class ModifyTests(BaseServerTestCase):
         removed_and_related = modification.node_instances.removed_and_related
         self.assertEqual(2, len(removed_and_related))
 
-        self.client.deployments.modify.finish(deployment.id, modification)
+        self.client.deployment_modifications.finish(modification.id)
 
         self._assert_number_of_instances(deployment.id, 'node1', 1, 2)
 
@@ -136,12 +324,3 @@ class ModifyTests(BaseServerTestCase):
                          node.deploy_number_of_instances)
         self.assertEqual(expected_number_of_instances,
                          node.number_of_instances)
-
-    def test_illegal_modify_stage(self):
-        _, _, _, deployment = self.put_deployment(
-            deployment_id=str(uuid.uuid4()),
-            blueprint_file_name='modify1.yaml')
-        client = self.client._client
-        r = client.patch('/deployments/{0}/modify'.format(deployment.id),
-                         data={'stage': 'what?'}, expected_status_code=400)
-        self.assertIn('Unknown modification stage', r['message'])

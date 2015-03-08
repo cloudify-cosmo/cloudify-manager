@@ -17,6 +17,7 @@ import os
 import json
 from manager_rest.models import (BlueprintState,
                                  Deployment,
+                                 DeploymentModification,
                                  Execution,
                                  DeploymentNode,
                                  DeploymentNodeInstance,
@@ -29,6 +30,7 @@ NODES = 'nodes'
 NODE_INSTANCES = 'node_instances'
 BLUEPRINTS = 'blueprints'
 DEPLOYMENTS = 'deployments'
+DEPLOYMENT_MODIFICATIONS = 'deployment_modifications'
 EXECUTIONS = 'executions'
 PROVIDER_CONTEXT = 'provider_context'
 PROVIDER_CONTEXT_ID = '1'
@@ -50,8 +52,9 @@ class FileStorageManager(object):
             NODE_INSTANCES: {},
             BLUEPRINTS: {},
             DEPLOYMENTS: {},
+            DEPLOYMENT_MODIFICATIONS: {},
             EXECUTIONS: {},
-            PROVIDER_CONTEXT: {}
+            PROVIDER_CONTEXT: {},
         }
         self._dump_data(data)
 
@@ -79,6 +82,9 @@ class FileStorageManager(object):
             deserialized_data[PROVIDER_CONTEXT] = \
                 {key: ProviderContext(**val)
                  for key, val in data[PROVIDER_CONTEXT].iteritems()}
+            deserialized_data[DEPLOYMENT_MODIFICATIONS] = \
+                {key: DeploymentModification(**val) for key, val in
+                 data[DEPLOYMENT_MODIFICATIONS].iteritems()}
 
             return deserialized_data
 
@@ -102,6 +108,9 @@ class FileStorageManager(object):
             serialized_data[PROVIDER_CONTEXT] = \
                 {key: val.to_dict() for key, val in data[PROVIDER_CONTEXT]
                     .iteritems()}
+            serialized_data[DEPLOYMENT_MODIFICATIONS] = \
+                {key: val.to_dict() for key, val in data[
+                    DEPLOYMENT_MODIFICATIONS].iteritems()}
             json.dump(serialized_data, f)
 
     def node_instances_list(self, **_):
@@ -172,14 +181,19 @@ class FileStorageManager(object):
         data[EXECUTIONS][execution_id] = execution
         self._dump_data(data)
 
-    def update_node(self, deployment_id, node_id, number_of_instances):
+    def update_node(self, deployment_id, node_id,
+                    number_of_instances=None,
+                    planned_number_of_instances=None):
         data = self._load_data()
         storage_node_id = '{0}_{1}'.format(deployment_id, node_id)
         if storage_node_id not in data[NODES]:
             raise manager_exceptions.NotFoundError(
                 'Node {0} not found'.format(node_id))
         node = data[NODES][storage_node_id]
-        node.number_of_instances = number_of_instances
+        if number_of_instances is not None:
+            node.number_of_instances = number_of_instances
+        if planned_number_of_instances is not None:
+            node.planned_number_of_instances = planned_number_of_instances
         self._dump_data(data)
 
     def update_node_instance(self, node_update):
@@ -286,6 +300,12 @@ class FileStorageManager(object):
             if node.deployment_id == deployment_id:
                 node_id = '{0}_{1}'.format(deployment_id, node.id)
                 del data[NODES][node_id]
+        for execution in data[EXECUTIONS].values():
+            if execution.deployment_id == deployment_id:
+                del data[EXECUTIONS][execution.id]
+        for modification in data[DEPLOYMENT_MODIFICATIONS].values():
+            if modification.deployment_id == deployment_id:
+                del data[DEPLOYMENT_MODIFICATIONS][modification.id]
         self._dump_data(data)
         return self._delete_object(deployment_id, DEPLOYMENTS, 'Deployment')
 
@@ -330,6 +350,44 @@ class FileStorageManager(object):
             return data[PROVIDER_CONTEXT][PROVIDER_CONTEXT_ID]
         raise manager_exceptions.NotFoundError(
             "Provider context not set")
+
+    def put_deployment_modification(self, modification_id, modification):
+        data = self._load_data()
+        if str(modification_id) in data[DEPLOYMENT_MODIFICATIONS]:
+            raise manager_exceptions.ConflictError(
+                'Deployment modification {0} already exists'
+                .format(modification_id))
+        data[DEPLOYMENT_MODIFICATIONS][str(modification_id)] = modification
+        self._dump_data(data)
+
+    def get_deployment_modification(self, modification_id, include=None):
+        data = self._load_data()
+        if modification_id in data[DEPLOYMENT_MODIFICATIONS]:
+            return data[DEPLOYMENT_MODIFICATIONS][modification_id]
+        raise manager_exceptions.NotFoundError(
+            "Deployment modification {0} not found".format(modification_id))
+
+    def update_deployment_modification(self, modification):
+        modification_id = modification.id
+        data = self._load_data()
+        if modification_id not in data[DEPLOYMENT_MODIFICATIONS]:
+            raise manager_exceptions.NotFoundError(
+                'Deployment modification {0} not found'
+                .format(modification_id))
+        updated_modification = data[DEPLOYMENT_MODIFICATIONS][modification_id]
+        if modification.status is not None:
+            updated_modification.status = modification.status
+        if modification.ended_at is not None:
+            updated_modification.ended_at = modification.ended_at
+        if modification.node_instances is not None:
+            updated_modification.node_instances = modification.node_instances
+        self._dump_data(data)
+
+    def deployment_modifications_list(self, deployment_id=None, include=None):
+        return [
+            x for x in self._load_data()[DEPLOYMENT_MODIFICATIONS].values()
+            if deployment_id is None or x.deployment_id == deployment_id
+        ]
 
 
 def create():

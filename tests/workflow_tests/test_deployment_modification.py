@@ -13,6 +13,14 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+
+import uuid
+import datetime
+import dateutil.parser
+
+from cloudify_rest_client.deployment_modifications import (
+    DeploymentModification)
+
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
@@ -122,6 +130,26 @@ class TestDeploymentModification(TestCase):
                                 'total_relationships': 1},
             expected_total=3)
 
+    def test_deployment_modification_add_compute_rollback(self):
+        nodes = {'compute': {'instances': 2}}
+        return self._test_deployment_modification(
+            modification_type='added',
+            modified_nodes=nodes,
+            expected_compute={'existence': 1,
+                              'modification': 1,
+                              'relationships': 0,
+                              'total_relationships': 0},
+            expected_db={'existence': 1,
+                         'modification': 1,
+                         'relationships': 1,
+                         'total_relationships': 1},
+            expected_webserver={'existence': 1,
+                                'modification': 0,
+                                'relationships': 1,
+                                'total_relationships': 1},
+            expected_total=3,
+            rollback=True)
+
     def _test_deployment_modification(self,
                                       modified_nodes,
                                       expected_compute,
@@ -129,13 +157,74 @@ class TestDeploymentModification(TestCase):
                                       expected_webserver,
                                       modification_type,
                                       expected_total,
-                                      deployment_id=None):
+                                      deployment_id=None,
+                                      rollback=False):
         if not deployment_id:
             dsl_path = resource("dsl/deployment_modification.yaml")
-            deployment, _ = deploy(dsl_path)
+            test_id = str(uuid.uuid4())
+            deployment, _ = deploy(dsl_path,
+                                   deployment_id=test_id,
+                                   blueprint_id='b_{0}'.format(test_id))
             deployment_id = deployment.id
-        execute_workflow('deployment_modification', deployment_id,
-                         parameters={'nodes': modified_nodes})
+
+        nodes_before_modification = {
+            node.id: node for node in self.client.nodes.list(deployment_id)
+        }
+
+        before_modifications = self.client.deployment_modifications.list(
+            deployment_id)
+
+        workflow_id = 'deployment_modification_{0}'.format(
+            'rollback' if rollback else 'finish')
+
+        execution = execute_workflow(
+            workflow_id, deployment_id,
+            parameters={'nodes': modified_nodes})
+
+        after_modifications = self.client.deployment_modifications.list(
+            deployment_id)
+
+        new_modifications = [
+            m for m in after_modifications
+            if m.id not in [m2.id for m2 in before_modifications]]
+        self.assertEqual(len(new_modifications), 1)
+        modification = list(new_modifications)[0]
+        self.assertEqual(self.client.deployment_modifications.get(
+            modification.id), modification)
+
+        expected_status = DeploymentModification.ROLLEDBACK if rollback \
+            else DeploymentModification.FINISHED
+        self.assertEqual(modification.status, expected_status)
+        self.assertEqual(modification.deployment_id, deployment_id)
+        self.assertEqual(modification.modified_nodes, modified_nodes)
+        self.assertDictContainsSubset({
+            'workflow_id': workflow_id,
+            'execution_id': execution.id,
+            'deployment_id': deployment_id,
+            'blueprint_id': 'b_{0}'.format(deployment_id)},
+            modification.context)
+        created_at = dateutil.parser.parse(modification.created_at)
+        ended_at = dateutil.parser.parse(modification.ended_at)
+        self.assertTrue(datetime.datetime.now() -
+                        datetime.timedelta(seconds=30) <=
+                        created_at <= ended_at <= datetime.datetime.now())
+        for node_id, modified_node in modified_nodes.items():
+            node = self.client.nodes.get(deployment_id, node_id)
+            if rollback:
+                self.assertEqual(
+                    node.planned_number_of_instances,
+                    nodes_before_modification[
+                        node.id].planned_number_of_instances)
+                self.assertEqual(
+                    node.number_of_instances,
+                    nodes_before_modification[
+                        node.id].number_of_instances)
+            else:
+                self.assertEqual(node.planned_number_of_instances,
+                                 modified_node['instances'])
+                self.assertEqual(node.number_of_instances,
+                                 modified_node['instances'])
+
         state = self.get_plugin_data('testmockoperations',
                                      deployment_id)['state']
 
@@ -171,27 +260,31 @@ class TestDeploymentModification(TestCase):
             self.assertEqual(expected_webserver['relationships'],
                              len(webserver_instances[0]['relationships']))
 
-        def assertion():
-            node_instances = self.client.node_instances.list(deployment_id)
-            self.assertEqual(expected_total, len(node_instances))
-            for node_id, modification in modified_nodes.items():
+        node_instances = self.client.node_instances.list(deployment_id)
+        self.assertEqual(expected_total, len(node_instances))
+        for node_id, modification in modified_nodes.items():
+            if rollback:
+                self.assertEqual(
+                    nodes_before_modification[
+                        node_id].number_of_instances,
+                    self.client.nodes.get(
+                        deployment_id, node_id).number_of_instances)
+            else:
                 self.assertEqual(
                     modification['instances'],
                     self.client.nodes.get(
                         deployment_id, node_id).number_of_instances)
-            for node_instance in node_instances:
-                relationships_count = len(node_instance.relationships)
-                if node_instance.node_id == 'compute':
-                    self.assertEqual(relationships_count,
-                                     expected_compute['total_relationships'])
-                if node_instance.node_id == 'db':
-                    self.assertEqual(relationships_count,
-                                     expected_db['total_relationships'])
-                if node_instance.node_id == 'webserver':
-                    self.assertEqual(relationships_count,
-                                     expected_webserver['total_relationships'])
-
-        self.do_assertions(assertion)
+        for node_instance in node_instances:
+            relationships_count = len(node_instance.relationships)
+            if node_instance.node_id == 'compute':
+                self.assertEqual(relationships_count,
+                                 expected_compute['total_relationships'])
+            if node_instance.node_id == 'db':
+                self.assertEqual(relationships_count,
+                                 expected_db['total_relationships'])
+            if node_instance.node_id == 'webserver':
+                self.assertEqual(relationships_count,
+                                 expected_webserver['total_relationships'])
 
         return deployment_id
 

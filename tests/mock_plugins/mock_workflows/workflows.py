@@ -311,10 +311,17 @@ def operation_mapping3(ctx, value, **_):
 
 
 @workflow
-def deployment_modification(ctx, nodes, **_):
+def deployment_modification_finish(ctx, nodes, **_):
+    _deployment_modification_impl(ctx, nodes, 'finish')
 
+
+@workflow
+def deployment_modification_rollback(ctx, nodes, **_):
+    _deployment_modification_impl(ctx, nodes, 'rollback')
+
+
+def _deployment_modification_impl(ctx, nodes, end_func_name):
     modification = ctx.deployment.start_modification(nodes)
-
     for node in modification.added.nodes:
         for instance in node.instances:
             instance.execute_operation('test.op', kwargs={
@@ -322,7 +329,6 @@ def deployment_modification(ctx, nodes, **_):
                 'relationships': [(instance.id, rel.target_id)
                                   for rel in instance.relationships]
             }).get()
-
     for node in modification.removed.nodes:
         for instance in node.instances:
             instance.execute_operation('test.op', kwargs={
@@ -330,8 +336,7 @@ def deployment_modification(ctx, nodes, **_):
                 'relationships': [rel.target_id
                                   for rel in instance.relationships]
             }).get()
-
-    modification.finish()
+    getattr(modification, end_func_name)()
 
 
 @workflow
