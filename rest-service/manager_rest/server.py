@@ -219,8 +219,13 @@ def register_authentication_methods(secure_app, authentication_providers):
             raise e
 
 
-if 'MANAGER_REST_CONFIG_PATH' in os.environ:
-    with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
+# if 'MANAGER_REST_CONFIG_PATH' in os.environ:
+config_file_path = os.path.dirname(__file__) + '/config.yaml'
+if True:
+    print '***** using {0} as MANAGER_REST_CONFIG_PATH'\
+        .format(config_file_path)
+    # with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
+    with open(config_file_path) as f:
         yaml_conf = yaml.load(f.read())
     obj_conf = config.instance()
     for key, value in yaml_conf.iteritems():
