@@ -80,28 +80,28 @@ def maybe_register_teardown(app, f):
 def get_class(class_path):
     """Returns a class from a string formatted as module:class"""
     if not class_path:
-        raise Exception('class path is missing or empty')
+        raise ValueError('class path is missing or empty')
 
     if not isinstance(class_path, basestring):
-        raise Exception('class path is not a string')
+        raise ValueError('class path is not a string')
 
     class_path = class_path.strip()
     if ':' not in class_path or class_path.count(':') > 1:
-        raise Exception('Invalid class path, expected format: '
-                        'module:class')
+        raise ValueError('Invalid class path, expected format: '
+                         'module:class')
 
     class_path_parts = class_path.split(':')
     class_module_str = class_path_parts[0].strip()
     class_name = class_path_parts[1].strip()
 
     if not class_module_str or not class_name:
-        raise Exception('Invalid class path, expected format: '
-                        'module:class')
+        raise ValueError('Invalid class path, expected format: '
+                         'module:class')
 
     module = importlib.import_module(class_module_str)
     if not hasattr(module, class_name):
-        raise Exception('module "{0}", does not contain class "{1}"'
-                        .format(class_module_str, class_name))
+        raise ValueError('module "{0}", does not contain class "{1}"'
+                         .format(class_module_str, class_name))
 
     return getattr(module, class_name)
 

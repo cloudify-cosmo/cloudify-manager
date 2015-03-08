@@ -188,10 +188,9 @@ def register_authentication_methods(secure_app, authentication_providers):
         try:
             auth_provider = utils.get_class_instance(auth_method_path)
             secure_app.authentication_provider(auth_provider)
-        except Exception as e:
-            print('Failed to register authentication method: ',
-                  authentication_providers, e)
-            raise e
+        except Exception:
+            # TODO log?
+            raise
 
 
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
