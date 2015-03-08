@@ -1188,29 +1188,16 @@ class Status(Resource):
         """
         Get the status of running system services
         """
-        job_list = {'riemann': 'Riemann',
-                    'rabbitmq-server': 'RabbitMQ',
-                    'celeryd-cloudify-management': 'Celery Management',
-                    'elasticsearch': 'Elasticsearch',
-                    'cloudify-ui': 'Cloudify UI',
-                    'logstash': 'Logstash',
-                    'nginx': 'Webserver'
-                    }
-
         try:
             if self._is_docker_env():
-                job_list.update({'rest-service': 'Manager Rest-Service',
-                                 'amqp-influx': 'AMQP InfluxDB',
-                                 })
-                from manager_rest.runitsupervise import get_services
-                jobs = get_services(job_list)
+                services_dict = self._get_service_port_dict()
+                from manager_rest.service_port_status \
+                    import get_services_status
+                jobs = get_services_status(services_dict)
             else:
-                job_list.update({'manager': 'Cloudify Manager',
-                                 'rsyslog': 'Syslog',
-                                 'ssh': 'SSH',
-                                 })
+                services_dict = self._get_service_dict()
                 from manager_rest.upstartdbus import get_jobs
-                jobs = get_jobs(job_list.keys(), job_list.values())
+                jobs = get_jobs(services_dict.keys(), services_dict.values())
         except ImportError:
             jobs = ['undefined']
 
@@ -1219,6 +1206,35 @@ class Status(Resource):
     @staticmethod
     def _is_docker_env():
         return os.getenv('DOCKER_ENV') is not None
+
+    @staticmethod
+    def _get_service_port_dict():
+        services = {'Riemann': [],
+                    'RabbitMQ': [5672],
+                    'Celery Management': [],
+                    'Elasticsearch': [9200],
+                    'Cloudify UI': [9001],
+                    'Logstash': [9999],
+                    'Webserver': [80, 53229],
+                    'InfluxDB': [8083, 8086],
+                    'Manager rest-service': [8100]
+                    }
+        return services
+
+    @staticmethod
+    def _get_service_dict():
+        services = {'riemann': 'Riemann',
+                    'rabbitmq-server': 'RabbitMQ',
+                    'celeryd-cloudify-management': 'Celery Management',
+                    'elasticsearch': 'Elasticsearch',
+                    'cloudify-ui': 'Cloudify UI',
+                    'logstash': 'Logstash',
+                    'nginx': 'Webserver',
+                    'manager': 'Cloudify Manager',
+                    'rsyslog': 'Syslog',
+                    'ssh': 'SSH',
+                    }
+        return services
 
 
 class ProviderContext(Resource):
