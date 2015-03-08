@@ -41,7 +41,8 @@ from manager_rest import utils
 # app factory
 def setup_app():
     app = Flask(__name__)
-    init_secure_app(app)
+    if config.instance().secured_server:
+        init_secure_app(app)
 
     # TODO Additional security settings:
     # 1. hooks - additional before/after request hooks

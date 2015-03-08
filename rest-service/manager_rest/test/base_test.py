@@ -138,6 +138,8 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_path = self.rest_service_log
 
         # security config
+        test_config.secured_server = False
+        '''
         test_config.securest_secret_key = 'test_secret_key'
         test_config.securest_authentication_methods = \
             ['flask_securest.authentication_providers.password:\
@@ -147,6 +149,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.securest_userstore_driver = 'flask_securest.userstores.\
         file:FileUserstore'
         test_config.securest_userstore_identifier_attribute = 'username'
+        '''
 
         return test_config
 

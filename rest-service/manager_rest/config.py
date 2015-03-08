@@ -27,6 +27,7 @@ class Config(object):
         self._file_server_resources_uri = None
         self._rest_service_log_path = None
         self._test_mode = False
+        self._secured_server = False
         self._securest_secret_key = None
         self._securest_authentication_methods = []
         self._securest_userstore_driver = None
@@ -111,6 +112,14 @@ class Config(object):
     @test_mode.setter
     def test_mode(self, value):
         self._test_mode = value
+
+    @property
+    def secured_server(self):
+        return self._secured_server
+
+    @secured_server.setter
+    def secured_server(self, value):
+        self._secured_server = value
 
     @property
     def securest_secret_key(self):
