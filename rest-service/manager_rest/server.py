@@ -28,11 +28,8 @@ from flask import (
 )
 from flask_restful import Api
 
-from flask_securest.rest_security import (
-    SecuREST,
-    SECUREST_SECRET_KEY,
-    SECUREST_USERSTORE_DRIVER,
-    SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE)
+from flask_securest import rest_security
+from flask_securest.rest_security import SecuREST
 
 from manager_rest import config
 from manager_rest import util
@@ -40,9 +37,6 @@ from manager_rest import storage_manager
 from manager_rest import resources
 from manager_rest import manager_exceptions
 from util import setup_logger
-
-
-AUTHENTICATE_METHOD_NAME = 'authenticate'
 
 
 # app factory
@@ -190,10 +184,10 @@ def init_secure_app(app):
     cfy_config = config.instance()
     validate_security_config(cfy_config)
 
-    app.config[SECUREST_SECRET_KEY] = cfy_config.securest_secret_key
-    app.config[SECUREST_USERSTORE_DRIVER] = \
+    app.config[rest_security.SECRET_KEY] = cfy_config.securest_secret_key
+    app.config[rest_security.USERSTORE_DRIVER] = \
         cfy_config.securest_userstore_driver
-    app.config[SECUREST_USERSTORE_IDENTIFIER_ATTRIBUTE] = \
+    app.config[rest_security.USERSTORE_IDENTIFIER_ATTRIBUTE] = \
         cfy_config.securest_userstore_identifier_attribute
 
     secure_app = SecuREST(app)
