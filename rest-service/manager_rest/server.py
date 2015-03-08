@@ -32,11 +32,10 @@ from flask_securest import rest_security
 from flask_securest.rest_security import SecuREST
 
 from manager_rest import config
-from manager_rest import util
 from manager_rest import storage_manager
 from manager_rest import resources
 from manager_rest import manager_exceptions
-from util import setup_logger
+from manager_rest import utils
 
 
 # app factory
@@ -64,10 +63,10 @@ def setup_app():
     ]
 
     app.logger_name = 'manager-rest'
-    setup_logger(logger_name=app.logger.name,
-                 logger_level=logging.DEBUG,
-                 handlers=additional_log_handlers,
-                 remove_existing_handlers=False)
+    utils.setup_logger(logger_name=app.logger.name,
+                       logger_level=logging.DEBUG,
+                       handlers=additional_log_handlers,
+                       remove_existing_handlers=False)
 
     app.before_request(log_request)
     app.after_request(log_response)
@@ -205,7 +204,7 @@ def register_authentication_methods(secure_app, authentication_providers):
     # Note: the order of registration is important here
     for auth_method_path in authentication_providers:
         try:
-            auth_provider = util.get_class_instance(auth_method_path)
+            auth_provider = utils.get_class_instance(auth_method_path)
             secure_app.authentication_provider(auth_provider)
         except Exception as e:
             print('Failed to register authentication method: ',
