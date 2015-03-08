@@ -163,26 +163,8 @@ def reset_state(configuration=None):
     app = setup_app()
 
 
-def validate_security_config(cfy_config):
-    # TODO raise better exceptions
-    if not hasattr(cfy_config, 'securest_secret_key') or \
-            cfy_config.securest_secret_key is None:
-        raise Exception('securest_secret_key not set')
-    if not hasattr(cfy_config, 'securest_authentication_methods') or \
-            cfy_config.securest_authentication_methods is None:
-        raise Exception('securest_authentication_methods not set')
-    if not hasattr(cfy_config, 'securest_userstore_driver') or \
-            cfy_config.securest_userstore_driver is None:
-        raise Exception('securest_userstore_driver not set')
-    if not hasattr(cfy_config, 'securest_userstore_identifier_attribute') or \
-            cfy_config.securest_userstore_identifier_attribute is None:
-        raise Exception('securest_userstore_identifier_attribute not set')
-
-
 def init_secure_app(app):
     cfy_config = config.instance()
-    validate_security_config(cfy_config)
-
     app.config[rest_security.SECRET_KEY] = cfy_config.securest_secret_key
     app.config[rest_security.USERSTORE_DRIVER] = \
         cfy_config.securest_userstore_driver
@@ -194,10 +176,10 @@ def init_secure_app(app):
     register_authentication_methods(secure_app,
                                     cfy_config.securest_authentication_methods)
 
-    @secure_app.unauthorized_user_handler
     def unauthorized_user_handler():
-        print '**** GOTCHA!'
         raise Exception(401)
+
+    secure_app.unauthorized_user_handler(unauthorized_user_handler)
 
 
 def register_authentication_methods(secure_app, authentication_providers):
