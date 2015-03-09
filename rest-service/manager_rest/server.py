@@ -167,15 +167,12 @@ def reset_state(configuration=None):
 def init_secure_app(app):
     cfy_config = config.instance()
     app.config[rest_security.SECRET_KEY] = cfy_config.securest_secret_key
-    app.config[rest_security.USERSTORE_DRIVER] = \
-        cfy_config.securest_userstore_driver
-    app.config[rest_security.USERSTORE_IDENTIFIER_ATTRIBUTE] = \
-        cfy_config.securest_userstore_identifier_attribute
 
     secure_app = SecuREST(app)
-
-    register_authentication_methods(secure_app,
-                                    cfy_config.securest_authentication_methods)
+    register_userstore_driver(
+        secure_app, cfy_config.securest_userstore_driver)
+    register_authentication_methods(
+        secure_app, cfy_config.securest_authentication_methods)
 
     def unauthorized_user_handler():
         raise Exception(401)
@@ -185,13 +182,28 @@ def init_secure_app(app):
 
 def register_authentication_methods(secure_app, authentication_providers):
     # Note: the order of registration is important here
-    for auth_method_path in authentication_providers:
+    for auth_provider in authentication_providers:
         try:
-            auth_provider = utils.get_class_instance(auth_method_path)
+            provider_name = auth_provider.iterkeys().next()
+            provider_details = auth_provider[provider_name]
+            implementation = provider_details.get('implementation')
+            properties = provider_details.get('properties')
+            auth_provider = utils.get_class_instance(implementation, properties)
             secure_app.authentication_provider(auth_provider)
         except Exception:
             # TODO log?
             raise
+
+
+def register_userstore_driver(secure_app, userstore_driver):
+    try:
+        implementation = userstore_driver.get('implementation')
+        properties = userstore_driver.get('properties')
+        userstore = utils.get_class_instance(implementation, properties)
+        secure_app.userstore_driver(userstore)
+    except Exception:
+        # TODO log?
+        raise
 
 
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:

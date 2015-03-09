@@ -106,9 +106,10 @@ def get_class(class_path):
     return getattr(module, class_name)
 
 
-def get_class_instance(class_path, *args, **kwargs):
+def get_class_instance(class_path, properties):
     """Returns an instance of a class from a string formatted as module:class
     the given *args, **kwargs are passed to the instance's __init__"""
-
+    if not properties:
+        properties = {}
     clazz = get_class(class_path)
-    return clazz(*args, **kwargs)
+    return clazz(**properties)
