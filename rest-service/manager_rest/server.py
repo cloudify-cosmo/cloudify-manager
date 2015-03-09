@@ -188,7 +188,8 @@ def register_authentication_methods(secure_app, authentication_providers):
             provider_details = auth_provider[provider_name]
             implementation = provider_details.get('implementation')
             properties = provider_details.get('properties')
-            auth_provider = utils.get_class_instance(implementation, properties)
+            auth_provider = utils.get_class_instance(implementation,
+                                                     properties)
             secure_app.authentication_provider(auth_provider)
         except Exception:
             # TODO log?
