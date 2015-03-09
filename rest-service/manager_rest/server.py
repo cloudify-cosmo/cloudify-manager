@@ -42,7 +42,7 @@ from manager_rest import utils
 def setup_app():
     app = Flask(__name__)
     if config.instance().secured_server:
-        init_secure_app(app)
+        init_secured_app(app)
 
     # TODO Additional security settings:
     # 1. hooks - additional before/after request hooks
@@ -164,7 +164,7 @@ def reset_state(configuration=None):
     app = setup_app()
 
 
-def init_secure_app(app):
+def init_secured_app(app):
     cfy_config = config.instance()
     app.config[rest_security.SECRET_KEY] = cfy_config.securest_secret_key
 
@@ -175,9 +175,24 @@ def init_secure_app(app):
         secure_app, cfy_config.securest_authentication_methods)
 
     def unauthorized_user_handler():
+        app.logger.debug('User access unauthorized')
         raise Exception(401)
 
     secure_app.unauthorized_user_handler(unauthorized_user_handler)
+
+
+def register_userstore_driver(secure_app, userstore_driver):
+    try:
+        implementation = userstore_driver.get('implementation')
+        properties = userstore_driver.get('properties')
+        app.logger.debug('registering userstore driver, implementation: {0}, '
+                         'properties: {1}'.format(implementation, properties))
+        userstore = utils.get_class_instance(implementation, properties)
+        secure_app.userstore_driver(userstore)
+    except Exception as e:
+        app.logger.error('failed to register userstore driver, {0}'
+                         .format(e.message()))
+        raise
 
 
 def register_authentication_methods(secure_app, authentication_providers):
@@ -188,23 +203,16 @@ def register_authentication_methods(secure_app, authentication_providers):
             provider_details = auth_provider[provider_name]
             implementation = provider_details.get('implementation')
             properties = provider_details.get('properties')
+            app.logger.debug('registering authentication provider, '
+                             'implementation: {0}, properties: {1}'
+                             .format(implementation, properties))
             auth_provider = utils.get_class_instance(implementation,
                                                      properties)
             secure_app.authentication_provider(auth_provider)
-        except Exception:
-            # TODO log?
+        except Exception as e:
+            app.logger.error('failed to register authentication methods, {0}'
+                             .format(e.message()))
             raise
-
-
-def register_userstore_driver(secure_app, userstore_driver):
-    try:
-        implementation = userstore_driver.get('implementation')
-        properties = userstore_driver.get('properties')
-        userstore = utils.get_class_instance(implementation, properties)
-        secure_app.userstore_driver(userstore)
-    except Exception:
-        # TODO log?
-        raise
 
 
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
