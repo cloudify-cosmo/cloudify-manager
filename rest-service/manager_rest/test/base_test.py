@@ -21,7 +21,7 @@ import tempfile
 import time
 import os
 
-from manager_rest import util, config, storage_manager, archiving
+from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
@@ -103,7 +103,7 @@ class BaseServerTestCase(unittest.TestCase):
             del(os.environ['MANAGER_REST_CONFIG_PATH'])
 
         server.reset_state(self.create_configuration())
-        util.copy_resources(config.instance().file_server_root)
+        utils.copy_resources(config.instance().file_server_root)
         server.setup_app()
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
