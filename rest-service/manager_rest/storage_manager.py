@@ -19,7 +19,7 @@ from os import path
 
 from flask import g, current_app
 
-from manager_rest.util import maybe_register_teardown
+from manager_rest.utils import maybe_register_teardown
 
 # storage_manager_module_name = 'file_storage_manager'
 storage_manager_module_name = 'es_storage_manager'
