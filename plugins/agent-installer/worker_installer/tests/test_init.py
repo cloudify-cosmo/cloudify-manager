@@ -31,6 +31,8 @@ KEY_FILE_PATH = '/bin/sh'
 def init_cloudify_agent_configuration(*args, **kwargs):
     if 'cloudify_agent' in kwargs:
         return kwargs['cloudify_agent']
+    elif 'agent_config' in kwargs:
+        return kwargs['agent_config']
     else:
         raise ValueError("'cloudify_agent' not set by init_worker_installer")
 
@@ -70,6 +72,20 @@ class InitTest(unittest.TestCase):
         self.assertEqual(cloudify_agent['user'], 'prop_user')
         self.assertEqual(cloudify_agent['key'], KEY_FILE_PATH)
 
+    def test_cloudify_agent_set_as_property_with_password(self):
+        ctx = MockCloudifyContext(
+            node_id='node_id',
+            properties={'cloudify_agent':
+                        {'user': 'prop_user',
+                         'distro': 'Ubuntu',
+                         'distro_codename': 'trusty',
+                         'password': 'prop_password'},
+                        'ip': 'localhost'})
+        cloudify_agent = init_cloudify_agent_configuration(ctx)
+
+        self.assertEqual(cloudify_agent['user'], 'prop_user')
+        self.assertEqual(cloudify_agent['password'], 'prop_password')
+
     def test_cloudify_agent_set_as_input(self):
 
         ctx = MockCloudifyContext(node_id='node_id',
@@ -85,9 +101,33 @@ class InitTest(unittest.TestCase):
         self.assertEqual(cloudify_agent['user'], 'input_user')
         self.assertEqual(cloudify_agent['key'], KEY_FILE_PATH)
 
+    def test_cloudify_agent_set_as_input_with_password(self):
+
+        ctx = MockCloudifyContext(node_id='node_id',
+                                  properties={'ip': 'localhost'})
+        cloudify_agent = \
+            init_cloudify_agent_configuration(
+                ctx,
+                cloudify_agent={'user': 'input_user',
+                                'distro': 'Ubuntu',
+                                'distro_codename': 'trusty',
+                                'password': 'input_password'})
+
+        self.assertEqual(cloudify_agent['user'], 'input_user')
+        self.assertEqual(cloudify_agent['password'], 'input_password')
+
     def test_cloudify_agent_not_set(self):
         ctx = MockCloudifyContext(node_id='node_id',
                                   properties={'ip': 'localhost'})
-        expected_message = "Missing ssh key path in worker configuration"
+        expected_message = "Missing password or ssh key path " \
+                           "in worker configuration"
+        self.assertRaisesRegexp(NonRecoverableError, expected_message,
+                                init_cloudify_agent_configuration, ctx)
+
+    def test_cloudify_agent_no_auth(self):
+        ctx = MockCloudifyContext(node_id='node_id',
+                                  properties={'ip': 'localhost'})
+        expected_message = "Missing password or ssh key path " \
+                           "in worker configuration"
         self.assertRaisesRegexp(NonRecoverableError, expected_message,
                                 init_cloudify_agent_configuration, ctx)

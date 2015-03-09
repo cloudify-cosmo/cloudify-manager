@@ -66,9 +66,7 @@ def init_worker_installer(func):
                 agent_config = ctx.node.properties['cloudify_agent']
             else:
                 agent_config = {}
-
         prepare_connection_configuration(ctx, agent_config)
-        kwargs['cloudify_agent'] = agent_config
         runner = FabricRunner(ctx, agent_config)
         try:
             prepare_additional_configuration(ctx, agent_config, runner)
@@ -163,19 +161,24 @@ def _prepare_and_validate_autoscale_params(ctx, config):
     config['max_workers'] = max_workers
 
 
-def _set_ssh_key(ctx, config):
-    if 'key' not in config:
+def _set_auth(ctx, config):
+    is_password = config.get('password')
+    is_key = config.get('key')
+
+    if not is_password and not is_key:
         if ctx.bootstrap_context.cloudify_agent.agent_key_path:
             config['key'] = ctx.bootstrap_context.cloudify_agent.agent_key_path
+            is_key = True
         else:
             raise NonRecoverableError(
-                'Missing ssh key path in worker configuration '
+                'Missing password or ssh key path in worker configuration '
                 '[cloudify_agent={0}'.format(config))
 
-    if not os.path.isfile(os.path.expanduser(config['key'])):
-        raise NonRecoverableError(
-            'Cannot find keypair file, expected file path was {'
-            '0}'.format(config['key']))
+    if not is_password and is_key:
+        if not os.path.isfile(os.path.expanduser(config['key'])):
+            raise NonRecoverableError(
+                'Cannot find keypair file, expected file path was {'
+                '0}'.format(config['key']))
 
 
 def _set_user(ctx, config):
@@ -245,7 +248,7 @@ def prepare_connection_configuration(ctx, agent_config):
         agent_config['name'] = name
     else:
         agent_config['host'] = get_machine_ip(ctx)
-        _set_ssh_key(ctx, agent_config)
+        _set_auth(ctx, agent_config)
         _set_user(ctx, agent_config)
         _set_remote_execution_port(ctx, agent_config)
         agent_config['name'] = ctx.instance.id
@@ -275,5 +278,4 @@ def prepare_additional_configuration(ctx, agent_config, runner):
     agent_config['delete_amqp_queues'] = _get_bool(agent_config,
                                                    'delete_amqp_queues',
                                                    True)
-
     _prepare_and_validate_autoscale_params(ctx, agent_config)
