@@ -61,11 +61,19 @@ class TestCase(unittest.TestCase):
         self.client = utils.create_rest_client()
         utils.restore_provider_context()
         TestEnvironment.start_celery_management_worker()
+        self.test_logs_file = path.join(testenv_instance.events_and_logs_dir,
+                                        self.id())
+        testenv_instance.handle_logs = \
+            self._write_test_events_and_logs_to_file
 
     def tearDown(self):
         TestEnvironment.stop_celery_management_worker()
         TestEnvironment.stop_all_celery_processes()
         TestEnvironment.reset_elasticsearch_data()
+
+    def _write_test_events_and_logs_to_file(self, output):
+        with open(self.test_logs_file, 'a') as f:
+            f.write('{0}\n'.format(output))
 
     def get_plugin_data(self,
                         plugin_name,
@@ -191,15 +199,18 @@ class TestEnvironment(object):
         self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
         self.rest_service_log_path = path.join(
             self.test_working_dir, 'cloudify-rest-service.log')
+        self.events_and_logs_dir = \
+            path.join(self.test_working_dir, 'tests-events-and-logs')
+        os.mkdir(self.events_and_logs_dir)
 
     def create(self):
-
         try:
             logger.info('Setting up test environment... workdir=[{0}]'
                         .format(self.test_working_dir))
 
             # events/logs polling
-            start_events_and_logs_polling()
+            start_events_and_logs_polling(
+                logs_handler_retriever=self._logs_handler_retriever)
 
             self.start_elasticsearch()
             self.start_riemann()
@@ -323,6 +334,12 @@ class TestEnvironment(object):
                         self.test_working_dir)
             shutil.rmtree(self.test_working_dir, ignore_errors=True)
 
+    def handle_logs(self, output):
+        pass
+
+    def _logs_handler_retriever(self):
+        return self.handle_logs
+
     @classmethod
     def _get_riemann_config(cls):
         manager_dir = cls._get_manager_root()
@@ -407,7 +424,7 @@ class TestEnvironment(object):
             f.write(yaml.safe_dump(types_yaml))
 
 
-def start_events_and_logs_polling():
+def start_events_and_logs_polling(logs_handler_retriever=None):
     """
     Fetches events and logs from RabbitMQ.
     """
@@ -431,6 +448,8 @@ def start_events_and_logs_polling():
             else:
                 output = create_event_message_prefix(output)
             logger.info(output)
+            if logs_handler_retriever:
+                logs_handler_retriever()(output)
         except Exception as e:
             logger.error('event/log format error - output: {0} [message={1}]'
                          .format(body, e.message))
