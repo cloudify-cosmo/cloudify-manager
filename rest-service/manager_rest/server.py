@@ -229,10 +229,10 @@ def register_userstore_driver(secure_app, userstore_driver):
         '''
         userstore = utils.get_class_instance(implementation, properties)
         secure_app.userstore_driver(userstore)
-    except Exception as e:
+    except Exception:
         # logging won't work here since not in scope of app context
-        # secure_app.app.logger.debug('failed to register userstore driver {0}, error: {1}'
-        #                             .format(userstore_driver, e.message))
+        # secure_app.app.logger.debug('failed to register userstore driver {0},
+        #  error: {1}'.format(userstore_driver, e.message))
         raise
 
 
@@ -253,7 +253,7 @@ def register_authentication_methods(secure_app, authentication_providers):
             auth_provider = utils.get_class_instance(implementation,
                                                      properties)
             secure_app.authentication_provider(auth_provider)
-        except Exception as e:
+        except Exception:
             # logging won't work here since not in scope of app context
             # secure_app.app.logger.error('failed to register authentication '
             #                             'methods, {0}'.format(e.message()))
