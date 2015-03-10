@@ -260,13 +260,15 @@ def register_authentication_methods(secure_app, authentication_providers):
             raise
 
 
+obj_conf = config.instance()
 if 'MANAGER_REST_CONFIG_PATH' in os.environ:
     with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
         yaml_conf = yaml.load(f.read())
-    obj_conf = config.instance()
     for key, value in yaml_conf.iteritems():
         if hasattr(obj_conf, key):
             setattr(obj_conf, key, value)
+
+obj_conf.secured_server = os.environ.get('IS_CFY_SECURED', False)
 
 app = setup_app()
 
