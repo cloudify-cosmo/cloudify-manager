@@ -243,9 +243,10 @@ def register_authentication_methods(secure_app, authentication_providers):
             properties = configuration.get('properties')
             # logging won't work here since not in scope of app context
             '''
-            secure_app.app.logger.debug('registering authentication provider, {0} with'
-                                        'implementation: {1}, and properties: {2}'
-                                        .format(name, implementation, properties))
+            secure_app.app.logger.debug('registering authentication provider,
+                                        {0} with implementation: {1}, and
+                                        properties: {2}'.format(name,
+                                        implementation, properties))
             '''
             auth_provider = utils.get_class_instance(implementation,
                                                      properties)
