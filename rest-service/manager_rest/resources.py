@@ -20,8 +20,6 @@ import urllib
 import tempfile
 import shutil
 import uuid
-import traceback
-import StringIO
 import contextlib
 from functools import wraps
 from os import path
@@ -35,7 +33,7 @@ from flask import (
     make_response,
     current_app as app
 )
-from flask.ext.restful import Resource, abort, marshal, reqparse
+from flask.ext.restful import Resource, marshal, reqparse
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
 from flask_securest.rest_security import SecuredResource
@@ -47,6 +45,7 @@ from manager_rest import requests_schema
 from manager_rest import chunked
 from manager_rest import archiving
 from manager_rest import manager_exceptions
+from manager_rest import utils
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
@@ -63,7 +62,7 @@ def exceptions_handled(func):
         try:
             return func(*args, **kwargs)
         except manager_exceptions.ManagerException as e:
-            abort_error(e)
+            utils.abort_error(e, app.logger)
     return wrapper
 
 
@@ -106,19 +105,6 @@ class marshal_with(object):
             else:
                 return marshal(response, include)
         return wrapper
-
-
-def abort_error(error):
-
-    app.logger.info('{0}: {1}'.format(type(error).__name__, str(error)))
-
-    s_traceback = StringIO.StringIO()
-    traceback.print_exc(file=s_traceback)
-
-    abort(error.http_code,
-          message=str(error),
-          error_code=error.error_code,
-          server_traceback=s_traceback.getvalue())
 
 
 def verify_json_content_type():

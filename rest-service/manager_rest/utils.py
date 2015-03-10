@@ -17,7 +17,10 @@ import sys
 import logging
 import shutil
 import importlib
+import traceback
+import StringIO
 from os import path
+from flask.ext.restful import abort
 
 
 def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,
@@ -113,3 +116,16 @@ def get_class_instance(class_path, properties):
         properties = {}
     clazz = get_class(class_path)
     return clazz(**properties)
+
+
+def abort_error(error, logger):
+
+    logger.info('{0}: {1}'.format(type(error).__name__, str(error)))
+
+    s_traceback = StringIO.StringIO()
+    traceback.print_exc(file=s_traceback)
+
+    abort(error.http_code,
+          message=str(error),
+          error_code=error.error_code,
+          server_traceback=s_traceback.getvalue())
