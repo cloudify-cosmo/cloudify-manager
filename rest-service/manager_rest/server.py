@@ -24,7 +24,8 @@ from logging.handlers import RotatingFileHandler
 from flask import (
     Flask,
     jsonify,
-    request
+    request,
+    current_app
 )
 from flask_restful import Api
 
@@ -187,32 +188,29 @@ def init_secured_app(app):
     authen_methods_configuration = cfy_config.securest_authentication_methods
     # this is temporary, to be removed when user configuration is possible
     if not authen_methods_configuration:
-        authen_methods_configuration = [
-            {
-                'password': {
-                    'implementation': 'flask_securest.authentication_providers'
-                                      '.password:PasswordAuthenticator',
-                    'properties': {
-                        'password_hash': 'plaintext'
-                    }
+        authen_methods_configuration = {
+            'password': {
+                'implementation': 'flask_securest.authentication_providers'
+                                  '.password:PasswordAuthenticator',
+                'properties': {
+                    'password_hash': 'plaintext'
                 }
             },
-            {
-                'token': {
-                    'implementation': 'flask_securest.authentication_providers'
-                                      '.token:TokenAuthenticator',
-                    'properties': {
-                        'secret_key': 'yaml_secret'
-                    }
+            'token': {
+                'implementation': 'flask_securest.authentication_providers'
+                                  '.token:TokenAuthenticator',
+                'properties': {
+                    'secret_key': 'yaml_secret'
                 }
             }
-        ]
+        }
     # end of temp section
     register_authentication_methods(secure_app, authen_methods_configuration)
 
     def unauthorized_user_handler():
-        app.logger.debug('User access unauthorized')
-        raise Exception(401)
+        utils.abort_error(
+            manager_exceptions.UnauthorizedError('user unauthorized'),
+            current_app.logger)
 
     secure_app.unauthorized_user_handler(unauthorized_user_handler)
 
@@ -228,7 +226,7 @@ def register_userstore_driver(secure_app, userstore_driver):
                                     .format(implementation, properties))
         '''
         userstore = utils.get_class_instance(implementation, properties)
-        secure_app.userstore_driver(userstore)
+        secure_app.set_userstore_driver(userstore)
     except Exception:
         # logging won't work here since not in scope of app context
         # secure_app.app.logger.debug('failed to register userstore driver {0},
@@ -238,21 +236,20 @@ def register_userstore_driver(secure_app, userstore_driver):
 
 def register_authentication_methods(secure_app, authentication_providers):
     # Note: the order of registration is important here
-    for auth_provider in authentication_providers:
+    for name, configuration in authentication_providers.items():
         try:
-            provider_name = auth_provider.iterkeys().next()
-            provider_details = auth_provider[provider_name]
-            implementation = provider_details.get('implementation')
-            properties = provider_details.get('properties')
+            implementation = configuration.get('implementation')
+            # TODO validate implementation not None
+            properties = configuration.get('properties')
             # logging won't work here since not in scope of app context
             '''
-            secure_app.app.logger.debug('registering authentication provider, '
-                                        'implementation: {0}, properties: {1}'
-                                        .format(implementation, properties))
+            secure_app.app.logger.debug('registering authentication provider, {0} with'
+                                        'implementation: {1}, and properties: {2}'
+                                        .format(name, implementation, properties))
             '''
             auth_provider = utils.get_class_instance(implementation,
                                                      properties)
-            secure_app.authentication_provider(auth_provider)
+            secure_app.register_authentication_provider(auth_provider)
         except Exception:
             # logging won't work here since not in scope of app context
             # secure_app.app.logger.error('failed to register authentication '
