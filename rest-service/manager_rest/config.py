@@ -30,7 +30,6 @@ class Config(object):
         self._secured_server = False
         self._securest_authentication_methods = []
         self._securest_userstore_driver = None
-        self._securest_userstore_identifier_attribute = None
 
     @property
     def db_address(self):
@@ -136,13 +135,6 @@ class Config(object):
     def securest_userstore_driver(self, value):
         self._securest_userstore_driver = value
 
-    @property
-    def securest_userstore_identifier_attribute(self):
-        return self._securest_userstore_identifier_attribute
-
-    @securest_userstore_identifier_attribute.setter
-    def securest_userstore_identifier_attribute(self, value):
-        self._securest_userstore_identifier_attribute = value
 
 _instance = Config()
 
