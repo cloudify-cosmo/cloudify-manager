@@ -28,7 +28,6 @@ class Config(object):
         self._rest_service_log_path = None
         self._test_mode = False
         self._secured_server = False
-        self._securest_secret_key = None
         self._securest_authentication_methods = []
         self._securest_userstore_driver = None
         self._securest_userstore_identifier_attribute = None
@@ -120,14 +119,6 @@ class Config(object):
     @secured_server.setter
     def secured_server(self, value):
         self._secured_server = value
-
-    @property
-    def securest_secret_key(self):
-        return self._securest_secret_key
-
-    @securest_secret_key.setter
-    def securest_secret_key(self, value):
-        self._securest_secret_key = value
 
     @property
     def securest_authentication_methods(self):

@@ -28,7 +28,6 @@ from flask import (
 )
 from flask_restful import Api
 
-from flask_securest import rest_security
 from flask_securest.rest_security import SecuREST
 
 from manager_rest import config
@@ -41,6 +40,8 @@ from manager_rest import utils
 # app factory
 def setup_app():
     app = Flask(__name__)
+
+    # secure the appl according to manager configuration
     if config.instance().secured_server:
         init_secured_app(app)
 
@@ -166,13 +167,48 @@ def reset_state(configuration=None):
 
 def init_secured_app(app):
     cfy_config = config.instance()
-    app.config[rest_security.SECRET_KEY] = cfy_config.securest_secret_key
 
     secure_app = SecuREST(app)
-    register_userstore_driver(
-        secure_app, cfy_config.securest_userstore_driver)
-    register_authentication_methods(
-        secure_app, cfy_config.securest_authentication_methods)
+
+    # handle userstore implementation
+    userstore_driver_configuration = cfy_config.securest_userstore_driver
+    # this is temporary, to be removed when user configuration is possible
+    if not userstore_driver_configuration:
+        userstore_driver_configuration = {
+            'implementation': 'flask_securest.userstores.file:FileUserstore',
+            'properties': {
+                'identifying_attribute': 'username'
+            }
+        }
+    # end of temp section
+    register_userstore_driver(secure_app, userstore_driver_configuration)
+
+    # handle authentication methods
+    authen_methods_configuration = cfy_config.securest_authentication_methods
+    # this is temporary, to be removed when user configuration is possible
+    if not authen_methods_configuration:
+        authen_methods_configuration = [
+            {
+                'password': {
+                    'implementation': 'flask_securest.authentication_providers'
+                                      '.password:PasswordAuthenticator',
+                    'properties': {
+                        'password_hash': 'plaintext'
+                    }
+                }
+            },
+            {
+                'token': {
+                    'implementation': 'flask_securest.authentication_providers'
+                                      '.token:TokenAuthenticator',
+                    'properties': {
+                        'secret_key': 'yaml_secret'
+                    }
+                }
+            }
+        ]
+    # end of temp section
+    register_authentication_methods(secure_app, authen_methods_configuration)
 
     def unauthorized_user_handler():
         app.logger.debug('User access unauthorized')
@@ -185,13 +221,18 @@ def register_userstore_driver(secure_app, userstore_driver):
     try:
         implementation = userstore_driver.get('implementation')
         properties = userstore_driver.get('properties')
-        app.logger.debug('registering userstore driver, implementation: {0}, '
-                         'properties: {1}'.format(implementation, properties))
+        # logging won't work here since not in scope of app context
+        '''
+        secure_app.app.logger.debug('registering userstore driver, '
+                                    'implementation: {0}, properties: {1}'
+                                    .format(implementation, properties))
+        '''
         userstore = utils.get_class_instance(implementation, properties)
         secure_app.userstore_driver(userstore)
     except Exception as e:
-        app.logger.error('failed to register userstore driver, {0}'
-                         .format(e.message()))
+        # logging won't work here since not in scope of app context
+        # secure_app.app.logger.debug('failed to register userstore driver {0}, error: {1}'
+        #                             .format(userstore_driver, e.message))
         raise
 
 
@@ -203,15 +244,19 @@ def register_authentication_methods(secure_app, authentication_providers):
             provider_details = auth_provider[provider_name]
             implementation = provider_details.get('implementation')
             properties = provider_details.get('properties')
-            app.logger.debug('registering authentication provider, '
-                             'implementation: {0}, properties: {1}'
-                             .format(implementation, properties))
+            # logging won't work here since not in scope of app context
+            '''
+            secure_app.app.logger.debug('registering authentication provider, '
+                                        'implementation: {0}, properties: {1}'
+                                        .format(implementation, properties))
+            '''
             auth_provider = utils.get_class_instance(implementation,
                                                      properties)
             secure_app.authentication_provider(auth_provider)
         except Exception as e:
-            app.logger.error('failed to register authentication methods, {0}'
-                             .format(e.message()))
+            # logging won't work here since not in scope of app context
+            # secure_app.app.logger.error('failed to register authentication '
+            #                             'methods, {0}'.format(e.message()))
             raise
 
 
