@@ -50,14 +50,25 @@ def init_worker_installer(func):
         if not ctx:
             raise NonRecoverableError(
                 'CloudifyContext not found in invocation args')
-        if ctx.type == context.NODE_INSTANCE and \
-                'cloudify_agent' in ctx.node.properties:
-            agent_config = ctx.node.properties['cloudify_agent']
+
+        if 'cloudify_agent' in kwargs:
+            if ctx.type == context.NODE_INSTANCE and \
+                    ctx.node.properties.get('cloudify_agent'):
+                raise NonRecoverableError("'cloudify_agent' is configured "
+                                          "both as a node property and as an "
+                                          "invocation input parameter for "
+                                          "operation '{0}'"
+                                          .format(ctx.operation.name))
+            agent_config = kwargs['cloudify_agent']
         else:
-            agent_config = kwargs.get('cloudify_agent', {})
+            if ctx.type == context.NODE_INSTANCE and \
+                    ctx.node.properties.get('cloudify_agent'):
+                agent_config = ctx.node.properties['cloudify_agent']
+            else:
+                agent_config = {}
 
         prepare_connection_configuration(ctx, agent_config)
-
+        kwargs['cloudify_agent'] = agent_config
         runner = FabricRunner(ctx, agent_config)
         try:
             prepare_additional_configuration(ctx, agent_config, runner)
@@ -152,16 +163,19 @@ def _prepare_and_validate_autoscale_params(ctx, config):
     config['max_workers'] = max_workers
 
 
-def _set_ssh_key(ctx, config):
+def _set_auth(ctx, config):
+    is_password = 'password' in config
+
     if 'key' not in config:
         if ctx.bootstrap_context.cloudify_agent.agent_key_path:
             config['key'] = ctx.bootstrap_context.cloudify_agent.agent_key_path
-        else:
+        elif not is_password:
             raise NonRecoverableError(
-                'Missing ssh key path in worker configuration '
+                'Missing password or ssh key path in worker configuration '
                 '[cloudify_agent={0}'.format(config))
 
-    if not os.path.isfile(os.path.expanduser(config['key'])):
+    if not is_password \
+            and not os.path.isfile(os.path.expanduser(config['key'])):
         raise NonRecoverableError(
             'Cannot find keypair file, expected file path was {'
             '0}'.format(config['key']))
@@ -234,7 +248,7 @@ def prepare_connection_configuration(ctx, agent_config):
         agent_config['name'] = name
     else:
         agent_config['host'] = get_machine_ip(ctx)
-        _set_ssh_key(ctx, agent_config)
+        _set_auth(ctx, agent_config)
         _set_user(ctx, agent_config)
         _set_remote_execution_port(ctx, agent_config)
         agent_config['name'] = ctx.instance.id
