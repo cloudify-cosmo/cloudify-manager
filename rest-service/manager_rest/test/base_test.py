@@ -138,7 +138,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_path = self.rest_service_log
 
         # security config
-        test_config.secured_server = True
+        test_config.secured_server = False
 
         return test_config
 
