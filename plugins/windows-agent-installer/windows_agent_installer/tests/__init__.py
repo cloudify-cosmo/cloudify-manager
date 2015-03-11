@@ -14,6 +14,4 @@
 #  * limitations under the License.
 
 
-__author__ = 'elip'
-
 TEST_MACHINE_IP_ENV_VARIABLE = 'TEST_MACHINE_IP'

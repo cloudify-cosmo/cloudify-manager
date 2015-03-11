@@ -21,7 +21,7 @@ import tempfile
 import time
 import os
 
-from manager_rest import util, config, storage_manager, archiving
+from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
@@ -103,7 +103,7 @@ class BaseServerTestCase(unittest.TestCase):
             del(os.environ['MANAGER_REST_CONFIG_PATH'])
 
         server.reset_state(self.create_configuration())
-        util.copy_resources(config.instance().file_server_root)
+        utils.copy_resources(config.instance().file_server_root)
         server.setup_app()
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
@@ -136,6 +136,10 @@ class BaseServerTestCase(unittest.TestCase):
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
         test_config.rest_service_log_path = self.rest_service_log
+
+        # security config
+        test_config.secured_server = False
+
         return test_config
 
     def post(self, resource_path, data, query_params=None):
@@ -175,8 +179,9 @@ class BaseServerTestCase(unittest.TestCase):
         result.json = json.loads(result.data)
         return result
 
-    def get(self, resource_path, query_params=None):
-        result = self.app.get(self._build_url(resource_path, query_params))
+    def get(self, resource_path, query_params=None, headers=None):
+        result = self.app.get(self._build_url(resource_path, query_params),
+                              headers=headers)
         result.json = json.loads(result.data)
         return result
 

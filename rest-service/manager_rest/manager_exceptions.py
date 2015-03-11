@@ -69,6 +69,15 @@ class NonexistentWorkflowError(ManagerException):
             **kwargs)
 
 
+class UnauthorizedError(ManagerException):
+    UNAUTHORIZED_ERROR_CODE = 'unauthorized_error'
+
+    def __init__(self, *args, **kwargs):
+        super(UnauthorizedError, self).__init__(
+            401, UnauthorizedError.UNAUTHORIZED_ERROR_CODE,
+            *args, **kwargs)
+
+
 class UnsupportedContentTypeError(ManagerException):
     UNSUPPORTED_CONTENT_TYPE_ERROR_CODE = 'unsupported_content_type_error'
 

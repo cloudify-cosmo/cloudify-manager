@@ -301,7 +301,7 @@ class TestEnvironment(object):
         sys.path.append(manager_rest_path)
         os.mkdir(self.fileserver_dir)
         from manager_rest.file_server import FileServer
-        from manager_rest.util import copy_resources
+        from manager_rest.utils import copy_resources
 
         self.file_server_process = FileServer(self.fileserver_dir)
         self.file_server_process.start()

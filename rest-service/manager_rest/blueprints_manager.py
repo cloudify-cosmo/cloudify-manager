@@ -27,7 +27,7 @@ from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
-from manager_rest.util import maybe_register_teardown
+from manager_rest.utils import maybe_register_teardown
 from manager_rest.celery_client import celery_client
 
 
