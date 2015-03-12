@@ -20,6 +20,7 @@ import urllib2
 import tempfile
 import time
 import os
+from itsdangerous import base64_encode
 
 from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
@@ -36,9 +37,12 @@ FILE_SERVER_RESOURCES_URI = '/resources'
 
 class MockHTTPClient(HTTPClient):
 
-    def __init__(self, app):
+    def __init__(self, app, user=None, password=None):
         super(MockHTTPClient, self).__init__('localhost')
         self.app = app
+        if user:
+            credentials = '{0}:{1}'.format(user, password)
+            self.encoded_credentials = base64_encode(credentials)
 
     @staticmethod
     def _build_url(resource_path, query_params):
@@ -48,14 +52,10 @@ class MockHTTPClient(HTTPClient):
             return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
         return resource_path
 
-    def do_request(self,
-                   requests_method,
-                   uri,
-                   data=None,
-                   params=None,
-                   expected_status_code=200):
+    def _do_request(self, requests_method, uri, data, params, headers,
+                    expected_status_code):
         if 'get' in requests_method.__name__:
-            response = self.app.get(self._build_url(uri, params))
+            response = self.app.get(self._build_url(uri, params), headers=headers)
 
         elif 'put' in requests_method.__name__:
             response = self.app.put(self._build_url(uri, params),
@@ -71,6 +71,7 @@ class MockHTTPClient(HTTPClient):
                                       data=json.dumps(data))
         else:
             raise NotImplemented()
+
         if response.status_code != expected_status_code:
             response.content = response.data
             response.json = lambda: json.loads(response.data)
@@ -80,6 +81,27 @@ class MockHTTPClient(HTTPClient):
 
 
 class BaseServerTestCase(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        super(BaseServerTestCase, self).__init__(*args, **kwargs)
+        self._secured = False
+
+    def create_client(self, user=None, password=None):
+        client = CloudifyClient('localhost', user=user,
+                                password=password)
+        mock_http_client = MockHTTPClient(self.app, user, password)
+        client._client = mock_http_client
+        client.blueprints.api = mock_http_client
+        client.deployments.api = mock_http_client
+        client.deployments.outputs.api = mock_http_client
+        client.deployment_modifications.api = mock_http_client
+        client.executions.api = mock_http_client
+        client.nodes.api = mock_http_client
+        client.node_instances.api = mock_http_client
+        client.manager.api = mock_http_client
+        client.evaluate.api = mock_http_client
+
+        return client
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -107,18 +129,7 @@ class BaseServerTestCase(unittest.TestCase):
         server.setup_app()
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
-        self.client = CloudifyClient('localhost')
-        mock_http_client = MockHTTPClient(self.app)
-        self.client._client = mock_http_client
-        self.client.blueprints.api = mock_http_client
-        self.client.deployments.api = mock_http_client
-        self.client.deployments.outputs.api = mock_http_client
-        self.client.deployment_modifications.api = mock_http_client
-        self.client.executions.api = mock_http_client
-        self.client.nodes.api = mock_http_client
-        self.client.node_instances.api = mock_http_client
-        self.client.manager.api = mock_http_client
-        self.client.evaluate.api = mock_http_client
+        self.client = self.create_client()
 
     def tearDown(self):
         self.file_server.stop()
@@ -138,7 +149,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_path = self.rest_service_log
 
         # security config
-        test_config.secured_server = False
+        test_config.secured_server = self._secured
 
         return test_config
 
