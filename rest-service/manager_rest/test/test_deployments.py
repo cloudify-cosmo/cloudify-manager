@@ -172,9 +172,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/node-instances?deployment_id={0}'.format(
-            deployment_id)
-        nodes = self.get(resource_path).json
+        nodes = self.get('/node-instances',
+                         query_params={'deployment_id': deployment_id}).json
         self.assertTrue(len(nodes) > 0)
         nodes_ids = [node['id'] for node in nodes]
 
@@ -194,9 +193,8 @@ class DeploymentsTestCase(BaseServerTestCase):
 
         # modifying a node's state so there'll be a node in a state other
         # than 'uninitialized'
-        resource_path = '/node-instances?deployment_id={0}'.format(
-            deployment_id)
-        nodes = self.get(resource_path).json
+        nodes = self.get('/node-instances',
+                         query_params={'deployment_id': deployment_id}).json
 
         resp = self.patch('/node-instances/{0}'.format(nodes[0]['id']), {
             'version': 0,
@@ -229,9 +227,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/node-instances?deployment_id={0}'.format(
-            deployment_id)
-        nodes = self.get(resource_path).json
+        nodes = self.get('/node-instances',
+                         query_params={'deployment_id': deployment_id}).json
 
         # modifying nodes states
         for node in nodes:
@@ -277,9 +274,8 @@ class DeploymentsTestCase(BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        resource_path = '/node-instances?deployment_id={0}'.format(
-            deployment_id)
-        nodes = self.get(resource_path).json
+        nodes = self.get('/node-instances',
+                         query_params={'deployment_id': deployment_id}).json
         self.assertEquals(2, len(nodes))
 
         def assert_node_exists(starts_with):

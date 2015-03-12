@@ -35,6 +35,13 @@ FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
 
 
+def build_query_string(query_params):
+    query_string = ''
+    if query_params and len(query_params) > 0:
+        query_string += urllib.urlencode(query_params) + '&'
+    return query_string
+
+
 class MockHTTPClient(HTTPClient):
 
     def __init__(self, app, user=None, password=None):
@@ -44,32 +51,28 @@ class MockHTTPClient(HTTPClient):
             credentials = '{0}:{1}'.format(user, password)
             self.encoded_credentials = base64_encode(credentials)
 
-    @staticmethod
-    def _build_url(resource_path, query_params):
-        query_string = ''
-        if query_params and len(query_params) > 0:
-            query_string += urllib.urlencode(query_params) + '&'
-            return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
-        return resource_path
-
     def _do_request(self, requests_method, uri, data, params, headers,
                     expected_status_code):
         if 'get' in requests_method.__name__:
-            response = self.app.get(self._build_url(uri, params),
-                                    headers=headers)
+            response = self.app.get(uri,
+                                    headers=headers,
+                                    query_string=build_query_string(params))
 
         elif 'put' in requests_method.__name__:
-            response = self.app.put(self._build_url(uri, params),
-                                    content_type='application/json',
-                                    data=json.dumps(data))
+            response = self.app.put(uri,
+                                    headers=headers,
+                                    data=data,
+                                    query_string=build_query_string(params))
         elif 'post' in requests_method.__name__:
-            response = self.app.post(self._build_url(uri, params),
-                                     content_type='application/json',
-                                     data=json.dumps(data))
+            response = self.app.post(uri,
+                                     headers=headers,
+                                     data=data,
+                                     query_string=build_query_string(params))
         elif 'patch' in requests_method.__name__:
-            response = self.app.patch(self._build_url(uri, params),
-                                      content_type='application/json',
-                                      data=json.dumps(data))
+            response = self.app.patch(uri,
+                                      headers=headers,
+                                      data=data,
+                                      query_string=build_query_string(params))
         else:
             raise NotImplemented()
 
@@ -155,32 +158,36 @@ class BaseServerTestCase(unittest.TestCase):
         return test_config
 
     def post(self, resource_path, data, query_params=None):
-        url = self._build_url(resource_path, query_params)
-        result = self.app.post(url,
+        result = self.app.post(urllib.quote(resource_path),
                                content_type='application/json',
-                               data=json.dumps(data))
+                               data=json.dumps(data),
+                               query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
     def post_file(self, resource_path, file_path, query_params=None):
         with open(file_path) as f:
-            result = self.app.post(
-                self._build_url(resource_path, query_params), data=f.read())
+            result = self.app.post(urllib.quote(resource_path),
+                                   data=f.read(),
+                                   query_string=build_query_string(
+                                       query_params))
             result.json = json.loads(result.data)
             return result
 
     def put_file(self, resource_path, file_path, query_params=None):
         with open(file_path) as f:
-            result = self.app.put(
-                self._build_url(resource_path, query_params), data=f.read())
+            result = self.app.put(urllib.quote(resource_path),
+                                  data=f.read(),
+                                  query_string=build_query_string(
+                                      query_params))
             result.json = json.loads(result.data)
             return result
 
     def put(self, resource_path, data=None, query_params=None):
-        result = self.app.put(
-            self._build_url(urllib.quote(resource_path), query_params),
-            content_type='application/json',
-            data=json.dumps(data) if data else None)
+        result = self.app.put(urllib.quote(resource_path),
+                              content_type='application/json',
+                              data=json.dumps(data) if data else None,
+                              query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
@@ -192,8 +199,9 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def get(self, resource_path, query_params=None, headers=None):
-        result = self.app.get(self._build_url(resource_path, query_params),
-                              headers=headers)
+        result = self.app.get(urllib.quote(resource_path),
+                              headers=headers,
+                              query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
@@ -202,7 +210,8 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def delete(self, resource_path, query_params=None):
-        result = self.app.delete(self._build_url(resource_path, query_params))
+        result = self.app.delete(urllib.quote(resource_path),
+                                 query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
@@ -275,10 +284,3 @@ class BaseServerTestCase(unittest.TestCase):
 
         raise RuntimeError('Url {0} is not available (waited {1} '
                            'seconds)'.format(url, timeout))
-
-    def _build_url(self, resource_path, query_params):
-        query_string = ''
-        if query_params and len(query_params) > 0:
-            query_string += '&' + urllib.urlencode(query_params)
-            return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
-        return resource_path
