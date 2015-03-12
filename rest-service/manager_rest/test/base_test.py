@@ -55,7 +55,8 @@ class MockHTTPClient(HTTPClient):
     def _do_request(self, requests_method, uri, data, params, headers,
                     expected_status_code):
         if 'get' in requests_method.__name__:
-            response = self.app.get(self._build_url(uri, params), headers=headers)
+            response = self.app.get(self._build_url(uri, params),
+                                    headers=headers)
 
         elif 'put' in requests_method.__name__:
             response = self.app.put(self._build_url(uri, params),
