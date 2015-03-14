@@ -34,43 +34,46 @@ FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
 
 
+def build_query_string(query_params):
+    query_string = ''
+    if query_params and len(query_params) > 0:
+        query_string += urllib.urlencode(query_params) + '&'
+    return query_string
+
+
 class MockHTTPClient(HTTPClient):
 
-    def __init__(self, app):
-        super(MockHTTPClient, self).__init__('localhost')
+    def __init__(self, app, user=None, password=None):
+        super(MockHTTPClient, self).__init__(host='localhost',
+                                             user=user,
+                                             password=password)
         self.app = app
 
-    @staticmethod
-    def _build_url(resource_path, query_params):
-        query_string = ''
-        if query_params and len(query_params) > 0:
-            query_string += urllib.urlencode(query_params) + '&'
-            return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
-        return resource_path
-
-    def do_request(self,
-                   requests_method,
-                   uri,
-                   data=None,
-                   params=None,
-                   expected_status_code=200):
+    def _do_request(self, requests_method, uri, data, params, headers,
+                    expected_status_code):
         if 'get' in requests_method.__name__:
-            response = self.app.get(self._build_url(uri, params))
+            response = self.app.get(uri,
+                                    headers=headers,
+                                    query_string=build_query_string(params))
 
         elif 'put' in requests_method.__name__:
-            response = self.app.put(self._build_url(uri, params),
-                                    content_type='application/json',
-                                    data=json.dumps(data))
+            response = self.app.put(uri,
+                                    headers=headers,
+                                    data=data,
+                                    query_string=build_query_string(params))
         elif 'post' in requests_method.__name__:
-            response = self.app.post(self._build_url(uri, params),
-                                     content_type='application/json',
-                                     data=json.dumps(data))
+            response = self.app.post(uri,
+                                     headers=headers,
+                                     data=data,
+                                     query_string=build_query_string(params))
         elif 'patch' in requests_method.__name__:
-            response = self.app.patch(self._build_url(uri, params),
-                                      content_type='application/json',
-                                      data=json.dumps(data))
+            response = self.app.patch(uri,
+                                      headers=headers,
+                                      data=data,
+                                      query_string=build_query_string(params))
         else:
             raise NotImplemented()
+
         if response.status_code != expected_status_code:
             response.content = response.data
             response.json = lambda: json.loads(response.data)
@@ -80,6 +83,30 @@ class MockHTTPClient(HTTPClient):
 
 
 class BaseServerTestCase(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        super(BaseServerTestCase, self).__init__(*args, **kwargs)
+        self._secured = False
+
+    def create_client(self, user=None, password=None):
+        client = CloudifyClient('localhost',
+                                user=user,
+                                password=password)
+        mock_http_client = MockHTTPClient(self.app,
+                                          user=user,
+                                          password=password)
+        client._client = mock_http_client
+        client.blueprints.api = mock_http_client
+        client.deployments.api = mock_http_client
+        client.deployments.outputs.api = mock_http_client
+        client.deployment_modifications.api = mock_http_client
+        client.executions.api = mock_http_client
+        client.nodes.api = mock_http_client
+        client.node_instances.api = mock_http_client
+        client.manager.api = mock_http_client
+        client.evaluate.api = mock_http_client
+
+        return client
 
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -107,18 +134,7 @@ class BaseServerTestCase(unittest.TestCase):
         server.setup_app()
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
-        self.client = CloudifyClient('localhost')
-        mock_http_client = MockHTTPClient(self.app)
-        self.client._client = mock_http_client
-        self.client.blueprints.api = mock_http_client
-        self.client.deployments.api = mock_http_client
-        self.client.deployments.outputs.api = mock_http_client
-        self.client.deployment_modifications.api = mock_http_client
-        self.client.executions.api = mock_http_client
-        self.client.nodes.api = mock_http_client
-        self.client.node_instances.api = mock_http_client
-        self.client.manager.api = mock_http_client
-        self.client.evaluate.api = mock_http_client
+        self.client = self.create_client()
 
     def tearDown(self):
         self.file_server.stop()
@@ -138,37 +154,41 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_path = self.rest_service_log
 
         # security config
-        test_config.secured_server = False
+        test_config.secured_server = self._secured
 
         return test_config
 
     def post(self, resource_path, data, query_params=None):
-        url = self._build_url(resource_path, query_params)
-        result = self.app.post(url,
+        result = self.app.post(urllib.quote(resource_path),
                                content_type='application/json',
-                               data=json.dumps(data))
+                               data=json.dumps(data),
+                               query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
     def post_file(self, resource_path, file_path, query_params=None):
         with open(file_path) as f:
-            result = self.app.post(
-                self._build_url(resource_path, query_params), data=f.read())
+            result = self.app.post(urllib.quote(resource_path),
+                                   data=f.read(),
+                                   query_string=build_query_string(
+                                       query_params))
             result.json = json.loads(result.data)
             return result
 
     def put_file(self, resource_path, file_path, query_params=None):
         with open(file_path) as f:
-            result = self.app.put(
-                self._build_url(resource_path, query_params), data=f.read())
+            result = self.app.put(urllib.quote(resource_path),
+                                  data=f.read(),
+                                  query_string=build_query_string(
+                                      query_params))
             result.json = json.loads(result.data)
             return result
 
     def put(self, resource_path, data=None, query_params=None):
-        result = self.app.put(
-            self._build_url(urllib.quote(resource_path), query_params),
-            content_type='application/json',
-            data=json.dumps(data) if data else None)
+        result = self.app.put(urllib.quote(resource_path),
+                              content_type='application/json',
+                              data=json.dumps(data) if data else None,
+                              query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
@@ -180,8 +200,9 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def get(self, resource_path, query_params=None, headers=None):
-        result = self.app.get(self._build_url(resource_path, query_params),
-                              headers=headers)
+        result = self.app.get(urllib.quote(resource_path),
+                              headers=headers,
+                              query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
@@ -190,7 +211,8 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def delete(self, resource_path, query_params=None):
-        result = self.app.delete(self._build_url(resource_path, query_params))
+        result = self.app.delete(urllib.quote(resource_path),
+                                 query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
@@ -263,10 +285,3 @@ class BaseServerTestCase(unittest.TestCase):
 
         raise RuntimeError('Url {0} is not available (waited {1} '
                            'seconds)'.format(url, timeout))
-
-    def _build_url(self, resource_path, query_params):
-        query_string = ''
-        if query_params and len(query_params) > 0:
-            query_string += '&' + urllib.urlencode(query_params)
-            return '{0}?{1}'.format(urllib.quote(resource_path), query_string)
-        return resource_path
