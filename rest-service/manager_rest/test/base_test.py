@@ -20,7 +20,6 @@ import urllib2
 import tempfile
 import time
 import os
-from itsdangerous import base64_encode
 
 from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
@@ -45,11 +44,10 @@ def build_query_string(query_params):
 class MockHTTPClient(HTTPClient):
 
     def __init__(self, app, user=None, password=None):
-        super(MockHTTPClient, self).__init__('localhost')
+        super(MockHTTPClient, self).__init__(host='localhost',
+                                             user=user,
+                                             password=password)
         self.app = app
-        if user:
-            credentials = '{0}:{1}'.format(user, password)
-            self.encoded_credentials = base64_encode(credentials)
 
     def _do_request(self, requests_method, uri, data, params, headers,
                     expected_status_code):
@@ -91,9 +89,12 @@ class BaseServerTestCase(unittest.TestCase):
         self._secured = False
 
     def create_client(self, user=None, password=None):
-        client = CloudifyClient('localhost', user=user,
+        client = CloudifyClient('localhost',
+                                user=user,
                                 password=password)
-        mock_http_client = MockHTTPClient(self.app, user, password)
+        mock_http_client = MockHTTPClient(self.app,
+                                          user=user,
+                                          password=password)
         client._client = mock_http_client
         client.blueprints.api = mock_http_client
         client.deployments.api = mock_http_client
