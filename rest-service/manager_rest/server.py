@@ -283,10 +283,8 @@ def load_configuration():
                 setattr(obj_conf, key, value)
 
     env_cfy_secured = os.environ.get('IS_CFY_SECURED')
-    if env_cfy_secured and env_cfy_secured.strip().lower() == 'true':
-        obj_conf.secured_server = True
-    else:
-        obj_conf.secured_server = False
+    obj_conf.secured_server = env_cfy_secured \
+                              and env_cfy_secured.strip().lower() == 'true'
 
 
 load_configuration()
