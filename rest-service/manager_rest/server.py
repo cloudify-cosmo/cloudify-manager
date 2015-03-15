@@ -264,7 +264,7 @@ def register_authentication_methods(secure_app, authentication_providers):
                                     implementation, properties))
             '''
             auth_provider = utils.get_class_instance(implementation,
-                                                 properties)
+                                                     properties)
             secure_app.register_authentication_provider(auth_provider)
         except Exception:
             # logging won't work here since not in scope of app context
@@ -283,8 +283,8 @@ def load_configuration():
                 setattr(obj_conf, key, value)
 
     env_cfy_secured = os.environ.get('IS_CFY_SECURED')
-    obj_conf.secured_server = env_cfy_secured \
-                              and env_cfy_secured.strip().lower() == 'true'
+    obj_conf.secured_server = env_cfy_secured and\
+        env_cfy_secured.strip().lower() == 'true'
 
 
 load_configuration()
