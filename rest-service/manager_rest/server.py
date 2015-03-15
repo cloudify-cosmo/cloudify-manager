@@ -191,21 +191,19 @@ def init_secured_app(app):
     if not authen_methods_configuration:
         authen_methods_configuration = [
             {
-                'password': {
-                    'implementation': 'flask_securest.authentication_providers'
-                                      '.password:PasswordAuthenticator',
-                    'properties': {
-                        'password_hash': 'plaintext'
-                    }
+                'name': 'password',
+                'implementation': 'flask_securest.authentication_providers'
+                                  '.password:PasswordAuthenticator',
+                'properties': {
+                    'password_hash': 'plaintext'
                 }
             },
             {
-                'token': {
-                    'implementation': 'flask_securest.authentication_providers'
-                                      '.token:TokenAuthenticator',
-                    'properties': {
-                        'secret_key': 'yaml_secret'
-                    }
+                'name': 'token',
+                'implementation': 'flask_securest.authentication_providers'
+                                  '.token:TokenAuthenticator',
+                'properties': {
+                    'secret_key': 'yaml_secret'
                 }
             }
         ]
@@ -241,26 +239,16 @@ def register_userstore_driver(secure_app, userstore_driver):
 
 def register_authentication_methods(secure_app, authentication_providers):
     # Note: the order of registration is important here
-    if not isinstance(authentication_providers, list):
-        raise ValueError('Invalid authentication providers configuration')
     for auth_method in authentication_providers:
-        if not isinstance(auth_method, dict):
-            raise ValueError('Invalid authentication providers configuration')
-        if len(auth_method) == 0 or len(auth_method) > 1:
-            raise ValueError('Invalid authentication providers configuration')
-
-        # using the first and only entry
-        method_name = auth_method.iterkeys().next()
-        method_details = auth_method[method_name]
         try:
-            implementation = method_details.get('implementation')
+            implementation = auth_method.get('implementation')
             # TODO validate implementation not None
-            properties = method_details.get('properties')
+            properties = auth_method.get('properties')
             # logging won't work here since not in scope of app context
             '''
             secure_app.app.logger.debug('registering authentication provider,
                                     {0} with implementation: {1}, and
-                                    properties: {2}'.format(name,
+                                    properties: {2}'.format(method_name,
                                     implementation, properties))
             '''
             auth_provider = utils.get_class_instance(implementation,
