@@ -110,6 +110,14 @@ class TaskRetriesTest(TestCase):
         )['retry_invocations']
         self.assertEqual(4, invocations)
 
+        # asserting event messages reflect that the task has been rescheduled
+        with open(self.test_logs_file, 'r') as f:
+            events_and_logs = f.read()
+            self.assertIn('Task rescheduled', events_and_logs)
+            # the following is the message that was
+            # passed to the rescheduling request
+            self.assertIn('Retrying operation', events_and_logs)
+
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
                                               retries,

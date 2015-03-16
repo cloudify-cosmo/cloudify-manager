@@ -168,6 +168,7 @@ def init_secured_app(app):
         userstore_driver_configuration = {
             'implementation': 'flask_securest.userstores.file:FileUserstore',
             'properties': {
+                'userstore_file': 'users.yaml',
                 'identifying_attribute': 'username'
             }
         }
@@ -178,22 +179,24 @@ def init_secured_app(app):
     authen_methods_configuration = cfy_config.securest_authentication_methods
     # this is temporary, to be removed when user configuration is possible
     if not authen_methods_configuration:
-        authen_methods_configuration = {
-            'password': {
+        authen_methods_configuration = [
+            {
+                'name': 'password',
                 'implementation': 'flask_securest.authentication_providers'
                                   '.password:PasswordAuthenticator',
                 'properties': {
                     'password_hash': 'plaintext'
                 }
             },
-            'token': {
+            {
+                'name': 'token',
                 'implementation': 'flask_securest.authentication_providers'
                                   '.token:TokenAuthenticator',
                 'properties': {
                     'secret_key': 'yaml_secret'
                 }
             }
-        }
+        ]
     # end of temp section
     register_authentication_methods(secure_app, authen_methods_configuration)
 
@@ -226,16 +229,16 @@ def register_userstore_driver(secure_app, userstore_driver):
 
 def register_authentication_methods(secure_app, authentication_providers):
     # Note: the order of registration is important here
-    for name, configuration in authentication_providers.items():
+    for auth_method in authentication_providers:
         try:
-            implementation = configuration.get('implementation')
-            properties = configuration.get('properties')
+            implementation = auth_method.get('implementation')
+            properties = auth_method.get('properties')
             # logging won't work here since not in scope of app context
             '''
             secure_app.app.logger.debug('registering authentication provider,
-                                        {0} with implementation: {1}, and
-                                        properties: {2}'.format(name,
-                                        implementation, properties))
+                                    {0} with implementation: {1}, and
+                                    properties: {2}'.format(method_name,
+                                    implementation, properties))
             '''
             auth_provider = utils.get_class_instance(implementation,
                                                      properties)
@@ -247,16 +250,21 @@ def register_authentication_methods(secure_app, authentication_providers):
             raise
 
 
-obj_conf = config.instance()
-if 'MANAGER_REST_CONFIG_PATH' in os.environ:
-    with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
-        yaml_conf = yaml.load(f.read())
-    for key, value in yaml_conf.iteritems():
-        if hasattr(obj_conf, key):
-            setattr(obj_conf, key, value)
+def load_configuration():
+    obj_conf = config.instance()
+    if 'MANAGER_REST_CONFIG_PATH' in os.environ:
+        with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
+            yaml_conf = yaml.load(f.read())
+        for key, value in yaml_conf.iteritems():
+            if hasattr(obj_conf, key):
+                setattr(obj_conf, key, value)
 
-obj_conf.secured_server = os.environ.get('IS_CFY_SECURED', False)
+    env_cfy_secured = os.environ.get('IS_CFY_SECURED')
+    obj_conf.secured_server = env_cfy_secured and\
+        env_cfy_secured.strip().lower() == 'true'
 
+
+load_configuration()
 app = setup_app()
 
 
@@ -271,7 +279,7 @@ def internal_error(e):
     response = jsonify(
         {"message":
          "Internal error occurred in manager REST server - {0}: {1}"
-            .format(type(e).__name__, str(e)),
+         .format(type(e).__name__, str(e)),
          "error_code": manager_exceptions.INTERNAL_SERVER_ERROR_CODE,
          "server_traceback": s_traceback.getvalue()})
     response.status_code = 500

@@ -239,20 +239,91 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['removed']['rel_uninstall'] = 4
         self.deployment_assertions(expectations)
 
-    def test_scale_rollback(self):
-        self.deploy('scale7')
+    def test_compute_scale_out_compute_rollback(self):
+        fail_operations = [{
+            'workflow': 'scale',
+            'node': 'compute',
+            'operation': 'cloudify.interfaces.lifecycle.start'
+        }]
+
+        expectations = self.deploy('scale7', inputs={'fail': fail_operations})
+        expectations['compute']['new']['install'] = 1
+        self.deployment_assertions(expectations)
+
         with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'node_id': 'node', 'delta': 1})
+            self.scale(parameters={'node_id': 'compute'})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
-        instances = self.client.node_instances.list(self.deployment_id)
-        self.assertEqual(len(instances), 1)
+        expectations = self.expectations()
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['new']['uninstall'] = 1
+        expectations['compute']['existing']['install'] = 1
+        self.deployment_assertions(expectations, rollback=True)
+
+    def test_db_contained_in_compute_scale_out_compute_rollback(self):
+        fail_operations = [{
+            'workflow': 'scale',
+            'node': 'db',
+            'operation': 'cloudify.interfaces.lifecycle.start'
+        }]
+
+        expectations = self.deploy('scale8', inputs={'fail': fail_operations})
+        expectations['compute']['new']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        self.deployment_assertions(expectations)
+
+        with self.assertRaises(RuntimeError) as e:
+            self.scale(parameters={'node_id': 'compute'})
+        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        expectations = self.expectations()
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['new']['uninstall'] = 1
+        expectations['compute']['existing']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        # this is somewhat of a hack. scale_rel_install only considers
+        # establish, so we reuse this to decrease 2 from the expected establish
+        # invocation, as start is the one that fails.
+        # whoever you are that may be reading this. please don't hate me.
+        # i mean no harm
+        expectations['db']['new']['scale_rel_install'] = -2
+        expectations['db']['new']['uninstall'] = 1
+        expectations['db']['new']['rel_uninstall'] = 2
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['rel_install'] = 2
+        self.deployment_assertions(expectations, rollback=True)
+
+    def test_db_connected_to_compute_scale_out_compute_rollback(self):
+        fail_operations = [{
+            'workflow': 'scale',
+            'node': 'compute',
+            'operation': 'cloudify.interfaces.lifecycle.start'
+        }]
+
+        expectations = self.deploy('scale9', inputs={'fail': fail_operations})
+        expectations['compute']['new']['install'] = 1
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 2
+        self.deployment_assertions(expectations)
+
+        with self.assertRaises(RuntimeError) as e:
+            self.scale(parameters={'node_id': 'compute'})
+        self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
+        expectations = self.expectations()
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['new']['uninstall'] = 1
+        expectations['compute']['existing']['install'] = 1
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['rel_install'] = 2
+        expectations['db']['existing']['rel_uninstall'] = 2
+        self.deployment_assertions(expectations, rollback=True)
 
     def setUp(self):
         super(TestScaleWorkflow, self).setUp()
         self.previous_ids = []
         self.previous_instances = []
 
-    def deployment_assertions(self, expected):
+    def deployment_assertions(self, expected, rollback=False):
         def expected_invocations(_expectations, num_instances):
             result = {}
             install_count = _expectations.get('install') or 0
@@ -281,6 +352,13 @@ class TestScaleWorkflow(TestCase):
             })
             return result
 
+        if rollback:
+            mod = self.client.deployment_modifications.list()[0]
+            rolledback = [i for i in mod.node_instances.added_and_related if
+                          i.get('modification') == 'added']
+        else:
+            rolledback = []
+
         instances = self.client.node_instances.list()
         instance_ids = [i.id for i in instances]
 
@@ -290,8 +368,13 @@ class TestScaleWorkflow(TestCase):
             existing_expectation = expectations['existing']
             removed_expectation = expectations['removed']
             node_instances = [i for i in instances if i.node_id == node_id]
-            new_instances = [i for i in node_instances
-                             if i.id not in self.previous_ids]
+            node_rolledback = [i for i in rolledback if i.node_id == node_id]
+
+            if rollback:
+                new_instances = node_rolledback
+            else:
+                new_instances = [i for i in node_instances
+                                 if i.id not in self.previous_ids]
             existing_instances = [i for i in node_instances
                                   if i.id in self.previous_ids]
             removed_instances = [i for i in self.previous_instances
@@ -365,8 +448,9 @@ class TestScaleWorkflow(TestCase):
             }
         }
 
-    def deploy(self, resource_name):
-        deployment, _ = deploy(resource('dsl/{0}.yaml'.format(resource_name)))
+    def deploy(self, resource_name, inputs=None):
+        deployment, _ = deploy(resource('dsl/{0}.yaml'.format(resource_name)),
+                               inputs=inputs)
         self.deployment_id = deployment.id
         return self.expectations()
 

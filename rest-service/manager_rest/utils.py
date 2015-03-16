@@ -114,8 +114,8 @@ def get_class_instance(class_path, properties):
     the given *args, **kwargs are passed to the instance's __init__"""
     if not properties:
         properties = {}
-    clazz = get_class(class_path)
-    return clazz(**properties)
+    cls = get_class(class_path)
+    return cls(**properties)
 
 
 def abort_error(error, logger):
@@ -124,7 +124,6 @@ def abort_error(error, logger):
 
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
-
     abort(error.http_code,
           message=str(error),
           error_code=error.error_code,
