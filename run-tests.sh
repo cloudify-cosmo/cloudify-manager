@@ -48,6 +48,7 @@ test_plugins()
     pushd plugins/agent-installer
     nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
     nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
+    nosetests worker_installer.tests.test_init:InitTest --nologcapture --nocapture
     popd
 }
 
