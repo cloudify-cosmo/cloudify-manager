@@ -46,18 +46,8 @@ def setup_app():
     if config.instance().secured_server:
         init_secured_app(app)
 
-    # TODO Additional security settings:
-    # 1. hooks - additional before/after request hooks
-    # 2. hook - unauthorized
-    # 3. authentication methods - place modules' files in a known location,
-    #   update the json config file on bootstrap, and append to the rest's
-    #   python path
-    # 4. userstore implementation
-    # 5. authorization implementation?
-
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
-
     additional_log_handlers = [
         RotatingFileHandler(
             config.instance().rest_service_log_path,
@@ -242,7 +232,6 @@ def register_authentication_methods(secure_app, authentication_providers):
     for auth_method in authentication_providers:
         try:
             implementation = auth_method.get('implementation')
-            # TODO validate implementation not None
             properties = auth_method.get('properties')
             # logging won't work here since not in scope of app context
             '''
@@ -281,7 +270,9 @@ app = setup_app()
 
 @app.errorhandler(500)
 def internal_error(e):
+
     # app.logger.exception(e)  # gets logged automatically
+
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
 
