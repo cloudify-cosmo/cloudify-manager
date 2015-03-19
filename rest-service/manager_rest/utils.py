@@ -16,10 +16,11 @@
 import sys
 import logging
 import shutil
+import importlib
+import traceback
+import StringIO
 from os import path
-
-
-__author__ = 'dank'
+from flask.ext.restful import abort
 
 
 def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,
@@ -77,3 +78,53 @@ def maybe_register_teardown(app, f):
     """
     if f not in app.teardown_appcontext_funcs:
         app.teardown_appcontext_funcs.append(f)
+
+
+def get_class(class_path):
+    """Returns a class from a string formatted as module:class"""
+    if not class_path:
+        raise ValueError('class path is missing or empty')
+
+    if not isinstance(class_path, basestring):
+        raise ValueError('class path is not a string')
+
+    class_path = class_path.strip()
+    if ':' not in class_path or class_path.count(':') > 1:
+        raise ValueError('Invalid class path, expected format: '
+                         'module:class')
+
+    class_path_parts = class_path.split(':')
+    class_module_str = class_path_parts[0].strip()
+    class_name = class_path_parts[1].strip()
+
+    if not class_module_str or not class_name:
+        raise ValueError('Invalid class path, expected format: '
+                         'module:class')
+
+    module = importlib.import_module(class_module_str)
+    if not hasattr(module, class_name):
+        raise ValueError('module "{0}", does not contain class "{1}"'
+                         .format(class_module_str, class_name))
+
+    return getattr(module, class_name)
+
+
+def get_class_instance(class_path, properties):
+    """Returns an instance of a class from a string formatted as module:class
+    the given *args, **kwargs are passed to the instance's __init__"""
+    if not properties:
+        properties = {}
+    cls = get_class(class_path)
+    return cls(**properties)
+
+
+def abort_error(error, logger):
+
+    logger.info('{0}: {1}'.format(type(error).__name__, str(error)))
+
+    s_traceback = StringIO.StringIO()
+    traceback.print_exc(file=s_traceback)
+    abort(error.http_code,
+          message=str(error),
+          error_code=error.error_code,
+          server_traceback=s_traceback.getvalue())

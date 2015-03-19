@@ -295,10 +295,8 @@ class PluginInstallerTestCase(testtools.TestCase):
         """
         Compare two directories recursively. Files in each directory are
         assumed to be equal if their names and contents are equal.
-
         @param dir1: First directory path
         @param dir2: Second directory path
-
         @return: True if the directory trees are the same and
             there were no errors while accessing the directories or files,
             False otherwise.

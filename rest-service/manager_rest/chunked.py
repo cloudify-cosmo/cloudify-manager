@@ -15,9 +15,6 @@
 #
 
 
-__author__ = 'dan'
-
-
 # Chunked is handled by gunicorn
 def decode(input_stream, buffer_size=8192):
     while True:

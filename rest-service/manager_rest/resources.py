@@ -20,13 +20,12 @@ import urllib
 import tempfile
 import shutil
 import uuid
-import traceback
-import StringIO
 import contextlib
 from functools import wraps
-from setuptools import archive_util
 from os import path
 from urllib2 import urlopen, URLError
+
+from setuptools import archive_util
 
 import elasticsearch
 from flask import (
@@ -34,9 +33,10 @@ from flask import (
     make_response,
     current_app as app
 )
-from flask.ext.restful import Resource, abort, marshal, reqparse
+from flask.ext.restful import Resource, marshal, reqparse
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
+from flask_securest.rest_security import SecuredResource
 
 from manager_rest import config
 from manager_rest import models
@@ -45,6 +45,7 @@ from manager_rest import requests_schema
 from manager_rest import chunked
 from manager_rest import archiving
 from manager_rest import manager_exceptions
+from manager_rest import utils
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
@@ -61,7 +62,7 @@ def exceptions_handled(func):
         try:
             return func(*args, **kwargs)
         except manager_exceptions.ManagerException as e:
-            abort_error(e)
+            utils.abort_error(e, app.logger)
     return wrapper
 
 
@@ -104,19 +105,6 @@ class marshal_with(object):
             else:
                 return marshal(response, include)
         return wrapper
-
-
-def abort_error(error):
-
-    app.logger.info('{0}: {1}'.format(type(error).__name__, str(error)))
-
-    s_traceback = StringIO.StringIO()
-    traceback.print_exc(file=s_traceback)
-
-    abort(error.http_code,
-          message=str(error),
-          error_code=error.error_code,
-          server_traceback=s_traceback.getvalue())
 
 
 def verify_json_content_type():
@@ -401,7 +389,7 @@ class BlueprintsUpload(object):
         return path.join(application_dir, application_file_name)
 
 
-class BlueprintsIdArchive(Resource):
+class BlueprintsIdArchive(SecuredResource):
 
     @swagger.operation(
         nickname="getArchive",
@@ -448,7 +436,7 @@ class BlueprintsIdArchive(Resource):
         return response
 
 
-class Blueprints(Resource):
+class Blueprints(SecuredResource):
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
@@ -465,7 +453,7 @@ class Blueprints(Resource):
         return get_blueprints_manager().blueprints_list(_include)
 
 
-class BlueprintsId(Resource):
+class BlueprintsId(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -557,7 +545,7 @@ class BlueprintsId(Resource):
         return responses.BlueprintState(**blueprint.to_dict()), 200
 
 
-class Executions(Resource):
+class Executions(SecuredResource):
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Execution.__name__),
@@ -608,7 +596,7 @@ class Executions(Resource):
         return responses.Execution(**execution.to_dict()), 201
 
 
-class ExecutionsId(Resource):
+class ExecutionsId(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -705,7 +693,7 @@ class ExecutionsId(Resource):
             execution_id).to_dict())
 
 
-class Deployments(Resource):
+class Deployments(SecuredResource):
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Deployment.__name__),
@@ -728,7 +716,7 @@ class Deployments(Resource):
         ]
 
 
-class DeploymentsId(Resource):
+class DeploymentsId(SecuredResource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
@@ -818,7 +806,7 @@ class DeploymentsId(Resource):
         return responses.Deployment(**deployment.to_dict()), 200
 
 
-class DeploymentModifications(Resource):
+class DeploymentModifications(SecuredResource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
@@ -886,7 +874,7 @@ class DeploymentModifications(Resource):
                 for m in modifications]
 
 
-class DeploymentModificationsId(Resource):
+class DeploymentModificationsId(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.DeploymentModification,
@@ -901,7 +889,7 @@ class DeploymentModificationsId(Resource):
         return responses.DeploymentModification(**modification.to_dict())
 
 
-class DeploymentModificationsIdFinish(Resource):
+class DeploymentModificationsIdFinish(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.DeploymentModification,
@@ -916,7 +904,7 @@ class DeploymentModificationsIdFinish(Resource):
         return responses.DeploymentModification(**modification.to_dict())
 
 
-class DeploymentModificationsIdRollback(Resource):
+class DeploymentModificationsIdRollback(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.DeploymentModification,
@@ -931,7 +919,7 @@ class DeploymentModificationsIdRollback(Resource):
         return responses.DeploymentModification(**modification.to_dict())
 
 
-class Nodes(Resource):
+class Nodes(SecuredResource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
@@ -976,7 +964,7 @@ class Nodes(Resource):
         return [responses.Node(**node.to_dict()) for node in nodes]
 
 
-class NodeInstances(Resource):
+class NodeInstances(SecuredResource):
 
     def __init__(self):
         self._args_parser = reqparse.RequestParser()
@@ -1022,7 +1010,7 @@ class NodeInstances(Resource):
         return [responses.NodeInstance(**node.to_dict()) for node in nodes]
 
 
-class NodeInstancesId(Resource):
+class NodeInstancesId(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.Node,
@@ -1140,7 +1128,7 @@ class NodeInstancesId(Resource):
                 node_instance_id).to_dict())
 
 
-class DeploymentsIdOutputs(Resource):
+class DeploymentsIdOutputs(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.DeploymentOutputs.__name__,
@@ -1170,7 +1158,7 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
     return es.search(index=index, doc_type=doc_type, body=body)
 
 
-class Events(Resource):
+class Events(SecuredResource):
 
     def _query_events(self):
         """
@@ -1219,7 +1207,7 @@ class Events(Resource):
         return self._query_events()
 
 
-class Search(Resource):
+class Search(SecuredResource):
 
     @swagger.operation(
         nickname='search',
@@ -1244,7 +1232,7 @@ class Search(Resource):
                                      body=request.json)
 
 
-class Status(Resource):
+class Status(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.Status,
@@ -1306,7 +1294,7 @@ class Status(Resource):
         return services
 
 
-class ProviderContext(Resource):
+class ProviderContext(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.ProviderContext,
@@ -1378,7 +1366,7 @@ class Version(Resource):
         return responses.Version(**get_version_data())
 
 
-class EvaluateFunctions(Resource):
+class EvaluateFunctions(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.EvaluatedFunctions,

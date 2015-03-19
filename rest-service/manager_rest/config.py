@@ -27,6 +27,9 @@ class Config(object):
         self._file_server_resources_uri = None
         self._rest_service_log_path = None
         self._test_mode = False
+        self._secured_server = False
+        self._securest_authentication_methods = []
+        self._securest_userstore_driver = None
 
     @property
     def db_address(self):
@@ -40,6 +43,10 @@ class Config(object):
     def db_port(self):
         return self._db_port
 
+    @db_port.setter
+    def db_port(self, value):
+        self._db_port = value
+
     @property
     def amqp_address(self):
         return self._amqp_address
@@ -47,10 +54,6 @@ class Config(object):
     @amqp_address.setter
     def amqp_address(self, value):
         self._amqp_address = value
-
-    @db_port.setter
-    def db_port(self, value):
-        self._db_port = value
 
     @property
     def file_server_root(self):
@@ -107,6 +110,30 @@ class Config(object):
     @test_mode.setter
     def test_mode(self, value):
         self._test_mode = value
+
+    @property
+    def secured_server(self):
+        return self._secured_server
+
+    @secured_server.setter
+    def secured_server(self, value):
+        self._secured_server = value
+
+    @property
+    def securest_authentication_methods(self):
+        return self._securest_authentication_methods
+
+    @securest_authentication_methods.setter
+    def securest_authentication_methods(self, value):
+        self._securest_authentication_methods = value
+
+    @property
+    def securest_userstore_driver(self):
+        return self._securest_userstore_driver
+
+    @securest_userstore_driver.setter
+    def securest_userstore_driver(self, value):
+        self._securest_userstore_driver = value
 
 
 _instance = Config()
