@@ -67,7 +67,8 @@ class FabricRunner(object):
         self.local = is_on_management_worker(ctx)
         if not self.local:
             self.host_string = '%(user)s@%(host)s:%(port)s' % config
-            self.key_filename = config['key']
+            self.key_filename = config.get('key')
+            self.password = config.get('password')
 
     def ping(self):
         self.run('echo "ping!"')
@@ -88,6 +89,7 @@ class FabricRunner(object):
         out = StringIO()
         with settings(host_string=self.host_string,
                       key_filename=self.key_filename,
+                      password=self.password,
                       disable_known_hosts=True):
             try:
                 return run(command, stdout=out, stderr=out,
@@ -100,6 +102,7 @@ class FabricRunner(object):
             return os.path.exists(file_path)
         with settings(host_string=self.host_string,
                       key_filename=self.key_filename,
+                      password=self.password,
                       disable_known_hosts=True):
             return exists(file_path)
 
@@ -130,6 +133,7 @@ class FabricRunner(object):
         else:
             with settings(host_string=self.host_string,
                           key_filename=self.key_filename,
+                          password=self.password,
                           disable_known_hosts=True):
                 if exists(file_path):
                     raise NonRecoverableError('Cannot put file, file already '
@@ -145,6 +149,7 @@ class FabricRunner(object):
             output = StringIO()
             with settings(host_string=self.host_string,
                           key_filename=self.key_filename,
+                          password=self.password,
                           disable_known_hosts=True):
                 get(file_path, output)
                 return output.getvalue()

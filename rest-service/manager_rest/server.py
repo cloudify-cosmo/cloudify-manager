@@ -46,18 +46,8 @@ def setup_app():
     if config.instance().secured_server:
         init_secured_app(app)
 
-    # TODO Additional security settings:
-    # 1. hooks - additional before/after request hooks
-    # 2. hook - unauthorized
-    # 3. authentication methods - place modules' files in a known location,
-    #   update the json config file on bootstrap, and append to the rest's
-    #   python path
-    # 4. userstore implementation
-    # 5. authorization implementation?
-
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
-
     additional_log_handlers = [
         RotatingFileHandler(
             config.instance().rest_service_log_path,
@@ -166,49 +156,12 @@ def reset_state(configuration=None):
     app = setup_app()
 
 
-def init_secured_app(app):
+def init_secured_app(_app):
     cfy_config = config.instance()
-
-    secure_app = SecuREST(app, request_security_bypass_handler)
-
-    # handle userstore implementation
-    userstore_driver_configuration = cfy_config.securest_userstore_driver
-    # this is temporary, to be removed when user configuration is possible
-    if not userstore_driver_configuration:
-        userstore_driver_configuration = {
-            'implementation': 'flask_securest.userstores.file:FileUserstore',
-            'properties': {
-                'userstore_file': 'users.yaml',
-                'identifying_attribute': 'username'
-            }
-        }
-    # end of temp section
-    register_userstore_driver(secure_app, userstore_driver_configuration)
-
-    # handle authentication methods
-    authen_methods_configuration = cfy_config.securest_authentication_methods
-    # this is temporary, to be removed when user configuration is possible
-    if not authen_methods_configuration:
-        authen_methods_configuration = [
-            {
-                'name': 'password',
-                'implementation': 'flask_securest.authentication_providers'
-                                  '.password:PasswordAuthenticator',
-                'properties': {
-                    'password_hash': 'plaintext'
-                }
-            },
-            {
-                'name': 'token',
-                'implementation': 'flask_securest.authentication_providers'
-                                  '.token:TokenAuthenticator',
-                'properties': {
-                    'secret_key': 'yaml_secret'
-                }
-            }
-        ]
-    # end of temp section
-    register_authentication_methods(secure_app, authen_methods_configuration)
+    secure_app = SecuREST(_app, request_security_bypass_handler)
+    register_userstore_driver(secure_app, cfy_config.securest_userstore_driver)
+    register_authentication_methods(secure_app,
+                                    cfy_config.securest_authentication_methods)
 
     def unauthorized_user_handler():
         utils.abort_error(
@@ -247,7 +200,6 @@ def register_authentication_methods(secure_app, authentication_providers):
     for auth_method in authentication_providers:
         try:
             implementation = auth_method.get('implementation')
-            # TODO validate implementation not None
             properties = auth_method.get('properties')
             # logging won't work here since not in scope of app context
             '''
@@ -268,17 +220,17 @@ def register_authentication_methods(secure_app, authentication_providers):
 
 def load_configuration():
     obj_conf = config.instance()
-    if 'MANAGER_REST_CONFIG_PATH' in os.environ:
-        with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
-            yaml_conf = yaml.load(f.read())
-        for key, value in yaml_conf.iteritems():
-            if hasattr(obj_conf, key):
-                setattr(obj_conf, key, value)
 
-    env_cfy_secured = os.environ.get('IS_CFY_SECURED')
-    obj_conf.secured_server = env_cfy_secured and\
-        env_cfy_secured.strip().lower() == 'true'
+    def load_config(env_var_name):
+        if env_var_name in os.environ:
+            with open(os.environ[env_var_name]) as f:
+                yaml_conf = yaml.load(f.read())
+            for key, value in yaml_conf.iteritems():
+                if hasattr(obj_conf, key):
+                    setattr(obj_conf, key, value)
 
+    load_config('MANAGER_REST_CONFIG_PATH')
+    load_config('MANAGER_REST_SECURITY_CONFIG_PATH')
 
 load_configuration()
 app = setup_app()
@@ -286,7 +238,9 @@ app = setup_app()
 
 @app.errorhandler(500)
 def internal_error(e):
+
     # app.logger.exception(e)  # gets logged automatically
+
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
 
