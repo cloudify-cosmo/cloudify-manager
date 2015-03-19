@@ -3,7 +3,7 @@ import socket
 
 def _is_port_occupied(port):
     try:
-        s = socket.create_connection(('localhost', port))
+        s = socket.create_connection(('hostingvm', port))
         s.close()
         return True
     except socket.error as err:
