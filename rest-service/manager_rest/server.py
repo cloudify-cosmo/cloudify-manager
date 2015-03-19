@@ -220,7 +220,7 @@ def init_secured_app(app):
 
 def request_security_bypass_handler(req):
     server_port = req.headers.get('X-Server-Port')
-    return server_port == config.instance().security_bypass_port
+    return str(server_port) == str(config.instance().security_bypass_port)
 
 
 def register_userstore_driver(secure_app, userstore_driver):
