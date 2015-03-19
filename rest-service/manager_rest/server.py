@@ -169,7 +169,7 @@ def reset_state(configuration=None):
 def init_secured_app(app):
     cfy_config = config.instance()
 
-    secure_app = SecuREST(app)
+    secure_app = SecuREST(app, request_security_bypass_handler)
 
     # handle userstore implementation
     userstore_driver_configuration = cfy_config.securest_userstore_driver
@@ -216,6 +216,11 @@ def init_secured_app(app):
             current_app.logger)
 
     secure_app.unauthorized_user_handler(unauthorized_user_handler)
+
+
+def request_security_bypass_handler(req):
+    server_port = req.headers.get('X-Server-Port')
+    return server_port == config.instance().security_bypass_port
 
 
 def register_userstore_driver(secure_app, userstore_driver):
