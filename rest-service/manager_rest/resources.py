@@ -1248,7 +1248,7 @@ class Status(SecuredResource):
         try:
             if self._is_docker_env():
                 services_dict = self._get_service_port_dict()
-                from manager_rest.service_port_status \
+                from manager_rest.services_status_client \
                     import get_services_status
                 jobs = get_services_status(services_dict)
             else:
