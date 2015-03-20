@@ -155,6 +155,24 @@ class BaseServerTestCase(unittest.TestCase):
 
         # security config
         test_config.secured_server = self._secured
+        if self._secured:
+            test_config.securest_userstore_driver = {
+                'implementation':
+                    'flask_securest.userstores.file:FileUserstore',
+                'properties': {
+                    'userstore_file': 'users.yaml',
+                    'identifying_attribute': 'username'
+                }
+            }
+            test_config.securest_authentication_methods = [{
+                'name': 'password',
+                'implementation':
+                    'flask_securest.authentication_providers.password'
+                    ':PasswordAuthenticator',
+                'properties': {
+                    'password_hash': 'plaintext'
+                }
+            }]
 
         return test_config
 

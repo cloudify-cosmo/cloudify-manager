@@ -156,49 +156,12 @@ def reset_state(configuration=None):
     app = setup_app()
 
 
-def init_secured_app(app):
+def init_secured_app(_app):
     cfy_config = config.instance()
-
-    secure_app = SecuREST(app)
-
-    # handle userstore implementation
-    userstore_driver_configuration = cfy_config.securest_userstore_driver
-    # this is temporary, to be removed when user configuration is possible
-    if not userstore_driver_configuration:
-        userstore_driver_configuration = {
-            'implementation': 'flask_securest.userstores.file:FileUserstore',
-            'properties': {
-                'userstore_file': 'users.yaml',
-                'identifying_attribute': 'username'
-            }
-        }
-    # end of temp section
-    register_userstore_driver(secure_app, userstore_driver_configuration)
-
-    # handle authentication methods
-    authen_methods_configuration = cfy_config.securest_authentication_methods
-    # this is temporary, to be removed when user configuration is possible
-    if not authen_methods_configuration:
-        authen_methods_configuration = [
-            {
-                'name': 'password',
-                'implementation': 'flask_securest.authentication_providers'
-                                  '.password:PasswordAuthenticator',
-                'properties': {
-                    'password_hash': 'plaintext'
-                }
-            },
-            {
-                'name': 'token',
-                'implementation': 'flask_securest.authentication_providers'
-                                  '.token:TokenAuthenticator',
-                'properties': {
-                    'secret_key': 'yaml_secret'
-                }
-            }
-        ]
-    # end of temp section
-    register_authentication_methods(secure_app, authen_methods_configuration)
+    secure_app = SecuREST(_app)
+    register_userstore_driver(secure_app, cfy_config.securest_userstore_driver)
+    register_authentication_methods(secure_app,
+                                    cfy_config.securest_authentication_methods)
 
     def unauthorized_user_handler():
         utils.abort_error(
@@ -252,17 +215,17 @@ def register_authentication_methods(secure_app, authentication_providers):
 
 def load_configuration():
     obj_conf = config.instance()
-    if 'MANAGER_REST_CONFIG_PATH' in os.environ:
-        with open(os.environ['MANAGER_REST_CONFIG_PATH']) as f:
-            yaml_conf = yaml.load(f.read())
-        for key, value in yaml_conf.iteritems():
-            if hasattr(obj_conf, key):
-                setattr(obj_conf, key, value)
 
-    env_cfy_secured = os.environ.get('IS_CFY_SECURED')
-    obj_conf.secured_server = env_cfy_secured and\
-        env_cfy_secured.strip().lower() == 'true'
+    def load_config(env_var_name):
+        if env_var_name in os.environ:
+            with open(os.environ[env_var_name]) as f:
+                yaml_conf = yaml.load(f.read())
+            for key, value in yaml_conf.iteritems():
+                if hasattr(obj_conf, key):
+                    setattr(obj_conf, key, value)
 
+    load_config('MANAGER_REST_CONFIG_PATH')
+    load_config('MANAGER_REST_SECURITY_CONFIG_PATH')
 
 load_configuration()
 app = setup_app()
