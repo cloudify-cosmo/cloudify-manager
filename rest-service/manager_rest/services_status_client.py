@@ -28,16 +28,16 @@ def _get_elasticsearch_status():
         service_status = res_body['status']
         status = response.getcode()
         if status == 200 and service_status == 'yellow':
-            return 'up'
+            return {'state': 'up'}
     except IOError:
         pass
-    return 'down'
+    return {'state': 'down'}
 
 
 def _get_service_state_by_port(ports):
     if _are_ports_occupied(ports):
-        return 'up'
-    return 'down'
+        return {'state': 'up'}
+    return {'state': 'down'}
 
 
 def get_services_status(services):
@@ -51,11 +51,10 @@ def get_services_status(services):
     for service_name, ports in services.items():
         out = []
         if service_name == 'Elasticsearch':
-            service_state = _get_elasticsearch_status()
+            out.append(_get_elasticsearch_status())
         else:
-            service_state = _get_service_state_by_port(ports)
-        out.append({'state': service_state,
-                    'display_name': service_name})
+            out.append(_get_service_state_by_port(ports))
         instances = {'instances': out}
+        instances.update({'display_name': service_name})
         result.append(instances)
     return result
