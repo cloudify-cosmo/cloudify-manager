@@ -169,7 +169,8 @@ def init_secured_app(_app):
             current_app.logger)
 
     secure_app.unauthorized_user_handler(unauthorized_user_handler)
-    secure_app.request_security_bypass_handler(request_security_bypass_handler)
+    secure_app.request_security_bypass_handler = \
+        request_security_bypass_handler
 
 
 def request_security_bypass_handler(req):
