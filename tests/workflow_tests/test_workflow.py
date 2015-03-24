@@ -167,7 +167,7 @@ class BasicWorkflowsTest(TestCase):
             deployment_id=deployment.id
         )['machines']
         self.assertEquals(1, len(machines))
-        result = self.client.search.run_query('')
+        result = self.client.search.run_query({})
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
         self.assertEquals(7, len(hits))
