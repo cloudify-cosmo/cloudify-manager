@@ -192,7 +192,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(blueprint_id, result.id)
 
     def test_publish_bz2_archive_from_url(self):
-        port = 53230
+        port = 53231
 
         archive_location = self._make_archive_file("dsl/basic.yaml", 'w:bz2')
 
@@ -205,7 +205,7 @@ class BasicWorkflowsTest(TestCase):
         fs = FileServer(archive_dir, False, port)
         fs.start()
         try:
-            wait_for_url(archive_url)
+            wait_for_url(archive_url, timeout=30)
             blueprint_id = self.client.blueprints.publish_archive(
                 archive_url,
                 str(uuid.uuid4()),
