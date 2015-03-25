@@ -254,8 +254,8 @@ workflows:
   heal:
     mapping: default_workflows.cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph
     parameters:
-      node_id:
-        description: Which node has failed
+      node_instance_id:
+        description: Which node instance has failed
       diagnose_value:
         description: Diagnosed reason of failure
         default: Not provided
