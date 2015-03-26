@@ -12,5 +12,4 @@ class SecurityTestCase(BaseServerTestCase):
         client.deployments.list()
 
     def tearDown(self):
-        self._secured = True
         super(SecurityTestCase, self).tearDown()
