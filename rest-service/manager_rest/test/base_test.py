@@ -49,27 +49,27 @@ class MockHTTPClient(HTTPClient):
                                              password=password)
         self.app = app
 
-    def _do_request(self, requests_method, uri, data, params, headers,
+    def _do_request(self, requests_method, request_url, body, params, headers,
                     expected_status_code, stream):
         if 'get' in requests_method.__name__:
-            response = self.app.get(uri,
+            response = self.app.get(request_url,
                                     headers=headers,
                                     query_string=build_query_string(params))
 
         elif 'put' in requests_method.__name__:
-            response = self.app.put(uri,
+            response = self.app.put(request_url,
                                     headers=headers,
-                                    data=data,
+                                    data=body,
                                     query_string=build_query_string(params))
         elif 'post' in requests_method.__name__:
-            response = self.app.post(uri,
+            response = self.app.post(request_url,
                                      headers=headers,
-                                     data=data,
+                                     data=body,
                                      query_string=build_query_string(params))
         elif 'patch' in requests_method.__name__:
-            response = self.app.patch(uri,
+            response = self.app.patch(request_url,
                                       headers=headers,
-                                      data=data,
+                                      data=body,
                                       query_string=build_query_string(params))
         else:
             raise NotImplemented()
@@ -77,7 +77,7 @@ class MockHTTPClient(HTTPClient):
         if response.status_code != expected_status_code:
             response.content = response.data
             response.json = lambda: json.loads(response.data)
-            self._raise_client_error(response, uri)
+            self._raise_client_error(response, request_url)
 
         return json.loads(response.data)
 
@@ -86,12 +86,9 @@ class BaseServerTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(BaseServerTestCase, self).__init__(*args, **kwargs)
-        self._secured = False
 
     def create_client(self, user=None, password=None):
-        client = CloudifyClient('localhost',
-                                user=user,
-                                password=password)
+        client = CloudifyClient('localhost')
         mock_http_client = MockHTTPClient(self.app,
                                           user=user,
                                           password=password)
@@ -152,27 +149,6 @@ class BaseServerTestCase(unittest.TestCase):
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
         test_config.rest_service_log_path = self.rest_service_log
-
-        # security config
-        test_config.secured_server = self._secured
-        if self._secured:
-            test_config.securest_userstore_driver = {
-                'implementation':
-                    'flask_securest.userstores.file:FileUserstore',
-                'properties': {
-                    'userstore_file': 'users.yaml',
-                    'identifying_attribute': 'username'
-                }
-            }
-            test_config.securest_authentication_methods = [{
-                'name': 'password',
-                'implementation':
-                    'flask_securest.authentication_providers.password'
-                    ':PasswordAuthenticator',
-                'properties': {
-                    'password_hash': 'plaintext'
-                }
-            }]
 
         return test_config
 
@@ -251,6 +227,10 @@ class BaseServerTestCase(unittest.TestCase):
             os.path.abspath(__file__)), blueprint_dir)
         archive_func(archive_path, source_dir)
         return archive_path
+
+    def get_mock_blueprint_path(self):
+        return os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), 'mock_blueprint', 'blueprint.yaml')
 
     def put_blueprint_args(self, blueprint_file_name=None,
                            blueprint_id='blueprint',
