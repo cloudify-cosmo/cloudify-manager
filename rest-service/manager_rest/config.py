@@ -28,6 +28,7 @@ class Config(object):
         self._rest_service_log_path = None
         self._test_mode = False
         self._secured_server = False
+        self._security_bypass_port = None
         self._securest_authentication_methods = []
         self._securest_userstore_driver = None
 
@@ -118,6 +119,14 @@ class Config(object):
     @secured_server.setter
     def secured_server(self, value):
         self._secured_server = value
+
+    @property
+    def security_bypass_port(self):
+        return self._security_bypass_port
+
+    @security_bypass_port.setter
+    def security_bypass_port(self, value):
+        self._security_bypass_port = value
 
     @property
     def securest_authentication_methods(self):

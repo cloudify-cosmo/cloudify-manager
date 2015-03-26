@@ -150,6 +150,7 @@ def install(ctx, runner, agent_config, **kwargs):
             runner.run('unlink {0}'.format(link_path))
             runner.run('ln -s {0}/env/{1} {2}'.format(
                 agent_config['base_dir'], link, link_path))
+
         except Exception as e:
             ctx.logger.warn('Error processing link: {0} [error={1}] - '
                             'ignoring..'.format(link_path, str(e)))
@@ -417,5 +418,7 @@ def connection_details(cloudify_agent):
         details['host'] = cloudify_agent['host']
     if 'key' in cloudify_agent:
         details['key'] = cloudify_agent['key']
+    if 'password' in cloudify_agent:
+        details['password'] = cloudify_agent['password']
 
     return details
