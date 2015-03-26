@@ -29,7 +29,7 @@ class Config(object):
         self._test_mode = False
         self._secured_server = False
         self._security_bypass_port = None
-        self._securest_authentication_methods = []
+        self._securest_authentication_providers = []
         self._securest_userstore_driver = None
 
     @property
@@ -129,12 +129,12 @@ class Config(object):
         self._security_bypass_port = value
 
     @property
-    def securest_authentication_methods(self):
-        return self._securest_authentication_methods
+    def securest_authentication_providers(self):
+        return self._securest_authentication_providers
 
-    @securest_authentication_methods.setter
-    def securest_authentication_methods(self, value):
-        self._securest_authentication_methods = value
+    @securest_authentication_providers.setter
+    def securest_authentication_providers(self, value):
+        self._securest_authentication_providers = value
 
     @property
     def securest_userstore_driver(self):
