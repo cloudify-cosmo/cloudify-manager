@@ -169,8 +169,9 @@ def init_secured_app(_app):
             current_app.logger)
 
     secure_app.unauthorized_user_handler(unauthorized_user_handler)
-    secure_app.request_security_bypass_handler = \
-        request_security_bypass_handler
+    if config.instance().security_bypass_port:
+        secure_app.request_security_bypass_handler = \
+            request_security_bypass_handler
 
 
 def request_security_bypass_handler(req):
@@ -179,45 +180,20 @@ def request_security_bypass_handler(req):
 
 
 def register_userstore_driver(secure_app, userstore_driver):
-    try:
-        implementation = userstore_driver.get('implementation')
-        properties = userstore_driver.get('properties')
-        # logging won't work here since not in scope of app context
-        '''
-        secure_app.app.logger.debug('registering userstore driver, '
-                                    'implementation: {0}, properties: {1}'
-                                    .format(implementation, properties))
-        '''
-        userstore = utils.get_class_instance(implementation, properties)
-        secure_app.set_userstore_driver(userstore)
-    except Exception:
-        # logging won't work here since not in scope of app context
-        # secure_app.app.logger.debug('failed to register userstore driver {0},
-        #  error: {1}'.format(userstore_driver, e.message))
-        raise
+    implementation = userstore_driver.get('implementation')
+    properties = userstore_driver.get('properties')
+    userstore = utils.get_class_instance(implementation, properties)
+    secure_app.set_userstore_driver(userstore)
 
 
 def register_authentication_methods(secure_app, authentication_providers):
     # Note: the order of registration is important here
     for auth_method in authentication_providers:
-        try:
-            implementation = auth_method.get('implementation')
-            properties = auth_method.get('properties')
-            # logging won't work here since not in scope of app context
-            '''
-            secure_app.app.logger.debug('registering authentication provider,
-                                    {0} with implementation: {1}, and
-                                    properties: {2}'.format(method_name,
-                                    implementation, properties))
-            '''
-            auth_provider = utils.get_class_instance(implementation,
-                                                     properties)
-            secure_app.register_authentication_provider(auth_provider)
-        except Exception:
-            # logging won't work here since not in scope of app context
-            # secure_app.app.logger.error('failed to register authentication '
-            #                             'methods, {0}'.format(e.message()))
-            raise
+        implementation = auth_method.get('implementation')
+        properties = auth_method.get('properties')
+        auth_provider = utils.get_class_instance(implementation,
+                                                 properties)
+        secure_app.register_authentication_provider(auth_provider)
 
 
 def load_configuration():
