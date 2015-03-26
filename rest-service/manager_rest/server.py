@@ -182,10 +182,6 @@ def request_security_bypass_handler(req):
 def register_userstore_driver(secure_app, userstore_driver):
     implementation = userstore_driver.get('implementation')
     properties = userstore_driver.get('properties')
-    userstore = utils.get_class_instance(implementation, properties)
-    secure_app.set_userstore_driver(userstore)
-    implementation = userstore_driver.get('implementation')
-    properties = userstore_driver.get('properties')
     secure_app.app.logger.debug('registering userstore driver {0}'
                                 .format(userstore_driver))
     userstore = utils.get_class_instance(implementation, properties)
@@ -195,11 +191,6 @@ def register_userstore_driver(secure_app, userstore_driver):
 def register_authentication_methods(secure_app, authentication_providers):
     # Note: the order of registration is important here
     for auth_method in authentication_providers:
-        implementation = auth_method.get('implementation')
-        properties = auth_method.get('properties')
-        auth_provider = utils.get_class_instance(implementation,
-                                                 properties)
-        secure_app.register_authentication_provider(auth_provider)
         implementation = auth_method.get('implementation')
         properties = auth_method.get('properties')
         secure_app.app.logger.debug('registering authentication method '
