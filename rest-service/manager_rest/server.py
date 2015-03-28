@@ -159,7 +159,9 @@ def reset_state(configuration=None):
 def init_secured_app(_app):
     cfy_config = config.instance()
     secure_app = SecuREST(_app)
-    register_userstore_driver(secure_app, cfy_config.securest_userstore_driver)
+    if cfy_config.securest_userstore_driver:
+        register_userstore_driver(secure_app,
+                                  cfy_config.securest_userstore_driver)
     register_authentication_providers(
         secure_app, cfy_config.securest_authentication_providers)
 
