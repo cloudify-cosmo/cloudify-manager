@@ -187,6 +187,7 @@ def setup_resources(api):
     api.add_resource(ProviderContext, '/provider/context')
     api.add_resource(Version, '/version')
     api.add_resource(EvaluateFunctions, '/evaluate/functions')
+    api.add_resource(Tokens, '/tokens')
 
 
 class BlueprintsUpload(object):
@@ -1390,3 +1391,29 @@ class EvaluateFunctions(SecuredResource):
             payload=payload)
         return responses.EvaluatedFunctions(deployment_id=deployment_id,
                                             payload=processed_payload)
+
+
+class Tokens(SecuredResource):
+    def __init__(self):
+        auth_providers = config.instance().securest_authentication_providers
+        for provider in auth_providers:
+            if provider['name'] == 'token':
+                self.token_provider = utils.get_class_instance(
+                    provider['implementation'], provider['properties'])
+                break
+
+        if not self.token_provider:
+            raise Exception('token authentication provider not configured')
+
+    @swagger.operation(
+        responseClass=responses.Tokens,
+        nickname="get auth token for the authenticated user",
+        )
+    @exceptions_handled
+    @marshal_with(responses.Tokens.resource_fields)
+    def get(self):
+        """
+        Get auth token
+        """
+        token = self.token_provider.generate_auth_token()
+        return responses.Tokens(token=token.decode('ascii'))
