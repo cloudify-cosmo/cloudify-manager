@@ -42,10 +42,6 @@ from manager_rest import utils
 def setup_app():
     app = Flask(__name__)
 
-    # secure the appl according to manager configuration
-    if config.instance().secured_server:
-        init_secured_app(app)
-
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
     additional_log_handlers = [

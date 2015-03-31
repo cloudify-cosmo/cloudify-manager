@@ -155,13 +155,29 @@ class BaseServerTestCase(unittest.TestCase):
         if self._secured:
             test_config.securest_userstore_driver = {
                 'implementation':
-                    'flask_securest.userstores.file:FileUserstore',
+                    'flask_securest.userstores.simple:SimpleUserstore',
                 'properties': {
-                    'userstore_file': 'users.yaml',
+                    'userstore': {
+                        'user1': {
+                            'username': 'user1',
+                            'password': 'pass1',
+                            'email': 'user1@domain.dom'
+                        },
+                        'user2': {
+                            'username': 'user2',
+                            'password': 'pass2',
+                            'email': 'user2@domain.dom'
+                        },
+                        'user3': {
+                            'username': 'user3',
+                            'password': 'pass3',
+                            'email': 'user3@domain.dom'
+                        },
+                        },
                     'identifying_attribute': 'username'
                 }
             }
-            test_config.securest_authentication_methods = [{
+            test_config.securest_authentication_providers = [{
                 'name': 'password',
                 'implementation':
                     'flask_securest.authentication_providers.password'
