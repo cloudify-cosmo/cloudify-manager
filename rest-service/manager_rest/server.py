@@ -42,10 +42,6 @@ from manager_rest import utils
 def setup_app():
     app = Flask(__name__)
 
-    # secure the appl according to manager configuration
-    if config.instance().secured_server:
-        init_secured_app(app)
-
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
     additional_log_handlers = [
@@ -60,6 +56,10 @@ def setup_app():
                        logger_level=logging.DEBUG,
                        handlers=additional_log_handlers,
                        remove_existing_handlers=False)
+
+    # secure the app according to manager configuration
+    if config.instance().secured_server:
+        init_secured_app(app)
 
     app.before_request(log_request)
     app.after_request(log_response)
@@ -184,6 +184,8 @@ def request_security_bypass_handler(req):
 def register_userstore_driver(secure_app, userstore_driver):
     implementation = userstore_driver.get('implementation')
     properties = userstore_driver.get('properties')
+    secure_app.app.logger.debug('registering userstore driver {0}'
+                                .format(userstore_driver))
     userstore = utils.get_class_instance(implementation, properties)
     secure_app.set_userstore_driver(userstore)
 
@@ -193,6 +195,8 @@ def register_authentication_providers(secure_app, authentication_providers):
     for provider in authentication_providers:
         implementation = provider.get('implementation')
         properties = provider.get('properties')
+        secure_app.app.logger.debug('registering authentication provider '
+                                    '{0}'.format(provider))
         auth_provider = utils.get_class_instance(implementation,
                                                  properties)
         secure_app.register_authentication_provider(auth_provider)
@@ -218,9 +222,7 @@ app = setup_app()
 
 @app.errorhandler(500)
 def internal_error(e):
-
     # app.logger.exception(e)  # gets logged automatically
-
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
 
