@@ -45,7 +45,7 @@ class SecurityTestBase(BaseServerTestCase):
                         'password': 'pass3',
                         'email': 'user3@domain.dom'
                     },
-                    },
+                },
                 'identifying_attribute': 'username'
             }
         }
