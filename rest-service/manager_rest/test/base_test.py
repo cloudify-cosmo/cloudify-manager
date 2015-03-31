@@ -150,43 +150,6 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
         test_config.rest_service_log_path = self.rest_service_log
 
-        # security config
-        test_config.secured_server = self._secured
-        if self._secured:
-            test_config.securest_userstore_driver = {
-                'implementation':
-                    'flask_securest.userstores.simple:SimpleUserstore',
-                'properties': {
-                    'userstore': {
-                        'user1': {
-                            'username': 'user1',
-                            'password': 'pass1',
-                            'email': 'user1@domain.dom'
-                        },
-                        'user2': {
-                            'username': 'user2',
-                            'password': 'pass2',
-                            'email': 'user2@domain.dom'
-                        },
-                        'user3': {
-                            'username': 'user3',
-                            'password': 'pass3',
-                            'email': 'user3@domain.dom'
-                        },
-                        },
-                    'identifying_attribute': 'username'
-                }
-            }
-            test_config.securest_authentication_providers = [{
-                'name': 'password',
-                'implementation':
-                    'flask_securest.authentication_providers.password'
-                    ':PasswordAuthenticator',
-                'properties': {
-                    'password_hash': 'plaintext'
-                }
-            }]
-
         return test_config
 
     def post(self, resource_path, data, query_params=None):
