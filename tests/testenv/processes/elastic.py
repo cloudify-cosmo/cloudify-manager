@@ -38,9 +38,9 @@ class ElasticSearchProcess(object):
         self._pid = None
         self._process = None
         setup_logger('elasticsearch',
-                             logging.INFO)
+                     logging.INFO)
         setup_logger('elasticsearch.trace',
-                             logging.INFO)
+                     logging.INFO)
 
     @staticmethod
     def _verify_service_responsiveness(timeout=120):
