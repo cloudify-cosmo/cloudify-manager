@@ -59,6 +59,7 @@ def setup_app():
 
     # secure the app according to manager configuration
     if config.instance().secured_server:
+        app.logger.info('initializing application security')
         init_secured_app(app)
 
     app.before_request(log_request)
