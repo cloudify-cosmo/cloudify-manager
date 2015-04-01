@@ -24,11 +24,11 @@ from cloudify.constants import VIRTUALENV_PATH_KEY
 from cloudify.constants import CELERY_WORK_DIR_PATH_KEY
 from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import LocalCommandRunner
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 from cloudify.decorators import operation
 
 
-logger = setup_default_logger('plugin_installer.tasks')
+logger = setup_logger('plugin_installer.tasks')
 manager_branch = 'master'
 
 

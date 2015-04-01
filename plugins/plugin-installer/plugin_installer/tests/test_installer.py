@@ -25,7 +25,7 @@ import testtools
 from cloudify.exceptions import NonRecoverableError
 from cloudify.mocks import MockCloudifyContext
 from cloudify.utils import LocalCommandRunner
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 from plugin_installer.tasks import install, get_url_and_args, \
     update_includes, parse_pip_version, \
     is_pip6_or_higher, extract_plugin_dir
@@ -37,7 +37,7 @@ from plugin_installer.tests.file_server import FileServer
 from plugin_installer.tests.file_server import PORT
 
 
-logger = setup_default_logger('test_plugin_installer')
+logger = setup_logger('test_plugin_installer')
 runner = LocalCommandRunner()
 test_file_server = FileServer(dirname(__file__))
 
