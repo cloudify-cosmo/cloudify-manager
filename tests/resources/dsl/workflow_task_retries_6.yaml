@@ -1,7 +1,7 @@
 tosca_definitions_version: cloudify_dsl_1_1
 
 imports:
-    - cloudify.types
+    - cloudify/types/types.yaml
     - plugins/testmockoperations.yaml
 
 node_templates:
