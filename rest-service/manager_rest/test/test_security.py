@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,13 +27,29 @@ class SecurityTestBase(BaseServerTestCase):
 
         test_config.securest_userstore_driver = {
             'implementation':
-                'flask_securest.userstores.file:FileUserstore',
+                'flask_securest.userstores.simple:SimpleUserstore',
             'properties': {
-                'userstore_file': 'users.yaml',
+                'userstore': {
+                    'user1': {
+                        'username': 'user1',
+                        'password': 'pass1',
+                        'email': 'user1@domain.dom'
+                    },
+                    'user2': {
+                        'username': 'user2',
+                        'password': 'pass2',
+                        'email': 'user2@domain.dom'
+                    },
+                    'user3': {
+                        'username': 'user3',
+                        'password': 'pass3',
+                        'email': 'user3@domain.dom'
+                    },
+                },
                 'identifying_attribute': 'username'
             }
         }
-        test_config.securest_authentication_methods = [
+        test_config.securest_authentication_providers = [
             {
                 'name': 'password',
                 'implementation':

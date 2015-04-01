@@ -120,6 +120,8 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
               '--pidfile={2}\celery.pid '
               '--autoscale={3},{4} '
               '--include={5} '
+              '--without-gossip '
+              '--without-mingle '
               .format(utils.get_manager_ip(),
                       cloudify_agent['name'],
                       RUNTIME_AGENT_PATH,
