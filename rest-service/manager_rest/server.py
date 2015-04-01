@@ -160,8 +160,8 @@ def init_secured_app(_app):
     cfy_config = config.instance()
     secure_app = SecuREST(_app)
     register_userstore_driver(secure_app, cfy_config.securest_userstore_driver)
-    register_authentication_methods(secure_app,
-                                    cfy_config.securest_authentication_methods)
+    register_authentication_providers(
+        secure_app, cfy_config.securest_authentication_providers)
 
     def unauthorized_user_handler():
         utils.abort_error(
@@ -188,13 +188,13 @@ def register_userstore_driver(secure_app, userstore_driver):
     secure_app.set_userstore_driver(userstore)
 
 
-def register_authentication_methods(secure_app, authentication_providers):
+def register_authentication_providers(secure_app, authentication_providers):
     # Note: the order of registration is important here
-    for auth_method in authentication_providers:
-        implementation = auth_method.get('implementation')
-        properties = auth_method.get('properties')
-        secure_app.app.logger.debug('registering authentication method '
-                                    '{0}'.format(auth_method))
+    for provider in authentication_providers:
+        implementation = provider.get('implementation')
+        properties = provider.get('properties')
+        secure_app.app.logger.debug('registering authentication provider '
+                                    '{0}'.format(provider))
         auth_provider = utils.get_class_instance(implementation,
                                                  properties)
         secure_app.register_authentication_provider(auth_provider)
