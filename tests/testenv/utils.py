@@ -26,7 +26,7 @@ from functools import wraps
 from celery import Celery
 from multiprocessing import Process
 from cloudify.exceptions import NonRecoverableError
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
 from os import path
@@ -51,7 +51,7 @@ celery.conf.update(
 )
 
 
-logger = setup_default_logger('testenv.utils')
+logger = setup_logger('testenv.utils')
 
 
 def task_exists(name, *args):

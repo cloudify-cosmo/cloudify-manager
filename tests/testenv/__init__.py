@@ -28,7 +28,7 @@ import yaml
 from os.path import dirname
 from os import path
 
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 from cloudify.logs import create_event_message_prefix
 
 import mock_plugins
@@ -44,8 +44,8 @@ from testenv.processes.riemann import RiemannProcess
 from testenv.processes.celery import CeleryWorkerProcess
 from testenv import utils
 
-logger = setup_default_logger('TESTENV')
-setup_default_logger('cloudify.rest_client', logging.INFO)
+logger = setup_logger('TESTENV')
+setup_logger('cloudify.rest_client', logging.INFO)
 testenv_instance = None
 
 
@@ -56,7 +56,7 @@ class TestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self.logger = setup_default_logger(self._testMethodName,
+        self.logger = setup_logger(self._testMethodName,
                                            logging.INFO)
         self.client = utils.create_rest_client()
         utils.restore_provider_context()
@@ -431,7 +431,7 @@ def start_events_and_logs_polling(logs_handler_retriever=None):
     if not RABBITMQ_POLLING_ENABLED:
         return
 
-    setup_default_logger('pika', logging.INFO)
+    setup_logger('pika', logging.INFO)
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
     channel = connection.channel()
