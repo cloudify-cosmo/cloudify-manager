@@ -1,4 +1,4 @@
--e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@CFY-1915-remove-alias-mapping#egg=cloudify-dsl-parser==3.2a8
+-e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@master#egg=cloudify-dsl-parser==3.2a8
 -e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.2a8
 -e git+https://github.com/cloudify-cosmo/flask-securest@0.5#egg=flask-securest==0.5
 
