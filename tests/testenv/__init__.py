@@ -57,7 +57,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.logger = setup_logger(self._testMethodName,
-                                           logging.INFO)
+                                   logging.INFO)
         self.client = utils.create_rest_client()
         utils.restore_provider_context()
         TestEnvironment.start_celery_management_worker()
