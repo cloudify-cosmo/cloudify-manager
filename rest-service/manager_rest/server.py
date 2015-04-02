@@ -59,6 +59,7 @@ def setup_app():
 
     # secure the app according to manager configuration
     if config.instance().secured_server:
+        app.logger.info('initializing application security')
         init_secured_app(app)
 
     app.before_request(log_request)
@@ -159,7 +160,9 @@ def reset_state(configuration=None):
 def init_secured_app(_app):
     cfy_config = config.instance()
     secure_app = SecuREST(_app)
-    register_userstore_driver(secure_app, cfy_config.securest_userstore_driver)
+    if cfy_config.securest_userstore_driver:
+        register_userstore_driver(secure_app,
+                                  cfy_config.securest_userstore_driver)
     register_authentication_providers(
         secure_app, cfy_config.securest_authentication_providers)
 
