@@ -69,6 +69,15 @@ class NonexistentWorkflowError(ManagerException):
             **kwargs)
 
 
+class NoTokenGeneratorError(ManagerException):
+    NO_TOKEN_GENERATOR_ERROR_CODE = 'no_token_generator_error'
+
+    def __init__(self, *args, **kwargs):
+        super(NoTokenGeneratorError, self).__init__(
+            401, NoTokenGeneratorError.NO_TOKEN_GENERATOR_ERROR_CODE,
+            *args, **kwargs)
+
+
 class UnauthorizedError(ManagerException):
     UNAUTHORIZED_ERROR_CODE = 'unauthorized_error'
 

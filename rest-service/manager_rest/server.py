@@ -159,6 +159,10 @@ def reset_state(configuration=None):
 
 def init_secured_app(_app):
     cfy_config = config.instance()
+    if config.instance().auth_token_generator:
+        validate_auth_token_generator(config.instance().auth_token_generator)
+
+    # init and configure flask-securest
     secure_app = SecuREST(_app)
     if cfy_config.securest_userstore_driver:
         register_userstore_driver(secure_app,
@@ -180,6 +184,11 @@ def init_secured_app(_app):
 def request_security_bypass_handler(req):
     server_port = req.headers.get('X-Server-Port')
     return str(server_port) == str(config.instance().security_bypass_port)
+
+
+def validate_auth_token_generator(auth_token_generator):
+    utils.get_class_instance(auth_token_generator['implementation'],
+                             auth_token_generator['properties'])
 
 
 def register_userstore_driver(secure_app, userstore_driver):

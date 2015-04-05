@@ -1392,24 +1392,31 @@ class EvaluateFunctions(SecuredResource):
 
 
 class Tokens(SecuredResource):
-    def __init__(self):
-        if config.instance().securest_token_generator:
-            self.token_generator = utils.get_class_instance(
-                config.instance().securest_token_generator['implementation'],
-                config.instance().securest_token_generator['properties'])
-        else:
-            raise Exception('token generator not configured')
 
     @swagger.operation(
         responseClass=responses.Tokens,
-        nickname="get auth token for the authenticated user",
+        nickname="get auth token for the request user",
+        notes="Generate authentication token for the request user",
         )
     @exceptions_handled
     @marshal_with(responses.Tokens.resource_fields)
     def get(self):
         """
-        Get auth token
+        Get authentication token
         """
-        token = self.token_generator.generate_auth_token()
-        # TODO why ascii and not utf-8?
-        return responses.Tokens(token=token.decode('ascii'))
+        def register_auth_token_generator():
+            token_gen_config = config.instance().auth_token_generator
+            if not token_gen_config:
+                raise manager_exceptions.NoTokenGeneratorError(
+                    'Token generator not configured')
+            app.logger.debug('registering auth token generator {0}'
+                             .format(token_gen_config))
+            app.auth_token_generator = utils.get_class_instance(
+                token_gen_config['implementation'],
+                token_gen_config['properties'])
+
+        if not getattr(app, 'auth_token_generator', None):
+            register_auth_token_generator()
+
+        token = app.auth_token_generator.generate_auth_token()
+        return responses.Tokens(token=token)
