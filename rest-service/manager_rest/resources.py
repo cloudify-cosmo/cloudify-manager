@@ -1393,15 +1393,12 @@ class EvaluateFunctions(SecuredResource):
 
 class Tokens(SecuredResource):
     def __init__(self):
-        auth_providers = config.instance().securest_authentication_providers
-        for provider in auth_providers:
-            if provider['name'] == 'token':
-                self.token_provider = utils.get_class_instance(
-                    provider['implementation'], provider['properties'])
-                break
-
-        if not self.token_provider:
-            raise Exception('token authentication provider not configured')
+        if config.instance().securest_token_generator:
+            self.token_generator = utils.get_class_instance(
+                config.instance().securest_token_generator['implementation'],
+                config.instance().securest_token_generator['properties'])
+        else:
+            raise Exception('token generator not configured')
 
     @swagger.operation(
         responseClass=responses.Tokens,
@@ -1413,5 +1410,6 @@ class Tokens(SecuredResource):
         """
         Get auth token
         """
-        token = self.token_provider.generate_auth_token()
+        token = self.token_generator.generate_auth_token()
+        # TODO why ascii and not utf-8?
         return responses.Tokens(token=token.decode('ascii'))

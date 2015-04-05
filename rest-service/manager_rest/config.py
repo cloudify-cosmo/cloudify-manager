@@ -29,8 +29,9 @@ class Config(object):
         self._test_mode = False
         self._secured_server = False
         self._security_bypass_port = None
-        self._securest_authentication_providers = []
         self._securest_userstore_driver = None
+        self._securest_authentication_providers = []
+        self._securest_token_generator = None
 
     @property
     def db_address(self):
@@ -135,6 +136,14 @@ class Config(object):
     @securest_authentication_providers.setter
     def securest_authentication_providers(self, value):
         self._securest_authentication_providers = value
+
+    @property
+    def securest_token_generator(self):
+        return self._securest_token_generator
+
+    @securest_token_generator.setter
+    def securest_token_generator(self, value):
+        self._securest_token_generator = value
 
     @property
     def securest_userstore_driver(self):
