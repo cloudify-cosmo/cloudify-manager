@@ -17,7 +17,7 @@ import winrm
 
 from cloudify.exceptions import CommandExecutionException
 from cloudify.utils import CommandExecutionResponse
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 
 DEFAULT_WINRM_PORT = '5985'
 DEFAULT_WINRM_URI = 'wsman'
@@ -53,7 +53,7 @@ class WinRMRunner(object):
                  validate_connection=True,
                  logger=None):
 
-        logger = logger or setup_default_logger('WinRMRunner')
+        logger = logger or setup_logger('WinRMRunner')
 
         # Validations - [host, user, password]
         validate(session_config)

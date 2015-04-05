@@ -338,14 +338,12 @@ class BlueprintsUpload(object):
 
         file_server_base_url = config.instance().file_server_base_uri
         dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
-        alias_mapping = '{0}/{1}'.format(file_server_base_url,
-                                         'cloudify/alias-mappings.yaml')
         resources_base = file_server_base_url + '/'
 
         # add to blueprints manager (will also dsl_parse it)
         try:
             blueprint = get_blueprints_manager().publish_blueprint(
-                dsl_path, alias_mapping, resources_base, blueprint_id)
+                dsl_path, resources_base, blueprint_id)
 
             # moving the app directory in the file server to be under a
             # directory named after the blueprint id

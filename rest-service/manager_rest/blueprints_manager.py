@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import json
 import uuid
 from datetime import datetime
 
@@ -67,18 +66,16 @@ class BlueprintsManager(object):
     def get_execution(self, execution_id, include=None):
         return self.sm.get_execution(execution_id, include=include)
 
-    def publish_blueprint(self, dsl_location, alias_mapping_url,
+    def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
         try:
-            plan = tasks.parse_dsl(dsl_location, alias_mapping_url,
-                                   resources_base_url)
+            plan = tasks.parse_dsl(dsl_location, resources_base_url)
         except Exception, ex:
             raise DslParseException(str(ex))
 
         now = str(datetime.now())
-        parsed_plan = json.loads(plan)
 
-        new_blueprint = models.BlueprintState(plan=parsed_plan,
+        new_blueprint = models.BlueprintState(plan=plan,
                                               id=blueprint_id,
                                               created_at=now,
                                               updated_at=now)

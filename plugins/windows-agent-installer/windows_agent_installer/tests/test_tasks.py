@@ -20,7 +20,7 @@ from nose.tools import nottest
 
 from cloudify import constants
 from cloudify.mocks import MockCloudifyContext
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 
 from windows_agent_installer import tasks, WinRMRunner
 from windows_agent_installer.tests import TEST_MACHINE_IP_ENV_VARIABLE
@@ -30,7 +30,7 @@ from windows_agent_installer.tests.test_winrm_runner import WinRMRunnerTest
 
 PACKAGE_URL = 'https://dl.dropboxusercontent.com/u/3588656/Cloudify.exe'
 
-logger = setup_default_logger('test_tasks')
+logger = setup_logger('test_tasks')
 
 # Configure mocks
 tasks.get_agent_package_url = lambda: PACKAGE_URL

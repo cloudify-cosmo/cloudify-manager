@@ -23,14 +23,14 @@ from os import path
 import pika
 
 from cloudify.celery import celery as celery_client
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 
 from testenv.constants import FILE_SERVER_PORT
 from testenv.constants import MANAGER_REST_PORT
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 
 
-logger = setup_default_logger('celery_worker_process')
+logger = setup_logger('celery_worker_process')
 
 
 class CeleryWorkerProcess(object):

@@ -19,14 +19,14 @@ import sys
 import time
 import yaml
 
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 from os.path import dirname
 from os import path
 from cloudify_rest_client import CloudifyClient
 from testenv.constants import MANAGER_REST_PORT
 
 
-logger = setup_default_logger('manager_rest_process')
+logger = setup_logger('manager_rest_process')
 
 
 class ManagerRestProcess(object):

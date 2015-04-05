@@ -23,10 +23,10 @@ import requests
 from os import path
 from testenv.constants import MANAGER_REST_PORT
 from testenv.utils import get_resource
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 
 
-logger = setup_default_logger('riemann_process')
+logger = setup_logger('riemann_process')
 
 
 class RiemannProcess(object):

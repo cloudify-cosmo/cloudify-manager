@@ -22,11 +22,11 @@ import sys
 import os
 import elasticsearch
 
-from cloudify.utils import setup_default_logger
+from cloudify.utils import setup_logger
 from testenv.constants import STORAGE_INDEX_NAME
 
 
-logger = setup_default_logger('elasticsearch_process')
+logger = setup_logger('elasticsearch_process')
 
 
 class ElasticSearchProcess(object):
@@ -37,10 +37,10 @@ class ElasticSearchProcess(object):
     def __init__(self):
         self._pid = None
         self._process = None
-        setup_default_logger('elasticsearch',
-                             logging.INFO)
-        setup_default_logger('elasticsearch.trace',
-                             logging.INFO)
+        setup_logger('elasticsearch',
+                     logging.INFO)
+        setup_logger('elasticsearch.trace',
+                     logging.INFO)
 
     @staticmethod
     def _verify_service_responsiveness(timeout=120):

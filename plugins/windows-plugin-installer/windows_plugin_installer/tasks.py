@@ -29,7 +29,7 @@ NSSM_PATH = 'C:\CloudifyAgent\\nssm\\nssm.exe'
 APP_PARAMETERS_FILE_PATH = 'C:\CloudifyAgent\AppParameters'
 
 
-logger = utils.setup_default_logger('plugin_installer.tasks')
+logger = utils.setup_logger('plugin_installer.tasks')
 
 
 @operation
