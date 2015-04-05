@@ -43,10 +43,8 @@ def build_query_string(query_params):
 
 class MockHTTPClient(HTTPClient):
 
-    def __init__(self, app, user=None, password=None):
-        super(MockHTTPClient, self).__init__(host='localhost',
-                                             user=user,
-                                             password=password)
+    def __init__(self, app, headers=None):
+        super(MockHTTPClient, self).__init__(host='localhost', headers=headers)
         self.app = app
 
     def _do_request(self, requests_method, request_url, body, params, headers,
@@ -87,11 +85,9 @@ class BaseServerTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(BaseServerTestCase, self).__init__(*args, **kwargs)
 
-    def create_client(self, user=None, password=None):
+    def create_client(self, headers=None):
         client = CloudifyClient('localhost')
-        mock_http_client = MockHTTPClient(self.app,
-                                          user=user,
-                                          password=password)
+        mock_http_client = MockHTTPClient(self.app, headers=headers)
         client._client = mock_http_client
         client.blueprints.api = mock_http_client
         client.deployments.api = mock_http_client
