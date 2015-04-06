@@ -159,11 +159,14 @@ def reset_state(configuration=None):
 
 def init_secured_app(_app):
     cfy_config = config.instance()
+
     if config.instance().auth_token_generator:
-        validate_auth_token_generator(config.instance().auth_token_generator)
+        register_auth_token_generator(_app,
+                                      config.instance().auth_token_generator)
 
     # init and configure flask-securest
     secure_app = SecuREST(_app)
+
     if cfy_config.securest_userstore_driver:
         register_userstore_driver(secure_app,
                                   cfy_config.securest_userstore_driver)
@@ -186,29 +189,29 @@ def request_security_bypass_handler(req):
     return str(server_port) == str(config.instance().security_bypass_port)
 
 
-def validate_auth_token_generator(auth_token_generator):
-    utils.get_class_instance(auth_token_generator['implementation'],
-                             auth_token_generator['properties'])
+def register_auth_token_generator(_app, auth_token_generator):
+    _app.logger.debug('registering auth token generator {0}'
+                      .format(auth_token_generator))
+    _app.auth_token_generator = \
+        utils.get_class_instance(auth_token_generator['implementation'],
+                                 auth_token_generator['properties'])
 
 
 def register_userstore_driver(secure_app, userstore_driver):
-    implementation = userstore_driver.get('implementation')
-    properties = userstore_driver.get('properties')
     secure_app.app.logger.debug('registering userstore driver {0}'
                                 .format(userstore_driver))
-    userstore = utils.get_class_instance(implementation, properties)
+    userstore = utils.get_class_instance(userstore_driver['implementation'],
+                                         userstore_driver['properties'])
     secure_app.set_userstore_driver(userstore)
 
 
 def register_authentication_providers(secure_app, authentication_providers):
     # Note: the order of registration is important here
     for provider in authentication_providers:
-        implementation = provider.get('implementation')
-        properties = provider.get('properties')
         secure_app.app.logger.debug('registering authentication provider '
                                     '{0}'.format(provider))
-        auth_provider = utils.get_class_instance(implementation,
-                                                 properties)
+        auth_provider = utils.get_class_instance(provider['implementation'],
+                                                 provider['properties'])
         secure_app.register_authentication_provider(auth_provider)
 
 

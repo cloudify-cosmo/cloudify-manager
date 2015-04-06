@@ -1404,19 +1404,8 @@ class Tokens(SecuredResource):
         """
         Get authentication token
         """
-        def register_auth_token_generator():
-            token_gen_config = config.instance().auth_token_generator
-            if not token_gen_config:
-                raise manager_exceptions.NoTokenGeneratorError(
-                    'Token generator not configured')
-            app.logger.debug('registering auth token generator {0}'
-                             .format(token_gen_config))
-            app.auth_token_generator = utils.get_class_instance(
-                token_gen_config['implementation'],
-                token_gen_config['properties'])
-
-        if not getattr(app, 'auth_token_generator', None):
-            register_auth_token_generator()
+        if not getattr(app, 'auth_token_generator'):
+            raise Exception('auth token generator not registered')
 
         token = app.auth_token_generator.generate_auth_token()
         return responses.Tokens(token=token)
