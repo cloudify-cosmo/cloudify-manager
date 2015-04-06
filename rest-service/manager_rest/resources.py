@@ -1404,8 +1404,13 @@ class Tokens(SecuredResource):
         """
         Get authentication token
         """
+        if not app.config.get('SECURED_MODE'):
+            raise manager_exceptions.AppNotSecuredError(
+                'token generation not supported, application is not secured')
+
         if not getattr(app, 'auth_token_generator'):
-            raise Exception('auth token generator not registered')
+            raise manager_exceptions.NoTokenGeneratorError(
+                'auth token generator not registered')
 
         token = app.auth_token_generator.generate_auth_token()
         return responses.Tokens(token=token)

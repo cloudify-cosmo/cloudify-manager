@@ -40,6 +40,5 @@ setup(
         'elasticsearch==1.0.0',
         'celery==3.1.17',
         'flask-securest==0.5',
-        'itsdangerous==0.24',
     ]
 )
