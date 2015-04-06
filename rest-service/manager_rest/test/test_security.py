@@ -25,11 +25,8 @@ class SecurityTestBase(BaseServerTestCase):
 
     @staticmethod
     def create_auth_header(username, password):
-        header = None
-        if username and password:
-            credentials = '{0}:{1}'.format(username, password)
-            header = {'Authorization': base64_encode(credentials)}
-        return header
+        return {'Authorization': base64_encode('{0}:{1}'
+                                               .format(username, password))}
 
     def create_configuration(self):
         test_config = super(SecurityTestBase, self).create_configuration()
