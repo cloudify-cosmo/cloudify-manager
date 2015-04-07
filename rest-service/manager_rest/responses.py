@@ -290,8 +290,8 @@ class EvaluatedFunctions():
 class Tokens(object):
 
     resource_fields = {
-        'token': fields.String
+        'value': fields.String
     }
 
     def __init__(self, **kwargs):
-        self.token = kwargs['token']
+        self.value = kwargs['value']

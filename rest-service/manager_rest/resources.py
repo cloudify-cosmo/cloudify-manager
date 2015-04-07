@@ -1414,4 +1414,4 @@ class Tokens(SecuredResource):
                 'not registered')
 
         token = app.auth_token_generator.generate_auth_token()
-        return responses.Tokens(token=token)
+        return responses.Tokens(value=token)
