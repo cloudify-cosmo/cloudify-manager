@@ -20,13 +20,23 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from base_test import BaseServerTestCase
 
+CLOUDIFY_AUTH_HEADER = 'Authorization'
+CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
+
 
 class SecurityTestBase(BaseServerTestCase):
 
     @staticmethod
-    def create_auth_header(username, password):
-        return {'Authorization': base64_encode('{0}:{1}'
-                                               .format(username, password))}
+    def create_auth_header(username=None, password=None, token=None):
+        header = None
+        # using or to allow testing of username without password and vice-versa
+        if username or password:
+            credentials = '{0}:{1}'.format(username, password)
+            header = {CLOUDIFY_AUTH_HEADER: base64_encode(credentials)}
+        elif token:
+            header = {CLOUDIFY_AUTH_TOKEN_HEADER: token}
+
+        return header
 
     def create_configuration(self):
         test_config = super(SecurityTestBase, self).create_configuration()
@@ -56,6 +66,14 @@ class SecurityTestBase(BaseServerTestCase):
                 'identifying_attribute': 'username'
             }
         }
+        test_config.auth_token_generator = {
+            'implementation': 'flask_securest.authentication_providers.token:'
+                              'TokenAuthenticator',
+            'properties': {
+                'secret_key': 'my_secret',
+                'expires_in': 600
+            }
+        }
         test_config.securest_authentication_providers = [
             {
                 'name': 'password',
@@ -64,6 +82,14 @@ class SecurityTestBase(BaseServerTestCase):
                     ':PasswordAuthenticator',
                 'properties': {
                     'password_hash': 'plaintext'
+                }
+            },
+            {
+                'name': 'token',
+                'implementation': 'flask_securest.authentication_providers.'
+                                  'token:TokenAuthenticator',
+                'properties': {
+                    'secret_key': 'my_secret'
                 }
             }
         ]
@@ -77,6 +103,34 @@ class SecurityTest(SecurityTestBase):
         client = self.create_client(SecurityTestBase.create_auth_header(
             username='user1', password='pass1'))
         client.deployments.list()
+
+    def test_wrong_credentials(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass2'))
+        self.assertRaises(CloudifyClientError, client.deployments.list)
+
+    def test_missing_credentials(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username=None, password=None))
+        self.assertRaises(CloudifyClientError, client.deployments.list)
+
+    def test_missing_user(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username=None, password='pass1'))
+        self.assertRaises(CloudifyClientError, client.deployments.list)
+
+    def test_missing_password(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password=None))
+        self.assertRaises(CloudifyClientError, client.deployments.list)
+
+    def test_token_authentication(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass1'))
+        token = client.tokens.get()
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            token=token))
+        client.blueprints.list()
 
     def test_secured_manager_blueprints_upload(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
