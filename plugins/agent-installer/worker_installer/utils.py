@@ -43,20 +43,26 @@ def download_resource_on_host(logger, runner, url, destination_path):
     logger.debug('attempting to download {0} to {1}'.format(
         url, destination_path))
     logger.debug('checking whether wget exists on the host machine')
-    r = runner.run('which wget')
-    if type(r) is str or r.succeeded:
+    try:
+        runner.run('which wget')
+    except FabricRunnerException:
+        pass
+    else:
         logger.debug('wget-ing {0} to {1}'.format(url, destination_path))
         return runner.run('wget -T 30 {0} -O {1}'.format(
             url, destination_path))
     logger.debug('checking whether curl exists on the host machine')
-    r = runner.run('which curl')
-    if type(r) is str or r.succeeded:
+    try:
+        runner.run('which curl')
+    except FabricRunnerException:
+        pass
+    else:
         logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
         return runner.run('curl {0} -O {1}'.format(
             url, destination_path))
     raise NonRecoverableError(
-        'could not download resource ({0} (with code {1}) )'.format(
-            r.stderr, r.status_code))
+        'could not download resource ({0}), wget and curl not found'.format(
+            url))
 
 
 class FabricRunner(object):
