@@ -36,7 +36,7 @@ from flask import (
 from flask.ext.restful import Resource, marshal, reqparse
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
-from flask_securest.rest_security import SecuredResource
+from flask_securest.rest_security import SECURED_MODE, SecuredResource
 
 from manager_rest import config
 from manager_rest import models
@@ -1404,13 +1404,14 @@ class Tokens(SecuredResource):
         """
         Get authentication token
         """
-        if not app.config.get('SECURED_MODE'):
+        if not app.config.get(SECURED_MODE):
             raise manager_exceptions.AppNotSecuredError(
                 'token generation not supported, application is not secured')
 
-        if not getattr(app, 'auth_token_generator'):
+        if not getattr(app, 'auth_token_generator', None):
             raise manager_exceptions.NoTokenGeneratorError(
-                'auth token generator not registered')
+                'token generation not supported, an auth token generator was '
+                'not registered')
 
         token = app.auth_token_generator.generate_auth_token()
         return responses.Tokens(token=token)
