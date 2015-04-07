@@ -36,7 +36,7 @@ from flask import (
 from flask.ext.restful import Resource, marshal, reqparse
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
-from flask_securest.rest_security import SecuredResource
+from flask_securest.rest_security import SECURED_MODE, SecuredResource
 
 from manager_rest import config
 from manager_rest import models
@@ -187,6 +187,7 @@ def setup_resources(api):
     api.add_resource(ProviderContext, '/provider/context')
     api.add_resource(Version, '/version')
     api.add_resource(EvaluateFunctions, '/evaluate/functions')
+    api.add_resource(Tokens, '/tokens')
 
 
 class BlueprintsUpload(object):
@@ -1388,3 +1389,29 @@ class EvaluateFunctions(SecuredResource):
             payload=payload)
         return responses.EvaluatedFunctions(deployment_id=deployment_id,
                                             payload=processed_payload)
+
+
+class Tokens(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses.Tokens,
+        nickname="get auth token for the request user",
+        notes="Generate authentication token for the request user",
+        )
+    @exceptions_handled
+    @marshal_with(responses.Tokens.resource_fields)
+    def get(self):
+        """
+        Get authentication token
+        """
+        if not app.config.get(SECURED_MODE):
+            raise manager_exceptions.AppNotSecuredError(
+                'token generation not supported, application is not secured')
+
+        if not getattr(app, 'auth_token_generator', None):
+            raise manager_exceptions.NoTokenGeneratorError(
+                'token generation not supported, an auth token generator was '
+                'not registered')
+
+        token = app.auth_token_generator.generate_auth_token()
+        return responses.Tokens(token=token)

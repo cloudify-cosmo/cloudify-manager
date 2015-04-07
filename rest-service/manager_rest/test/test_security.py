@@ -13,13 +13,20 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from itsdangerous import base64_encode
 from mock import patch
 
-from base_test import BaseServerTestCase
 from cloudify_rest_client.exceptions import CloudifyClientError
+
+from base_test import BaseServerTestCase
 
 
 class SecurityTestBase(BaseServerTestCase):
+
+    @staticmethod
+    def create_auth_header(username, password):
+        return {'Authorization': base64_encode('{0}:{1}'
+                                               .format(username, password))}
 
     def create_configuration(self):
         test_config = super(SecurityTestBase, self).create_configuration()
@@ -67,11 +74,13 @@ class SecurityTestBase(BaseServerTestCase):
 class SecurityTest(SecurityTestBase):
 
     def test_secured_client(self):
-        client = self.create_client(user='user1', password='pass1')
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass1'))
         client.deployments.list()
 
     def test_secured_manager_blueprints_upload(self):
-        client = self.create_client(user='user1', password='pass1')
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass1'))
 
         # the flask api client needs to be modified since it doesn't support
         # a bytes generator as "data" for file upload
@@ -96,19 +105,22 @@ class SecurityBypassTest(SecurityTestBase):
         return test_config
 
     def test_bypass_and_correct_credentials(self):
-        client = self.create_client(user='user1', password='pass1')
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass1'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
 
         client.blueprints.list()
 
     def test_bypass_and_incorrect_password(self):
-        client = self.create_client(user='user1', password='wrong-pass')
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='wrong_pass'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
 
         client.blueprints.list()
 
     def test_bypass_and_nonexisting_user(self):
-        client = self.create_client(user='nonexisting-user', password='pass1')
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='nonexisting-user', password='pass1'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
         client.blueprints.list()
 
@@ -118,13 +130,15 @@ class SecurityBypassTest(SecurityTestBase):
         client.blueprints.list()
 
     def test_bypass_not_bypass_port_and_correct_credentials(self):
-        client = self.create_client(user='user1', password='pass1')
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass1'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         client.blueprints.list()
 
     def test_bypass_not_bypass_port_and_incorrect_password(self):
-        client = self.create_client(user='user1', password='wrong-pass')
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='wrong-pass'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         try:
@@ -135,7 +149,8 @@ class SecurityBypassTest(SecurityTestBase):
             self.assertEquals(401, e.status_code)
 
     def test_bypass_not_bypass_port_and_nonexisting_user(self):
-        client = self.create_client(user='nonexisting-user', password='pass1')
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='nonexisting-user', password='pass1'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         try:
