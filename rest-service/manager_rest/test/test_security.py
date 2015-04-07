@@ -129,7 +129,7 @@ class SecurityTest(SecurityTestBase):
             username='user1', password='pass1'))
         token = client.tokens.get()
         client = self.create_client(SecurityTestBase.create_auth_header(
-            token=token))
+            token=token.value))
         client.blueprints.list()
 
     def test_secured_manager_blueprints_upload(self):
