@@ -15,7 +15,7 @@ from setuptools import setup
 
 setup(
     name='mock-plugin',
-    version='3.2a8',
+    version='3.2rc',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['mock_for_test'],

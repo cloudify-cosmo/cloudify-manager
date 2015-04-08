@@ -18,14 +18,14 @@ from setuptools import setup
 
 setup(
     name='cloudify-agent-installer-plugin',
-    version='3.2a8',
+    version='3.2rc',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['worker_installer'],
     license='LICENSE',
     description='Plugin for installing a Cloudify agent on a machine',
     install_requires=[
-        'cloudify-plugins-common==3.2a8',
+        'cloudify-plugins-common==3.2rc',
         'fabric==1.8.3',
         'jinja2==2.7.2'
     ],

@@ -18,14 +18,14 @@ from setuptools import setup
 
 setup(
     name='cloudify-windows-agent-installer-plugin',
-    version='3.2a8',
+    version='3.2rc',
     author='nirc',
     author_email='nirc@gigaspaces.com',
     packages=['windows_agent_installer'],
     license='LICENSE',
     description='Plugin for installing a Cloudify agent on a windows machine',
     install_requires=[
-        'cloudify-plugins-common==3.2a8',
+        'cloudify-plugins-common==3.2rc',
         'pywinrm==0.0.2dev',
     ],
     tests_require=[

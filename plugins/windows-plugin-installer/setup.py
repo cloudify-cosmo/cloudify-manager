@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-windows-plugin-installer-plugin',
-    version='3.2a8',
+    version='3.2rc',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=['windows_plugin_installer'],
@@ -27,7 +27,7 @@ setup(
                 'existing celery windows worker',
     zip_safe=False,
     install_requires=[
-        "cloudify-plugins-common==3.2a8"
+        "cloudify-plugins-common==3.2rc"
     ],
     tests_require=[
         "nose"
