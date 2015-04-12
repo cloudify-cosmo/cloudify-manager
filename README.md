@@ -6,16 +6,16 @@ This repository contains the following Cloudify components:
 
 * Cloudify's manager REST service.
 * Plugins:
-	* [agent-installer (linux)](http://getcloudify.org/guide/3.1/plugin-linux-agent-installer.html).
-	* [plugin-installer (linux)](http://getcloudify.org/guide/3.1/plugin-installer-plugin.html).
-	* [windows-agent-installer](http://getcloudify.org/guide/3.1/plugin-windows-agent-installer.html).
-	* [windows-plugin-installer](http://getcloudify.org/guide/3.1/plugin-installer-plugin.html).
+	* [agent-installer (linux)](http://getcloudify.org/guide/plugin-linux-agent-installer.html).
+	* [plugin-installer (linux)](http://getcloudify.org/guide/plugin-installer-plugin.html).
+	* [windows-agent-installer](http://getcloudify.org/guide/plugin-windows-agent-installer.html).
+	* [windows-plugin-installer](http://getcloudify.org/guide/plugin-installer-plugin.html).
 	* riemann-controller.
 * Integration tests.
 
 # REST API Reference
 
-See [here](http://getcloudify.org/guide/3.1/reference-rest-api.html).
+See [here](http://getcloudify.org/guide/reference-rest-api.html).
 
 ## Running Integration Tests
 
