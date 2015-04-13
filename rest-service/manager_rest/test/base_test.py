@@ -48,7 +48,7 @@ class MockHTTPClient(HTTPClient):
         self.app = app
 
     def _do_request(self, requests_method, request_url, body, params, headers,
-                    expected_status_code, stream):
+                    expected_status_code, stream, verify):
         if 'get' in requests_method.__name__:
             response = self.app.get(request_url,
                                     headers=headers,
