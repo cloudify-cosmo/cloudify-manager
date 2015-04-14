@@ -1272,7 +1272,7 @@ class Status(SecuredResource):
                     'Elasticsearch': [9200],
                     'Cloudify UI': [9001],
                     'Logstash': [9999],
-                    'Webserver': [80, 53229],
+                    'Webserver': [53229],
                     'InfluxDB': [8083, 8086],
                     'Manager rest-service': [8100]
                     }
