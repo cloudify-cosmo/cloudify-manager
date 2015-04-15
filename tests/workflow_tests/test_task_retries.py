@@ -142,7 +142,6 @@ class TaskRetriesTest(TestCase):
         # events are async so we may have to wait some
         self.do_assertions(assertion)
 
-
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
                                               retries,
