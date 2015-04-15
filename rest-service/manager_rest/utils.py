@@ -115,7 +115,13 @@ def get_class_instance(class_path, properties):
     if not properties:
         properties = {}
     cls = get_class(class_path)
-    return cls(**properties)
+    try:
+        instance = cls(**properties)
+    except Exception as e:
+        raise RuntimeError('Failed to instantiate {0}, error: {1}'
+                           .format(cls, e))
+
+    return instance
 
 
 def abort_error(error, logger):

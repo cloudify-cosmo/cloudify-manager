@@ -105,24 +105,26 @@ class BaseServerTestCase(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         self.rest_service_log = tempfile.mkstemp()[1]
+        self.securest_log_file = tempfile.mkstemp()[1]
         self.file_server = FileServer(self.tmpdir)
         self.file_server.start()
         storage_manager.storage_manager_module_name = \
             STORAGE_MANAGER_MODULE_NAME
 
-        # workaround for setting the rest service log path, since it's
-        # needed when 'server' module is imported.
-        # right after the import the log path is set normally like the rest
+        # workaround for setting the rest service and securest log files,
+        # since they're needed when 'server' module is imported.
+        # right after the import the log paths are set normally like the rest
         # of the variables (used in the reset_state)
-        tmp_conf_file = tempfile.mkstemp()[1]
-        json.dump({'rest_service_log_path': self.rest_service_log},
-                  open(tmp_conf_file, 'w'))
-        os.environ['MANAGER_REST_CONFIG_PATH'] = tmp_conf_file
-        try:
-            from manager_rest import server
-        finally:
-            del(os.environ['MANAGER_REST_CONFIG_PATH'])
+        # tmp_conf_file = tempfile.mkstemp()[1]
+        # json.dump({'rest_service_log_path': self.rest_service_log},
+        #           open(tmp_conf_file, 'w'))
+        # os.environ['MANAGER_REST_CONFIG_PATH'] = tmp_conf_file
+        # try:
+        #     from manager_rest import server
+        # finally:
+        #     del(os.environ['MANAGER_REST_CONFIG_PATH'])
 
+        from manager_rest import server
         server.reset_state(self.create_configuration())
         utils.copy_resources(config.instance().file_server_root)
         server.setup_app()
@@ -145,7 +147,14 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.file_server_uploaded_blueprints_folder = \
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
+        test_config.rest_service_log_level = 'DEBUG'
         test_config.rest_service_log_path = self.rest_service_log
+        test_config.rest_service_log_file_size_MB = 100,
+        test_config.rest_service_log_files_backup_count = 20
+        test_config.securest_log_level = 'DEBUG'
+        test_config.securest_log_file = self.securest_log_file
+        test_config.securest_log_file_size_MB = 100
+        test_config.securest_log_files_backup_count = 20
 
         return test_config
 
