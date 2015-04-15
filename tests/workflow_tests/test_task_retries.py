@@ -30,6 +30,7 @@ class TaskRetriesTest(TestCase):
         super(TaskRetriesTest, self).setUp()
         delete_provider_context()
         self.addCleanup(restore_provider_context)
+        self.events = []
 
     def configure(self, retries, retry_interval):
         context = {'cloudify': {'workflows': {
@@ -37,6 +38,11 @@ class TaskRetriesTest(TestCase):
             'task_retry_interval': retry_interval
         }}}
         self.client.manager.create_context(self._testMethodName, context)
+
+    def _write_test_events_and_logs_to_file(self, output, event):
+        super(TaskRetriesTest, self)._write_test_events_and_logs_to_file(
+            output, event)
+        self.events.append(event)
 
     def test_retries_and_retry_interval(self):
         self._test_retries_and_retry_interval_impl(
@@ -117,6 +123,25 @@ class TaskRetriesTest(TestCase):
             # the following is the message that was
             # passed to the rescheduling request
             self.assertIn('Retrying operation', events_and_logs)
+
+        # asserting that task events contain current_retries/total_retries
+        # only asserting that the properties exists and nothing logical because
+        # this is already covered in the local workflow tests
+        def assertion():
+            events = [e for e in self.events if
+                      e.get('event_type', '').startswith('task_') or
+                      e.get('event_type', '') == 'sending_task']
+            self.assertGreater(len(events), 0)
+            seen_current_retries = set()
+            for event in events:
+                current_retries = event['context']['task_current_retries']
+                seen_current_retries.add(current_retries)
+                total_retries = event['context']['task_total_retries']
+                self.assertEqual(total_retries, 5)
+            self.assertSetEqual(seen_current_retries, {0, 1, 2, 3})
+        # events are async so we may have to wait some
+        self.do_assertions(assertion)
+
 
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
