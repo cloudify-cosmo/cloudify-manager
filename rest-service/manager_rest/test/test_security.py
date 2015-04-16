@@ -252,6 +252,7 @@ class TestSecurityAuditLog(SecurityTestBase):
         test_config.securest_log_file = tempfile.mkstemp()[1]
         test_config.securest_log_file_size_MB = 0.1
         test_config.securest_log_files_backup_count = 1
+        self.security_log_path = test_config.securest_log_file
         return test_config
 
     def test_password_auth_success_log(self):
@@ -290,13 +291,6 @@ class TestSecurityAuditLog(SecurityTestBase):
 
     def test_token_auth_failure_log(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
-        client.tokens.get().value
-        expected_text = '[INFO] [flask-securest] user "user1" authenticated' \
-                        ' successfully, authentication provider: password'
-        self.assert_log_contains(expected_text)
-
-        client = self.create_client(SecurityTestBase.create_auth_header(
             token='wrong_token'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
         expected_text = '[ERROR] [flask-securest] User unauthorized, all ' \
@@ -307,22 +301,9 @@ class TestSecurityAuditLog(SecurityTestBase):
         self.assert_log_contains(expected_text)
 
     def assert_log_contains(self, expected_text):
-        MISSING_LOG = 'expected log to contain "{0}" but it only ' \
-                      'contained "{1}"'
-
-        def read_security_log():
-            logger = logging.getLogger('flask-securest')
-            print 'handlers: '
-            for handler in logger.handlers:
-                print '    file: ', handler.baseFilename
-            log_file_handler = logger.handlers[1]
-            with open(log_file_handler.baseFilename, 'r') as log:
-                text = log.read()
-            return text
-
-        logged_text = read_security_log()
-        self.assertIn(expected_text, logged_text,
-                      MISSING_LOG.format(expected_text, logged_text))
+        with open(self.security_log_path) as f:
+            logged_text = f.read()
+        self.assertIn(expected_text, logged_text)
 
     def tearDown(self):
         logger = logging.getLogger('flask-securest')

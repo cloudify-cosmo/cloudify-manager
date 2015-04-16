@@ -45,10 +45,11 @@ def setup_app():
     app.logger_name = 'manager-rest'
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
-    create_logger(app.logger_name,
-                  cfy_config.rest_service_log_level,
-                  cfy_config.rest_service_log_path,
-                  cfy_config.rest_service_log_file_size_MB,
+    create_logger(logger_name=app.logger_name,
+                  log_level=cfy_config.rest_service_log_level,
+                  log_file=cfy_config.rest_service_log_path,
+                  log_file_size_MB=cfy_config.rest_service_log_file_size_MB,
+                  log_files_backup_count=
                   cfy_config.rest_service_log_files_backup_count)
 
     # secure the app according to manager configuration
@@ -179,11 +180,11 @@ def init_secured_app(_app):
     # init and configure flask-securest
     secure_app = SecuREST(_app)
     secure_app.logger = create_logger(
-        'flask-securest',
-        cfy_config.securest_log_level,
-        cfy_config.securest_log_file,
-        cfy_config.securest_log_file_size_MB,
-        cfy_config.securest_log_files_backup_count
+        logger_name='flask-securest',
+        log_level=cfy_config.securest_log_level,
+        log_file=cfy_config.securest_log_file,
+        log_file_size_MB=cfy_config.securest_log_file_size_MB,
+        log_files_backup_count=cfy_config.securest_log_files_backup_count
     )
 
     if cfy_config.securest_userstore_driver:

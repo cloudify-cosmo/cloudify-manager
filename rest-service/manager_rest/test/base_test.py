@@ -111,9 +111,9 @@ class BaseServerTestCase(unittest.TestCase):
         storage_manager.storage_manager_module_name = \
             STORAGE_MANAGER_MODULE_NAME
 
-        # workaround for setting the rest service and securest log files,
-        # since they're needed when 'server' module is imported.
-        # right after the import the log paths are set normally like the rest
+        # workaround for setting the rest service log path, since it's
+        # needed when 'server' module is imported.
+        # right after the import the log path is set normally like the rest
         # of the variables (used in the reset_state)
         tmp_conf_file = tempfile.mkstemp()[1]
         json.dump({'rest_service_log_path': self.rest_service_log,
