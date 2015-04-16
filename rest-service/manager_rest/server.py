@@ -49,8 +49,8 @@ def setup_app():
                   log_level=cfy_config.rest_service_log_level,
                   log_file=cfy_config.rest_service_log_path,
                   log_file_size_MB=cfy_config.rest_service_log_file_size_MB,
-                  log_files_backup_count=
-                  cfy_config.rest_service_log_files_backup_count)
+                  log_files_backup_count=cfy_config.
+                  rest_service_log_files_backup_count)
 
     # secure the app according to manager configuration
     if cfy_config.secured_server:
