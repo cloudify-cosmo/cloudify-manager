@@ -71,7 +71,7 @@ class TestCase(unittest.TestCase):
         TestEnvironment.stop_all_celery_processes()
         TestEnvironment.reset_elasticsearch_data()
 
-    def _write_test_events_and_logs_to_file(self, output):
+    def _write_test_events_and_logs_to_file(self, output, event):
         with open(self.test_logs_file, 'a') as f:
             f.write('{0}\n'.format(output))
 
@@ -334,7 +334,7 @@ class TestEnvironment(object):
                         self.test_working_dir)
             shutil.rmtree(self.test_working_dir, ignore_errors=True)
 
-    def handle_logs(self, output):
+    def handle_logs(self, output, event):
         pass
 
     def _logs_handler_retriever(self):
@@ -442,14 +442,14 @@ def start_events_and_logs_polling(logs_handler_retriever=None):
 
     def callback(ch, method, properties, body):
         try:
-            output = json.loads(body)
+            event = json.loads(body)
             if RABBITMQ_VERBOSE_MESSAGES_ENABLED:
-                output = '\n{0}'.format(json.dumps(output, indent=4))
+                output = '\n{0}'.format(json.dumps(event, indent=4))
             else:
-                output = create_event_message_prefix(output)
+                output = create_event_message_prefix(event)
             logger.info(output)
             if logs_handler_retriever:
-                logs_handler_retriever()(output)
+                logs_handler_retriever()(output, event)
         except Exception as e:
             logger.error('event/log format error - output: {0} [message={1}]'
                          .format(body, e.message))
