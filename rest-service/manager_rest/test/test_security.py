@@ -13,6 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import logging
+import tempfile
+
 from itsdangerous import base64_encode
 from mock import patch
 
@@ -20,8 +23,10 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from base_test import BaseServerTestCase
 
+
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
+BASIC_AUTH_PREFIX = 'Basic '
 
 
 class SecurityTestBase(BaseServerTestCase):
@@ -32,7 +37,8 @@ class SecurityTestBase(BaseServerTestCase):
         # using or to allow testing of username without password and vice-versa
         if username or password:
             credentials = '{0}:{1}'.format(username, password)
-            header = {CLOUDIFY_AUTH_HEADER: base64_encode(credentials)}
+            header = {CLOUDIFY_AUTH_HEADER:
+                      BASIC_AUTH_PREFIX + base64_encode(credentials)}
         elif token:
             header = {CLOUDIFY_AUTH_TOKEN_HEADER: token}
 
@@ -236,3 +242,94 @@ class SecurityBypassTest(SecurityTestBase):
             return orig_func(*args, **kwargs)
 
         client._client._do_request = new_func
+
+
+class TestSecurityAuditLog(SecurityTestBase):
+
+    def create_configuration(self):
+        test_config = super(TestSecurityAuditLog, self).create_configuration()
+        test_config.securest_log_level = 'DEBUG'
+        test_config.securest_log_file = tempfile.mkstemp()[1]
+        test_config.securest_log_file_size_MB = 0.1
+        test_config.securest_log_files_backup_count = 1
+        return test_config
+
+    def test_password_auth_success_log(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass1'))
+        client.deployments.list()
+        expected_text = '[INFO] [flask-securest] user "user1" authenticated' \
+                        ' successfully, authentication provider: password'
+        self.assert_log_contains(expected_text)
+
+    def test_password_auth_failure_log(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='wrong_user', password='pass1'))
+        self.assertRaises(CloudifyClientError, client.deployments.list)
+        expected_text = '[ERROR] [flask-securest] User unauthorized, ' \
+                        'all authentication methods failed: \n'\
+                        'password authentication failed: user not found\n'\
+                        'token authentication failed: token is missing or ' \
+                        'empty'
+        self.assert_log_contains(expected_text)
+
+    def test_token_auth_success_log(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass1'))
+        token_value = client.tokens.get().value
+        expected_text = '[INFO] [flask-securest] user "user1" authenticated' \
+                        ' successfully, authentication provider: password'
+        self.assert_log_contains(expected_text)
+
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            token=token_value))
+        client.deployments.list()
+        expected_text = '[INFO] [flask-securest] user "user1" authenticated' \
+                        ' successfully, authentication provider: token'
+        self.assert_log_contains(expected_text)
+
+    def test_token_auth_failure_log(self):
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            username='user1', password='pass1'))
+        client.tokens.get().value
+        expected_text = '[INFO] [flask-securest] user "user1" authenticated' \
+                        ' successfully, authentication provider: password'
+        self.assert_log_contains(expected_text)
+
+        client = self.create_client(SecurityTestBase.create_auth_header(
+            token='wrong_token'))
+        self.assertRaises(CloudifyClientError, client.deployments.list)
+        expected_text = '[ERROR] [flask-securest] User unauthorized, all ' \
+                        'authentication methods failed: \n'\
+                        'password authentication failed: username or password'\
+                        ' not found on request\n'\
+                        'token authentication failed: invalid token'
+        self.assert_log_contains(expected_text)
+
+    def assert_log_contains(self, expected_text):
+        MISSING_LOG = 'expected log to contain "{0}" but it only ' \
+                      'contained "{1}"'
+
+        def read_security_log():
+            logger = logging.getLogger('flask-securest')
+            print 'handlers: '
+            for handler in logger.handlers:
+                print '    file: ', handler.baseFilename
+            log_file_handler = logger.handlers[1]
+            with open(log_file_handler.baseFilename, 'r') as log:
+                text = log.read()
+            return text
+
+        logged_text = read_security_log()
+        self.assertIn(expected_text, logged_text,
+                      MISSING_LOG.format(expected_text, logged_text))
+
+    def tearDown(self):
+        logger = logging.getLogger('flask-securest')
+        # using a copy of the logger handlers list to overcome concurrent
+        # modification while remove handlers
+        handlers_copy = logger.handlers[:]
+        for handler in handlers_copy:
+            logger.removeHandler(handler)
+
+        super(TestSecurityAuditLog, self).tearDown()

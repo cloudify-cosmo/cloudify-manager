@@ -115,16 +115,18 @@ class BaseServerTestCase(unittest.TestCase):
         # since they're needed when 'server' module is imported.
         # right after the import the log paths are set normally like the rest
         # of the variables (used in the reset_state)
-        # tmp_conf_file = tempfile.mkstemp()[1]
-        # json.dump({'rest_service_log_path': self.rest_service_log},
-        #           open(tmp_conf_file, 'w'))
-        # os.environ['MANAGER_REST_CONFIG_PATH'] = tmp_conf_file
-        # try:
-        #     from manager_rest import server
-        # finally:
-        #     del(os.environ['MANAGER_REST_CONFIG_PATH'])
+        tmp_conf_file = tempfile.mkstemp()[1]
+        json.dump({'rest_service_log_path': self.rest_service_log,
+                   'rest_service_log_file_size_MB': 1,
+                   'rest_service_log_files_backup_count': 1,
+                   'rest_service_log_level': 'DEBUG'},
+                  open(tmp_conf_file, 'w'))
+        os.environ['MANAGER_REST_CONFIG_PATH'] = tmp_conf_file
+        try:
+            from manager_rest import server
+        finally:
+            del(os.environ['MANAGER_REST_CONFIG_PATH'])
 
-        from manager_rest import server
         server.reset_state(self.create_configuration())
         utils.copy_resources(config.instance().file_server_root)
         server.setup_app()
@@ -133,6 +135,8 @@ class BaseServerTestCase(unittest.TestCase):
         self.client = self.create_client()
 
     def tearDown(self):
+        self.quiet_delete(self.rest_service_log)
+        self.quiet_delete(self.securest_log_file)
         self.file_server.stop()
 
     def create_configuration(self):
@@ -289,3 +293,10 @@ class BaseServerTestCase(unittest.TestCase):
 
         raise RuntimeError('Url {0} is not available (waited {1} '
                            'seconds)'.format(url, timeout))
+
+    @staticmethod
+    def quiet_delete(file_path):
+        try:
+            os.remove(file_path)
+        except:
+            pass

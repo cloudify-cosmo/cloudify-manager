@@ -231,7 +231,8 @@ def register_authentication_providers(secure_app, authentication_providers):
                                     '{0}'.format(provider))
         auth_provider = utils.get_class_instance(provider['implementation'],
                                                  provider['properties'])
-        secure_app.register_authentication_provider(auth_provider)
+        secure_app.register_authentication_provider(provider['name'],
+                                                    auth_provider)
 
 
 def load_configuration():
