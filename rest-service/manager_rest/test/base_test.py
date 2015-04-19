@@ -109,6 +109,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.rest_service_log = tempfile.mkstemp()[1]
         self.securest_log_file = tempfile.mkstemp()[1]
         self.file_server = FileServer(self.tmpdir)
+        self.addCleanup(self.cleanup)
         self.file_server.start()
         storage_manager.storage_manager_module_name = \
             STORAGE_MANAGER_MODULE_NAME
@@ -141,10 +142,17 @@ class BaseServerTestCase(unittest.TestCase):
     def tearDown(self):
         print '***** starting base_test tearDown for {0}'\
             .format(self._testMethodName)
+        print '***** completed base_test tearDown for {0}' \
+            .format(self._testMethodName)
+
+    def cleanup(self):
+        print '***** starting base_test cleanup for {0}' \
+            .format(self._testMethodName)
         self.quiet_delete(self.rest_service_log)
         self.quiet_delete(self.securest_log_file)
-        self.file_server.stop()
-        print '***** completed base_test tearDown for {0}' \
+        if self.file_server:
+            self.file_server.stop()
+        print '***** completed base_test cleanup for {0}' \
             .format(self._testMethodName)
 
     def create_configuration(self):
