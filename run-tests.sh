@@ -57,7 +57,7 @@ test_rest_service()
     echo "### Testing rest-service..."
     pushd rest-service && pip install . -r dev-requirements.txt && popd
     pip install nose
-    nosetests rest-service/manager_rest/test --nologcapture --nocapture --processes=0
+    nosetests rest-service/manager_rest/test --nologcapture --nocapture
 }
 
 run_intergration_tests()
