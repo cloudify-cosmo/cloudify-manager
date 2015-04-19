@@ -45,15 +45,25 @@ class FileServer(object):
             self.process.start()
 
     def stop(self):
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
         try:
+            pid = self.process.pid
             self.process.terminate()
             while self.is_alive():
                 time.sleep(0.1)
         except BaseException as e:
             # pass
             exc_type, exc, traceback = sys.exc_info()
+            logging.info('Failed to stop file_server, error: {1}'
+                         .format(e))
             raise RuntimeError('Failed to stop file_server, error: {1}'
                                .format(e)), None, traceback
+        else:
+            if pid:
+                logging.info('stopped file server process: {0}'.format(pid))
+            else:
+                logging.info('stopped file server process, pid unknown')
 
     def start_impl(self):
         import logging
