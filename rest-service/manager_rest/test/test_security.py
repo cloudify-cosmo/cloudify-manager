@@ -31,8 +31,7 @@ BASIC_AUTH_PREFIX = 'Basic '
 
 class SecurityTestBase(BaseServerTestCase):
 
-    # @staticmethod
-    def create_auth_header(username=None, password=None, token=None):
+    def create_auth_header(self, username=None, password=None, token=None):
         header = None
         # using or to allow testing of username without password and vice-versa
         if username or password:
@@ -106,41 +105,41 @@ class SecurityTestBase(BaseServerTestCase):
 class SecurityTest(SecurityTestBase):
 
     def test_secured_client(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='pass1'))
         client.deployments.list()
 
     def test_wrong_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass2'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='pass2'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
 
     def test_missing_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username=None, password=None))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username=None, password=None))
         self.assertRaises(CloudifyClientError, client.deployments.list)
 
     def test_missing_user(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username=None, password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username=None, password='pass1'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
 
     def test_missing_password(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password=None))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password=None))
         self.assertRaises(CloudifyClientError, client.deployments.list)
 
     def test_token_authentication(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='pass1'))
         token = client.tokens.get()
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            token=token.value))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    token=token.value))
         client.blueprints.list()
 
     def test_secured_manager_blueprints_upload(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='pass1'))
 
         # the flask api client needs to be modified since it doesn't support
         # a bytes generator as "data" for file upload
@@ -165,22 +164,23 @@ class SecurityBypassTest(SecurityTestBase):
         return test_config
 
     def test_bypass_and_correct_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='pass1'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
 
         client.blueprints.list()
 
     def test_bypass_and_incorrect_password(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='wrong_pass'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='wrong_pass'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
 
         client.blueprints.list()
 
     def test_bypass_and_nonexisting_user(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='nonexisting-user', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='nonexisting-user',
+                                    password='pass1'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
         client.blueprints.list()
 
@@ -190,15 +190,15 @@ class SecurityBypassTest(SecurityTestBase):
         client.blueprints.list()
 
     def test_bypass_not_bypass_port_and_correct_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='pass1'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         client.blueprints.list()
 
     def test_bypass_not_bypass_port_and_incorrect_password(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='wrong-pass'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='wrong-pass'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         try:
@@ -209,8 +209,9 @@ class SecurityBypassTest(SecurityTestBase):
             self.assertEquals(401, e.status_code)
 
     def test_bypass_not_bypass_port_and_nonexisting_user(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='nonexisting-user', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='nonexisting-user',
+                                    password='pass1'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         try:
@@ -256,16 +257,16 @@ class TestSecurityAuditLog(SecurityTestBase):
         return test_config
 
     def test_password_auth_success_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='pass1'))
         client.deployments.list()
         expected_text = '[INFO] [flask-securest] user "user1" authenticated' \
                         ' successfully, authentication provider: password'
         self.assert_log_contains(expected_text)
 
     def test_password_auth_failure_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='wrong_user', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='wrong_user', password='pass1'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
         expected_text = '[ERROR] [flask-securest] User unauthorized, ' \
                         'all authentication methods failed: \n'\
@@ -275,23 +276,23 @@ class TestSecurityAuditLog(SecurityTestBase):
         self.assert_log_contains(expected_text)
 
     def test_token_auth_success_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    username='user1', password='pass1'))
         token_value = client.tokens.get().value
         expected_text = '[INFO] [flask-securest] user "user1" authenticated' \
                         ' successfully, authentication provider: password'
         self.assert_log_contains(expected_text)
 
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            token=token_value))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    token=token_value))
         client.deployments.list()
         expected_text = '[INFO] [flask-securest] user "user1" authenticated' \
                         ' successfully, authentication provider: token'
         self.assert_log_contains(expected_text)
 
     def test_token_auth_failure_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            token='wrong_token'))
+        client = self.create_client(SecurityTestBase.create_auth_header(self,
+                                    token='wrong_token'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
         expected_text = '[ERROR] [flask-securest] User unauthorized, all ' \
                         'authentication methods failed: \n'\
