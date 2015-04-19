@@ -105,7 +105,9 @@ class BaseServerTestCase(unittest.TestCase):
     def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         self.rest_service_log = tempfile.mkstemp()[1]
+        self.securest_log_file = tempfile.mkstemp()[1]
         self.file_server = FileServer(self.tmpdir)
+        self.addCleanup(self.cleanup)
         self.file_server.start()
         storage_manager.storage_manager_module_name = \
             STORAGE_MANAGER_MODULE_NAME
@@ -115,7 +117,10 @@ class BaseServerTestCase(unittest.TestCase):
         # right after the import the log path is set normally like the rest
         # of the variables (used in the reset_state)
         tmp_conf_file = tempfile.mkstemp()[1]
-        json.dump({'rest_service_log_path': self.rest_service_log},
+        json.dump({'rest_service_log_path': self.rest_service_log,
+                   'rest_service_log_file_size_MB': 1,
+                   'rest_service_log_files_backup_count': 1,
+                   'rest_service_log_level': 'DEBUG'},
                   open(tmp_conf_file, 'w'))
         os.environ['MANAGER_REST_CONFIG_PATH'] = tmp_conf_file
         try:
@@ -130,8 +135,11 @@ class BaseServerTestCase(unittest.TestCase):
         self.app = server.app.test_client()
         self.client = self.create_client()
 
-    def tearDown(self):
-        self.file_server.stop()
+    def cleanup(self):
+        self.quiet_delete(self.rest_service_log)
+        self.quiet_delete(self.securest_log_file)
+        if self.file_server:
+            self.file_server.stop()
 
     def create_configuration(self):
         from manager_rest.config import Config
@@ -145,8 +153,14 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.file_server_uploaded_blueprints_folder = \
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
+        test_config.rest_service_log_level = 'DEBUG'
         test_config.rest_service_log_path = self.rest_service_log
-
+        test_config.rest_service_log_file_size_MB = 100,
+        test_config.rest_service_log_files_backup_count = 20
+        test_config.securest_log_level = 'DEBUG'
+        test_config.securest_log_file = self.securest_log_file
+        test_config.securest_log_file_size_MB = 100
+        test_config.securest_log_files_backup_count = 20
         return test_config
 
     def post(self, resource_path, data, query_params=None):
@@ -280,3 +294,10 @@ class BaseServerTestCase(unittest.TestCase):
 
         raise RuntimeError('Url {0} is not available (waited {1} '
                            'seconds)'.format(url, timeout))
+
+    @staticmethod
+    def quiet_delete(file_path):
+        try:
+            os.remove(file_path)
+        except:
+            pass

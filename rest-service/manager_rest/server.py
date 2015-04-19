@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import StringIO
-import logging
 import functools
 import traceback
 import os
@@ -41,24 +40,20 @@ from manager_rest import utils
 # app factory
 def setup_app():
     app = Flask(__name__)
-
-    # setting up the app logger with a rotating file handler, in addition to
-    #  the built-in flask logger which can be helpful in debug mode.
-    additional_log_handlers = [
-        RotatingFileHandler(
-            config.instance().rest_service_log_path,
-            maxBytes=1024 * 1024 * 100,
-            backupCount=20)
-    ]
+    cfy_config = config.instance()
 
     app.logger_name = 'manager-rest'
-    utils.setup_logger(logger_name=app.logger.name,
-                       logger_level=logging.DEBUG,
-                       handlers=additional_log_handlers,
-                       remove_existing_handlers=False)
+    # setting up the app logger with a rotating file handler, in addition to
+    #  the built-in flask logger which can be helpful in debug mode.
+    create_logger(logger_name=app.logger_name,
+                  log_level=cfy_config.rest_service_log_level,
+                  log_file=cfy_config.rest_service_log_path,
+                  log_file_size_MB=cfy_config.rest_service_log_file_size_MB,
+                  log_files_backup_count=cfy_config.
+                  rest_service_log_files_backup_count)
 
     # secure the app according to manager configuration
-    if config.instance().secured_server:
+    if cfy_config.secured_server:
         app.logger.info('initializing application security')
         init_secured_app(app)
 
@@ -157,15 +152,40 @@ def reset_state(configuration=None):
     app = setup_app()
 
 
+def create_logger(logger_name,
+                  log_level,
+                  log_file,
+                  log_file_size_MB,
+                  log_files_backup_count):
+
+    additional_log_handlers = [
+        RotatingFileHandler(
+            filename=log_file,
+            maxBytes=log_file_size_MB * 1024 * 1024,
+            backupCount=log_files_backup_count)
+    ]
+
+    return utils.setup_logger(logger_name=logger_name,
+                              logger_level=log_level,
+                              handlers=additional_log_handlers,
+                              remove_existing_handlers=False)
+
+
 def init_secured_app(_app):
     cfy_config = config.instance()
-
-    if config.instance().auth_token_generator:
+    if cfy_config.auth_token_generator:
         register_auth_token_generator(_app,
                                       config.instance().auth_token_generator)
 
     # init and configure flask-securest
     secure_app = SecuREST(_app)
+    secure_app.logger = create_logger(
+        logger_name='flask-securest',
+        log_level=cfy_config.securest_log_level,
+        log_file=cfy_config.securest_log_file,
+        log_file_size_MB=cfy_config.securest_log_file_size_MB,
+        log_files_backup_count=cfy_config.securest_log_files_backup_count
+    )
 
     if cfy_config.securest_userstore_driver:
         register_userstore_driver(secure_app,
@@ -212,7 +232,8 @@ def register_authentication_providers(secure_app, authentication_providers):
                                     '{0}'.format(provider))
         auth_provider = utils.get_class_instance(provider['implementation'],
                                                  provider['properties'])
-        secure_app.register_authentication_provider(auth_provider)
+        secure_app.register_authentication_provider(provider['name'],
+                                                    auth_provider)
 
 
 def load_configuration():

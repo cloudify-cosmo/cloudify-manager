@@ -197,8 +197,16 @@ class TestEnvironment(object):
         )
         os.makedirs(self.plugins_storage_dir)
         self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
+        self.rest_service_log_level = 'DEBUG'
         self.rest_service_log_path = path.join(
             self.test_working_dir, 'cloudify-rest-service.log')
+        self.rest_service_log_file_size_MB = 100
+        self.rest_service_log_files_backup_count = 20
+        self.securest_log_level = 'DEBUG'
+        self.securest_log_file = path.join(
+            self.test_working_dir, 'rest-security-audit.log')
+        self.securest_log_file_size_MB = 100
+        self.securest_log_files_backup_count = 20
         self.events_and_logs_dir = \
             path.join(self.test_working_dir, 'tests-events-and-logs')
         os.mkdir(self.events_and_logs_dir)
@@ -276,6 +284,7 @@ class TestEnvironment(object):
 
         from manager_rest.file_server import PORT as FS_PORT
         file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
+
         self.manager_rest_process = ManagerRestProcess(
             MANAGER_REST_PORT,
             self.fileserver_dir,
@@ -283,7 +292,14 @@ class TestEnvironment(object):
             FILE_SERVER_BLUEPRINTS_FOLDER,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
             FILE_SERVER_RESOURCES_URI,
+            self.rest_service_log_level,
             self.rest_service_log_path,
+            self.rest_service_log_file_size_MB,
+            self.rest_service_log_files_backup_count,
+            self.securest_log_level,
+            self.securest_log_file,
+            self.securest_log_file_size_MB,
+            self.securest_log_files_backup_count,
             self.test_working_dir)
         self.manager_rest_process.start()
 

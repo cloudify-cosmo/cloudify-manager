@@ -38,7 +38,14 @@ class ManagerRestProcess(object):
                  file_server_blueprints_folder,
                  file_server_uploaded_blueprints_folder,
                  file_server_resources_uri,
+                 rest_service_log_level,
                  rest_service_log_path,
+                 rest_service_log_file_size_MB,
+                 rest_service_log_files_backup_count,
+                 securest_log_level,
+                 securest_log_file,
+                 securest_log_file_size_MB,
+                 securest_log_files_backup_count,
                  tempdir):
         self.process = None
         self.port = port or MANAGER_REST_PORT
@@ -48,7 +55,15 @@ class ManagerRestProcess(object):
         self.file_server_uploaded_blueprints_folder = \
             file_server_uploaded_blueprints_folder
         self.file_server_resources_uri = file_server_resources_uri
+        self.rest_service_log_level = rest_service_log_level
         self.rest_service_log_path = rest_service_log_path
+        self.rest_service_log_file_size_MB = rest_service_log_file_size_MB
+        self.rest_service_log_files_backup_count = \
+            rest_service_log_files_backup_count
+        self.securest_log_level = securest_log_level
+        self.securest_log_file = securest_log_file
+        self.securest_log_file_size_MB = securest_log_file_size_MB
+        self.securest_log_files_backup_count = securest_log_files_backup_count
         self.client = CloudifyClient('localhost', port=port)
         self.tempdir = tempdir
 
@@ -56,7 +71,17 @@ class ManagerRestProcess(object):
         end_time = time.time() + timeout
 
         configuration = {
+            'rest_service_log_level': self.rest_service_log_level,
             'rest_service_log_path': self.rest_service_log_path,
+            'rest_service_log_file_size_MB':
+                self.rest_service_log_file_size_MB,
+            'rest_service_log_files_backup_count':
+                self.rest_service_log_files_backup_count,
+            'securest_log_level': self.securest_log_level,
+            'securest_log_file': self.securest_log_file,
+            'securest_log_file_size_MB': self.securest_log_file_size_MB,
+            'securest_log_files_backup_count':
+                self.securest_log_files_backup_count,
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
             'file_server_uploaded_blueprints_folder':

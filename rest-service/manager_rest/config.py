@@ -25,11 +25,18 @@ class Config(object):
         self._file_server_blueprints_folder = None
         self._file_server_uploaded_blueprints_folder = None
         self._file_server_resources_uri = None
+        self._rest_service_log_level = None
         self._rest_service_log_path = None
+        self._rest_service_log_file_size_MB = None
+        self._rest_service_log_files_backup_count = None
         self._test_mode = False
         self._secured_server = False
         self._auth_token_generator = None
         self._security_bypass_port = None
+        self._securest_log_level = None
+        self._securest_log_file = None
+        self._securest_log_file_size_MB = None
+        self._securest_log_files_backup_count = None
         self._securest_userstore_driver = None
         self._securest_authentication_providers = []
 
@@ -106,6 +113,30 @@ class Config(object):
         self._rest_service_log_path = value
 
     @property
+    def rest_service_log_level(self):
+        return self._rest_service_log_level
+
+    @rest_service_log_level.setter
+    def rest_service_log_level(self, value):
+        self._rest_service_log_level = value
+
+    @property
+    def rest_service_log_file_size_MB(self):
+        return self._rest_service_log_file_size_MB
+
+    @rest_service_log_file_size_MB.setter
+    def rest_service_log_file_size_MB(self, value):
+        self._rest_service_log_file_size_MB = value
+
+    @property
+    def rest_service_log_files_backup_count(self):
+        return self._rest_service_log_files_backup_count
+
+    @rest_service_log_files_backup_count.setter
+    def rest_service_log_files_backup_count(self, value):
+        self._rest_service_log_files_backup_count = value
+
+    @property
     def test_mode(self):
         return self._test_mode
 
@@ -144,6 +175,38 @@ class Config(object):
     @auth_token_generator.setter
     def auth_token_generator(self, value):
         self._auth_token_generator = value
+
+    @property
+    def securest_log_level(self):
+        return self._securest_log_level
+
+    @securest_log_level.setter
+    def securest_log_level(self, value):
+        self._securest_log_level = value
+
+    @property
+    def securest_log_file(self):
+        return self._securest_log_file
+
+    @securest_log_file.setter
+    def securest_log_file(self, value):
+        self._securest_log_file = value
+
+    @property
+    def securest_log_file_size_MB(self):
+        return self._securest_log_file_size_MB
+
+    @securest_log_file_size_MB.setter
+    def securest_log_file_size_MB(self, value):
+        self._securest_log_file_size_MB = value
+
+    @property
+    def securest_log_files_backup_count(self):
+        return self._securest_log_files_backup_count
+
+    @securest_log_files_backup_count.setter
+    def securest_log_files_backup_count(self, value):
+        self._securest_log_files_backup_count = value
 
     @property
     def securest_userstore_driver(self):

@@ -114,8 +114,15 @@ def get_class_instance(class_path, properties):
     the given *args, **kwargs are passed to the instance's __init__"""
     if not properties:
         properties = {}
-    cls = get_class(class_path)
-    return cls(**properties)
+    try:
+        cls = get_class(class_path)
+        instance = cls(**properties)
+    except Exception as e:
+        exc_type, exc, traceback = sys.exc_info()
+        raise RuntimeError('Failed to instantiate {0}, error: {1}'
+                           .format(class_path, e)), None, traceback
+
+    return instance
 
 
 def abort_error(error, logger):
