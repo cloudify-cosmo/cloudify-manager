@@ -31,7 +31,7 @@ BASIC_AUTH_PREFIX = 'Basic '
 
 class SecurityTestBase(BaseServerTestCase):
 
-    @staticmethod
+    # @staticmethod
     def create_auth_header(username=None, password=None, token=None):
         header = None
         # using or to allow testing of username without password and vice-versa
