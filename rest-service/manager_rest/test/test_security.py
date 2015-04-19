@@ -32,9 +32,11 @@ BASIC_AUTH_PREFIX = 'Basic '
 class SecurityTestBase(BaseServerTestCase):
 
     def setUp(self):
+        print 'in SecurityTestBase setUp, calling super setUp'
         super(SecurityTestBase, self).setUp()
 
     def tearDown(self):
+        print 'in SecurityTestBase tearDown, calling super tearDown'
         super(SecurityTestBase, self).tearDown()
 
     def create_auth_header(self, username=None, password=None, token=None):
@@ -159,9 +161,11 @@ class SecurityTest(SecurityTestBase):
             client.blueprints.upload(self.get_mock_blueprint_path(), 'bp-id')
 
     def setUp(self):
+        print 'in SecurityTest setUp, calling super setUp'
         super(SecurityTest, self).setUp()
 
     def tearDown(self):
+        print 'in SecurityTest tearDown, calling super tearDown'
         super(SecurityTest, self).tearDown()
 
 
@@ -257,15 +261,18 @@ class SecurityBypassTest(SecurityTestBase):
         client._client._do_request = new_func
 
     def setUp(self):
+        print 'in SecurityBypassTest setup, calling super setup'
         super(SecurityBypassTest, self).setUp()
 
     def tearDown(self):
+        print 'in SecurityBypassTest teardown, calling super teardown'
         super(SecurityBypassTest, self).tearDown()
 
 
 class TestSecurityAuditLog(SecurityTestBase):
 
     def setUp(self):
+        print 'in TestSecurityAuditLog setUp, calling super setUp'
         super(TestSecurityAuditLog, self).setUp()
 
     def create_configuration(self):
@@ -335,4 +342,5 @@ class TestSecurityAuditLog(SecurityTestBase):
         for handler in handlers_copy:
             logger.removeHandler(handler)
 
+        print 'in TestSecurityAuditLog tearDown, calling super tearDown'
         super(TestSecurityAuditLog, self).tearDown()
