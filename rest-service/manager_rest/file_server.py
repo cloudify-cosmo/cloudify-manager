@@ -55,9 +55,7 @@ class FileServer(object):
         except BaseException as e:
             exc_type, exc, traceback = sys.exc_info()
             logging.info('Failed to stop file_server, error: {0}'
-                         .format(e))
-            raise RuntimeError('Failed to stop file_server, error: {0}'
-                               .format(e)), None, traceback
+                         .format(e)), None, traceback
         else:
             if pid:
                 logging.info('stopped file server process: {0}'.format(pid))
