@@ -49,8 +49,11 @@ class FileServer(object):
             self.process.terminate()
             while self.is_alive():
                 time.sleep(0.1)
-        except BaseException:
-            pass
+        except BaseException as e:
+            # pass
+            exc_type, exc, traceback = sys.exc_info()
+            raise RuntimeError('Failed to stop file_server, error: {1}'
+                               .format(e)), None, traceback
 
     def start_impl(self):
         import logging
