@@ -41,7 +41,7 @@ class SecurityTestBase(BaseServerTestCase):
         if username or password:
             credentials = '{0}:{1}'.format(username, password)
             header = {CLOUDIFY_AUTH_HEADER:
-                          BASIC_AUTH_PREFIX + base64_encode(credentials)}
+                      BASIC_AUTH_PREFIX + base64_encode(credentials)}
         elif token:
             header = {CLOUDIFY_AUTH_TOKEN_HEADER: token}
 
