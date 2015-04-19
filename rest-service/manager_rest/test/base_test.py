@@ -103,6 +103,7 @@ class BaseServerTestCase(unittest.TestCase):
         return client
 
     def setUp(self):
+        print 'setting up {0}'.format(self._testMethodName)
         self.tmpdir = tempfile.mkdtemp()
         self.rest_service_log = tempfile.mkstemp()[1]
         self.securest_log_file = tempfile.mkstemp()[1]
@@ -135,6 +136,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.client = self.create_client()
 
     def tearDown(self):
+        print 'tearing down {0}'.format(self._testMethodName)
         self.quiet_delete(self.rest_service_log)
         self.quiet_delete(self.securest_log_file)
         self.file_server.stop()
