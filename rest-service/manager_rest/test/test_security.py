@@ -32,11 +32,13 @@ BASIC_AUTH_PREFIX = 'Basic '
 class SecurityTestBase(BaseServerTestCase):
 
     def setUp(self):
-        print 'in SecurityTestBase setUp, calling super setUp'
+        print '***** starting test {0}, in SecurityTestBase setUp, ' \
+              'calling super setUp'.format(self._testMethodName)
         super(SecurityTestBase, self).setUp()
 
     def tearDown(self):
-        print 'in SecurityTestBase tearDown, calling super tearDown'
+        print '***** ending test {0}, in SecurityTestBase tearDown, ' \
+              'calling super tearDown'.format(self._testMethodName)
         super(SecurityTestBase, self).tearDown()
 
     def create_auth_header(self, username=None, password=None, token=None):
@@ -161,11 +163,13 @@ class SecurityTest(SecurityTestBase):
             client.blueprints.upload(self.get_mock_blueprint_path(), 'bp-id')
 
     def setUp(self):
-        print 'in SecurityTest setUp, calling super setUp'
+        print '***** starting test {0}, in SecurityTest setUp, ' \
+              'calling super setUp'.format(self._testMethodName)
         super(SecurityTest, self).setUp()
 
     def tearDown(self):
-        print 'in SecurityTest tearDown, calling super tearDown'
+        print '***** ending test {0}, in SecurityTest tearDown, ' \
+              'calling super tearDown'.format(self._testMethodName)
         super(SecurityTest, self).tearDown()
 
 
@@ -261,18 +265,21 @@ class SecurityBypassTest(SecurityTestBase):
         client._client._do_request = new_func
 
     def setUp(self):
-        print 'in SecurityBypassTest setup, calling super setup'
+        print '***** starting test {0}, in SecurityBypassTest setUp, ' \
+              'calling super setUp'.format(self._testMethodName)
         super(SecurityBypassTest, self).setUp()
 
     def tearDown(self):
-        print 'in SecurityBypassTest teardown, calling super teardown'
+        print '***** ending test {0}, in SecurityBypassTest tearDown, ' \
+              'calling super tearDown'.format(self._testMethodName)
         super(SecurityBypassTest, self).tearDown()
 
 
 class TestSecurityAuditLog(SecurityTestBase):
 
     def setUp(self):
-        print 'in TestSecurityAuditLog setUp, calling super setUp'
+        print '***** starting test {0}, in TestSecurityAuditLog setUp, ' \
+              'calling super setUp'.format(self._testMethodName)
         super(TestSecurityAuditLog, self).setUp()
 
     def create_configuration(self):
@@ -342,5 +349,6 @@ class TestSecurityAuditLog(SecurityTestBase):
         for handler in handlers_copy:
             logger.removeHandler(handler)
 
-        print 'in TestSecurityAuditLog tearDown, calling super tearDown'
+        print '***** ending test {0}, in TestSecurityAuditLog tearDown, ' \
+              'calling super tearDown'.format(self._testMethodName)
         super(TestSecurityAuditLog, self).tearDown()

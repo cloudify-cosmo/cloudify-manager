@@ -103,7 +103,8 @@ class BaseServerTestCase(unittest.TestCase):
         return client
 
     def setUp(self):
-        print 'starting base_test setUp for {0}'.format(self._testMethodName)
+        print '***** starting base_test setUp for {0}'\
+            .format(self._testMethodName)
         self.tmpdir = tempfile.mkdtemp()
         self.rest_service_log = tempfile.mkstemp()[1]
         self.securest_log_file = tempfile.mkstemp()[1]
@@ -134,14 +135,17 @@ class BaseServerTestCase(unittest.TestCase):
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
         self.client = self.create_client()
-        print 'completed base_test setUp for {0}'.format(self._testMethodName)
+        print '***** completed base_test setUp for {0}'\
+            .format(self._testMethodName)
 
     def tearDown(self):
-        print 'starting base_test tearDown for {0}'\
+        print '***** starting base_test tearDown for {0}'\
             .format(self._testMethodName)
         self.quiet_delete(self.rest_service_log)
         self.quiet_delete(self.securest_log_file)
         self.file_server.stop()
+        print '***** completed base_test tearDown for {0}' \
+            .format(self._testMethodName)
 
     def create_configuration(self):
         from manager_rest.config import Config
@@ -163,8 +167,6 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.securest_log_file = self.securest_log_file
         test_config.securest_log_file_size_MB = 100
         test_config.securest_log_files_backup_count = 20
-        print 'completed base_test tearDown for {0}' \
-            .format(self._testMethodName)
         return test_config
 
     def post(self, resource_path, data, query_params=None):
