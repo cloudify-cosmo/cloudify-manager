@@ -25,17 +25,8 @@ BASIC_AUTH_PREFIX = 'Basic '
 
 class SecurityTestBase(BaseServerTestCase):
 
-    def setUp(self):
-        print '***** starting test {0}, in SecurityTestBase setUp, ' \
-              'calling super setUp'.format(self._testMethodName)
-        super(SecurityTestBase, self).setUp()
-
-    def tearDown(self):
-        print '***** ending test {0}, in SecurityTestBase tearDown, ' \
-              'calling super tearDown'.format(self._testMethodName)
-        super(SecurityTestBase, self).tearDown()
-
-    def create_auth_header(self, username=None, password=None, token=None):
+    @staticmethod
+    def create_auth_header(username=None, password=None, token=None):
         header = None
         # using or to allow testing of username without password and vice-versa
         if username or password:

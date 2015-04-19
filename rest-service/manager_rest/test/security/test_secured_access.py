@@ -24,40 +24,40 @@ class SecurityTest(SecurityTestBase):
 
     def test_secured_client(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
-            self, username='user1', password='pass1'))
+            username='user1', password='pass1'))
         client.deployments.list()
 
     def test_wrong_credentials(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
-            self, username='user1', password='pass2'))
+            username='user1', password='pass2'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
 
     def test_missing_credentials(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
-            self, username=None, password=None))
+            username=None, password=None))
         self.assertRaises(CloudifyClientError, client.deployments.list)
 
     def test_missing_user(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
-            self, username=None, password='pass1'))
+            username=None, password='pass1'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
 
     def test_missing_password(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
-            self, username='user1', password=None))
+            username='user1', password=None))
         self.assertRaises(CloudifyClientError, client.deployments.list)
 
     def test_token_authentication(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
-            self, username='user1', password='pass1'))
+            username='user1', password='pass1'))
         token = client.tokens.get()
         client = self.create_client(SecurityTestBase.create_auth_header(
-            self, token=token.value))
+            token=token.value))
         client.blueprints.list()
 
     def test_secured_manager_blueprints_upload(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
-            self, username='user1', password='pass1'))
+            username='user1', password='pass1'))
 
         # the flask api client needs to be modified since it doesn't support
         # a bytes generator as "data" for file upload
@@ -69,13 +69,3 @@ class SecurityTest(SecurityTestBase):
 
         with patch.object(client._client.app, 'put', modified_put):
             client.blueprints.upload(self.get_mock_blueprint_path(), 'bp-id')
-
-    def setUp(self):
-        print '***** starting test {0}, in SecurityTest setUp, ' \
-              'calling super setUp'.format(self._testMethodName)
-        super(SecurityTest, self).setUp()
-
-    def tearDown(self):
-        print '***** ending test {0}, in SecurityTest tearDown, ' \
-              'calling super tearDown'.format(self._testMethodName)
-        super(SecurityTest, self).tearDown()
