@@ -31,6 +31,12 @@ BASIC_AUTH_PREFIX = 'Basic '
 
 class SecurityTestBase(BaseServerTestCase):
 
+    def setUp(self):
+        super(SecurityTestBase, self).setUp()
+
+    def tearDown(self):
+        super(SecurityTestBase, self).tearDown()
+
     def create_auth_header(self, username=None, password=None, token=None):
         header = None
         # using or to allow testing of username without password and vice-versa
@@ -152,6 +158,12 @@ class SecurityTest(SecurityTestBase):
         with patch.object(client._client.app, 'put', modified_put):
             client.blueprints.upload(self.get_mock_blueprint_path(), 'bp-id')
 
+    def setUp(self):
+        super(SecurityTest, self).setUp()
+
+    def tearDown(self):
+        super(SecurityTest, self).tearDown()
+
 
 class SecurityBypassTest(SecurityTestBase):
 
@@ -244,8 +256,17 @@ class SecurityBypassTest(SecurityTestBase):
 
         client._client._do_request = new_func
 
+    def setUp(self):
+        super(SecurityBypassTest, self).setUp()
+
+    def tearDown(self):
+        super(SecurityBypassTest, self).tearDown()
+
 
 class TestSecurityAuditLog(SecurityTestBase):
+
+    def setUp(self):
+        super(TestSecurityAuditLog, self).setUp()
 
     def create_configuration(self):
         test_config = super(TestSecurityAuditLog, self).create_configuration()
