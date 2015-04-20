@@ -2,7 +2,7 @@ import supervise
 
 DEFAULT_SERVICE_DIR = '/etc/service'
 UNKNOWN_SERVICE_EXCEPT_MSG = '[Errno 2] No such file or directory: \'' + \
-                             DEFAULT_SERVICE_DIR + '/{0}' + \
+                             DEFAULT_SERVICE_DIR + '/{0}' +\
                              '/supervise/status' + '\''
 supervise.DEFAULT_SERVICE_DIR = DEFAULT_SERVICE_DIR
 
@@ -30,7 +30,10 @@ def get_service_details(name):
     :param name: The service name
     :return: Service details.
     """
-    return {'instances': get_instance_properties(name)}
+    if is_service(name):
+        return {'instances': get_instance_properties(name)}
+    else:
+        return None
 
 
 def get_services(services):
@@ -42,14 +45,13 @@ def get_services(services):
     """
     output = []
     for service, name in services.items():
-        if is_service(service):
-            service_details = get_service_details(service)
-            display_name = {'display_name': name}
-            if service_details:
-                service_details.update(display_name)
-                output.append(service_details)
-            else:
-                output.append(display_name)
+        service_details = get_service_details(service)
+        display_name = {'display_name': name}
+        if service_details:
+            service_details.update(display_name)
+            output.append(service_details)
+        else:
+            output.append(display_name)
     return output
 
 
