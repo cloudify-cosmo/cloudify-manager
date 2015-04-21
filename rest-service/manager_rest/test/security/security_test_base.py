@@ -71,7 +71,7 @@ class SecurityTestBase(BaseServerTestCase):
                               'TokenAuthenticator',
             'properties': {
                 'secret_key': 'my_secret',
-                'expires_in': 600
+                'expires_in_seconds': 600
             }
         }
         test_config.securest_authentication_providers = [
