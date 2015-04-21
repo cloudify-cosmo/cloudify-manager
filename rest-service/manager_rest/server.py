@@ -45,7 +45,7 @@ def setup_app():
     app.logger_name = 'manager-rest'
     # setting up the app logger with a rotating file handler, in addition to
     #  the built-in flask logger which can be helpful in debug mode.
-    create_logger(logger_name=app.logger_name,
+    create_logger(logger_name=app.logger.name,
                   log_level=cfy_config.rest_service_log_level,
                   log_file=cfy_config.rest_service_log_path,
                   log_file_size_MB=cfy_config.rest_service_log_file_size_MB,
