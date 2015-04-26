@@ -218,8 +218,8 @@ def register_auth_token_generator(_app, auth_token_generator):
 
 
 def register_userstore_driver(secure_app, userstore_driver):
-    secure_app.logger.debug('registering userstore driver {0}'
-                            .format(userstore_driver))
+    secure_app.app.logger.debug('registering userstore driver {0}'
+                                .format(userstore_driver))
     userstore = utils.get_class_instance(userstore_driver['implementation'],
                                          userstore_driver['properties'])
     secure_app.set_userstore_driver(userstore)
@@ -228,8 +228,8 @@ def register_userstore_driver(secure_app, userstore_driver):
 def register_authentication_providers(secure_app, authentication_providers):
     # Note: the order of registration is important here
     for provider in authentication_providers:
-        secure_app.logger.debug('registering authentication provider {0}'
-                                .format(provider))
+        secure_app.app.logger.debug('registering authentication provider {0}'
+                                    .format(provider))
         auth_provider = utils.get_class_instance(provider['implementation'],
                                                  provider['properties'])
         secure_app.register_authentication_provider(provider['name'],
