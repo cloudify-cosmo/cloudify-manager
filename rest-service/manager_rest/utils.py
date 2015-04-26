@@ -50,7 +50,7 @@ def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,
 
     formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
                                       '[%(name)s] %(message)s',
-                                  datefmt='%H:%M:%S')
+                                  datefmt='%d/%m/%Y %H:%M:%S')
     for handler in handlers:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
