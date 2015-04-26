@@ -54,7 +54,7 @@ def setup_app():
 
     # secure the app according to manager configuration
     if cfy_config.secured_server:
-        app.logger.info('initializing application security')
+        app.logger.info('initializing rest-service security')
         init_secured_app(app)
 
     app.before_request(log_request)
@@ -228,8 +228,8 @@ def register_userstore_driver(secure_app, userstore_driver):
 def register_authentication_providers(secure_app, authentication_providers):
     # Note: the order of registration is important here
     for provider in authentication_providers:
-        secure_app.app.logger.debug('registering authentication provider '
-                                    '{0}'.format(provider))
+        secure_app.app.logger.debug('registering authentication provider {0}'
+                                    .format(provider))
         auth_provider = utils.get_class_instance(provider['implementation'],
                                                  provider['properties'])
         secure_app.register_authentication_provider(provider['name'],
