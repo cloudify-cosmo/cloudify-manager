@@ -196,7 +196,8 @@ def init_secured_app(_app):
     def unauthorized_user_handler():
         utils.abort_error(
             manager_exceptions.UnauthorizedError('user unauthorized'),
-            current_app.logger)
+            current_app.logger,
+            hide_server_message=True)
 
     secure_app.unauthorized_user_handler = unauthorized_user_handler
     if config.instance().security_bypass_port:

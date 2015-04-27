@@ -125,12 +125,15 @@ def get_class_instance(class_path, properties):
     return instance
 
 
-def abort_error(error, logger):
-
+def abort_error(error, logger, hide_server_message=False):
     logger.info('{0}: {1}'.format(type(error).__name__, str(error)))
-
     s_traceback = StringIO.StringIO()
-    traceback.print_exc(file=s_traceback)
+    if hide_server_message:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        traceback.print_tb(exc_traceback, file=s_traceback)
+    else:
+        traceback.print_exc(file=s_traceback)
+
     abort(error.http_code,
           message=str(error),
           error_code=error.error_code,
