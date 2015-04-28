@@ -15,7 +15,7 @@
 
 from mock import patch
 
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client.exceptions import UserUnauthorizedError
 
 from manager_rest.test.security.security_test_base import SecurityTestBase
 
@@ -30,22 +30,22 @@ class SecurityTest(SecurityTestBase):
     def test_wrong_credentials(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
             username='user1', password='pass2'))
-        self.assertRaises(CloudifyClientError, client.deployments.list)
+        self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_credentials(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
             username=None, password=None))
-        self.assertRaises(CloudifyClientError, client.deployments.list)
+        self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_user(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
             username=None, password='pass1'))
-        self.assertRaises(CloudifyClientError, client.deployments.list)
+        self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_password(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
             username='user1', password=None))
-        self.assertRaises(CloudifyClientError, client.deployments.list)
+        self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_token_authentication(self):
         client = self.create_client(SecurityTestBase.create_auth_header(
