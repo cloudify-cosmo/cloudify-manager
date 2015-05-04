@@ -26,13 +26,15 @@ if [ ! -f ${fs_mount_path} ]; then
 fi
 
 ctx logger info "Mounting file system ${filesys} on ${fs_mount_path}"
-sudo mount ${filesys} ${fs_mount_path} && MOUNT_OK=1
+sudo mount ${filesys} ${fs_mount_path}
+MOUNT_OK=1
 
 user=$(whoami)
 ctx logger info "Changing ownership of ${fs_mount_path} to ${user}"
 
 prev_fs_mount_path_owner=`stat -c %U ${fs_mount_path}`
-sudo chown -R ${user} ${fs_mount_path} && CHOWN_OK=1
+sudo chown -R ${user} ${fs_mount_path}
+CHOWN_OK=1
 
 ctx logger info "Adding mount point ${fs_mount_path} to file system table"
 echo ${filesys} ${fs_mount_path} ${fs_type} auto 0 0 | sudo tee --append /etc/fstab > /dev/null
