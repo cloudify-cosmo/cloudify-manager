@@ -58,7 +58,7 @@ def download_resource_on_host(logger, runner, url, destination_path):
         pass
     else:
         logger.debug('curl-ing {0} to {1}'.format(url, destination_path))
-        return runner.run('curl {0} -O {1}'.format(
+        return runner.run('curl {0} -o {1}'.format(
             url, destination_path))
     raise NonRecoverableError(
         'could not download resource ({0}), wget and curl not found'.format(
