@@ -6,10 +6,20 @@ fs_type=$(ctx source node properties fs_type)
 
 if [ ! -f ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
+elif which docker; then
+    docker_back=/tmp/docker_back
+    sudo mkdir ${docker_back}
+    sudo service docker stop
+    ctx logger info "Backing up existing docker files on ${fs_mount_path} to ${docker_back}"
+    sudo cp -a ${fs_mount_path}/. ${docker_back}
 fi
 
 ctx logger info "Mounting file system ${filesys} on ${fs_mount_path}"
 sudo mount ${filesys} ${fs_mount_path}
+if [ ! -z ${docker_back} ]; then
+    ctx logger info "Restoring docker files from local backup ${docker_back} to ${fs_mount_path}"
+    cp -a ${docker_back}/. ${fs_mount_path}
+fi
 
 user=$(whoami)
 ctx logger info "Changing ownership of ${fs_mount_path} to ${user}"
