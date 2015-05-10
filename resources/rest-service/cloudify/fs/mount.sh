@@ -4,7 +4,6 @@ fs_mount_path=$(ctx source node properties fs_mount_path)
 filesys=$(ctx source instance runtime-properties filesys)
 fs_type=$(ctx source node properties fs_type)
 
-ctx logger info "HERE0"
 if [ ! -d ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
 elif which docker; then
@@ -19,7 +18,7 @@ ctx logger info "Mounting file system ${filesys} on ${fs_mount_path}"
 sudo mount ${filesys} ${fs_mount_path}
 if [ ! -z ${docker_back} ]; then
     ctx logger info "Restoring docker files from local backup ${docker_back} to ${fs_mount_path}"
-    sudo cp -a ${docker_back}/. ${fs_mount_path}
+    sudo mv -v ${docker_back}/* ${fs_mount_path}
 fi
 
 user=$(whoami)
