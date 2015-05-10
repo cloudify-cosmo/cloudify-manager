@@ -4,6 +4,7 @@ fs_mount_path=$(ctx source node properties fs_mount_path)
 filesys=$(ctx source instance runtime-properties filesys)
 fs_type=$(ctx source node properties fs_type)
 
+ctx logger info "HERE0"
 if [ ! -f ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
     ctx logger info "HERE"
