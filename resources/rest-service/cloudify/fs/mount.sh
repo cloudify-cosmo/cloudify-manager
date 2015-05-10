@@ -5,11 +5,9 @@ filesys=$(ctx source instance runtime-properties filesys)
 fs_type=$(ctx source node properties fs_type)
 
 ctx logger info "HERE0"
-if [ ! -f ${fs_mount_path} ]; then
+if [ ! -d ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
-    ctx logger info "HERE"
 elif which docker; then
-    ctx logger info "HERE2"
     docker_back=/tmp/docker_back
     sudo mkdir ${docker_back}
     sudo service docker stop
