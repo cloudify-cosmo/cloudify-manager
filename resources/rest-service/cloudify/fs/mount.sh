@@ -18,7 +18,7 @@ ctx logger info "Mounting file system ${filesys} on ${fs_mount_path}"
 sudo mount ${filesys} ${fs_mount_path}
 if [ ! -z ${docker_back} ]; then
     ctx logger info "Restoring docker files from local backup ${docker_back} to ${fs_mount_path}"
-    cp -a ${docker_back}/. ${fs_mount_path}
+    sudo cp -a ${docker_back}/. ${fs_mount_path}
 fi
 
 user=$(whoami)
