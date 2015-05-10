@@ -6,7 +6,9 @@ fs_type=$(ctx source node properties fs_type)
 
 if [ ! -f ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
+    ctx logger info "HERE"
 elif which docker; then
+    ctx logger info "HERE2"
     docker_back=/tmp/docker_back
     sudo mkdir ${docker_back}
     sudo service docker stop
