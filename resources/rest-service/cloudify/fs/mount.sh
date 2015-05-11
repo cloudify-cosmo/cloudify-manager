@@ -34,4 +34,4 @@ ctx logger info "Adding mount point ${fs_mount_path} to file system table"
 echo ${filesys} ${fs_mount_path} ${fs_type} auto 0 0 | sudo tee --append /etc/fstab > /dev/null
 echo HERE5
 ctx logger info "Marking this instance as mounted"
-ctx instance source instance runtime-properties mounted_once "True"
+ctx source instance runtime-properties mounted_once "True"
