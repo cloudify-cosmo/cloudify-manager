@@ -3,12 +3,13 @@
 fs_mount_path=$(ctx source node properties fs_mount_path)
 filesys=$(ctx source instance runtime-properties filesys)
 fs_type=$(ctx source node properties fs_type)
+mounted_once=$(ctx instance runtime-properties mounted_once)
 
 if [ ! -d ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
-elif which docker; then
+elif which docker && -z ${mounted_once}; then
     docker_back=/tmp/docker_back
-    sudo mkdir ${docker_back}
+    sudo mkdir -p ${docker_back}
     sudo service docker stop
     ctx logger info "Backing up existing docker files on ${fs_mount_path} to ${docker_back}"
     sudo cp -a ${fs_mount_path}/. ${docker_back}
@@ -28,3 +29,5 @@ sudo chown -R ${user} ${fs_mount_path}
 
 ctx logger info "Adding mount point ${fs_mount_path} to file system table"
 echo ${filesys} ${fs_mount_path} ${fs_type} auto 0 0 | sudo tee --append /etc/fstab > /dev/null
+ctx logger info "Marking this instance as mounted"
+ctx instance runtime-properties mounted_once "True"
