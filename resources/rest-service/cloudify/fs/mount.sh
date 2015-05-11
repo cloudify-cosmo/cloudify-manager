@@ -4,7 +4,7 @@ fs_mount_path=$(ctx source node properties fs_mount_path)
 filesys=$(ctx source instance runtime-properties filesys)
 fs_type=$(ctx source node properties fs_type)
 echo HERE1
-mounted_once=$(ctx instance runtime-properties mounted_once)
+mounted_once=$(ctx source instance runtime-properties mounted_once)
 echo HERE2
 if [ ! -d ${fs_mount_path} ]; then
     echo HERE3
@@ -34,4 +34,4 @@ ctx logger info "Adding mount point ${fs_mount_path} to file system table"
 echo ${filesys} ${fs_mount_path} ${fs_type} auto 0 0 | sudo tee --append /etc/fstab > /dev/null
 echo HERE5
 ctx logger info "Marking this instance as mounted"
-ctx instance runtime-properties mounted_once "True"
+ctx instance source instance runtime-properties mounted_once "True"
