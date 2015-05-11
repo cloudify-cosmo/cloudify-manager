@@ -7,7 +7,7 @@ mounted_once=$(ctx instance runtime-properties mounted_once)
 
 if [ ! -d ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
-elif which docker && -z ${mounted_once}; then
+elif [ which docker && -z ${mounted_once} ]; then
     docker_back=/tmp/docker_back
     sudo mkdir -p ${docker_back}
     sudo service docker stop
