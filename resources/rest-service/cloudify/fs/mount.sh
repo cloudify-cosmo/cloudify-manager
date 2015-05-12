@@ -8,23 +8,24 @@ recovery_enabled=$(ctx source instance runtime-properties recovery_enabled)
 if [ ! -d ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
 elif which docker; then
+    ctx logger info "Stopping docker service"
     sudo service docker stop
     if [ -z ${recovery_enabled} ]; then
-        docker_back=/tmp/docker_back
-        sudo mkdir -p ${docker_back}
+        docker_files=/tmp/cfy_docker_files
+        sudo mkdir -p ${docker_files}
         sudo service docker stop
-        ctx logger info "Backing up existing docker files on ${fs_mount_path} to ${docker_back}"
-        sudo cp -a ${fs_mount_path}/. ${docker_back}
+        ctx logger info "Backing up existing docker files on ${fs_mount_path} to ${docker_files}"
+        sudo cp -a ${fs_mount_path}/. ${docker_files}
     fi
 fi
 
-
 ctx logger info "Mounting file system ${filesys} on ${fs_mount_path}"
 sudo mount ${filesys} ${fs_mount_path}
-if [ ! -z ${docker_back} ]; then
-    ctx logger info "Restoring docker files from local backup ${docker_back} to ${fs_mount_path}"
-    sudo cp -a ${docker_back}/. ${fs_mount_path}
-    sudo rm -rf ${docker_back}
+
+if [ ! -z ${docker_files} ]; then
+    ctx logger info "Restoring docker files from local backup ${docker_files} to ${fs_mount_path}"
+    sudo cp -a ${docker_files}/. ${fs_mount_path}
+    sudo rm -rf ${docker_files}
 fi
 
 user=$(whoami)
