@@ -13,7 +13,6 @@ elif which docker; then
     if [ -z ${recovery_enabled} ]; then
         docker_files=/tmp/cfy_docker_files
         sudo mkdir -p ${docker_files}
-        sudo service docker stop
         ctx logger info "Backing up existing docker files on ${fs_mount_path} to ${docker_files}"
         sudo cp -a ${fs_mount_path}/. ${docker_files}
     fi
