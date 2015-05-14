@@ -5,9 +5,13 @@ filesys=$(ctx source instance runtime-properties filesys)
 fs_type=$(ctx source node properties fs_type)
 ever_mounted=$(ctx source instance runtime-properties ever_mounted)
 
+ctx logger info "Checking whether docker is installed"
+which docker
+docker_installed=$?
+
 if [ ! -d ${fs_mount_path} ]; then
     sudo mkdir -p ${fs_mount_path}
-elif which docker; then
+elif [ docker_installed -ge 0 ]; then
     ctx logger info "Stopping docker service"
     sudo service docker stop
     if [ -z ${ever_mounted} ]; then
@@ -34,7 +38,7 @@ sudo chown -R ${user} ${fs_mount_path}
 ctx logger info "Adding mount point ${fs_mount_path} to file system table"
 echo ${filesys} ${fs_mount_path} ${fs_type} auto 0 0 | sudo tee --append /etc/fstab > /dev/null
 
-if which docker; then
+if [ docker_installed -ge 0 ]; then
     ctx logger info "Starting docker service"
     sudo service docker start
 fi
