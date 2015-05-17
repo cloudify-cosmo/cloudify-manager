@@ -6,7 +6,9 @@ fs_type=$(ctx source node properties fs_type)
 ever_mounted=$(ctx source instance runtime-properties ever_mounted)
 
 ctx logger info "Checking whether docker is installed"
+set +e
 which docker
+set -e
 docker_installed=$?
 
 if [ ! -d ${fs_mount_path} ]; then
