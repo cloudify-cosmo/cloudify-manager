@@ -157,59 +157,6 @@ node_types:
           implementation: agent.cloudify_agent.operations.install_plugins
           executor: host_agent
 
-    interfaces:
-      cloudify.interfaces.remote_cloudify_agent:
-
-        #####################################################
-        # Not supported for an installation without
-        # ---------------------------------------------------
-        # It will be executed on the manager and will connect
-        # to the agent via fabric/winrm
-        #####################################################
-
-        create:
-          implementation: agent.cloudify_agent.installer.operations.create
-          executor: central_deployment_agent
-
-        #####################################################
-        # This operation will create all the necessary
-        # configuration for the agent to be started.
-        # ---------------------------------------------------
-        # It will be executed on the manager and will connect
-        # to the agent via fabric/winrm
-        #####################################################
-
-        configure:
-          implementation: agent.cloudify_agent.installer.operations.configure
-          executor: central_deployment_agent
-
-        #####################################################
-        # This operation will restart the agent process
-        # whithout connecting to the remote host.
-        # the agent will have a new name after this
-        # operation, but will of course listen to the same
-        # queue.
-        # ---------------------------------------------------
-        # It will be executed on the agent host via the
-        # existing AMQP connection.
-        #####################################################
-
-        restart:
-          implementation: agent.cloudify_agent.operations.restart
-          executor: host_agent
-
-        #####################################################
-        # This operation will stop the agent process
-        # whithout connecting to the remote host.
-        # ---------------------------------------------------
-        # It will be executed on the agent host via the
-        # existing AMQP connection.
-        #####################################################
-
-        stop:
-          implementation: agent.cloudify_agent.operations.stop
-          executor: host_agent
-
       cloudify.interfaces.monitoring_agent:
         install: {}
         start: {}
