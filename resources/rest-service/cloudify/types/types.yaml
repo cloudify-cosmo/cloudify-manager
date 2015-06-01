@@ -29,24 +29,30 @@ node_types:
     derived_from: cloudify.nodes.Root
     properties:
       install_agent:
-        default: true
         description: |
-          Property indicating that this Compute node will be
+          Property for specifying that this Compute node will be
           running a cloudify agent.
-      remote_execution:
         default: true
+      remote_execution:
         description: |
-          Property indicating how will the cloudify agent be installed on
+          Property specifying how will the cloudify agent be installed on
           the Compute node. If the 'install_agent' property is false, this
           property is ignored since this node will not be running an agent.
           If 'install_agent' is true, this property should set to true in
           order for cloudify to remotely install the agent, and false if the
           agent installation process takes place outside the context of
           cloudify (e.g userdata)
+        default: true
       cloudify_agent:
         default: {}
       ip:
         default: ''
+      os:
+        description: |
+          Property specifying what type of operating system this compute node
+          will run.
+        default:
+          type: Linux
     interfaces:
       cloudify.interfaces.cloudify_agent:
 
@@ -156,6 +162,9 @@ node_types:
         install_plugins:
           implementation: agent.cloudify_agent.operations.install_plugins
           executor: host_agent
+
+      cloudify.interfaces.host:  # DEPRECATED
+        get_state: {}
 
       cloudify.interfaces.monitoring_agent:
         install: {}

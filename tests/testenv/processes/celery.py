@@ -105,7 +105,7 @@ class CeleryWorkerProcess(object):
             '--loglevel=debug',
             '--hostname={0}'.format(self.hostname),
             '--purge',
-            '--app=cloudify',
+            '--app=cloudify_agent.app.app',
             '--logfile={0}'.format(self.celery_log_file),
             '--pidfile={0}'.format(self.celery_pid_file),
             '--queues={0}'.format(self.queues),
@@ -205,15 +205,17 @@ class CeleryWorkerProcess(object):
 
         includes = []
 
-        for plugin_dir_name in os.walk(self.envdir).next()[1]:
-            for module_name in os.walk(os.path.join(
-                    self.envdir,
-                    plugin_dir_name)).next()[2]:
-                if '__init__' not in module_name:
-                    full_module_path = '{0}.{1}'\
-                        .format(plugin_dir_name,
-                                os.path.splitext(module_name)[0])
-                    includes.append(full_module_path)
+        for root, _, filenames in os.walk(self.envdir):
+            for filename in filenames:
+                file_path = os.path.join(root, filename)
+                if '__init__' in file_path:
+                    continue
+                if 'pyc' in file_path:
+                    continue
+                module = os.path.splitext(file_path)[0].replace(
+                    self.envdir, '').strip('/').replace('/', '.')
+                includes.append(module)
+
         return includes
 
 

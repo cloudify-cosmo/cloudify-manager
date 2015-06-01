@@ -38,6 +38,10 @@ PROVIDER_CONTEXT = {
         'workflows': {
             'task_retries': 0,
             'task_retry_interval': 0
+        },
+        'cloudify_agent': {
+            'user': 'dummy',
+            'agent_key_path': 'dummy'
         }
     }
 }
@@ -52,15 +56,6 @@ celery.conf.update(
 
 
 logger = setup_logger('testenv.utils')
-
-
-def task_exists(name, *args):
-    logger.info('task_exists invoked with : {0}'
-                .format(args))
-    if 'non_existent' in name:
-        logger.info('non_existent operation, raising NonRecoverableError')
-        raise NonRecoverableError('non_existent operation [{0}]'.format(name))
-    return True
 
 
 def deploy_application(dsl_path,
@@ -96,6 +91,24 @@ def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
     wait_for_deployment_creation_to_complete(
         deployment_id=deployment_id)
     return deployment
+
+
+def build_includes(directory):
+
+    includes = []
+
+    for root, _, filenames in os.walk(directory):
+        for filename in filenames:
+            file_path = os.path.join(root, filename)
+            if '__init__' in file_path:
+                continue
+            if 'pyc' in file_path:
+                continue
+            module = os.path.splitext(file_path)[0].replace(
+                directory, '').strip('/').replace('/', '.')
+            includes.append(module)
+
+    return includes
 
 
 def wait_for_deployment_creation_to_complete(
@@ -350,9 +363,9 @@ def update_storage(ctx):
         # TODO - the ctx in this case should include the plugin name
         # TODO - as if it was a remote task.
 
-        if ctx.task_name.startswith('worker_installer'):
+        if ctx.task_name.startswith('cloudify_agent.installer.operations'):
             plugin_name = 'agent_installer'
-        if ctx.task_name.startswith('plugin_installer'):
+        elif ctx.task_name.startswith('cloudify_agent.operations'):
             plugin_name = 'plugin_installer'
 
     storage_file_path = os.path.join(

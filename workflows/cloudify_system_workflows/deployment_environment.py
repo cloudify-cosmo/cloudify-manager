@@ -42,33 +42,44 @@ def create(ctx, **kwargs):
 
     # installing the operations worker
     sequence.add(
-        ctx.send_event('Installing deployment operations worker'),
+        ctx.send_event('Creating deployment operations worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.install'),
+            task_name='cloudify_agent.installer.operations.create'),
+        ctx.send_event('Configuring deployment operations worker'),
+        ctx.execute_task(
+            task_name='cloudify_agent.installer.operations.configure'),
         ctx.send_event('Starting deployment operations worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.start'))
+            task_name='cloudify_agent.installer.operations.start')
+    )
 
     if deployment_plugins:
         sequence.add(
             ctx.send_event('Installing deployment operations plugins'),
             ctx.execute_task(
                 task_queue=ctx.deployment.id,
-                task_name='plugin_installer.tasks.install',
-                kwargs={'plugins': deployment_plugins}),
+                task_target=ctx.deployment.id,
+                task_name='cloudify_agent.operations'
+                          '.install_plugins',
+                kwargs={'plugins': deployment_plugins},
+                local=False),
             ctx.execute_task(
-                task_name='worker_installer.tasks.restart',
+                task_name='cloudify_agent.installer.operations.restart',
                 send_task_events=False))
 
     # installing the workflows worker
     sequence.add(
-        ctx.send_event('Installing deployment workflows worker'),
+        ctx.send_event('Creating deployment workflows worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.install',
+            task_name='cloudify_agent.installer.operations.create',
+            kwargs=WORKFLOWS_WORKER_PAYLOAD),
+        ctx.send_event('Configuring deployment workflows worker'),
+        ctx.execute_task(
+            task_name='cloudify_agent.installer.operations.configure',
             kwargs=WORKFLOWS_WORKER_PAYLOAD),
         ctx.send_event('Starting deployment workflows worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.start',
+            task_name='cloudify_agent.installer.operations.start',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     if workflow_plugins:
@@ -76,10 +87,13 @@ def create(ctx, **kwargs):
             ctx.send_event('Installing deployment workflows plugins'),
             ctx.execute_task(
                 task_queue='{0}_workflows'.format(ctx.deployment.id),
-                task_name='plugin_installer.tasks.install',
-                kwargs={'plugins': workflow_plugins}),
+                task_target='{0}_workflows'.format(ctx.deployment.id),
+                task_name='cloudify_agent.operations'
+                          '.install_plugins',
+                kwargs={'plugins': workflow_plugins},
+                local=False),
             ctx.execute_task(
-                task_name='worker_installer.tasks.restart',
+                task_name='cloudify_agent.installer.operations.restart',
                 send_task_events=False,
                 kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
@@ -102,19 +116,19 @@ def delete(ctx, **kwargs):
         # uninstalling the operations worker
         ctx.send_event('Stopping deployment operations worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.stop'),
-        ctx.send_event('Uninstalling deployment operations worker'),
+            task_name='cloudify_agent.installer.operations.stop'),
+        ctx.send_event('Deleting deployment operations worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.uninstall'),
+            task_name='cloudify_agent.installer.operations.delete'),
 
         # uninstalling the workflows worker
         ctx.send_event('Stopping deployment workflows worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.stop',
+            task_name='cloudify_agent.installer.operations.stop',
             kwargs=WORKFLOWS_WORKER_PAYLOAD),
-        ctx.send_event('Uninstall deployment workflows worker'),
+        ctx.send_event('Deleting deployment workflows worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.uninstall',
+            task_name='cloudify_agent.installer.operations.delete',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     # Stop deployment policy engine core
