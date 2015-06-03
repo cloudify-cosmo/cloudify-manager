@@ -1,57 +1,5 @@
 #!/bin/bash -e
 
-test_plugins()
-{
-    echo "### Testing plugins..."
-    echo "### Creating agent package..."
-
-    mkdir -p package/linux
-    virtualenv package/linux/env
-    source package/linux/env/bin/activate
-
-    pip install testtools
-    pip install celery==3.1.17
-
-    pip install -r tests/dev-requirements.txt
-    pushd plugins/agent-installer && pip install . && popd
-    pushd plugins/windows-agent-installer && pip install . && popd
-    pushd plugins/plugin-installer && pip install . && popd
-    pushd plugins/windows-plugin-installer && pip install . && popd
-    pushd plugins/agent-installer/worker_installer/tests/mock-sudo-plugin && pip install . && popd
-    tar czf Ubuntu-agent.tar.gz package
-    rm -rf package
-
-    virtualenv ~/env
-    source ~/env/bin/activate
-
-    pip install testtools
-    pip install celery==3.1.17
-    pip install -r tests/dev-requirements.txt
-
-    pushd plugins/agent-installer && pip install . && popd
-    pushd plugins/plugin-installer && pip install . && popd
-    pushd plugins/windows-agent-installer; pip install .; popd
-    pushd plugins/windows-plugin-installer; pip install .; popd
-    pushd plugins/riemann-controller; pip install .; popd
-
-    echo "### Starting HTTP server for serving agent package (for agent installer tests)"
-    python -m SimpleHTTPServer 8000 &
-
-    pip install nose
-    pip install mock
-
-    nosetests plugins/plugin-installer/plugin_installer/tests --nologcapture --nocapture
-    nosetests plugins/windows-plugin-installer/windows_plugin_installer/tests --nologcapture --nocapture
-    nosetests plugins/windows-agent-installer/windows_agent_installer/tests --nologcapture --nocapture
-
-    echo "Defaults:travis  requiretty" | sudo tee -a /etc/sudoers
-    pushd plugins/agent-installer
-    nosetests worker_installer.tests.test_configuration:CeleryWorkerConfigurationTest --nologcapture --nocapture
-    nosetests worker_installer.tests.test_worker_installer:TestLocalInstallerCase --nologcapture --nocapture
-    nosetests worker_installer.tests.test_init:InitTest --nologcapture --nocapture
-    popd
-}
-
 test_rest_service()
 {
     echo "### Testing rest-service..."
@@ -122,16 +70,8 @@ run_flake8()
     flake8 tests/
 }
 
-run_plugin_installer_py26()
-{
-    pip install tox
-    cd plugins/plugin-installer && tox -e py26
-}
-
 case $1 in
-    test-plugins         ) test_plugins;;
     test-rest-service    ) test_rest_service;;
     run-integration-tests) run_intergration_tests;;
     flake8               ) run_flake8;;
-    plugin-installer-py26) run_plugin_installer_py26;;
 esac
