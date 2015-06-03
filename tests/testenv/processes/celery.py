@@ -203,7 +203,11 @@ class CeleryWorkerProcess(object):
 
     def _build_includes(self):
 
-        includes = []
+        includes = [
+            # this module will apply various monkey-patches
+            # to the process.
+            'testenv.mocks',
+        ]
 
         for root, _, filenames in os.walk(self.envdir):
             for filename in filenames:

@@ -13,18 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
-from mock import MagicMock
-
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify import ctx
-from cloudify.workflows import tasks
-
-from cloudify_agent.installer import linux
-from cloudify_agent.api.plugins import installer as plugin_installer
-from cloudify_agent.api import utils as api_utils
-from cloudify_agent.api import factory
 
 from testenv.utils import update_storage
 
@@ -43,8 +34,6 @@ def provision(**kwargs):
         if ctx.node.properties.get('test_ip'):
             ctx.instance.runtime_properties['ip'] = \
                 ctx.node.properties['test_ip']
-        else:
-            ctx.instance.runtime_properties['ip'] = 'dummy-ip'
         machines[ctx.instance.id] = NOT_RUNNING
         data['machines'] = machines
 

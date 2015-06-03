@@ -25,7 +25,6 @@ from contextlib import contextmanager
 from functools import wraps
 from celery import Celery
 from multiprocessing import Process
-from cloudify.exceptions import NonRecoverableError
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
@@ -38,10 +37,6 @@ PROVIDER_CONTEXT = {
         'workflows': {
             'task_retries': 0,
             'task_retry_interval': 0
-        },
-        'cloudify_agent': {
-            'user': 'dummy',
-            'agent_key_path': 'dummy'
         }
     }
 }
@@ -359,14 +354,8 @@ def update_storage(ctx):
     if plugin_name is None:
 
         # hack for tasks that are executed locally.
-        # TODO - Aren't these tasks also a part of a plugin?
-        # TODO - the ctx in this case should include the plugin name
-        # TODO - as if it was a remote task.
-
-        if ctx.task_name.startswith('cloudify_agent.installer.operations'):
-            plugin_name = 'agent_installer'
-        elif ctx.task_name.startswith('cloudify_agent.operations'):
-            plugin_name = 'plugin_installer'
+        if ctx.task_name.startswith('cloudify_agent'):
+            plugin_name = 'agent'
 
     storage_file_path = os.path.join(
         os.environ['TEST_WORKING_DIR'],

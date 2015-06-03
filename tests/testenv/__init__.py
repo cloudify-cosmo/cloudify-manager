@@ -254,12 +254,12 @@ class TestEnvironment(object):
                 'cloudify.plugins.workflows',
                 'diamond_agent.tasks',
                 'script_runner.tasks',
-                'cloudify_agent.installer.operations',
-                'cloudify_agent.operations',
 
-                # this module will apply various monkey-patches
-                # to the process.
-                'testenv.mocks',
+                # modules in the agent intended for backwards compatibility
+                'worker_installer.tasks',
+                'windows_agent_installer.tasks',
+                'plugin_installer.tasks',
+                'windows_plugin_installer.tasks',
             ],
 
             # we need higher concurrency since
