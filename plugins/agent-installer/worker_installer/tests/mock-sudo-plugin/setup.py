@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='mock-sudo-plugin',
-    version='3.2',
+    version='3.3a1',
     author='idanmo',
     author_email='idan@gigaspaces.com',
     packages=['sudo_plugin'],
