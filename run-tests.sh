@@ -60,10 +60,6 @@ run_flake8()
 {
     echo "### Running flake8..."
     pip install flake8
-    flake8 plugins/agent-installer/
-    flake8 plugins/windows-agent-installer/
-    flake8 plugins/plugin-installer/
-    flake8 plugins/windows-plugin-installer/
     flake8 plugins/riemann-controller/
     flake8 workflows/
     flake8 rest-service/
