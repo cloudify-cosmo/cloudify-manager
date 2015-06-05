@@ -138,3 +138,21 @@ def abort_error(error, logger, hide_server_message=False):
           message=str(error),
           error_code=error.error_code,
           server_traceback=s_traceback.getvalue())
+
+
+def poll_until(pollster, raiser,
+               expected_result=None,
+               sleep_time=5, timeout=100):
+    import time
+
+    times_counter = timeout/sleep_time
+
+    if not callable(pollster):
+        raise Exception("%s is not callable" % pollster.__name__)
+    while pollster() != expected_result:
+        if times_counter == 0:
+            if not callable(raiser):
+                raise Exception("%s is not callable" % raiser.__name__)
+            raiser()
+        times_counter -= 1
+        time.sleep(sleep_time)

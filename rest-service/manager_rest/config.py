@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
+
 
 class Config(object):
 
@@ -39,6 +41,8 @@ class Config(object):
         self._securest_log_files_backup_count = None
         self._securest_userstore_driver = None
         self._securest_authentication_providers = []
+        self._use_existing_workers = os.getenv(
+            "CLOUDIFY_USE_EXISTING_WORKERS", False)
 
     @property
     def db_address(self):
@@ -215,6 +219,10 @@ class Config(object):
     @securest_userstore_driver.setter
     def securest_userstore_driver(self, value):
         self._securest_userstore_driver = value
+
+    @property
+    def use_existing_workers(self):
+        return self._use_existing_workers
 
 
 _instance = Config()

@@ -51,3 +51,5 @@ riemann.log
 
 # vim
 *.swp
+*venv/
+.idea

@@ -24,9 +24,13 @@ WORKFLOWS_WORKER_PAYLOAD = {
 }
 
 
-@workflow
-def create(ctx, **kwargs):
-
+def _setup_plugins(ctx, **kwargs):
+    """
+        Setups common part for both `create` and `create wth acquire`
+        :param ctx:
+        :param kwargs:
+        :return:
+    """
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
@@ -40,15 +44,6 @@ def create(ctx, **kwargs):
     workflow_plugins = filter(lambda plugin: plugin['install'],
                               workflow_plugins)
 
-    # installing the operations worker
-    sequence.add(
-        ctx.send_event('Installing deployment operations worker'),
-        ctx.execute_task(
-            task_name='worker_installer.tasks.install'),
-        ctx.send_event('Starting deployment operations worker'),
-        ctx.execute_task(
-            task_name='worker_installer.tasks.start'))
-
     if deployment_plugins:
         sequence.add(
             ctx.send_event('Installing deployment operations plugins'),
@@ -59,17 +54,6 @@ def create(ctx, **kwargs):
             ctx.execute_task(
                 task_name='worker_installer.tasks.restart',
                 send_task_events=False))
-
-    # installing the workflows worker
-    sequence.add(
-        ctx.send_event('Installing deployment workflows worker'),
-        ctx.execute_task(
-            task_name='worker_installer.tasks.install',
-            kwargs=WORKFLOWS_WORKER_PAYLOAD),
-        ctx.send_event('Starting deployment workflows worker'),
-        ctx.execute_task(
-            task_name='worker_installer.tasks.start',
-            kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     if workflow_plugins:
         sequence.add(
@@ -89,12 +73,107 @@ def create(ctx, **kwargs):
         ctx.execute_task('riemann_controller.tasks.create',
                          kwargs=kwargs.get('policy_configuration', {})))
 
+    return graph, sequence
+
+
+@workflow
+def create_with_acquire(ctx, **kwargs):
+    """
+        Similar to `create` workflow but avoiding workers
+        installation just restarting them
+        :param ctx:
+        :param kwargs:
+        :return:
+    """
+    graph, sequence = _setup_plugins(ctx, **kwargs)
+
+    # acquiring the operations worker with start
+    sequence.add(
+        ctx.send_event('Starting deployment operations worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.start'))
+
+    # acquiring the workflow worker with start
+    sequence.add(
+        ctx.send_event('Starting deployment workflows worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.start',
+            kwargs=WORKFLOWS_WORKER_PAYLOAD))
+
     return graph.execute()
 
 
 @workflow
-def delete(ctx, **kwargs):
+def create(ctx, **kwargs):
+    """
+        Create workers once deployment environment is needed
+        :param ctx:
+        :param kwargs:
+        :return:
+    """
+    graph, sequence = _setup_plugins(ctx, **kwargs)
 
+    # installing the operations worker
+    sequence.add(
+        ctx.send_event('Installing deployment operations worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.install'),
+        ctx.send_event('Starting deployment operations worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.start'))
+
+    # installing the workflows worker
+    sequence.add(
+        ctx.send_event('Installing deployment workflows worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.install',
+            kwargs=WORKFLOWS_WORKER_PAYLOAD),
+        ctx.send_event('Starting deployment workflows worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.start',
+            kwargs=WORKFLOWS_WORKER_PAYLOAD))
+
+    return graph.execute()
+
+
+@workflow
+def delete_with_release(ctx, **kwargs):
+    """
+        Similar to `delete` workflow but avoiding workers
+        uninstalling just stopping them
+        :param ctx:
+        :param kwargs:
+        :return:
+    """
+    graph = ctx.graph_mode()
+    sequence = graph.sequence()
+
+    sequence.add(
+        # releasing the operations worker
+        ctx.send_event('Stopping deployment operations worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.stop'),
+
+        # releasing the workflows worker
+        ctx.send_event('Stopping deployment workflows worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.stop',
+            kwargs=WORKFLOWS_WORKER_PAYLOAD))
+
+    # Stop deployment policy engine core
+    sequence.add(
+        ctx.send_event('Stopping deployment policy engine core'),
+        ctx.execute_task('riemann_controller.tasks.delete'))
+
+
+@workflow
+def delete(ctx, **kwargs):
+    """
+        Delete workers once deployment environment is not needed
+        :param ctx:
+        :param kwargs:
+        :return:
+    """
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 

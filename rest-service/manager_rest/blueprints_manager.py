@@ -22,8 +22,10 @@ from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
+from manager_rest import config
 from manager_rest import models
 from manager_rest import manager_exceptions
+from manager_rest import utils
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.utils import maybe_register_teardown
@@ -197,7 +199,7 @@ class BlueprintsManager(object):
         If force is used, this method will request the abrupt and immediate
         termination of the executed workflow. This is valid for all
         workflows, regardless of whether they provide support for graceful
-        termination or not.
+        termination or not. Also deployment environment will be dropped off.
 
         Note that in either case, the execution is not yet cancelled upon
         returning from the method. Instead, it'll be in a 'cancelling' or
@@ -230,6 +232,13 @@ class BlueprintsManager(object):
             else models.Execution.FORCE_CANCELLING
         self.sm.update_execution_status(
             execution_id, new_status, '')
+
+        try:
+            self._delete_deployment_environment(execution.deployment_id)
+        except RuntimeError:
+            # current exception should not be critical to whole process
+            pass
+
         return self.get_execution(execution_id)
 
     def create_deployment(self, blueprint_id, deployment_id, inputs=None):
@@ -643,10 +652,19 @@ class BlueprintsManager(object):
                 '[status={1}]'.format(deployment_id, status))
 
     def _create_deployment_environment(self, deployment, deployment_plan, now):
+
         deployment_env_creation_task_id = str(uuid.uuid4())
         wf_id = 'create_deployment_environment'
-        deployment_env_creation_task_name = \
+
+        deployment_env_creation_task_name = (
+
             'cloudify_system_workflows.deployment_environment.create'
+
+            if not config.instance().use_existing_workers
+
+            else 'cloudify_system_workflows.deployment_environment.'
+                 'create_with_acquire'
+        )
 
         context = self._build_context_from_deployment(
             deployment, deployment_env_creation_task_id, wf_id,
@@ -675,11 +693,39 @@ class BlueprintsManager(object):
             parameters=self._get_only_user_execution_parameters(kwargs))
         self.sm.put_execution(new_execution.id, new_execution)
 
-        celery_client().execute_task(
-            deployment_env_creation_task_name,
-            'cloudify.management',
-            deployment_env_creation_task_id,
-            kwargs=kwargs)
+        celery_class = celery_client()
+        with celery_class() as cl:
+            deployment_env_creation_async_task = cl.execute_task(
+                deployment_env_creation_task_name,
+                'cloudify.management',
+                deployment_env_creation_task_id,
+                kwargs=kwargs)
+
+            def poll_execution_status():
+                deployment_env_creation_async_task.get(timeout=10,
+                                                       propagate=True)
+                # verify deployment environment creation completed successfully
+                execution = self.sm.get_execution(
+                    deployment_env_creation_task_id)
+                return execution.status in models.Execution.END_STATES
+
+            execution = self.sm.get_execution(
+                deployment_env_creation_task_id)
+
+            def raiser():
+                if execution.status != models.Execution.TERMINATED:
+                    raise RuntimeError(
+                        'Failed to create environment in time for deployment '
+                        '{0}'.format(execution.deployment_id))
+
+            try:
+                utils.poll_until(poll_execution_status,
+                                 raiser,
+                                 expected_result=True,
+                                 sleep_time=10,
+                                 timeout=300)
+            finally:
+                self._delete_deployment_environment(execution.deployment_id)
 
     @staticmethod
     def _build_context_from_deployment(deployment, task_id, wf_id,
@@ -699,8 +745,16 @@ class BlueprintsManager(object):
 
         deployment_env_deletion_task_id = str(uuid.uuid4())
         wf_id = 'delete_deployment_environment'
-        deployment_env_deletion_task_name = \
+
+        deployment_env_deletion_task_name = (
+
             'cloudify_system_workflows.deployment_environment.delete'
+
+            if not config.instance().use_existing_workers
+
+            else 'cloudify_system_workflows.deployment_environment.'
+                 'delete_with_release'
+        )
 
         context = self._build_context_from_deployment(
             deployment,
@@ -720,22 +774,25 @@ class BlueprintsManager(object):
             parameters=self._get_only_user_execution_parameters(kwargs))
         self.sm.put_execution(new_execution.id, new_execution)
 
-        deployment_env_deletion_task_async_result = \
-            celery_client().execute_task(
-                deployment_env_deletion_task_name,
-                'cloudify.management',
-                deployment_env_deletion_task_id,
-                kwargs=kwargs)
+        celery_class = celery_client()
+        with celery_class() as cl:
+            deployment_env_deletion_task_async_result = (
+                cl.execute_task(
+                    deployment_env_deletion_task_name,
+                    'cloudify.management',
+                    deployment_env_deletion_task_id,
+                    kwargs=kwargs))
 
-        # wait for deployment environment deletion to complete
-        deployment_env_deletion_task_async_result.get(timeout=300,
-                                                      propagate=True)
-        # verify deployment environment deletion completed successfully
-        execution = self.sm.get_execution(
-            deployment_env_deletion_task_id)
-        if execution.status != models.Execution.TERMINATED:
-            raise RuntimeError('Failed to delete environment for deployment '
-                               '{0}'.format(deployment_id))
+            # wait for deployment environment deletion to complete
+            deployment_env_deletion_task_async_result.get(timeout=300,
+                                                          propagate=True)
+            # verify deployment environment deletion completed successfully
+            execution = self.sm.get_execution(
+                deployment_env_deletion_task_id)
+            if execution.status != models.Execution.TERMINATED:
+                raise RuntimeError(
+                    'Failed to delete environment for deployment '
+                    '{0}'.format(deployment_id))
 
     @staticmethod
     def _get_only_user_execution_parameters(execution_parameters):

@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 
-from manager_rest.celery_client import celery_client as client
+from manager_rest.celery_client import celery_client
 
 
 class WorkflowClient(object):
@@ -36,10 +36,13 @@ class WorkflowClient(object):
             'execution_id': execution_id
         }
 
-        client().execute_task(task_name=task_name,
-                              task_queue=task_queue,
-                              task_id=execution_id,
-                              kwargs=execution_parameters)
+        celery_class = celery_client()
+        with celery_class() as cl:
+            cl.execute_task(
+                task_name=task_name,
+                task_queue=task_queue,
+                task_id=execution_id,
+                kwargs=execution_parameters)
 
 
 def workflow_client():
