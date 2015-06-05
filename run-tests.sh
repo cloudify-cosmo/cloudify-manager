@@ -3,7 +3,8 @@
 test_rest_service()
 {
     echo "### Testing rest-service..."
-    pushd rest-service && pip install . -r dev-requirements.txt && popd
+    pushd rest-service && pip install -r dev-requirements.txt && popd
+    pushd rest-service && pip install . && popd
     pip install nose
     nosetests rest-service/manager_rest/test --nologcapture --nocapture
 }
@@ -27,7 +28,8 @@ run_intergration_tests()
     sudo chmod 777 /dev/shm  # for celery worker
 
     pip install -r tests/dev-requirements.txt
-    pushd rest-service && pip install . -r dev-requirements.txt && popd
+    pushd rest-service && pip install -r dev-requirements.txt && popd
+    pushd rest-service && pip install . && popd
 
     # make utils and such
     # available as python packages
