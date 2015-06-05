@@ -24,12 +24,30 @@ TASK_STATE_RETRY = 'RETRY'
 TASK_STATE_FAILURE = 'FAILURE'
 
 
+class CeleryWrapper(Celery):
+
+    def __enter__(self):
+        self = super(CeleryWrapper, self).__enter__()
+        self.conf.update(CELERY_TASK_SERIALIZER="json")
+        return self
+
+
 class CeleryClient(object):
 
     def __init__(self):
-        amqp_uri = 'amqp://{0}'.format(config.instance().amqp_address)
-        self.celery = Celery(broker=amqp_uri, backend=amqp_uri)
-        self.celery.conf.update(CELERY_TASK_SERIALIZER="json")
+        """
+            Instantiate CeleryClient instance with
+            on-demand AMQP access connection
+
+        """
+        self.amqp_uri = 'amqp://{0}'.format(config.instance().amqp_address)
+
+    def __enter__(self):
+        self._current_instance = CeleryClient()
+        return self._current_instance
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self._current_instance
 
     def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
         """
@@ -42,10 +60,12 @@ class CeleryClient(object):
             :return: the celery task async result
         """
 
-        return self.celery.send_task(task_name,
-                                     queue=task_queue,
-                                     task_id=task_id,
-                                     kwargs=kwargs)
+        with CeleryWrapper(broker=self.amqp_uri,
+                           backend=self.amqp_uri) as cl:
+            return cl.send_task(task_name,
+                                queue=task_queue,
+                                task_id=task_id,
+                                kwargs=kwargs)
 
     def get_task_status(self, task_id):
         """
@@ -54,8 +74,9 @@ class CeleryClient(object):
             :param task_id: the task id
             :return: the task's celery status
         """
-        async_result = self.celery.AsyncResult(task_id)
-        return async_result.status
+        with CeleryWrapper(broker=self.amqp_uri,
+                           backend=self.amqp_uri) as cl:
+            return cl.AsyncResult(task_id).status
 
     def get_failed_task_error(self, task_id):
         """
@@ -64,13 +85,19 @@ class CeleryClient(object):
             :param task_id: the task id
             :return: the exception object
         """
-        async_result = self.celery.AsyncResult(task_id)
-        return async_result.result
+        with CeleryWrapper(broker=self.amqp_uri,
+                           backend=self.amqp_uri) as cl:
+            return cl.AsyncResult(task_id).result
 
 
 def celery_client():
+    """
+        Provides appropriate class for Celery workflow
+        :return: Celery client
+        :rtype CeleryClient
+    """
     if config.instance().test_mode:
         from test.mocks import MockCeleryClient
-        return MockCeleryClient()
+        return MockCeleryClient
     else:
-        return CeleryClient()
+        return CeleryClient
