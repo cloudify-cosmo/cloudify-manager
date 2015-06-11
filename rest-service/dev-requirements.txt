@@ -1,4 +1,4 @@
--e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@CFY-1546-refactoring#egg=cloudify-dsl-parser==3.3a1
+-e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@master#egg=cloudify-dsl-parser==3.3a1
 -e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.3a1
 -e git+https://github.com/cloudify-cosmo/flask-securest@0.6#egg=flask-securest==0.6
 
