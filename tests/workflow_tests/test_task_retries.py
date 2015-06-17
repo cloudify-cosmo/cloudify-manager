@@ -109,7 +109,8 @@ class TaskRetriesTest(TestCase):
         self.configure(retries=5, retry_interval=5)
         deployment_id = str(uuid.uuid4())
         deploy(resource('dsl/test-operation-retry-blueprint.yaml'),
-               deployment_id=deployment_id)
+               deployment_id=deployment_id,
+               timeout_seconds=240)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id
@@ -153,12 +154,15 @@ class TaskRetriesTest(TestCase):
         self.configure(retries=retries, retry_interval=retry_interval)
         deployment_id = str(uuid.uuid4())
         if expect_failure:
-            self.assertRaises(RuntimeError, deploy,
-                              dsl_path=resource(blueprint),
-                              deployment_id=deployment_id)
+            with self.assertRaises(RuntimeError):
+                deploy(
+                    dsl_path=resource(blueprint),
+                    deployment_id=deployment_id,
+                    timeout_seconds=240)
         else:
             deploy(resource(blueprint),
-                   deployment_id=deployment_id)
+                   deployment_id=deployment_id,
+                   timeout_seconds=240)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id
@@ -199,13 +203,16 @@ class ProcessModeTaskRetriesTest(ProcessModeTestCase):
                 deploy(
                     dsl_path=resource(blueprint),
                     deployment_id=deployment_id,
+                    timeout_seconds=240,
                     inputs=inputs)
             self.assertIn('Failing task on user defined exception',
                           str(cm.exception))
         else:
-            deploy(resource(blueprint),
-                   deployment_id=deployment_id,
-                   inputs=inputs)
+            deploy(
+                resource(blueprint),
+                deployment_id=deployment_id,
+                timeout_seconds=240,
+                inputs=inputs)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id

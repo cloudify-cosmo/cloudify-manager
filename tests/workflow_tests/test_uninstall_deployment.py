@@ -118,7 +118,7 @@ class TestUninstallDeployment(TestCase):
 
     def test_failed_uninstall_task(self):
         dsl_path = resource('dsl/basic_stop_error.yaml')
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = deploy(dsl_path, timeout_seconds=240)
         deployment_id = deployment.id
         undeploy(deployment_id)
 

@@ -345,10 +345,13 @@ class TestEnvironment(object):
         self.delete_working_directory()
 
     def delete_working_directory(self):
-        if os.path.exists(self.test_working_dir):
-            logger.info('Deleting test environment from: %s',
-                        self.test_working_dir)
-            shutil.rmtree(self.test_working_dir, ignore_errors=True)
+        if not os.getenv('KEEP_TESTENV_LOGS', False):
+            if os.path.exists(self.test_working_dir):
+                logger.info('Deleting test environment from: %s',
+                            self.test_working_dir)
+                shutil.rmtree(self.test_working_dir, ignore_errors=True)
+        else:
+            logger.info("Keeping logs due to ${KEEP_TESTENV_LOGS}")
 
     def handle_logs(self, output, event):
         pass

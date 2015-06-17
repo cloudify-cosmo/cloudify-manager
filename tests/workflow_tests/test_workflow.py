@@ -170,7 +170,7 @@ class BasicWorkflowsTest(TestCase):
         result = self.client.search.run_query({})
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
-        self.assertEquals(7, len(hits))
+        self.assertEquals(8, len(hits))
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
@@ -612,13 +612,13 @@ class BasicWorkflowsTest(TestCase):
                                     deployment_id=deployment.id)
 
         # assert both deployment and workflows plugins
-        # were installed, started and restarted
+        # were installed, started and stopped and started again if needed
         # this is because we both install a custom
         # workflow and a deployment plugin
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['installed', 'started', 'restarted'])
+                         ['installed', 'started', 'stopped', 'started'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['installed', 'started', 'restarted'])
+                         ['installed', 'started', 'stopped', 'started'])
 
         # assert plugin installer installed
         # the necessary plugins.
@@ -650,11 +650,11 @@ class BasicWorkflowsTest(TestCase):
         # assert both deployment and workflows plugins
         # were stopped and uninstalled
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['installed', 'started', 'restarted',
-                          'stopped', 'uninstalled'])
+                         ['installed', 'started', 'stopped',
+                          'started', 'started', 'stopped', 'uninstalled'])
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['installed', 'started', 'restarted',
-                          'stopped', 'uninstalled'])
+                         ['installed', 'started', 'stopped',
+                          'started', 'started', 'stopped', 'uninstalled'])
 
         self.assertFalse(_is_riemann_core_up())
 

@@ -71,7 +71,17 @@ class ExecutionsTest(TestCase):
             plugin_name='testmockoperations',
             deployment_id=deployment_id
         )
-        self.assertEqual(data, {})
+        # Such assert is needed because it may appear that execution
+        # workflow may run pollster for
+        # 'initiate_deployment_environment' workflow
+        if data == {}:
+            self.assertEqual(data, {})
+        else:
+            self.assertEqual(data,
+                             {
+                                 'mock_operation_invocation':
+                                     [{'before-sleep': None}]
+                             })
 
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")
@@ -80,15 +90,15 @@ class ExecutionsTest(TestCase):
         def assertions():
             deployments_executions = self.client.executions.list(
                 deployment_id=deployment.id)
-            # expecting 2 executions (1 for deployment environment
-            # creation and 1 execution of 'install'). Checking the install
+            # expecting 3 executions (1 for deployment environment
+            # creation, second for initialization
+            #  and 1 execution of 'install'). Checking the install
             # execution's status
-            self.assertEquals(2, len(deployments_executions))
-            self.assertIn(execution_id, [deployments_executions[0].id,
-                                         deployments_executions[1].id])
-            install_execution = \
-                deployments_executions[0] if execution_id == \
-                deployments_executions[0].id else deployments_executions[1]
+            self.assertEquals(3, len(deployments_executions))
+            self.assertIn(execution_id, [
+                _d.id for _d in deployments_executions])
+            install_execution = [_d for _d in deployments_executions
+                                 if _d.id == execution_id].pop(0)
             self.assertEquals(Execution.TERMINATED, install_execution.status)
             self.assertEquals('', install_execution.error)
 
