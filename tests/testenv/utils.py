@@ -131,9 +131,13 @@ def execute_workflow(workflow_name, deployment_id,
     A blocking method which runs the requested workflow
     """
     client = create_rest_client()
-
-    execution = client.executions.start(deployment_id, workflow_name,
-                                        parameters=parameters or {})
+    wait_to_finish_all_executions(
+        deployment_id,
+        timeout_seconds=timeout_seconds)
+    execution = client.executions.start(
+        deployment_id,
+        workflow_name,
+        parameters=parameters or {})
 
     if wait_for_execution:
         wait_for_execution_to_end(execution,
@@ -147,17 +151,30 @@ def verify_deployment_environment_creation_complete(deployment_id):
     # complete
     client = create_rest_client()
     execs = client.executions.list(deployment_id)
-    if not execs \
-            or execs[0].status != Execution.TERMINATED \
-            or execs[0].workflow_id != 'create_deployment_environment':
-        from testenv import TestEnvironment  # avoid cyclic import
-        logs = TestEnvironment.read_celery_management_logs() or ''
-        logs = logs[len(logs) - 100000:]
-        raise RuntimeError(
-            "Expected a single execution for workflow "
-            "'create_deployment_environment' with status 'terminated'; "
-            "Found these executions instead: {0}.\nCelery log:\n{1}".format(
-                json.dumps(execs, indent=2), logs))
+    for execution in execs:
+        if (not execution or execution.status != Execution.TERMINATED or
+                execution.workflow_id != 'create_deployment_environment'):
+            from testenv import TestEnvironment  # avoid cyclic import
+            logs = TestEnvironment.read_celery_management_logs() or ''
+            logs = logs[len(logs) - 100000:]
+            raise RuntimeError(
+                "Expected a single execution for workflow "
+                "'create_deployment_environment' with status 'terminated'; "
+                "Found these executions instead:"
+                "{0}.\nCelery log:\n{1}".format(
+                    json.dumps(execs, indent=2), logs))
+
+
+def wait_to_finish_all_executions(deployment_id, timeout_seconds=240):
+
+    client = create_rest_client()
+    previous_executions = client.executions.list(deployment_id)
+    for _execution in previous_executions:
+        try:
+            wait_for_execution_to_end(
+                _execution, timeout_seconds=timeout_seconds)
+        except BaseException as e:
+            print(str(e))
 
 
 def undeploy_application(deployment_id,
@@ -168,6 +185,8 @@ def undeploy_application(deployment_id,
     path.
     """
     client = create_rest_client()
+    wait_to_finish_all_executions(
+        deployment_id, timeout_seconds=timeout_seconds)
     execution = client.executions.start(deployment_id,
                                         'uninstall')
     wait_for_execution_to_end(execution, timeout_seconds=timeout_seconds)
@@ -207,7 +226,7 @@ def get_resource(resource):
 
 def wait_for_execution_to_end(execution, timeout_seconds=240):
     client = create_rest_client()
-    deadline = time.time() + timeout_seconds
+    deadline = time.time() + timeout_seconds * 5
     while execution.status not in Execution.END_STATES:
         time.sleep(0.5)
         execution = client.executions.get(execution.id)
@@ -360,18 +379,21 @@ def update_storage(ctx):
         'plugins-storage',
         '{0}.json'.format(plugin_name)
     )
+    print("Storage file path %s" % storage_file_path)
 
     # create storage file
     # if it doesn't exist
     if not os.path.exists(storage_file_path):
-        f = open(storage_file_path, 'w')
-        json.dump({}, f)
+        with open(storage_file_path, 'w') as f:
+            json.dump({}, f)
 
     with open(storage_file_path, 'r') as f:
         data = json.load(f)
         if deployment_id not in data:
             data[deployment_id] = {}
+
         yield data.get(deployment_id)
+
     with open(storage_file_path, 'w') as f:
         json.dump(data, f, indent=2)
         f.write(os.linesep)

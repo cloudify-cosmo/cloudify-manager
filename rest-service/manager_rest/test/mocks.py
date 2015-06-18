@@ -23,6 +23,13 @@ def task_state():
 
 class MockCeleryClient(object):
 
+    def __enter__(self):
+        self.current_instance = MockCeleryClient()
+        return self.current_instance
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        del self.current_instance
+
     def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
         get_storage_manager().update_execution_status(task_id,
                                                       task_state(),

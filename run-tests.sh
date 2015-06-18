@@ -65,14 +65,20 @@ run_intergration_tests()
     echo "### Running integration tests..."
     sudo apt-get update && sudo apt-get install -qy python-dbus
     dpkg -L python-dbus
-    #sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
-    #sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
-    wget http://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb
+
+    if [ ! -f "elasticsearch-1.3.2.deb" ]; then
+        wget http://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb
+    fi
+
     sudo dpkg -i elasticsearch-1.3.2.deb
     export PATH=/usr/share/elasticsearch/bin:$PATH
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
-    wget http://aphyr.com/riemann/riemann_0.2.6_all.deb
+
+    if [ ! -f "riemann_0.2.6_all.deb" ]; then
+        wget http://aphyr.com/riemann/riemann_0.2.6_all.deb
+    fi
+
     sudo dpkg -i riemann_0.2.6_all.deb
     sudo test -d /dev/shm && sudo rm -rf /dev/shm
     sudo ln -Tsf /{run,dev}/shm
@@ -128,10 +134,23 @@ run_plugin_installer_py26()
     cd plugins/plugin-installer && tox -e py26
 }
 
+print_usage()
+{
+    echo -e "Usage: ./run-tests [OPTION]                            Description
+        -------------------                            -----------
+       ./run-tests test-plugins               Runs tests against plugins code\n
+                   test-rest-service          Runs tests against ReST service\n
+                   run-integration-tests      Runs integration tests\n
+                   flake8                     Runs PEP8 codestyle checks\n
+                   plugin-installer-py26      Runs tests against plugin installer\n
+    "
+}
+
 case $1 in
     test-plugins         ) test_plugins;;
     test-rest-service    ) test_rest_service;;
     run-integration-tests) run_intergration_tests;;
     flake8               ) run_flake8;;
     plugin-installer-py26) run_plugin_installer_py26;;
+                        *) print_usage;;
 esac

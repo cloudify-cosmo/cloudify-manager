@@ -161,8 +161,8 @@ class RestAPITest(TestCase):
             deployment_by_id.id)
 
         self.assertEqual(len(executions),
-                         2,
-                         'There should be 2 executions but are: {0}'.format(
+                         3,
+                         'There should be 3 executions but are: {0}'.format(
                              executions))
         execution_from_list = executions[0]
         execution_by_id = self.client.executions.get(execution_from_list.id)

@@ -25,6 +25,50 @@ WORKFLOWS_WORKER_PAYLOAD = {
 
 
 @workflow
+def stop(ctx, **kwargs):
+
+    graph = ctx.graph_mode()
+    sequence = graph.sequence()
+
+    sequence.add(
+        # stopping the operations worker
+        ctx.send_event('Stopping deployment operations worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.stop'),
+
+        # stopping the deployment worker
+        ctx.send_event('Stopping deployment workflows worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.stop',
+            kwargs=WORKFLOWS_WORKER_PAYLOAD),)
+
+    return graph.execute()
+
+
+@workflow
+def start(ctx, **kwargs):
+
+    graph = ctx.graph_mode()
+    sequence = graph.sequence()
+
+    # installing the operations worker
+    sequence.add(
+        ctx.send_event('Start deployment operations worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.start'))
+
+    # installing the workflows worker
+    sequence.add(
+        ctx.send_event('Starting deployment workflows worker'),
+        ctx.execute_task(
+            task_name='worker_installer.tasks.start',
+            kwargs=WORKFLOWS_WORKER_PAYLOAD),
+    )
+
+    return graph.execute()
+
+
+@workflow
 def create(ctx, **kwargs):
 
     graph = ctx.graph_mode()
@@ -44,44 +88,54 @@ def create(ctx, **kwargs):
     sequence.add(
         ctx.send_event('Installing deployment operations worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.install'),
-        ctx.send_event('Starting deployment operations worker'),
-        ctx.execute_task(
-            task_name='worker_installer.tasks.start'))
-
-    if deployment_plugins:
-        sequence.add(
-            ctx.send_event('Installing deployment operations plugins'),
-            ctx.execute_task(
-                task_queue=ctx.deployment.id,
-                task_name='plugin_installer.tasks.install',
-                kwargs={'plugins': deployment_plugins}),
-            ctx.execute_task(
-                task_name='worker_installer.tasks.restart',
-                send_task_events=False))
+            task_name='worker_installer.tasks.install')
+    )
 
     # installing the workflows worker
     sequence.add(
         ctx.send_event('Installing deployment workflows worker'),
         ctx.execute_task(
             task_name='worker_installer.tasks.install',
-            kwargs=WORKFLOWS_WORKER_PAYLOAD),
-        ctx.send_event('Starting deployment workflows worker'),
-        ctx.execute_task(
-            task_name='worker_installer.tasks.start',
-            kwargs=WORKFLOWS_WORKER_PAYLOAD))
+            kwargs=WORKFLOWS_WORKER_PAYLOAD)
+    )
+
+    if deployment_plugins:
+        sequence.add(
+
+            ctx.send_event('Starting deployment operations worker'),
+            ctx.execute_task(
+                task_name='worker_installer.tasks.start'),
+
+            ctx.send_event('Installing deployment operations plugins'),
+            ctx.execute_task(
+                task_queue=ctx.deployment.id,
+                task_name='plugin_installer.tasks.install',
+                kwargs={'plugins': deployment_plugins}),
+
+            ctx.send_event('Stopping deployment operations worker'),
+            ctx.execute_task(
+                task_name='worker_installer.tasks.stop')
+        )
 
     if workflow_plugins:
         sequence.add(
+
+            ctx.send_event('Starting deployment workflows worker'),
+            ctx.execute_task(
+                task_name='worker_installer.tasks.start',
+                kwargs=WORKFLOWS_WORKER_PAYLOAD),
+
             ctx.send_event('Installing deployment workflows plugins'),
             ctx.execute_task(
                 task_queue='{0}_workflows'.format(ctx.deployment.id),
                 task_name='plugin_installer.tasks.install',
                 kwargs={'plugins': workflow_plugins}),
+
+            ctx.send_event('Stopping deployment workflows worker'),
             ctx.execute_task(
-                task_name='worker_installer.tasks.restart',
-                send_task_events=False,
-                kwargs=WORKFLOWS_WORKER_PAYLOAD))
+                task_name='worker_installer.tasks.stop',
+                kwargs=WORKFLOWS_WORKER_PAYLOAD),
+        )
 
     # Start deployment policy engine core
     sequence.add(

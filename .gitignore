@@ -51,3 +51,8 @@ riemann.log
 
 # vim
 *.swp
+*venv/
+.idea
+
+*.deb
+rest-service/src/
