@@ -90,11 +90,10 @@ class ExecutionsTest(TestCase):
         def assertions():
             deployments_executions = self.client.executions.list(
                 deployment_id=deployment.id)
-            # expecting 3 executions (1 for deployment environment
-            # creation, second for initialization
-            #  and 1 execution of 'install'). Checking the install
-            # execution's status
-            self.assertEquals(3, len(deployments_executions))
+            # Expecting 2 executions (1 for deployment environment
+            # creation and 1 execution of 'install').
+            # Checking the install execution's status.
+            self.assertEquals(2, len(deployments_executions))
             self.assertIn(execution_id, [
                 _d.id for _d in deployments_executions])
             install_execution = [_d for _d in deployments_executions

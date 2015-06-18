@@ -31,9 +31,12 @@ def stop(ctx, **kwargs):
     sequence = graph.sequence()
 
     sequence.add(
+        # stopping the operations worker
         ctx.send_event('Stopping deployment operations worker'),
         ctx.execute_task(
             task_name='worker_installer.tasks.stop'),
+
+        # stopping the deployment worker
         ctx.send_event('Stopping deployment workflows worker'),
         ctx.execute_task(
             task_name='worker_installer.tasks.stop',
@@ -43,7 +46,7 @@ def stop(ctx, **kwargs):
 
 
 @workflow
-def initiate(ctx, **kwargs):
+def start(ctx, **kwargs):
 
     graph = ctx.graph_mode()
     sequence = graph.sequence()

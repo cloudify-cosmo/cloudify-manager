@@ -679,17 +679,43 @@ class ExecutionsId(SecuredResource):
         """
         Update execution status by id
         """
+        _system_workflow_ids = [
+            "create_deployment_environment",
+            "delete_deployment_environment",
+            "start_deployment_environment",
+            "stop_deployment_environment",
+        ]
+
+        _start_stop_workflow_ids = [
+            "start_deployment_environment",
+            "stop_deployment_environment",
+        ]
+
         verify_json_content_type()
         request_json = request.json
         verify_parameter_in_request_body('status', request_json)
+        sm = get_storage_manager()
 
-        get_storage_manager().update_execution_status(
+        sm.update_execution_status(
             execution_id,
             request_json['status'],
             request_json.get('error', ''))
 
-        return responses.Execution(**get_storage_manager().get_execution(
-            execution_id).to_dict())
+        execution = sm.get_execution(
+            execution_id).to_dict()
+        workflow_id = execution['workflow_id']
+
+        if (workflow_id in _start_stop_workflow_ids and
+                execution['status'] in models.Execution.END_STATES):
+            sm.delete_execution(execution_id)
+
+        if (workflow_id not in _system_workflow_ids and
+                execution['status'] in models.Execution.END_STATES):
+
+            get_blueprints_manager().stop_deployment_environment(
+                execution['deployment_id'])
+
+        return responses.Execution(**execution)
 
 
 class Deployments(SecuredResource):

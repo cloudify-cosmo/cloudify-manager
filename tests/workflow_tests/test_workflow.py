@@ -33,6 +33,7 @@ from testenv.utils import verify_deployment_environment_creation_complete
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
 from testenv.utils import wait_for_url
+from testenv.utils import wait_to_finish_all_executions
 
 
 class BasicWorkflowsTest(TestCase):
@@ -330,13 +331,14 @@ class BasicWorkflowsTest(TestCase):
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
         try:
+            wait_to_finish_all_executions(deployment_id)
             self.client.deployments.delete(deployment_id)
             self.fail("Deleted deployment {0} successfully even though it "
                       "should have had live nodes and the ignore_live_nodes "
                       "flag was set to False".format(deployment_id))
-        except CloudifyClientError, e:
+        except CloudifyClientError as e:
+            print(str(e))
             self.assertTrue('live nodes' in str(e))
-
         # deleting deployment - this time there's no execution running,
         # and using the ignore_live_nodes parameter to force deletion
         deleted_deployment_id = self.client.deployments.delete(
@@ -590,6 +592,7 @@ class BasicWorkflowsTest(TestCase):
             'dsl/basic_with_deployment_plugin_and_workflow_plugin.yaml'
         )
         deployment, _ = deploy(dsl_path)
+        wait_to_finish_all_executions(deployment.id)
 
         def _is_riemann_core_up():
             try:
@@ -615,10 +618,12 @@ class BasicWorkflowsTest(TestCase):
         # were installed, started and stopped and started again if needed
         # this is because we both install a custom
         # workflow and a deployment plugin
+        workflows = ['installed', 'started', 'stopped',
+                     'started', 'stopped']
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['installed', 'started', 'stopped', 'started'])
+                         workflows)
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['installed', 'started', 'stopped', 'started'])
+                         workflows)
 
         # assert plugin installer installed
         # the necessary plugins.
@@ -649,12 +654,16 @@ class BasicWorkflowsTest(TestCase):
 
         # assert both deployment and workflows plugins
         # were stopped and uninstalled
+        workflows = ['installed', 'started',
+                     'stopped', 'started',
+                     'stopped', 'started',
+                     'stopped', 'stopped',
+                     'uninstalled']
+        print(data[deployment_operations_worker_name]['states'])
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['installed', 'started', 'stopped',
-                          'started', 'started', 'stopped', 'uninstalled'])
+                         workflows)
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['installed', 'started', 'stopped',
-                          'started', 'started', 'stopped', 'uninstalled'])
+                         workflows)
 
         self.assertFalse(_is_riemann_core_up())
 

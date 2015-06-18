@@ -29,7 +29,7 @@ from testenv.utils import execute_workflow
 
 
 class PoliciesTestsBase(TestCase):
-    NUM_OF_INITIAL_WORKFLOWS = 3
+    NUM_OF_INITIAL_WORKFLOWS = 5
     # In test's blueprint set this value decreased by 1 (1s safety time buffer)
     MIN_INTERVAL_BETWEEN_WORKFLOWS = 2
 
@@ -57,6 +57,8 @@ class PoliciesTestsBase(TestCase):
         def assertion():
             executions = self.client.executions.list(
                 deployment_id=self.deployment.id)
+            print("Current number of executions %s" % len(executions))
+            print("Expected number of executions %s" % expected_count)
             self.assertTrue(len(executions) <= expected_count)
         self.do_assertions(assertion)
 
@@ -525,14 +527,14 @@ class TestAutohealPolicies(PoliciesTestsBase):
         execute_workflow('uninstall', self.deployment.id)
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 5)
 
     def test_workflow_gets_triggered_with_isstarted_check_turned_off(self):
         self.launch_deployment('dsl/isstarted_check_turned_off.yaml')
         execute_workflow('uninstall', self.deployment.id)
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 4)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 5)
         self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
 
     def test_autoheal_policy_nested_nodes(self):

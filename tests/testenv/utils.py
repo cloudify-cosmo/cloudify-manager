@@ -170,8 +170,11 @@ def wait_to_finish_all_executions(deployment_id, timeout_seconds=240):
     client = create_rest_client()
     previous_executions = client.executions.list(deployment_id)
     for _execution in previous_executions:
-        wait_for_execution_to_end(
-            _execution, timeout_seconds=timeout_seconds)
+        try:
+            wait_for_execution_to_end(
+                _execution, timeout_seconds=timeout_seconds)
+        except BaseException as e:
+            print(str(e))
 
 
 def undeploy_application(deployment_id,
@@ -376,18 +379,21 @@ def update_storage(ctx):
         'plugins-storage',
         '{0}.json'.format(plugin_name)
     )
+    print("Storage file path %s" % storage_file_path)
 
     # create storage file
     # if it doesn't exist
     if not os.path.exists(storage_file_path):
-        f = open(storage_file_path, 'w')
-        json.dump({}, f)
+        with open(storage_file_path, 'w') as f:
+            json.dump({}, f)
 
     with open(storage_file_path, 'r') as f:
         data = json.load(f)
         if deployment_id not in data:
             data[deployment_id] = {}
+
         yield data.get(deployment_id)
+
     with open(storage_file_path, 'w') as f:
         json.dump(data, f, indent=2)
         f.write(os.linesep)

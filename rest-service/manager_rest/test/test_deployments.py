@@ -122,8 +122,6 @@ class DeploymentsTestCase(BaseServerTestCase):
         expected_execution_names = sorted([
             'create_deployment_environment',
             'install',
-            'initiate_deployment_environment'
-
         ])
         for workflow in expected_execution_names:
             self.assertIn(workflow, execution_names)

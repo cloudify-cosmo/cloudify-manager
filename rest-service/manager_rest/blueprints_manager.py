@@ -130,7 +130,7 @@ class BlueprintsManager(object):
         self._delete_deployment_environment(deployment_id)
         return self.sm.delete_deployment(deployment_id)
 
-    def _initiate_deployment_environment(self, deployment, parameters=None):
+    def start_deployment_environment(self, deployment, parameters=None):
         """
             Sends task to celery workers to
             start workflow and deployment workers
@@ -138,10 +138,10 @@ class BlueprintsManager(object):
             :return:
         """
         deployment_env_init_task_name = (
-            'cloudify_system_workflows.deployment_environment.initiate'
+            'cloudify_system_workflows.deployment_environment.start'
         )
         deployment_env_init_task_id = str(uuid.uuid4())
-        wf_id = "initiate_deployment_environment"
+        wf_id = "start_deployment_environment"
         context = self._build_context_from_deployment(
             deployment,
             deployment_env_init_task_id,
@@ -176,6 +176,46 @@ class BlueprintsManager(object):
             initiate_task.get(timeout=300,
                               propagate=True)
 
+    def stop_deployment_environment(self, deployment_id):
+        """
+            Sends task to celery workers to
+            stop workflow and deployment workers
+            :param deployment_id: Deployment ID
+            :return:
+        """
+        deployment = self.sm.get_deployment(deployment_id)
+        deployment_env_stop_task_name = (
+            'cloudify_system_workflows.deployment_environment.stop'
+        )
+        deployment_env_stop_task_id = str(uuid.uuid4())
+        wf_id = "stop_deployment_environment"
+        context = self._build_context_from_deployment(
+            deployment,
+            deployment_env_stop_task_id,
+            wf_id,
+            deployment_env_stop_task_name
+        )
+        _parameters = {'__cloudify_context': context}
+        new_execution = models.Execution(
+            id=deployment_env_stop_task_id,
+            status=models.Execution.PENDING,
+            created_at=str(datetime.now()),
+            blueprint_id=deployment.blueprint_id,
+            workflow_id=wf_id,
+            deployment_id=deployment.id,
+            error='',
+            parameters=self._get_only_user_execution_parameters(_parameters))
+
+        self.sm.put_execution(new_execution.id, new_execution)
+
+        celery_class = celery_client()
+        with celery_class() as cl:
+            cl.execute_task(
+                deployment_env_stop_task_name,
+                context['task_target'],
+                deployment_env_stop_task_id,
+                kwargs=_parameters)
+
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
                          allow_custom_parameters=False, force=False):
@@ -208,8 +248,8 @@ class BlueprintsManager(object):
             BlueprintsManager._merge_and_validate_execution_parameters(
                 workflow, workflow_id, parameters, allow_custom_parameters)
 
-        self._initiate_deployment_environment(deployment,
-                                              parameters=execution_parameters)
+        self.start_deployment_environment(deployment,
+                                          parameters=execution_parameters)
 
         execution_id = str(uuid.uuid4())
 
