@@ -1,13 +1,56 @@
 tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
-    - relationship_interface_shared.yaml
+    - cloudify/types/types.yaml
+    - plugins/cloudmock.yaml
+    - plugins/connectionconfigurermock.yaml
+    - plugins/testmockoperations.yaml
 
-relationships:
-    connected_to:
-        derived_from: cloudify.relationships.connected_to
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                postconfigure:
-                    implementation: connection_configurer_mock.connection_configurer_mock.tasks.configure_connection
-                    inputs: {}
+node_templates:
+    host:
+        type: test_host_type
+        properties:
+            install_agent: false
+        interfaces:
+            cloudify.interfaces.host:
+                get_state: cloudmock.cloudmock.tasks.get_state
+            cloudify.interfaces.lifecycle:
+                create: cloudmock.cloudmock.tasks.provision
+                configure: testmockoperations.testmockoperations.tasks.set_property
+                start: cloudmock.cloudmock.tasks.start
+    mock_node_that_connects_to_host:
+        type: test_app_module_type
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create: testmockoperations.testmockoperations.tasks.touch
+                configure: testmockoperations.testmockoperations.tasks.set_property
+                start: testmockoperations.testmockoperations.tasks.make_reachable
+        relationships:
+            -   type: cloudify.relationships.connected_to
+                target: host
+                source_interfaces:
+                    cloudify.interfaces.relationship_lifecycle:
+                        postconfigure:
+                            implementation: connection_configurer_mock.connection_configurer_mock.tasks.configure_connection
+                            inputs: {}
+
+
+node_types:
+    test_host_type:
+        derived_from: cloudify.nodes.Compute
+        properties:
+            target_property_key:
+                default: target_property_value
+            property_name:
+                default: target_runtime_property_key
+            value:
+                default: target_runtime_property_value
+    test_app_module_type:
+        derived_from: cloudify.nodes.ApplicationModule
+        properties:
+            source_property_key:
+                default: source_property_value
+            property_name:
+                default: source_runtime_property_key
+            value:
+                default: source_runtime_property_value
