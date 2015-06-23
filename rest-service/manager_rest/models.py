@@ -95,7 +95,7 @@ class Execution(SerializableObject):
     END_STATES = [TERMINATED, FAILED, CANCELLED]
 
     fields = {'id', 'status', 'deployment_id', 'workflow_id', 'blueprint_id',
-              'created_at', 'error', 'parameters'}
+              'created_at', 'error', 'parameters', 'is_system_workflow'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
@@ -106,6 +106,7 @@ class Execution(SerializableObject):
         self.created_at = kwargs['created_at']
         self.error = kwargs['error']
         self.parameters = kwargs['parameters']
+        self.is_system_workflow = kwargs['is_system_workflow']
 
 
 class DeploymentNode(SerializableObject):

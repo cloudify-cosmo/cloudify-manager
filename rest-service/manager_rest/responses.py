@@ -142,7 +142,8 @@ class Execution(object):
         'status': fields.String,
         'error': fields.String,
         'created_at': fields.String,
-        'parameters': fields.Raw
+        'parameters': fields.Raw,
+        'is_system_workflow': fields.Boolean
     }
 
     def __init__(self, **kwargs):
@@ -154,6 +155,7 @@ class Execution(object):
         self.created_at = kwargs['created_at']
         self.error = kwargs['error']
         self.parameters = kwargs['parameters']
+        self.is_system_workflow = kwargs['parameters']
 
 
 @swagger.model
