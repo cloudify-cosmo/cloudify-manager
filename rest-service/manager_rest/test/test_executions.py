@@ -14,14 +14,15 @@
 #  * limitations under the License.
 
 
+from datetime import datetime
+
 import mock
 
 from cloudify_rest_client import exceptions
-
+from base_test import BaseServerTestCase
 from manager_rest import manager_exceptions
 from manager_rest import models
-
-from base_test import BaseServerTestCase
+from manager_rest import storage_manager
 
 
 class ExecutionsTestCase(BaseServerTestCase):
@@ -52,6 +53,44 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertIsNotNone(get_execution['created_at'])
 
         return execution
+
+    def test_list_system_executions(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
+
+        # manually pushing a system workflow execution to the storage
+        system_wf_execution_id = 'mock_execution_id'
+        system_wf_id = 'mock_system_workflow_id'
+        system_wf_execution = models.Execution(
+            id=system_wf_execution_id,
+            status=models.Execution.TERMINATED,
+            deployment_id=deployment_id,
+            workflow_id=system_wf_id,
+            blueprint_id=blueprint_id,
+            created_at=str(datetime.now()),
+            error='',
+            parameters=dict(),
+            is_system_workflow=True)
+        storage_manager.instance().put_execution(system_wf_execution_id,
+                                                 system_wf_execution)
+
+        # listing only non-system workflow executions
+        executions = self.client.executions.list(deployment_id=deployment_id)
+
+        # expecting 1 execution (create_deployment_environment)
+        self.assertEquals(1, len(executions))
+        self.assertEquals('create_deployment_environment',
+                          executions[0]['workflow_id'])
+
+        # listing all executions
+        executions = self.client.executions.list(deployment_id=deployment_id,
+                                                 include_system_workflows=True)
+
+        # expecting 2 executions
+        self.assertEquals(2, len(executions))
+        self.assertEquals('create_deployment_environment',
+                          executions[0]['workflow_id'])
+        self.assertEquals(system_wf_id, executions[1]['workflow_id'])
 
     def test_execute_with_custom_parameters(self):
         # note that this test also tests for passing custom parameters for an
