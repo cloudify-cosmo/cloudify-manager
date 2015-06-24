@@ -1,5 +1,5 @@
 -e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@master#egg=cloudify-dsl-parser==3.3a2
--e git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==3.3a2
+-e git+https://github.com/cloudify-cosmo/cloudify-rest-client@https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-2850-deployment-scalability.zip#egg=cloudify-rest-client==3.3a2
 -e git+https://github.com/cloudify-cosmo/flask-securest@0.6#egg=flask-securest==0.6
 
 # test dependencies
