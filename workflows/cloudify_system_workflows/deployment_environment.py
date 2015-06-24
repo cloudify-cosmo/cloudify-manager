@@ -14,8 +14,8 @@
 #    * limitations under the License.
 
 
-from cloudify import IS_TRANSIENT_DEPLOYMENT_WORKERS
 from cloudify import celery
+from cloudify import utils
 from cloudify.decorators import workflow
 from cloudify.workflows.workflow_context import task_config
 
@@ -32,6 +32,8 @@ def create(ctx, **kwargs):
 
     graph = ctx.graph_mode()
     sequence = graph.sequence()
+
+    is_transient_workers = utils.is_transient_deployment_workers_mode()
 
     deployment_plugins = kwargs['deployment_plugins_to_install']
 
@@ -63,7 +65,7 @@ def create(ctx, **kwargs):
                 task_name='worker_installer.tasks.restart',
                 send_task_events=False))
 
-    if IS_TRANSIENT_DEPLOYMENT_WORKERS:
+    if is_transient_workers:
         sequence.add(
             ctx.send_event('Stopping deployment operations worker'),
             ctx.execute_task(
@@ -92,7 +94,7 @@ def create(ctx, **kwargs):
                 send_task_events=False,
                 kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
-    if IS_TRANSIENT_DEPLOYMENT_WORKERS:
+    if is_transient_workers:
         sequence.add(
             ctx.send_event('Stopping deployment workflows worker'),
             ctx.execute_task(
