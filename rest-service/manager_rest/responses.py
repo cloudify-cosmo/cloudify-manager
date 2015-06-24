@@ -155,7 +155,7 @@ class Execution(object):
         self.created_at = kwargs['created_at']
         self.error = kwargs['error']
         self.parameters = kwargs['parameters']
-        self.is_system_workflow = kwargs['parameters']
+        self.is_system_workflow = kwargs['is_system_workflow']
 
 
 @swagger.model
