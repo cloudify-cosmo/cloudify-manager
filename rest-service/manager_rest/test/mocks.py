@@ -27,7 +27,7 @@ class MockCeleryClient(object):
         get_storage_manager().update_execution_status(task_id,
                                                       task_state(),
                                                       '')
-        return MockAsyncResult()
+        return MockAsyncResult(task_id)
 
     def get_task_status(self, task_id):
         return 'SUCCESS'
@@ -38,8 +38,8 @@ class MockCeleryClient(object):
 
 class MockAsyncResult(object):
 
-    def __init__(self):
-        self.id = 'mock-id'
+    def __init__(self, task_id):
+        self.id = task_id
 
     def get(self, timeout=300, propagate=True):
         return None

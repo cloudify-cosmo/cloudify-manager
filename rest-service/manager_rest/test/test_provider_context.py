@@ -14,19 +14,21 @@
 #  * limitations under the License.
 
 from cloudify_rest_client import exceptions
+from manager_rest.manager_exceptions import ConflictError
 
 from base_test import BaseServerTestCase
 
 
 class ProviderContextTestCase(BaseServerTestCase):
 
+    def initialize_provider_context(self):
+        pass  # each test in this class creates its own provider context
+
     def test_post_provider_context(self):
-        result = self.post('/provider/context', data={
-            'name': 'test_provider',
-            'context': {'key': 'value'}
-        })
-        self.assertEqual(result.status_code, 201)
-        self.assertEqual(result.json['status'], 'ok')
+        result = self.client.manager.create_context(
+            'test_provider',
+            {'key': 'value'})
+        self.assertEqual('ok', result['status'])
 
     def test_get_provider_context(self):
         self.test_post_provider_context()
@@ -36,8 +38,13 @@ class ProviderContextTestCase(BaseServerTestCase):
 
     def test_post_provider_context_twice_fails(self):
         self.test_post_provider_context()
-        self.assertRaises(self.failureException,
-                          self.test_post_provider_context)
+        try:
+            self.test_post_provider_context()
+            self.fail('Expected failure when trying to re-post provider '
+                      'context')
+        except exceptions.CloudifyClientError as e:
+            self.assertEqual(409, e.status_code)
+            self.assertEqual(ConflictError.CONFLICT_ERROR_CODE, e.error_code)
 
     def test_update_provider_context(self):
         self.test_post_provider_context()
@@ -52,7 +59,7 @@ class ProviderContextTestCase(BaseServerTestCase):
             self.client.manager.update_context(
                 'test_provider',
                 {'key': 'value'})
-            self.fail('Expected failure due to existing context')
+            self.fail('Expected failure due to nonexisting context')
         except exceptions.CloudifyClientError as e:
             self.assertEqual(e.status_code, 404)
             self.assertEqual(e.message, 'Provider Context not found')

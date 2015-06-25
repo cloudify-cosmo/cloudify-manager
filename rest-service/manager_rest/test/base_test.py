@@ -134,12 +134,17 @@ class BaseServerTestCase(unittest.TestCase):
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
         self.client = self.create_client()
+        self.initialize_provider_context()
 
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)
         self.quiet_delete(self.securest_log_file)
         if self.file_server:
             self.file_server.stop()
+
+    def initialize_provider_context(self):
+        # creating an empty bootstrap context
+        self.client.manager.create_context(self.id(), {'cloudify': {}})
 
     def create_configuration(self):
         from manager_rest.config import Config

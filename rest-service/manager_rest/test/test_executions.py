@@ -85,6 +85,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         # listing all executions
         executions = self.client.executions.list(deployment_id=deployment_id,
                                                  include_system_workflows=True)
+        executions.sort(key=lambda e: e.created_at)
 
         # expecting 2 executions
         self.assertEquals(2, len(executions))
