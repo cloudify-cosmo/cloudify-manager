@@ -18,7 +18,7 @@ import tempfile
 
 from manager_rest import archiving
 from manager_rest.file_server import FileServer
-from base_test import BaseServerTestCase
+from base_test import BaseServerTestCase, version_url
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -216,7 +216,7 @@ class BlueprintsTestCase(BaseServerTestCase):
                                      archive_func=archive_func)).json
         self.assertEqual(blueprint_id, put_blueprints_response['id'])
 
-        response = self.app.get('/blueprints/{0}/archive'.format(blueprint_id))
+        response = self.app.get(version_url('/blueprints/{0}/archive'.format(blueprint_id)))
 
         archive_filename = '{0}.{1}'.format(blueprint_id, archive_type)
         self.assertTrue(archive_filename in

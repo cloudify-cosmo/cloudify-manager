@@ -29,9 +29,10 @@ from cloudify_rest_client.client import HTTPClient
 
 STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
 FILE_SERVER_PORT = 53229
-FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
+DEFAULT_API_VERSION = 'v2'
+FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 
 
 def build_query_string(query_params):
@@ -39,6 +40,13 @@ def build_query_string(query_params):
     if query_params and len(query_params) > 0:
         query_string += urllib.urlencode(query_params) + '&'
     return query_string
+
+
+def version_url(url, api_version=DEFAULT_API_VERSION):
+    if api_version not in url:
+        url = '/{0}{1}'.format(api_version, url)
+
+    return url
 
 
 class MockHTTPClient(HTTPClient):
@@ -50,22 +58,22 @@ class MockHTTPClient(HTTPClient):
     def _do_request(self, requests_method, request_url, body, params, headers,
                     expected_status_code, stream, verify):
         if 'get' in requests_method.__name__:
-            response = self.app.get(request_url,
+            response = self.app.get(version_url(request_url),
                                     headers=headers,
                                     query_string=build_query_string(params))
 
         elif 'put' in requests_method.__name__:
-            response = self.app.put(request_url,
+            response = self.app.put(version_url(request_url),
                                     headers=headers,
                                     data=body,
                                     query_string=build_query_string(params))
         elif 'post' in requests_method.__name__:
-            response = self.app.post(request_url,
+            response = self.app.post(version_url(request_url),
                                      headers=headers,
                                      data=body,
                                      query_string=build_query_string(params))
         elif 'patch' in requests_method.__name__:
-            response = self.app.patch(request_url,
+            response = self.app.patch(version_url(request_url),
                                       headers=headers,
                                       data=body,
                                       query_string=build_query_string(params))
@@ -85,8 +93,8 @@ class BaseServerTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(BaseServerTestCase, self).__init__(*args, **kwargs)
 
-    def create_client(self, headers=None):
-        client = CloudifyClient('localhost')
+    def create_client(self, api_version='v2', headers=None):
+        client = CloudifyClient(host='localhost', api_version=api_version)
         mock_http_client = MockHTTPClient(self.app, headers=headers)
         client._client = mock_http_client
         client.blueprints.api = mock_http_client
@@ -164,7 +172,7 @@ class BaseServerTestCase(unittest.TestCase):
         return test_config
 
     def post(self, resource_path, data, query_params=None):
-        result = self.app.post(urllib.quote(resource_path),
+        result = self.app.post(urllib.quote(version_url(resource_path)),
                                content_type='application/json',
                                data=json.dumps(data),
                                query_string=build_query_string(query_params))
@@ -173,7 +181,7 @@ class BaseServerTestCase(unittest.TestCase):
 
     def post_file(self, resource_path, file_path, query_params=None):
         with open(file_path) as f:
-            result = self.app.post(urllib.quote(resource_path),
+            result = self.app.post(urllib.quote(version_url(resource_path)),
                                    data=f.read(),
                                    query_string=build_query_string(
                                        query_params))
@@ -182,7 +190,7 @@ class BaseServerTestCase(unittest.TestCase):
 
     def put_file(self, resource_path, file_path, query_params=None):
         with open(file_path) as f:
-            result = self.app.put(urllib.quote(resource_path),
+            result = self.app.put(urllib.quote(version_url(resource_path)),
                                   data=f.read(),
                                   query_string=build_query_string(
                                       query_params))
@@ -190,7 +198,7 @@ class BaseServerTestCase(unittest.TestCase):
             return result
 
     def put(self, resource_path, data=None, query_params=None):
-        result = self.app.put(urllib.quote(resource_path),
+        result = self.app.put(urllib.quote(version_url(resource_path)),
                               content_type='application/json',
                               data=json.dumps(data) if data else None,
                               query_string=build_query_string(query_params))
@@ -198,25 +206,25 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def patch(self, resource_path, data):
-        result = self.app.patch(urllib.quote(resource_path),
+        result = self.app.patch(urllib.quote(version_url(resource_path)),
                                 content_type='application/json',
                                 data=json.dumps(data))
         result.json = json.loads(result.data)
         return result
 
     def get(self, resource_path, query_params=None, headers=None):
-        result = self.app.get(urllib.quote(resource_path),
+        result = self.app.get(urllib.quote(version_url(resource_path)),
                               headers=headers,
                               query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
 
     def head(self, resource_path):
-        result = self.app.head(urllib.quote(resource_path))
+        result = self.app.head(urllib.quote(version_url(resource_path)))
         return result
 
     def delete(self, resource_path, query_params=None):
-        result = self.app.delete(urllib.quote(resource_path),
+        result = self.app.delete(urllib.quote(version_url(resource_path)),
                                  query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
         return result
@@ -246,9 +254,10 @@ class BaseServerTestCase(unittest.TestCase):
     def put_blueprint_args(self, blueprint_file_name=None,
                            blueprint_id='blueprint',
                            archive_func=archiving.make_targzfile,
-                           blueprint_dir='mock_blueprint'):
+                           blueprint_dir='mock_blueprint',
+                           api_version=DEFAULT_API_VERSION):
 
-        resource_path = '/blueprints/{0}'.format(blueprint_id)
+        resource_path = '/{0}/blueprints/{1}'.format(api_version, blueprint_id)
         result = [
             resource_path,
             self.archive_mock_blueprint(archive_func, blueprint_dir),
