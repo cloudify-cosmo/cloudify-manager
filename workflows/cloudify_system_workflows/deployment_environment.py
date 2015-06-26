@@ -15,8 +15,8 @@
 
 
 from cloudify import celery
-from cloudify import utils
 from cloudify.decorators import workflow
+from cloudify.manager import get_rest_client
 from cloudify.workflows.workflow_context import task_config
 
 
@@ -33,7 +33,7 @@ def create(ctx, **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    is_transient_workers = utils.is_transient_deployment_workers_mode()
+    is_transient_workers = _is_transient_deployment_workers_mode()
 
     deployment_plugins = kwargs['deployment_plugins_to_install']
 
@@ -190,3 +190,9 @@ def stop(ctx, prerequisite_task_id, prerequisite_task_timeout=60, **kwargs):
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     return graph.execute()
+
+
+def _is_transient_deployment_workers_mode():
+    client = get_rest_client()
+    bootstrap_context = client.manager.get_context()['context']['cloudify']
+    return bootstrap_context.get('transient_deployment_workers', False)

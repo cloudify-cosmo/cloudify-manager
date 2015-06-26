@@ -290,8 +290,9 @@ class BlueprintsManager(object):
         if timeout > 0:
             try:
                 # wait for the workflow execution to complete
-                async_task.get(timeout=300, propagate=True)
+                async_task.get(timeout=timeout, propagate=True)
             except Exception as e:
+                # error message for the user
                 error_msg =\
                     'Error occurred while executing the {0} system workflow '\
                     'for deployment {1}: {2} - {3}'.format(
@@ -299,10 +300,9 @@ class BlueprintsManager(object):
                 # adding traceback to the log error message
                 tb = StringIO()
                 traceback.print_exc(file=tb)
-                log_error_msg = error_msg + '; traceback: {0}'.format(
-                    tb.getvalue())
-                current_app.error(log_error_msg)
-                # TODO: avoid having both error messages in REST logs..?
+                log_error_msg = '{0}; traceback: {1}'.format(
+                    error_msg, tb.getvalue())
+                current_app.logger.error(log_error_msg)
                 raise RuntimeError(error_msg)
 
             # verify the execution completed successfully
