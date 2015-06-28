@@ -1239,11 +1239,6 @@ class Search(SecuredResource):
 
 class Status(SecuredResource):
 
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('ignore_live_nodes', type=str,
-                                   default='false', location='args')
-
     @swagger.operation(
         responseClass=responses.Status,
         nickname="status",

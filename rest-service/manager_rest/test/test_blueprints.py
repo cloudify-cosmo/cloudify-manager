@@ -216,7 +216,8 @@ class BlueprintsTestCase(BaseServerTestCase):
                                      archive_func=archive_func)).json
         self.assertEqual(blueprint_id, put_blueprints_response['id'])
 
-        response = self.app.get(version_url('/blueprints/{0}/archive'.format(blueprint_id)))
+        response = self.app.get(version_url('/blueprints/{0}/archive'.format(
+            blueprint_id)))
 
         archive_filename = '{0}.{1}'.format(blueprint_id, archive_type)
         self.assertTrue(archive_filename in
