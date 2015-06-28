@@ -29,8 +29,9 @@ class SecurityBypassTest(SecurityTestBase):
         return test_config
 
     def test_bypass_and_correct_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='pass1'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
 
         client.blueprints.list()

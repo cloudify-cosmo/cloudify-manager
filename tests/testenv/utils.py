@@ -187,7 +187,7 @@ def is_node_started(node_id):
 
 
 def create_rest_client():
-    return CloudifyClient('localhost', port=MANAGER_REST_PORT)
+    return CloudifyClient(host='localhost', port=MANAGER_REST_PORT)
 
 
 def get_resource(resource):

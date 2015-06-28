@@ -29,23 +29,27 @@ class SecurityTest(SecurityTestBase):
         client.deployments.list()
 
     def test_wrong_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass2'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='pass2'))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username=None, password=None))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username=None,
+                                                       password=None))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_user(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username=None, password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username=None,
+                                                       password='pass1'))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_password(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password=None))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password=None))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_token_authentication(self):
