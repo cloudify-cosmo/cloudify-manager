@@ -29,10 +29,10 @@ from cloudify_rest_client.client import HTTPClient
 
 STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
 FILE_SERVER_PORT = 53229
+FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
 DEFAULT_API_VERSION = 'v2'
-FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 
 
 def build_query_string(query_params):
