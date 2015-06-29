@@ -95,7 +95,7 @@ class BaseServerTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(BaseServerTestCase, self).__init__(*args, **kwargs)
 
-    def create_client(self, api_version='v2', headers=None):
+    def create_client(self, api_version=DEFAULT_API_VERSION, headers=None):
         client = CloudifyClient(host='localhost',
                                 api_version=api_version,
                                 headers=headers)
