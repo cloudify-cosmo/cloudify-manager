@@ -561,7 +561,21 @@ class Executions(SecuredResource):
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
         notes="Returns a list of executions for the optionally provided "
-              "deployment id."
+              "deployment id.",
+        parameters=[{'name': 'deployment_id',
+                     'description': 'List execution of a specific deployment',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'defaultValue': None,
+                     'paramType': 'query'},
+                    {'name': 'include_system_workflows',
+                     'description': 'Include executions of system workflows',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'bool',
+                     'defaultValue': False,
+                     'paramType': 'query'}]
     )
     @exceptions_handled
     @marshal_with(responses.Execution.resource_fields)
@@ -571,9 +585,14 @@ class Executions(SecuredResource):
         if deployment_id:
             get_blueprints_manager().get_deployment(deployment_id,
                                                     include=['id'])
+        is_include_system_workflows = verify_and_convert_bool(
+            'include_system_workflows',
+            request.args.get('include_system_workflows', 'false'))
+
         executions = get_blueprints_manager().executions_list(
             deployment_id=deployment_id, include=_include)
-        return [responses.Execution(**e.to_dict()) for e in executions]
+        return [responses.Execution(**e.to_dict()) for e in executions if
+                is_include_system_workflows or not e.is_system_workflow]
 
     @exceptions_handled
     @marshal_with(responses.Execution.resource_fields)
@@ -694,7 +713,7 @@ class ExecutionsId(SecuredResource):
         request_json = request.json
         verify_parameter_in_request_body('status', request_json)
 
-        get_storage_manager().update_execution_status(
+        get_blueprints_manager().update_execution_status(
             execution_id,
             request_json['status'],
             request_json.get('error', ''))
