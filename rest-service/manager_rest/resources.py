@@ -46,6 +46,7 @@ from manager_rest import chunked
 from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
+from manager_rest import swagger as rest_swagger
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
@@ -155,50 +156,49 @@ def _replace_workflows_field_for_deployment_response(deployment_dict):
     return deployment_dict
 
 
-def _versioned_urls(resource_name):
+def _versioned_urls(endpoint):
     urls = []
-    for version in SUPPORTED_API_VERSIONS:
-        urls.append('/{0}/{1}'.format(version, resource_name))
-
+    for api_version in SUPPORTED_API_VERSIONS:
+        urls.append('/{0}/{1}'.format(api_version, endpoint))
     return urls
 
 
 def setup_resources(api):
-    api = swagger.docs(api,
-                       apiVersion='0.1',
-                       basePath='http://localhost:8100')
-    api.add_resource(Blueprints, *_versioned_urls('blueprints'))
-    api.add_resource(BlueprintsId, *_versioned_urls(
-        'blueprints/<string:blueprint_id>'))
-    api.add_resource(BlueprintsIdArchive, *_versioned_urls(
-        'blueprints/<string:blueprint_id>/archive'))
-    api.add_resource(Executions, *_versioned_urls('executions'))
-    api.add_resource(ExecutionsId, *_versioned_urls(
-        'executions/<string:execution_id>'))
-    api.add_resource(Deployments, *_versioned_urls('deployments'))
-    api.add_resource(DeploymentsId, *_versioned_urls(
-        'deployments/<string:deployment_id>'))
-    api.add_resource(DeploymentsIdOutputs, *_versioned_urls(
-        'deployments/<string:deployment_id>/outputs'))
-    api.add_resource(DeploymentModifications, *_versioned_urls(
-        'deployment-modifications'))
-    api.add_resource(DeploymentModificationsId, *_versioned_urls(
-        'deployment-modifications/<string:modification_id>'))
-    api.add_resource(DeploymentModificationsIdFinish, *_versioned_urls(
-        'deployment-modifications/<string:modification_id>/finish'))
-    api.add_resource(DeploymentModificationsIdRollback, *_versioned_urls(
-        'deployment-modifications/<string:modification_id>/rollback'))
-    api.add_resource(Nodes, *_versioned_urls('nodes'))
-    api.add_resource(NodeInstances, *_versioned_urls('node-instances'))
-    api.add_resource(NodeInstancesId, *_versioned_urls(
-        'node-instances/<string:node_instance_id>'))
-    api.add_resource(Events, *_versioned_urls('events'))
-    api.add_resource(Search, *_versioned_urls('search'))
-    api.add_resource(Status, *_versioned_urls('status'))
-    api.add_resource(ProviderContext, *_versioned_urls('provider/context'))
-    api.add_resource(Version, *_versioned_urls('version'))
-    api.add_resource(EvaluateFunctions, *_versioned_urls('evaluate/functions'))
-    api.add_resource(Tokens, *_versioned_urls('tokens'))
+    resources_endpoints = {
+        Blueprints: 'blueprints',
+        BlueprintsId: 'blueprints/<string:blueprint_id>',
+        BlueprintsIdArchive: 'blueprints/<string:blueprint_id>/archive',
+        Executions: 'executions',
+        ExecutionsId: 'executions/<string:execution_id>',
+        Deployments: 'deployments',
+        DeploymentsId: 'deployments/<string:deployment_id>',
+        DeploymentsIdOutputs: 'deployments/<string:deployment_id>/outputs',
+        DeploymentModifications: 'deployment-modifications',
+        DeploymentModificationsId: 'deployment-modifications/'
+                                   '<string:modification_id>',
+        DeploymentModificationsIdFinish: 'deployment-modifications/'
+                                         '<string:modification_id>/finish',
+        DeploymentModificationsIdRollback: 'deployment-modifications/'
+                                           '<string:modification_id>/rollback',
+        Nodes: 'nodes',
+        NodeInstances: 'node-instances',
+        NodeInstancesId: 'node-instances/<string:node_instance_id>',
+        Events: 'events',
+        Search: 'search',
+        Status: 'status',
+        ProviderContext: 'provider/context',
+        Version: 'version',
+        EvaluateFunctions: 'evaluate/functions',
+        Tokens: 'tokens'
+    }
+
+    for resource, endpoint in resources_endpoints.iteritems():
+        api.add_resource(resource, *_versioned_urls(endpoint))
+
+        for api_version in SUPPORTED_API_VERSIONS:
+            rest_swagger.add_swagger_resource(
+                api, api_version, resource, '/{0}/{1}'.format(api_version,
+                                                              endpoint))
 
 
 class BlueprintsUpload(object):
