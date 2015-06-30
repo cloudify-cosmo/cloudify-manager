@@ -215,8 +215,12 @@ class BlueprintsTestCase(BaseServerTestCase):
             *self.put_blueprint_args(blueprint_id=blueprint_id,
                                      archive_func=archive_func)).json
         self.assertEqual(blueprint_id, put_blueprints_response['id'])
+        api_version = self.client._client.api_version
+        url = '/{0}{1}'.format(
+            api_version,
+            '/blueprints/{0}/archive'.format(blueprint_id))
 
-        response = self.app.get('/blueprints/{0}/archive'.format(blueprint_id))
+        response = self.app.get(url)
 
         archive_filename = '{0}.{1}'.format(blueprint_id, archive_type)
         self.assertTrue(archive_filename in

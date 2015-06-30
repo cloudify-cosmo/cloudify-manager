@@ -38,4 +38,3 @@ CHOWN_OK=1
 
 ctx logger info "Adding mount point ${fs_mount_path} to file system table"
 echo ${filesys} ${fs_mount_path} ${fs_type} auto 0 0 | sudo tee --append /etc/fstab > /dev/null
-

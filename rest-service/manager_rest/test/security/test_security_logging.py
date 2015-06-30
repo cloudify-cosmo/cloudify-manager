@@ -34,8 +34,9 @@ class TestSecurityAuditLog(SecurityTestBase):
         return test_config
 
     def test_password_auth_success_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='pass1'))
         client.deployments.list()
         expected_text = '[INFO] [flask-securest] user "user1" authenticated ' \
                         'successfully'
@@ -44,8 +45,9 @@ class TestSecurityAuditLog(SecurityTestBase):
         self.assert_log_contains(expected_text)
 
     def test_wrong_user_auth_failure_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='wrong_user', password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='wrong_user',
+                                                       password='pass1'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
         self.assert_log_contains('[ERROR] [flask-securest] User unauthorized')
         expected_text = 'all authentication methods failed:' \
@@ -55,8 +57,9 @@ class TestSecurityAuditLog(SecurityTestBase):
         self.assert_log_contains(expected_text)
 
     def test_wrong_password_auth_failure_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='wrong_pass'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='wrong_pass'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
         self.assert_log_contains('[ERROR] [flask-securest] User unauthorized')
         expected_text = 'all authentication methods failed:' \
@@ -66,11 +69,12 @@ class TestSecurityAuditLog(SecurityTestBase):
         self.assert_log_contains(expected_text)
 
     def test_token_auth_success_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='pass1'))
         token_value = client.tokens.get().value
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            token=token_value))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(token=token_value))
         client.deployments.list()
         expected_text = '[INFO] [flask-securest] user "user1" authenticated ' \
                         'successfully'
@@ -79,8 +83,8 @@ class TestSecurityAuditLog(SecurityTestBase):
         self.assert_log_contains(expected_text)
 
     def test_token_auth_failure_log(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            token='wrong_token'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(token='wrong_token'))
         self.assertRaises(CloudifyClientError, client.deployments.list)
         self.assert_log_contains('[ERROR] [flask-securest] User unauthorized')
         expected_text = 'all authentication methods failed:' \
