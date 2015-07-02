@@ -98,6 +98,12 @@ class BlueprintsManager(object):
 
         return self.sm.update_execution_status(execution_id, status, error)
 
+    def create_snapshot(self, snapshot_id):
+        pass
+
+    def restore_snapshot(self, snapshot_id):
+        pass
+
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
         try:

@@ -48,6 +48,19 @@ class BlueprintValidationStatus(object):
 
 
 @swagger.model
+class Snapshot(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'created_at': fields.String,
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.created_at = kwargs['created_at']
+
+
+@swagger.model
 class Workflow(object):
 
     resource_fields = {

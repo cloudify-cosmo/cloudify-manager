@@ -168,6 +168,10 @@ def setup_resources(api):
         Blueprints: 'blueprints',
         BlueprintsId: 'blueprints/<string:blueprint_id>',
         BlueprintsIdArchive: 'blueprints/<string:blueprint_id>/archive',
+        Snapshots: 'snapshots',
+        SnapshotsId: 'snapshots/<string:snapshot_id>',
+        SnapshotsIdUpload: 'snapshots/<string:snapshot_id>/upload',
+        SnapshotsIdDownload: 'snapshots/<string:snapshot_id>/download',
         Executions: 'executions',
         ExecutionsId: 'executions/<string:execution_id>',
         Deployments: 'deployments',
@@ -720,6 +724,263 @@ class ExecutionsId(SecuredResource):
 
         return responses.Execution(**get_storage_manager().get_execution(
             execution_id).to_dict())
+
+
+def get_snapshot_ctime(snapshot_path):
+    import time
+    return time.strftime('%d %b %Y %H:%M:%S',
+                         time.localtime(os.path.getctime(snapshot_path)))
+
+
+def get_snapshot_by_id(snapshot_id):
+    snapshots_path = os.path.join(
+        config.instance().file_server_root,
+        config.instance().file_server_uploaded_snapshots_folder,
+        snapshot_id
+    )
+    path = os.path.join(snapshots_path, '{0}.zip'.format(snapshot_id))
+    created_at = get_snapshot_ctime(path)
+    return responses.Snapshot(
+        id=snapshot_id,
+        created_at=created_at
+    ), snapshots_path
+
+
+class Snapshots(SecuredResource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Snapshot.__name__),
+        nickname='list',
+        notes='Returns a list existing snapshots.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def get(self, _include=None):
+        snapshots_path = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_snapshots_folder
+        )
+        snapshots = [f for f in os.listdir(snapshots_path)
+                     if os.path.isdir(os.path.join(snapshots_path, f))]
+
+        def snapshot_created_at(s):
+            return get_snapshot_ctime(os.path.join(snapshots_path, s,
+                                                   '{0}.zip'.format(s)))
+        return [responses.Snapshot(id=s, created_at=snapshot_created_at(s))
+                for s in snapshots]
+
+
+class SnapshotsId(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='createSnapshot',
+        notes='Create new snapshot of the manager.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def put(self, snapshot_id):
+        if doesSnapshotExist(snapshot_id):
+            raise RuntimeError("Snapshot with id '{0}' already exists."
+                               .format(snapshot_id))
+
+        # for testing purpose
+        path = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_snapshots_folder,
+            snapshot_id
+        )
+        os.makedirs(path)
+        snapshot_file = os.path.join(path, '{0}.zip'.format(snapshot_id))
+        with zipfile.ZipFile(snapshot_file, 'w') as f:
+            f.writestr('asd.txt', 'asdf')
+        # end test code
+
+        # snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
+        # return responses.Snapshot(snapshot.to_dict()), 201
+        return responses.Snapshot(
+            id=snapshot_id,
+            created_at=get_snapshot_ctime(snapshot_file)
+        ), 201
+
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='deleteSnapshot',
+        notes='Delete existing snapshot.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def delete(self, snapshot_id):
+        if not doesSnapshotExist(snapshot_id):
+            raise RuntimeError("Snapshot with id '{0}' doesn't exist."
+                               .format(snapshot_id))
+
+        snapshot, path = get_snapshot_by_id(snapshot_id)
+        shutil.rmtree(path, ignore_errors=True)
+        return snapshot
+
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='restoreSnapshot',
+        notes='Restore existing snapshot.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def post(self, snapshot_id):
+        if not doesSnapshotExist(snapshot_id):
+            raise RuntimeError("Snapshot with id '{0}' doesn't exist."
+                               .format(snapshot_id))
+        get_blueprints_manager().restore_snapshot(snapshot_id)
+        return None, 201
+
+
+def doesSnapshotExist(snapshot_id):
+    snapshot_path = os.path.join(
+        config.instance().file_server_root,
+        config.instance().file_server_uploaded_snapshots_folder,
+        snapshot_id
+    )
+
+    return os.path.exists(snapshot_path)
+
+
+class SnapshotsIdUpload(SecuredResource):
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='uploadSnapshot',
+        notes='Submitted snapshot should be an archive.'
+              'Archive format has to be zip.'
+              ' Snapshot archive may be submitted via either URL or by '
+              'direct upload.',
+        parameters=[
+                    {'name': 'snapshot_archive_url',
+                     'description': 'url of a snapshot archive file',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'},
+                    {
+                        'name': 'body',
+                        'description': 'Binary form of the zip',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body'}],
+        consumes=[
+            "application/octet-stream"
+        ]
+
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def put(self, snapshot_id):
+        file_server_root = config.instance().file_server_root
+        archive_target_path = tempfile.mktemp(dir=file_server_root)
+        try:
+            self._save_file_locally(archive_target_path)
+            snapshot = self._move_archive_to_uploaded_snapshot_dir(
+                snapshot_id,
+                file_server_root,
+                archive_target_path
+            )
+
+            return snapshot, 201
+        finally:
+            if os.path.exists(archive_target_path):
+                os.remove(archive_target_path)
+
+    def _move_archive_to_uploaded_snapshot_dir(self, snapshot_id,
+                                               file_server_root,
+                                               archive_path):
+
+        if not os.path.exists(archive_path):
+            raise RuntimeError("Archive [{0}] doesn't exist - Cannot move "
+                               "archive to uploaded snapshots "
+                               "directory".format(archive_path))
+
+        uploaded_snapshot_dir = os.path.join(
+            file_server_root,
+            config.instance().file_server_uploaded_snapshots_folder,
+            snapshot_id
+        )
+
+        os.makedirs(uploaded_snapshot_dir)
+        snapshot_file = os.path.join(uploaded_snapshot_dir, '{0}.zip'
+                                     .format(snapshot_id))
+        shutil.move(archive_path, snapshot_file)
+        created_at = os.path.getctime(snapshot_file)
+        return responses.Snapshot(id=snapshot_id, created_at=created_at)
+
+    def _save_file_locally(self, archive_target_path):
+        # Downloading snapshot archive
+        if 'snapshot_archive_url' in request.args:
+            if request.data or 'Transfer-Encoding' in request.headers:
+                raise manager_exceptions.BadParametersError(
+                    "Can't pass both a snapshot URL via query parameters "
+                    "and snapshot data via the request body at the same time")
+            snapshot_url = request.args['snapshot_archive_url']
+            try:
+                with contextlib.closing(urlopen(snapshot_url)) as urlf:
+                    with open(archive_target_path, 'w') as f:
+                        f.write(urlf.read())
+            except URLError:
+                raise manager_exceptions.ParamUrlNotFoundError(
+                    "URL {0} not found - can't download snapshot archive"
+                    .format(snapshot_url))
+            except ValueError:
+                raise manager_exceptions.BadParametersError(
+                    "URL {0} is malformed - can't download snapshot archive"
+                    .format(snapshot_url))
+
+        elif 'Transfer-Encoding' in request.headers:
+            with open(archive_target_path, 'w') as f:
+                for buffered_chunked in chunked.decode(request.input_stream):
+                    f.write(buffered_chunked)
+        else:
+            if not request.data:
+                raise manager_exceptions.BadParametersError(
+                    'Missing snapshot archive in request body or '
+                    '"snapshot_archive_url" in query parameters')
+            uploaded_file_data = request.data
+            with open(archive_target_path, 'w') as f:
+                f.write(uploaded_file_data)
+
+
+class SnapshotsIdDownload(SecuredResource):
+
+    @swagger.operation(
+        nickname='downloadSnapshot',
+        notes='Downloads snapshot as as archive.'
+    )
+    @exceptions_handled
+    def get(self, snapshot_id):
+        if not doesSnapshotExist(snapshot_id):
+            raise RuntimeError("Snapshot with id '{0}' doesn't exist."
+                               .format(snapshot_id))
+
+        snapshot_path = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_uploaded_snapshots_folder,
+            snapshot_id,
+            '{0}.zip'.format(snapshot_id)
+        )
+
+        snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
+            config.instance().file_server_resources_uri,
+            config.instance().file_server_uploaded_snapshots_folder,
+            snapshot_id
+        )
+
+        response = make_response()
+        response.headers['Content-Description'] = 'File Transfer'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Content-Type'] = 'application/octet-stream'
+        response.headers['Content-Disposition'] = \
+            'attachment; filename={0}.zip'.format(snapshot_id)
+        response.headers['Content-Length'] = os.path.getsize(snapshot_path)
+        response.headers['X-Accel-Redirect'] = snapshot_uri
+        response.headers['X-Accel-Buffering'] = 'yes'
+        return response
 
 
 class Deployments(SecuredResource):
