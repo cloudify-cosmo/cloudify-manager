@@ -23,41 +23,48 @@ from manager_rest.test.security.security_test_base import SecurityTestBase
 class SecurityTest(SecurityTestBase):
 
     def test_secured_client(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='pass1'))
         client.deployments.list()
 
     def test_wrong_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass2'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='pass2'))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_credentials(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username=None, password=None))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username=None,
+                                                       password=None))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_user(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username=None, password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username=None,
+                                                       password='pass1'))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_password(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password=None))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password=None))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_token_authentication(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='pass1'))
         token = client.tokens.get()
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            token=token.value))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(token=token.value))
         client.blueprints.list()
 
     def test_secured_manager_blueprints_upload(self):
-        client = self.create_client(SecurityTestBase.create_auth_header(
-            username='user1', password='pass1'))
+        client = self.create_client(headers=SecurityTestBase.
+                                    create_auth_header(username='user1',
+                                                       password='pass1'))
 
         # the flask api client needs to be modified since it doesn't support
         # a bytes generator as "data" for file upload

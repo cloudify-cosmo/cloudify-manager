@@ -46,6 +46,7 @@ from manager_rest import chunked
 from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
+from manager_rest import swagger as rest_swagger
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
@@ -54,6 +55,8 @@ from manager_rest import get_version_data
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
 SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
+
+SUPPORTED_API_VERSIONS = ['v1', 'v2']
 
 
 def exceptions_handled(func):
@@ -153,41 +156,49 @@ def _replace_workflows_field_for_deployment_response(deployment_dict):
     return deployment_dict
 
 
+def _versioned_urls(endpoint):
+    urls = []
+    for api_version in SUPPORTED_API_VERSIONS:
+        urls.append('/{0}/{1}'.format(api_version, endpoint))
+    return urls
+
+
 def setup_resources(api):
-    api = swagger.docs(api,
-                       apiVersion='0.1',
-                       basePath='http://localhost:8100')
-    api.add_resource(Blueprints, '/blueprints')
-    api.add_resource(BlueprintsId, '/blueprints/<string:blueprint_id>')
-    api.add_resource(BlueprintsIdArchive,
-                     '/blueprints/<string:blueprint_id>/archive')
-    api.add_resource(Executions, '/executions')
-    api.add_resource(ExecutionsId, '/executions/<string:execution_id>')
-    api.add_resource(Deployments, '/deployments')
-    api.add_resource(DeploymentsId, '/deployments/<string:deployment_id>')
-    api.add_resource(DeploymentsIdOutputs,
-                     '/deployments/<string:deployment_id>/outputs')
-    api.add_resource(DeploymentModifications,
-                     '/deployment-modifications')
-    api.add_resource(DeploymentModificationsId,
-                     '/deployment-modifications/<string:modification_id>')
-    api.add_resource(
-        DeploymentModificationsIdFinish,
-        '/deployment-modifications/<string:modification_id>/finish')
-    api.add_resource(
-        DeploymentModificationsIdRollback,
-        '/deployment-modifications/<string:modification_id>/rollback')
-    api.add_resource(Nodes, '/nodes')
-    api.add_resource(NodeInstances, '/node-instances')
-    api.add_resource(NodeInstancesId,
-                     '/node-instances/<string:node_instance_id>')
-    api.add_resource(Events, '/events')
-    api.add_resource(Search, '/search')
-    api.add_resource(Status, '/status')
-    api.add_resource(ProviderContext, '/provider/context')
-    api.add_resource(Version, '/version')
-    api.add_resource(EvaluateFunctions, '/evaluate/functions')
-    api.add_resource(Tokens, '/tokens')
+    resources_endpoints = {
+        Blueprints: 'blueprints',
+        BlueprintsId: 'blueprints/<string:blueprint_id>',
+        BlueprintsIdArchive: 'blueprints/<string:blueprint_id>/archive',
+        Executions: 'executions',
+        ExecutionsId: 'executions/<string:execution_id>',
+        Deployments: 'deployments',
+        DeploymentsId: 'deployments/<string:deployment_id>',
+        DeploymentsIdOutputs: 'deployments/<string:deployment_id>/outputs',
+        DeploymentModifications: 'deployment-modifications',
+        DeploymentModificationsId: 'deployment-modifications/'
+                                   '<string:modification_id>',
+        DeploymentModificationsIdFinish: 'deployment-modifications/'
+                                         '<string:modification_id>/finish',
+        DeploymentModificationsIdRollback: 'deployment-modifications/'
+                                           '<string:modification_id>/rollback',
+        Nodes: 'nodes',
+        NodeInstances: 'node-instances',
+        NodeInstancesId: 'node-instances/<string:node_instance_id>',
+        Events: 'events',
+        Search: 'search',
+        Status: 'status',
+        ProviderContext: 'provider/context',
+        Version: 'version',
+        EvaluateFunctions: 'evaluate/functions',
+        Tokens: 'tokens'
+    }
+
+    for resource, endpoint in resources_endpoints.iteritems():
+        api.add_resource(resource, *_versioned_urls(endpoint))
+
+        for api_version in SUPPORTED_API_VERSIONS:
+            rest_swagger.add_swagger_resource(
+                api, api_version, resource, '/{0}/{1}'.format(api_version,
+                                                              endpoint))
 
 
 class BlueprintsUpload(object):
@@ -550,7 +561,21 @@ class Executions(SecuredResource):
         responseClass='List[{0}]'.format(responses.Execution.__name__),
         nickname="list",
         notes="Returns a list of executions for the optionally provided "
-              "deployment id."
+              "deployment id.",
+        parameters=[{'name': 'deployment_id',
+                     'description': 'List execution of a specific deployment',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'defaultValue': None,
+                     'paramType': 'query'},
+                    {'name': 'include_system_workflows',
+                     'description': 'Include executions of system workflows',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'bool',
+                     'defaultValue': False,
+                     'paramType': 'query'}]
     )
     @exceptions_handled
     @marshal_with(responses.Execution.resource_fields)
@@ -560,9 +585,14 @@ class Executions(SecuredResource):
         if deployment_id:
             get_blueprints_manager().get_deployment(deployment_id,
                                                     include=['id'])
+        is_include_system_workflows = verify_and_convert_bool(
+            'include_system_workflows',
+            request.args.get('include_system_workflows', 'false'))
+
         executions = get_blueprints_manager().executions_list(
             deployment_id=deployment_id, include=_include)
-        return [responses.Execution(**e.to_dict()) for e in executions]
+        return [responses.Execution(**e.to_dict()) for e in executions if
+                is_include_system_workflows or not e.is_system_workflow]
 
     @exceptions_handled
     @marshal_with(responses.Execution.resource_fields)
@@ -683,7 +713,7 @@ class ExecutionsId(SecuredResource):
         request_json = request.json
         verify_parameter_in_request_body('status', request_json)
 
-        get_storage_manager().update_execution_status(
+        get_blueprints_manager().update_execution_status(
             execution_id,
             request_json['status'],
             request_json.get('error', ''))

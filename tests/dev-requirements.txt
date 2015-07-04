@@ -4,6 +4,7 @@ https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/CFY-2649-cloud
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-agent/archive/CFY-2649-cloudify-agent.zip
+
 pyzmq
 
 # Manually install:

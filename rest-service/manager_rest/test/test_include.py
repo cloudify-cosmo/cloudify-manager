@@ -25,6 +25,8 @@ class IncludeQueryParamTests(BaseServerTestCase):
         super(IncludeQueryParamTests, self).setUp()
         self.put_deployment(deployment_id=str(uuid.uuid4()),
                             blueprint_file_name='blueprint.yaml')
+
+    def initialize_provider_context(self):
         self.client.manager.create_context('test', {'hello': 'world'})
 
     def test_blueprints(self):

@@ -276,6 +276,7 @@ node_types:
         description: >
           Configuration for Cloudify Manager
         default:
+          transient_deployment_workers: false
           resources_prefix: ''
           cloudify_agent:
             min_workers: 2
