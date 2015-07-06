@@ -76,7 +76,7 @@ def create(ctx, **kwargs):
         sequence.add(
             ctx.send_event('Stopping deployment operations worker'),
             ctx.execute_task(
-                task_name='worker_installer.tasks.stop'))
+                task_name='cloudify_agent.installer.operations.stop'))
 
     # installing the workflows worker
     sequence.add(
@@ -112,7 +112,7 @@ def create(ctx, **kwargs):
         sequence.add(
             ctx.send_event('Stopping deployment workflows worker'),
             ctx.execute_task(
-                task_name='worker_installer.tasks.stop',
+                task_name='cloudify_agent.installer.operations.stop',
                 kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     # Start deployment policy engine core
@@ -165,11 +165,11 @@ def start(ctx, **kwargs):
     sequence.add(
         ctx.send_event('Starting deployment operations worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.start'),
+            task_name='cloudify_agent.installer.operations.start'),
 
         ctx.send_event('Starting deployment workflows worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.start',
+            task_name='cloudify_agent.installer.operations.start',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     return graph.execute()
@@ -196,11 +196,11 @@ def stop(ctx, prerequisite_task_id, prerequisite_task_timeout=60, **kwargs):
         ctx.local_task(wait_for_prerequisite_task_to_finish),
         ctx.send_event('Stopping deployment operations worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.stop'),
+            task_name='cloudify_agent.installer.operations.stop'),
 
         ctx.send_event('Stopping deployment workflows worker'),
         ctx.execute_task(
-            task_name='worker_installer.tasks.stop',
+            task_name='cloudify_agent.installer.operations.stop',
             kwargs=WORKFLOWS_WORKER_PAYLOAD))
 
     return graph.execute()
