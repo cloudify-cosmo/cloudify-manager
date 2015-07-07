@@ -24,6 +24,7 @@ import contextlib
 from functools import wraps
 from os import path
 from urllib2 import urlopen, URLError
+import time
 
 from setuptools import archive_util
 
@@ -944,7 +945,7 @@ class DeploymentModificationsIdRollback(SecuredResource):
     @marshal_with(responses.DeploymentModification.resource_fields)
     def post(self, modification_id):
         modification = get_blueprints_manager(
-            ).rollback_deployment_modification(modification_id)
+        ).rollback_deployment_modification(modification_id)
         return responses.DeploymentModification(**modification.to_dict())
 
 
@@ -1189,12 +1190,15 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
 
 class Events(SecuredResource):
 
+    def _set_index_name(self):
+        return 'logstash-{0}'.format(time.strftime("%Y.%m.%d"))
+
     def _query_events(self):
         """
         List events for the provided Elasticsearch query
         """
         verify_json_content_type()
-        return _query_elastic_search(index='cloudify_events',
+        return _query_elastic_search(index=self._set_index_name(),
                                      body=request.json)
 
     @swagger.operation(
@@ -1427,7 +1431,7 @@ class Tokens(SecuredResource):
         responseClass=responses.Tokens,
         nickname="get auth token for the request user",
         notes="Generate authentication token for the request user",
-        )
+    )
     @exceptions_handled
     @marshal_with(responses.Tokens.resource_fields)
     def get(self):
