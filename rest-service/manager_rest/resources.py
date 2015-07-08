@@ -24,7 +24,6 @@ import contextlib
 from functools import wraps
 from os import path
 from urllib2 import urlopen, URLError
-import time
 
 from setuptools import archive_util
 
@@ -1191,7 +1190,6 @@ def _query_elastic_search(index=None, doc_type=None, body=None):
 class Events(SecuredResource):
 
     def _set_index_name(self):
-        # return 'logstash-{0}'.format(time.strftime("%Y.%m.%d"))
         return 'logstash-*'
 
     def _query_events(self):
