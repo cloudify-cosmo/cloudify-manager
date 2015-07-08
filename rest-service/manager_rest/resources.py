@@ -780,7 +780,7 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def put(self, snapshot_id):
-        if doesSnapshotExist(snapshot_id):
+        if _does_snapshot_exist(snapshot_id):
             raise RuntimeError("Snapshot with id '{0}' already exists."
                                .format(snapshot_id))
 
@@ -811,7 +811,7 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def delete(self, snapshot_id):
-        if not doesSnapshotExist(snapshot_id):
+        if not _does_snapshot_exist(snapshot_id):
             raise RuntimeError("Snapshot with id '{0}' doesn't exist."
                                .format(snapshot_id))
 
@@ -827,14 +827,14 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def post(self, snapshot_id):
-        if not doesSnapshotExist(snapshot_id):
+        if not _does_snapshot_exist(snapshot_id):
             raise RuntimeError("Snapshot with id '{0}' doesn't exist."
                                .format(snapshot_id))
         get_blueprints_manager().restore_snapshot(snapshot_id)
         return None, 201
 
 
-def doesSnapshotExist(snapshot_id):
+def _does_snapshot_exist(snapshot_id):
     snapshot_path = os.path.join(
         config.instance().file_server_root,
         config.instance().file_server_uploaded_snapshots_folder,
@@ -954,7 +954,7 @@ class SnapshotsIdDownload(SecuredResource):
     )
     @exceptions_handled
     def get(self, snapshot_id):
-        if not doesSnapshotExist(snapshot_id):
+        if not _does_snapshot_exist(snapshot_id):
             raise RuntimeError("Snapshot with id '{0}' doesn't exist."
                                .format(snapshot_id))
 
