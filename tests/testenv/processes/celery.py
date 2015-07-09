@@ -219,8 +219,10 @@ class CeleryWorkerProcess(object):
 
 # copied from worker_installer/tasks.py:_delete_amqp_queues
 def _delete_amqp_queues(worker_name, queues):
+    credentials = pika.PlainCredentials('cloudify', 'c10udify')
     connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
+        pika.ConnectionParameters(host='localhost',
+                                  credentials=credentials))
     try:
         channel = connection.channel()
         for queue in queues:
