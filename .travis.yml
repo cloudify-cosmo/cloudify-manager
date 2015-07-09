@@ -17,7 +17,7 @@ env:
         - ACTION="flake8"
         - ACTION="plugin-installer-py26"
 before_script:
-        - sudo rabbitmqctl add_user cloudify cl10dify
+        - sudo rabbitmqctl add_user cloudify c10udify
         - sudo rabbitmqctl set_permissions cloudify '.*' '.*' '.*'
         - sudo rabbitmqctl delete_user guest
 install:
