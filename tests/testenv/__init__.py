@@ -448,8 +448,10 @@ def start_events_and_logs_polling(logs_handler_retriever=None):
         return
 
     setup_logger('pika', logging.INFO)
+    credentials = pika.PlainCredentials('cloudify', 'c10udify')
     connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
+        pika.ConnectionParameters(host='localhost',
+                                  credentials=credentials))
     channel = connection.channel()
     queues = ['cloudify-events', 'cloudify-logs']
     for q in queues:

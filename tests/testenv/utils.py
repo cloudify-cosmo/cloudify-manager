@@ -43,9 +43,10 @@ PROVIDER_CONTEXT = {
 }
 PROVIDER_NAME = 'integration_tests'
 
+DEFAULT_AMQP_URI = 'amqp://cloudify:c10udify@'
 
-celery = Celery(broker='amqp://',
-                backend='amqp://')
+celery = Celery(broker=DEFAULT_AMQP_URI,
+                backend=DEFAULT_AMQP_URI)
 celery.conf.update(
     CELERY_TASK_SERIALIZER="json"
 )
