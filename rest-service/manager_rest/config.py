@@ -20,6 +20,8 @@ class Config(object):
         self._db_address = 'localhost'
         self._db_port = 9200
         self._amqp_address = 'localhost'
+        self._amqp_username = 'cloudify'
+        self._amqp_password = 'c10udify'
         self._file_server_root = None
         self._file_server_base_uri = None
         self._file_server_blueprints_folder = None
@@ -63,6 +65,22 @@ class Config(object):
     @amqp_address.setter
     def amqp_address(self, value):
         self._amqp_address = value
+
+    @property
+    def amqp_username(self):
+        return self._amqp_username
+
+    @amqp_username.setter
+    def amqp_username(self, value):
+        self._amqp_username = value
+
+    @property
+    def amqp_password(self):
+        return self._amqp_password
+
+    @amqp_password.setter
+    def amqp_password(self, value):
+        self._amqp_password = value
 
     @property
     def file_server_root(self):

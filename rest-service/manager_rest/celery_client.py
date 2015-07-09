@@ -27,7 +27,10 @@ TASK_STATE_FAILURE = 'FAILURE'
 class CeleryClient(object):
 
     def __init__(self):
-        amqp_uri = 'amqp://{0}'.format(config.instance().amqp_address)
+        amqp_uri = 'amqp://{username}:{password}@{address}'.format(
+            address=config.instance().amqp_address,
+            username=config.instance().amqp_username,
+            password=config.instance().amqp_password)
         self.celery = Celery(broker=amqp_uri, backend=amqp_uri)
         self.celery.conf.update(CELERY_TASK_SERIALIZER="json")
 
