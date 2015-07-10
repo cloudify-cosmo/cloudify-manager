@@ -51,6 +51,7 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager)
 from manager_rest import get_version_data
+from manager_rest.snapshots import (create_snapshot, restore_snapshot)
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
@@ -784,24 +785,8 @@ class SnapshotsId(SecuredResource):
             raise RuntimeError("Snapshot with id '{0}' already exists."
                                .format(snapshot_id))
 
-        # for testing purpose
-        path = os.path.join(
-            config.instance().file_server_root,
-            config.instance().file_server_uploaded_snapshots_folder,
-            snapshot_id
-        )
-        os.makedirs(path)
-        snapshot_file = os.path.join(path, '{0}.zip'.format(snapshot_id))
-        with zipfile.ZipFile(snapshot_file, 'w') as f:
-            f.writestr('asd.txt', 'asdf')
-        # end test code
-
-        # snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
-        # return responses.Snapshot(snapshot.to_dict()), 201
-        return responses.Snapshot(
-            id=snapshot_id,
-            created_at=get_snapshot_ctime(snapshot_file)
-        ), 201
+        snapshot = create_snapshot(snapshot_id)
+        return snapshot, 201
 
     @swagger.operation(
         responseClass=responses.Snapshot,
@@ -830,7 +815,7 @@ class SnapshotsId(SecuredResource):
         if not doesSnapshotExist(snapshot_id):
             raise RuntimeError("Snapshot with id '{0}' doesn't exist."
                                .format(snapshot_id))
-        get_blueprints_manager().restore_snapshot(snapshot_id)
+        restore_snapshot(snapshot_id)
         return None, 201
 
 

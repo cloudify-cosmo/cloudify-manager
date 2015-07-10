@@ -98,12 +98,6 @@ class BlueprintsManager(object):
 
         return self.sm.update_execution_status(execution_id, status, error)
 
-    def create_snapshot(self, snapshot_id):
-        pass
-
-    def restore_snapshot(self, snapshot_id):
-        pass
-
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
         try:
@@ -775,6 +769,20 @@ class BlueprintsManager(object):
             raise RuntimeError(
                 'Unexpected deployment status for deployment {0} '
                 '[status={1}]'.format(deployment_id, status))
+
+    # For restore snapshot purpose. To that moment elasticsearch has to be
+    # already restored.
+    def recreate_deployments_enviroments(self):
+        deps = self.deployments_list()
+
+        for dep in deps:
+            dep['id'] = dep['deployment_id']
+            blueprint = self.get_blueprint(dep['blueprint_id'])
+            plan = blueprint.plan
+            deployment_plan = tasks.prepare_deployment_plan(plan,
+                                                            dep['inputs'])
+
+            self._create_deployment_environment(dep, deployment_plan)
 
     def _create_deployment_environment(self, deployment, deployment_plan):
         wf_id = 'create_deployment_environment'
