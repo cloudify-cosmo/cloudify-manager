@@ -80,8 +80,10 @@ def _deployment_config_dir():
 def _publish_configuration_event(state, deployment_config_dir_path):
     manager_queue = 'manager-riemann'
     exchange_name = 'cloudify-monitoring'
+    credentials = pika.PlainCredentials('cloudify', 'c10udify')
     connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host=get_manager_ip())
+        pika.ConnectionParameters(host=get_manager_ip(),
+                                  credentials=credentials)
     )
     try:
         channel = connection.channel()

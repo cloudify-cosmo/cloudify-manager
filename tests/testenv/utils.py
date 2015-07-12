@@ -279,8 +279,9 @@ def publish_event(queue,
                   event,
                   exchange_name='cloudify-monitoring',
                   exchange_type='topic'):
+    credentials = pika.PlainCredentials('cloudify', 'c10udify')
     connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
+        pika.ConnectionParameters(host='localhost', credentials=credentials))
     channel = connection.channel()
     channel.exchange_declare(exchange=exchange_name,
                              type=exchange_type,
