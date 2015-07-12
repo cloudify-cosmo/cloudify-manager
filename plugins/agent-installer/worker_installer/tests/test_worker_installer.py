@@ -62,7 +62,7 @@ def _get_custom_celery_includes_list():
 def _extract_registered_plugins(worker_name):
 
     # c = Celery(broker=broker_url, backend=broker_url)
-    broker_url = 'amqp://guest:guest@localhost:5672//'
+    broker_url = 'amqp://cloudify:c10udify@localhost:5672//'
     c = Celery(broker=broker_url, backend=broker_url)
     tasks = c.control.inspect.registered(c.control.inspect())
 
@@ -398,7 +398,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         tasks.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
 
-        broker_url = 'amqp://guest:guest@localhost:5672//'
+        broker_url = 'amqp://cloudify:c10udify@localhost:5672//'
         c = Celery(broker=broker_url, backend=broker_url)
         kwargs = {'command': 'ls -l'}
         result = c.send_task(
@@ -412,7 +412,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         tasks.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
 
-        broker_url = 'amqp://guest:guest@localhost:5672//'
+        broker_url = 'amqp://cloudify:c10udify@localhost:5672//'
         c = Celery(broker=broker_url, backend=broker_url)
         kwargs = {'command': 'ls -l'}
         result = c.send_task(

@@ -111,7 +111,7 @@ class CeleryWorkerProcess(object):
             '--queues={0}'.format(self.queues),
             '--autoscale={0},1'.format(self.concurrency),
             '--include={0}'.format(','.join(includes)),
-            '--broker={0}'.format('amqp://cloudify:c10udify@localhost')
+            '--broker={0}'.format('amqp://cloudify:c10udify@localhost//')
         ]
 
         env_conf = dict(
