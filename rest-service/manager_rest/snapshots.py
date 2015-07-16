@@ -1,28 +1,55 @@
-import tempfile
-import shutil
-import time
 import json
+import tempfile
+import time
+import shutil
 import zipfile
 
-from os import (path, makedirs)
+from os import (path, makedirs, remove)
+from subprocess import call
 
 import elasticsearch
+import elasticsearch.helpers
 
 from manager_rest import config
 from manager_rest import responses
 from manager_rest.blueprints_manager import get_blueprints_manager
 
 ELASTICSEARCH = 'es_data'
+INFLUXDB = 'influxdb-data'
+INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
+                     '?u=root&p=root&chunked=true" --data-urlencode'
+                     ' "q=select * from /.*/" > {0}')
+INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
+                        '-d "[${{line}}]" "http://localhost:8086/db/cloudify/'
+                        'series?u=root&p=root" ;done')
 
-DATA_TO_COPY = [
-    ('/opt/influxdb/shared/data', 'influxdb-data'),
-    (config.instance().file_server_blueprints_folder, 'blueprints'),
-    (config.instance().file_server_uploaded_blueprints_folder,
-        'uploaded-blueprints')
-]
+
+def get_json_objects(f):
+    start_point = 0
+    active_brackets = 0
+    c = f.read(1)
+    while c:
+        if c == '{':
+            active_brackets += 1
+        elif c == '}':
+            active_brackets -= 1
+            if active_brackets == 0:
+                end_point = f.tell()
+                f.seek(start_point)
+                yield f.read(end_point - start_point)
+                start_point = end_point
+
+        c = f.read(1)
 
 
 def copy_data(archive_root, to_archive=True):
+    DATA_TO_COPY = [
+        (config.instance().file_server_blueprints_folder, 'blueprints'),
+        (config.instance().file_server_uploaded_blueprints_folder,
+            'uploaded-blueprints')
+    ]
+
+    # files with constant relative/absolute paths
     for (p1, p2) in DATA_TO_COPY:
         if p1[0] != '/':
             p1 = path.join(config.instance().file_server_root, p1)
@@ -31,10 +58,15 @@ def copy_data(archive_root, to_archive=True):
         if not to_archive:
             p1, p2 = p2, p1
 
-        shutil.copy(p1, p2)
+        if path.isfile(p1):
+            shutil.copy(p1, p2)
+        else:
+            if path.exists(p2):
+                shutil.rmtree(p2, ignore_errors=True)
+            shutil.copytree(p1, p2)
 
 
-def create_snapshot(self, snapshot_id):
+def create_snapshot(snapshot_id):
 
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
@@ -61,6 +93,17 @@ def create_snapshot(self, snapshot_id):
         for item in event_scan:
             f.write(json.dumps(item) + '\n')
 
+    # influxdb
+    influxdb_file = path.join(tempdir, INFLUXDB)
+    influxdb_temp_file = influxdb_file + '.temp'
+    call(INFLUXDB_DUMP_CMD.format(influxdb_temp_file), shell=True)
+    with open(influxdb_temp_file, 'r') as f, open(influxdb_file, 'w') as g:
+        for obj in get_json_objects(f):
+            obj = obj.replace('  ', '') + '\n'
+            g.write(obj)
+
+    remove(influxdb_temp_file)
+
     # zip
     snapshot_dir = path.join(snapshots_dir, snapshot_id)
     makedirs(snapshot_dir)
@@ -82,7 +125,7 @@ def create_snapshot(self, snapshot_id):
     )
 
 
-def restore_snapshot(self, snapshot_id):
+def restore_snapshot(snapshot_id):
 
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
@@ -114,11 +157,14 @@ def restore_snapshot(self, snapshot_id):
     es.indices.create(index='cloudify_storage')
 
     def es_data_itr():
-        for line in open(ELASTICSEARCH, 'r'):
+        for line in open(path.join(tempdir, ELASTICSEARCH), 'r'):
             yield json.loads(line)
 
     elasticsearch.helpers.bulk(es, es_data_itr())
-
     get_blueprints_manager().recreate_deployments_enviroments()
 
+    # influxdb
+    call(INFLUXDB_RESTORE_CMD.format(path.join(tempdir, INFLUXDB)), shell=True)
+
+    # end
     shutil.rmtree(tempdir)

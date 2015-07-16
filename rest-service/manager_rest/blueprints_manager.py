@@ -776,11 +776,10 @@ class BlueprintsManager(object):
         deps = self.deployments_list()
 
         for dep in deps:
-            dep['id'] = dep['deployment_id']
-            blueprint = self.get_blueprint(dep['blueprint_id'])
+            blueprint = self.get_blueprint(dep.blueprint_id)
             plan = blueprint.plan
             deployment_plan = tasks.prepare_deployment_plan(plan,
-                                                            dep['inputs'])
+                                                            dep.inputs)
 
             self._create_deployment_environment(dep, deployment_plan)
 
