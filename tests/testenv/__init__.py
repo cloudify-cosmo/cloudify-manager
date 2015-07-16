@@ -37,6 +37,7 @@ from testenv.constants import RABBITMQ_VERBOSE_MESSAGES_ENABLED
 from testenv.constants import RABBITMQ_POLLING_ENABLED
 from testenv.constants import FILE_SERVER_RESOURCES_URI
 from testenv.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
+from testenv.constants import FILE_SERVER_UPLOADED_SNAPSHOTS_FOLDER
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 from testenv.processes.elastic import ElasticSearchProcess
 from testenv.processes.manager_rest import ManagerRestProcess
@@ -251,6 +252,7 @@ class TestEnvironment(object):
             additional_includes=[
                 'riemann_controller.tasks',
                 'cloudify_system_workflows.deployment_environment',
+                'cloudify_system_workflows.snapshot',
                 'cloudify.plugins.workflows',
                 'diamond_agent.tasks',
                 'script_runner.tasks'
@@ -291,6 +293,7 @@ class TestEnvironment(object):
             file_server_base_uri,
             FILE_SERVER_BLUEPRINTS_FOLDER,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+            FILE_SERVER_UPLOADED_SNAPSHOTS_FOLDER,
             FILE_SERVER_RESOURCES_URI,
             self.rest_service_log_level,
             self.rest_service_log_path,

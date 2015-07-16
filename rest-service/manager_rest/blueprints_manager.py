@@ -99,7 +99,12 @@ class BlueprintsManager(object):
         return self.sm.update_execution_status(execution_id, status, error)
 
     def create_snapshot(self, snapshot_id):
-        pass
+        # Not finished yet ..
+        self._execute_system_wide_workflow(
+            'create_snapshot',
+            'cloudify_system_workflows.snapshot.create',
+            {'snapshot_id': snapshot_id}
+        )
 
     def restore_snapshot(self, snapshot_id):
         pass
@@ -251,6 +256,31 @@ class BlueprintsManager(object):
             execution_parameters=execution_parameters)
 
         return new_execution
+
+    def _execute_system_wide_workflow(self, wf_id, task_mapping,
+                    execution_parameters=None, created_at=None):
+
+        execution_id = str(uuid.uuid4())
+        execution_parameters = execution_parameters or {}
+
+        execution = models.Execution(
+            id=execution_id,
+            status=models.Execution.PENDING,
+            created_at=created_at or str(datetime.now()),
+            blueprint_id=None,
+            workflow_id=wf_id,
+            deployment_id=None,
+            error='',
+            parameters=self._get_only_user_execution_parameters(
+                execution_parameters),
+            is_system_workflow=True)
+
+        self.sm.put_execution(execution.id, execution)
+
+        async_task = workflow_client().execute_system_wide_workflow(
+            wf_id, execution_id, task_mapping, execution_parameters)
+
+        return async_task
 
     def _execute_system_workflow(self, deployment, wf_id, task_mapping,
                                  execution_parameters=None, timeout=0,
