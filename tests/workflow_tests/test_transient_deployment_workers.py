@@ -32,7 +32,9 @@ class TransientDeploymentWorkersTest(ProcessModeTestCase):
         self.addCleanup(restore_provider_context)
 
     def configure(self):
-        context = {'cloudify': {'transient_deployment_workers': True}}
+        context = {'cloudify': {
+            'transient_deployment_workers_mode': {
+                'enabled': True}}}
         self.client.manager.create_context(self._testMethodName, context)
 
     def test_basic_sanity(self):

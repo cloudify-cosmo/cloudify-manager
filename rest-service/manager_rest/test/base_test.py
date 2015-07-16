@@ -21,6 +21,8 @@ import tempfile
 import time
 import os
 
+from nose.tools import nottest
+
 from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
@@ -41,6 +43,7 @@ def build_query_string(query_params):
     return query_string
 
 
+@nottest
 def test_config(**kwargs):
     """
     decorator-generator that can be used on test functions to set
@@ -58,10 +61,10 @@ def test_config(**kwargs):
 
 def inject_test_config(f):
     """
-    decorator for injecting "test_config" into a function.
+    decorator for injecting "test_config" into a test obj method.
     also see the "test_config" decorator
-    :param f: a function to be injected with  the "test_config" parameter
-    :return: the function augmented with the "test_config" parameter
+    :param f: a test obj method to be injected with the "test_config" parameter
+    :return: the method augmented with the "test_config" parameter
     """
     def _wrapper(test_obj, *args, **kwargs):
         test_func = getattr(test_obj, test_obj.id().split('.')[-1])
