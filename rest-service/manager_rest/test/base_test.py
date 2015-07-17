@@ -60,6 +60,7 @@ def test_config(**kwargs):
     return _test_config_decorator
 
 
+@nottest
 def inject_test_config(f):
     """
     decorator for injecting "test_config" into a test obj method.
