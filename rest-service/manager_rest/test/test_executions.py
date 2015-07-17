@@ -18,7 +18,9 @@ from datetime import datetime
 
 import mock
 
-from manager_rest.test import base_test
+from manager_rest.test.base_test import BaseServerTestCase
+from manager_rest.test.base_test import test_config
+from manager_rest.test.base_test import inject_test_config
 from cloudify_rest_client import exceptions
 from manager_rest import manager_exceptions
 from manager_rest import models
@@ -27,7 +29,7 @@ from manager_rest.blueprints_manager import \
     LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE as LIMITLESS_GLOBAL_EXECUTIONS
 
 
-class ExecutionsTestCase(base_test.BaseServerTestCase):
+class ExecutionsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
 
@@ -453,12 +455,11 @@ class ExecutionsTestCase(base_test.BaseServerTestCase):
         return execution
 
 
-class TransientDeploymentWorkersExecutionsTestCase(
-    base_test.BaseServerTestCase):
+class TransientDeploymentWorkersExecutionsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
 
-    @base_test.inject_test_config
+    @inject_test_config
     def initialize_provider_context(self, test_config):
         provider_context = {
             'cloudify': {
@@ -467,9 +468,8 @@ class TransientDeploymentWorkersExecutionsTestCase(
         }
         self.client.manager.create_context(self.id(), provider_context)
 
-    @base_test.test_config(
-        enabled=True,
-        global_parallel_executions_limit=LIMITLESS_GLOBAL_EXECUTIONS)
+    @test_config(enabled=True,
+                 global_parallel_executions_limit=LIMITLESS_GLOBAL_EXECUTIONS)
     def test_transient_dep_workers_force_execute(self):
         # verifies force-executing a workflow is disabled in transient
         # deployment workers mode - regardless of whether other workflows
@@ -488,7 +488,7 @@ class TransientDeploymentWorkersExecutionsTestCase(
                 EXISTING_RUNNING_EXECUTION_ERROR_CODE
             self.assertEqual(expected_error_code, e.error_code)
 
-    @base_test.test_config()
+    @test_config()
     def test_transient_dep_workers_default_config(self):
         # verifies default values in the REST service for the transient
         # deployment workers mode configuration
@@ -508,23 +508,22 @@ class TransientDeploymentWorkersExecutionsTestCase(
             m.assert_called_once_with(deployment_id, False,
                                       expected_default_config)
 
-    @base_test.test_config(enabled=True,
-                           global_parallel_executions_limit=2)
+    @test_config(enabled=True,
+                 global_parallel_executions_limit=2)
     def test_transient_dep_workers_global_executions_limit(self):
         # verifies global executions limit takes effect when transient
         # deployment workers mode is enabled
         self._run_parallel_executions_and_verify_result(expect_failure=True)
 
-    @base_test.test_config(enabled=False,
-                           global_parallel_executions_limit=1)
+    @test_config(enabled=False,
+                 global_parallel_executions_limit=1)
     def test_transient_dep_workers_disabled_global_executions_limit(self):
         # verifies global executions limit has no effect when transient
         # deployment workers mode is disabled
         self._run_parallel_executions_and_verify_result(expect_failure=False)
 
-    @base_test.test_config(
-        enabled=True,
-        global_parallel_executions_limit=LIMITLESS_GLOBAL_EXECUTIONS)
+    @test_config(enabled=True,
+                 global_parallel_executions_limit=LIMITLESS_GLOBAL_EXECUTIONS)
     def test_transient_dep_workers_limitless_global_executions(self):
         # verifies the value for limitless global executions is used correctly
         self._run_parallel_executions_and_verify_result(expect_failure=False)
