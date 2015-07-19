@@ -29,22 +29,143 @@ node_types:
     derived_from: cloudify.nodes.Root
     properties:
       install_agent:
+        description: |
+          Property for specifying that this Compute node will be
+          running a cloudify agent.
+        default: true
+      remote_execution:
+        description: |
+          Property specifying how will the cloudify agent be installed on
+          the Compute node. If the 'install_agent' property is false, this
+          property is ignored since this node will not be running an agent.
+          If 'install_agent' is true, this property should set to true in
+          order for cloudify to remotely install the agent, and false if the
+          agent installation process takes place outside the context of
+          cloudify (e.g userdata)
         default: true
       cloudify_agent:
         default: {}
       ip:
         default: ''
+      os:
+        description: |
+          Property specifying what type of operating system this compute node
+          will run.
+        default:
+          type: Linux
     interfaces:
-      cloudify.interfaces.worker_installer:
-        install: agent_installer.worker_installer.tasks.install
-        start: agent_installer.worker_installer.tasks.start
-        stop: agent_installer.worker_installer.tasks.stop
-        uninstall: agent_installer.worker_installer.tasks.uninstall
-        restart: agent_installer.worker_installer.tasks.restart
-      cloudify.interfaces.plugin_installer:
-        install: plugin_installer.plugin_installer.tasks.install
+      cloudify.interfaces.cloudify_agent:
+
+        #####################################################
+        # This operation will download the necessary files
+        # for the agent and place them were needed.
+        # ---------------------------------------------------
+        # It will be executed on the manager and will connect
+        # to the agent via fabric/winrm
+        #####################################################
+
+        create:
+          implementation: agent.cloudify_agent.installer.operations.create
+          executor: central_deployment_agent
+
+        #####################################################
+        # This operation will create all the necessary
+        # configuration for the agent to be started.
+        # ---------------------------------------------------
+        # It will be executed on the manager and will connect
+        # to the agent via fabric/winrm
+        #####################################################
+
+        configure:
+          implementation: agent.cloudify_agent.installer.operations.configure
+          executor: central_deployment_agent
+
+        #####################################################
+        # This operation will actually start the agent
+        # process.
+        # ---------------------------------------------------
+        # It will be executed on the manager and will connect
+        # to the agent via fabric/winrm
+        #####################################################
+
+        start:
+          implementation: agent.cloudify_agent.installer.operations.start
+          executor: central_deployment_agent
+
+        #####################################################
+        # This operation will stop the agent process.
+        # ---------------------------------------------------
+        # It will be executed on the manager and will connect
+        # to the agent via fabric/winrm
+        #####################################################
+
+        stop:
+          implementation: agent.cloudify_agent.installer.operations.stop
+          executor: central_deployment_agent
+
+        #####################################################
+        # This operation will stop the agent process
+        # whithout connecting to the remote host.
+        # ---------------------------------------------------
+        # It will be executed on the agent host via AMQP
+        #####################################################
+
+        stop_amqp:
+          implementation: agent.cloudify_agent.operations.stop
+          executor: host_agent
+
+        #####################################################
+        # This operation will delete agent resources.
+        # ---------------------------------------------------
+        # It will be executed on the manager and will connect
+        # to the agent via fabric/winrm
+        #####################################################
+
+        delete:
+          implementation: agent.cloudify_agent.installer.operations.delete
+          executor: central_deployment_agent
+
+        #####################################################
+        # This operation will restart the agent process.
+        # ---------------------------------------------------
+        # It will be executed on the manager and will connect
+        # to the agent via fabric/winrm
+        #####################################################
+
+        restart:
+          implementation: agent.cloudify_agent.installer.operations.restart
+          executor: central_deployment_agent
+
+        #####################################################
+        # This operation will restart the agent process
+        # whithout connecting to the remote host.
+        # the agent will have a new name after this
+        # operation, but will of course listen to the same
+        # queue.
+        # ---------------------------------------------------
+        # It will be executed on the agent host via AMQP
+        #####################################################
+
+        restart_amqp:
+          implementation: agent.cloudify_agent.operations.restart
+          executor: host_agent
+
+        #####################################################
+        # This operation will install additional plugins
+        # on the agent environment.
+        # ---------------------------------------------------
+        # It will be executed directly on the agent via AMQP.
+        # not requiring any new remote connection to be
+        # established.
+        #####################################################
+
+        install_plugins:
+          implementation: agent.cloudify_agent.operations.install_plugins
+          executor: host_agent
+
       cloudify.interfaces.host:  # DEPRECATED
         get_state: {}
+
       cloudify.interfaces.monitoring_agent:
         install: {}
         start: {}
@@ -286,20 +407,8 @@ workflows:
 ##################################################################################
 plugins:
 
-  agent_installer:
+  agent:
     executor: central_deployment_agent
-    install: false
-
-  plugin_installer:
-    executor: host_agent
-    install: false
-
-  windows_agent_installer:
-    executor: central_deployment_agent
-    install: false
-
-  windows_plugin_installer:
-    executor: host_agent
     install: false
 
   default_workflows:
