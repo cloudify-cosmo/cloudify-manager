@@ -69,7 +69,8 @@ def inject_test_config(f):
     """
     def _wrapper(test_obj, *args, **kwargs):
         test_func = getattr(test_obj, test_obj.id().split('.')[-1])
-        kwargs['test_config'] = test_func.test_config
+        if hasattr(test_func, 'test_config'):
+            kwargs['test_config'] = test_func.test_config
         return f(test_obj, *args, **kwargs)
     return _wrapper
 
