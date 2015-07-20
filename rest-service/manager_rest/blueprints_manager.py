@@ -33,6 +33,9 @@ from manager_rest.utils import get_class_instance
 from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
 
 
+LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
+
+
 class DslParseException(Exception):
     pass
 
@@ -59,9 +62,12 @@ class BlueprintsManager(object):
     def deployments_list(self, include=None):
         return self.sm.deployments_list(include=include)
 
-    def executions_list(self, deployment_id=None, include=None):
-        return self.sm.executions_list(deployment_id=deployment_id,
-                                       include=include)
+    def executions_list(self, deployment_id=None,
+                        is_include_system_workflows=False, include=None):
+        executions = self.sm.executions_list(deployment_id=deployment_id,
+                                             include=include)
+        return [e for e in executions if
+                is_include_system_workflows or not e.is_system_workflow]
 
     def get_blueprint(self, blueprint_id, include=None):
         return self.sm.get_blueprint(blueprint_id, include=include)
@@ -75,7 +81,7 @@ class BlueprintsManager(object):
 
     def update_execution_status(self, execution_id, status, error):
 
-        if self._is_transient_deployment_workers_mode() and \
+        if self._get_transient_deployment_workers_mode_config()['enabled'] and\
                 status in models.Execution.END_STATES:
             execution = self.get_execution(execution_id)
 
@@ -182,32 +188,18 @@ class BlueprintsManager(object):
 
         self._verify_deployment_environment_created_successfully(deployment_id)
 
-        is_transient_workers = self._is_transient_deployment_workers_mode()
+        transient_workers_config =\
+            self._get_transient_deployment_workers_mode_config()
+        is_transient_workers_enabled = transient_workers_config['enabled']
 
-        # validate no execution is currently in progress
-        if not force:
-            executions = self.sm.executions_list(
-                deployment_id=deployment_id)
-            running = [
-                e.id for e in executions if
-                self.sm.get_execution(e.id).status
-                not in models.Execution.END_STATES]
-            if len(running) > 0:
-                raise manager_exceptions.ExistingRunningExecutionError(
-                    'The following executions are currently running for this '
-                    'deployment: {0}. To execute this workflow anyway, pass '
-                    '"force=true" as a query parameter to this request'.format(
-                        running))
-        elif is_transient_workers:
-            raise manager_exceptions.ExistingRunningExecutionError(
-                'Forcing concurrent executions is disabled in transient '
-                'deployment workers mode')
+        self._check_for_active_executions(deployment_id, force,
+                                          transient_workers_config)
 
         execution_parameters = \
             BlueprintsManager._merge_and_validate_execution_parameters(
                 workflow, workflow_id, parameters, allow_custom_parameters)
 
-        if is_transient_workers:
+        if is_transient_workers_enabled:
             # in this mode, we push the user execution object to storage
             # before executing the "_start_deployment_environment" system
             # workflow, to prevent from other executions to start running in
@@ -232,7 +224,7 @@ class BlueprintsManager(object):
 
         self.sm.put_execution(new_execution.id, new_execution)
 
-        if is_transient_workers:
+        if is_transient_workers_enabled:
             # initiating a workflow to start deployment workers
             wf_id = '_start_deployment_environment'
             deployment_env_start_task_name = \
@@ -806,10 +798,65 @@ class BlueprintsManager(object):
         self._execute_system_workflow(
             deployment, wf_id, deployment_env_deletion_task_name, timeout=300)
 
-    def _is_transient_deployment_workers_mode(self):
+    def _check_for_active_executions(self, deployment_id, force,
+                                     transient_workers_config):
+        is_transient_workers_enabled = transient_workers_config['enabled']
+
+        def _get_running_executions(deployment_id=None, include_system=True):
+            executions = self.executions_list(
+                deployment_id=deployment_id,
+                is_include_system_workflows=include_system)
+            running = [
+                e.id for e in executions if
+                self.sm.get_execution(e.id).status
+                not in models.Execution.END_STATES]
+            return running
+
+        # validate no execution is currently in progress
+        if not force:
+            running = _get_running_executions(deployment_id)
+            if len(running) > 0:
+                raise manager_exceptions.ExistingRunningExecutionError(
+                    'The following executions are currently running for this '
+                    'deployment: {0}. To execute this workflow anyway, pass '
+                    '"force=true" as a query parameter to this request'.format(
+                        running))
+        elif is_transient_workers_enabled:
+            raise manager_exceptions.ExistingRunningExecutionError(
+                'Forcing parallel executions in a single deployment is '
+                'disabled in transient deployment workers mode')
+
+        if is_transient_workers_enabled:
+            global_parallel_executions_limit = \
+                transient_workers_config['global_parallel_executions_limit']
+
+            if global_parallel_executions_limit != \
+                    LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE:
+                running = _get_running_executions()
+                if len(running) >= global_parallel_executions_limit:
+                    raise manager_exceptions. \
+                        GlobalParallelRunningExecutionsLimitReachedError(
+                            'New workflows may not be executed at this time,'
+                            'because global parallel running executions limit '
+                            'has been reached ({0} running executions; '
+                            'global limit {1}). Please try again soon'
+                            .format(len(running),
+                                    global_parallel_executions_limit))
+
+    def _get_transient_deployment_workers_mode_config(self):
         provider_context = self.sm.get_provider_context().context
-        return provider_context['cloudify'].get(
-            'transient_deployment_workers', False)
+        transient_workers_config = provider_context['cloudify'].get(
+            'transient_deployment_workers_mode', {})
+
+        # setting defaults if missing
+        transient_workers_config['enabled'] = \
+            transient_workers_config.get('enabled', False)
+        transient_workers_config['global_parallel_executions_limit'] = \
+            transient_workers_config.get(
+                'global_parallel_executions_limit',
+                LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE)
+
+        return transient_workers_config
 
     @staticmethod
     def _get_only_user_execution_parameters(execution_parameters):
