@@ -1360,7 +1360,8 @@ class ProviderContext(SecuredResource):
 
         try:
             get_blueprints_manager().update_provider_context(update, context)
-            return responses.ProviderContextPostStatus(status='ok'), status_code
+            return \
+                responses.ProviderContextPostStatus(status='ok'), status_code
         except ResolverInstantiationError, ex:
             raise manager_exceptions.ResolverInstantiationError(ex.message)
 

@@ -24,13 +24,13 @@ from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
+from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.utils import maybe_register_teardown
 from manager_rest.utils import get_class_instance
-from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
 
 
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
@@ -873,7 +873,8 @@ class BlueprintsManager(object):
             if resolver_section:
                 resolver_class_path = resolver_section.get(
                     constants.RESOLVER_IMPLEMENTATION_KEY)
-                params = resolver_section.get(constants.RESLOVER_PARAMETERS_KEY)
+                params = resolver_section.get(
+                    constants.RESLOVER_PARAMETERS_KEY)
         return resolver_class_path, params
 
     def _update_url_resolver(self):
@@ -893,9 +894,10 @@ class BlueprintsManager(object):
                         rules=params.get(constants.DEFAULT_RESLOVER_RULES_KEY))
                 except Exception as e:
                     raise ResolverInstantiationError(
-                        'failed to instantiate the default resolver class ({0}) '
+                        'failed to instantiate the default resolver ({0}) '
                         'with params {1}: {2}'.format(
-                            DefaultUrlResolver.__class__.__name__, params, e.message))
+                            DefaultUrlResolver.__class__.__name__,
+                            params, e.message))
         return resolver
 
     def update_provider_context(self, update, context):
@@ -922,4 +924,3 @@ def get_blueprints_manager():
         g.blueprints_manager = BlueprintsManager()
         maybe_register_teardown(current_app, teardown_blueprints_manager)
     return g.blueprints_manager
-

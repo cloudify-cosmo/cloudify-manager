@@ -64,4 +64,3 @@ class ProviderContextTestCase(BaseServerTestCase):
         except exceptions.CloudifyClientError as e:
             self.assertEqual(e.status_code, 404)
             self.assertEqual(e.message, 'Provider Context not found')
-

@@ -41,16 +41,19 @@ class ResolverTests(BaseServerTestCase):
     def _create_resolver_section(self, resolver_impl=None, resolver_params=[]):
         resolver_section = {}
         if resolver_impl:
-            resolver_section[constants.RESOLVER_IMPLEMENTATION_KEY] = resolver_impl
+            resolver_section[constants.RESOLVER_IMPLEMENTATION_KEY] = \
+                resolver_impl
         if resolver_params:
-            resolver_section[constants.RESLOVER_PARAMETERS_KEY] = resolver_params
+            resolver_section[constants.RESLOVER_PARAMETERS_KEY] = \
+                resolver_params
         return resolver_section
 
     def _update_provider_context(self, resolver_section=None):
         cloudify_section = {}
         if resolver_section:
             cloudify_section[constants.URL_RESOLVER_KEY] = resolver_section
-        self.client.manager.update_context(self.id(), {'cloudify': cloudify_section})
+        self.client.manager.update_context(self.id(),
+                                           {'cloudify': cloudify_section})
 
     @mock.patch('dsl_parser.tasks.parse_dsl')
     def _test_resolver(self,
@@ -77,7 +80,8 @@ class ResolverTests(BaseServerTestCase):
 
         mock_parse_dsl.assert_call_once()
         resolver = mock_parse_dsl.call_args[0][2]
-        self.assertEqual(_get_instance_class_path(resolver), expected_resolver_impl)
+        self.assertEqual(_get_instance_class_path(resolver),
+                         expected_resolver_impl)
         if resolver_section and resolver_section.get(
                 constants.RESOLVER_IMPLEMENTATION_KEY):
             self.assertEqual(
@@ -93,7 +97,8 @@ class ResolverTests(BaseServerTestCase):
                             expected_params=None)
 
     def test_custom_rules_no_resolver_implementation(self):
-        # only the rules are specified in the url_resolver section in the provider context
+        # only the rules are specified in the url_resolver section
+        # in the provider context
         params = {
             'rules': [
                 {'prefix1': 'prefix2'}
