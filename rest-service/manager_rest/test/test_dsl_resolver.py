@@ -12,14 +12,14 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from cloudify_rest_client.exceptions import CloudifyClientError
-
-from dsl_parser import constants
 
 import mock
-from dsl_parser.url_resolver.abstract_url_resolver import AbstractUrlResolver
 
+from cloudify_rest_client.exceptions import CloudifyClientError
+from dsl_parser import constants
+from dsl_parser.url_resolver.abstract_url_resolver import AbstractUrlResolver
 from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
+
 from manager_rest import utils
 from manager_rest.test.base_test import BaseServerTestCase
 
