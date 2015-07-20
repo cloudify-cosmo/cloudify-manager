@@ -20,18 +20,24 @@ from StringIO import StringIO
 
 from flask import g, current_app
 
+from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
-from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.utils import maybe_register_teardown
+from manager_rest.utils import get_class_instance
+from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
 
 
 class DslParseException(Exception):
+    pass
+
+
+class ResolverInstantiationError(Exception):
     pass
 
 
@@ -101,7 +107,8 @@ class BlueprintsManager(object):
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
         try:
-            plan = tasks.parse_dsl(dsl_location, resources_base_url)
+            plan = tasks.parse_dsl(
+                dsl_location, resources_base_url, current_app.resolver)
         except Exception, ex:
             raise DslParseException(str(ex))
 
@@ -776,8 +783,8 @@ class BlueprintsManager(object):
             'cloudify_system_workflows.deployment_environment.create'
 
         kwargs = {
-            DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
-                DEPLOYMENT_PLUGINS_TO_INSTALL],
+            constants.DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
+                constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
             'workflow_plugins_to_install': deployment_plan[
                 'workflow_plugins_to_install'],
             'policy_configuration': {
@@ -809,6 +816,49 @@ class BlueprintsManager(object):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
 
+    def _get_resolver_section(self):
+        resolver_class_path = None
+        params = None
+        provider_context = self.sm.get_provider_context().context
+        if self.sm.get_provider_context().context:
+            cloudify_section = provider_context['cloudify']
+            resolver_section = cloudify_section.get(constants.URL_RESOLVER_KEY)
+            if resolver_section:
+                resolver_class_path = resolver_section.get(
+                    constants.RESOLVER_IMPLEMENTATION_KEY)
+                params = resolver_section.get(constants.RESLOVER_PARAMETERS_KEY)
+        return resolver_class_path, params
+
+    def _update_url_resolver(self):
+        resolver = DefaultUrlResolver()
+        resolver_class_path, params = self._get_resolver_section()
+        if resolver_class_path:
+            try:
+                resolver = get_class_instance(resolver_class_path, params)
+            except Exception as e:
+                raise ResolverInstantiationError(e.message)
+        else:
+            # using the default resolver
+            if params:
+                # using custom rules for the default resolver
+                try:
+                    resolver = DefaultUrlResolver(
+                        rules=params.get(constants.DEFAULT_RESLOVER_RULES_KEY))
+                except Exception as e:
+                    raise ResolverInstantiationError(
+                        'failed to instantiate the default resolver class ({0}) '
+                        'with params {1}: {2}'.format(
+                            DefaultUrlResolver.__class__.__name__, params, e.message))
+        return resolver
+
+    def update_provider_context(self, update, context):
+        if update:
+            self.sm.update_provider_context(context)
+        else:
+            self.sm.put_provider_context(context)
+
+        current_app.resolver = self._update_url_resolver()
+
 
 def teardown_blueprints_manager(exception):
     # print "tearing down blueprints manager!"
@@ -825,3 +875,4 @@ def get_blueprints_manager():
         g.blueprints_manager = BlueprintsManager()
         maybe_register_teardown(current_app, teardown_blueprints_manager)
     return g.blueprints_manager
+

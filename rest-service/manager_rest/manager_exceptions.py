@@ -267,3 +267,15 @@ class UnknownModificationStageError(ManagerException):
             *args,
             **kwargs
         )
+
+
+class ResolverInstantiationError(ManagerException):
+    ERROR_CODE = 'get_resolver_from_context_error'
+
+    def __init__(self, *args, **kwargs):
+        super(ResolverInstantiationError, self).__init__(
+            400,
+            ResolverInstantiationError.ERROR_CODE,
+            *args,
+            **kwargs
+        )

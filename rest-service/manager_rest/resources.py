@@ -49,7 +49,8 @@ from manager_rest import utils
 from manager_rest import swagger as rest_swagger
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
-                                             get_blueprints_manager)
+                                             get_blueprints_manager,
+                                             ResolverInstantiationError)
 from manager_rest import get_version_data
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -1356,11 +1357,11 @@ class ProviderContext(SecuredResource):
 
         status_code = 200 if update else 201
 
-        if update:
-            get_storage_manager().update_provider_context(context)
-        else:
-            get_storage_manager().put_provider_context(context)
-        return responses.ProviderContextPostStatus(status='ok'), status_code
+        try:
+            get_blueprints_manager().update_provider_context(update, context)
+            return responses.ProviderContextPostStatus(status='ok'), status_code
+        except ResolverInstantiationError, ex:
+            raise manager_exceptions.ResolverInstantiationError(ex.message)
 
 
 class Version(Resource):

@@ -27,7 +27,8 @@ class ProviderContextTestCase(BaseServerTestCase):
     def test_post_provider_context(self):
         result = self.client.manager.create_context(
             'test_provider',
-            {'key': 'value'})
+            {'key': 'value',
+             'cloudify': {}})
         self.assertEqual('ok', result['status'])
 
     def test_get_provider_context(self):
@@ -63,3 +64,4 @@ class ProviderContextTestCase(BaseServerTestCase):
         except exceptions.CloudifyClientError as e:
             self.assertEqual(e.status_code, 404)
             self.assertEqual(e.message, 'Provider Context not found')
+
