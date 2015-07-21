@@ -1363,7 +1363,7 @@ class ProviderContext(SecuredResource):
             return \
                 responses.ProviderContextPostStatus(status='ok'), status_code
         except ResolverInstantiationError, ex:
-            raise manager_exceptions.ResolverInstantiationError(ex.message)
+            raise manager_exceptions.ResolverInstantiationError(str(ex))
 
 
 class Version(Resource):

@@ -863,12 +863,11 @@ class BlueprintsManager(object):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
 
-    def _get_resolver_section(self):
+    def _get_resolver_section(self, context):
         resolver_class_path = None
         params = None
-        provider_context = self.sm.get_provider_context().context
-        if self.sm.get_provider_context().context:
-            cloudify_section = provider_context['cloudify']
+        if context:
+            cloudify_section = context['cloudify']
             resolver_section = cloudify_section.get(constants.URL_RESOLVER_KEY)
             if resolver_section:
                 resolver_class_path = resolver_section.get(
@@ -877,14 +876,14 @@ class BlueprintsManager(object):
                     constants.RESLOVER_PARAMETERS_KEY)
         return resolver_class_path, params
 
-    def _update_url_resolver(self):
+    def _update_url_resolver(self, context):
         resolver = DefaultUrlResolver()
-        resolver_class_path, params = self._get_resolver_section()
+        resolver_class_path, params = self._get_resolver_section(context)
         if resolver_class_path:
             try:
                 resolver = get_class_instance(resolver_class_path, params)
             except Exception as e:
-                raise ResolverInstantiationError(e.message)
+                raise ResolverInstantiationError(str(e))
         else:
             # using the default resolver
             if params:
@@ -906,7 +905,7 @@ class BlueprintsManager(object):
         else:
             self.sm.put_provider_context(context)
 
-        current_app.resolver = self._update_url_resolver()
+        current_app.resolver = self._update_url_resolver(context)
 
 
 def teardown_blueprints_manager(exception):
