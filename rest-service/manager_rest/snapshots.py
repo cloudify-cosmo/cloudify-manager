@@ -15,6 +15,8 @@ from manager_rest import responses
 from manager_rest.blueprints_manager import get_blueprints_manager
 
 ELASTICSEARCH = 'es_data'
+CRED_INFO = 'cred_info'
+CRED_KEY = 'agent_key'
 INFLUXDB = 'influxdb-data'
 INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
                      '?u=root&p=root&chunked=true" --data-urlencode'
@@ -57,6 +59,9 @@ def copy_data(archive_root, to_archive=True):
             p2 = path.join(archive_root, p2)
         if not to_archive:
             p1, p2 = p2, p1
+
+        if not path.exists(p1):
+            continue
 
         if path.isfile(p1):
             shutil.copy(p1, p2)
@@ -103,6 +108,20 @@ def create_snapshot(snapshot_id):
             g.write(obj)
 
     remove(influxdb_temp_file)
+
+    # credentials
+    cloudify_agent = es.get(
+        index='cloudify_storage',
+        doc_type='provider_context',
+        id='CONTEXT'
+    )['_source']['context']['cloudify']['cloudify_agent']
+
+    with open(path.join(tempdir, CRED_INFO), 'w') as f:
+        f.write(json.dumps(cloudify_agent))
+    shutil.copy(path.expanduser(
+        cloudify_agent['agent_key_path']),
+        path.join(tempdir, CRED_KEY)
+    )
 
     # zip
     snapshot_dir = path.join(snapshots_dir, snapshot_id)
@@ -165,6 +184,35 @@ def restore_snapshot(snapshot_id):
 
     # influxdb
     call(INFLUXDB_RESTORE_CMD.format(path.join(tempdir, INFLUXDB)), shell=True)
+
+    # credentials
+    with open(path.join(tempdir, CRED_INFO), 'r') as f:
+        cred_info = f.read()
+
+    update_action = {
+        '_op_type': 'update',
+        '_index': 'cloudify_storage',
+        '_type': 'provider_context',
+        '_id': 'CONTEXT',
+        'doc': {
+            'context': {'cloudify': {'cloudify_agent': {
+                'user': cred_info['user'],
+                'agent_key_path': cred_info['agent_key_path']
+            }}}
+        }
+    }
+
+    es.bulk(body=[update_action])
+
+    key_path = path.expanduser(cred_info['agent_key_path'])
+    dir_name = path.dirname(key_path)
+    try:
+        makedirs(dir_name)
+    except:
+        # if path already exists then do nothing
+        pass
+
+    shutil.copy(path.join(tempdir, CRED_KEY), key_path)
 
     # end
     shutil.rmtree(tempdir)
