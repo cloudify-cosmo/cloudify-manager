@@ -785,7 +785,7 @@ class SnapshotsId(SecuredResource):
                                .format(snapshot_id))
 
         snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
-        return responses.Snapshot(**snapshot), 201
+        return snapshot, 201
 
     @swagger.operation(
         responseClass=responses.Snapshot,

@@ -29,6 +29,7 @@ from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.utils import maybe_register_teardown
+from manager_rest import config
 
 
 class DslParseException(Exception):
@@ -99,15 +100,28 @@ class BlueprintsManager(object):
         return self.sm.update_execution_status(execution_id, status, error)
 
     def create_snapshot(self, snapshot_id):
-        # Not finished yet ..
-        self._execute_system_wide_workflow(
+        return self._execute_system_wide_workflow(
             'create_snapshot',
             'cloudify_system_workflows.snapshot.create',
-            {'snapshot_id': snapshot_id}
-        )
+            {
+                'snapshot_id': snapshot_id,
+                'config': config.instance().to_dict()
+            }
+        ).get()
 
     def restore_snapshot(self, snapshot_id):
-        pass
+        async_task = self._execute_system_wide_workflow(
+            'restore_snapshot',
+            'cloudify_system_workflows.snapshot.restore',
+            {
+                'snapshot_id': snapshot_id,
+                'config': config.instance().to_dict()
+            }
+        )
+        result = async_task.get()
+        # This should become part of the workflow..
+        self.recreate_deployments_enviroments()
+        return result
 
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
@@ -805,6 +819,17 @@ class BlueprintsManager(object):
             raise RuntimeError(
                 'Unexpected deployment status for deployment {0} '
                 '[status={1}]'.format(deployment_id, status))
+
+    # For restore snapshot purpose. To that moment elasticsearch has to be
+    # already restored.
+    def recreate_deployments_enviroments(self):
+        for dep in self.deployments_list():
+            blueprint = self.get_blueprint(dep.blueprint_id)
+            plan = blueprint.plan
+            deployment_plan = tasks.prepare_deployment_plan(plan,
+                                                            dep.inputs)
+
+            self._create_deployment_environment(dep, deployment_plan)
 
     def _create_deployment_environment(self, deployment, deployment_plan):
         wf_id = 'create_deployment_environment'
