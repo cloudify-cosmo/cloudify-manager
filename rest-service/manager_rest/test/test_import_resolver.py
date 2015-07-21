@@ -17,7 +17,8 @@ import mock
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import constants
-from dsl_parser.url_resolver.abstract_url_resolver import AbstractUrlResolver
+from dsl_parser.url_resolver.abstract_url_resolver import \
+    AbstractImportResolver
 from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
 
 from manager_rest import utils
@@ -28,11 +29,11 @@ def _get_instance_class_path(instance):
     return "%s:%s" % (instance.__module__, instance.__class__.__name__)
 
 
-class CustomResolver(AbstractUrlResolver):
+class CustomResolver(AbstractImportResolver):
     def __init__(self, param1=None):
         self.params = {'param1': param1}
 
-    def resolve(self, url):
+    def resolve(self, import_url):
         pass
 
 
@@ -60,7 +61,8 @@ class ResolverTests(BaseServerTestCase):
                        mock_parse_dsl,
                        resolver_section,
                        expected_resolver_impl,
-                       expected_params):
+                       expected_params,
+                       err_msg_contains=None):
 
         original_get_class_instance = utils.get_class_instance
         get_class_instance_inputs = []
@@ -72,22 +74,34 @@ class ResolverTests(BaseServerTestCase):
             get_class_instance_inputs.append(resolver)
             return resolver
 
-        mock_parse_dsl.return_value = None
-        with mock.patch('manager_rest.blueprints_manager.get_class_instance',
-                        new=mock_get_class_instance):
-            self._update_provider_context(resolver_section)
-            self.put_file(*self.put_blueprint_args())
+        try:
+            mock_parse_dsl.return_value = None
+            with mock.patch(
+                    'manager_rest.blueprints_manager.get_class_instance',
+                    new=mock_get_class_instance):
+                self._update_provider_context(resolver_section)
+                self.put_file(*self.put_blueprint_args())
 
-        mock_parse_dsl.assert_call_once()
-        resolver = mock_parse_dsl.call_args[0][2]
-        self.assertEqual(_get_instance_class_path(resolver),
-                         expected_resolver_impl)
-        if resolver_section and resolver_section.get(
-                constants.RESOLVER_IMPLEMENTATION_KEY):
-            self.assertEqual(
-                get_class_instance_inputs[0], expected_resolver_impl)
-            self.assertEqual(get_class_instance_inputs[1], expected_params)
-            self.assertEqual(get_class_instance_inputs[2], resolver)
+            if err_msg_contains:
+                self.fail("Excpected CloudifyClientError ({0})"
+                          .format(err_msg_contains))
+            # asserts
+            mock_parse_dsl.assert_call_once()
+            resolver = mock_parse_dsl.call_args[0][2]
+            self.assertEqual(_get_instance_class_path(resolver),
+                             expected_resolver_impl)
+            if resolver_section and resolver_section.get(
+                    constants.RESOLVER_IMPLEMENTATION_KEY):
+                self.assertEqual(
+                    get_class_instance_inputs[0], expected_resolver_impl)
+                self.assertEqual(get_class_instance_inputs[1], expected_params)
+                self.assertEqual(get_class_instance_inputs[2], resolver)
+
+        except CloudifyClientError, ex:
+            if err_msg_contains:
+                self.assertIn(err_msg_contains, str(ex))
+            else:
+                raise ex
 
     def test_implicit_default_resolver(self):
         # url_resolver section is not specified in provider context
@@ -172,21 +186,19 @@ class ResolverTests(BaseServerTestCase):
         self.assertDictEqual(mock_parse_dsl.call_args[0][2].params, params)
 
     def test_illegal_default_resolver_rule(self):
-        # wrong rules configurations
+        # wrong rule configuration
         params = {
             'rules': [{'only': 'one', 'pair': 'allowed'}]
         }
         resolver_impl = _get_instance_class_path(DefaultUrlResolver())
         resolver_section = self._create_resolver_section(
-            resolver_impl=resolver_impl,
             resolver_params=params)
-        self.assertRaisesRegexp(
-            CloudifyClientError,
-            'Failed to instantiate {0}'.format(resolver_impl),
-            self._test_resolver,
+        self._test_resolver(
             resolver_section=resolver_section,
             expected_resolver_impl=resolver_impl,
-            expected_params=params)
+            expected_params=params,
+            err_msg_contains='Each rule must be a '
+                             'dictionary with one (key,value) pair')
 
     def test_illegal_default_resolver_rules_type(self):
         # wrong rules configurations
@@ -195,15 +207,12 @@ class ResolverTests(BaseServerTestCase):
         }
         resolver_impl = _get_instance_class_path(DefaultUrlResolver())
         resolver_section = self._create_resolver_section(
-            resolver_impl=resolver_impl,
             resolver_params=params)
-        self.assertRaisesRegexp(
-            CloudifyClientError,
-            'Failed to instantiate {0}'.format(resolver_impl),
-            self._test_resolver,
+        self._test_resolver(
             resolver_section=resolver_section,
             expected_resolver_impl=resolver_impl,
-            expected_params=params)
+            expected_params=params,
+            err_msg_contains='The `rules` parameter must be a list')
 
     def test_illegal_default_resolver_rule_type(self):
         # wrong rules configurations
@@ -212,12 +221,25 @@ class ResolverTests(BaseServerTestCase):
         }
         resolver_impl = _get_instance_class_path(DefaultUrlResolver())
         resolver_section = self._create_resolver_section(
-            resolver_impl=resolver_impl,
             resolver_params=params)
-        self.assertRaisesRegexp(
-            CloudifyClientError,
-            'Failed to instantiate {0}'.format(resolver_impl),
-            self._test_resolver,
+        self._test_resolver(
             resolver_section=resolver_section,
             expected_resolver_impl=resolver_impl,
-            expected_params=params)
+            expected_params=params,
+            err_msg_contains='Each rule must be a dictionary')
+
+    def test_illegal_custom_resolver(self):
+        # wrong rules configurations
+        params = {
+            'wrong_param_name': ''
+        }
+        resolver_impl = _get_instance_class_path(CustomResolver())
+        resolver_section = self._create_resolver_section(
+            resolver_impl=resolver_impl,
+            resolver_params=params)
+        self._test_resolver(
+            resolver_section=resolver_section,
+            expected_resolver_impl=resolver_impl,
+            expected_params=params,
+            err_msg_contains='Failed to instantiate {0}'
+            .format(resolver_impl))

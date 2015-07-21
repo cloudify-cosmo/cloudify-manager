@@ -24,7 +24,10 @@ from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
-from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
+from dsl_parser.url_resolver.default_url_resolver import \
+    DefaultUrlResolver, \
+    DefaultResolverValidationException, \
+    DEFAULT_RESLOVER_RULES_KEY
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
@@ -867,13 +870,15 @@ class BlueprintsManager(object):
         resolver_class_path = None
         params = None
         if context:
-            cloudify_section = context['cloudify']
-            resolver_section = cloudify_section.get(constants.URL_RESOLVER_KEY)
-            if resolver_section:
-                resolver_class_path = resolver_section.get(
-                    constants.RESOLVER_IMPLEMENTATION_KEY)
-                params = resolver_section.get(
-                    constants.RESLOVER_PARAMETERS_KEY)
+            cloudify_section = context.get(constants.CLOUDIFY)
+            if cloudify_section:
+                resolver_section = \
+                    cloudify_section.get(constants.URL_RESOLVER_KEY)
+                if resolver_section:
+                    resolver_class_path = resolver_section.get(
+                        constants.RESOLVER_IMPLEMENTATION_KEY)
+                    params = resolver_section.get(
+                        constants.RESLOVER_PARAMETERS_KEY)
         return resolver_class_path, params
 
     def _update_url_resolver(self, context):
@@ -882,30 +887,32 @@ class BlueprintsManager(object):
         if resolver_class_path:
             try:
                 resolver = get_class_instance(resolver_class_path, params)
-            except Exception as e:
-                raise ResolverInstantiationError(str(e))
+            except RuntimeError, ex:
+                raise ResolverInstantiationError(
+                    'Failed to instantiate resolver ({0}). {1}'
+                    .format(resolver_class_path, str(ex)))
         else:
             # using the default resolver
             if params:
                 # using custom rules for the default resolver
                 try:
                     resolver = DefaultUrlResolver(
-                        rules=params.get(constants.DEFAULT_RESLOVER_RULES_KEY))
-                except Exception as e:
+                        rules=params.get(DEFAULT_RESLOVER_RULES_KEY))
+                except DefaultResolverValidationException, ex:
                     raise ResolverInstantiationError(
-                        'failed to instantiate the default resolver ({0}) '
-                        'with params {1}: {2}'.format(
-                            DefaultUrlResolver.__class__.__name__,
-                            params, e.message))
+                        'Wrong parameters ({0}) configured for '
+                        'the default resolver ({1}): {2}'
+                        .format(params, DefaultUrlResolver.__name__, str(ex)))
         return resolver
 
-    def update_provider_context(self, update, context):
+    def update_provider_context(self, update, provider_context):
         if update:
-            self.sm.update_provider_context(context)
+            self.sm.update_provider_context(provider_context)
         else:
-            self.sm.put_provider_context(context)
+            self.sm.put_provider_context(provider_context)
 
-        current_app.resolver = self._update_url_resolver(context)
+        current_app.resolver = self._update_url_resolver(
+            provider_context.context)
 
 
 def teardown_blueprints_manager(exception):
