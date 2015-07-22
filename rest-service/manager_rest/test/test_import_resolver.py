@@ -19,7 +19,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import constants
 from dsl_parser.url_resolver.abstract_url_resolver import \
     AbstractImportResolver
-from dsl_parser.url_resolver.default_import_resolver import DefaultImportResolver
+from dsl_parser.url_resolver.default_import_resolver import \
+    DefaultImportResolver
 
 from manager_rest import utils
 from manager_rest.test.base_test import BaseServerTestCase

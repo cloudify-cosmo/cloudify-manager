@@ -902,7 +902,8 @@ class BlueprintsManager(object):
                     raise ResolverInstantiationError(
                         'Wrong parameters ({0}) configured for '
                         'the default resolver ({1}): {2}'
-                        .format(params, DefaultImportResolver.__name__, str(ex)))
+                        .format(params,
+                                DefaultImportResolver.__name__, str(ex)))
         return resolver
 
     def update_provider_context(self, update, provider_context):
