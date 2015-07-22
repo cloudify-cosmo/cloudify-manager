@@ -17,7 +17,7 @@ import mock
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import constants
-from dsl_parser.url_resolver.abstract_url_resolver import \
+from dsl_parser.url_resolver.abstract_import_resolver import \
     AbstractImportResolver
 from dsl_parser.url_resolver.default_import_resolver import \
     DefaultImportResolver
