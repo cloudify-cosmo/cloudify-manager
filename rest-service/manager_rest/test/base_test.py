@@ -21,6 +21,8 @@ import tempfile
 import time
 import os
 
+from nose.tools import nottest
+
 from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
@@ -40,6 +42,38 @@ def build_query_string(query_params):
     if query_params and len(query_params) > 0:
         query_string += urllib.urlencode(query_params) + '&'
     return query_string
+
+
+@nottest
+def test_config(**kwargs):
+    """
+    decorator-generator that can be used on test functions to set
+    key-value pairs that may later be injected into functions using the
+    "inject_test_config" decorator
+    :param kwargs: key-value pairs to be stored on the function object
+    :return: a decorator for a test function, which stores with the test's
+     config on the test function's object under the "test_config" attribute
+    """
+    def _test_config_decorator(test_func):
+        test_func.test_config = kwargs
+        return test_func
+    return _test_config_decorator
+
+
+@nottest
+def inject_test_config(f):
+    """
+    decorator for injecting "test_config" into a test obj method.
+    also see the "test_config" decorator
+    :param f: a test obj method to be injected with the "test_config" parameter
+    :return: the method augmented with the "test_config" parameter
+    """
+    def _wrapper(test_obj, *args, **kwargs):
+        test_func = getattr(test_obj, test_obj.id().split('.')[-1])
+        if hasattr(test_func, 'test_config'):
+            kwargs['test_config'] = test_func.test_config
+        return f(test_obj, *args, **kwargs)
+    return _wrapper
 
 
 class MockHTTPClient(HTTPClient):

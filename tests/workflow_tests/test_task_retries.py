@@ -262,7 +262,7 @@ class ProcessModeTaskRetriesTest(ProcessModeTestCase):
             retry_interval=5,
             expected_interval=5,
             # non recoverable exception
-            # should be retried
+            # should not be retried
             expected_retries=0,
             invocations_type='failure_invocation',
             expect_failure=True,

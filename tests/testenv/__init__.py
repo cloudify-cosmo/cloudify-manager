@@ -253,7 +253,13 @@ class TestEnvironment(object):
                 'cloudify_system_workflows.deployment_environment',
                 'cloudify.plugins.workflows',
                 'diamond_agent.tasks',
-                'script_runner.tasks'
+                'script_runner.tasks',
+
+                # modules in the agent intended for backwards compatibility
+                'worker_installer.tasks',
+                'windows_agent_installer.tasks',
+                'plugin_installer.tasks',
+                'windows_plugin_installer.tasks',
             ],
 
             # we need higher concurrency since
@@ -348,7 +354,7 @@ class TestEnvironment(object):
         if os.path.exists(self.test_working_dir):
             logger.info('Deleting test environment from: %s',
                         self.test_working_dir)
-            shutil.rmtree(self.test_working_dir, ignore_errors=True)
+            # shutil.rmtree(self.test_working_dir, ignore_errors=True)
 
     def handle_logs(self, output, event):
         pass
