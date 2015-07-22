@@ -70,6 +70,12 @@ def _create_es_client(config):
                                                'port': config.db_port}])
 
 
+def _delete_all_docs(es_client):
+    for doc in elasticsearch.helpers.scan(es_client):
+        doc['_op_type'] = 'delete'
+        yield doc
+
+
 @system_wide_workflow
 def create(ctx, snapshot_id, config, **kw):
     config = Config.from_dict(config)
@@ -151,11 +157,9 @@ def restore(ctx, snapshot_id, config, **kwargs):
 
     this_exec = es.get(id=ctx.execution_id, index='cloudify_storage', doc_type='execution')
 
-    # elasticsearch > delete all documents
-    #es.indices.delete(index='cloudify_events') temporarily commented out for testing
-    es.indices.delete(index='cloudify_storage')
-    #es.indices.create(index='cloudify_events') temporarily commented out for testing
-    es.indices.create(index='cloudify_storage')
+    ctx.send_event('Deleting all ElasticSearch data')
+    elasticsearch.helpers.bulk(es, _delete_all_docs(es))
+    es.indices.flush()
 
     def es_data_itr():
         for line in open(path.join(tempdir, ELASTICSEARCH), 'r'):
@@ -164,10 +168,11 @@ def restore(ctx, snapshot_id, config, **kwargs):
         del this_exec['found']
         yield this_exec
 
+    ctx.send_event('Restoring ElasticSearch data')
     elasticsearch.helpers.bulk(es, es_data_itr())
     es.indices.flush()
 
-    # influxdb
+    ctx.send_event('Restoring InfluxDB metrics')
     call(INFLUXDB_RESTORE_CMD.format(path.join(tempdir, INFLUXDB)), shell=True)
 
     # end

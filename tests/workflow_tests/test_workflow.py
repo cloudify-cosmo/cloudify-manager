@@ -670,8 +670,9 @@ class BasicWorkflowsTest(TestCase):
 
         self.client.snapshots.restore('test-snapshot')
 
-        # Uncomment after a strange problem with ES is resolved
-        # undeploy(deployment.id, delete_deployment=True)
+        self.assertEqual(len(self.client.deployments.list()), 1)
+
+        undeploy(deployment.id, delete_deployment=True)
 
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion

@@ -823,13 +823,18 @@ class BlueprintsManager(object):
     # For restore snapshot purpose. To that moment elasticsearch has to be
     # already restored.
     def recreate_deployments_enviroments(self):
+        cr_dep_env_tasks = []
         for dep in self.deployments_list():
             blueprint = self.get_blueprint(dep.blueprint_id)
             plan = blueprint.plan
             deployment_plan = tasks.prepare_deployment_plan(plan,
                                                             dep.inputs)
 
-            self._create_deployment_environment(dep, deployment_plan)
+            cr_dep_env_tasks.append(
+                self._create_deployment_environment(dep, deployment_plan)
+            )
+        for task in cr_dep_env_tasks:
+            task.get()
 
     def _create_deployment_environment(self, deployment, deployment_plan):
         wf_id = 'create_deployment_environment'
@@ -848,7 +853,7 @@ class BlueprintsManager(object):
             },
         }
 
-        self._execute_system_workflow(
+        return self._execute_system_workflow(
             deployment, wf_id, deployment_env_creation_task_name, kwargs)
 
     def _delete_deployment_environment(self, deployment_id):
