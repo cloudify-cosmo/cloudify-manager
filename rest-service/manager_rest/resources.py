@@ -594,9 +594,10 @@ class Executions(SecuredResource):
             request.args.get('include_system_workflows', 'false'))
 
         executions = get_blueprints_manager().executions_list(
-            deployment_id=deployment_id, include=_include)
-        return [responses.Execution(**e.to_dict()) for e in executions if
-                is_include_system_workflows or not e.is_system_workflow]
+            deployment_id=deployment_id,
+            is_include_system_workflows=is_include_system_workflows,
+            include=_include)
+        return [responses.Execution(**e.to_dict()) for e in executions]
 
     @exceptions_handled
     @marshal_with(responses.Execution.resource_fields)

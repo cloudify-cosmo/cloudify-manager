@@ -133,6 +133,18 @@ class ExistingRunningExecutionError(ManagerException):
             .EXISTING_RUNNING_EXECUTION_ERROR_CODE, *args, **kwargs)
 
 
+class GlobalParallelRunningExecutionsLimitReachedError(ManagerException):
+    GLOBAL_PARALLEL_RUNNING_EXECUTIONS_LIMIT_REACHED_ERROR_CODE = \
+        'global_parallel_running_executions_limit_reached_error'
+
+    def __init__(self, *args, **kwargs):
+        super(GlobalParallelRunningExecutionsLimitReachedError, self).__init__(
+            400,
+            GlobalParallelRunningExecutionsLimitReachedError
+            .GLOBAL_PARALLEL_RUNNING_EXECUTIONS_LIMIT_REACHED_ERROR_CODE,
+            *args, **kwargs)
+
+
 class ExistingStartedDeploymentModificationError(ManagerException):
     EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR = \
         'existing_started_deployment_modification_error'
