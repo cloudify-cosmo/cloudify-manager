@@ -19,7 +19,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import constants
 from dsl_parser.url_resolver.abstract_url_resolver import \
     AbstractImportResolver
-from dsl_parser.url_resolver.default_url_resolver import DefaultUrlResolver
+from dsl_parser.url_resolver.default_import_resolver import DefaultImportResolver
 
 from manager_rest import utils
 from manager_rest.test.base_test import BaseServerTestCase
@@ -105,7 +105,7 @@ class ResolverTests(BaseServerTestCase):
 
     def test_implicit_default_resolver(self):
         # url_resolver section is not specified in provider context
-        resolver_impl = _get_instance_class_path(DefaultUrlResolver())
+        resolver_impl = _get_instance_class_path(DefaultImportResolver())
         self._test_resolver(resolver_section=None,
                             expected_resolver_impl=resolver_impl,
                             expected_params=None)
@@ -118,7 +118,7 @@ class ResolverTests(BaseServerTestCase):
                 {'prefix1': 'prefix2'}
             ]
         }
-        resolver_impl = _get_instance_class_path(DefaultUrlResolver())
+        resolver_impl = _get_instance_class_path(DefaultImportResolver())
         resolver_section = self._create_resolver_section(
             resolver_params=params)
         self._test_resolver(resolver_section=resolver_section,
@@ -128,7 +128,7 @@ class ResolverTests(BaseServerTestCase):
     def test_explicit_default_resolver(self):
         # url_resolver section is specified in provider context
         # points to the default resolver with no rules specified
-        resolver_impl = _get_instance_class_path(DefaultUrlResolver())
+        resolver_impl = _get_instance_class_path(DefaultImportResolver())
         resolver_section = self._create_resolver_section(
             resolver_impl=resolver_impl)
         self._test_resolver(resolver_section=resolver_section,
@@ -143,7 +143,7 @@ class ResolverTests(BaseServerTestCase):
                 {'prefix1': 'prefix2'}
             ]
         }
-        resolver_impl = _get_instance_class_path(DefaultUrlResolver())
+        resolver_impl = _get_instance_class_path(DefaultImportResolver())
         resolver_section = self._create_resolver_section(
             resolver_impl=resolver_impl,
             resolver_params=params)
@@ -190,7 +190,7 @@ class ResolverTests(BaseServerTestCase):
         params = {
             'rules': [{'only': 'one', 'pair': 'allowed'}]
         }
-        resolver_impl = _get_instance_class_path(DefaultUrlResolver())
+        resolver_impl = _get_instance_class_path(DefaultImportResolver())
         resolver_section = self._create_resolver_section(
             resolver_params=params)
         self._test_resolver(
@@ -205,7 +205,7 @@ class ResolverTests(BaseServerTestCase):
         params = {
             'rules': 'this should be a list'
         }
-        resolver_impl = _get_instance_class_path(DefaultUrlResolver())
+        resolver_impl = _get_instance_class_path(DefaultImportResolver())
         resolver_section = self._create_resolver_section(
             resolver_params=params)
         self._test_resolver(
@@ -219,7 +219,7 @@ class ResolverTests(BaseServerTestCase):
         params = {
             'rules': ['this should be a dict']
         }
-        resolver_impl = _get_instance_class_path(DefaultUrlResolver())
+        resolver_impl = _get_instance_class_path(DefaultImportResolver())
         resolver_section = self._create_resolver_section(
             resolver_params=params)
         self._test_resolver(

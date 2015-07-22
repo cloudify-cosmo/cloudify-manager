@@ -24,10 +24,10 @@ from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
-from dsl_parser.url_resolver.default_url_resolver import \
-    DefaultUrlResolver, \
+from dsl_parser.url_resolver.default_import_resolver import \
     DefaultResolverValidationException, \
-    DEFAULT_RESLOVER_RULES_KEY
+    DEFAULT_RESLOVER_RULES_KEY, \
+    DefaultImportResolver
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
@@ -882,7 +882,7 @@ class BlueprintsManager(object):
         return resolver_class_path, params
 
     def _update_url_resolver(self, context):
-        resolver = DefaultUrlResolver()
+        resolver = DefaultImportResolver()
         resolver_class_path, params = self._get_resolver_section(context)
         if resolver_class_path:
             try:
@@ -896,13 +896,13 @@ class BlueprintsManager(object):
             if params:
                 # using custom rules for the default resolver
                 try:
-                    resolver = DefaultUrlResolver(
+                    resolver = DefaultImportResolver(
                         rules=params.get(DEFAULT_RESLOVER_RULES_KEY))
                 except DefaultResolverValidationException, ex:
                     raise ResolverInstantiationError(
                         'Wrong parameters ({0}) configured for '
                         'the default resolver ({1}): {2}'
-                        .format(params, DefaultUrlResolver.__name__, str(ex)))
+                        .format(params, DefaultImportResolver.__name__, str(ex)))
         return resolver
 
     def update_provider_context(self, update, provider_context):
