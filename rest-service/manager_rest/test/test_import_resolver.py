@@ -17,9 +17,9 @@ import mock
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import constants
-from dsl_parser.url_resolver.abstract_import_resolver import \
+from dsl_parser.import_resolver.abstract_import_resolver import \
     AbstractImportResolver
-from dsl_parser.url_resolver.default_import_resolver import \
+from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 
 from manager_rest import utils
@@ -105,14 +105,14 @@ class ResolverTests(BaseServerTestCase):
                 raise ex
 
     def test_implicit_default_resolver(self):
-        # url_resolver section is not specified in provider context
+        # import_resolver section is not specified in provider context
         resolver_impl = _get_instance_class_path(DefaultImportResolver())
         self._test_resolver(resolver_section=None,
                             expected_resolver_impl=resolver_impl,
                             expected_params=None)
 
     def test_custom_rules_no_resolver_implementation(self):
-        # only the rules are specified in the url_resolver section
+        # only the rules are specified in the import_resolver section
         # in the provider context
         params = {
             'rules': [
@@ -127,7 +127,7 @@ class ResolverTests(BaseServerTestCase):
                             expected_params=params)
 
     def test_explicit_default_resolver(self):
-        # url_resolver section is specified in provider context
+        # import_resolver section is specified in provider context
         # points to the default resolver with no rules specified
         resolver_impl = _get_instance_class_path(DefaultImportResolver())
         resolver_section = self._create_resolver_section(
@@ -137,7 +137,7 @@ class ResolverTests(BaseServerTestCase):
                             expected_params=None)
 
     def test_explicit_default_resolver_and_rules(self):
-        # url_resolver section is specified in provider context
+        # import_resolver section is specified in provider context
         # points to the default resolver with different rules specified
         params = {
             'rules': [
@@ -153,7 +153,7 @@ class ResolverTests(BaseServerTestCase):
                             expected_params=params)
 
     def test_custom_resolver(self):
-        # url_resolver section is specified in provider context
+        # import_resolver section is specified in provider context
         # points to some custom resolver
         params = {
             'param1': 'value1'

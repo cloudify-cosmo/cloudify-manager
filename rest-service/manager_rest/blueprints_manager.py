@@ -24,7 +24,7 @@ from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
-from dsl_parser.url_resolver.default_import_resolver import \
+from dsl_parser.import_resolver.default_import_resolver import \
     DefaultResolverValidationException, \
     DEFAULT_RESLOVER_RULES_KEY, \
     DefaultImportResolver
@@ -881,7 +881,7 @@ class BlueprintsManager(object):
                         constants.RESLOVER_PARAMETERS_KEY)
         return resolver_class_path, params
 
-    def _update_url_resolver(self, context):
+    def _update_import_resolver(self, context):
         resolver = DefaultImportResolver()
         resolver_class_path, params = self._get_resolver_section(context)
         if resolver_class_path:
@@ -912,7 +912,7 @@ class BlueprintsManager(object):
         else:
             self.sm.put_provider_context(provider_context)
 
-        current_app.resolver = self._update_url_resolver(
+        current_app.resolver = self._update_import_resolver(
             provider_context.context)
 
 
