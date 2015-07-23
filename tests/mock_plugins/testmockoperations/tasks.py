@@ -385,7 +385,7 @@ def retry(ctx, retry_count=1, retry_after=1, **kwargs):
                 '({1})'.format(invocations, ctx.operation.retry_number))
         data['retry_invocations'] = invocations + 1
     if ctx.operation.retry_number < retry_count:
-        return ctx.operation.retry(message='Retrying operation',
+        return ctx.operation.retry(message='Retrying _operation',
                                    retry_after=retry_after)
 
 
@@ -445,3 +445,19 @@ def get_prop(prop_name, ctx, kwargs, default=None):
         return ctx.node.properties[prop_name]
     else:
         return default
+
+
+@operation
+def retrieve_template(ctx, rendering_tests_demo_conf, mode, **kwargs):
+    if mode == 'get':
+        resource = \
+            ctx.get_resource(rendering_tests_demo_conf,
+                             template_variables={'ctx': ctx})
+    else:
+        resource = \
+            ctx.download_resource(rendering_tests_demo_conf,
+                                  template_variables={'ctx': ctx})
+
+    with update_storage(ctx) as data:
+        data['rendered_resource'] = resource
+
