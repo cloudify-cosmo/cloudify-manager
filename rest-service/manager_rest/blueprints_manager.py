@@ -24,12 +24,10 @@ from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
 from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
-from manager_rest import models
-from manager_rest import manager_exceptions
+from manager_rest import (models, config, responses, manager_exceptions)
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.utils import maybe_register_teardown
-from manager_rest import config
 
 
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
@@ -106,7 +104,7 @@ class BlueprintsManager(object):
         return self.sm.update_execution_status(execution_id, status, error)
 
     def create_snapshot(self, snapshot_id):
-        return self._execute_system_wide_workflow(
+        wf_result = self._execute_system_wide_workflow(
             'create_snapshot',
             'cloudify_system_workflows.snapshot.create',
             {
@@ -114,6 +112,7 @@ class BlueprintsManager(object):
                 'config': config.instance().to_dict()
             }
         ).get()
+        return responses.Snapshot(**wf_result)
 
     def restore_snapshot(self, snapshot_id):
         async_task = self._execute_system_wide_workflow(

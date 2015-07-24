@@ -10,8 +10,6 @@ from subprocess import call
 import elasticsearch
 import elasticsearch.helpers
 
-from manager_rest import responses
-from manager_rest.config import Config
 from cloudify.decorators import system_wide_workflow
 
 ELASTICSEARCH = 'es_data'
@@ -24,6 +22,11 @@ INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
 INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
                         '-d "[${{line}}]" "http://localhost:8086/db/cloudify/'
                         'series?u=root&p=root" ;done')
+
+
+class DictToAttributes(object):
+    def __init__(self, dic):
+        self.__dict__ = dic
 
 
 def get_json_objects(f):
@@ -83,7 +86,7 @@ def _delete_all_docs(es_client):
 
 @system_wide_workflow
 def create(ctx, snapshot_id, config, **kw):
-    config = Config.from_dict(config)
+    config = DictToAttributes(config)
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
     snapshots_dir = path.join(
@@ -145,15 +148,15 @@ def create(ctx, snapshot_id, config, **kw):
     created_at = time.strftime('%d %b %Y %H:%M:%S',
                                time.localtime(path.getctime(zipf)))
 
-    return responses.Snapshot(
-        id=snapshot_id,
-        created_at=created_at
-    )
+    return {
+        'id': snapshot_id,
+        'created_at': created_at
+    }
 
 
 @system_wide_workflow
 def restore(ctx, snapshot_id, config, **kwargs):
-    config = Config.from_dict(config)
+    config = DictToAttributes(config)
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
     file_server_root = config.file_server_root
