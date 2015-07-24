@@ -24,7 +24,10 @@ INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
 
 class DictToAttributes(object):
     def __init__(self, dic):
-        self.__dict__ = dic
+        self._dict = dic
+
+    def __getattr__(self, name):
+        return self._dict[name]
 
 
 def get_json_objects(f):
