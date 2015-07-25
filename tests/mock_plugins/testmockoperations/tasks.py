@@ -448,7 +448,7 @@ def get_prop(prop_name, ctx, kwargs, default=None):
 
 
 @operation
-def retrieve_template(ctx, rendering_tests_demo_conf, mode, **kwargs):
+def retrieve_template(ctx, rendering_tests_demo_conf, mode, **_):
     if mode == 'get':
         resource = \
             ctx.get_resource(rendering_tests_demo_conf,
@@ -460,4 +460,3 @@ def retrieve_template(ctx, rendering_tests_demo_conf, mode, **kwargs):
 
     with update_storage(ctx) as data:
         data['rendered_resource'] = resource
-
