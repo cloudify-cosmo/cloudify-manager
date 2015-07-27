@@ -198,7 +198,7 @@ def setup_resources(api):
         for api_version in SUPPORTED_API_VERSIONS:
             rest_swagger.add_swagger_resource(
                 api, api_version, resource, '/api/{0}/{1}'.format(api_version,
-                                                              endpoint))
+                                                                  endpoint))
 
 
 class BlueprintsUpload(object):
