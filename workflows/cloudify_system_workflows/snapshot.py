@@ -4,7 +4,7 @@ import time
 import shutil
 import zipfile
 
-from os import (path, makedirs, remove)
+from os import (path, makedirs, remove, listdir)
 from subprocess import call
 
 import elasticsearch
@@ -13,6 +13,8 @@ import elasticsearch.helpers
 from cloudify.decorators import system_wide_workflow
 
 ELASTICSEARCH = 'es_data'
+CRED_DIR = 'credentials'
+CRED_KEY_NAME = 'agent_key'
 INFLUXDB = 'influxdb-data'
 INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
                      '?u=root&p=root&chunked=true" --data-urlencode'
@@ -62,6 +64,9 @@ def copy_data(archive_root, config, to_archive=True):
             p2 = path.join(archive_root, p2)
         if not to_archive:
             p1, p2 = p2, p1
+
+        if not path.exists(p1):
+            continue
 
         if path.isfile(p1):
             shutil.copy(p1, p2)
@@ -117,6 +122,21 @@ def create(ctx, snapshot_id, config, **kw):
 
     remove(influxdb_temp_file)
 
+    # credentials
+    archive_cred_path = path.join(tempdir, CRED_DIR)
+    makedirs(archive_cred_path)
+
+    node_scan = elasticsearch.helpers.scan(es, index='cloudify_storage',
+                                           doc_type='node')
+    for n in node_scan:
+        props = n['_source']['properties']
+        if 'cloudify_agent' in props:
+            node_id = n['_id']
+            agent_key_path = props['cloudify_agent']['key']
+            makedirs(path.join(archive_cred_path, node_id))
+            shutil.copy(path.expanduser(agent_key_path),
+                        path.join(archive_cred_path, node_id, CRED_KEY_NAME))
+
     # zip
     snapshot_dir = path.join(snapshots_dir, snapshot_id)
     makedirs(snapshot_dir)
@@ -161,7 +181,8 @@ def restore(ctx, snapshot_id, config, **kwargs):
     # elasticsearch
     es = _create_es_client(config)
 
-    this_exec = es.get(id=ctx.execution_id, index='cloudify_storage', doc_type='execution')
+    this_exec = es.get(id=ctx.execution_id, index='cloudify_storage',
+                       doc_type='execution')
 
     ctx.send_event('Deleting all ElasticSearch data')
     elasticsearch.helpers.bulk(es, _delete_all_docs(es))
@@ -178,8 +199,45 @@ def restore(ctx, snapshot_id, config, **kwargs):
     elasticsearch.helpers.bulk(es, es_data_itr())
     es.indices.flush()
 
+    # influxdb
     ctx.send_event('Restoring InfluxDB metrics')
     call(INFLUXDB_RESTORE_CMD.format(path.join(tempdir, INFLUXDB)), shell=True)
+
+    # credentials
+    ctx.send_event('Restoring credentials')
+    archive_cred_path = path.join(tempdir, CRED_DIR)
+    cred_path = path.join(config.file_server_root, CRED_DIR)
+
+    # in case when this is not first restore action
+    if path.exists(cred_path):
+        shutil.rmtree(cred_path)
+
+    makedirs(cred_path)
+
+    update_actions = []
+    for node_id in listdir(archive_cred_path):
+        makedirs(path.join(cred_path, node_id))
+        agent_key_path = path.join(cred_path, node_id, CRED_KEY_NAME)
+        shutil.copy(path.join(archive_cred_path, node_id, CRED_KEY_NAME),
+                    agent_key_path)
+
+        update_action = {
+            '_op_type': 'update',
+            '_index': 'cloudify_storage',
+            '_type': 'node',
+            '_id': node_id,
+            'doc': {
+                'properties': {
+                    'cloudify_agent': {
+                        'key': agent_key_path
+                    }
+                }
+            }
+        }
+
+        update_actions.append(update_action)
+
+    elasticsearch.helpers.bulk(es, update_actions)
 
     # end
     shutil.rmtree(tempdir)
