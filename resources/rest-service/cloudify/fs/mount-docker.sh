@@ -33,10 +33,6 @@ if [ ! -z ${docker_files} ]; then
     sudo rm -rf ${docker_files}
 fi
 
-user=$(whoami)
-ctx logger info "Changing ownership of ${fs_mount_path} to ${user}"
-sudo chown -R ${user} ${fs_mount_path}
-
 ctx logger info "Adding mount point ${fs_mount_path} to file system table"
 echo ${filesys} ${fs_mount_path} ${fs_type} auto 0 0 | sudo tee --append /etc/fstab > /dev/null
 
