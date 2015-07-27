@@ -873,7 +873,7 @@ class BlueprintsManager(object):
             cloudify_section = context.get(constants.CLOUDIFY)
             if cloudify_section:
                 resolver_section = \
-                    cloudify_section.get(constants.URL_RESOLVER_KEY)
+                    cloudify_section.get(constants.IMPORT_RESOLVER_KEY)
                 if resolver_section:
                     resolver_class_path = resolver_section.get(
                         constants.RESOLVER_IMPLEMENTATION_KEY)
