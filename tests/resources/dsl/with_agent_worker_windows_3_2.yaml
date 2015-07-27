@@ -1,33 +1,35 @@
 tosca_definitions_version: cloudify_dsl_1_0
 
 imports:
-  - cloudify/types/types.yaml
+  - http://www.getcloudify.org/spec/cloudify/3.2/types.yaml
   - plugins/cloudmock.yaml
   - plugins/mock_agent_plugin.yaml
 
 node_templates:
+
   webserver_host:
     type: cloudify.nodes.Compute
     properties:
       install_agent: true
-      cloudify_agent:
-
-        #################################################################
-        # These propreties are needed here so that the agent installer
-        # will not try to auto detect these values by connecting to the
-        # "remote" machine. the values themselves to not matter because
-        # the installer will not actually install the agent (that code
-        # is monkey patched to use mocks)
-        #################################################################
-
-        basedir: /tmp/dummy
-        package_url: http://localhost/dummy.tar.gz
     interfaces:
+      ###############################################################
+      # This is how we would define a Compute Windows node in 3.2
+      ###############################################################
+      cloudify.interfaces.worker_installer:
+        install: windows_agent_installer.windows_agent_installer.tasks.install
+        start: windows_agent_installer.windows_agent_installer.tasks.start
+        stop: windows_agent_installer.windows_agent_installer.tasks.stop
+        uninstall: windows_agent_installer.windows_agent_installer.tasks.uninstall
+        restart: windows_agent_installer.windows_agent_installer.tasks.restart
+      cloudify.interfaces.plugin_installer:
+        install: windows_plugin_installer.windows_plugin_installer.tasks.install
+
       cloudify.interfaces.lifecycle:
         create: cloudmock.cloudmock.tasks.provision
         start: cloudmock.cloudmock.tasks.start
         stop: cloudmock.cloudmock.tasks.stop
         delete: cloudmock.cloudmock.tasks.terminate
+
   webserver:
     type: cloudify.nodes.WebServer
     relationships:
