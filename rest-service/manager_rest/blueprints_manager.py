@@ -138,7 +138,7 @@ class BlueprintsManager(object):
         self.sm.get_deployment(deployment_id)
 
         # validate there are no running executions for this deployment
-        executions = self.sm.executions_list(deployment_id=deployment_id)
+        executions = self.executions_list(deployment_id=deployment_id)
         if any(execution.status not in models.Execution.END_STATES for
            execution in executions):
             raise manager_exceptions.DependentExistsError(
