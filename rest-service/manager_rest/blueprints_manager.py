@@ -363,9 +363,12 @@ class BlueprintsManager(object):
 
     def create_deployment(self, blueprint_id, deployment_id, inputs=None):
         blueprint = self.get_blueprint(blueprint_id)
+        print 'got blueprint: {0}'.format(blueprint)
         plan = blueprint.plan
         try:
+            print 'preparing deployment plan'
             deployment_plan = tasks.prepare_deployment_plan(plan, inputs)
+            print 'deployment_plan: {0}'.format(deployment_plan)
         except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))
@@ -373,6 +376,7 @@ class BlueprintsManager(object):
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
 
         now = str(datetime.now())
+        'print creating Deployment object'
         new_deployment = models.Deployment(
             id=deployment_id,
             blueprint_id=blueprint_id, created_at=now, updated_at=now,
@@ -383,6 +387,7 @@ class BlueprintsManager(object):
             groups=deployment_plan['groups'],
             outputs=deployment_plan['outputs'])
 
+        print 'putting deployment in db: {0}'.format(new_deployment)
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id,
                                       deployment_id,

@@ -14,11 +14,14 @@
 #  * limitations under the License.
 
 
+import inspect
+
 import elasticsearch.exceptions
 from elasticsearch import Elasticsearch
 
 from manager_rest import config
 from manager_rest import manager_exceptions
+from manager_rest.abstract_storage_manager import AbstractStorageManager
 from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  DeploymentModification,
@@ -27,24 +30,28 @@ from manager_rest.models import (BlueprintState,
                                  DeploymentNodeInstance,
                                  ProviderContext)
 
-STORAGE_INDEX_NAME = 'cloudify_storage'
-NODE_TYPE = 'node'
-NODE_INSTANCE_TYPE = 'node_instance'
-BLUEPRINT_TYPE = 'blueprint'
-DEPLOYMENT_TYPE = 'deployment'
-DEPLOYMENT_MODIFICATION_TYPE = 'deployment_modification'
-EXECUTION_TYPE = 'execution'
-PROVIDER_CONTEXT_TYPE = 'provider_context'
-PROVIDER_CONTEXT_ID = 'CONTEXT'
 
+STORAGE_INDEX_NAME = 'cloudify_storage'
+NODE_INSTANCE_TYPE = 'node_instance'
 DEFAULT_SEARCH_SIZE = 10000
 
 MUTATE_PARAMS = {
     'refresh': True
 }
+ID_ATTRIBUTE = 'id'
+
+'''
+NODE_TYPE = 'node'
+BLUEPRINT_TYPE = 'blueprint'
+DEPLOYMENT_TYPE = 'deployment'
+DEPLOYMENT_MODIFICATION_TYPE = 'deployment_modification'
+
+PROVIDER_CONTEXT_ID = 'CONTEXT'
+
+'''
 
 
-class ESStorageManager(object):
+class ESStorageManager(AbstractStorageManager):
 
     def __init__(self, host, port):
         self.es_host = host
@@ -55,21 +62,100 @@ class ESStorageManager(object):
         return Elasticsearch(hosts=[{'host': self.es_host,
                                      'port': self.es_port}])
 
-    def _list_docs(self, doc_type, model_class, query=None, fields=None):
-        include = list(fields) if fields else True
+    def _doc_exists(self, collection_name, filter_by):
+        query = self._build_field_value_filter(filter_by)
+        count_result = self._connection.count(index=STORAGE_INDEX_NAME,
+                                              doc_type=collection_name,
+                                              body=query)
+        print 'got count result: {0}'.format(count_result)
+        count = count_result['count']
+        print 'returning value: {0}'.format(count > 0)
+        return count > 0
+
+    def _get_id_attribute(self):
+        return ID_ATTRIBUTE
+
+    def _get_document_by_id(self, collection_name, doc_id, fields=None):
+        document = self._connection.get(index=STORAGE_INDEX_NAME,
+                                      id=doc_id,
+                                      doc_type=collection_name,
+                                      fields=fields)
+        print 'returning document: {0}'.format(document)
+        return document
+
+    def _list_documents(self, collection_name, filter_by=None, include_fields=None):
+        include = list(include_fields) if include_fields else True
+        query = self._build_field_value_filter(filter_by)
         search_result = self._connection.search(index=STORAGE_INDEX_NAME,
-                                                doc_type=doc_type,
+                                                doc_type=collection_name,
                                                 size=DEFAULT_SEARCH_SIZE,
                                                 body=query,
                                                 _source=include)
-        docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
+        return map(lambda hit: hit['_source'], search_result['hits']['hits'])
 
-        # ES doesn't return _version if using its search API.
-        if doc_type == NODE_INSTANCE_TYPE:
-            for doc in docs:
-                doc['version'] = None
-        return [self._fill_missing_fields_and_deserialize(doc, model_class)
-                for doc in docs]
+    @staticmethod
+    def _fill_missing_fields(document, model_class):
+        try:
+            if model_class == DeploymentNodeInstance:
+                if not document.get('version'):
+                    document['version'] = None
+
+            for field in model_class.fields:
+                if field not in document:
+                    document[field] = None
+        except Exception as e:
+            print 'Failed to fill missing data, error: {0}'.format(e)
+            raise e
+        return document
+
+    def _insert_document(self, collection_name, document):
+        self._connection.create(index=STORAGE_INDEX_NAME,
+                                doc_type=collection_name,
+                                body=document,
+                                id=document['id'],
+                                **MUTATE_PARAMS)
+
+    def _update_documents(self, collection_name, updated_values, filter_by=None):
+        # implemented here as update document (a single document)
+        updated_doc = {'doc': updated_values}
+        document_id = filter_by['id']
+        try:
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=collection_name,
+                                    id=document_id,
+                                    body=updated_doc,
+                                    **MUTATE_PARAMS)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Document id {0} not found in {1}".format(document_id,
+                                                          collection_name))
+
+    def _delete_documents(self, collection_name, filter_by):
+        query = self._build_field_value_filter(filter_by)
+        self._connection.delete_by_query(index=STORAGE_INDEX_NAME,
+                                         doc_type=collection_name,
+                                         body=query)
+
+    def _delete_document(self, collection_name, document_id, model_class):
+        try:
+            res = self._connection.delete(STORAGE_INDEX_NAME, collection_name,
+                                          document_id,
+                                          **MUTATE_PARAMS)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "{0} {1} not found".format(collection_name, document_id))
+
+        fields_data = {
+            self._get_id_attribute(): res['_id']
+        }
+        return self._fill_missing_fields_and_deserialize(fields_data,
+                                                         model_class)
+
+    def _db_encode(self, document):
+        return document
+
+    def _db_decode(self, document):
+        return document
 
     def _get_doc(self, doc_type, doc_id, fields=None):
         try:
@@ -101,31 +187,6 @@ class ESStorageManager(object):
             return self._fill_missing_fields_and_deserialize(fields_data,
                                                              model_class)
 
-    def _put_doc_if_not_exists(self, doc_type, doc_id, value):
-        try:
-            self._connection.create(index=STORAGE_INDEX_NAME,
-                                    doc_type=doc_type, id=doc_id,
-                                    body=value,
-                                    **MUTATE_PARAMS)
-        except elasticsearch.exceptions.ConflictError:
-            raise manager_exceptions.ConflictError(
-                '{0} {1} already exists'.format(doc_type, doc_id))
-
-    def _delete_doc(self, doc_type, doc_id, model_class, id_field='id'):
-        try:
-            res = self._connection.delete(STORAGE_INDEX_NAME, doc_type,
-                                          doc_id,
-                                          **MUTATE_PARAMS)
-        except elasticsearch.exceptions.NotFoundError:
-            raise manager_exceptions.NotFoundError(
-                "{0} {1} not found".format(doc_type, doc_id))
-
-        fields_data = {
-            id_field: res['_id']
-        }
-        return self._fill_missing_fields_and_deserialize(fields_data,
-                                                         model_class)
-
     def _delete_doc_by_query(self, doc_type, query):
         self._connection.delete_by_query(index=STORAGE_INDEX_NAME,
                                          doc_type=doc_type,
@@ -139,7 +200,7 @@ class ESStorageManager(object):
         return model_class(**fields_data)
 
     @staticmethod
-    def _build_field_value_filter(key, val):
+    def _build_field_value_filter(filter_by):
         # This method is used to create a search filter to receive only
         # results where a specific key holds a specific value.
         # Filters are faster than queries as they are cached and don't
@@ -147,19 +208,33 @@ class ESStorageManager(object):
         # Since a filter must go along with a query, it's wrapped in a
         # simple 'constant_score' query in this case (similar to match_all
         # query in some ways)
-        return {
-            'query': {
-                'constant_score': {
-                    'filter': {
-                        'term': {
-                            key: val
+        query = None
+        if not filter:
+            return query
+
+        if len(filter_by) == 1:
+            key, val = filter_by.iteritems().next()
+            query = {
+                'query': {
+                    'constant_score': {
+                        'filter': {
+                            'term': {
+                                key: val
+                            }
                         }
                     }
                 }
             }
-        }
+        elif len(filter_by) > 1:
+            terms = []
+            for key, val in filter_by.iteritems():
+                terms.append({'term': {key: val}})
+            query = {'query': {'bool': {'must': terms}}}
+
+        return query
 
     def node_instances_list(self, include=None):
+        print 'starting {0}'.format(inspect.stack()[0][3])
         search_result = self._connection.search(index=STORAGE_INDEX_NAME,
                                                 doc_type=NODE_INSTANCE_TYPE,
                                                 size=DEFAULT_SEARCH_SIZE,
@@ -167,48 +242,26 @@ class ESStorageManager(object):
         docs_with_versions = \
             map(lambda hit: (hit['_source'], hit['_version']),
                 search_result['hits']['hits'])
+        print 'ended {0}'.format(inspect.stack()[0][3])
         return map(
             lambda doc_with_version: DeploymentNodeInstance(
                 version=doc_with_version[1], **doc_with_version[0]),
             docs_with_versions)
 
-    def blueprints_list(self, include=None):
-        return self._list_docs(BLUEPRINT_TYPE, BlueprintState, fields=include)
-
-    def deployments_list(self, include=None):
-        return self._list_docs(DEPLOYMENT_TYPE, Deployment, fields=include)
-
-    def executions_list(self, deployment_id=None, include=None):
-        query = None
-        if deployment_id:
-            query = self._build_field_value_filter('deployment_id',
-                                                   deployment_id)
-        return self._list_docs(EXECUTION_TYPE, Execution,
-                               query=query, fields=include)
-
-    def get_blueprint_deployments(self, blueprint_id, include=None):
-        return self._list_docs(DEPLOYMENT_TYPE, Deployment,
-                               self._build_field_value_filter(
-                                   'blueprint_id', blueprint_id),
-                               fields=include)
-
     def get_node_instance(self, node_instance_id, include=None):
-        doc = self._get_doc(NODE_INSTANCE_TYPE,
-                            node_instance_id,
-                            fields=include)
-        node = DeploymentNodeInstance(version=doc['_version'],
-                                      **doc['_source'])
+        print 'starting {0}'.format(inspect.stack()[0][3])
+        document = self._get_document_by_id(NODE_INSTANCE_TYPE, node_instance_id,
+                                            include)
+        self._validate_included_fields(document, include)
+        node = DeploymentNodeInstance(version=document['_version'],
+                                      **document['_source'])
+        print 'ended {0}'.format(inspect.stack()[0][3])
         return node
 
-    def get_node(self, deployment_id, node_id, include=None):
-        storage_node_id = self._storage_node_id(deployment_id, node_id)
-        return self._get_doc_and_deserialize(doc_id=storage_node_id,
-                                             doc_type=NODE_TYPE,
-                                             model_class=DeploymentNode,
-                                             fields=include)
-
     def get_node_instances(self, deployment_id, node_id=None, include=None):
+        print 'starting {0}'.format(inspect.stack()[0][3])
         query = None
+        # deployment id is mandatory, so why ask?
         if deployment_id or node_id:
             terms = []
             if deployment_id:
@@ -216,136 +269,26 @@ class ESStorageManager(object):
             if node_id:
                 terms.append({'term': {'node_id': node_id}})
             query = {'query': {'bool': {'must': terms}}}
-        return self._list_docs(NODE_INSTANCE_TYPE,
+        docs = self._list_docs(NODE_INSTANCE_TYPE,
                                DeploymentNodeInstance,
                                query=query,
                                fields=include)
-
-    def get_nodes(self, deployment_id=None, include=None):
-        query = None
-        if deployment_id:
-            query = {'query': {'term': {'deployment_id': deployment_id}}}
-        return self._list_docs(NODE_TYPE,
-                               DeploymentNode,
-                               query=query,
-                               fields=include)
-
-    def get_blueprint(self, blueprint_id, include=None):
-        return self._get_doc_and_deserialize(BLUEPRINT_TYPE,
-                                             blueprint_id,
-                                             BlueprintState,
-                                             fields=include)
-
-    def get_deployment(self, deployment_id, include=None):
-        return self._get_doc_and_deserialize(DEPLOYMENT_TYPE,
-                                             deployment_id,
-                                             Deployment,
-                                             fields=include)
-
-    def get_execution(self, execution_id, include=None):
-        return self._get_doc_and_deserialize(EXECUTION_TYPE,
-                                             execution_id,
-                                             Execution,
-                                             fields=include)
-
-    def put_blueprint(self, blueprint_id, blueprint):
-        self._put_doc_if_not_exists(BLUEPRINT_TYPE, str(blueprint_id),
-                                    blueprint.to_dict())
-
-    def put_deployment(self, deployment_id, deployment):
-        self._put_doc_if_not_exists(DEPLOYMENT_TYPE, str(deployment_id),
-                                    deployment.to_dict())
-
-    def put_execution(self, execution_id, execution):
-        self._put_doc_if_not_exists(EXECUTION_TYPE, str(execution_id),
-                                    execution.to_dict())
-
-    def put_node(self, node):
-        storage_node_id = self._storage_node_id(node.deployment_id, node.id)
-        doc_data = node.to_dict()
-        self._put_doc_if_not_exists(NODE_TYPE, storage_node_id, doc_data)
+        print 'ended {0}'.format(inspect.stack()[0][3])
+        return docs
 
     def put_node_instance(self, node_instance):
+        print 'starting {0}'.format(inspect.stack()[0][3])
         node_instance_id = node_instance.id
         doc_data = node_instance.to_dict()
         del(doc_data['version'])
         self._put_doc_if_not_exists(NODE_INSTANCE_TYPE,
                                     str(node_instance_id),
                                     doc_data)
+        print 'ended {0}'.format(inspect.stack()[0][3])
         return 1
 
-    def delete_blueprint(self, blueprint_id):
-        return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
-                                BlueprintState)
-
-    def update_execution_status(self, execution_id, status, error):
-        update_doc_data = {'status': status,
-                           'error': error}
-        update_doc = {'doc': update_doc_data}
-
-        try:
-            self._connection.update(index=STORAGE_INDEX_NAME,
-                                    doc_type=EXECUTION_TYPE,
-                                    id=str(execution_id),
-                                    body=update_doc,
-                                    **MUTATE_PARAMS)
-        except elasticsearch.exceptions.NotFoundError:
-            raise manager_exceptions.NotFoundError(
-                "Execution {0} not found".format(execution_id))
-
-    def update_provider_context(self, provider_context):
-        doc_data = {'doc': provider_context.to_dict()}
-        try:
-            self._connection.update(index=STORAGE_INDEX_NAME,
-                                    doc_type=PROVIDER_CONTEXT_TYPE,
-                                    id=PROVIDER_CONTEXT_ID,
-                                    body=doc_data,
-                                    **MUTATE_PARAMS)
-        except elasticsearch.exceptions.NotFoundError:
-            raise manager_exceptions.NotFoundError(
-                'Provider Context not found')
-
-    def delete_deployment(self, deployment_id):
-        query = {'query': {'term': {'deployment_id': deployment_id}}}
-        self._delete_doc_by_query(EXECUTION_TYPE, query)
-        self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
-        self._delete_doc_by_query(NODE_TYPE, query)
-        self._delete_doc_by_query(DEPLOYMENT_MODIFICATION_TYPE, query)
-        return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
-
-    def delete_execution(self, execution_id):
-        return self._delete_doc(EXECUTION_TYPE, execution_id, Execution)
-
-    def delete_node(self, node_id):
-        return self._delete_doc(NODE_TYPE, node_id, DeploymentNode)
-
-    def delete_node_instance(self, node_instance_id):
-        return self._delete_doc(NODE_INSTANCE_TYPE,
-                                node_instance_id,
-                                DeploymentNodeInstance)
-
-    def update_node(self, deployment_id, node_id,
-                    number_of_instances=None,
-                    planned_number_of_instances=None):
-        storage_node_id = self._storage_node_id(deployment_id, node_id)
-        update_doc_data = {}
-        if number_of_instances is not None:
-            update_doc_data['number_of_instances'] = number_of_instances
-        if planned_number_of_instances is not None:
-            update_doc_data[
-                'planned_number_of_instances'] = planned_number_of_instances
-        update_doc = {'doc': update_doc_data}
-        try:
-            self._connection.update(index=STORAGE_INDEX_NAME,
-                                    doc_type=NODE_TYPE,
-                                    id=storage_node_id,
-                                    body=update_doc,
-                                    **MUTATE_PARAMS)
-        except elasticsearch.exceptions.NotFoundError:
-            raise manager_exceptions.NotFoundError(
-                "Node {0} not found".format(node_id))
-
     def update_node_instance(self, node):
+        print('in update_node_instance')
         new_state = node.state
         new_runtime_props = node.runtime_properties
         new_relationships = node.relationships
@@ -375,65 +318,6 @@ class ESStorageManager(object):
                                id=node.id,
                                body=updated,
                                **MUTATE_PARAMS)
-
-    def put_provider_context(self, provider_context):
-        doc_data = provider_context.to_dict()
-        self._put_doc_if_not_exists(PROVIDER_CONTEXT_TYPE,
-                                    PROVIDER_CONTEXT_ID,
-                                    doc_data)
-
-    def get_provider_context(self, include=None):
-        return self._get_doc_and_deserialize(PROVIDER_CONTEXT_TYPE,
-                                             PROVIDER_CONTEXT_ID,
-                                             ProviderContext,
-                                             fields=include)
-
-    def put_deployment_modification(self, modification_id, modification):
-        self._put_doc_if_not_exists(DEPLOYMENT_MODIFICATION_TYPE,
-                                    modification_id,
-                                    modification.to_dict())
-
-    def get_deployment_modification(self, modification_id, include=None):
-        return self._get_doc_and_deserialize(DEPLOYMENT_MODIFICATION_TYPE,
-                                             modification_id,
-                                             DeploymentModification,
-                                             fields=include)
-
-    def update_deployment_modification(self, modification):
-
-        modification_id = modification.id
-        update_doc_data = {}
-        if modification.status is not None:
-            update_doc_data['status'] = modification.status
-        if modification.ended_at is not None:
-            update_doc_data['ended_at'] = modification.ended_at
-        if modification.node_instances is not None:
-            update_doc_data['node_instances'] = modification.node_instances
-
-        update_doc = {'doc': update_doc_data}
-        try:
-            self._connection.update(index=STORAGE_INDEX_NAME,
-                                    doc_type=DEPLOYMENT_MODIFICATION_TYPE,
-                                    id=modification_id,
-                                    body=update_doc,
-                                    **MUTATE_PARAMS)
-        except elasticsearch.exceptions.NotFoundError:
-            raise manager_exceptions.NotFoundError(
-                "Modification {0} not found".format(modification_id))
-
-    def deployment_modifications_list(self, deployment_id=None, include=None):
-        query = None
-        if deployment_id:
-            terms = [{'term': {'deployment_id': deployment_id}}]
-            query = {'query': {'bool': {'must': terms}}}
-        return self._list_docs(DEPLOYMENT_MODIFICATION_TYPE,
-                               DeploymentModification,
-                               query=query,
-                               fields=include)
-
-    @staticmethod
-    def _storage_node_id(deployment_id, node_id):
-        return '{0}_{1}'.format(deployment_id, node_id)
 
 
 def create():
