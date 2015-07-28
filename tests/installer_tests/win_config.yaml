@@ -1,0 +1,4 @@
+python_path: C:\Python27\python
+#agent_url: http://46.101.245.114/cfy/konrad/cloudify-windows-agent-32.exe
+agent_url: http://127.0.0.1:9000/cloudify-windows-agent-32.exe
+agent_user: IEUser
