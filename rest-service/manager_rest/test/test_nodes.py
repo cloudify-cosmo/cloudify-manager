@@ -12,6 +12,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import importlib
+import os
+import sys
+import tempfile
+import uuid
 
 import manager_rest.storage_manager as sm
 from base_test import BaseServerTestCase
@@ -259,3 +264,34 @@ class NodesTest(BaseServerTestCase):
                                       relationships=None,
                                       host_id=None)
         sm.instance().put_node_instance(node)
+
+    def test_get_agent_installation_script(self):
+        _, deployment_id, _, _ = self.put_deployment(
+            blueprint_file_name='blueprint.yaml')
+        instances = self.client.node_instances.list(
+            deployment_id=deployment_id)
+        vm = [x for x in instances if x.node_id == 'vm'][0]
+        props = vm.runtime_properties
+        new_agent = {
+          'name': 'new_agent{0}'.format(uuid.uuid4()),
+          'basedir': '/home/ubuntu'
+        }
+        props['new_cloudify_agent'] = new_agent
+        self.client.node_instances.update(vm.id, runtime_properties=props)
+        url = '/node-instances/{0}/install_agent.py'.format(vm.id)
+        response = self.get(url, parse_json=False)
+        self.assertTrue(200 <= response.status_code <= 299)
+        content = response.data
+        _, script_path = tempfile.mkstemp(prefix='install', suffix='.py')
+        with open(script_path, 'w') as script_file:
+            script_file.write(content)
+        directory, filename = os.path.split(script_path)
+        module_name, _ = os.path.splitext(filename)
+        old_path = sys.path
+        try:
+            sys.path = list(old_path)
+            sys.path.append(directory)
+            module = importlib.import_module(module_name)
+            self.assertEquals(new_agent, module.get_cloudify_agent())
+        finally:
+            sys.path = old_path

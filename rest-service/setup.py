@@ -23,7 +23,8 @@ setup(
     author='Dan Kilman',
     author_email='dank@gigaspaces.com',
     packages=['manager_rest'],
-    package_data={'manager_rest': ['VERSION']},
+    package_data={'manager_rest': [
+        'VERSION', 'resources/install_agent.py.template']},
     license='LICENSE',
     description='Cloudify manager rest service',
     zip_safe=False,
@@ -39,6 +40,6 @@ setup(
         'PyYAML==3.10',
         'elasticsearch==1.0.0',
         'celery==3.1.17',
-        'flask-securest==0.6',
+        'flask-securest==0.6'
     ]
 )
