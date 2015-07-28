@@ -110,7 +110,7 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
     runner.run('{0} -o{1} -y'.format(agent_exec_path, RUNTIME_AGENT_PATH),
                quiet=True)
 
-    params = ('--broker=amqp://guest:guest@{0}:5672// '
+    params = ('--broker=amqp://cloudify:c10udify@{0}:5672// '
               '-Ofair '
               '--events '
               '--app=cloudify '
