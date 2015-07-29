@@ -1,6 +1,6 @@
--e git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@3.3m2#egg=cloudify-dsl-parser==3.3a2
--e git+https://github.com/cloudify-cosmo/cloudify-rest-client@3.3m2#egg=cloudify-rest-client==3.3a2
--e git+https://github.com/cloudify-cosmo/flask-securest@0.6#egg=flask-securest==0.6
+https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
+https://github.com/cloudify-cosmo/flask-securest/archive/0.6.zip
 
 # test dependencies
 python-dateutil
