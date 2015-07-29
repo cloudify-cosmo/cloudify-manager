@@ -196,6 +196,9 @@ def uninstall(ctx, runner, agent_config, **kwargs):
     ctx.logger.debug(
         'Uninstalling celery worker [cloudify_agent={0}]'.format(agent_config))
 
+    if agent_config.get('delete_amqp_queues'):
+        _delete_amqp_queues(agent_config['name'])
+
     files_to_delete = [
         agent_config['init_file'], agent_config['config_file']
     ]
