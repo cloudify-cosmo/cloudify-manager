@@ -32,7 +32,9 @@ class CeleryClient(object):
             username=config.instance().amqp_username,
             password=config.instance().amqp_password)
         self.celery = Celery(broker=amqp_uri, backend=amqp_uri)
-        self.celery.conf.update(CELERY_TASK_SERIALIZER="json")
+        self.celery.conf.update(
+            CELERY_TASK_SERIALIZER="json",
+            CELERY_TASK_RESULT_EXPIRES=600)
 
     def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
         """

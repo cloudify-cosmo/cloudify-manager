@@ -44,6 +44,10 @@ os.environ[MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL_KEY] = FILE_SERVER  # NOQA
 tasks.DEFAULT_AGENT_RESOURCES.update({'agent_package_path': '/Ubuntu-agent.tar.gz'})  # NOQA
 tasks.DEFAULT_AGENT_RESOURCES.update({'disable_requiretty_script_path': '/plugins/agent-installer/worker_installer/tests/Ubuntu-disable-require-tty.sh'})  # NOQA
 
+broker_url = 'amqp://cloudify:c10udify@localhost:5672//'
+celery = Celery(broker=broker_url, backend=broker_url)
+celery.conf.update(CELERY_TASK_RESULT_EXPIRES=600)
+
 
 def _get_custom_agent_package_url(distro):
     return AGENT_PACKAGE_URL
@@ -61,15 +65,12 @@ def _get_custom_celery_includes_list():
 
 def _extract_registered_plugins(worker_name):
 
-    # c = Celery(broker=broker_url, backend=broker_url)
-    broker_url = 'amqp://cloudify:c10udify@localhost:5672//'
-    c = Celery(broker=broker_url, backend=broker_url)
-    tasks = c.control.inspect.registered(c.control.inspect())
+    tasks = celery.control.inspect.registered(celery.control.inspect())
 
     # retry a few times
     attempt = 0
     while tasks is None and attempt <= 3:
-        tasks = c.control.inspect.registered(c.control.inspect())
+        tasks = celery.control.inspect.registered(celery.control.inspect())
         attempt += 1
         time.sleep(3)
     if tasks is None:
@@ -397,11 +398,8 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         tasks.install(ctx, cloudify_agent=agent_config)
         tasks.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
-
-        broker_url = 'amqp://cloudify:c10udify@localhost:5672//'
-        c = Celery(broker=broker_url, backend=broker_url)
         kwargs = {'command': 'ls -l'}
-        result = c.send_task(
+        result = celery.send_task(
             name='sudo_plugin.sudo.run',
             kwargs=kwargs,
             queue=agent_config['name'])
@@ -411,11 +409,8 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
         tasks.install(ctx, cloudify_agent=agent_config)
         tasks.start(ctx)
         self.assert_installed_plugins(ctx, agent_config['name'])
-
-        broker_url = 'amqp://cloudify:c10udify@localhost:5672//'
-        c = Celery(broker=broker_url, backend=broker_url)
         kwargs = {'command': 'ls -l'}
-        result = c.send_task(
+        result = celery.send_task(
             name='sudo_plugin.sudo.run',
             kwargs=kwargs,
             queue=agent_config['name'])
