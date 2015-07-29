@@ -1174,23 +1174,35 @@ class DeploymentsIdOutputs(SecuredResource):
                                            outputs=outputs)
 
 
+def _elasticsearch_connection():
+    es_host = config.instance().db_address
+    es_port = config.instance().db_port
+    return elasticsearch.Elasticsearch(hosts=[{"host": es_host,
+                                              "port": es_port}])
+
+
+def _check_index_exists(index_name):
+    es = _elasticsearch_connection()
+    return es.exists(index=index_name)
+
+
 def _query_elastic_search(index=None, doc_type=None, body=None):
     """Query ElasticSearch with the provided index and query body.
 
     Returns:
     Elasticsearch result as is (Python dict).
     """
-    es_host = config.instance().db_address
-    es_port = config.instance().db_port
-    es = elasticsearch.Elasticsearch(hosts=[{"host": es_host,
-                                             "port": es_port}])
+    es = _elasticsearch_connection()
     return es.search(index=index, doc_type=doc_type, body=body)
 
 
 class Events(SecuredResource):
 
     def _set_index_name(self):
-        return 'logstash-*'
+        if _check_index_exists('cloudify_events'):
+            return 'cloudify_events'
+        else:
+            return 'logstash-*'
 
     def _query_events(self):
         """
