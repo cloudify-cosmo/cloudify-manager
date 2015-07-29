@@ -12,6 +12,8 @@ import elasticsearch.helpers
 
 from cloudify.decorators import system_wide_workflow
 
+VERSION = '3.3'
+VERSION_FILE = 'version'
 ELASTICSEARCH = 'es_data'
 CRED_DIR = 'credentials'
 CRED_KEY_NAME = 'agent_key'
@@ -33,21 +35,26 @@ class DictToAttributes(object):
 
 
 def get_json_objects(f):
-    start_point = 0
-    active_brackets = 0
-    c = f.read(1)
-    while c:
-        if c == '{':
-            active_brackets += 1
-        elif c == '}':
-            active_brackets -= 1
-            if active_brackets == 0:
-                end_point = f.tell()
-                f.seek(start_point)
-                yield f.read(end_point - start_point)
-                start_point = end_point
+    def chunks(g):
+        ch = g.read(10000)
+        yield ch
+        while ch:
+            ch = g.read(10000)
+            yield ch
 
-        c = f.read(1)
+    s = ''
+    decoder = json.JSONDecoder()
+    for ch in chunks(f):
+        s += ch
+        try:
+            while s:
+                obj, idx = decoder.raw_decode(s)
+                yield json.dumps(obj)
+                s = s[idx:]
+        except:
+            pass
+
+    assert not s
 
 
 def copy_data(archive_root, config, to_archive=True):
@@ -117,8 +124,7 @@ def create(ctx, snapshot_id, config, **kw):
     call(INFLUXDB_DUMP_CMD.format(influxdb_temp_file), shell=True)
     with open(influxdb_temp_file, 'r') as f, open(influxdb_file, 'w') as g:
         for obj in get_json_objects(f):
-            obj = obj.replace('  ', '') + '\n'
-            g.write(obj)
+            g.write(obj + '\n')
 
     remove(influxdb_temp_file)
 
@@ -136,6 +142,10 @@ def create(ctx, snapshot_id, config, **kw):
             makedirs(path.join(archive_cred_path, node_id))
             shutil.copy(path.expanduser(agent_key_path),
                         path.join(archive_cred_path, node_id, CRED_KEY_NAME))
+
+    # version
+    with open(path.join(tempdir, VERSION_FILE), 'w') as f:
+        f.write(VERSION)
 
     # zip
     snapshot_dir = path.join(snapshots_dir, snapshot_id)
@@ -158,22 +168,7 @@ def create(ctx, snapshot_id, config, **kw):
     }
 
 
-@system_wide_workflow
-def restore(ctx, snapshot_id, config, **kwargs):
-    config = DictToAttributes(config)
-    tempdir = tempfile.mkdtemp('-snapshot-data')
-
-    file_server_root = config.file_server_root
-    snapshots_dir = path.join(
-        file_server_root,
-        config.file_server_uploaded_snapshots_folder
-    )
-
-    snapshot_path = path.join(snapshots_dir, snapshot_id, '{0}.zip'
-                              .format(snapshot_id))
-
-    with zipfile.ZipFile(snapshot_path, 'r') as zipf:
-        zipf.extractall(tempdir)
+def restore_snapshot_format_3_3(ctx, config, tempdir):
 
     # files/dirs copy
     copy_data(tempdir, config, to_archive=False)
@@ -240,4 +235,42 @@ def restore(ctx, snapshot_id, config, **kwargs):
     elasticsearch.helpers.bulk(es, update_actions)
 
     # end
-    shutil.rmtree(tempdir)
+
+
+@system_wide_workflow
+def restore(ctx, snapshot_id, config, **kwargs):
+    mappings = {
+        '3.3': restore_snapshot_format_3_3
+    }
+
+    config = DictToAttributes(config)
+    tempdir = tempfile.mkdtemp('-snapshot-data')
+
+    try:
+        file_server_root = config.file_server_root
+        snapshots_dir = path.join(
+            file_server_root,
+            config.file_server_uploaded_snapshots_folder
+        )
+
+        snapshot_path = path.join(snapshots_dir, snapshot_id, '{0}.zip'
+                                  .format(snapshot_id))
+
+        with zipfile.ZipFile(snapshot_path, 'r') as zipf:
+            zipf.extractall(tempdir)
+
+        with open(path.join(tempdir, VERSION_FILE), 'r') as f:
+            from_version = f.read()
+
+        if from_version not in mappings:
+            raise RuntimeError('Manager is not able to restore snapshot'
+                               ' of manager {0}'.format(from_version))
+
+        ctx.send_event('Starting restoring snapshot of manager {0}'
+                       .format(from_version))
+        mappings[from_version](ctx, snapshot_id, config, tempdir)
+        ctx.send_event('Successfully restored snapshot of manager {0}'
+                       .format(from_version))
+
+    finally:
+        shutil.rmtree(tempdir)
