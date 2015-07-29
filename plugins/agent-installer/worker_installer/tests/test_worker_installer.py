@@ -400,6 +400,7 @@ class TestLocalInstallerCase(WorkerInstallerTestCase):
 
         broker_url = 'amqp://cloudify:c10udify@localhost:5672//'
         c = Celery(broker=broker_url, backend=broker_url)
+        c.conf.update(CELERY_TASK_RESULT_EXPIRES=600)
         kwargs = {'command': 'ls -l'}
         result = c.send_task(
             name='sudo_plugin.sudo.run',
