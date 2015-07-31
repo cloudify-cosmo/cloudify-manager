@@ -1184,7 +1184,7 @@ def _elasticsearch_connection():
 
 def _check_index_exists(index_name):
     es = _elasticsearch_connection()
-    return es.exists(index=index_name)
+    return es.exists(index=[index_name])
 
 
 def _query_elastic_search(index=None, doc_type=None, body=None):
