@@ -27,8 +27,7 @@ class RetriveResourceRenderingTest(TestCase):
 
     def _get_expected_template(self):
         with open(self.rendered_template_path, 'r') as f:
-            expected = f.read()
-        return expected
+            return f.read()
 
     def _retrieve_resource_test(self, mode):
         blueprint_id = 'blueprint-' + str(uuid.uuid4())
