@@ -46,8 +46,8 @@ PROVIDER_NAME = 'integration_tests'
 celery = Celery(broker='amqp://',
                 backend='amqp://')
 celery.conf.update(
-    CELERY_TASK_SERIALIZER="json"
-)
+    CELERY_TASK_SERIALIZER="json",
+    CELERY_TASK_RESULT_EXPIRES=600)
 
 
 logger = setup_logger('testenv.utils')
