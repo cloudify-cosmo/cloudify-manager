@@ -3,7 +3,7 @@ https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-agent/archive/CFY-3266-rabbit-fd.zip
 
 pyzmq
 
