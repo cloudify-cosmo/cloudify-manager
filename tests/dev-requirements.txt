@@ -1,6 +1,6 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/CFY-2870-jinja-template-rendering-3.zip
+https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
