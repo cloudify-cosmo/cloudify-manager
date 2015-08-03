@@ -53,7 +53,7 @@ class ResolverTests(BaseServerTestCase):
     def _update_provider_context(self, resolver_section=None):
         cloudify_section = {}
         if resolver_section:
-            cloudify_section[constants.URL_RESOLVER_KEY] = resolver_section
+            cloudify_section[constants.IMPORT_RESOLVER_KEY] = resolver_section
         self.client.manager.update_context(self.id(),
                                            {'cloudify': cloudify_section})
 
