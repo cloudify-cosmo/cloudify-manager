@@ -88,8 +88,13 @@ def _create_es_client(config):
                                                'port': config.db_port}])
 
 
-def _delete_all_docs(es_client):
-    for doc in elasticsearch.helpers.scan(es_client):
+def _except_types(s, *args):
+    return (e for e in s if e['_type'] not in args)
+
+
+def _delete_all_docs_except_context(es_client):
+    s = elasticsearch.helpers.scan(es_client)
+    for doc in _except_types(s, 'provider_context'):
         doc['_op_type'] = 'delete'
         yield doc
 
@@ -113,7 +118,7 @@ def create(ctx, snapshot_id, config, **kw):
     event_scan = elasticsearch.helpers.scan(es, index='cloudify_events')
 
     with open(path.join(tempdir, ELASTICSEARCH), 'w') as f:
-        for item in storage_scan:
+        for item in _except_types(storage_scan, 'provider_context'):
             f.write(json.dumps(item) + '\n')
         #for item in event_scan:     Temporarily commented out ..
         #    f.write(json.dumps(item) + '\n')  .. for testing
@@ -180,7 +185,7 @@ def restore_snapshot_format_3_3(ctx, config, tempdir):
                        doc_type='execution')
 
     ctx.send_event('Deleting all ElasticSearch data')
-    elasticsearch.helpers.bulk(es, _delete_all_docs(es))
+    elasticsearch.helpers.bulk(es, _delete_all_docs_except_context(es))
     es.indices.flush()
 
     def es_data_itr():
@@ -268,7 +273,7 @@ def restore(ctx, snapshot_id, config, **kwargs):
 
         ctx.send_event('Starting restoring snapshot of manager {0}'
                        .format(from_version))
-        mappings[from_version](ctx, snapshot_id, config, tempdir)
+        mappings[from_version](ctx, config, tempdir)
         ctx.send_event('Successfully restored snapshot of manager {0}'
                        .format(from_version))
 
