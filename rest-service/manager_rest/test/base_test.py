@@ -87,7 +87,7 @@ class MockHTTPClient(HTTPClient):
 
     def version_url(self, url):
         if self.api_version not in url:
-            url = '/{0}{1}'.format(self.api_version, url)
+            url = '/api/{0}{1}'.format(self.api_version, url)
 
         return url
 
@@ -312,7 +312,8 @@ class BaseServerTestCase(unittest.TestCase):
                            blueprint_dir='mock_blueprint',
                            api_version=DEFAULT_API_VERSION):
 
-        resource_path = '/{0}/blueprints/{1}'.format(api_version, blueprint_id)
+        resource_path = '/api/{0}/blueprints/{1}'.format(api_version,
+                                                         blueprint_id)
         result = [
             resource_path,
             self.archive_mock_blueprint(archive_func, blueprint_dir),

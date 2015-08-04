@@ -160,7 +160,7 @@ def _replace_workflows_field_for_deployment_response(deployment_dict):
 def _versioned_urls(endpoint):
     urls = []
     for api_version in SUPPORTED_API_VERSIONS:
-        urls.append('/{0}/{1}'.format(api_version, endpoint))
+        urls.append('/api/{0}/{1}'.format(api_version, endpoint))
     return urls
 
 
@@ -198,8 +198,8 @@ def setup_resources(api):
 
         for api_version in SUPPORTED_API_VERSIONS:
             rest_swagger.add_swagger_resource(
-                api, api_version, resource, '/{0}/{1}'.format(api_version,
-                                                              endpoint))
+                api, api_version, resource, '/api/{0}/{1}'.format(api_version,
+                                                                  endpoint))
 
 
 class BlueprintsUpload(object):

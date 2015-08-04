@@ -216,7 +216,7 @@ class BlueprintsTestCase(BaseServerTestCase):
                                      archive_func=archive_func)).json
         self.assertEqual(blueprint_id, put_blueprints_response['id'])
         api_version = self.client._client.api_version
-        url = '/{0}{1}'.format(
+        url = '/api/{0}{1}'.format(
             api_version,
             '/blueprints/{0}/archive'.format(blueprint_id))
 
