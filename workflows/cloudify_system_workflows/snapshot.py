@@ -115,10 +115,11 @@ def create(ctx, snapshot_id, config, **kw):
     # elasticsearch
     es = _create_es_client(config)
     storage_scan = elasticsearch.helpers.scan(es, index='cloudify_storage')
+    storage_scan = _except_types(storage_scan, 'provider_context')
     event_scan = elasticsearch.helpers.scan(es, index='cloudify_events')
 
     with open(path.join(tempdir, ELASTICSEARCH), 'w') as f:
-        for item in _except_types(storage_scan, 'provider_context'):
+        for item in storage_scan:
             f.write(json.dumps(item) + '\n')
         #for item in event_scan:     Temporarily commented out ..
         #    f.write(json.dumps(item) + '\n')  .. for testing
