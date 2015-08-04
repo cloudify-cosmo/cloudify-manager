@@ -27,8 +27,7 @@ class ProviderContextTestCase(BaseServerTestCase):
     def test_post_provider_context(self):
         result = self.client.manager.create_context(
             'test_provider',
-            {'key': 'value',
-             'cloudify': {}})
+            {'key': 'value'})
         self.assertEqual('ok', result['status'])
 
     def test_get_provider_context(self):
