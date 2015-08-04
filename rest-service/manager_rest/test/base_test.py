@@ -190,9 +190,11 @@ class BaseServerTestCase(unittest.TestCase):
         if self.file_server:
             self.file_server.stop()
 
-    def initialize_provider_context(self):
+    def initialize_provider_context(self, client=None):
+        if not client:
+            client = self.client
         # creating an empty bootstrap context
-        self.client.manager.create_context(self.id(), {'cloudify': {}})
+        client.manager.create_context(self.id(), {'cloudify': {}})
 
     def create_configuration(self):
         from manager_rest.config import Config
