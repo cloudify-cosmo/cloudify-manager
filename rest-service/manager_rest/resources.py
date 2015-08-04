@@ -49,17 +49,15 @@ from manager_rest import chunked
 from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
-from manager_rest import swagger as rest_swagger
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
-                                             get_blueprints_manager)
+                                             get_blueprints_manager,
+                                             BlueprintsManager)
 from manager_rest import get_version_data
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
 SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
-
-SUPPORTED_API_VERSIONS = ['v1', 'v2']
 
 
 def exceptions_handled(func):
@@ -157,51 +155,6 @@ def _replace_workflows_field_for_deployment_response(deployment_dict):
 
         deployment_dict['workflows'] = workflows
     return deployment_dict
-
-
-def _versioned_urls(endpoint):
-    urls = []
-    for api_version in SUPPORTED_API_VERSIONS:
-        urls.append('/api/{0}/{1}'.format(api_version, endpoint))
-    return urls
-
-
-def setup_resources(api):
-    resources_endpoints = {
-        Blueprints: 'blueprints',
-        BlueprintsId: 'blueprints/<string:blueprint_id>',
-        BlueprintsIdArchive: 'blueprints/<string:blueprint_id>/archive',
-        Executions: 'executions',
-        ExecutionsId: 'executions/<string:execution_id>',
-        Deployments: 'deployments',
-        DeploymentsId: 'deployments/<string:deployment_id>',
-        DeploymentsIdOutputs: 'deployments/<string:deployment_id>/outputs',
-        DeploymentModifications: 'deployment-modifications',
-        DeploymentModificationsId: 'deployment-modifications/'
-                                   '<string:modification_id>',
-        DeploymentModificationsIdFinish: 'deployment-modifications/'
-                                         '<string:modification_id>/finish',
-        DeploymentModificationsIdRollback: 'deployment-modifications/'
-                                           '<string:modification_id>/rollback',
-        Nodes: 'nodes',
-        NodeInstances: 'node-instances',
-        NodeInstancesId: 'node-instances/<string:node_instance_id>',
-        Events: 'events',
-        Search: 'search',
-        Status: 'status',
-        ProviderContext: 'provider/context',
-        Version: 'version',
-        EvaluateFunctions: 'evaluate/functions',
-        Tokens: 'tokens'
-    }
-
-    for resource, endpoint in resources_endpoints.iteritems():
-        api.add_resource(resource, *_versioned_urls(endpoint))
-
-        for api_version in SUPPORTED_API_VERSIONS:
-            rest_swagger.add_swagger_resource(
-                api, api_version, resource, '/api/{0}/{1}'.format(api_version,
-                                                                  endpoint))
 
 
 class BlueprintsUpload(object):
@@ -592,10 +545,12 @@ class Executions(SecuredResource):
             'include_system_workflows',
             request.args.get('include_system_workflows', 'false'))
 
+        deployment_id_filter = BlueprintsManager.create_filters_dict(
+            deployment_id=deployment_id)
         executions = get_blueprints_manager().executions_list(
-            deployment_id=deployment_id,
             is_include_system_workflows=is_include_system_workflows,
-            include=_include)
+            include=_include,
+            filters=deployment_id_filter)
         return [responses.Execution(**e.to_dict()) for e in executions]
 
     @exceptions_handled
@@ -857,7 +812,7 @@ class DeploymentModifications(SecuredResource):
                      'required': True,
                      'allowMultiple': False,
                      'dataType': requests_schema.
-                     DeploymentModificationRequest.__name__,
+                    DeploymentModificationRequest.__name__,
                      'paramType': 'body'}],
         consumes=[
             "application/json"
@@ -880,7 +835,7 @@ class DeploymentModifications(SecuredResource):
                                          param_type=dict,
                                          optional=True)
         nodes = request_json.get('nodes', {})
-        modification = get_blueprints_manager().\
+        modification = get_blueprints_manager(). \
             start_deployment_modification(deployment_id, nodes, context)
         return responses.DeploymentModification(**modification.to_dict()), 201
 
@@ -901,8 +856,10 @@ class DeploymentModifications(SecuredResource):
     def get(self, _include=None):
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
+        deployment_id_filter = BlueprintsManager.create_filters_dict(
+            deployment_id=deployment_id)
         modifications = get_storage_manager().deployment_modifications_list(
-            deployment_id, include=_include)
+            filters=deployment_id_filter, include=_include)
         return [responses.DeploymentModification(**m.to_dict())
                 for m in modifications]
 
@@ -992,8 +949,10 @@ class Nodes(SecuredResource):
             except manager_exceptions.NotFoundError:
                 nodes = []
         else:
-            nodes = get_storage_manager().get_nodes(deployment_id,
-                                                    include=_include)
+            deployment_id_filter = BlueprintsManager.create_filters_dict(
+                deployment_id=deployment_id)
+            nodes = get_storage_manager().get_nodes(
+                filters=deployment_id_filter, include=_include)
         return [responses.Node(**node.to_dict()) for node in nodes]
 
 
@@ -1036,10 +995,12 @@ class NodeInstances(SecuredResource):
         """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
-        node_name = args.get('node_name')
-        nodes = get_storage_manager().get_node_instances(deployment_id,
-                                                         node_name,
-                                                         include=_include)
+        node_id = args.get('node_name')
+        params_filter = BlueprintsManager.create_filters_dict(
+            deployment_id=deployment_id, node_id=node_id)
+        nodes = get_storage_manager().get_node_instances(
+            filters=params_filter,
+            include=_include)
         return [responses.NodeInstance(**node.to_dict()) for node in nodes]
 
 
@@ -1129,7 +1090,7 @@ class NodeInstancesId(SecuredResource):
         """
         verify_json_content_type()
         if request.json.__class__ is not dict or \
-                'version' not in request.json or \
+            'version' not in request.json or \
                 request.json['version'].__class__ is not int:
 
             if request.json.__class__ is not dict:
