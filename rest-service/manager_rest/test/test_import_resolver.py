@@ -87,7 +87,8 @@ class ResolverTests(BaseServerTestCase):
                 self.fail("Excpected CloudifyClientError ({0})"
                           .format(err_msg_contains))
             # asserts
-            mock_parse_dsl.assert_call_once()
+            mock_parse_dsl.assert_called_once_with(
+                mock.ANY, mock.ANY, mock.ANY)
             resolver = mock_parse_dsl.call_args[0][2]
             self.assertEqual(_get_instance_class_path(resolver),
                              expected_resolver_impl)
@@ -176,15 +177,20 @@ class ResolverTests(BaseServerTestCase):
             resolver_impl=resolver_impl,
             resolver_params=params)
 
+        # update provider context with resolver and
         self._test_resolver(resolver_section=resolver_section,
                             expected_resolver_impl=resolver_impl,
                             expected_params=params)
 
+        # upload blueprint again and check that
+        # the expected resolver passed to the parser
         with mock.patch('dsl_parser.tasks.parse_dsl') as mock_parse_dsl:
             self.put_file(*self.put_blueprint_args())
-
-        mock_parse_dsl.assert_call_once()
-        self.assertDictEqual(mock_parse_dsl.call_args[0][2].params, params)
+            mock_parse_dsl.assert_called_once_with(
+                mock.ANY, mock.ANY, mock.ANY)
+            self.assertEqual('CustomResolver',
+                             mock_parse_dsl.call_args[0][2].__class__.__name__)
+            self.assertDictEqual(mock_parse_dsl.call_args[0][2].params, params)
 
     def test_illegal_default_resolver_rule(self):
         # wrong rule configuration

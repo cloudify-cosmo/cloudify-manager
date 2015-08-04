@@ -917,10 +917,9 @@ class BlueprintsManager(object):
     def update_provider_context(self, update, provider_context):
         if update:
             self.sm.update_provider_context(provider_context)
-            if hasattr(current_app, 'resolver'):
-                delattr(current_app, "resolver")
         else:
             self.sm.put_provider_context(provider_context)
+        self._update_import_resolver_in_app(provider_context.context)
 
 
 def teardown_blueprints_manager(exception):
