@@ -1,5 +1,5 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-2976-add-api-prefix-to-rest-api.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
 https://github.com/cloudify-cosmo/flask-securest/archive/0.6.zip
 # test dependencies
 python-dateutil
