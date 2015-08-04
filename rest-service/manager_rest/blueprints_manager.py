@@ -116,8 +116,9 @@ class BlueprintsManager(object):
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
         try:
+            resolver = self._get_resolver()
             plan = tasks.parse_dsl(
-                dsl_location, resources_base_url, current_app.resolver)
+                dsl_location, resources_base_url, resolver)
         except Exception, ex:
             raise DslParseException(str(ex))
 
@@ -866,7 +867,8 @@ class BlueprintsManager(object):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
 
-    def _get_resolver_section(self, context):
+    @staticmethod
+    def _get_resolver_section(context):
         resolver_class_path = None
         params = None
         if context:
@@ -881,7 +883,13 @@ class BlueprintsManager(object):
                         constants.RESLOVER_PARAMETERS_KEY)
         return resolver_class_path, params
 
-    def _update_import_resolver(self, context):
+    def _get_resolver(self):
+        if not hasattr(current_app, 'resolver'):
+            self._update_import_resolver_in_app(
+                self.sm.get_provider_context().context)
+        return current_app.resolver
+
+    def _update_import_resolver_in_app(self, context):
         resolver = DefaultImportResolver()
         resolver_class_path, params = self._get_resolver_section(context)
         if resolver_class_path:
@@ -904,16 +912,15 @@ class BlueprintsManager(object):
                         'the default resolver ({1}): {2}'
                         .format(params,
                                 DefaultImportResolver.__name__, str(ex)))
-        return resolver
+        current_app.resolver = resolver
 
     def update_provider_context(self, update, provider_context):
         if update:
             self.sm.update_provider_context(provider_context)
+            if hasattr(current_app, 'resolver'):
+                delattr(current_app, "resolver")
         else:
             self.sm.put_provider_context(provider_context)
-
-        current_app.resolver = self._update_import_resolver(
-            provider_context.context)
 
 
 def teardown_blueprints_manager(exception):
