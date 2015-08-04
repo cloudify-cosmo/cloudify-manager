@@ -16,3 +16,5 @@
 from celery import Celery
 
 app = Celery(broker='amqp://', backend='amqp://')
+app.conf.update(
+    CELERY_TASK_RESULT_EXPIRES=600)
