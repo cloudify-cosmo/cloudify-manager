@@ -4,6 +4,7 @@ import time
 import shutil
 import zipfile
 
+from itertools import chain
 from os import (path, makedirs, remove, listdir)
 from subprocess import call
 
@@ -113,10 +114,8 @@ def create(ctx, snapshot_id, config, **kw):
     event_scan = elasticsearch.helpers.scan(es, index='cloudify_events')
 
     with open(path.join(tempdir, ELASTICSEARCH), 'w') as f:
-        for item in storage_scan:
+        for item in chain(storage_scan, event_scan):
             f.write(json.dumps(item) + '\n')
-        #for item in event_scan:     Temporarily commented out ..
-        #    f.write(json.dumps(item) + '\n')  .. for testing
 
     # influxdb
     influxdb_file = path.join(tempdir, INFLUXDB)

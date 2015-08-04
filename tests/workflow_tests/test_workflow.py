@@ -594,22 +594,6 @@ class BasicWorkflowsTest(TestCase):
 
         self.assertFalse(_is_riemann_core_up())
 
-    def test_snapshot_creation_and_restore_workflows(self):
-        dsl_path = resource('dsl/two_nodes_one_host.yaml')
-        deployment, _ = deploy(dsl_path)
-
-        self.client.snapshots.create('test-snapshot')
-
-        undeploy(deployment.id, delete_deployment=True)
-
-        self.client.blueprints.delete(deployment.blueprint_id)
-
-        self.client.snapshots.restore('test-snapshot')
-
-        self.assertEqual(len(self.client.deployments.list()), 1)
-
-        undeploy(deployment.id, delete_deployment=True)
-
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
         dsl_path = resource('dsl/get_attributes.yaml')
