@@ -20,21 +20,30 @@ from StringIO import StringIO
 
 from flask import g, current_app
 
+from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
-from dsl_parser.constants import DEPLOYMENT_PLUGINS_TO_INSTALL
+from dsl_parser.import_resolver.default_import_resolver import \
+    DefaultResolverValidationException, \
+    DEFAULT_RESLOVER_RULES_KEY, \
+    DefaultImportResolver
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.utils import maybe_register_teardown
+from manager_rest.utils import get_class_instance
 
 
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
 
 
 class DslParseException(Exception):
+    pass
+
+
+class ResolverInstantiationError(Exception):
     pass
 
 
@@ -107,7 +116,9 @@ class BlueprintsManager(object):
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
         try:
-            plan = tasks.parse_dsl(dsl_location, resources_base_url)
+            resolver = self._get_resolver()
+            plan = tasks.parse_dsl(
+                dsl_location, resources_base_url, resolver)
         except Exception, ex:
             raise DslParseException(str(ex))
 
@@ -768,8 +779,8 @@ class BlueprintsManager(object):
             'cloudify_system_workflows.deployment_environment.create'
 
         kwargs = {
-            DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
-                DEPLOYMENT_PLUGINS_TO_INSTALL],
+            constants.DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
+                constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
             'workflow_plugins_to_install': deployment_plan[
                 'workflow_plugins_to_install'],
             'policy_configuration': {
@@ -855,6 +866,60 @@ class BlueprintsManager(object):
     def _get_only_user_execution_parameters(execution_parameters):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
+
+    @staticmethod
+    def _get_resolver_section(context):
+        resolver_class_path = None
+        params = None
+        if context:
+            cloudify_section = context.get(constants.CLOUDIFY)
+            if cloudify_section:
+                resolver_section = \
+                    cloudify_section.get(constants.IMPORT_RESOLVER_KEY)
+                if resolver_section:
+                    resolver_class_path = resolver_section.get(
+                        constants.RESOLVER_IMPLEMENTATION_KEY)
+                    params = resolver_section.get(
+                        constants.RESLOVER_PARAMETERS_KEY)
+        return resolver_class_path, params
+
+    def _get_resolver(self):
+        if not hasattr(current_app, 'resolver'):
+            self._update_import_resolver_in_app(
+                self.sm.get_provider_context().context)
+        return current_app.resolver
+
+    def _update_import_resolver_in_app(self, context):
+        resolver = DefaultImportResolver()
+        resolver_class_path, params = self._get_resolver_section(context)
+        if resolver_class_path:
+            try:
+                resolver = get_class_instance(resolver_class_path, params)
+            except RuntimeError, ex:
+                raise ResolverInstantiationError(
+                    'Failed to instantiate resolver ({0}). {1}'
+                    .format(resolver_class_path, str(ex)))
+        else:
+            # using the default resolver
+            if params:
+                # using custom rules for the default resolver
+                try:
+                    resolver = DefaultImportResolver(
+                        rules=params.get(DEFAULT_RESLOVER_RULES_KEY))
+                except DefaultResolverValidationException, ex:
+                    raise ResolverInstantiationError(
+                        'Wrong parameters ({0}) configured for '
+                        'the default resolver ({1}): {2}'
+                        .format(params,
+                                DefaultImportResolver.__name__, str(ex)))
+        current_app.resolver = resolver
+
+    def update_provider_context(self, update, provider_context):
+        if update:
+            self.sm.update_provider_context(provider_context)
+        else:
+            self.sm.put_provider_context(provider_context)
+        self._update_import_resolver_in_app(provider_context.context)
 
 
 def teardown_blueprints_manager(exception):

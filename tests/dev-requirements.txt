@@ -1,9 +1,9 @@
-https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/3.3m3.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/3.3m3.zip
+https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/3.3m3.zip
+https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/1.3m3.zip
+https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.3m3.zip
+https://github.com/cloudify-cosmo/cloudify-agent/archive/3.3m3.zip
 
 pyzmq
 

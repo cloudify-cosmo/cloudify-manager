@@ -26,9 +26,11 @@ BASIC_AUTH_PREFIX = 'Basic '
 class SecurityTestBase(BaseServerTestCase):
 
     def initialize_provider_context(self):
-        # uploading the provider context from the setup for security tests
-        # fails on authorization
-        pass
+        client = self.create_client(
+            headers=SecurityTestBase.create_auth_header(username='user1',
+                                                        password='pass1'))
+        super(SecurityTestBase, self).initialize_provider_context(
+            client=client)
 
     @staticmethod
     def create_auth_header(username=None, password=None, token=None):

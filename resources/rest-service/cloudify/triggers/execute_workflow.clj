@@ -5,7 +5,7 @@
           manager-ip            (or (System/getenv "MANAGEMENT_IP") "127.0.0.1")
           raw-manager-rest-port (or (System/getenv "MANAGER_REST_PORT") "8101")
           manager-rest-port     (Integer/parseInt raw-manager-rest-port)
-          base-uri              (str "http://" manager-ip ":" manager-rest-port "/v2")
+          base-uri              (str "http://" manager-ip ":" manager-rest-port "/api/v2")
           endpoint              (str "/executions")
           resource-uri          (str base-uri endpoint)
           body                  (cheshire.core/generate-string {

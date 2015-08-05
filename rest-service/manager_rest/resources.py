@@ -49,7 +49,8 @@ from manager_rest import utils
 from manager_rest import swagger as rest_swagger
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
-                                             get_blueprints_manager)
+                                             get_blueprints_manager,
+                                             ResolverInstantiationError)
 from manager_rest import get_version_data
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -159,7 +160,7 @@ def _replace_workflows_field_for_deployment_response(deployment_dict):
 def _versioned_urls(endpoint):
     urls = []
     for api_version in SUPPORTED_API_VERSIONS:
-        urls.append('/{0}/{1}'.format(api_version, endpoint))
+        urls.append('/api/{0}/{1}'.format(api_version, endpoint))
     return urls
 
 
@@ -197,8 +198,8 @@ def setup_resources(api):
 
         for api_version in SUPPORTED_API_VERSIONS:
             rest_swagger.add_swagger_resource(
-                api, api_version, resource, '/{0}/{1}'.format(api_version,
-                                                              endpoint))
+                api, api_version, resource, '/api/{0}/{1}'.format(api_version,
+                                                                  endpoint))
 
 
 class BlueprintsUpload(object):
@@ -1372,11 +1373,12 @@ class ProviderContext(SecuredResource):
 
         status_code = 200 if update else 201
 
-        if update:
-            get_storage_manager().update_provider_context(context)
-        else:
-            get_storage_manager().put_provider_context(context)
-        return responses.ProviderContextPostStatus(status='ok'), status_code
+        try:
+            get_blueprints_manager().update_provider_context(update, context)
+            return \
+                responses.ProviderContextPostStatus(status='ok'), status_code
+        except ResolverInstantiationError, ex:
+            raise manager_exceptions.ResolverInstantiationError(str(ex))
 
 
 class Version(Resource):

@@ -1,0 +1,36 @@
+tosca_definitions_version: cloudify_dsl_1_1
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations.yaml
+
+inputs:
+    rendering_tests_demo_conf:
+        description: >
+            Path of resource to retrieve
+    mode:
+        description: >
+            Get or download resource
+
+node_types:
+  custom_type:
+    derived_from: cloudify.nodes.Compute
+    properties:
+      port:
+        type: integer
+      my_url:
+        type: string
+
+node_templates:
+    my_node:
+        type: custom_type
+        properties:
+            port: 8888
+            my_url: my_url.html
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                  implementation: testmockoperations.testmockoperations.tasks.retrieve_template
+                  inputs:
+                    rendering_tests_demo_conf: { get_input: rendering_tests_demo_conf }
+                    mode: { get_input: mode }
