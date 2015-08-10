@@ -87,7 +87,7 @@ class MockHTTPClient(HTTPClient):
 
     def version_url(self, url):
         if self.api_version not in url:
-            url = '/{0}{1}'.format(self.api_version, url)
+            url = '/api/{0}{1}'.format(self.api_version, url)
 
         return url
 
@@ -190,9 +190,11 @@ class BaseServerTestCase(unittest.TestCase):
         if self.file_server:
             self.file_server.stop()
 
-    def initialize_provider_context(self):
+    def initialize_provider_context(self, client=None):
+        if not client:
+            client = self.client
         # creating an empty bootstrap context
-        self.client.manager.create_context(self.id(), {'cloudify': {}})
+        client.manager.create_context(self.id(), {'cloudify': {}})
 
     def create_configuration(self):
         from manager_rest.config import Config
@@ -310,7 +312,8 @@ class BaseServerTestCase(unittest.TestCase):
                            blueprint_dir='mock_blueprint',
                            api_version=DEFAULT_API_VERSION):
 
-        resource_path = '/{0}/blueprints/{1}'.format(api_version, blueprint_id)
+        resource_path = '/api/{0}/blueprints/{1}'.format(api_version,
+                                                         blueprint_id)
         result = [
             resource_path,
             self.archive_mock_blueprint(archive_func, blueprint_dir),

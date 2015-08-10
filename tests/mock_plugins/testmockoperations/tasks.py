@@ -445,3 +445,16 @@ def get_prop(prop_name, ctx, kwargs, default=None):
         return ctx.node.properties[prop_name]
     else:
         return default
+
+
+@operation
+def retrieve_template(ctx, rendering_tests_demo_conf, mode, **_):
+    if mode == 'get':
+        resource = \
+            ctx.get_resource_and_render(rendering_tests_demo_conf)
+    else:
+        resource = \
+            ctx.download_resource_and_render(rendering_tests_demo_conf)
+
+    with update_storage(ctx) as data:
+        data['rendered_resource'] = resource
