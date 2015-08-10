@@ -456,7 +456,7 @@ class Blueprints(SecuredResource):
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
         nickname="list",
-        notes="Returns a list a submitted blueprints."
+        notes="Returns a list of uploaded blueprints."
     )
     @exceptions_handled
     @marshal_with(responses.BlueprintState.resource_fields)
@@ -753,7 +753,7 @@ class Snapshots(SecuredResource):
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Snapshot.__name__),
         nickname='list',
-        notes='Returns a list existing snapshots.'
+        notes='Returns a list of existing snapshots.'
     )
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
@@ -936,7 +936,7 @@ class SnapshotsIdDownload(SecuredResource):
 
     @swagger.operation(
         nickname='downloadSnapshot',
-        notes='Downloads snapshot as as archive.'
+        notes='Downloads snapshot as an archive.'
     )
     @exceptions_handled
     def get(self, snapshot_id):
@@ -974,7 +974,7 @@ class Deployments(SecuredResource):
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Deployment.__name__),
         nickname="list",
-        notes="Returns a list existing deployments."
+        notes="Returns a list of existing deployments."
     )
     @exceptions_handled
     @marshal_with(responses.Deployment.resource_fields)
