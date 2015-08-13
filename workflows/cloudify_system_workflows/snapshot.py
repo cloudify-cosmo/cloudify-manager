@@ -55,8 +55,6 @@ def get_json_objects(f):
         except:
             pass
 
-    assert not s
-
 
 def copy_data(archive_root, config, to_archive=True):
     DATA_TO_COPY = [
@@ -141,7 +139,7 @@ def create(ctx, snapshot_id, config, **kw):
                                            doc_type='node')
     for n in node_scan:
         props = n['_source']['properties']
-        if 'cloudify_agent' in props:
+        if 'cloudify_agent' in props and 'key' in props['cloudify_agent']:
             node_id = n['_id']
             agent_key_path = props['cloudify_agent']['key']
             makedirs(path.join(archive_cred_path, node_id))
@@ -245,7 +243,8 @@ def restore_snapshot_format_3_3(ctx, config, tempdir):
 @system_wide_workflow
 def restore(ctx, snapshot_id, config, **kwargs):
     mappings = {
-        '3.3': restore_snapshot_format_3_3
+        '3.3': restore_snapshot_format_3_3,
+        '3.2': restore_snapshot_format_3_3
     }
 
     config = DictToAttributes(config)
