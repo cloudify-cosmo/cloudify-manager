@@ -36,7 +36,8 @@ PROVIDER_CONTEXT = {
     'cloudify': {
         'workflows': {
             'task_retries': 0,
-            'task_retry_interval': 0
+            'task_retry_interval': 0,
+            'subgraph_retries': 0
         }
     }
 }

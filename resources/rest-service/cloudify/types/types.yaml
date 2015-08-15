@@ -47,12 +47,11 @@ node_types:
         default: {}
       ip:
         default: ''
-      os:
+      os_family:
         description: |
-          Property specifying what type of operating system this compute node
-          will run.
-        default:
-          type: Linux
+          Property specifying what type of operating system family
+          this compute node will run.
+        default: Linux
     interfaces:
       cloudify.interfaces.cloudify_agent:
 
