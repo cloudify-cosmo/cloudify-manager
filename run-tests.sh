@@ -16,8 +16,8 @@ run_intergration_tests()
     dpkg -L python-dbus
     #sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
     #sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
-    wget http://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb
-    sudo dpkg -i elasticsearch-1.3.2.deb
+    wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.6.0.deb
+    sudo dpkg -i elasticsearch-1.6.0.deb
     export PATH=/usr/share/elasticsearch/bin:$PATH
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
