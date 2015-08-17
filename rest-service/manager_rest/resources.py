@@ -31,7 +31,8 @@ import elasticsearch
 from flask import (
     request,
     make_response,
-    current_app as app
+    current_app as app,
+    g
 )
 from flask.ext.restful import Resource, marshal, reqparse
 from flask_restful_swagger import swagger
@@ -1177,15 +1178,22 @@ class DeploymentsIdOutputs(SecuredResource):
 
 
 def _elasticsearch_connection():
-    es_host = config.instance().db_address
-    es_port = config.instance().db_port
-    return elasticsearch.Elasticsearch(hosts=[{"host": es_host,
-                                              "port": es_port}])
+    def es_connection():
+        es_host = config.instance().db_address
+        es_port = config.instance().db_port
+        return elasticsearch.Elasticsearch(hosts=[{"host": es_host,
+                                                   "port": es_port}])
+
+    if 'es_connection' not in g:
+        g.es_connection = es_connection()
+    return g.es_connection
 
 
 def _check_index_exists(index_name):
-    es = _elasticsearch_connection()
-    return es.indices.exists(index=[index_name])
+    if 'exists' not in g:
+        es = _elasticsearch_connection()
+        g.exists = es.indices.exists(index=[index_name])
+    return g.exists
 
 
 def _query_elastic_search(index=None, doc_type=None, body=None):
