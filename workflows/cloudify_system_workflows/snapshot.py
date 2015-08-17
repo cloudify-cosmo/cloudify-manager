@@ -1,6 +1,5 @@
 import json
 import tempfile
-import time
 import shutil
 import zipfile
 
@@ -44,16 +43,20 @@ def get_json_objects(f):
             yield ch
 
     s = ''
+    n = 0
     decoder = json.JSONDecoder()
     for ch in chunks(f):
         s += ch
         try:
             while s:
                 obj, idx = decoder.raw_decode(s)
+                n += 1
                 yield json.dumps(obj)
                 s = s[idx:]
         except:
             pass
+
+    assert not n or not s
 
 
 def copy_data(archive_root, config, to_archive=True):
@@ -154,7 +157,7 @@ def create(ctx, snapshot_id, config, **kw):
     snapshot_dir = path.join(snapshots_dir, snapshot_id)
     makedirs(snapshot_dir)
 
-    zipf = shutil.make_archive(
+    shutil.make_archive(
         path.join(snapshot_dir, snapshot_id),
         'zip',
         tempdir
@@ -162,13 +165,6 @@ def create(ctx, snapshot_id, config, **kw):
 
     # end
     shutil.rmtree(tempdir)
-    created_at = time.strftime('%d %b %Y %H:%M:%S',
-                               time.localtime(path.getctime(zipf)))
-
-    return {
-        'id': snapshot_id,
-        'created_at': created_at
-    }
 
 
 def restore_snapshot_format_3_3(ctx, config, tempdir):

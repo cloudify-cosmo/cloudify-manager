@@ -30,7 +30,6 @@ from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 from manager_rest import models
 from manager_rest import config
-from manager_rest import responses
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
@@ -64,6 +63,9 @@ class BlueprintsManager(object):
     def blueprints_list(self, include=None):
         return self.sm.blueprints_list(include=include)
 
+    def snapshots_list(self, include=None):
+        return self.sm.snapshots_list(include=include)
+
     def deployments_list(self, include=None):
         return self.sm.deployments_list(include=include)
 
@@ -76,6 +78,9 @@ class BlueprintsManager(object):
 
     def get_blueprint(self, blueprint_id, include=None):
         return self.sm.get_blueprint(blueprint_id, include=include)
+
+    def get_snapshot(self, snapshot_id, include=None):
+        return self.sm.get_snapshot(snapshot_id, include=include)
 
     def get_deployment(self, deployment_id, include=None):
         return self.sm.get_deployment(deployment_id=deployment_id,
@@ -115,8 +120,17 @@ class BlueprintsManager(object):
 
         return self.sm.update_execution_status(execution_id, status, error)
 
+    def create_snapshot_model(self, snapshot_id):
+        now = str(datetime.now())
+        new_snapshot = models.Snapshot(id=snapshot_id,
+                                       created_at=now)
+        self.sm.put_snapshot(snapshot_id, new_snapshot)
+        return new_snapshot
+
     def create_snapshot(self, snapshot_id):
-        wf_result = self._execute_system_wide_workflow(
+        new_snapshot = self.create_snapshot_model(snapshot_id)
+
+        self._execute_system_wide_workflow(
             'create_snapshot',
             'cloudify_system_workflows.snapshot.create',
             {
@@ -124,7 +138,7 @@ class BlueprintsManager(object):
                 'config': config.instance().to_dict()
             }
         ).get()
-        return responses.Snapshot(**wf_result)
+        return new_snapshot
 
     def restore_snapshot(self, snapshot_id):
         async_task = self._execute_system_wide_workflow(
@@ -170,6 +184,9 @@ class BlueprintsManager(object):
                                   in blueprint_deployments])))
 
         return self.sm.delete_blueprint(blueprint_id)
+
+    def delete_snapshot(self, snapshot_id):
+        return self.sm.delete_snapshot(snapshot_id)
 
     def delete_deployment(self, deployment_id, ignore_live_nodes=False):
         # Verify deployment exists.

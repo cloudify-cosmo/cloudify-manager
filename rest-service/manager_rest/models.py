@@ -40,6 +40,15 @@ class BlueprintState(SerializableObject):
         self.updated_at = kwargs['updated_at']
 
 
+class Snapshot(SerializableObject):
+
+    fields = {'id', 'created_at'}
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.created_at = kwargs['created_at']
+
+
 class Deployment(SerializableObject):
 
     fields = {'id', 'created_at', 'updated_at', 'blueprint_id',

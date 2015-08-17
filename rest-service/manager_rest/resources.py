@@ -1,4 +1,4 @@
-#########
+
 # Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -728,24 +728,21 @@ class ExecutionsId(SecuredResource):
             execution_id).to_dict())
 
 
-def get_snapshot_ctime(snapshot_path):
-    import time
-    return time.strftime('%d %b %Y %H:%M:%S',
-                         time.localtime(os.path.getctime(snapshot_path)))
+def _does_snapshot_exist(snapshot_id):
+    try:
+        get_blueprints_manager().get_snapshot(snapshot_id)
+    except:
+        return False
+
+    return True
 
 
-def get_snapshot_by_id(snapshot_id):
-    snapshots_path = os.path.join(
+def _get_snapshot_path(snapshot_id):
+    return os.path.join(
         config.instance().file_server_root,
         config.instance().file_server_uploaded_snapshots_folder,
         snapshot_id
     )
-    path = os.path.join(snapshots_path, '{0}.zip'.format(snapshot_id))
-    created_at = get_snapshot_ctime(path)
-    return responses.Snapshot(
-        id=snapshot_id,
-        created_at=created_at
-    ), snapshots_path
 
 
 class Snapshots(SecuredResource):
@@ -758,18 +755,7 @@ class Snapshots(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def get(self, _include=None):
-        snapshots_path = os.path.join(
-            config.instance().file_server_root,
-            config.instance().file_server_uploaded_snapshots_folder
-        )
-        snapshots = [f for f in os.listdir(snapshots_path)
-                     if os.path.isdir(os.path.join(snapshots_path, f))]
-
-        def snapshot_created_at(s):
-            return get_snapshot_ctime(os.path.join(snapshots_path, s,
-                                                   '{0}.zip'.format(s)))
-        return [responses.Snapshot(id=s, created_at=snapshot_created_at(s))
-                for s in snapshots]
+        return get_blueprints_manager().snapshots_list(_include)
 
 
 class SnapshotsId(SecuredResource):
@@ -782,11 +768,12 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def put(self, snapshot_id):
-        if _does_snapshot_exist(snapshot_id):
+        try:
+            snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
+        except:
+            # we override original exeption
             raise RuntimeError("Snapshot with id '{0}' already exists."
                                .format(snapshot_id))
-
-        snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
         return snapshot, 201
 
     @swagger.operation(
@@ -797,11 +784,8 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def delete(self, snapshot_id):
-        if not _does_snapshot_exist(snapshot_id):
-            raise RuntimeError("Snapshot with id '{0}' doesn't exist."
-                               .format(snapshot_id))
-
-        snapshot, path = get_snapshot_by_id(snapshot_id)
+        snapshot = get_blueprints_manager().delete_snapshot(snapshot_id)
+        path = _get_snapshot_path(snapshot_id)
         shutil.rmtree(path, ignore_errors=True)
         return snapshot
 
@@ -818,16 +802,6 @@ class SnapshotsId(SecuredResource):
                                .format(snapshot_id))
         get_blueprints_manager().restore_snapshot(snapshot_id)
         return None, 201
-
-
-def _does_snapshot_exist(snapshot_id):
-    snapshot_path = os.path.join(
-        config.instance().file_server_root,
-        config.instance().file_server_uploaded_snapshots_folder,
-        snapshot_id
-    )
-
-    return os.path.exists(snapshot_path)
 
 
 class SnapshotsIdUpload(SecuredResource):
@@ -860,11 +834,16 @@ class SnapshotsIdUpload(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def put(self, snapshot_id):
+        if _does_snapshot_exist(snapshot_id):
+            raise RuntimeError("Snapshot with id '{0}' already exists."
+                               .format(snapshot_id))
+        snapshot = get_blueprints_manager().create_snapshot_model(snapshot_id)
+
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             self._save_file_locally(archive_target_path)
-            snapshot = self._move_archive_to_uploaded_snapshot_dir(
+            self._move_archive_to_uploaded_snapshot_dir(
                 snapshot_id,
                 file_server_root,
                 archive_target_path
@@ -894,8 +873,6 @@ class SnapshotsIdUpload(SecuredResource):
         snapshot_file = os.path.join(uploaded_snapshot_dir, '{0}.zip'
                                      .format(snapshot_id))
         shutil.move(archive_path, snapshot_file)
-        created_at = os.path.getctime(snapshot_file)
-        return responses.Snapshot(id=snapshot_id, created_at=created_at)
 
     def _save_file_locally(self, archive_target_path):
         # Downloading snapshot archive
