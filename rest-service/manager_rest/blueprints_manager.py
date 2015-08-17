@@ -115,24 +115,38 @@ class BlueprintsManager(object):
 
         return self.sm.update_execution_status(execution_id, status, error)
 
+    def _get_conf_for_snapshots_wf(self):
+        config_instance = config.instance()
+        return {
+            attr: getattr(config_instance, attr) for attr in (
+                'file_server_root',
+                'file_server_uploaded_snapshots_folder',
+                'file_server_blueprints_folder',
+                'file_server_uploaded_blueprints_folder',
+                'db_address',
+                'db_port'
+            )
+        }
+
+
     def create_snapshot(self, snapshot_id):
         wf_result = self._execute_system_wide_workflow(
-            'create_snapshot',
-            'cloudify_system_workflows.snapshot.create',
-            {
+            wf_id='create_snapshot',
+            task_mapping='cloudify_system_workflows.snapshot.create',
+            execution_parameters={
                 'snapshot_id': snapshot_id,
-                'config': config.instance().to_dict()
+                'config': self._get_conf_for_snapshots_wf()
             }
         ).get()
         return responses.Snapshot(**wf_result)
 
     def restore_snapshot(self, snapshot_id):
         async_task = self._execute_system_wide_workflow(
-            'restore_snapshot',
-            'cloudify_system_workflows.snapshot.restore',
-            {
+            wf_id='restore_snapshot',
+            task_mapping='cloudify_system_workflows.snapshot.restore',
+            execution_parameters={
                 'snapshot_id': snapshot_id,
-                'config': config.instance().to_dict()
+                'config': self._get_conf_for_snapshots_wf()
             }
         )
         result = async_task.get()
