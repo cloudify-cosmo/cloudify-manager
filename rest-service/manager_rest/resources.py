@@ -1178,14 +1178,11 @@ class DeploymentsIdOutputs(SecuredResource):
 
 
 def _elasticsearch_connection():
-    def es_connection():
+    if 'es_connection' not in g:
         es_host = config.instance().db_address
         es_port = config.instance().db_port
-        return elasticsearch.Elasticsearch(hosts=[{"host": es_host,
-                                                   "port": es_port}])
-
-    if 'es_connection' not in g:
-        g.es_connection = es_connection()
+        g.es_connection = elasticsearch.Elasticsearch(
+            hosts=[{"host": es_host, "port": es_port}])
     return g.es_connection
 
 
