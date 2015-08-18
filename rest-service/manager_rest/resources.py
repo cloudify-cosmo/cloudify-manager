@@ -1190,10 +1190,11 @@ def _elasticsearch_connection():
 
 
 def _check_index_exists(index_name):
-    if 'cloudify_events_index_exists' not in g:
+    if not hasattr(app, 'cloudify_events_index_exists'):
         es = _elasticsearch_connection()
-        g.cloudify_events_index_exists = es.indices.exists(index=[index_name])
-    return g.cloudify_events_index_exists
+        app.cloudify_events_index_exists = \
+            es.indices.exists(index=[index_name])
+    return app.cloudify_events_index_exists
 
 
 def _query_elastic_search(index=None, doc_type=None, body=None):
