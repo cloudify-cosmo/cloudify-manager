@@ -42,7 +42,7 @@ class WorkflowClient(object):
                               kwargs=execution_parameters)
 
     @staticmethod
-    def execute_system_workflow(deployment, wf_id, task_id, task_mapping,
+    def execute_system_workflow(wf_id, task_id, task_mapping, deployment=None,
                                 execution_parameters=None):
         # task_id is not generated here since for system workflows,
         # the task id is equivalent to the execution id
@@ -52,35 +52,12 @@ class WorkflowClient(object):
             'task_name': task_mapping,
             'execution_id': task_id,
             'workflow_id': wf_id,
-            'blueprint_id': deployment.blueprint_id,
-            'deployment_id': deployment.id,
         }
 
-        return WorkflowClient._execute_wf_on_manager_worker(
-            context,
-            execution_parameters
-        )
+        if deployment:
+            context['blueprint_id'] = deployment.blueprint_id
+            context['deployment_id'] = deployment.id
 
-    @staticmethod
-    def execute_system_wide_workflow(wf_id, task_id, task_mapping,
-                                     execution_parameters=None):
-        # task_id is not generated here since for system workflows,
-        # the task id is equivalent to the execution id
-
-        context = {
-            'task_id': task_id,
-            'task_name': task_mapping,
-            'execution_id': task_id,
-            'workflow_id': wf_id,
-        }
-
-        return WorkflowClient._execute_wf_on_manager_worker(
-            context,
-            execution_parameters
-        )
-
-    @staticmethod
-    def _execute_wf_on_manager_worker(context, execution_parameters):
         task_queue = 'cloudify.management'
 
         context['task_target'] = task_queue

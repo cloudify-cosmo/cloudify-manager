@@ -105,13 +105,15 @@ class BlueprintsManager(object):
                 deployment_env_creation_task_name = \
                     'cloudify_system_workflows.deployment_environment.stop'
 
-                kwargs = {
+                exec_params = {
                     'prerequisite_task_id': execution_id
                 }
 
                 self._execute_system_workflow(
-                    deployment, wf_id, deployment_env_creation_task_name,
-                    kwargs)
+                    wf_id=wf_id,
+                    task_mapping=deployment_env_creation_task_name,
+                    deployment=deployment,
+                    execution_parameters=exec_params)
 
         return self.sm.update_execution_status(execution_id, status, error)
 
@@ -128,9 +130,8 @@ class BlueprintsManager(object):
             )
         }
 
-
     def create_snapshot(self, snapshot_id):
-        wf_result = self._execute_system_wide_workflow(
+        wf_result = self._execute_system_workflow(
             wf_id='create_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.create',
             execution_parameters={
@@ -141,7 +142,7 @@ class BlueprintsManager(object):
         return responses.Snapshot(**wf_result)
 
     def restore_snapshot(self, snapshot_id):
-        async_task = self._execute_system_wide_workflow(
+        async_task = self._execute_system_workflow(
             wf_id='restore_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.restore',
             execution_parameters={
@@ -276,7 +277,10 @@ class BlueprintsManager(object):
                 'cloudify_system_workflows.deployment_environment.start'
 
             self._execute_system_workflow(
-                deployment, wf_id, deployment_env_start_task_name, timeout=300,
+                wf_id=wf_id,
+                task_mapping=deployment_env_start_task_name,
+                deployment=deployment,
+                timeout=300,
                 created_at=start_deployment_env_created_at_time)
 
         # executing the user workflow
@@ -290,32 +294,7 @@ class BlueprintsManager(object):
 
         return new_execution
 
-    def _execute_system_wide_workflow(self, wf_id, task_mapping,
-                    execution_parameters=None, created_at=None):
-
-        execution_id = str(uuid.uuid4())
-        execution_parameters = execution_parameters or {}
-
-        execution = models.Execution(
-            id=execution_id,
-            status=models.Execution.PENDING,
-            created_at=created_at or str(datetime.now()),
-            blueprint_id=None,
-            workflow_id=wf_id,
-            deployment_id=None,
-            error='',
-            parameters=self._get_only_user_execution_parameters(
-                execution_parameters),
-            is_system_workflow=True)
-
-        self.sm.put_execution(execution.id, execution)
-
-        async_task = workflow_client().execute_system_wide_workflow(
-            wf_id, execution_id, task_mapping, execution_parameters)
-
-        return async_task
-
-    def _execute_system_workflow(self, deployment, wf_id, task_mapping,
+    def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
                                  created_at=None):
         """
@@ -342,9 +321,9 @@ class BlueprintsManager(object):
             id=execution_id,
             status=models.Execution.PENDING,
             created_at=created_at or str(datetime.now()),
-            blueprint_id=deployment.blueprint_id,
+            blueprint_id=deployment.blueprint_id if deployment else None,
             workflow_id=wf_id,
-            deployment_id=deployment.id,
+            deployment_id=deployment.id if deployment else None,
             error='',
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
@@ -353,8 +332,11 @@ class BlueprintsManager(object):
         self.sm.put_execution(execution.id, execution)
 
         async_task = workflow_client().execute_system_workflow(
-            deployment, wf_id, execution_id, task_mapping,
-            execution_parameters)
+            wf_id=wf_id,
+            task_id=execution_id,
+            task_mapping=task_mapping,
+            deployment=deployment,
+            execution_parameters=execution_parameters)
 
         if timeout > 0:
             try:
@@ -362,10 +344,13 @@ class BlueprintsManager(object):
                 async_task.get(timeout=timeout, propagate=True)
             except Exception as e:
                 # error message for the user
+                if deployment:
+                    add_info = ' for deployment {0}'.format(deployment.id)
+                else:
+                    add_info = ''
                 error_msg =\
-                    'Error occurred while executing the {0} system workflow '\
-                    'for deployment {1}: {2} - {3}'.format(
-                        wf_id, deployment.id, type(e).__name__, str(e))
+                    'Error occurred while executing the {0} system workflow{1}:'\
+                    ' {2} - {3}'.format(wf_id, add_info, type(e).__name__, e)
                 # adding traceback to the log error message
                 tb = StringIO()
                 traceback.print_exc(file=tb)
@@ -378,10 +363,9 @@ class BlueprintsManager(object):
             execution = self.sm.get_execution(async_task.id)
             if execution.status != models.Execution.TERMINATED:
                 raise RuntimeError(
-                    'Failed executing the {0} system workflow for deployment '
-                    '{1}: Execution did not complete successfully before '
-                    'timeout ({2} seconds)'.format(
-                        wf_id, deployment.id, timeout))
+                    'Failed executing the {0} system workflow{1}: '
+                    'Execution did not complete successfully before '
+                    'timeout ({2} seconds)'.format(wf_id, add_info, timeout))
 
         return async_task
 
@@ -860,7 +844,7 @@ class BlueprintsManager(object):
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
 
-        kwargs = {
+        execution_params = {
             constants.DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
                 constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
             'workflow_plugins_to_install': deployment_plan[
@@ -873,7 +857,10 @@ class BlueprintsManager(object):
         }
 
         return self._execute_system_workflow(
-            deployment, wf_id, deployment_env_creation_task_name, kwargs)
+            wf_id=wf_id,
+            task_mapping=deployment_env_creation_task_name,
+            deployment=deployment,
+            execution_parameters=execution_params)
 
     def _delete_deployment_environment(self, deployment_id):
         deployment = self.sm.get_deployment(deployment_id)
@@ -882,7 +869,10 @@ class BlueprintsManager(object):
             'cloudify_system_workflows.deployment_environment.delete'
 
         self._execute_system_workflow(
-            deployment, wf_id, deployment_env_deletion_task_name, timeout=300)
+            wf_id=wf_id,
+            task_mapping=deployment_env_deletion_task_name,
+            deployment=deployment,
+            timeout=300)
 
     def _check_for_active_executions(self, deployment_id, force,
                                      transient_workers_config):
