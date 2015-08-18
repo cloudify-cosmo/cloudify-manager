@@ -31,8 +31,10 @@ class BlueprintState(BlueprintStateV1):
 
     resource_fields = dict(BlueprintStateV1.resource_fields.items() + {
         'description': fields.String,
+        'main_file_name': fields.String
     }.items())
 
     def __init__(self, **kwargs):
         super(BlueprintState, self).__init__(**kwargs)
         self.description = kwargs['description']
+        self.main_file_name = kwargs['main_file_name']

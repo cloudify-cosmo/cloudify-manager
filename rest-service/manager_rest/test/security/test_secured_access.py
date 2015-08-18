@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from mock import patch
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
@@ -67,14 +66,4 @@ class SecurityTest(SecurityTestBase):
         client = self.create_client(headers=SecurityTestBase.
                                     create_auth_header(username='user1',
                                                        password='pass1'))
-
-        # the flask api client needs to be modified since it doesn't support
-        # a bytes generator as "data" for file upload
-        original_put = client._client.app.put
-
-        def modified_put(*args, **kwargs):
-            kwargs['data'] = kwargs['data'].next()
-            return original_put(*args, **kwargs)
-
-        with patch.object(client._client.app, 'put', modified_put):
-            client.blueprints.upload(self.get_mock_blueprint_path(), 'bp-id')
+        client.blueprints.upload(self.get_mock_blueprint_path(), 'bp-id')

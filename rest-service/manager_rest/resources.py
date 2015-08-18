@@ -327,23 +327,26 @@ class BlueprintsUpload(object):
             shutil.rmtree(tempdir)
 
     def _prepare_and_submit_blueprint(self, file_server_root,
-                                      application_dir,
+                                      app_dir,
                                       blueprint_id):
-        application_file = self._extract_application_file(file_server_root,
-                                                          application_dir)
 
-        file_server_base_url = config.instance().file_server_base_uri
-        dsl_path = '{0}/{1}'.format(file_server_base_url, application_file)
-        resources_base = file_server_base_url + '/'
+        app_dir, app_file_name = self._extract_application_file(
+            file_server_root, app_dir)
+
+        file_server_base_url = '{0}/'.format(
+            config.instance().file_server_base_uri)
 
         # add to blueprints manager (will also dsl_parse it)
         try:
             blueprint = get_blueprints_manager().publish_blueprint(
-                dsl_path, resources_base, blueprint_id)
+                app_dir,
+                app_file_name,
+                file_server_base_url,
+                blueprint_id)
 
             # moving the app directory in the file server to be under a
             # directory named after the blueprint id
-            shutil.move(os.path.join(file_server_root, application_dir),
+            shutil.move(os.path.join(file_server_root, app_dir),
                         os.path.join(
                             file_server_root,
                             config.instance().file_server_blueprints_folder,
@@ -351,7 +354,7 @@ class BlueprintsUpload(object):
             self._process_plugins(file_server_root, blueprint.id)
             return blueprint
         except DslParseException, ex:
-            shutil.rmtree(os.path.join(file_server_root, application_dir))
+            shutil.rmtree(os.path.join(file_server_root, app_dir))
             raise manager_exceptions.InvalidBlueprintError(
                 'Invalid blueprint - {0}'.format(ex.message))
 
@@ -381,7 +384,7 @@ class BlueprintsUpload(object):
 
         # return relative path from the file server root since this path
         # is appended to the file server base uri
-        return path.join(application_dir, application_file_name)
+        return application_dir, application_file_name
 
 
 class BlueprintsIdArchive(SecuredResource):

@@ -31,7 +31,10 @@ class SerializableObject(object):
 
 class BlueprintState(SerializableObject):
 
-    fields = {'plan', 'id', 'description', 'created_at', 'updated_at'}
+    fields = {
+        'plan', 'id', 'description', 'created_at', 'updated_at',
+        'main_file_name'
+    }
 
     def __init__(self, **kwargs):
         self.plan = kwargs['plan']
@@ -39,6 +42,7 @@ class BlueprintState(SerializableObject):
         self.description = kwargs['description']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
+        self.main_file_name = kwargs['main_file_name']
 
 
 class Deployment(SerializableObject):

@@ -15,6 +15,7 @@
 
 import uuid
 import traceback
+import os
 from datetime import datetime
 from StringIO import StringIO
 
@@ -104,12 +105,17 @@ class BlueprintsManager(object):
 
         return self.sm.update_execution_status(execution_id, status, error)
 
-    def publish_blueprint(self, dsl_location,
-                          resources_base_url, blueprint_id):
+    def publish_blueprint(self,
+                          application_dir,
+                          application_file_name,
+                          resources_base,
+                          blueprint_id):
+        application_file = os.path.join(application_dir, application_file_name)
+        dsl_location = '{0}{1}'.format(resources_base, application_file)
         try:
             resolver = self._get_resolver()
             plan = tasks.parse_dsl(
-                dsl_location, resources_base_url, resolver)
+                dsl_location, resources_base, resolver)
         except Exception, ex:
             raise DslParseException(str(ex))
 
@@ -120,7 +126,8 @@ class BlueprintsManager(object):
             id=blueprint_id,
             description=plan.get('description'),
             created_at=now,
-            updated_at=now)
+            updated_at=now,
+            main_file_name=application_file_name)
         self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 

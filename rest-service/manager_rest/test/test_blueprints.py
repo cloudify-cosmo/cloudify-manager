@@ -223,6 +223,53 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         )
         self.assertEqual(put_blueprints_response.status_code, 400)
 
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_main_file_name(self):
+        blueprint_id = 'blueprint_main_file_name'
+        blueprint_file = 'blueprint_with_inputs.yaml'
+        blueprint_path = os.path.join(
+            self.get_blueprint_path('mock_blueprint'),
+            blueprint_file)
+        response = self.client.blueprints.upload(blueprint_path, blueprint_id)
+        self.assertEqual(blueprint_file, response.main_file_name)
+        blueprint = self.client.blueprints.get(blueprint_id)
+        self.assertEqual(blueprint_file, blueprint.main_file_name)
+        blueprint = self.client.blueprints.list()[0]
+        self.assertEqual(blueprint_file, blueprint.main_file_name)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_default_main_file_name(self):
+        blueprint_id = 'blueprint_default_main_file_name'
+        blueprint_file = 'blueprint.yaml'
+        response = self.put_file(
+            *self.put_blueprint_args(blueprint_id=blueprint_id)).json
+        self.assertEquals(blueprint_file, response['main_file_name'])
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_publish_archive_blueprint_main_file_name(self):
+        port = 53230
+        blueprint_id = 'publish_archive_blueprint_main_file_name'
+        main_file_name = 'blueprint_with_workflows.yaml'
+        archive_path = self.archive_mock_blueprint()
+        archive_filename = os.path.basename(archive_path)
+        archive_dir = os.path.dirname(archive_path)
+        fs = FileServer(archive_dir, False, port)
+        fs.start()
+        try:
+            archive_url = 'http://localhost:{0}/{1}'.format(
+                port, archive_filename)
+            self.wait_for_url(archive_url)
+            response = self.client.blueprints.publish_archive(archive_url,
+                                                              blueprint_id,
+                                                              main_file_name)
+        finally:
+            fs.stop()
+        self.assertEqual(blueprint_id, response.id)
+        self.assertEqual(main_file_name, response.main_file_name)
+
     def _test_put_blueprint(self, archive_func, archive_type):
         blueprint_id = 'new_blueprint_id'
         put_blueprints_response = self.put_file(
@@ -230,7 +277,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                                      archive_func=archive_func)).json
         self.assertEqual(blueprint_id, put_blueprints_response['id'])
 
-        url = self._version_url('/blueprints/{0}/archive'.format(blueprint_id))
+        url = self._version_url(
+            '/blueprints/{0}/archive'.format(blueprint_id))
         response = self.app.get(url)
 
         archive_filename = '{0}.{1}'.format(blueprint_id, archive_type)
