@@ -19,7 +19,7 @@ if [[ -z "${use_external_resource}" && -z "${created}" ]]; then
     esac
 
     ctx logger info "Creating ${fs_type} file system using ${mkfs_executable}"
-    sudo ${mkfs_executable} ${filesys}
+    sudo ${mkfs_executable} -N 20000000 ${filesys}
     ctx logger info "Marking this instance as created"
     ctx instance runtime-properties created "True"
 else
