@@ -164,6 +164,19 @@ def _versioned_urls(endpoint):
     return urls
 
 
+def _make_streaming_response(id, path, content_length, archive_type):
+    response = make_response()
+    response.headers['Content-Description'] = 'File Transfer'
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Content-Type'] = 'application/octet-stream'
+    response.headers['Content-Disposition'] = \
+        'attachment; filename={0}.{1}'.format(id, archive_type)
+    response.headers['Content-Length'] = content_length
+    response.headers['X-Accel-Redirect'] = path
+    response.headers['X-Accel-Buffering'] = 'yes'
+    return response
+
+
 def setup_resources(api):
     resources_endpoints = {
         Blueprints: 'blueprints',
@@ -171,8 +184,7 @@ def setup_resources(api):
         BlueprintsIdArchive: 'blueprints/<string:blueprint_id>/archive',
         Snapshots: 'snapshots',
         SnapshotsId: 'snapshots/<string:snapshot_id>',
-        SnapshotsIdUpload: 'snapshots/<string:snapshot_id>/upload',
-        SnapshotsIdDownload: 'snapshots/<string:snapshot_id>/download',
+        SnapshotsIdArchive: 'snapshots/<string:snapshot_id>/archive',
         Executions: 'executions',
         ExecutionsId: 'executions/<string:execution_id>',
         Deployments: 'deployments',
@@ -439,16 +451,12 @@ class BlueprintsIdArchive(SecuredResource):
             blueprint_id,
             archive_type)
 
-        response = make_response()
-        response.headers['Content-Description'] = 'File Transfer'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'application/octet-stream'
-        response.headers['Content-Disposition'] = \
-            'attachment; filename={0}.{1}'.format(blueprint_id, archive_type)
-        response.headers['Content-Length'] = os.path.getsize(local_path)
-        response.headers['X-Accel-Redirect'] = blueprint_path
-        response.headers['X-Accel-Buffering'] = 'yes'
-        return response
+        return _make_streaming_response(
+            blueprint_id,
+            blueprint_path,
+            os.path.getsize(local_path),
+            archive_type
+        )
 
 
 class Blueprints(SecuredResource):
@@ -804,7 +812,8 @@ class SnapshotsId(SecuredResource):
         return None, 201
 
 
-class SnapshotsIdUpload(SecuredResource):
+class SnapshotsIdArchive(SecuredResource):
+
     @swagger.operation(
         responseClass=responses.Snapshot,
         nickname='uploadSnapshot',
@@ -908,9 +917,6 @@ class SnapshotsIdUpload(SecuredResource):
             with open(archive_target_path, 'w') as f:
                 f.write(uploaded_file_data)
 
-
-class SnapshotsIdDownload(SecuredResource):
-
     @swagger.operation(
         nickname='downloadSnapshot',
         notes='Downloads snapshot as an archive.'
@@ -934,16 +940,12 @@ class SnapshotsIdDownload(SecuredResource):
             snapshot_id
         )
 
-        response = make_response()
-        response.headers['Content-Description'] = 'File Transfer'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'application/octet-stream'
-        response.headers['Content-Disposition'] = \
-            'attachment; filename={0}.zip'.format(snapshot_id)
-        response.headers['Content-Length'] = os.path.getsize(snapshot_path)
-        response.headers['X-Accel-Redirect'] = snapshot_uri
-        response.headers['X-Accel-Buffering'] = 'yes'
-        return response
+        return _make_streaming_response(
+            snapshot_id,
+            snapshot_uri,
+            os.path.getsize(snapshot_path),
+            'zip'
+        )
 
 
 class Deployments(SecuredResource):
