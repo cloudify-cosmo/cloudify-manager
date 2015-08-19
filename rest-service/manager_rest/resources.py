@@ -842,7 +842,7 @@ class SnapshotsIdArchive(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
-    def post(self, snapshot_id):
+    def put(self, snapshot_id):
         if _does_snapshot_exist(snapshot_id):
             raise RuntimeError("Snapshot with id '{0}' already exists."
                                .format(snapshot_id))
