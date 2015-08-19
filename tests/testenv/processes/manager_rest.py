@@ -37,7 +37,6 @@ class ManagerRestProcess(object):
                  file_server_base_uri,
                  file_server_blueprints_folder,
                  file_server_uploaded_blueprints_folder,
-                 file_server_uploaded_snapshots_folder,
                  file_server_resources_uri,
                  rest_service_log_level,
                  rest_service_log_path,
@@ -55,8 +54,6 @@ class ManagerRestProcess(object):
         self.file_server_blueprints_folder = file_server_blueprints_folder
         self.file_server_uploaded_blueprints_folder = \
             file_server_uploaded_blueprints_folder
-        self.file_server_uploaded_snapshots_folder = \
-            file_server_uploaded_snapshots_folder
         self.file_server_resources_uri = file_server_resources_uri
         self.rest_service_log_level = rest_service_log_level
         self.rest_service_log_path = rest_service_log_path
@@ -89,8 +86,6 @@ class ManagerRestProcess(object):
             'file_server_base_uri': self.file_server_base_uri,
             'file_server_uploaded_blueprints_folder':
             self.file_server_uploaded_blueprints_folder,
-            'file_server_uploaded_snapshots_folder':
-            self.file_server_uploaded_snapshots_folder,
             'file_server_resources_uri': self.file_server_resources_uri,
             'file_server_blueprints_folder': self.file_server_blueprints_folder
         }
