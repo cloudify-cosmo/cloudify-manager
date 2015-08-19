@@ -91,11 +91,12 @@ def _except_types(s, *args):
     return (e for e in s if e['_type'] not in args)
 
 
-def _delete_all_docs_except_context(es_client):
+def _clean_up_db_before_restore(es_client, wf_exec_id):
     s = elasticsearch.helpers.scan(es_client)
     for doc in _except_types(s, 'provider_context'):
-        doc['_op_type'] = 'delete'
-        yield doc
+        if doc['_id'] != wf_exec_id:
+            doc['_op_type'] = 'delete'
+            yield doc
 
 
 @system_wide_workflow
@@ -179,19 +180,15 @@ def restore_snapshot_format_3_3(ctx, config, tempdir):
     # elasticsearch
     es = _create_es_client(config)
 
-    this_exec = es.get(id=ctx.execution_id, index='cloudify_storage',
-                       doc_type='execution')
-
     ctx.send_event('Deleting all ElasticSearch data')
-    elasticsearch.helpers.bulk(es, _delete_all_docs_except_context(es))
+    elasticsearch.helpers.bulk(
+        es,
+        _clean_up_db_before_restore(es, ctx.execution_id))
     es.indices.flush()
 
     def es_data_itr():
         for line in open(path.join(tempdir, ELASTICSEARCH), 'r'):
             yield json.loads(line)
-        this_exec['_version'] = None
-        del this_exec['found']
-        yield this_exec
 
     ctx.send_event('Restoring ElasticSearch data')
     elasticsearch.helpers.bulk(es, es_data_itr())
