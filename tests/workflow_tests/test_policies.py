@@ -45,18 +45,24 @@ class PoliciesTestsBase(TestCase):
             expected_num_of_node_instances,
             len(self.node_instances)
         )
-        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS)
+        self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS,
+                                 # could be greater if triggers already
+                                 # got a change to activate
+                                 expect_exact=False)
 
     def get_node_instance_by_name(self, name):
         for nodeInstance in self.node_instances:
             if nodeInstance.node_id == name:
                 return nodeInstance
 
-    def wait_for_executions(self, expected_count):
+    def wait_for_executions(self, expected_count, expect_exact=True):
         def assertion():
             executions = self.client.executions.list(
                 deployment_id=self.deployment.id)
-            self.assertEqual(expected_count, len(executions))
+            if expect_exact:
+                self.assertEqual(expected_count, len(executions))
+            else:
+                self.assertLessEqual(expected_count, len(executions))
         self.do_assertions(assertion)
 
     def wait_for_invocations(self, deployment_id, expected_count):
