@@ -12,20 +12,14 @@ test_rest_service()
 run_intergration_tests()
 {
     echo "### Running integration tests..."
-    sudo apt-get update && sudo apt-get install -qy python-dbus
-    dpkg -L python-dbus
-    #sudo ln -sf /usr/lib/python2.7/dist-packages/dbus ~/env/lib/python2.7/site-packages/dbus
-    #sudo ln -sf /usr/lib/python2.7/dist-packages/_dbus_*.so ~/env/lib/python2.7/site-packages
-    wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.6.0.deb
-    sudo dpkg -i elasticsearch-1.6.0.deb
-    export PATH=/usr/share/elasticsearch/bin:$PATH
-    sudo mkdir -p /usr/share/elasticsearch/data
-    sudo chmod 777 /usr/share/elasticsearch/data
-    wget http://aphyr.com/riemann/riemann_0.2.6_all.deb
-    sudo dpkg -i riemann_0.2.6_all.deb
-    sudo test -d /dev/shm && sudo rm -rf /dev/shm
-    sudo ln -Tsf /{run,dev}/shm
-    sudo chmod 777 /dev/shm  # for celery worker
+
+    wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.6.0.tar.gz
+    tar xzvf elasticsearch-1.6.0.tar.gz
+    export PATH=$PWD/elasticsearch-1.6.0/bin:$PATH
+
+    wget https://s3-eu-west-1.amazonaws.com/cloudify-test-resources/riemann-0.2.6.tar.bz2
+    tar xjvf riemann-0.2.6.tar.bz2
+    export PATH=$PWD/riemann-0.2.6/bin:$PATH
 
     pip install -r tests/dev-requirements.txt
     pushd rest-service && pip install -r dev-requirements.txt && popd
