@@ -39,6 +39,8 @@ from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
 from flask_securest.rest_security import SECURED_MODE, SecuredResource
 
+from dsl_parser import utils as dsl_parser_utils
+
 from manager_rest import config
 from manager_rest import models
 from manager_rest import responses
@@ -50,8 +52,7 @@ from manager_rest import utils
 from manager_rest import swagger as rest_swagger
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
-                                             get_blueprints_manager,
-                                             ResolverInstantiationError)
+                                             get_blueprints_manager)
 from manager_rest import get_version_data
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -1383,7 +1384,7 @@ class ProviderContext(SecuredResource):
             get_blueprints_manager().update_provider_context(update, context)
             return \
                 responses.ProviderContextPostStatus(status='ok'), status_code
-        except ResolverInstantiationError, ex:
+        except dsl_parser_utils.ResolverInstantiationError, ex:
             raise manager_exceptions.ResolverInstantiationError(str(ex))
 
 
