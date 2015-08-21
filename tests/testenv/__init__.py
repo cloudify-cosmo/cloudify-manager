@@ -489,3 +489,10 @@ def start_events_and_logs_polling(logs_handler_retriever=None):
     polling_thread = threading.Thread(target=consume)
     polling_thread.daemon = True
     polling_thread.start()
+
+    def liveness_check():
+        logger.info('@@@ LIVENESS @@@ {0}'.format(time.time()))
+        time.sleep(1)
+    liveness_thread = threading.Thread(target=liveness_check)
+    liveness_thread.daemon = True
+    liveness_thread.start()
