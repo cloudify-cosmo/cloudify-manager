@@ -120,12 +120,18 @@ class BlueprintsManager(object):
 
         return self.sm.update_execution_status(execution_id, status, error)
 
-    def create_snapshot_model(self, snapshot_id):
+    def create_snapshot_model(self, snapshot_id,
+                              status=models.Snapshot.CREATING):
         now = str(datetime.now())
         new_snapshot = models.Snapshot(id=snapshot_id,
-                                       created_at=now)
+                                       created_at=now,
+                                       status=status,
+                                       error='')
         self.sm.put_snapshot(snapshot_id, new_snapshot)
         return new_snapshot
+
+    def update_snapshot_status(self, snapshot_id, status, error):
+        return self.sm.update_snapshot_status(snapshot_id, status, error)
 
     def create_snapshot(self, snapshot_id):
         new_snapshot = self.create_snapshot_model(snapshot_id)
@@ -138,9 +144,11 @@ class BlueprintsManager(object):
                 'config': config.instance().to_dict()
             }
         ).get()
+        self.update_snapshot_status(snapshot_id, models.Snapshot.CREATED, '')
         return new_snapshot
 
     def restore_snapshot(self, snapshot_id):
+        snapshot = self.get_snapshot(snapshot_id)
         async_task = self._execute_system_wide_workflow(
             'restore_snapshot',
             'cloudify_system_workflows.snapshot.restore',
@@ -149,10 +157,10 @@ class BlueprintsManager(object):
                 'config': config.instance().to_dict()
             }
         )
-        result = async_task.get()
+        async_task.get()
         # This should become part of the workflow..
         self.recreate_deployments_enviroments()
-        return result
+        return snapshot
 
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
@@ -294,7 +302,8 @@ class BlueprintsManager(object):
         return new_execution
 
     def _execute_system_wide_workflow(self, wf_id, task_mapping,
-                    execution_parameters=None, created_at=None):
+                                      execution_parameters=None,
+                                      created_at=None):
 
         execution_id = str(uuid.uuid4())
         execution_parameters = execution_parameters or {}

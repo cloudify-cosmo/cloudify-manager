@@ -1,4 +1,4 @@
-
+#########
 # Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -736,15 +736,6 @@ class ExecutionsId(SecuredResource):
             execution_id).to_dict())
 
 
-def _does_snapshot_exist(snapshot_id):
-    try:
-        get_blueprints_manager().get_snapshot(snapshot_id)
-    except:
-        return False
-
-    return True
-
-
 def _get_snapshot_path(snapshot_id):
     return os.path.join(
         config.instance().file_server_root,
@@ -776,12 +767,7 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def put(self, snapshot_id):
-        try:
-            snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
-        except:
-            # we override original exeption
-            raise RuntimeError("Snapshot with id '{0}' already exists."
-                               .format(snapshot_id))
+        snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
         return snapshot, 201
 
     @swagger.operation(
@@ -795,7 +781,7 @@ class SnapshotsId(SecuredResource):
         snapshot = get_blueprints_manager().delete_snapshot(snapshot_id)
         path = _get_snapshot_path(snapshot_id)
         shutil.rmtree(path, ignore_errors=True)
-        return snapshot
+        return snapshot, 200
 
     @swagger.operation(
         responseClass=responses.Snapshot,
@@ -805,11 +791,26 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def post(self, snapshot_id):
-        if not _does_snapshot_exist(snapshot_id):
-            raise RuntimeError("Snapshot with id '{0}' doesn't exist."
-                               .format(snapshot_id))
         get_blueprints_manager().restore_snapshot(snapshot_id)
-        return None, 201
+        return None, 200
+
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def patch(self, snapshot_id):
+        """
+        Update snapshot status by id
+        """
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('status', request_json)
+
+        get_blueprints_manager().update_snapshot_status(
+            snapshot_id,
+            request_json['status'],
+            request_json.get('error', ''))
+
+        return responses.Snapshot(**get_storage_manager().get_snapshot(
+            snapshot_id).to_dict()), 200
 
 
 class SnapshotsIdArchive(SecuredResource):
@@ -843,10 +844,10 @@ class SnapshotsIdArchive(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def put(self, snapshot_id):
-        if _does_snapshot_exist(snapshot_id):
-            raise RuntimeError("Snapshot with id '{0}' already exists."
-                               .format(snapshot_id))
-        snapshot = get_blueprints_manager().create_snapshot_model(snapshot_id)
+        snapshot = get_blueprints_manager().create_snapshot_model(
+            snapshot_id,
+            models.Snapshot.CREATED
+        )
 
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
@@ -923,14 +924,10 @@ class SnapshotsIdArchive(SecuredResource):
     )
     @exceptions_handled
     def get(self, snapshot_id):
-        if not _does_snapshot_exist(snapshot_id):
-            raise RuntimeError("Snapshot with id '{0}' doesn't exist."
-                               .format(snapshot_id))
+        get_blueprints_manager().get_snapshot(snapshot_id)
 
         snapshot_path = os.path.join(
-            config.instance().file_server_root,
-            config.instance().file_server_uploaded_snapshots_folder,
-            snapshot_id,
+            _get_snapshot_path(snapshot_id),
             '{0}.zip'.format(snapshot_id)
         )
 
@@ -945,7 +942,7 @@ class SnapshotsIdArchive(SecuredResource):
             snapshot_uri,
             os.path.getsize(snapshot_path),
             'zip'
-        )
+        ), 200
 
 
 class Deployments(SecuredResource):

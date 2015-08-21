@@ -297,6 +297,20 @@ class ESStorageManager(object):
         return self._delete_doc(SNAPSHOT_TYPE, snapshot_id,
                                 Snapshot)
 
+    def update_snapshot_status(self, snapshot_id, status, error):
+        update_doc_data = {'status': status,
+                           'error': error}
+        update_doc = {'doc': update_doc_data}
+        try:
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=SNAPSHOT_TYPE,
+                                    id=str(snapshot_id),
+                                    body=update_doc,
+                                    **MUTATE_PARAMS)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Snapshot {0} not found".format(snapshot_id))
+
     def update_execution_status(self, execution_id, status, error):
         update_doc_data = {'status': status,
                            'error': error}
