@@ -24,26 +24,17 @@ from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
 from dsl_parser import tasks
-from dsl_parser.import_resolver.default_import_resolver import \
-    DefaultResolverValidationException, \
-    DEFAULT_RESLOVER_RULES_KEY, \
-    DefaultImportResolver
+from dsl_parser import utils as dsl_parser_utils
 from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.utils import maybe_register_teardown
-from manager_rest.utils import get_class_instance
-
 
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
 
 
 class DslParseException(Exception):
-    pass
-
-
-class ResolverInstantiationError(Exception):
     pass
 
 
@@ -869,19 +860,11 @@ class BlueprintsManager(object):
 
     @staticmethod
     def _get_resolver_section(context):
-        resolver_class_path = None
-        params = None
         if context:
             cloudify_section = context.get(constants.CLOUDIFY)
             if cloudify_section:
-                resolver_section = \
-                    cloudify_section.get(constants.IMPORT_RESOLVER_KEY)
-                if resolver_section:
-                    resolver_class_path = resolver_section.get(
-                        constants.RESOLVER_IMPLEMENTATION_KEY)
-                    params = resolver_section.get(
-                        constants.RESLOVER_PARAMETERS_KEY)
-        return resolver_class_path, params
+                return cloudify_section.get(constants.IMPORT_RESOLVER_KEY)
+        return None
 
     def _get_resolver(self):
         if not hasattr(current_app, 'resolver'):
@@ -890,29 +873,9 @@ class BlueprintsManager(object):
         return current_app.resolver
 
     def _update_import_resolver_in_app(self, context):
-        resolver = DefaultImportResolver()
-        resolver_class_path, params = self._get_resolver_section(context)
-        if resolver_class_path:
-            try:
-                resolver = get_class_instance(resolver_class_path, params)
-            except RuntimeError, ex:
-                raise ResolverInstantiationError(
-                    'Failed to instantiate resolver ({0}). {1}'
-                    .format(resolver_class_path, str(ex)))
-        else:
-            # using the default resolver
-            if params:
-                # using custom rules for the default resolver
-                try:
-                    resolver = DefaultImportResolver(
-                        rules=params.get(DEFAULT_RESLOVER_RULES_KEY))
-                except DefaultResolverValidationException, ex:
-                    raise ResolverInstantiationError(
-                        'Wrong parameters ({0}) configured for '
-                        'the default resolver ({1}): {2}'
-                        .format(params,
-                                DefaultImportResolver.__name__, str(ex)))
-        current_app.resolver = resolver
+        resolver_section = self._get_resolver_section(context)
+        current_app.resolver = dsl_parser_utils.create_import_resolver(
+            resolver_section)
 
     def update_provider_context(self, update, provider_context):
         if update:
