@@ -166,11 +166,27 @@ def _versioned_urls(endpoint):
     return urls
 
 
+def _make_streaming_response(id, path, content_length, archive_type):
+    response = make_response()
+    response.headers['Content-Description'] = 'File Transfer'
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Content-Type'] = 'application/octet-stream'
+    response.headers['Content-Disposition'] = \
+        'attachment; filename={0}.{1}'.format(id, archive_type)
+    response.headers['Content-Length'] = content_length
+    response.headers['X-Accel-Redirect'] = path
+    response.headers['X-Accel-Buffering'] = 'yes'
+    return response
+
+
 def setup_resources(api):
     resources_endpoints = {
         Blueprints: 'blueprints',
         BlueprintsId: 'blueprints/<string:blueprint_id>',
         BlueprintsIdArchive: 'blueprints/<string:blueprint_id>/archive',
+        Snapshots: 'snapshots',
+        SnapshotsId: 'snapshots/<string:snapshot_id>',
+        SnapshotsIdArchive: 'snapshots/<string:snapshot_id>/archive',
         Executions: 'executions',
         ExecutionsId: 'executions/<string:execution_id>',
         Deployments: 'deployments',
@@ -204,42 +220,134 @@ def setup_resources(api):
                                                                   endpoint))
 
 
-class BlueprintsUpload(object):
-    def do_request(self, blueprint_id):
+class UploadedDataManager(object):
+
+    def receive_uploaded_data(self, data_id):
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             self._save_file_locally(archive_target_path)
-            application_dir = self._extract_file_to_file_server(
-                file_server_root, archive_target_path)
-            blueprint = self._prepare_and_submit_blueprint(file_server_root,
-                                                           application_dir,
-                                                           blueprint_id)
-            self._move_archive_to_uploaded_blueprints_dir(blueprint.id,
-                                                          file_server_root,
-                                                          archive_target_path)
-            return blueprint, 201
+            doc = self._prepare_and_process_doc(data_id,
+                                                file_server_root,
+                                                archive_target_path)
+            self._move_archive_to_uploaded_dir(data_id,
+                                               file_server_root,
+                                               archive_target_path)
+
+            return doc, 201
         finally:
             if os.path.exists(archive_target_path):
                 os.remove(archive_target_path)
 
-    @staticmethod
-    def _move_archive_to_uploaded_blueprints_dir(blueprint_id,
-                                                 file_server_root,
-                                                 archive_path):
+    def _save_file_locally(self, archive_target_path):
+        url_key = self._get_data_url_key()
+        if url_key in request.args:
+            if request.data or 'Transfer-Encoding' in request.headers:
+                raise manager_exceptions.BadParametersError(
+                    "Can't pass both a snapshot URL via query parameters "
+                    "and {0} data via the request body at the same time"
+                    .format(self._get_kind()))
+            data_url = request.args[url_key]
+            try:
+                with contextlib.closing(urlopen(data_url)) as urlf:
+                    with open(archive_target_path, 'w') as f:
+                        f.write(urlf.read())
+            except URLError:
+                raise manager_exceptions.ParamUrlNotFoundError(
+                    "URL {0} not found - can't download {1} archive"
+                    .format(data_url, self._get_kind()))
+            except ValueError:
+                raise manager_exceptions.BadParametersError(
+                    "URL {0} is malformed - can't download {1} archive"
+                    .format(data_url, self._get_kind()))
+
+        elif 'Transfer-Encoding' in request.headers:
+            with open(archive_target_path, 'w') as f:
+                for buffered_chunked in chunked.decode(request.input_stream):
+                    f.write(buffered_chunked)
+        else:
+            if not request.data:
+                raise manager_exceptions.BadParametersError(
+                    'Missing {0} archive in request body or '
+                    '"{1}" in query parameters'.format(self._get_kind(),
+                                                       data_url))
+            uploaded_file_data = request.data
+            with open(archive_target_path, 'w') as f:
+                f.write(uploaded_file_data)
+
+    def _move_archive_to_uploaded_dir(self, data_id, root_path, archive_path):
         if not os.path.exists(archive_path):
             raise RuntimeError("Archive [{0}] doesn't exist - Cannot move "
-                               "archive to uploaded blueprints "
-                               "directory".format(archive_path))
-        uploaded_blueprint_dir = os.path.join(
-            file_server_root,
-            config.instance().file_server_uploaded_blueprints_folder,
-            blueprint_id)
-        os.makedirs(uploaded_blueprint_dir)
-        archive_type = archiving.get_archive_type(archive_path)
-        archive_file_name = '{0}.{1}'.format(blueprint_id, archive_type)
+                               "archive to uploaded {1}s "
+                               "directory".format(archive_path,
+                                                  self._get_kind()))
+        uploaded_dir = os.path.join(
+            root_path,
+            self._get_target_dir_path(),
+            data_id)
+        os.makedirs(uploaded_dir)
+        archive_type = self._get_archive_type(archive_path)
+        archive_file_name = '{0}.{1}'.format(data_id, archive_type)
         shutil.move(archive_path,
-                    os.path.join(uploaded_blueprint_dir, archive_file_name))
+                    os.path.join(uploaded_dir, archive_file_name))
+
+    def _get_kind(self):
+        raise NotImplementedError('Subclass responsibility')
+
+    def _get_data_url_key(self):
+        raise NotImplementedError('Subclass responsibility')
+
+    def _get_target_dir_path(self):
+        raise NotImplementedError('Subclass responsibility')
+
+    def _get_archive_type(self, archive_path):
+        raise NotImplementedError('Subclass responsibility')
+
+    def _prepare_and_process_doc(self, data_id, file_server_root,
+                                 archive_target_path):
+        raise NotImplementedError('Subclass responsibility')
+
+
+class UploadedSnapshotsManager(UploadedDataManager):
+
+    def _get_kind(self):
+        return 'snapshot'
+
+    def _get_data_url_key(self):
+        return 'snapshot_archive_url'
+
+    def _get_target_dir_path(self):
+        return config.instance().file_server_uploaded_snapshots_folder
+
+    def _get_archive_type(self, archive_path):
+        return 'zip'
+
+    def _prepare_and_process_doc(self, data_id, file_server_root,
+                                 archive_target_path):
+        return get_blueprints_manager().create_snapshot_model(data_id)
+
+
+class UploadedBlueprintsManager(UploadedDataManager):
+
+    def _get_kind(self):
+        return 'blueprint'
+
+    def _get_data_url_key(self):
+        return 'blueprint_archive_url'
+
+    def _get_target_dir_path(self):
+        return config.instance().file_server_uploaded_blueprints_folder
+
+    def _get_archive_type(self, archive_path):
+        return archiving.get_archive_type(archive_path)
+
+    def _prepare_and_process_doc(self, data_id, file_server_root,
+                                 archive_target_path):
+        application_dir = self._extract_file_to_file_server(
+                file_server_root, archive_target_path)
+        return self._prepare_and_submit_blueprint(file_server_root,
+                                                  application_dir,
+                                                  data_id)
 
     def _process_plugins(self, file_server_root, blueprint_id):
         plugins_directory = path.join(file_server_root,
@@ -257,8 +365,7 @@ class BlueprintsUpload(object):
                                         'plugins', final_zip_name)
             self._zip_dir(plugin_dir, target_zip_path)
 
-    @staticmethod
-    def _zip_dir(dir_to_zip, target_zip_path):
+    def _zip_dir(self, dir_to_zip, target_zip_path):
         zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
         try:
             plugin_dir_base_name = path.basename(dir_to_zip)
@@ -270,47 +377,7 @@ class BlueprintsUpload(object):
         finally:
             zipf.close()
 
-    @staticmethod
-    def _save_file_locally(archive_file_name):
-
-        if 'blueprint_archive_url' in request.args:
-
-            if request.data or 'Transfer-Encoding' in request.headers:
-                raise manager_exceptions.BadParametersError(
-                    "Can't pass both a blueprint URL via query parameters "
-                    "and blueprint data via the request body at the same time")
-
-            blueprint_url = request.args['blueprint_archive_url']
-            try:
-                with contextlib.closing(urlopen(blueprint_url)) as urlf:
-                    with open(archive_file_name, 'w') as f:
-                        f.write(urlf.read())
-                return
-            except URLError:
-                raise manager_exceptions.ParamUrlNotFoundError(
-                    "URL {0} not found - can't download blueprint archive"
-                    .format(blueprint_url))
-            except ValueError:
-                raise manager_exceptions.BadParametersError(
-                    "URL {0} is malformed - can't download blueprint archive"
-                    .format(blueprint_url))
-
-        # save uploaded file
-        if 'Transfer-Encoding' in request.headers:
-            with open(archive_file_name, 'w') as f:
-                for buffered_chunked in chunked.decode(request.input_stream):
-                    f.write(buffered_chunked)
-        else:
-            if not request.data:
-                raise manager_exceptions.BadParametersError(
-                    'Missing application archive in request body or '
-                    '"blueprint_archive_url" in query parameters')
-            uploaded_file_data = request.data
-            with open(archive_file_name, 'w') as f:
-                f.write(uploaded_file_data)
-
-    @staticmethod
-    def _extract_file_to_file_server(file_server_root,
+    def _extract_file_to_file_server(self, file_server_root,
                                      archive_target_path):
         # extract application to file server
         tempdir = tempfile.mkdtemp('-blueprint-submit')
@@ -373,8 +440,7 @@ class BlueprintsUpload(object):
             raise manager_exceptions.InvalidBlueprintError(
                 'Invalid blueprint - {0}'.format(ex.message))
 
-    @staticmethod
-    def _extract_application_file(file_server_root, application_dir):
+    def _extract_application_file(self, file_server_root, application_dir):
 
         full_application_dir = path.join(file_server_root, application_dir)
 
@@ -437,16 +503,12 @@ class BlueprintsIdArchive(SecuredResource):
             blueprint_id,
             archive_type)
 
-        response = make_response()
-        response.headers['Content-Description'] = 'File Transfer'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Content-Type'] = 'application/octet-stream'
-        response.headers['Content-Disposition'] = \
-            'attachment; filename={0}.{1}'.format(blueprint_id, archive_type)
-        response.headers['Content-Length'] = os.path.getsize(local_path)
-        response.headers['X-Accel-Redirect'] = blueprint_path
-        response.headers['X-Accel-Buffering'] = 'yes'
-        return response
+        return _make_streaming_response(
+            blueprint_id,
+            blueprint_path,
+            os.path.getsize(local_path),
+            archive_type
+        )
 
 
 class Blueprints(SecuredResource):
@@ -454,7 +516,7 @@ class Blueprints(SecuredResource):
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
         nickname="list",
-        notes="Returns a list a submitted blueprints."
+        notes="Returns a list of uploaded blueprints."
     )
     @exceptions_handled
     @marshal_with(responses.BlueprintState.resource_fields)
@@ -524,7 +586,7 @@ class BlueprintsId(SecuredResource):
         """
         Upload a blueprint (id specified)
         """
-        return BlueprintsUpload().do_request(blueprint_id=blueprint_id)
+        return UploadedBlueprintsManager().receive_uploaded_data(blueprint_id)
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -726,12 +788,149 @@ class ExecutionsId(SecuredResource):
             execution_id).to_dict())
 
 
+def _get_snapshot_path(snapshot_id):
+    return os.path.join(
+        config.instance().file_server_root,
+        config.instance().file_server_uploaded_snapshots_folder,
+        snapshot_id
+    )
+
+
+class Snapshots(SecuredResource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses.Snapshot.__name__),
+        nickname='list',
+        notes='Returns a list of existing snapshots.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def get(self, _include=None):
+        return get_blueprints_manager().snapshots_list(_include)
+
+
+class SnapshotsId(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='createSnapshot',
+        notes='Create new snapshot of the manager.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def put(self, snapshot_id):
+        snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
+        return snapshot, 201
+
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='deleteSnapshot',
+        notes='Delete existing snapshot.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def delete(self, snapshot_id):
+        snapshot = get_blueprints_manager().delete_snapshot(snapshot_id)
+        path = _get_snapshot_path(snapshot_id)
+        shutil.rmtree(path, ignore_errors=True)
+        return snapshot, 200
+
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='restoreSnapshot',
+        notes='Restore existing snapshot.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def post(self, snapshot_id):
+        get_blueprints_manager().restore_snapshot(snapshot_id)
+        return None, 200
+
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def patch(self, snapshot_id):
+        """
+        Update snapshot status by id
+        """
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('status', request_json)
+
+        get_blueprints_manager().update_snapshot_status(
+            snapshot_id,
+            request_json['status'],
+            request_json.get('error', ''))
+
+        return responses.Snapshot(**get_storage_manager().get_snapshot(
+            snapshot_id).to_dict()), 200
+
+
+class SnapshotsIdArchive(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='uploadSnapshot',
+        notes='Submitted snapshot should be an archive.'
+              'Archive format has to be zip.'
+              ' Snapshot archive may be submitted via either URL or by '
+              'direct upload.',
+        parameters=[
+                    {'name': 'snapshot_archive_url',
+                     'description': 'url of a snapshot archive file',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'},
+                    {
+                        'name': 'body',
+                        'description': 'Binary form of the zip',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body'}],
+        consumes=[
+            "application/octet-stream"
+        ]
+
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def put(self, snapshot_id):
+        return UploadedSnapshotsManager().receive_uploaded_data(snapshot_id)
+
+    @swagger.operation(
+        nickname='downloadSnapshot',
+        notes='Downloads snapshot as an archive.'
+    )
+    @exceptions_handled
+    def get(self, snapshot_id):
+        get_blueprints_manager().get_snapshot(snapshot_id)
+
+        snapshot_path = os.path.join(
+            _get_snapshot_path(snapshot_id),
+            '{0}.zip'.format(snapshot_id)
+        )
+
+        snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
+            config.instance().file_server_resources_uri,
+            config.instance().file_server_uploaded_snapshots_folder,
+            snapshot_id
+        )
+
+        return _make_streaming_response(
+            snapshot_id,
+            snapshot_uri,
+            os.path.getsize(snapshot_path),
+            'zip'
+        ), 200
+
+
 class Deployments(SecuredResource):
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Deployment.__name__),
         nickname="list",
-        notes="Returns a list existing deployments."
+        notes="Returns a list of existing deployments."
     )
     @exceptions_handled
     @marshal_with(responses.Deployment.resource_fields)
