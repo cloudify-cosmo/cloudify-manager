@@ -30,7 +30,6 @@ from dsl_parser.import_resolver.default_import_resolver import \
     DefaultImportResolver
 from manager_rest import models
 from manager_rest import config
-from manager_rest import responses
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
@@ -64,6 +63,9 @@ class BlueprintsManager(object):
     def blueprints_list(self, include=None):
         return self.sm.blueprints_list(include=include)
 
+    def snapshots_list(self, include=None):
+        return self.sm.snapshots_list(include=include)
+
     def deployments_list(self, include=None):
         return self.sm.deployments_list(include=include)
 
@@ -76,6 +78,9 @@ class BlueprintsManager(object):
 
     def get_blueprint(self, blueprint_id, include=None):
         return self.sm.get_blueprint(blueprint_id, include=include)
+
+    def get_snapshot(self, snapshot_id, include=None):
+        return self.sm.get_snapshot(snapshot_id, include=include)
 
     def get_deployment(self, deployment_id, include=None):
         return self.sm.get_deployment(deployment_id=deployment_id,
@@ -130,7 +135,21 @@ class BlueprintsManager(object):
             )
         }
 
+    def create_snapshot_model(self, snapshot_id,
+                              status=models.Snapshot.CREATING):
+        now = str(datetime.now())
+        new_snapshot = models.Snapshot(id=snapshot_id,
+                                       created_at=now,
+                                       status=status,
+                                       error='')
+        self.sm.put_snapshot(snapshot_id, new_snapshot)
+        return new_snapshot
+
+    def update_snapshot_status(self, snapshot_id, status, error):
+        return self.sm.update_snapshot_status(snapshot_id, status, error)
+
     def create_snapshot(self, snapshot_id):
+        new_snapshot = self.create_snapshot_model(snapshot_id)
         wf_result = self._execute_system_workflow(
             wf_id='create_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.create',
@@ -139,9 +158,11 @@ class BlueprintsManager(object):
                 'config': self._get_conf_for_snapshots_wf()
             }
         ).get()
-        return responses.Snapshot(**wf_result)
+        self.update_snapshot_status(snapshot_id, models.Snapshot.CREATED, '')
+        return new_snapshot
 
     def restore_snapshot(self, snapshot_id):
+        snapshot = self.get_snapshot(snapshot_id)
         async_task = self._execute_system_workflow(
             wf_id='restore_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.restore',
@@ -150,10 +171,10 @@ class BlueprintsManager(object):
                 'config': self._get_conf_for_snapshots_wf()
             }
         )
-        result = async_task.get()
+        async_task.get()
         # This should become part of the workflow..
         self.recreate_deployments_enviroments()
-        return result
+        return snapshot
 
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
@@ -185,6 +206,9 @@ class BlueprintsManager(object):
                                   in blueprint_deployments])))
 
         return self.sm.delete_blueprint(blueprint_id)
+
+    def delete_snapshot(self, snapshot_id):
+        return self.sm.delete_snapshot(snapshot_id)
 
     def delete_deployment(self, deployment_id, ignore_live_nodes=False):
         # Verify deployment exists.
