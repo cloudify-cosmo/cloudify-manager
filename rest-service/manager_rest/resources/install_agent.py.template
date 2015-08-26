@@ -73,9 +73,9 @@ class LinuxRunner(CommandRunner):
     def archive_name(self):
         return 'package.tar.gz'
 
-    def extract(self, archive, destination, strip=1):
-        return self.run('tar xzvf {0} --strip={1} -C {2}'
-                        .format(archive, strip, destination))
+    def extract(self, archive, destination):
+        return self.run('tar xzvf {0} --strip=2 -C {1}'
+                        .format(archive, destination))
 
     def env_command(self, env_path, command):
         return '{0}/bin/python {0}/bin/{1}'.format(env_path, command)
