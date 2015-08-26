@@ -264,12 +264,14 @@ class BaseServerTestCase(unittest.TestCase):
         result.json = json.loads(result.data)
         return result
 
-    def get(self, resource_path, query_params=None, headers=None):
+    def get(self, resource_path, query_params=None, headers=None,
+            parse_json=True):
         url = self.client._client.version_url(resource_path)
         result = self.app.get(urllib.quote(url),
                               headers=headers,
                               query_string=build_query_string(query_params))
-        result.json = json.loads(result.data)
+        if parse_json:
+            result.json = json.loads(result.data)
         return result
 
     def head(self, resource_path):

@@ -1,0 +1,4 @@
+python_path: /usr/bin/python
+#agent_url: http://10.0.4.1:8000/ubuntu-trusty-agent-with-installer.tar.gz
+agent_url: http://46.101.245.114/cfy/konrad/ubuntu-trusty-agent-with-installer.tar.gz
+agent_user: vagrant

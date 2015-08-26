@@ -68,8 +68,33 @@ run_flake8()
     flake8 tests/
 }
 
+run_installer_tests()
+{
+    echo "### Testing agent installation script..."
+    DIR=$(mktemp -d)
+    pushd $DIR
+    if ! which rabbitmq-server; then
+        echo 'deb http://www.rabbitmq.com/debian testing main' | sudo tee -a /etc/apt/sources.list
+        wget https://www.rabbitmq.com/rabbitmq-signing-key-public.asc
+        sudo apt-key add rabbitmq-signing-key-public.asc
+        sudo apt-get update
+        sudo apt-get -y install rabbitmq-server
+    fi
+    sudo service rabbitmq-server start
+    virtualenv env
+    . env/bin/activate
+    popd
+    pip install -r tests/dev-requirements.txt
+    pushd rest-service && pip install -r dev-requirements.txt && popd
+    pushd rest-service && pip install -e . && popd
+    pip install nose
+    export CONFIG_PATH=tests/installer_tests/config.yaml
+    nosetests tests/installer_tests/ -s
+}
+
 case $1 in
     test-rest-service    ) test_rest_service;;
     run-integration-tests) run_intergration_tests;;
     flake8               ) run_flake8;;
+    run-installer-tests  ) run_installer_tests;;
 esac
