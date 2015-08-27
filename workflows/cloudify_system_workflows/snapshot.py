@@ -206,27 +206,28 @@ def restore_snapshot_format_3_3(ctx, config, tempdir):
     makedirs(cred_path)
 
     update_actions = []
-    for node_id in listdir(archive_cred_path):
-        makedirs(path.join(cred_path, node_id))
-        agent_key_path = path.join(cred_path, node_id, CRED_KEY_NAME)
-        shutil.copy(path.join(archive_cred_path, node_id, CRED_KEY_NAME),
-                    agent_key_path)
+    if path.exists(archive_cred_path):
+        for node_id in listdir(archive_cred_path):
+            makedirs(path.join(cred_path, node_id))
+            agent_key_path = path.join(cred_path, node_id, CRED_KEY_NAME)
+            shutil.copy(path.join(archive_cred_path, node_id, CRED_KEY_NAME),
+                        agent_key_path)
 
-        update_action = {
-            '_op_type': 'update',
-            '_index': 'cloudify_storage',
-            '_type': 'node',
-            '_id': node_id,
-            'doc': {
-                'properties': {
-                    'cloudify_agent': {
-                        'key': agent_key_path
+            update_action = {
+                '_op_type': 'update',
+                '_index': 'cloudify_storage',
+                '_type': 'node',
+                '_id': node_id,
+                'doc': {
+                    'properties': {
+                        'cloudify_agent': {
+                            'key': agent_key_path
+                        }
                     }
                 }
             }
-        }
 
-        update_actions.append(update_action)
+            update_actions.append(update_action)
 
     elasticsearch.helpers.bulk(es, update_actions)
 
