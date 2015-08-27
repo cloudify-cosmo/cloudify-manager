@@ -148,13 +148,16 @@ class BlueprintsManager(object):
     def update_snapshot_status(self, snapshot_id, status, error):
         return self.sm.update_snapshot_status(snapshot_id, status, error)
 
-    def create_snapshot(self, snapshot_id):
+    def create_snapshot(self, snapshot_id,
+                        include_metrics, include_credentials):
         new_snapshot = self.create_snapshot_model(snapshot_id)
-        wf_result = self._execute_system_workflow(
+        self._execute_system_workflow(
             wf_id='create_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.create',
             execution_parameters={
                 'snapshot_id': snapshot_id,
+                'include_metrics': include_metrics,
+                'include_credentials': include_credentials,
                 'config': self._get_conf_for_snapshots_wf()
             }
         ).get()

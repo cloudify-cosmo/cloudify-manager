@@ -816,12 +816,32 @@ class SnapshotsId(SecuredResource):
     @swagger.operation(
         responseClass=responses.Snapshot,
         nickname='createSnapshot',
-        notes='Create new snapshot of the manager.'
+        notes='Create new snapshot of the manager.',
+        consumes=[
+            "application/json"
+        ]
     )
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def put(self, snapshot_id):
-        snapshot = get_blueprints_manager().create_snapshot(snapshot_id)
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('include_metrics', request_json)
+        verify_parameter_in_request_body('include_credentials', request_json)
+        include_metrics = verify_and_convert_bool(
+            'include_metrics',
+            request_json['include_metrics']
+        )
+        include_credentials = verify_and_convert_bool(
+            'include_credentials',
+            request_json['include_credentials']
+        )
+
+        snapshot = get_blueprints_manager().create_snapshot(
+            snapshot_id,
+            include_metrics,
+            include_credentials
+        )
         return snapshot, 201
 
     @swagger.operation(
@@ -924,7 +944,7 @@ class SnapshotsIdArchive(SecuredResource):
             snapshot_uri,
             os.path.getsize(snapshot_path),
             'zip'
-        ), 200
+        )
 
 
 class Deployments(SecuredResource):
