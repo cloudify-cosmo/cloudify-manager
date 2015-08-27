@@ -273,8 +273,8 @@ class NodesTest(BaseServerTestCase):
         vm = [x for x in instances if x.node_id == 'vm'][0]
         props = vm.runtime_properties
         new_agent = {
-          'name': 'new_agent{0}'.format(uuid.uuid4()),
-          'basedir': '/home/ubuntu'
+            'name': 'new_agent{0}'.format(uuid.uuid4()),
+            'basedir': '/home/ubuntu'
         }
         props['new_cloudify_agent'] = new_agent
         self.client.node_instances.update(vm.id, runtime_properties=props)
