@@ -1,4 +1,5 @@
 import importlib
+import json
 import os
 import shutil
 import sys
@@ -54,6 +55,15 @@ class InstallAgentScriptTest(unittest.TestCase):
         module = self.import_install_module(agent)
         returned_agent = module.get_cloudify_agent()
         self.assertEquals(agent, returned_agent)
+
+    def test_prepare_agent(self):
+        agent = {'manager_file_server_url': 'localhost:12345'}
+        _, config = tempfile.mkstemp(dir=self.dest_path)
+        with open(config, 'w') as f:
+            f.write(json.dumps(agent))
+        module = self.import_install_module({})
+        new_agent = module.prepare_cloudify_agent(config)
+        print str(new_agent)
 
     def tearDown(self):
         shutil.rmtree(self.dest_path)

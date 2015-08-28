@@ -79,7 +79,8 @@ class InstallerTestBase(unittest.TestCase):
 
     def call(self, operation, agent):
         agent_config_path = agent['agent_file']
-        command = '{0} {1} --operation={2} --config={3}'.format(
+        command = ('{0} {1} --operation={2} --config={3} '
+                   '--ignore-result').format(
             self.config['python_path'],
             self.script_path,
             operation,
