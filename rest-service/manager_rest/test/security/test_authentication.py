@@ -14,25 +14,53 @@
 #  * limitations under the License.
 
 from nose.plugins.attrib import attr
+from itsdangerous import base64_encode
 
 from manager_rest.test import base_test
-from manager_rest.test.security.security_test_base import SecurityTestBase
+from manager_rest.test.security.security_test_base import \
+    BASIC_AUTH_PREFIX, CLOUDIFY_AUTH_HEADER, SecurityTestBase
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
-class SecurityTest(SecurityTestBase):
+class AuthenticationTests(SecurityTestBase):
+
+    @staticmethod
+    def get_authorization_provider_configuration():
+        return {}
+
+    @staticmethod
+    def get_role_loader_configuration():
+        return {}
 
     def test_secured_client(self):
         client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='user1',
-                                                       password='pass1'))
+                                    create_auth_header(username='admin',
+                                                       password='admin'))
         client.deployments.list()
 
     def test_wrong_credentials(self):
         client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='user1',
-                                                       password='pass2'))
+                                    create_auth_header(username='admin',
+                                                       password='wrong'))
+        self.assertRaises(UserUnauthorizedError, client.deployments.list)
+
+    def test_invalid_three_part_header(self):
+        credentials = 'username:password:extra'
+        header = {
+            CLOUDIFY_AUTH_HEADER:
+                BASIC_AUTH_PREFIX + base64_encode(credentials)
+        }
+        client = self.create_client(headers=header)
+        self.assertRaises(UserUnauthorizedError, client.deployments.list)
+
+    def test_invalid_one_part_header(self):
+        credentials = 'just_username'
+        header = {
+            CLOUDIFY_AUTH_HEADER:
+                BASIC_AUTH_PREFIX + base64_encode(credentials)
+        }
+        client = self.create_client(headers=header)
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_credentials(self):
@@ -44,19 +72,19 @@ class SecurityTest(SecurityTestBase):
     def test_missing_user(self):
         client = self.create_client(headers=SecurityTestBase.
                                     create_auth_header(username=None,
-                                                       password='pass1'))
+                                                       password='admin'))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_missing_password(self):
         client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='user1',
+                                    create_auth_header(username='admin',
                                                        password=None))
         self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def test_token_authentication(self):
         client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='user1',
-                                                       password='pass1'))
+                                    create_auth_header(username='admin',
+                                                       password='admin'))
         token = client.tokens.get()
         client = self.create_client(headers=SecurityTestBase.
                                     create_auth_header(token=token.value))
@@ -64,6 +92,6 @@ class SecurityTest(SecurityTestBase):
 
     def test_secured_manager_blueprints_upload(self):
         client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='user1',
-                                                       password='pass1'))
+                                    create_auth_header(username='admin',
+                                                       password='admin'))
         client.blueprints.upload(self.get_mock_blueprint_path(), 'bp-id')

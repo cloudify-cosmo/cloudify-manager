@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import os
 
 
@@ -21,10 +22,6 @@ class Config(object):
         self._db_address = 'localhost'
         self._db_port = 9200
         self._amqp_address = 'localhost'
-        self.amqp_username = 'guest'
-        self.amqp_password = 'guest'
-        self.amqp_ssl_enabled = False
-        self.amqp_ca_path = ''
         self._file_server_root = None
         self._file_server_base_uri = None
         self._file_server_blueprints_folder = None
@@ -36,6 +33,9 @@ class Config(object):
         self._rest_service_log_files_backup_count = None
         self._test_mode = False
         self._security_enabled = False
+        self._security_ssl = {'enabled': False}
+        self._security_admin_username = None
+        self._security_admin_password = None
         self._security_auth_token_generator = None
         self._security_audit_log_level = None
         self._security_audit_log_file = None
@@ -43,6 +43,8 @@ class Config(object):
         self._security_audit_log_files_backup_count = None
         self._security_userstore_driver = None
         self._security_authentication_providers = []
+        self._security_authorization_provider = None
+        self._security_role_loader = None
 
     @property
     def db_address(self):
@@ -157,6 +159,30 @@ class Config(object):
         self._security_enabled = value
 
     @property
+    def security_ssl(self):
+        return self._security_ssl
+
+    @security_ssl.setter
+    def security_ssl(self, value):
+        self._security_ssl = value
+
+    @property
+    def security_admin_username(self):
+        return self._security_admin_username
+
+    @security_admin_username.setter
+    def security_admin_username(self, value):
+        self._security_admin_username = value
+
+    @property
+    def security_admin_password(self):
+        return self._security_admin_password
+
+    @security_admin_password.setter
+    def security_admin_password(self, value):
+        self._security_admin_password = value
+
+    @property
     def security_authentication_providers(self):
         return self._security_authentication_providers
 
@@ -217,6 +243,22 @@ class Config(object):
     @security_userstore_driver.setter
     def security_userstore_driver(self, value):
         self._security_userstore_driver = value
+
+    @property
+    def security_authorization_provider(self):
+        return self._security_authorization_provider
+
+    @security_authorization_provider.setter
+    def security_authorization_provider(self, value):
+        self._security_authorization_provider = value
+
+    @property
+    def security_role_loader(self):
+        return self._security_role_loader
+
+    @security_role_loader.setter
+    def security_role_loader(self, value):
+        self._security_role_loader = value
 
 
 _instance = Config()

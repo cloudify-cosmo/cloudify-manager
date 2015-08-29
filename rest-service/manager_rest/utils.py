@@ -72,14 +72,6 @@ def copy_resources(file_server_root, resources_path=None):
                                                   'cloudify'))
 
 
-def maybe_register_teardown(app, f):
-    """
-    A way to add a cleanup hook on a given appcontext - but only do it once
-    """
-    if f not in app.teardown_appcontext_funcs:
-        app.teardown_appcontext_funcs.append(f)
-
-
 def get_class(class_path):
     """Returns a class from a string formatted as module:class"""
     if not class_path:
@@ -109,7 +101,7 @@ def get_class(class_path):
     return getattr(module, class_name)
 
 
-def get_class_instance(class_path, properties):
+def get_class_instance(class_path, properties=None):
     """Returns an instance of a class from a string formatted as module:class
     the given *args, **kwargs are passed to the instance's __init__"""
     if not properties:

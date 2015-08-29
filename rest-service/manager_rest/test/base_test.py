@@ -48,7 +48,7 @@ LATEST_API_VERSION = 2  # to be used by max_client_version test attribute
 def build_query_string(query_params):
     query_string = ''
     if query_params and len(query_params) > 0:
-        query_string += urllib.urlencode(query_params) + '&'
+        query_string += urllib.urlencode(query_params, True) + '&'
     return query_string
 
 
@@ -97,6 +97,7 @@ class MockHTTPClient(HTTPClient):
                    data=None,
                    params=None,
                    headers=None,
+                   pagination=None,
                    expected_status_code=200,
                    stream=False):
         if CLIENT_API_VERSION == 'v1':

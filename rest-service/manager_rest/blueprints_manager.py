@@ -19,7 +19,7 @@ import os
 from datetime import datetime
 from StringIO import StringIO
 
-from flask import g, current_app
+from flask import current_app
 
 from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
@@ -28,9 +28,8 @@ from dsl_parser import tasks
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import models
 from manager_rest import manager_exceptions
-from manager_rest.workflow_client import workflow_client
-from manager_rest.storage_manager import get_storage_manager
-from manager_rest.utils import maybe_register_teardown
+from manager_rest import storage_manager
+from manager_rest import workflow_client as wf_client
 
 TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT = True
 GLOBAL_PARALLEL_EXECUTIONS_LIMIT_DEFAULT = 50
@@ -51,7 +50,11 @@ class BlueprintsManager(object):
 
     @property
     def sm(self):
-        return get_storage_manager()
+        return storage_manager.get_storage_manager()
+
+    @property
+    def workflow_client(self):
+        return wf_client.get_workflow_client()
 
     def blueprints_list(self, include=None, filters=None):
         return self.sm.blueprints_list(include=include, filters=filters)
@@ -73,17 +76,27 @@ class BlueprintsManager(object):
                                       include=include)
 
     def get_execution(self, execution_id, include=None):
-        return self.sm.get_execution(execution_id, include=include)
+        current_app.logger.info('***** getting execution {0}'.
+                                format(execution_id))
+        execution = self.sm.get_execution(execution_id, include=include)
+        current_app.logger.info('***** returning execution {0}'
+                                .format(execution))
+        return execution
 
     def get_plugin(self, plugin_id, include=None):
         return self.sm.get_plugin(plugin_id, include=include)
 
     def update_execution_status(self, execution_id, status, error):
-
+        current_app.logger.info('***** starting update_execution_status')
         if self._get_transient_deployment_workers_mode_config()['enabled'] and\
                 status in models.Execution.END_STATES:
             execution = self.get_execution(execution_id)
-
+            current_app.logger.info('***** execution found: {0}'.
+                                    format(execution))
+            current_app.logger.info('***** execution.is_system_workflow: {0}'.
+                                    format(execution.is_system_workflow))
+            current_app.logger.info('***** execution.workflow_id: {0}'.
+                                    format(execution.workflow_id))
             # currently, the create and delete deployment environment
             # workflows are still not marked as system workflows, so they're
             # named explicitly
@@ -107,6 +120,10 @@ class BlueprintsManager(object):
                     deployment, wf_id, deployment_env_creation_task_name,
                     kwargs)
 
+        current_app.logger.info('***** about to call update_execution_status'
+                                ' with execution_id: {0}, '
+                                'status: {1} and error: {2}'.
+                                format(execution_id, status, error))
         return self.sm.update_execution_status(execution_id, status, error)
 
     def publish_blueprint(self,
@@ -132,6 +149,8 @@ class BlueprintsManager(object):
             created_at=now,
             updated_at=now,
             main_file_name=application_file_name)
+        current_app.logger.info('***** putting blueprint: {0}'.
+                                format(blueprint_id))
         self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 
@@ -190,15 +209,22 @@ class BlueprintsManager(object):
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
                          allow_custom_parameters=False, force=False):
+        current_app.logger.info('***** started execute_workflow')
         deployment = self.get_deployment(deployment_id)
-
+        current_app.logger.info('***** got deployment {0}'.format(deployment))
         if workflow_id not in deployment.workflows:
+            current_app.logger.info('***** workflow {0} does not exist in'
+                                    ' deployment {1}'.format(workflow_id,
+                                                             deployment_id))
             raise manager_exceptions.NonexistentWorkflowError(
                 'Workflow {0} does not exist in deployment {1}'.format(
                     workflow_id, deployment_id))
         workflow = deployment.workflows[workflow_id]
-
+        current_app.logger.info('***** got workflow {0}'.format(workflow))
+        current_app.logger.info('***** verifying deployment env created '
+                                'successfully...')
         self._verify_deployment_environment_created_successfully(deployment_id)
+        current_app.logger.info('***** verified!')
 
         transient_workers_config =\
             self._get_transient_deployment_workers_mode_config()
@@ -247,7 +273,7 @@ class BlueprintsManager(object):
                 created_at=start_deployment_env_created_at_time)
 
         # executing the user workflow
-        workflow_client().execute_workflow(
+        self.workflow_client.execute_workflow(
             workflow_id,
             workflow,
             blueprint_id=deployment.blueprint_id,
@@ -274,7 +300,7 @@ class BlueprintsManager(object):
         """
         execution_id = str(uuid.uuid4())  # will also serve as the task id
         execution_parameters = execution_parameters or {}
-
+        current_app.logger.info('***** starting _execute_system_workflow')
         # currently, deployment env creation/deletion are not set as
         # system workflows
         is_system_workflow = wf_id not in (
@@ -292,11 +318,15 @@ class BlueprintsManager(object):
                 execution_parameters),
             is_system_workflow=is_system_workflow)
 
+        current_app.logger.info('***** calling put_execution')
         self.sm.put_execution(execution.id, execution)
 
-        async_task = workflow_client().execute_system_workflow(
+        current_app.logger.info('***** calling execute_system_workflow')
+        async_task = self.workflow_client.execute_system_workflow(
             deployment, wf_id, execution_id, task_mapping,
             execution_parameters)
+        current_app.logger.info('***** called workflow_client().'
+                                'execute_system_workflow')
 
         if timeout > 0:
             try:
@@ -317,6 +347,8 @@ class BlueprintsManager(object):
                 raise RuntimeError(error_msg)
 
             # verify the execution completed successfully
+            current_app.logger.info('***** verifying the execution completed'
+                                    ' successfully')
             execution = self.sm.get_execution(async_task.id)
             if execution.status != models.Execution.TERMINATED:
                 raise RuntimeError(
@@ -373,6 +405,7 @@ class BlueprintsManager(object):
         return self.get_execution(execution_id)
 
     def create_deployment(self, blueprint_id, deployment_id, inputs=None):
+        current_app.logger.info('***** creating deployment')
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         try:
@@ -394,15 +427,20 @@ class BlueprintsManager(object):
             groups=deployment_plan['groups'],
             outputs=deployment_plan['outputs'])
 
+        current_app.logger.info('***** putting deployment')
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id,
                                       deployment_id,
                                       deployment_plan)
 
         node_instances = deployment_plan['node_instances']
+        current_app.logger.info('***** calling '
+                                '_create_deployment_node_instances')
         self._create_deployment_node_instances(deployment_id,
                                                node_instances)
+        current_app.logger.info('***** calling _create_deployment_environment')
         self._create_deployment_environment(new_deployment, deployment_plan)
+        current_app.logger.info('***** deployment environment created!')
         return new_deployment
 
     def start_deployment_modification(self,
@@ -754,19 +792,47 @@ class BlueprintsManager(object):
 
     def _verify_deployment_environment_created_successfully(self,
                                                             deployment_id):
+        current_app.logger.info('***** creating filter with deployment_id: {0}'
+                                .format(deployment_id))
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
+        current_app.logger.info('***** deployment_id_filter: {0}'.
+                                format(deployment_id_filter))
+
+        executions_list = self.sm.executions_list(filters=deployment_id_filter)
+        current_app.logger.info('***** executions_list: {0}'.
+                                format(executions_list))
+        found = None
+        for execution in executions_list:
+            if execution.workflow_id == 'create_deployment_environment':
+                found = execution
+                break
+
+        if found:
+            current_app.logger.info('***** create_deployment_environment '
+                                    'found: {0}'.format(found))
+        else:
+            current_app.logger.info('***** create_deployment_environment '
+                                    'not found')
+
+        # why listing all executions again? we just did..
         env_creation = next(
             (execution for execution in
              self.sm.executions_list(filters=deployment_id_filter)
              if execution.workflow_id == 'create_deployment_environment'),
             None)
-
+        if env_creation:
+            current_app.logger.info('***** env creation: {0}'.
+                                    format(env_creation))
+        else:
+            current_app.logger.info('***** env creation is NONE!')
         if not env_creation:
             raise RuntimeError('Failed to find "create_deployment_environment"'
                                ' execution for deployment {0}'.format(
                                    deployment_id))
         status = env_creation.status
+        current_app.logger.info('***** env creation status: {0}'.
+                                format(status))
         if status == models.Execution.TERMINATED:
             return
         elif status == models.Execution.PENDING:
@@ -805,6 +871,7 @@ class BlueprintsManager(object):
         return filters or None
 
     def _create_deployment_environment(self, deployment, deployment_plan):
+        current_app.logger.info('***** in _create_deployment_environment')
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
@@ -821,6 +888,9 @@ class BlueprintsManager(object):
             },
         }
 
+        current_app.logger.info('***** calling _execute_system_workflow with'
+                                ' deployment {0} and wf_id {1}'.
+                                format(deployment, wf_id))
         self._execute_system_workflow(
             deployment, wf_id, deployment_env_creation_task_name, kwargs)
 
@@ -843,6 +913,7 @@ class BlueprintsManager(object):
             executions = self.executions_list(
                 filters=deplyment_id_filter,
                 is_include_system_workflows=include_system)
+            current_app.logger.info('***** getting running executions')
             running = [
                 e.id for e in executions if
                 self.sm.get_execution(e.id).status
@@ -937,18 +1008,17 @@ class BlueprintsManager(object):
         self._update_parser_context_in_app(provider_context.context)
 
 
-def teardown_blueprints_manager(exception):
-    # print "tearing down blueprints manager!"
-    pass
+def init_blueprints_manager(**kwargs):
+    """
+    Set and return the current app's blueprints manager
+    """
+    current_app.config['blueprints_manager'] = BlueprintsManager()
+    return get_blueprints_manager()
 
 
 # What we need to access this manager in Flask
 def get_blueprints_manager():
     """
-    Get the current blueprints manager
-    or create one if none exists for the current app context
+    Get the current app's blueprints manager
     """
-    if 'blueprints_manager' not in g:
-        g.blueprints_manager = BlueprintsManager()
-        maybe_register_teardown(current_app, teardown_blueprints_manager)
-    return g.blueprints_manager
+    return current_app.config.get('blueprints_manager')

@@ -13,9 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from celery import Celery
-from cloudify import utils
 
+from celery import Celery
 from manager_rest import config
 
 TASK_STATE_PENDING = 'PENDING'
@@ -28,25 +27,11 @@ TASK_STATE_FAILURE = 'FAILURE'
 class CeleryClient(object):
 
     def __init__(self):
-        _, ssl_settings = utils.internal.get_broker_ssl_and_port(
-            ssl_enabled=config.instance().amqp_ssl_enabled,
-            cert_path=config.instance().amqp_ca_path,
-        )
-
-        # Port not required as currently the address is provided with port and
-        # vhost included.
-        amqp_uri = 'amqp://{username}:{password}@{address}'.format(
-            address=config.instance().amqp_address,
-            username=config.instance().amqp_username,
-            password=config.instance().amqp_password,
-        )
-
+        amqp_uri = 'amqp://{0}'.format(config.instance().amqp_address)
         self.celery = Celery(broker=amqp_uri, backend=amqp_uri)
         self.celery.conf.update(
             CELERY_TASK_SERIALIZER="json",
             CELERY_TASK_RESULT_EXPIRES=600)
-        if config.instance().amqp_ssl_enabled:
-            self.celery.conf.update(BROKER_USE_SSL=ssl_settings)
 
     def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
         """
@@ -58,7 +43,7 @@ class CeleryClient(object):
             :param kwargs: optional kwargs to be passed to the task
             :return: the celery task async result
         """
-
+        print '***** in CeleryClient.execute_task'
         return self.celery.send_task(task_name,
                                      queue=task_queue,
                                      task_id=task_id,

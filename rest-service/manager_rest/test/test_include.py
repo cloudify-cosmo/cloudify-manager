@@ -37,7 +37,8 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_include_propagation_to_model(self):
         self._test_include_propagation_to_model(dict(include=[u'id'],
-                                                     filters={}))
+                                                     filters={},
+                                                     pagination={}))
 
     @attr(client_min_version=1, client_max_version=1)
     def test_include_propagation_to_model_v1(self):

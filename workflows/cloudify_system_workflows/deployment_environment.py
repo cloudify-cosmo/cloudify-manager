@@ -207,7 +207,8 @@ def stop(ctx, prerequisite_task_id, prerequisite_task_timeout=60, **kwargs):
 
 
 def _is_transient_deployment_workers_mode():
-    client = get_rest_client()
+    client = get_rest_client(username='workflow_admin',
+                             password='workflow_admin')
     bootstrap_context = client.manager.get_context()['context']['cloudify']
     return bootstrap_context.get(
         'transient_deployment_workers_mode', {}).get('enabled', True)
