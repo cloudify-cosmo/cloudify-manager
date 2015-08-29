@@ -33,12 +33,11 @@ from flask_securest.rest_security import SecuREST
 from manager_rest import endpoint_mapper
 from manager_rest import config
 from manager_rest import storage_manager
-from manager_rest import blueprints_manager
-from manager_rest import workflow_client
 from manager_rest import manager_exceptions
 from manager_rest import utils
 
 
+SECURITY_BYPASS_PORT = '8101'
 IMPLEMENTATION_KEY = 'implementation'
 PROPERTIES_KEY = 'properties'
 
@@ -70,7 +69,6 @@ def setup_app(warnings=None):
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
 
-    app.before_first_request(_init_app_managers)
     app.before_request(log_request)
     app.after_request(log_response)
 
@@ -237,6 +235,10 @@ def init_secured_app(_app):
             current_app.logger,
             hide_server_message=True)
 
+    def _is_internal_request(req):
+        server_port = req.headers.get('X-Server-Port')
+        return str(server_port) == SECURITY_BYPASS_PORT
+
     cfy_config = config.instance()
     if cfy_config.security_auth_token_generator:
         register_auth_token_generator(
@@ -263,42 +265,7 @@ def init_secured_app(_app):
             cfy_config.security_authorization_provider)
 
     secure_app.unauthorized_user_handler = unauthorized_user_handler
-
-
-def _init_app_managers():
-    """
-     initialize a storage manager, a blueprints manager and
-     a workflow client for the current app
-    """
-    ssl_enabled = False
-    verify_certificate = False
-    admin_username = None
-    admin_password = None
-    cfy_config = config.instance()
-
-    security_enabled = cfy_config.security_enabled
-    if security_enabled:
-        ssl_enabled = cfy_config.security_ssl.get('enabled', True)
-        verify_certificate = cfy_config.security_ssl.get(
-            'verify_certificate', True)
-        admin_username = cfy_config.security_admin_username
-        admin_password = cfy_config.security_admin_password
-
-    storage_manager.init_storage_manager(security_enabled,
-                                         ssl_enabled,
-                                         verify_certificate,
-                                         admin_username,
-                                         admin_password)
-    blueprints_manager.init_blueprints_manager(security_enabled,
-                                               ssl_enabled,
-                                               verify_certificate,
-                                               admin_username,
-                                               admin_password)
-    workflow_client.init_workflow_client(security_enabled,
-                                         ssl_enabled,
-                                         verify_certificate,
-                                         admin_username,
-                                         admin_password)
+    secure_app.skip_auth_hook = _is_internal_request
 
 
 def load_configuration():

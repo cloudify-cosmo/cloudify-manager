@@ -1,6 +1,6 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
-https://github.com/cloudify-cosmo/flask-securest/archive/0.7.zip
+https://github.com/cloudify-cosmo/flask-securest/archive/CFY-3682-Add-implementation-for-authrization-based-on-roles.zip
 
 
 # test dependencies

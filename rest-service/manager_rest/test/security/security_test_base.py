@@ -27,14 +27,9 @@ BASIC_AUTH_PREFIX = 'Basic '
 class SecurityTestBase(BaseServerTestCase):
 
     def setUp(self):
-        current_file = os.path.dirname(os.path.abspath(__file__))
-        os.environ['REST_SERVICE_HOME'] = os.path.join(current_file,
-                                                       '../resources')
         super(SecurityTestBase, self).setUp()
 
     def cleanup(self):
-        if os.environ.get('REST_SERVICE_HOME'):
-            del(os.environ['REST_SERVICE_HOME'])
         super(SecurityTestBase, self).cleanup()
 
     def initialize_provider_context(self):
@@ -147,11 +142,15 @@ class SecurityTestBase(BaseServerTestCase):
 
     @staticmethod
     def get_authorization_provider_configuration():
+        abs_path = os.path.dirname(os.path.abspath(__file__))
+        roles_config_file_path = os.path.join(abs_path,
+                                              '../resources/roles_config.yaml')
         return {
             'implementation': 'flask_securest.authorization_providers.'
                               'role_based_authorization_provider:'
                               'RoleBasedAuthorizationProvider',
             'properties': {
+                'roles_config_file_path': roles_config_file_path,
                 'role_loader': {
                     'implementation':
                         'flask_securest.authorization_providers.role_loaders.'
