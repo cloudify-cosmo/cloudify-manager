@@ -33,6 +33,8 @@ from flask_securest.rest_security import SecuREST
 from manager_rest import endpoint_mapper
 from manager_rest import config
 from manager_rest import storage_manager
+from manager_rest import blueprints_manager
+from manager_rest import workflow_client
 from manager_rest import manager_exceptions
 from manager_rest import utils
 
@@ -40,8 +42,6 @@ from manager_rest import utils
 SECURITY_BYPASS_PORT = '8101'
 IMPLEMENTATION_KEY = 'implementation'
 PROPERTIES_KEY = 'properties'
-REST_SERVICE_HOME_ENV_VAR = 'REST_SERVICE_HOME'
-ROLES_CONFIG_FILE_NAME = 'roles_config.yaml'
 
 
 # app factory
@@ -71,6 +71,7 @@ def setup_app(warnings=None):
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
 
+    app.before_first_request(_init_app_managers)
     app.before_request(log_request)
     app.after_request(log_response)
 
@@ -208,18 +209,6 @@ def init_secured_app(_app):
     def register_authorization_provider(authorization_provider):
         secure_app.app.logger.debug('registering authorization provider {0}'
                                     .format(authorization_provider))
-        # validate the roles_config.yaml file exists
-        roles_config_file_path = \
-            os.path.join(os.environ[REST_SERVICE_HOME_ENV_VAR],
-                         ROLES_CONFIG_FILE_NAME)
-        if not os.path.isfile(roles_config_file_path):
-            raise ValueError('Roles configuration file not found: {0}'.
-                             format(roles_config_file_path))
-
-        # set roles_config.yaml as a property for the auth provider class
-        authorization_provider[PROPERTIES_KEY]['roles_config_file_path'] = \
-            roles_config_file_path
-
         secure_app.authorization_provider = \
             create_instance(authorization_provider)
 
