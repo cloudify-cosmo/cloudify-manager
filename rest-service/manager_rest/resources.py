@@ -30,6 +30,7 @@ from setuptools import archive_util
 
 import elasticsearch
 from flask import (
+    current_app,
     request,
     make_response,
     current_app as app,
@@ -201,6 +202,7 @@ def make_streaming_response(res_id, res_path, content_length, archive_type):
 
 class BlueprintsUpload(object):
     def do_request(self, blueprint_id):
+        app.logger.info('***** uploading blueprint {0}'.format(blueprint_id))
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
@@ -621,6 +623,9 @@ class Executions(SecuredResource):
                 "request body's 'parameters' field must be a dict but"
                 " is of type {0}".format(parameters.__class__.__name__))
 
+        current_app.logger.info('***** in resources.py Executions post,'
+                                ' calling execute_workflow on {0}'.
+                                format(workflow_id))
         execution = get_blueprints_manager().execute_workflow(
             deployment_id, workflow_id, parameters=parameters,
             allow_custom_parameters=allow_custom_parameters, force=force)
@@ -640,8 +645,13 @@ class ExecutionsId(SecuredResource):
         """
         Get execution by id
         """
-        return get_blueprints_manager().get_execution(execution_id,
-                                                      include=_include)
+        current_app.logger.info('***** in resources.py ExecutionId get,'
+                                ' calling get_execution')
+        execution = get_blueprints_manager().get_execution(execution_id,
+                                                           include=_include)
+        current_app.logger.info('***** in resources.py ExecutionId get,'
+                                ' returning execution')
+        return execution
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -720,6 +730,12 @@ class ExecutionsId(SecuredResource):
             request_json.get('error', ''))
 
         return get_storage_manager().get_execution(execution_id)
+        current_app.logger.info('***** in resources.py ExecutionId patch,'
+                                ' calling get_execution')
+        execution = get_storage_manager().get_execution(execution_id)
+        current_app.logger.info('***** in resources.py ExecutionId patch,'
+                                ' got execution: {0}'.format(execution))
+        return execution
 
 
 class Deployments(SecuredResource):
@@ -1350,7 +1366,8 @@ class ProviderContext(SecuredResource):
         verify_parameter_in_request_body('context', request_json)
         verify_parameter_in_request_body('name', request_json)
         context = models.ProviderContext(name=request.json['name'],
-                                         context=request.json['context'])
+                                         context=request.json['context'],
+                                         acl='[ALLOW#ALL#GET]')
         update = verify_and_convert_bool(
             'update',
             request.args.get('update', 'false')

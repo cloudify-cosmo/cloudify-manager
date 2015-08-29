@@ -36,6 +36,9 @@ class Config(object):
         self._rest_service_log_files_backup_count = None
         self._test_mode = False
         self._security_enabled = False
+        self._security_ssl = {'enabled': False}
+        self._security_admin_username = None
+        self._security_admin_password = None
         self._security_auth_token_generator = None
         self._security_audit_log_level = None
         self._security_audit_log_file = None
@@ -43,6 +46,7 @@ class Config(object):
         self._security_audit_log_files_backup_count = None
         self._security_userstore_driver = None
         self._security_authentication_providers = []
+        self._security_authorization_provider = None
 
     @property
     def db_address(self):
@@ -157,6 +161,30 @@ class Config(object):
         self._security_enabled = value
 
     @property
+    def security_ssl(self):
+        return self._security_ssl
+
+    @security_ssl.setter
+    def security_ssl(self, value):
+        self._security_ssl = value
+
+    @property
+    def security_admin_username(self):
+        return self._security_admin_username
+
+    @security_admin_username.setter
+    def security_admin_username(self, value):
+        self._security_admin_username = value
+
+    @property
+    def security_admin_password(self):
+        return self._security_admin_password
+
+    @security_admin_password.setter
+    def security_admin_password(self, value):
+        self._security_admin_password = value
+
+    @property
     def security_authentication_providers(self):
         return self._security_authentication_providers
 
@@ -217,6 +245,14 @@ class Config(object):
     @security_userstore_driver.setter
     def security_userstore_driver(self, value):
         self._security_userstore_driver = value
+
+    @property
+    def security_authorization_provider(self):
+        return self._security_authorization_provider
+
+    @security_authorization_provider.setter
+    def security_authorization_provider(self, value):
+        self._security_authorization_provider = value
 
 
 _instance = Config()

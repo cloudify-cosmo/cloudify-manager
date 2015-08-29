@@ -18,6 +18,8 @@ import json
 
 class SerializableObject(object):
 
+    fields = {}
+
     def to_dict(self):
         # attr_and_values = ((attr, getattr(self, attr)) for attr in dir(self)
         #                    if not attr.startswith("__"))
@@ -29,14 +31,22 @@ class SerializableObject(object):
         return json.dumps(self.to_dict())
 
 
-class BlueprintState(SerializableObject):
-
-    fields = {
-        'plan', 'id', 'description', 'created_at', 'updated_at',
-        'main_file_name'
-    }
+class ManagedResource(SerializableObject):
+    fields = {'acl'}
 
     def __init__(self, **kwargs):
+        # by default, the resource acl allows all to do everything
+        self.acl = kwargs.get('acl', {'*': '*'})
+
+
+class BlueprintState(ManagedResource):
+
+    blueprint_fields = {'plan', 'id', 'description', 'created_at',
+                        'updated_at', 'main_file_name'}
+    fields = set.union(ManagedResource.fields, blueprint_fields)
+
+    def __init__(self, **kwargs):
+        super(BlueprintState, self).__init__(**kwargs)
         self.plan = kwargs['plan']
         self.id = kwargs['id']
         self.description = kwargs['description']
@@ -45,13 +55,15 @@ class BlueprintState(SerializableObject):
         self.main_file_name = kwargs['main_file_name']
 
 
-class Deployment(SerializableObject):
+class Deployment(ManagedResource):
 
-    fields = {'id', 'created_at', 'updated_at', 'blueprint_id',
-              'workflows', 'permalink', 'inputs', 'policy_types',
-              'policy_triggers', 'groups', 'outputs'}
+    deployment_fields = {'id', 'created_at', 'updated_at', 'blueprint_id',
+                         'workflows', 'permalink', 'inputs', 'policy_types',
+                         'policy_triggers', 'groups', 'outputs'}
+    fields = set.union(ManagedResource.fields, deployment_fields)
 
     def __init__(self, **kwargs):
+        super(Deployment, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
@@ -65,7 +77,7 @@ class Deployment(SerializableObject):
         self.permalink = None  # TODO: implement
 
 
-class DeploymentModification(SerializableObject):
+class DeploymentModification(ManagedResource):
 
     STARTED = 'started'
     FINISHED = 'finished'
@@ -73,10 +85,13 @@ class DeploymentModification(SerializableObject):
 
     END_STATES = [FINISHED, ROLLEDBACK]
 
-    fields = {'id', 'deployment_id', 'modified_nodes', 'node_instances',
-              'status', 'created_at', 'ended_at', 'context'}
+    deployment_modification_fields = {'id', 'deployment_id', 'modified_nodes',
+                                      'node_instances', 'status', 'created_at',
+                                      'ended_at', 'context'}
+    fields = set.union(ManagedResource.fields, deployment_modification_fields)
 
     def __init__(self, **kwargs):
+        super(DeploymentModification, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.created_at = kwargs['created_at']
         self.ended_at = kwargs['ended_at']
@@ -87,7 +102,7 @@ class DeploymentModification(SerializableObject):
         self.context = kwargs['context']
 
 
-class Execution(SerializableObject):
+class Execution(ManagedResource):
 
     TERMINATED = 'terminated'
     FAILED = 'failed'
@@ -99,10 +114,13 @@ class Execution(SerializableObject):
 
     END_STATES = [TERMINATED, FAILED, CANCELLED]
 
-    fields = {'id', 'status', 'deployment_id', 'workflow_id', 'blueprint_id',
-              'created_at', 'error', 'parameters', 'is_system_workflow'}
+    execution_fields = {'id', 'status', 'deployment_id', 'workflow_id',
+                        'blueprint_id', 'created_at', 'error', 'parameters',
+                        'is_system_workflow'}
+    fields = set.union(ManagedResource.fields, execution_fields)
 
     def __init__(self, **kwargs):
+        super(Execution, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
@@ -114,19 +132,21 @@ class Execution(SerializableObject):
         self.is_system_workflow = kwargs['is_system_workflow']
 
 
-class DeploymentNode(SerializableObject):
+class DeploymentNode(ManagedResource):
     """
     Represents a node in a deployment.
     """
 
-    fields = {
+    deployment_node_fields = {
         'id', 'deployment_id', 'blueprint_id', 'type', 'type_hierarchy',
         'number_of_instances', 'planned_number_of_instances',
         'deploy_number_of_instances', 'host_id', 'properties',
         'operations', 'plugins', 'relationships', 'plugins_to_install'
     }
+    fields = set.union(ManagedResource.fields, deployment_node_fields)
 
     def __init__(self, **kwargs):
+        super(DeploymentNode, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.deployment_id = kwargs['deployment_id']
         self.blueprint_id = kwargs['blueprint_id']
@@ -144,17 +164,19 @@ class DeploymentNode(SerializableObject):
         self.plugins_to_install = kwargs['plugins_to_install']
 
 
-class DeploymentNodeInstance(SerializableObject):
+class DeploymentNodeInstance(ManagedResource):
     """
     Represents a node instance in a deployment.
     """
 
-    fields = {
+    deployment_node_instance_fields = {
         'id', 'deployment_id', 'runtime_properties', 'state', 'version',
         'relationships', 'node_id', 'host_id'
     }
+    fields = set.union(ManagedResource.fields, deployment_node_instance_fields)
 
     def __init__(self, **kwargs):
+        super(DeploymentNodeInstance, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.node_id = kwargs['node_id']
         self.deployment_id = kwargs['deployment_id']
@@ -165,25 +187,29 @@ class DeploymentNodeInstance(SerializableObject):
         self.host_id = kwargs['host_id']
 
 
-class ProviderContext(SerializableObject):
+class ProviderContext(ManagedResource):
 
-    fields = {'context', 'name'}
+    provider_context_fields = {'context', 'name'}
+    fields = set.union(ManagedResource.fields, provider_context_fields)
 
     def __init__(self, **kwargs):
+        super(ProviderContext, self).__init__(**kwargs)
         self.context = kwargs['context']
         self.name = kwargs['name']
 
 
-class Plugin(SerializableObject):
+class Plugin(ManagedResource):
     """
     Represents a wheel plugin
     """
-    fields = {'id', 'package_name', 'archive_name', 'package_source',
-              'package_version', 'supported_platform', 'distribution',
-              'distribution_version', 'distribution_release', 'wheels',
-              'excluded_wheels', 'supported_py_versions', 'uploaded_at'}
+    plugin_fields = {'id', 'package_name', 'archive_name', 'package_source',
+                     'package_version', 'supported_platform', 'distribution',
+                     'distribution_version', 'distribution_release', 'wheels',
+                     'excluded_wheels', 'supported_py_versions', 'uploaded_at'}
+    fields = set.union(ManagedResource.fields, plugin_fields)
 
     def __init__(self, **kwargs):
+        super(Plugin, self).__init__()
         self.id = kwargs['id']
         self.package_name = kwargs['package_name']
         self.archive_name = kwargs['archive_name']
