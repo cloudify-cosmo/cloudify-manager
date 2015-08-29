@@ -38,6 +38,10 @@ from manager_rest import utils
 
 
 SECURITY_BYPASS_PORT = '8101'
+IMPLEMENTATION_KEY = 'implementation'
+PROPERTIES_KEY = 'properties'
+REST_SERVICE_HOME_ENV_VAR = 'REST_SERVICE_HOME'
+ROLES_CONFIG_FILE_NAME = 'roles_config.yaml'
 
 
 # app factory
@@ -182,10 +186,77 @@ def create_logger(logger_name,
 
 
 def init_secured_app(_app):
+
+    def register_auth_token_generator(auth_token_generator):
+        _app.logger.debug('registering auth token generator {0}'
+                          .format(auth_token_generator))
+        _app.auth_token_generator = create_instance(auth_token_generator)
+
+    def register_userstore_driver(userstore_driver):
+        secure_app.app.logger.debug('registering userstore driver {0}'
+                                    .format(userstore_driver))
+        secure_app.userstore_driver = create_instance(userstore_driver)
+
+    def register_authentication_providers(authentication_providers):
+        # Note: the order of registration is important here
+        for provider in authentication_providers:
+            secure_app.app.logger.debug(
+                'registering authentication provider {0}'.format(provider))
+            secure_app.register_authentication_provider(
+                provider['name'], create_instance(provider))
+
+    def register_authorization_provider(authorization_provider):
+        secure_app.app.logger.debug('registering authorization provider {0}'
+                                    .format(authorization_provider))
+        # validate the roles_config.yaml file exists
+        roles_config_file_path = \
+            os.path.join(os.environ[REST_SERVICE_HOME_ENV_VAR],
+                         ROLES_CONFIG_FILE_NAME)
+        if not os.path.isfile(roles_config_file_path):
+            raise ValueError('Roles configuration file not found: {0}'.
+                             format(roles_config_file_path))
+
+        # set roles_config.yaml as a property for the auth provider class
+        authorization_provider[PROPERTIES_KEY]['roles_config_file_path'] = \
+            roles_config_file_path
+
+        secure_app.authorization_provider = \
+            create_instance(authorization_provider)
+
+    def create_instance(class_details):
+        if type(class_details) is not dict:
+            raise ValueError('Cannot create a class instance, class_details'
+                             ' is not a dict: {0}'.format(class_details))
+
+        if IMPLEMENTATION_KEY not in class_details:
+            raise ValueError('Cannot create a class instance, class_details'
+                             ' is missing a {0} key: {1}'.
+                             format(IMPLEMENTATION_KEY, class_details))
+
+        path_to_class = class_details[IMPLEMENTATION_KEY]
+        class_init_args = class_details.get(PROPERTIES_KEY)
+        if class_init_args:
+            for name, value in class_init_args.iteritems():
+                if type(value) is dict \
+                        and IMPLEMENTATION_KEY in value:
+                        # create inner class instance
+                        class_init_args[name] = create_instance(value)
+        return utils.get_class_instance(path_to_class, class_init_args)
+
+    def unauthorized_user_handler():
+        utils.abort_error(
+            manager_exceptions.UnauthorizedError('user unauthorized'),
+            current_app.logger,
+            hide_server_message=True)
+
+    def _is_internal_request(req):
+        server_port = req.headers.get('X-Server-Port')
+        return str(server_port) == SECURITY_BYPASS_PORT
+
     cfy_config = config.instance()
     if cfy_config.security_auth_token_generator:
         register_auth_token_generator(
-            _app, config.instance().security_auth_token_generator)
+            config.instance().security_auth_token_generator)
 
     # init and configure flask-securest
     secure_app = SecuREST(_app)
@@ -198,53 +269,17 @@ def init_secured_app(_app):
     )
 
     if cfy_config.security_userstore_driver:
-        register_userstore_driver(secure_app,
-                                  cfy_config.security_userstore_driver)
-    register_authentication_providers(
-        secure_app, cfy_config.security_authentication_providers)
+        register_userstore_driver(cfy_config.security_userstore_driver)
 
-    def unauthorized_user_handler():
-        utils.abort_error(
-            manager_exceptions.UnauthorizedError('user unauthorized'),
-            current_app.logger,
-            hide_server_message=True)
+    register_authentication_providers(
+        cfy_config.security_authentication_providers)
+
+    if cfy_config.security_authorization_provider:
+        register_authorization_provider(
+            cfy_config.security_authorization_provider)
 
     secure_app.unauthorized_user_handler = unauthorized_user_handler
-
-    secure_app.request_security_bypass_handler = \
-        request_security_bypass_handler
-
-
-def request_security_bypass_handler(req):
-    server_port = req.headers.get('X-Server-Port')
-    return str(server_port) == SECURITY_BYPASS_PORT
-
-
-def register_auth_token_generator(_app, auth_token_generator):
-    _app.logger.debug('registering auth token generator {0}'
-                      .format(auth_token_generator))
-    _app.auth_token_generator = \
-        utils.get_class_instance(auth_token_generator['implementation'],
-                                 auth_token_generator['properties'])
-
-
-def register_userstore_driver(secure_app, userstore_driver):
-    secure_app.app.logger.debug('registering userstore driver {0}'
-                                .format(userstore_driver))
-    userstore = utils.get_class_instance(userstore_driver['implementation'],
-                                         userstore_driver['properties'])
-    secure_app.set_userstore_driver(userstore)
-
-
-def register_authentication_providers(secure_app, authentication_providers):
-    # Note: the order of registration is important here
-    for provider in authentication_providers:
-        secure_app.app.logger.debug('registering authentication provider {0}'
-                                    .format(provider))
-        auth_provider = utils.get_class_instance(provider['implementation'],
-                                                 provider['properties'])
-        secure_app.register_authentication_provider(provider['name'],
-                                                    auth_provider)
+    secure_app.skip_auth_hook = _is_internal_request
 
 
 def load_configuration():

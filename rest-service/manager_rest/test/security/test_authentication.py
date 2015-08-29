@@ -23,7 +23,11 @@ from cloudify_rest_client.exceptions import UserUnauthorizedError
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
-class SecurityTest(SecurityTestBase):
+class AuthenticationTests(SecurityTestBase):
+
+    @staticmethod
+    def get_authorization_provider_configuration():
+        return {}
 
     def test_secured_client(self):
         client = self.create_client(headers=SecurityTestBase.

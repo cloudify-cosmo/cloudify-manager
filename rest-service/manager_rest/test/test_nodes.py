@@ -15,7 +15,7 @@
 
 from nose.plugins.attrib import attr
 
-import manager_rest.storage_manager as sm
+from manager_rest import storage_manager
 from manager_rest.test import base_test
 
 
@@ -173,12 +173,14 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEqual('b-state', response.json['state'])
 
     def test_patch_node_conflict(self):
+        sm = storage_manager._get_instance()
         from manager_rest import manager_exceptions
-        prev_update_node_func = sm.instance().update_node_instance
+        prev_update_node_func = sm.update_node_instance
         try:
             def conflict_update_node_func(node):
                 raise manager_exceptions.ConflictError()
-            sm.instance().update_node_instance = conflict_update_node_func
+            sm.update_node_instance = \
+                conflict_update_node_func
             self.put_node_instance(
                 instance_id='1234',
                 deployment_id='111',
@@ -191,7 +193,7 @@ class NodesTest(base_test.BaseServerTestCase):
                                    'version': 2})
             self.assertEqual(409, response.status_code)
         finally:
-            sm.instance().update_node_instance = prev_update_node_func
+            sm.update_node_instance = prev_update_node_func
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -288,4 +290,4 @@ class NodesTest(base_test.BaseServerTestCase):
                                       version=None,
                                       relationships=None,
                                       host_id=None)
-        sm.instance().put_node_instance(node)
+        storage_manager._get_instance().put_node_instance(node)

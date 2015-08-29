@@ -80,8 +80,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             error='',
             parameters=dict(),
             is_system_workflow=True)
-        storage_manager.instance().put_execution(system_wf_execution_id,
-                                                 system_wf_execution)
+        storage_manager._get_instance().put_execution(
+            system_wf_execution_id, system_wf_execution)
 
         # listing only non-system workflow executions
         executions = self.client.executions.list(deployment_id=deployment_id)

@@ -15,6 +15,7 @@
 
 
 from manager_rest.celery_client import celery_client as client
+from flask import current_app
 
 
 class WorkflowClient(object):
@@ -48,7 +49,6 @@ class WorkflowClient(object):
         # the task id is equivalent to the execution id
 
         task_queue = 'cloudify.management'
-
         context = {
             'task_id': task_id,
             'task_name': task_mapping,
@@ -68,5 +68,13 @@ class WorkflowClient(object):
             kwargs=execution_parameters)
 
 
-def workflow_client():
-    return WorkflowClient()
+# What we need to access this manager in Flask
+def get_workflow_client():
+    """
+    Get the current app's workflow client, create if necessary
+    """
+    wf_client = current_app.config.get('workflow_client')
+    if not wf_client:
+        current_app.config['workflow_client'] = WorkflowClient()
+        wf_client = current_app.config.get('workflow_client')
+    return wf_client

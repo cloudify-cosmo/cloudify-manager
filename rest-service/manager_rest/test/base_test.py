@@ -30,6 +30,7 @@ from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
+
 try:
     from cloudify_rest_client.client import \
         DEFAULT_API_VERSION as CLIENT_API_VERSION
