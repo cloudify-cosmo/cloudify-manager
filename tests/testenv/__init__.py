@@ -36,7 +36,8 @@ from wagon.wagon import Wagon
 from elasticsearch import Elasticsearch
 
 import mock_plugins
-from testenv.constants import MANAGER_REST_PORT
+
+from testenv.constants import REST_PORT
 from testenv.constants import RABBITMQ_VERBOSE_MESSAGES_ENABLED
 from testenv.constants import RABBITMQ_POLLING_ENABLED
 from testenv.constants import FILE_SERVER_RESOURCES_URI
@@ -292,7 +293,7 @@ class TestEnvironment(object):
         file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
 
         self.manager_rest_process = ManagerRestProcess(
-            MANAGER_REST_PORT,
+            REST_PORT,
             self.fileserver_dir,
             file_server_base_uri,
             FILE_SERVER_BLUEPRINTS_FOLDER,

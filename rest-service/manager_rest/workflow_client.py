@@ -57,8 +57,8 @@ class WorkflowClient(object):
                             execution_parameters=execution_parameters)
 
     @staticmethod
-    def execute_system_workflow(wf_id, task_id, task_mapping, deployment=None,
-                                execution_parameters=None,
+    def execute_system_workflow(wf_id, task_id, task_mapping,
+                                deployment=None, execution_parameters=None,
                                 bypass_maintenance=None):
         execution_parameters = execution_parameters or {}
         # task_id is not generated here since for system workflows,

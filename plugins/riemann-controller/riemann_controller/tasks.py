@@ -81,7 +81,7 @@ def _publish_configuration_event(state, deployment_config_dir_path):
     manager_queue = 'manager-riemann'
     exchange_name = 'cloudify-monitoring'
 
-    broker_host = broker_config.broker_hostname
+    broker_ip = broker_config.broker_hostname
 
     broker_port, ssl_options = utils.internal.get_broker_ssl_and_port(
         ssl_enabled=broker_config.broker_ssl_enabled,
@@ -94,7 +94,7 @@ def _publish_configuration_event(state, deployment_config_dir_path):
     )
 
     connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host=broker_host,
+        pika.ConnectionParameters(host=broker_ip,
                                   port=broker_port,
                                   credentials=credentials,
                                   ssl=broker_config.broker_ssl_enabled,
