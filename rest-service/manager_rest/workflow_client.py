@@ -20,8 +20,18 @@ from flask import current_app
 
 class WorkflowClient(object):
 
-    @staticmethod
-    def execute_workflow(name,
+    def __init__(self, security_enabled, ssl_enabled, verify_ssl_certificate,
+                 cloudify_username, cloudify_password):
+        self.security_context = {
+            'security_enabled': security_enabled,
+            'ssl_enabled': ssl_enabled,
+            'verify_ssl_certificate': verify_ssl_certificate,
+            'cloudify_username': cloudify_username,
+            'cloudify_password': cloudify_password
+        }
+
+    def execute_workflow(self,
+                         name,
                          workflow,
                          blueprint_id,
                          deployment_id,
@@ -29,21 +39,22 @@ class WorkflowClient(object):
                          execution_parameters=None):
         task_name = workflow['operation']
         task_queue = '{}_workflows'.format(deployment_id)
-
         execution_parameters['__cloudify_context'] = {
             'workflow_id': name,
             'blueprint_id': blueprint_id,
             'deployment_id': deployment_id,
-            'execution_id': execution_id
+            'execution_id': execution_id,
+            'security_ctx': self.security_context
         }
-
+        print '***** in execute_workflow, calling execute_task ' \
+              'with __cloudify_context: {0}'.\
+            format(execution_parameters['__cloudify_context'])
         client().execute_task(task_name=task_name,
                               task_queue=task_queue,
                               task_id=execution_id,
                               kwargs=execution_parameters)
 
-    @staticmethod
-    def execute_system_workflow(deployment, wf_id, task_id, task_mapping,
+    def execute_system_workflow(self, deployment, wf_id, task_id, task_mapping,
                                 execution_parameters=None):
         # task_id is not generated here since for system workflows,
         # the task id is equivalent to the execution id
@@ -57,8 +68,11 @@ class WorkflowClient(object):
             'deployment_id': deployment.id,
             'execution_id': task_id,
             'workflow_id': wf_id,
+            'security_ctx': self.security_context
         }
         execution_parameters = execution_parameters or {}
+        print '***** in execute_system_workflow, setting __cloudify_context' \
+              ' to: {0}'.format(context)
         execution_parameters['__cloudify_context'] = context
 
         return client().execute_task(
@@ -68,13 +82,20 @@ class WorkflowClient(object):
             kwargs=execution_parameters)
 
 
+def init_workflow_client(security_enabled, ssl_enabled, verify_ssl_certificate,
+                         admin_username, admin_password):
+    current_app.config['workflow_client'] = \
+        WorkflowClient(security_enabled,
+                       ssl_enabled,
+                       verify_ssl_certificate,
+                       admin_username,
+                       admin_password)
+    return get_workflow_client()
+
+
 # What we need to access this manager in Flask
 def get_workflow_client():
     """
-    Get the current app's workflow client, create if necessary
+    Get the current app's workflow client
     """
-    wf_client = current_app.config.get('workflow_client')
-    if not wf_client:
-        current_app.config['workflow_client'] = WorkflowClient()
-        wf_client = current_app.config.get('workflow_client')
-    return wf_client
+    return current_app.config.get('workflow_client')

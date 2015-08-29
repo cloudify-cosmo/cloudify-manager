@@ -29,11 +29,12 @@ WORKFLOWS_WORKER_PAYLOAD = {
 
 @workflow
 def create(ctx, **kwargs):
-
+    print '***** in deployment_environment.create, ctx is: {0}'.format(ctx)
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    is_transient_workers = _is_transient_deployment_workers_mode()
+    is_transient_workers = _is_transient_deployment_workers_mode(
+        ctx.security_ctx)
 
     deployment_plugins = kwargs['deployment_plugins_to_install']
 
@@ -206,8 +207,8 @@ def stop(ctx, prerequisite_task_id, prerequisite_task_timeout=60, **kwargs):
     return graph.execute()
 
 
-def _is_transient_deployment_workers_mode():
-    client = get_rest_client()
+def _is_transient_deployment_workers_mode(security_ctx):
+    client = get_rest_client(security_ctx)
     bootstrap_context = client.manager.get_context()['context']['cloudify']
     return bootstrap_context.get(
         'transient_deployment_workers_mode', {}).get('enabled', True)

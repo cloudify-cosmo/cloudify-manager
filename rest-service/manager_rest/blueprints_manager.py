@@ -21,6 +21,8 @@ from StringIO import StringIO
 
 from flask import current_app
 
+from flask_securest import rest_security
+
 from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
@@ -48,7 +50,13 @@ class BlueprintAlreadyExistsException(Exception):
 
 class BlueprintsManager(object):
 
-    def __init__(self):
+    def __init__(self, security_enabled, ssl_enabled, verify_ssl_certificate,
+                 cloudify_username, cloudify_password):
+        self.security_enabled = security_enabled
+        self.ssl_enabled = ssl_enabled
+        self.cloudify_username = cloudify_username
+        self.cloudify_password = cloudify_password
+        self.verify_ssl_certificate = verify_ssl_certificate
         self.sm = storage_manager.get_storage_manager()
         self.workflow_client = wf_client.get_workflow_client()
 
@@ -88,7 +96,7 @@ class BlueprintsManager(object):
         return self.sm.get_plugin(plugin_id, include=include)
 
     def update_execution_status(self, execution_id, status, error):
-
+        current_app.logger.info('***** starting update_execution_status')
         if self._get_transient_deployment_workers_mode_config()['enabled'] and\
                 status in models.Execution.END_STATES:
             execution = self.get_execution(execution_id)
@@ -133,15 +141,20 @@ class BlueprintsManager(object):
             raise DslParseException(str(ex))
 
         now = str(datetime.now())
-
+        the_acl = rest_security.get_acl()
+        current_app.logger.error('***** creating blueprint with acl: {0}'.
+                                 format(the_acl))
         new_blueprint = models.BlueprintState(
             plan=plan,
             id=blueprint_id,
             description=plan.get('description'),
             created_at=now,
             updated_at=now,
-            main_file_name=application_file_name)
-        self.sm.put_blueprint(new_blueprint.id, new_blueprint)
+            acl=rest_security.get_acl())
+        current_app.logger.error('***** putting blueprint: {0}'.
+                                 format(new_blueprint))
+        self.sm.put_blueprint(
+            new_blueprint.id, new_blueprint)
         return new_blueprint
 
     def delete_blueprint(self, blueprint_id):
@@ -199,15 +212,22 @@ class BlueprintsManager(object):
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
                          allow_custom_parameters=False, force=False):
+        current_app.logger.info('***** started execute_workflow')
         deployment = self.get_deployment(deployment_id)
-
+        current_app.logger.info('***** got deployment {0}'.format(deployment))
         if workflow_id not in deployment.workflows:
+            current_app.logger.info('***** workflow {0} does not exist in'
+                                    ' deployment {1}'.format(workflow_id,
+                                                             deployment_id))
             raise manager_exceptions.NonexistentWorkflowError(
                 'Workflow {0} does not exist in deployment {1}'.format(
                     workflow_id, deployment_id))
         workflow = deployment.workflows[workflow_id]
-
+        current_app.logger.info('***** got workflow {0}'.format(workflow))
+        current_app.logger.info('***** verifying deployment env created '
+                                'successfully...')
         self._verify_deployment_environment_created_successfully(deployment_id)
+        current_app.logger.info('***** verified!')
 
         transient_workers_config =\
             self._get_transient_deployment_workers_mode_config()
@@ -412,6 +432,7 @@ class BlueprintsManager(object):
         self._create_deployment_node_instances(deployment_id,
                                                node_instances)
         self._create_deployment_environment(new_deployment, deployment_plan)
+        current_app.logger.info('***** deployment environment created!')
         return new_deployment
 
     def start_deployment_modification(self,
@@ -763,6 +784,8 @@ class BlueprintsManager(object):
 
     def _verify_deployment_environment_created_successfully(self,
                                                             deployment_id):
+        current_app.logger.info('***** creating filter with deployment_id: {0}'
+                                .format(deployment_id))
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
         env_creation = next(
@@ -770,12 +793,18 @@ class BlueprintsManager(object):
              self.sm.executions_list(filters=deployment_id_filter)
              if execution.workflow_id == 'create_deployment_environment'),
             None)
-
+        if env_creation:
+            current_app.logger.info('***** env creation: {0}'.
+                                    format(env_creation))
+        else:
+            current_app.logger.info('***** env creation is NONE!')
         if not env_creation:
             raise RuntimeError('Failed to find "create_deployment_environment"'
                                ' execution for deployment {0}'.format(
                                    deployment_id))
         status = env_creation.status
+        current_app.logger.info('***** env creation status: {0}'.
+                                format(status))
         if status == models.Execution.TERMINATED:
             return
         elif status == models.Execution.PENDING:
@@ -939,6 +968,7 @@ class BlueprintsManager(object):
         }
 
     def update_provider_context(self, update, provider_context):
+        # this object is unique - should be readable by all
         if update:
             self.sm.update_provider_context(provider_context)
         else:
@@ -946,13 +976,19 @@ class BlueprintsManager(object):
         self._update_parser_context_in_app(provider_context.context)
 
 
+def init_blueprints_manager(security_enabled=False, ssl_enabled=False,
+                            verify_ssl_certificate=True,
+                            cloudify_username=None, cloudify_password=None):
+    current_app.config['blueprints_manager'] = \
+        BlueprintsManager(security_enabled, ssl_enabled,
+                          verify_ssl_certificate,
+                          cloudify_username, cloudify_password)
+    return get_blueprints_manager()
+
+
 # What we need to access this manager in Flask
 def get_blueprints_manager():
     """
-    Get the current app's blueprints manager, create if necessary
+    Get the current blueprints manager
     """
-    manager = current_app.config.get('blueprints_manager')
-    if not manager:
-        current_app.config['blueprints_manager'] = BlueprintsManager()
-        manager = current_app.config.get('blueprints_manager')
-    return manager
+    return current_app.config.get('blueprints_manager')

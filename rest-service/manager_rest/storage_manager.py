@@ -44,13 +44,14 @@ def teardown_storage_manager(exception):
     pass
 
 
+def init_storage_manager():
+    current_app.config['storage_manager'] = _get_instance()
+    return get_storage_manager()
+
+
 # What we need to access this manager in Flask
 def get_storage_manager():
     """
-    Get the current app's storage manager, create if necessary
+    Get the current app's storage manager
     """
-    manager = current_app.config.get('storage_manager')
-    if not manager:
-        current_app.config['storage_manager'] = _get_instance()
-        manager = current_app.config.get('storage_manager')
-    return manager
+    return current_app.config.get('storage_manager')

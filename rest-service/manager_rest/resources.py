@@ -207,6 +207,7 @@ class BlueprintsUpload(object):
             self._save_file_locally(archive_target_path)
             application_dir = self._extract_file_to_file_server(
                 file_server_root, archive_target_path)
+
             blueprint = self._prepare_and_submit_blueprint(file_server_root,
                                                            application_dir,
                                                            blueprint_id)
@@ -1350,7 +1351,8 @@ class ProviderContext(SecuredResource):
         verify_parameter_in_request_body('context', request_json)
         verify_parameter_in_request_body('name', request_json)
         context = models.ProviderContext(name=request.json['name'],
-                                         context=request.json['context'])
+                                         context=request.json['context'],
+                                         acl='[ALLOW#ALL#GET]')
         update = verify_and_convert_bool(
             'update',
             request.args.get('update', 'false')

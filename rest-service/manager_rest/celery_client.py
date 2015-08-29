@@ -59,7 +59,7 @@ class CeleryClient(object):
             :param kwargs: optional kwargs to be passed to the task
             :return: the celery task async result
         """
-
+        print '***** in CeleryClient.execute_task'
         return self.celery.send_task(task_name,
                                      queue=task_queue,
                                      task_id=task_id,

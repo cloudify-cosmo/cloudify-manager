@@ -208,7 +208,7 @@ node_types:
           implementation: script.script_runner.tasks.run
           inputs:
             script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/mkfs.sh
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3m5/resources/rest-service/cloudify/fs/mkfs.sh
 
   # A storage Container (Object Store segment)
   cloudify.nodes.ObjectStorage:
@@ -329,7 +329,7 @@ relationships:
           implementation: script.script_runner.tasks.run
           inputs:
             script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/fdisk.sh
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3m5/resources/rest-service/cloudify/fs/fdisk.sh
             device_name:
               default: { get_attribute: [TARGET, device_name] }
 
@@ -341,12 +341,12 @@ relationships:
           implementation: script.script_runner.tasks.run
           inputs:
             script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/mount.sh
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3m5/resources/rest-service/cloudify/fs/mount.sh
         unlink:
           implementation: script.script_runner.tasks.run
           inputs:
             script_path:
-              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/fs/unmount.sh
+              default: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3m5/resources/rest-service/cloudify/fs/unmount.sh
 
 ##################################################################################
 # Workflows
@@ -480,7 +480,7 @@ policy_types:
                 description: Service names whose events should be taken into consideration
                 default:
                     - service
-        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/host_failure.clj
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3m5/resources/rest-service/cloudify/policies/host_failure.clj
 
     cloudify.policies.types.threshold:
         properties: &THRESHOLD_BASED_POLICY_PROPERTIES
@@ -499,7 +499,7 @@ policy_types:
             stability_time:
                 description: How long a threshold must be breached before the triggers will be processed
                 default: 0
-        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/threshold.clj
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3m5/resources/rest-service/cloudify/policies/threshold.clj
 
     cloudify.policies.types.ewma_stabilized:
         properties:
@@ -508,7 +508,7 @@ policy_types:
                 description: |
                     r is the ratio between successive events. The smaller it is, the smaller impact on the computed value the most recent event has.
                 default: 0.5
-        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/policies/ewma_stabilized.clj
+        source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3m5/resources/rest-service/cloudify/policies/ewma_stabilized.clj
 
 ##################################################################################
 # Policy triggers definitions
@@ -538,4 +538,4 @@ policy_triggers:
       conn_timeout:
         description: Connection timeout when making request to manager REST in ms
         default: 1000
-    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/master/resources/rest-service/cloudify/triggers/execute_workflow.clj
+    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3m5/resources/rest-service/cloudify/triggers/execute_workflow.clj
