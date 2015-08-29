@@ -24,16 +24,16 @@ from cloudify_rest_client.exceptions import UserUnauthorizedError
 class AuthorizationTests(SecurityTestBase):
 
     def test_admin_access(self):
-        client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='admin',
-                                                       password='admin'))
+        client = self.create_client(
+            headers=SecurityTestBase.create_auth_header(
+                username='alice', password='alice_password'))   # administrator
         # admins should be able to do everything
         client.deployments.list()
 
     def test_manager_access(self):
         client = self.create_client(
             headers=SecurityTestBase.create_auth_header(
-                username='deployment_manager', password='deployment_manager'))
+                username='bob', password='bob_password'))   # manager
         # deployment_managers should be able to do deploy and un-deploy
         # to list blueprints, deployment and executions
         # deployment_manager should not be able to assign roles
@@ -42,7 +42,7 @@ class AuthorizationTests(SecurityTestBase):
     def test_viewer_access(self):
         client = self.create_client(
             headers=SecurityTestBase.create_auth_header(
-                username='deployment_viewer', password='deployment_viewer'))
+                username='carol', password='carol_password'))   # viewer
         # viewers should be able to do viewer all resources but not create
         # or delete resources
         client.deployments.list()
@@ -50,8 +50,8 @@ class AuthorizationTests(SecurityTestBase):
                           'dummy_blueprint_id')
 
     def test_user_access(self):
-        client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='user',
-                                                       password='user'))
+        client = self.create_client(
+            headers=SecurityTestBase.create_auth_header(
+                username='dave', password='dave_password'))     # user
         # users should not be able to do anything
         self.assertRaises(UserUnauthorizedError, client.deployments.list)

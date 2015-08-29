@@ -101,24 +101,24 @@ class SecurityTestBase(BaseServerTestCase):
                 'userstore': {
                     'users': [
                         {
-                            'username': 'admin',
-                            'password': 'admin',
+                            'username': 'alice',
+                            'password': 'alice_password',
                             'groups': ['cfy_admins']
                         },
                         {
-                            'username': 'deployment_manager',
-                            'password': 'deployment_manager',
+                            'username': 'bob',
+                            'password': 'bob_password',
                             'groups': ['managers', 'users']
                         },
                         {
-                            'username': 'deployment_viewer',
-                            'password': 'deployment_viewer',
+                            'username': 'carol',
+                            'password': 'carol_password',
                             'groups': ['users'],
                             'roles': ['viewer']
                         },
                         {
-                            'username': 'user',
-                            'password': 'user',
+                            'username': 'dave',
+                            'password': 'dave_password',
                             'groups': ['users']
                         }
                     ],

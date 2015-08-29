@@ -14,14 +14,39 @@
 #  * limitations under the License.
 
 
+from manager_rest import config
 from manager_rest.celery_client import celery_client as client
 from flask import current_app
 
 
 class WorkflowClient(object):
 
-    @staticmethod
-    def execute_workflow(name,
+    def __init__(self):
+        ssl_enabled = False
+        verify_certificate = False
+        cloudify_username = None
+        cloudify_password = None
+        cfy_config = config.instance()
+
+        security_enabled = cfy_config.security_enabled
+        if security_enabled:
+            cloudify_username = cfy_config.security_admin_username
+            cloudify_password = cfy_config.security_admin_password
+            ssl_enabled = cfy_config.security_ssl.get('enabled', True)
+            if ssl_enabled:
+                verify_certificate = cfy_config.security_ssl.get(
+                    'verify_certificate', True)
+
+        self.security_context = {
+            'security_enabled': security_enabled,
+            'ssl_enabled': ssl_enabled,
+            'verify_ssl_certificate': verify_certificate,
+            'cloudify_username': cloudify_username,
+            'cloudify_password': cloudify_password
+        }
+
+    def execute_workflow(self,
+                         name,
                          workflow,
                          blueprint_id,
                          deployment_id,
@@ -34,17 +59,16 @@ class WorkflowClient(object):
             'workflow_id': name,
             'blueprint_id': blueprint_id,
             'deployment_id': deployment_id,
-            'execution_id': execution_id
+            'execution_id': execution_id,
+            'security_ctx': self.security_context
         }
-
         client().execute_task(task_name=task_name,
                               task_queue=task_queue,
                               task_id=execution_id,
                               kwargs=execution_parameters)
 
-    @staticmethod
-    def execute_system_workflow(wf_id, task_id, task_mapping, deployment=None,
-                                execution_parameters=None):
+    def execute_system_workflow(self, wf_id, task_id, task_mapping,
+                                deployment=None, execution_parameters=None):
         # task_id is not generated here since for system workflows,
         # the task id is equivalent to the execution id
 
@@ -54,6 +78,7 @@ class WorkflowClient(object):
             'task_name': task_mapping,
             'execution_id': task_id,
             'workflow_id': wf_id,
+            'security_ctx': self.security_context
         }
 
         if deployment:
@@ -72,6 +97,11 @@ class WorkflowClient(object):
             context['task_id'],
             kwargs=execution_parameters
         )
+
+
+def init_workflow_client():
+    current_app.config['workflow_client'] = WorkflowClient()
+    return get_workflow_client()
 
 
 # What we need to access this manager in Flask
