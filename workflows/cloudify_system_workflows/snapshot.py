@@ -12,21 +12,21 @@ import elasticsearch.helpers
 
 from cloudify.decorators import system_wide_workflow
 
-VERSION = '3.3'
-VERSION_FILE = 'version'
-ELASTICSEARCH = 'es_data'
-CRED_DIR = 'credentials'
-CRED_KEY_NAME = 'agent_key'
-INFLUXDB = 'influxdb-data'
-INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
-                     '?u=root&p=root&chunked=true" --data-urlencode'
-                     ' "q=select * from /.*/" > {0}')
-INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
-                        '-d "[${{line}}]" "http://localhost:8086/db/cloudify/'
-                        'series?u=root&p=root" ;done')
+_VERSION = '3.3'
+_VERSION_FILE = 'version'
+_ELASTICSEARCH = 'es_data'
+_CRED_DIR = 'credentials'
+_CRED_KEY_NAME = 'agent_key'
+_INFLUXDB = 'influxdb-data'
+_INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
+                      '?u=root&p=root&chunked=true" --data-urlencode'
+                      ' "q=select * from /.*/" > {0}')
+_INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
+                         '-d "[${{line}}]" "http://localhost:8086/db/cloudify/'
+                         'series?u=root&p=root" ;done')
 
 
-class DictToAttributes(object):
+class _DictToAttributes(object):
     def __init__(self, dic):
         self._dict = dic
 
@@ -34,7 +34,7 @@ class DictToAttributes(object):
         return self._dict[name]
 
 
-def get_json_objects(f):
+def _get_json_objects(f):
     def chunks(g):
         ch = g.read(10000)
         yield ch
@@ -59,7 +59,7 @@ def get_json_objects(f):
     assert not n or not s
 
 
-def copy_data(archive_root, config, to_archive=True):
+def _copy_data(archive_root, config, to_archive=True):
     DATA_TO_COPY = [
         (config.file_server_blueprints_folder, 'blueprints'),
         (config.file_server_uploaded_blueprints_folder, 'uploaded-blueprints')
@@ -96,47 +96,37 @@ def _except_types(s, *args):
 
 def _clean_up_db_before_restore(es_client, wf_exec_id):
     s = elasticsearch.helpers.scan(es_client)
-    for doc in _except_types(s, 'provider_context'):
+    for doc in _except_types(s, 'provider_context', 'snapshot'):
         if doc['_id'] != wf_exec_id:
             doc['_op_type'] = 'delete'
             yield doc
 
 
-@system_wide_workflow
-def create(ctx, snapshot_id, config, **kw):
-    config = DictToAttributes(config)
-    tempdir = tempfile.mkdtemp('-snapshot-data')
-
-    snapshots_dir = path.join(
-        config.file_server_root,
-        config.file_server_uploaded_snapshots_folder
-    )
-
-    # files/dirs copy
-    copy_data(tempdir, config)
-
-    # elasticsearch
-    es = _create_es_client(config)
+def _dump_elasticsearch(tempdir, es):
     storage_scan = elasticsearch.helpers.scan(es, index='cloudify_storage')
-    storage_scan = _except_types(storage_scan, 'provider_context')
+    storage_scan = _except_types(storage_scan,
+                                 'provider_context',
+                                 'snapshot')
     event_scan = elasticsearch.helpers.scan(es, index='cloudify_events')
 
-    with open(path.join(tempdir, ELASTICSEARCH), 'w') as f:
+    with open(path.join(tempdir, _ELASTICSEARCH), 'w') as f:
         for item in chain(storage_scan, event_scan):
             f.write(json.dumps(item) + '\n')
 
-    # influxdb
-    influxdb_file = path.join(tempdir, INFLUXDB)
+
+def _dump_influxdb(tempdir):
+    influxdb_file = path.join(tempdir, _INFLUXDB)
     influxdb_temp_file = influxdb_file + '.temp'
-    call(INFLUXDB_DUMP_CMD.format(influxdb_temp_file), shell=True)
+    call(_INFLUXDB_DUMP_CMD.format(influxdb_temp_file), shell=True)
     with open(influxdb_temp_file, 'r') as f, open(influxdb_file, 'w') as g:
-        for obj in get_json_objects(f):
+        for obj in _get_json_objects(f):
             g.write(obj + '\n')
 
     remove(influxdb_temp_file)
 
-    # credentials
-    archive_cred_path = path.join(tempdir, CRED_DIR)
+
+def _dump_credentials(tempdir, es):
+    archive_cred_path = path.join(tempdir, _CRED_DIR)
     makedirs(archive_cred_path)
 
     node_scan = elasticsearch.helpers.scan(es, index='cloudify_storage',
@@ -148,11 +138,39 @@ def create(ctx, snapshot_id, config, **kw):
             agent_key_path = props['cloudify_agent']['key']
             makedirs(path.join(archive_cred_path, node_id))
             shutil.copy(path.expanduser(agent_key_path),
-                        path.join(archive_cred_path, node_id, CRED_KEY_NAME))
+                        path.join(archive_cred_path, node_id,
+                                  _CRED_KEY_NAME))
+
+
+@system_wide_workflow
+def create(ctx, snapshot_id, include_metrics, include_credentials,
+           config, **kw):
+    config = _DictToAttributes(config)
+    tempdir = tempfile.mkdtemp('-snapshot-data')
+
+    snapshots_dir = path.join(
+        config.file_server_root,
+        config.file_server_uploaded_snapshots_folder
+    )
+
+    # files/dirs copy
+    _copy_data(tempdir, config)
+
+    # elasticsearch
+    es = _create_es_client(config)
+    _dump_elasticsearch(tempdir, es)
+
+    # influxdb
+    if include_metrics:
+        _dump_influxdb(tempdir)
+
+    # credentials
+    if include_credentials:
+        _dump_credentials(tempdir, es)
 
     # version
-    with open(path.join(tempdir, VERSION_FILE), 'w') as f:
-        f.write(VERSION)
+    with open(path.join(tempdir, _VERSION_FILE), 'w') as f:
+        f.write(_VERSION)
 
     # zip
     snapshot_dir = path.join(snapshots_dir, snapshot_id)
@@ -168,14 +186,7 @@ def create(ctx, snapshot_id, config, **kw):
     shutil.rmtree(tempdir)
 
 
-def restore_snapshot_format_3_3(ctx, config, tempdir):
-
-    # files/dirs copy
-    copy_data(tempdir, config, to_archive=False)
-
-    # elasticsearch
-    es = _create_es_client(config)
-
+def _restore_elasticsearch_3_3(ctx, tempdir, es):
     ctx.send_event('Deleting all ElasticSearch data')
     elasticsearch.helpers.bulk(
         es,
@@ -183,21 +194,25 @@ def restore_snapshot_format_3_3(ctx, config, tempdir):
     es.indices.flush()
 
     def es_data_itr():
-        for line in open(path.join(tempdir, ELASTICSEARCH), 'r'):
+        for line in open(path.join(tempdir, _ELASTICSEARCH), 'r'):
             yield json.loads(line)
 
     ctx.send_event('Restoring ElasticSearch data')
     elasticsearch.helpers.bulk(es, es_data_itr())
     es.indices.flush()
 
-    # influxdb
-    ctx.send_event('Restoring InfluxDB metrics')
-    call(INFLUXDB_RESTORE_CMD.format(path.join(tempdir, INFLUXDB)), shell=True)
 
-    # credentials
+def _restore_influxdb_3_3(ctx, tempdir):
+    ctx.send_event('Restoring InfluxDB metrics')
+    influxdb_file = path.join(tempdir, _INFLUXDB)
+    if path.exists(influxdb_file):
+        call(_INFLUXDB_RESTORE_CMD.format(influxdb_file), shell=True)
+
+
+def _restore_credentials_3_3(ctx, tempdir, file_server_root, es):
     ctx.send_event('Restoring credentials')
-    archive_cred_path = path.join(tempdir, CRED_DIR)
-    cred_path = path.join(config.file_server_root, CRED_DIR)
+    archive_cred_path = path.join(tempdir, _CRED_DIR)
+    cred_path = path.join(file_server_root, _CRED_DIR)
 
     # in case when this is not first restore action
     if path.exists(cred_path):
@@ -209,8 +224,8 @@ def restore_snapshot_format_3_3(ctx, config, tempdir):
     if path.exists(archive_cred_path):
         for node_id in listdir(archive_cred_path):
             makedirs(path.join(cred_path, node_id))
-            agent_key_path = path.join(cred_path, node_id, CRED_KEY_NAME)
-            shutil.copy(path.join(archive_cred_path, node_id, CRED_KEY_NAME),
+            agent_key_path = path.join(cred_path, node_id, _CRED_KEY_NAME)
+            shutil.copy(path.join(archive_cred_path, node_id, _CRED_KEY_NAME),
                         agent_key_path)
 
             update_action = {
@@ -231,17 +246,33 @@ def restore_snapshot_format_3_3(ctx, config, tempdir):
 
     elasticsearch.helpers.bulk(es, update_actions)
 
+
+def _restore_snapshot_format_3_3(ctx, config, tempdir):
+
+    # files/dirs copy
+    _copy_data(tempdir, config, to_archive=False)
+
+    # elasticsearch
+    es = _create_es_client(config)
+    _restore_elasticsearch_3_3(ctx, tempdir, es)
+
+    # influxdb
+    _restore_influxdb_3_3(ctx, tempdir)
+
+    # credentials
+    _restore_credentials_3_3(ctx, tempdir, config.file_server_root, es)
+
     # end
 
 
 @system_wide_workflow
 def restore(ctx, snapshot_id, config, **kwargs):
     mappings = {
-        '3.3': restore_snapshot_format_3_3,
-        '3.2': restore_snapshot_format_3_3
+        '3.3': _restore_snapshot_format_3_3,
+        '3.2': _restore_snapshot_format_3_3
     }
 
-    config = DictToAttributes(config)
+    config = _DictToAttributes(config)
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
     try:
@@ -257,7 +288,7 @@ def restore(ctx, snapshot_id, config, **kwargs):
         with zipfile.ZipFile(snapshot_path, 'r') as zipf:
             zipf.extractall(tempdir)
 
-        with open(path.join(tempdir, VERSION_FILE), 'r') as f:
+        with open(path.join(tempdir, _VERSION_FILE), 'r') as f:
             from_version = f.read()
 
         if from_version not in mappings:
