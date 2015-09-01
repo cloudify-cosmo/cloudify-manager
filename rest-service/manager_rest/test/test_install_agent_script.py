@@ -63,7 +63,7 @@ class InstallAgentScriptTest(unittest.TestCase):
             f.write(json.dumps(agent))
         module = self.import_install_module({})
         new_agent = module.prepare_cloudify_agent(config)
-        print str(new_agent)
+        self.assertIn('package_url', new_agent)
 
     def tearDown(self):
         shutil.rmtree(self.dest_path)
