@@ -113,6 +113,7 @@ class FileStorageManager(object):
                     DEPLOYMENT_MODIFICATIONS].iteritems()}
             json.dump(serialized_data, f)
 
+    # todo(adaml): who's calling this function?
     def node_instances_list(self, **_):
         data = self._load_data()
         return data[NODE_INSTANCES].values()
@@ -124,22 +125,13 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Node {0} not found".format(node_id))
 
-    def get_node_instances(self, deployment_id, node_id=None, **_):
-        instances = [
-            x for x in self._load_data()[NODE_INSTANCES].values()
-            if not deployment_id or x.deployment_id == deployment_id]
-        instances = [
-            x for x in instances
-            if not node_id or x.node_id == node_id
-        ]
-        return instances
+    def get_node_instances(self, filters=None, **_):
+        instances = self._load_data()[NODE_INSTANCES].values()
+        return self.filter_data(instances, filters)
 
-    def get_nodes(self, deployment_id=None, **_):
-        nodes = [
-            x for x in self._load_data()[NODES].values()
-            if deployment_id is None or x.deployment_id == deployment_id
-        ]
-        return nodes
+    def get_nodes(self, filters=None, **_):
+        nodes = self._load_data()[NODES].values()
+        return self.filter_data(nodes, filters)
 
     def get_node(self, deployment_id, node_id, **_):
         data = self._load_data()
@@ -213,25 +205,35 @@ class FileStorageManager(object):
         data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 
-    def blueprints_list(self, **_):
-        data = self._load_data()
-        return data[BLUEPRINTS].values()
+    def blueprints_list(self, filters=None, **_):
+        blueprints = self._load_data()[BLUEPRINTS].values()
+        return self.filter_data(blueprints, filters)
 
-    def deployments_list(self, **_):
-        data = self._load_data()
-        return data[DEPLOYMENTS].values()
+    @staticmethod
+    def filter_data(items_lst, filters=None):
+        result = []
+        if filters:
+            for item in items_lst:
+                for key, val in filters.iteritems():
+                    # filter keys have already been verified
+                    if getattr(item, key) != val:
+                        break
+                else:
+                    result.append(item)
+        else:
+            result = items_lst
+        return result
 
-    def executions_list(self, deployment_id=None, **_):
+    def deployments_list(self, filters=None, **_):
+        deployments = self._load_data()[DEPLOYMENTS].values()
+        return self.filter_data(deployments, filters)
+
+    def executions_list(self, filters=None, **_):
         executions = self._load_data()[EXECUTIONS].values()
-        if deployment_id:
-            executions = [
-                e for e in executions if e.deployment_id == deployment_id]
-        return executions
+        return self.filter_data(executions, filters)
 
     def get_blueprint_deployments(self, blueprint_id, **_):
-        deployments = self.deployments_list()
-        return [deployment for deployment in deployments
-                if deployment.blueprint_id == blueprint_id]
+        return self.deployments_list(filters={'blueprint_id': blueprint_id})
 
     def get_blueprint(self, blueprint_id, include=None):
         data = self._load_data()
@@ -383,11 +385,9 @@ class FileStorageManager(object):
             updated_modification.node_instances = modification.node_instances
         self._dump_data(data)
 
-    def deployment_modifications_list(self, deployment_id=None, include=None):
-        return [
-            x for x in self._load_data()[DEPLOYMENT_MODIFICATIONS].values()
-            if deployment_id is None or x.deployment_id == deployment_id
-        ]
+    def deployment_modifications_list(self, include=None, filters=None):
+        modifications = self._load_data()[DEPLOYMENT_MODIFICATIONS].values()
+        return self.filter_data(modifications, filters)
 
 
 def create():

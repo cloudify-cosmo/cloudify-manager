@@ -78,13 +78,13 @@ class ModifyTests(BaseServerTestCase):
         mock_context = {'some': 'data'}
 
         node1_instance = self.client.node_instances.list(
-            deployment_id=deployment.id, node_name='node1')[0]
+            deployment_id=deployment.id, node_id='node1')[0]
         self.client.node_instances.update(
             node1_instance.id,
             runtime_properties={'test': 'before_start'},
             version=0)
         node2_instance = self.client.node_instances.list(
-            deployment_id=deployment.id, node_name='node2')[0]
+            deployment_id=deployment.id, node_id='node2')[0]
         self.client.node_instances.update(
             node2_instance.id,
             runtime_properties={'test': 'before_start'},
