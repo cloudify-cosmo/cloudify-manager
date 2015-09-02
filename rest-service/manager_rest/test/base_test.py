@@ -213,10 +213,10 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_path = self.rest_service_log
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 20
-        test_config.securest_log_level = 'DEBUG'
-        test_config.securest_log_file = self.securest_log_file
-        test_config.securest_log_file_size_MB = 100
-        test_config.securest_log_files_backup_count = 20
+        test_config.security_audit_log_level = 'DEBUG'
+        test_config.security_audit_log_file = self.securest_log_file
+        test_config.security_audit_log_file_size_MB = 100
+        test_config.security_audit_log_files_backup_count = 20
         return test_config
 
     def post(self, resource_path, data, query_params=None):
