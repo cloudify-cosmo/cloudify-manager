@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import os
+import platform
 import shlex
 import shutil
 import subprocess
@@ -168,6 +169,7 @@ def _parser():
     parser.add_argument('--operation')
     parser.add_argument('--config')
     parser.add_argument('--dryrun', action='store_true', default=False)
+    parser.add_argument('--ignore-result', action='store_true', default=False)
     return parser
 
 
@@ -181,12 +183,32 @@ def _parse_args(parser, args):
     return result
 
 
-def _prepare_cloudify_agent(path):
+def _set_package_url(agent):
+    file_server = agent['manager_file_server_url']
+    if agent['windows']:
+        agent_file = 'cloudify-windows-agent.exe'
+    else:
+        distro, _, distro_codename = platform.dist()
+        agent['distro'] = distro.lower()
+        agent['distro_codename'] = distro_codename.lower()
+        agent_file = '{0}-{1}-agent.tar.gz'.format(
+            agent['distro'],
+            agent['distro_codename'])
+    agent['package_url'] = '{0}/packages/agents/{1}'.format(
+        file_server,
+        agent_file)
+
+
+def prepare_cloudify_agent(path):
     if path:
         with open(path) as f:
-            return json.load(f)
+            agent = json.load(f)
     else:
-        return get_cloudify_agent()
+        agent = get_cloudify_agent()
+    agent['windows'] = os.system == 'nt'
+    if 'package_url' not in agent:
+        _set_package_url(agent)
+    return agent
 
 
 def _setup_logger(name):
@@ -216,10 +238,15 @@ def _perform_operation(operation, installer):
         installer.run_daemon_command(operation)
 
 
+def _return(value):
+    from cloudify import ctx
+    ctx.returns(value)
+
+
 def _main(args):
     parser = _parser()
     command = _parse_args(parser, args[1:])
-    cloudify_agent = _prepare_cloudify_agent(command.config)
+    cloudify_agent = prepare_cloudify_agent(command.config)
     logger = _setup_logger('installer')
     runner = _prepare_runner(logger)
     installer = Installer(logger, runner, cloudify_agent)
@@ -229,6 +256,8 @@ def _main(args):
         logger.info(str(cloudify_agent))
     else:
         _perform_operation(command.operation, installer)
+    if not command.ignore_result:
+        _return(cloudify_agent)
 
 
 if __name__ == '__main__':

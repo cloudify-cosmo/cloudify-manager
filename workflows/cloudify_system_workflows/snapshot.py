@@ -11,9 +11,12 @@ import elasticsearch
 import elasticsearch.helpers
 
 from cloudify.decorators import system_wide_workflow
+from cloudify.manager import get_rest_client
+
 
 _VERSION = '3.3'
 _VERSION_FILE = 'version'
+_AGENTS_FILE = 'agents.json'
 _ELASTICSEARCH = 'es_data'
 _CRED_DIR = 'credentials'
 _CRED_KEY_NAME = 'agent_key'
@@ -186,7 +189,34 @@ def create(ctx, snapshot_id, include_metrics, include_credentials,
     shutil.rmtree(tempdir)
 
 
-def _restore_elasticsearch_3_3(ctx, tempdir, es):
+def _update_es_node(es_node):
+    if es_node['_type'] == 'deployment':
+        workflows = es_node['_source']['workflows']
+        if 'install_new_agents' not in workflows:
+            workflows['install_new_agents'] = {
+                'operation': 'cloudify.plugins.workflows.install_new_agents',
+                'parameters': {},
+                'plugin': 'default_workflows'
+            }
+    if es_node['_type'] == 'node':
+        source = es_node['_source']
+        type_hierarchy = source.get('type_hierarchy', [])
+        if 'cloudify.nodes.Compute' in type_hierarchy:
+            operations = source['operations']
+            op_name = 'cloudify.interfaces.cloudify_agent.create_amqp'
+            if op_name not in operations:
+                operations[op_name] = {
+                    'inputs': {},
+                    'has_intrinsic_functions': False,
+                    'plugin': 'agent',
+                    'retry_interval': None,
+                    'max_retries': None,
+                    'executor': 'central_deployment_agent',
+                    'operation': 'cloudify_agent.operations.create_agent_amqp'
+                }
+
+
+def _restore_elasticsearch(ctx, tempdir, es):
     ctx.send_event('Deleting all ElasticSearch data')
     elasticsearch.helpers.bulk(
         es,
@@ -195,7 +225,9 @@ def _restore_elasticsearch_3_3(ctx, tempdir, es):
 
     def es_data_itr():
         for line in open(path.join(tempdir, _ELASTICSEARCH), 'r'):
-            yield json.loads(line)
+            elem = json.loads(line)
+            _update_es_node(elem)
+            yield elem
 
     ctx.send_event('Restoring ElasticSearch data')
     elasticsearch.helpers.bulk(es, es_data_itr())
@@ -247,14 +279,13 @@ def _restore_credentials_3_3(ctx, tempdir, file_server_root, es):
     elasticsearch.helpers.bulk(es, update_actions)
 
 
-def _restore_snapshot_format_3_3(ctx, config, tempdir):
-
+def _restore_snapshot(ctx, config, tempdir):
     # files/dirs copy
     _copy_data(tempdir, config, to_archive=False)
 
     # elasticsearch
     es = _create_es_client(config)
-    _restore_elasticsearch_3_3(ctx, tempdir, es)
+    _restore_elasticsearch(ctx, tempdir, es)
 
     # influxdb
     _restore_influxdb_3_3(ctx, tempdir)
@@ -262,14 +293,42 @@ def _restore_snapshot_format_3_3(ctx, config, tempdir):
     # credentials
     _restore_credentials_3_3(ctx, tempdir, config.file_server_root, es)
 
+    es.indices.flush()
     # end
+
+
+def _restore_snapshot_format_3_3(ctx, config, tempdir):
+    _restore_snapshot(ctx, config, tempdir)
+
+
+# In 3.3 cloudify_agent dict was added to node instances runtime properties.
+# This code is used to fill those dicts when migrating from 3.2.
+def insert_agents_data(client, agents):
+    for nodes in agents.values():
+        for node_instances in nodes.values():
+            for node_instance_id, agent in node_instances.iteritems():
+                node_instance = client.node_instances.get(node_instance_id)
+                runtime_properties = node_instance.runtime_properties
+                runtime_properties['cloudify_agent'] = agent
+                client.node_instances.update(
+                    node_instance_id=node_instance_id,
+                    runtime_properties=runtime_properties)
+
+
+def _restore_snapshot_format_3_2(ctx, config, tempdir):
+    _restore_snapshot(ctx, config, tempdir)
+    ctx.send_event('Updating cloudify agent data')
+    client = get_rest_client()
+    with open(path.join(tempdir, _AGENTS_FILE)) as agents_file:
+        agents = json.load(agents_file)
+    insert_agents_data(client, agents)
 
 
 @system_wide_workflow
 def restore(ctx, snapshot_id, config, **kwargs):
     mappings = {
         '3.3': _restore_snapshot_format_3_3,
-        '3.2': _restore_snapshot_format_3_3
+        '3.2': _restore_snapshot_format_3_2
     }
 
     config = _DictToAttributes(config)
