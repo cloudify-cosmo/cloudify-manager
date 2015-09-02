@@ -18,15 +18,15 @@ import json
 import tempfile
 import shutil
 import zipfile
-
-from itertools import chain
-from os import (path, makedirs, remove, listdir)
-from subprocess import call
+import itertools
+import os
+import subprocess
 
 import elasticsearch
 import elasticsearch.helpers
 
 from cloudify.decorators import system_wide_workflow
+from cloudify.exceptions import NonRecoverableError
 from cloudify.manager import get_rest_client
 from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
@@ -90,19 +90,19 @@ def _copy_data(archive_root, config, to_archive=True):
     # files with constant relative/absolute paths
     for (p1, p2) in DATA_TO_COPY:
         if p1[0] != '/':
-            p1 = path.join(config.file_server_root, p1)
+            p1 = os.path.join(config.file_server_root, p1)
         if p2[0] != '/':
-            p2 = path.join(archive_root, p2)
+            p2 = os.path.join(archive_root, p2)
         if not to_archive:
             p1, p2 = p2, p1
 
-        if not path.exists(p1):
+        if not os.path.exists(p1):
             continue
 
-        if path.isfile(p1):
+        if os.path.isfile(p1):
             shutil.copy(p1, p2)
         else:
-            if path.exists(p2):
+            if os.path.exists(p2):
                 shutil.rmtree(p2, ignore_errors=True)
             shutil.copytree(p1, p2)
 
@@ -128,7 +128,7 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
             create_envs_params, **kw):
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
-    snapshots_dir = path.join(
+    snapshots_dir = os.path.join(
         config.file_server_root,
         config.file_server_uploaded_snapshots_folder
     )
@@ -149,18 +149,18 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
         _dump_credentials(tempdir, es)
 
     # version
-    with open(path.join(tempdir, _VERSION_FILE), 'w') as f:
+    with open(os.path.join(tempdir, _VERSION_FILE), 'w') as f:
         f.write(_VERSION)
 
-    with open(path.join(tempdir, _CREATE_ENVS_PARAMS_FILE), 'w') as f:
+    with open(os.path.join(tempdir, _CREATE_ENVS_PARAMS_FILE), 'w') as f:
         json.dump(create_envs_params, f)
 
     # zip
-    snapshot_dir = path.join(snapshots_dir, snapshot_id)
-    makedirs(snapshot_dir)
+    snapshot_dir = os.path.join(snapshots_dir, snapshot_id)
+    os.makedirs(snapshot_dir)
 
     shutil.make_archive(
-        path.join(snapshot_dir, snapshot_id),
+        os.path.join(snapshot_dir, snapshot_id),
         'zip',
         tempdir
     )
@@ -188,25 +188,25 @@ def _dump_elasticsearch(tempdir, es):
                                  'snapshot')
     event_scan = elasticsearch.helpers.scan(es, index='cloudify_events')
 
-    with open(path.join(tempdir, _ELASTICSEARCH), 'w') as f:
-        for item in chain(storage_scan, event_scan):
+    with open(os.path.join(tempdir, _ELASTICSEARCH), 'w') as f:
+        for item in itertools.chain(storage_scan, event_scan):
             f.write(json.dumps(item) + '\n')
 
 
 def _dump_influxdb(tempdir):
-    influxdb_file = path.join(tempdir, _INFLUXDB)
+    influxdb_file = os.path.join(tempdir, _INFLUXDB)
     influxdb_temp_file = influxdb_file + '.temp'
-    call(_INFLUXDB_DUMP_CMD.format(influxdb_temp_file), shell=True)
+    subprocess.call(_INFLUXDB_DUMP_CMD.format(influxdb_temp_file), shell=True)
     with open(influxdb_temp_file, 'r') as f, open(influxdb_file, 'w') as g:
         for obj in _get_json_objects(f):
             g.write(obj + '\n')
 
-    remove(influxdb_temp_file)
+    os.remove(influxdb_temp_file)
 
 
 def _dump_credentials(tempdir, es):
-    archive_cred_path = path.join(tempdir, _CRED_DIR)
-    makedirs(archive_cred_path)
+    archive_cred_path = os.path.join(tempdir, _CRED_DIR)
+    os.makedirs(archive_cred_path)
 
     node_scan = elasticsearch.helpers.scan(es, index='cloudify_storage',
                                            doc_type='node')
@@ -215,10 +215,10 @@ def _dump_credentials(tempdir, es):
         if 'cloudify_agent' in props and 'key' in props['cloudify_agent']:
             node_id = n['_id']
             agent_key_path = props['cloudify_agent']['key']
-            makedirs(path.join(archive_cred_path, node_id))
-            shutil.copy(path.expanduser(agent_key_path),
-                        path.join(archive_cred_path, node_id,
-                                  _CRED_KEY_NAME))
+            os.makedirs(os.path.join(archive_cred_path, node_id))
+            shutil.copy(os.path.expanduser(agent_key_path),
+                        os.path.join(archive_cred_path, node_id,
+                                     _CRED_KEY_NAME))
 
 
 def _update_es_node(es_node):
@@ -256,7 +256,7 @@ def _restore_elasticsearch(ctx, tempdir, es):
     es.indices.flush()
 
     def es_data_itr():
-        for line in open(path.join(tempdir, _ELASTICSEARCH), 'r'):
+        for line in open(os.path.join(tempdir, _ELASTICSEARCH), 'r'):
             elem = json.loads(line)
             _update_es_node(elem)
             yield elem
@@ -268,29 +268,29 @@ def _restore_elasticsearch(ctx, tempdir, es):
 
 def _restore_influxdb_3_3(ctx, tempdir):
     ctx.send_event('Restoring InfluxDB metrics')
-    influxdb_file = path.join(tempdir, _INFLUXDB)
-    if path.exists(influxdb_file):
-        call(_INFLUXDB_RESTORE_CMD.format(influxdb_file), shell=True)
+    influxdb_f = os.path.join(tempdir, _INFLUXDB)
+    if os.path.exists(influxdb_f):
+        subprocess.call(_INFLUXDB_RESTORE_CMD.format(influxdb_f), shell=True)
 
 
 def _restore_credentials_3_3(ctx, tempdir, file_server_root, es):
     ctx.send_event('Restoring credentials')
-    archive_cred_path = path.join(tempdir, _CRED_DIR)
-    cred_path = path.join(file_server_root, _CRED_DIR)
+    archive_cred_path = os.path.join(tempdir, _CRED_DIR)
+    cred_path = os.path.join(file_server_root, _CRED_DIR)
 
     # in case when this is not first restore action
-    if path.exists(cred_path):
+    if os.path.exists(cred_path):
         shutil.rmtree(cred_path)
 
-    makedirs(cred_path)
+    os.makedirs(cred_path)
 
     update_actions = []
-    if path.exists(archive_cred_path):
-        for node_id in listdir(archive_cred_path):
-            makedirs(path.join(cred_path, node_id))
-            agent_key_path = path.join(cred_path, node_id, _CRED_KEY_NAME)
-            shutil.copy(path.join(archive_cred_path, node_id, _CRED_KEY_NAME),
-                        agent_key_path)
+    if os.path.exists(archive_cred_path):
+        for node_id in os.listdir(archive_cred_path):
+            os.makedirs(os.path.join(cred_path, node_id))
+            agent_key_path = os.path.join(cred_path, node_id, _CRED_KEY_NAME)
+            shutil.copy(os.path.join(archive_cred_path, node_id,
+                        _CRED_KEY_NAME), agent_key_path)
 
             update_action = {
                 '_op_type': 'update',
@@ -351,7 +351,7 @@ def _restore_snapshot_format_3_2(ctx, config, tempdir):
     _restore_snapshot(ctx, config, tempdir)
     ctx.send_event('Updating cloudify agent data')
     client = get_rest_client()
-    with open(path.join(tempdir, _AGENTS_FILE)) as agents_file:
+    with open(os.path.join(tempdir, _AGENTS_FILE)) as agents_file:
         agents = json.load(agents_file)
     insert_agents_data(client, agents)
 
@@ -368,36 +368,35 @@ def restore(ctx, snapshot_id, config, **kwargs):
 
     try:
         file_server_root = config.file_server_root
-        snapshots_dir = path.join(
+        snapshots_dir = os.path.join(
             file_server_root,
             config.file_server_uploaded_snapshots_folder
         )
 
-        snapshot_path = path.join(snapshots_dir, snapshot_id, '{0}.zip'
-                                  .format(snapshot_id))
+        snapshot_path = os.path.join(snapshots_dir, snapshot_id, '{0}.zip'
+                                     .format(snapshot_id))
 
         with zipfile.ZipFile(snapshot_path, 'r') as zipf:
             zipf.extractall(tempdir)
 
-        with open(path.join(tempdir, _VERSION_FILE), 'r') as f:
+        with open(os.path.join(tempdir, _VERSION_FILE), 'r') as f:
             from_version = f.read()
 
         if from_version not in mappings:
-            raise RuntimeError('Manager is not able to restore snapshot'
-                               ' of manager {0}'.format(from_version))
+            raise NonRecoverableError('Manager is not able to restore snapshot'
+                                      ' of manager {0}'.format(from_version))
 
         ctx.send_event('Starting restoring snapshot of manager {0}'
                        .format(from_version))
         mappings[from_version](ctx, config, tempdir)
-        create_envs_params_file = path.join(tempdir, _CREATE_ENVS_PARAMS_FILE)
-        if path.exists(create_envs_params_file):
-            with open(create_envs_params_file, 'r') as f:
+        create_envs_params_f = os.path.join(tempdir, _CREATE_ENVS_PARAMS_FILE)
+        if os.path.exists(create_envs_params_f):
+            with open(create_envs_params_f, 'r') as f:
                 create_envs_params = json.load(f)
         else:
             create_envs_params = {}
 
         ctx.load_deployment_contexts()
-        rest_client = get_rest_client()
         for dep_id, dep_ctx in ctx.deployment_contexts.iteritems():
             tasks_graph = generate_create_dep_tasks_graph(
                 dep_ctx,
