@@ -243,7 +243,7 @@ def load_configuration():
     def load_config(env_var_name):
         if env_var_name in os.environ:
             with open(os.environ[env_var_name]) as f:
-                yaml_conf = yaml.load(f.read())
+                yaml_conf = yaml.safe_load(f.read())
             for key, value in yaml_conf.iteritems():
                 if hasattr(obj_conf, key):
                     setattr(obj_conf, key, value)
