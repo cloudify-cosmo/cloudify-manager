@@ -27,9 +27,7 @@ WORKFLOWS_WORKER_PAYLOAD = {
 }
 
 
-@workflow
-def create(ctx, **kwargs):
-
+def generate_create_dep_tasks_graph(ctx, **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
@@ -121,12 +119,17 @@ def create(ctx, **kwargs):
         ctx.execute_task('riemann_controller.tasks.create',
                          kwargs=kwargs.get('policy_configuration', {})))
 
+    return graph
+
+
+@workflow
+def create(ctx, **kwargs):
+    graph = generate_create_dep_tasks_graph(ctx, **kwargs)
     return graph.execute()
 
 
 @workflow
 def delete(ctx, **kwargs):
-
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 

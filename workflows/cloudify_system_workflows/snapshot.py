@@ -12,11 +12,14 @@ import elasticsearch.helpers
 
 from cloudify.decorators import system_wide_workflow
 from cloudify.manager import get_rest_client
+from cloudify_system_workflows.deployment_environment import \
+    generate_create_dep_tasks_graph
 
 
 _VERSION = '3.3'
 _VERSION_FILE = 'version'
 _AGENTS_FILE = 'agents.json'
+_CREATE_ENVS_PARAMS_FILE = 'create_envs_params'
 _ELASTICSEARCH = 'es_data'
 _CRED_DIR = 'credentials'
 _CRED_KEY_NAME = 'agent_key'
@@ -105,6 +108,63 @@ def _clean_up_db_before_restore(es_client, wf_exec_id):
             yield doc
 
 
+def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
+            create_envs_params, **kw):
+    tempdir = tempfile.mkdtemp('-snapshot-data')
+
+    snapshots_dir = path.join(
+        config.file_server_root,
+        config.file_server_uploaded_snapshots_folder
+    )
+
+    # files/dirs copy
+    _copy_data(tempdir, config)
+
+    # elasticsearch
+    es = _create_es_client(config)
+    _dump_elasticsearch(tempdir, es)
+
+    # influxdb
+    if include_metrics:
+        _dump_influxdb(tempdir)
+
+    # credentials
+    if include_credentials:
+        _dump_credentials(tempdir, es)
+
+    # version
+    with open(path.join(tempdir, _VERSION_FILE), 'w') as f:
+        f.write(_VERSION)
+
+    with open(path.join(tempdir, _CREATE_ENVS_PARAMS_FILE), 'w') as f:
+        json.dump(create_envs_params, f)
+
+    # zip
+    snapshot_dir = path.join(snapshots_dir, snapshot_id)
+    makedirs(snapshot_dir)
+
+    shutil.make_archive(
+        path.join(snapshot_dir, snapshot_id),
+        'zip',
+        tempdir
+    )
+
+    # end
+    shutil.rmtree(tempdir)
+
+
+@system_wide_workflow
+def create(ctx, snapshot_id, config, **kwargs):
+    update_status = get_rest_client().snapshots.update_status
+    config = _DictToAttributes(config)
+    try:
+        _create(ctx, snapshot_id, config, **kwargs)
+        update_status(snapshot_id, config.created_status)
+    except BaseException, e:
+        update_status(snapshot_id, config.failed_status, str(e))
+        raise
+
+
 def _dump_elasticsearch(tempdir, es):
     storage_scan = elasticsearch.helpers.scan(es, index='cloudify_storage')
     storage_scan = _except_types(storage_scan,
@@ -143,50 +203,6 @@ def _dump_credentials(tempdir, es):
             shutil.copy(path.expanduser(agent_key_path),
                         path.join(archive_cred_path, node_id,
                                   _CRED_KEY_NAME))
-
-
-@system_wide_workflow
-def create(ctx, snapshot_id, include_metrics, include_credentials,
-           config, **kw):
-    config = _DictToAttributes(config)
-    tempdir = tempfile.mkdtemp('-snapshot-data')
-
-    snapshots_dir = path.join(
-        config.file_server_root,
-        config.file_server_uploaded_snapshots_folder
-    )
-
-    # files/dirs copy
-    _copy_data(tempdir, config)
-
-    # elasticsearch
-    es = _create_es_client(config)
-    _dump_elasticsearch(tempdir, es)
-
-    # influxdb
-    if include_metrics:
-        _dump_influxdb(tempdir)
-
-    # credentials
-    if include_credentials:
-        _dump_credentials(tempdir, es)
-
-    # version
-    with open(path.join(tempdir, _VERSION_FILE), 'w') as f:
-        f.write(_VERSION)
-
-    # zip
-    snapshot_dir = path.join(snapshots_dir, snapshot_id)
-    makedirs(snapshot_dir)
-
-    shutil.make_archive(
-        path.join(snapshot_dir, snapshot_id),
-        'zip',
-        tempdir
-    )
-
-    # end
-    shutil.rmtree(tempdir)
 
 
 def _update_es_node(es_node):
@@ -357,8 +373,30 @@ def restore(ctx, snapshot_id, config, **kwargs):
         ctx.send_event('Starting restoring snapshot of manager {0}'
                        .format(from_version))
         mappings[from_version](ctx, config, tempdir)
+        create_envs_params_file = path.join(tempdir, _CREATE_ENVS_PARAMS_FILE)
+        if path.exists(create_envs_params_file):
+            with open(create_envs_params_file, 'r') as f:
+                create_envs_params = json.load(f)
+        else:
+            create_envs_params = {}
+
+        ctx.load_deployment_contexts()
+        rest_client = get_rest_client()
+        for dep_id, dep_ctx in ctx.deployment_contexts.iteritems():
+            tasks_graph = generate_create_dep_tasks_graph(
+                dep_ctx,
+                **create_envs_params[dep_id]
+            )
+            try:
+                dep_ctx.internal.start_local_tasks_processing()
+                dep_ctx.internal.start_event_monitor()
+                tasks_graph.execute()
+            finally:
+                dep_ctx.internal.stop_local_tasks_processing()
+                dep_ctx.internal.stop_event_monitor()
+            ctx.send_event('Successfully created {0}\'s deployment environment'
+                           .format(dep_id))
         ctx.send_event('Successfully restored snapshot of manager {0}'
                        .format(from_version))
-
     finally:
         shutil.rmtree(tempdir)

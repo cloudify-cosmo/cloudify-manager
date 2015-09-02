@@ -20,10 +20,8 @@ from StringIO import StringIO
 
 from flask import g, current_app
 
-from dsl_parser import constants
+from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
-from dsl_parser import functions
-from dsl_parser import tasks
 from dsl_parser.import_resolver.default_import_resolver import \
     DefaultResolverValidationException, \
     DEFAULT_RESLOVER_RULES_KEY, \
@@ -33,8 +31,9 @@ from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
-from manager_rest.utils import maybe_register_teardown
-from manager_rest.utils import get_class_instance
+from manager_rest.utils import \
+    maybe_register_teardown, \
+    get_class_instance
 
 
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
@@ -124,7 +123,7 @@ class BlueprintsManager(object):
 
     def _get_conf_for_snapshots_wf(self):
         config_instance = config.instance()
-        return {
+        snapshots_conf = {
             attr: getattr(config_instance, attr) for attr in (
                 'file_server_root',
                 'file_server_uploaded_snapshots_folder',
@@ -134,9 +133,12 @@ class BlueprintsManager(object):
                 'db_port'
             )
         }
+        snapshots_conf['created_status'] = models.Snapshot.CREATED
+        snapshots_conf['failed_status'] = models.Snapshot.FAILED
+        return snapshots_conf
 
-    def create_snapshot_model(self, snapshot_id,
-                              status=models.Snapshot.CREATING):
+    def _create_snapshot_model(self, snapshot_id,
+                               status=models.Snapshot.CREATING):
         now = str(datetime.now())
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
@@ -150,7 +152,12 @@ class BlueprintsManager(object):
 
     def create_snapshot(self, snapshot_id,
                         include_metrics, include_credentials):
-        new_snapshot = self.create_snapshot_model(snapshot_id)
+        new_snapshot = self._create_snapshot_model(snapshot_id)
+        create_envs_params = {}
+        for dep in self.deployments_list():
+            bp = self.get_blueprint(dep.blueprint_id)
+            dep_plan = tasks.prepare_deployment_plan(bp.plan, dep.inputs)
+            create_envs_params[dep.id] = self._get_create_env_params(dep_plan)
         self._execute_system_workflow(
             wf_id='create_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.create',
@@ -158,15 +165,15 @@ class BlueprintsManager(object):
                 'snapshot_id': snapshot_id,
                 'include_metrics': include_metrics,
                 'include_credentials': include_credentials,
-                'config': self._get_conf_for_snapshots_wf()
+                'config': self._get_conf_for_snapshots_wf(),
+                'create_envs_params': create_envs_params
             }
-        ).get()
-        self.update_snapshot_status(snapshot_id, models.Snapshot.CREATED, '')
+        )
         return new_snapshot
 
     def restore_snapshot(self, snapshot_id):
         snapshot = self.get_snapshot(snapshot_id)
-        async_task = self._execute_system_workflow(
+        self._execute_system_workflow(
             wf_id='restore_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.restore',
             execution_parameters={
@@ -174,9 +181,6 @@ class BlueprintsManager(object):
                 'config': self._get_conf_for_snapshots_wf()
             }
         )
-        async_task.get()
-        # This should become part of the workflow..
-        self.recreate_deployments_enviroments()
         return snapshot
 
     def publish_blueprint(self, dsl_location,
@@ -850,28 +854,8 @@ class BlueprintsManager(object):
                 'Unexpected deployment status for deployment {0} '
                 '[status={1}]'.format(deployment_id, status))
 
-    # For restore snapshot purpose. To that moment elasticsearch has to be
-    # already restored.
-    def recreate_deployments_enviroments(self):
-        cr_dep_env_tasks = []
-        for dep in self.deployments_list():
-            blueprint = self.get_blueprint(dep.blueprint_id)
-            plan = blueprint.plan
-            deployment_plan = tasks.prepare_deployment_plan(plan,
-                                                            dep.inputs)
-
-            cr_dep_env_tasks.append(
-                self._create_deployment_environment(dep, deployment_plan)
-            )
-        for task in cr_dep_env_tasks:
-            task.get()
-
-    def _create_deployment_environment(self, deployment, deployment_plan):
-        wf_id = 'create_deployment_environment'
-        deployment_env_creation_task_name = \
-            'cloudify_system_workflows.deployment_environment.create'
-
-        execution_params = {
+    def _get_create_env_params(self, deployment_plan):
+        return {
             constants.DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
                 constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
             'workflow_plugins_to_install': deployment_plan[
@@ -883,11 +867,16 @@ class BlueprintsManager(object):
             },
         }
 
-        return self._execute_system_workflow(
+    def _create_deployment_environment(self, deployment, deployment_plan):
+        wf_id = 'create_deployment_environment'
+        deployment_env_creation_task_name = \
+            'cloudify_system_workflows.deployment_environment.create'
+
+        self._execute_system_workflow(
             wf_id=wf_id,
             task_mapping=deployment_env_creation_task_name,
             deployment=deployment,
-            execution_parameters=execution_params)
+            execution_parameters=self._get_create_env_params(deployment_plan))
 
     def _delete_deployment_environment(self, deployment_id):
         deployment = self.sm.get_deployment(deployment_id)
