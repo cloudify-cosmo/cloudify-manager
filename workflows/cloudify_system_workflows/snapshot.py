@@ -39,7 +39,7 @@ _CREATE_ENVS_PARAMS_FILE = 'create_envs_params'
 _ELASTICSEARCH = 'es_data'
 _CRED_DIR = 'credentials'
 _CRED_KEY_NAME = 'agent_key'
-_INFLUXDB = 'influxdb-data'
+_INFLUXDB = 'influxdb_data'
 _INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
                       '?u=root&p=root&chunked=true" --data-urlencode'
                       ' "q=select * from /.*/" > {0}')
