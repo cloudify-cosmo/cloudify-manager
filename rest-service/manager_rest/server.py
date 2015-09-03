@@ -30,9 +30,9 @@ from flask_restful import Api
 
 from flask_securest.rest_security import SecuREST
 
+from manager_rest import endpoint_mapper
 from manager_rest import config
 from manager_rest import storage_manager
-from manager_rest import resources
 from manager_rest import manager_exceptions
 from manager_rest import utils
 
@@ -89,7 +89,7 @@ def setup_app():
         flask_handle_user_exception,
         flask_restful_handle_user_exception)
 
-    resources.setup_resources(api)
+    endpoint_mapper.setup_resources(api)
     return app
 
 

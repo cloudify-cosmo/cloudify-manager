@@ -34,7 +34,7 @@ FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
-DEFAULT_API_VERSION = 'v2'
+LATEST_API_VERSION = 'v2'
 
 
 def build_query_string(query_params):
@@ -78,7 +78,7 @@ def inject_test_config(f):
 
 class MockHTTPClient(HTTPClient):
 
-    def __init__(self, app, api_version=DEFAULT_API_VERSION, headers=None):
+    def __init__(self, app, api_version=LATEST_API_VERSION, headers=None):
         super(MockHTTPClient, self).__init__(host='localhost',
                                              headers=headers,
                                              api_version=api_version)
@@ -129,13 +129,13 @@ class BaseServerTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(BaseServerTestCase, self).__init__(*args, **kwargs)
 
-    def create_client(self, api_version=DEFAULT_API_VERSION, headers=None):
+    def create_client(self, headers=None):
         client = CloudifyClient(host='localhost',
-                                api_version=api_version,
+                                api_version=self.api_version,
                                 headers=headers)
         mock_http_client = MockHTTPClient(self.app,
-                                          api_version=api_version,
-                                          headers=headers)
+                                          headers=headers,
+                                          api_version=self.api_version)
         client._client = mock_http_client
         client.blueprints.api = mock_http_client
         client.deployments.api = mock_http_client
@@ -150,7 +150,8 @@ class BaseServerTestCase(unittest.TestCase):
 
         return client
 
-    def setUp(self):
+    def setUp(self, api_version=LATEST_API_VERSION):
+        self.api_version = api_version
         self.tmpdir = tempfile.mkdtemp()
         self.rest_service_log = tempfile.mkstemp()[1]
         self.securest_log_file = tempfile.mkstemp()[1]
@@ -309,10 +310,9 @@ class BaseServerTestCase(unittest.TestCase):
     def put_blueprint_args(self, blueprint_file_name=None,
                            blueprint_id='blueprint',
                            archive_func=archiving.make_targzfile,
-                           blueprint_dir='mock_blueprint',
-                           api_version=DEFAULT_API_VERSION):
+                           blueprint_dir='mock_blueprint'):
 
-        resource_path = '/api/{0}/blueprints/{1}'.format(api_version,
+        resource_path = '/api/{0}/blueprints/{1}'.format(self.api_version,
                                                          blueprint_id)
         result = [
             resource_path,
@@ -333,7 +333,8 @@ class BaseServerTestCase(unittest.TestCase):
                        blueprint_id='blueprint',
                        inputs=None):
         blueprint_response = self.put_file(
-            *self.put_blueprint_args(blueprint_file_name, blueprint_id)).json
+            *self.put_blueprint_args(blueprint_file_name,
+                                     blueprint_id)).json
 
         if 'error_code' in blueprint_response:
             raise RuntimeError(

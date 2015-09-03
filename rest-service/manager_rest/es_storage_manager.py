@@ -139,26 +139,35 @@ class ESStorageManager(object):
         return model_class(**fields_data)
 
     @staticmethod
-    def _build_field_value_filter(key, val):
-        # This method is used to create a search filter to receive only
-        # results where a specific key holds a specific value.
-        # Filters are faster than queries as they are cached and don't
-        # influence the score.
-        # Since a filter must go along with a query, it's wrapped in a
-        # simple 'constant_score' query in this case (similar to match_all
-        # query in some ways)
-        return {
-            'query': {
-                'constant_score': {
-                    'filter': {
-                        'term': {
-                            key: val
+    def _build_filter_terms_query(filters=None):
+        """
+        This method is used to create a search filter to receive only results
+        where a specific key holds a specific value.
+        Filters are faster than queries as they are cached and don't
+        influence the score.
+        :param filters: a dictionary containing filters keys and their expected
+         value
+        :return: an elasticsearch query string containing the given filters
+        """
+        terms_lst = []
+        query = None
+        if filters:
+            for key, val in filters.iteritems():
+                terms_lst.append({'term': {key: val}})
+            query = {
+                'query': {
+                    'filtered': {
+                        'filter': {
+                            'bool': {
+                                'must':  terms_lst
+                            }
                         }
                     }
                 }
             }
-        }
+        return query
 
+    # todo(adaml): who uses this?
     def node_instances_list(self, include=None):
         search_result = self._connection.search(index=STORAGE_INDEX_NAME,
                                                 doc_type=NODE_INSTANCE_TYPE,
@@ -172,25 +181,30 @@ class ESStorageManager(object):
                 version=doc_with_version[1], **doc_with_version[0]),
             docs_with_versions)
 
-    def blueprints_list(self, include=None):
-        return self._list_docs(BLUEPRINT_TYPE, BlueprintState, fields=include)
+    def blueprints_list(self, include=None, filters=None):
+        return self._get_items_list(BLUEPRINT_TYPE,
+                                    BlueprintState,
+                                    filters=filters,
+                                    include=include)
 
-    def deployments_list(self, include=None):
-        return self._list_docs(DEPLOYMENT_TYPE, Deployment, fields=include)
+    def deployments_list(self, include=None, filters=None):
+        return self._get_items_list(DEPLOYMENT_TYPE,
+                                    Deployment,
+                                    filters=filters,
+                                    include=include)
 
-    def executions_list(self, deployment_id=None, include=None):
-        query = None
-        if deployment_id:
-            query = self._build_field_value_filter('deployment_id',
-                                                   deployment_id)
-        return self._list_docs(EXECUTION_TYPE, Execution,
-                               query=query, fields=include)
+    def executions_list(self, include=None, filters=None):
+        return self._get_items_list(EXECUTION_TYPE,
+                                    Execution,
+                                    filters=filters,
+                                    include=include)
 
     def get_blueprint_deployments(self, blueprint_id, include=None):
-        return self._list_docs(DEPLOYMENT_TYPE, Deployment,
-                               self._build_field_value_filter(
-                                   'blueprint_id', blueprint_id),
-                               fields=include)
+        deployment_filters = {'blueprint_id': blueprint_id}
+        return self._get_items_list(DEPLOYMENT_TYPE,
+                                    Deployment,
+                                    filters=deployment_filters,
+                                    include=include)
 
     def get_node_instance(self, node_instance_id, include=None):
         doc = self._get_doc(NODE_INSTANCE_TYPE,
@@ -207,26 +221,23 @@ class ESStorageManager(object):
                                              model_class=DeploymentNode,
                                              fields=include)
 
-    def get_node_instances(self, deployment_id, node_id=None, include=None):
-        query = None
-        if deployment_id or node_id:
-            terms = []
-            if deployment_id:
-                terms.append({'term': {'deployment_id': deployment_id}})
-            if node_id:
-                terms.append({'term': {'node_id': node_id}})
-            query = {'query': {'bool': {'must': terms}}}
-        return self._list_docs(NODE_INSTANCE_TYPE,
-                               DeploymentNodeInstance,
-                               query=query,
-                               fields=include)
+    def get_node_instances(self, include=None, filters=None):
+        return self._get_items_list(NODE_INSTANCE_TYPE,
+                                    DeploymentNodeInstance,
+                                    filters=filters,
+                                    include=include)
 
-    def get_nodes(self, deployment_id=None, include=None):
-        query = None
-        if deployment_id:
-            query = {'query': {'term': {'deployment_id': deployment_id}}}
-        return self._list_docs(NODE_TYPE,
-                               DeploymentNode,
+    def get_nodes(self, include=None, filters=None):
+        return self._get_items_list(NODE_TYPE,
+                                    DeploymentNode,
+                                    filters=filters,
+                                    include=include)
+
+    def _get_items_list(self, doc_type, model_class, include=None,
+                        filters=None):
+        query = self._build_filter_terms_query(filters=filters)
+        return self._list_docs(doc_type,
+                               model_class,
                                query=query,
                                fields=include)
 
@@ -306,7 +317,8 @@ class ESStorageManager(object):
                 'Provider Context not found')
 
     def delete_deployment(self, deployment_id):
-        query = {'query': {'term': {'deployment_id': deployment_id}}}
+        query = self._build_filter_terms_query(filters={'deployment_id':
+                                                        deployment_id})
         self._delete_doc_by_query(EXECUTION_TYPE, query)
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
         self._delete_doc_by_query(NODE_TYPE, query)
@@ -421,15 +433,11 @@ class ESStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 "Modification {0} not found".format(modification_id))
 
-    def deployment_modifications_list(self, deployment_id=None, include=None):
-        query = None
-        if deployment_id:
-            terms = [{'term': {'deployment_id': deployment_id}}]
-            query = {'query': {'bool': {'must': terms}}}
-        return self._list_docs(DEPLOYMENT_MODIFICATION_TYPE,
-                               DeploymentModification,
-                               query=query,
-                               fields=include)
+    def deployment_modifications_list(self, include=None, filters=None):
+        return self._get_items_list(DEPLOYMENT_MODIFICATION_TYPE,
+                                    DeploymentModification,
+                                    filters=filters,
+                                    include=include)
 
     @staticmethod
     def _storage_node_id(deployment_id, node_id):
