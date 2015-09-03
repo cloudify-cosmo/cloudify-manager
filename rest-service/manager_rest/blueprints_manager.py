@@ -856,14 +856,14 @@ class BlueprintsManager(object):
 
     def _get_create_env_params(self, deployment_plan):
         return {
-            constants.DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
+            'deployment_plugins_to_install': deployment_plan[
                 constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
             'workflow_plugins_to_install': deployment_plan[
-                'workflow_plugins_to_install'],
+                constants.WORKFLOW_PLUGINS_TO_INSTALL],
             'policy_configuration': {
-                'policy_types': deployment_plan['policy_types'],
-                'policy_triggers': deployment_plan['policy_triggers'],
-                'groups': deployment_plan['groups'],
+                'policy_types': deployment_plan[constants.POLICY_TYPES],
+                'policy_triggers': deployment_plan[constants.POLICY_TRIGGERS],
+                'groups': deployment_plan[constants.GROUPS],
             },
         }
 

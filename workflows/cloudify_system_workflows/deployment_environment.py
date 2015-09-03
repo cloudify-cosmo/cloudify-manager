@@ -27,21 +27,19 @@ WORKFLOWS_WORKER_PAYLOAD = {
 }
 
 
-def generate_create_dep_tasks_graph(ctx, **kwargs):
+def generate_create_dep_tasks_graph(ctx, deployment_plugins_to_install,
+                                    workflow_plugins_to_install,
+                                    policy_configuration=None):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
     is_transient_workers = _is_transient_deployment_workers_mode()
 
-    deployment_plugins = kwargs['deployment_plugins_to_install']
-
     deployment_plugins = filter(lambda plugin: plugin['install'],
-                                deployment_plugins)
-
-    workflow_plugins = kwargs['workflow_plugins_to_install']
+                                deployment_plugins_to_install)
 
     workflow_plugins = filter(lambda plugin: plugin['install'],
-                              workflow_plugins)
+                              workflow_plugins_to_install)
 
     # installing the operations worker
     sequence.add(
@@ -117,7 +115,7 @@ def generate_create_dep_tasks_graph(ctx, **kwargs):
     sequence.add(
         ctx.send_event('Starting deployment policy engine core'),
         ctx.execute_task('riemann_controller.tasks.create',
-                         kwargs=kwargs.get('policy_configuration', {})))
+                         policy_configuration or {}))
 
     return graph
 
