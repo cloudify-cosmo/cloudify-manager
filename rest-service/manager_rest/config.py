@@ -38,7 +38,7 @@ class Config(object):
         self._security_audit_log_file_size_MB = None
         self._security_audit_log_files_backup_count = None
         self._security_userstore_driver = None
-        self._securest_authentication_providers = []
+        self._security_authentication_providers = []
 
     @property
     def db_address(self):
@@ -161,12 +161,12 @@ class Config(object):
         self._security_bypass_port = value
 
     @property
-    def securest_authentication_providers(self):
-        return self._securest_authentication_providers
+    def security_authentication_providers(self):
+        return self._security_authentication_providers
 
-    @securest_authentication_providers.setter
-    def securest_authentication_providers(self, value):
-        self._securest_authentication_providers = value
+    @security_authentication_providers.setter
+    def security_authentication_providers(self, value):
+        self._security_authentication_providers = value
 
     @property
     def security_auth_token_generator(self):

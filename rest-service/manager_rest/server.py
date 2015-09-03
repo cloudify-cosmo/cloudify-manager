@@ -191,7 +191,7 @@ def init_secured_app(_app):
         register_userstore_driver(secure_app,
                                   cfy_config.security_userstore_driver)
     register_authentication_providers(
-        secure_app, cfy_config.securest_authentication_providers)
+        secure_app, cfy_config.security_authentication_providers)
 
     def unauthorized_user_handler():
         utils.abort_error(

@@ -81,7 +81,7 @@ class SecurityTestBase(BaseServerTestCase):
                 'expires_in_seconds': 600
             }
         }
-        test_config.securest_authentication_providers = [
+        test_config.security_authentication_providers = [
             {
                 'name': 'password',
                 'implementation':
