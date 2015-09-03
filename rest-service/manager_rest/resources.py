@@ -1462,7 +1462,7 @@ class Tokens(SecuredResource):
             raise manager_exceptions.AppNotSecuredError(
                 'token generation not supported, application is not secured')
 
-        if not hasattr(app, 'auth_token_generator'):
+        if not hasattr(app, 'security_auth_token_generator'):
             raise manager_exceptions.NoTokenGeneratorError(
                 'token generation not supported, an auth token generator was '
                 'not registered')

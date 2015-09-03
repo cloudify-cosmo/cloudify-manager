@@ -30,14 +30,14 @@ class Config(object):
         self._rest_service_log_file_size_MB = None
         self._rest_service_log_files_backup_count = None
         self._test_mode = False
-        self._secured_server = False
-        self._auth_token_generator = None
+        self._security_enabled = False
+        self._security_auth_token_generator = None
         self._security_bypass_port = None
-        self._securest_log_level = None
-        self._securest_log_file = None
-        self._securest_log_file_size_MB = None
-        self._securest_log_files_backup_count = None
-        self._securest_userstore_driver = None
+        self._security_audit_log_level = None
+        self._security_audit_log_file = None
+        self._security_audit_log_file_size_MB = None
+        self._security_audit_log_files_backup_count = None
+        self._security_userstore_driver = None
         self._securest_authentication_providers = []
 
     @property
@@ -145,12 +145,12 @@ class Config(object):
         self._test_mode = value
 
     @property
-    def secured_server(self):
-        return self._secured_server
+    def security_enabled(self):
+        return self._security_enabled
 
-    @secured_server.setter
-    def secured_server(self, value):
-        self._secured_server = value
+    @security_enabled.setter
+    def security_enabled(self, value):
+        self._security_enabled = value
 
     @property
     def security_bypass_port(self):
@@ -169,52 +169,52 @@ class Config(object):
         self._securest_authentication_providers = value
 
     @property
-    def auth_token_generator(self):
-        return self._auth_token_generator
+    def security_auth_token_generator(self):
+        return self._security_auth_token_generator
 
-    @auth_token_generator.setter
-    def auth_token_generator(self, value):
-        self._auth_token_generator = value
-
-    @property
-    def securest_log_level(self):
-        return self._securest_log_level
-
-    @securest_log_level.setter
-    def securest_log_level(self, value):
-        self._securest_log_level = value
+    @security_auth_token_generator.setter
+    def security_auth_token_generator(self, value):
+        self._security_auth_token_generator = value
 
     @property
-    def securest_log_file(self):
-        return self._securest_log_file
+    def security_audit_log_level(self):
+        return self._security_audit_log_level
 
-    @securest_log_file.setter
-    def securest_log_file(self, value):
-        self._securest_log_file = value
-
-    @property
-    def securest_log_file_size_MB(self):
-        return self._securest_log_file_size_MB
-
-    @securest_log_file_size_MB.setter
-    def securest_log_file_size_MB(self, value):
-        self._securest_log_file_size_MB = value
+    @security_audit_log_level.setter
+    def security_audit_log_level(self, value):
+        self._security_audit_log_level = value
 
     @property
-    def securest_log_files_backup_count(self):
-        return self._securest_log_files_backup_count
+    def security_audit_log_file(self):
+        return self._security_audit_log_file
 
-    @securest_log_files_backup_count.setter
-    def securest_log_files_backup_count(self, value):
-        self._securest_log_files_backup_count = value
+    @security_audit_log_file.setter
+    def security_audit_log_file(self, value):
+        self._security_audit_log_file = value
 
     @property
-    def securest_userstore_driver(self):
-        return self._securest_userstore_driver
+    def security_audit_log_file_size_MB(self):
+        return self._security_audit_log_file_size_MB
 
-    @securest_userstore_driver.setter
-    def securest_userstore_driver(self, value):
-        self._securest_userstore_driver = value
+    @security_audit_log_file_size_MB.setter
+    def security_audit_log_file_size_MB(self, value):
+        self._security_audit_log_file_size_MB = value
+
+    @property
+    def security_audit_log_files_backup_count(self):
+        return self._security_audit_log_files_backup_count
+
+    @security_audit_log_files_backup_count.setter
+    def security_audit_log_files_backup_count(self, value):
+        self._security_audit_log_files_backup_count = value
+
+    @property
+    def security_userstore_driver(self):
+        return self._security_userstore_driver
+
+    @security_userstore_driver.setter
+    def security_userstore_driver(self, value):
+        self._security_userstore_driver = value
 
 
 _instance = Config()
