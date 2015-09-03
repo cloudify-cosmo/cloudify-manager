@@ -121,8 +121,13 @@ def generate_create_dep_tasks_graph(ctx, deployment_plugins_to_install,
 
 
 @workflow
-def create(ctx, **kwargs):
-    graph = generate_create_dep_tasks_graph(ctx, **kwargs)
+def create(ctx, deployment_plugins_to_install, workflow_plugins_to_install,
+           policy_configuration, **_):
+    graph = generate_create_dep_tasks_graph(
+        ctx,
+        deployment_plugins_to_install,
+        workflow_plugins_to_install,
+        policy_configuration)
     return graph.execute()
 
 
