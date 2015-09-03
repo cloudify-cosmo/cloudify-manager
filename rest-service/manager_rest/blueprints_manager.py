@@ -137,8 +137,8 @@ class BlueprintsManager(object):
         snapshots_conf['failed_status'] = models.Snapshot.FAILED
         return snapshots_conf
 
-    def _create_snapshot_model(self, snapshot_id,
-                               status=models.Snapshot.CREATING):
+    def create_snapshot_model(self, snapshot_id,
+                              status=models.Snapshot.CREATING):
         now = str(datetime.now())
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
@@ -152,7 +152,7 @@ class BlueprintsManager(object):
 
     def create_snapshot(self, snapshot_id,
                         include_metrics, include_credentials):
-        new_snapshot = self._create_snapshot_model(snapshot_id)
+        new_snapshot = self.create_snapshot_model(snapshot_id)
         create_envs_params = {}
         for dep in self.deployments_list():
             bp = self.get_blueprint(dep.blueprint_id)
