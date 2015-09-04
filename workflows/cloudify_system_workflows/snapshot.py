@@ -25,7 +25,7 @@ import subprocess
 import elasticsearch
 import elasticsearch.helpers
 
-from cloudify.decorators import system_wide_workflow
+from cloudify.decorators import workflow
 from cloudify.exceptions import NonRecoverableError
 from cloudify.manager import get_rest_client
 from cloudify_system_workflows.deployment_environment import \
@@ -169,7 +169,7 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
     shutil.rmtree(tempdir)
 
 
-@system_wide_workflow
+@workflow(system_wide=True)
 def create(ctx, snapshot_id, config, **kwargs):
     update_status = get_rest_client().snapshots.update_status
     config = _DictToAttributes(config)
@@ -356,7 +356,7 @@ def _restore_snapshot_format_3_2(ctx, config, tempdir):
     insert_agents_data(client, agents)
 
 
-@system_wide_workflow
+@workflow(system_wide=True)
 def restore(ctx, snapshot_id, config, **kwargs):
     mappings = {
         '3.3': _restore_snapshot_format_3_3,
@@ -396,8 +396,8 @@ def restore(ctx, snapshot_id, config, **kwargs):
         else:
             create_envs_params = {}
 
-        ctx.load_deployment_contexts()
-        for dep_id, dep_ctx in ctx.deployment_contexts.iteritems():
+        ctx.load_deployments_contexts()
+        for dep_id, dep_ctx in ctx.deployments_contexts.iteritems():
             tasks_graph = generate_create_dep_tasks_graph(
                 dep_ctx,
                 **create_envs_params[dep_id]
