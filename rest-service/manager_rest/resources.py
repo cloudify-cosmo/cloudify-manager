@@ -1259,29 +1259,35 @@ class Status(SecuredResource):
         """
         Get the status of running system services
         """
-        job_list = {'riemann': 'Riemann',
-                    'rabbitmq-server': 'RabbitMQ',
-                    'celeryd-cloudify-management': 'Celery Management',
-                    'elasticsearch': 'Elasticsearch',
-                    'cloudify-ui': 'Cloudify UI',
-                    'logstash': 'Logstash',
-                    'nginx': 'Webserver'
-                    }
-
         try:
             if self._is_docker_env():
-                job_list.update({'rest-service': 'Manager Rest-Service',
-                                 'amqp-influx': 'AMQP InfluxDB',
-                                 })
+                job_list = {'riemann': 'Riemann',
+                            'rabbitmq-server': 'RabbitMQ',
+                            'celeryd-cloudify-management': 'Celery Management',
+                            'elasticsearch': 'Elasticsearch',
+                            'cloudify-ui': 'Cloudify UI',
+                            'logstash': 'Logstash',
+                            'nginx': 'Webserver',
+                            'rest-service': 'Manager Rest-Service',
+                            'amqp-influx': 'AMQP InfluxDB'
+                            }
                 from manager_rest.runitsupervise import get_services
                 jobs = get_services(job_list)
             else:
-                job_list.update({'manager': 'Cloudify Manager',
-                                 'rsyslog': 'Syslog',
-                                 'ssh': 'SSH',
-                                 })
-                from manager_rest.upstartdbus import get_jobs
-                jobs = get_jobs(job_list.keys(), job_list.values())
+                from manager_rest.systemddbus import get_services
+                job_list = {'cloudify-mgmtworker.service': 'Celery Management',
+                            'cloudify-restservice.service':
+                                'Manager Rest-Service',
+                            'cloudify-amqpinflux.service': 'AMQP InfluxDB',
+                            'cloudify-influxdb.service': 'InfluxDB',
+                            'cloudify-rabbitmq.service': 'RabbitMQ',
+                            'cloudify-riemann.service': 'Riemann',
+                            'cloudify-webui.service': 'Cloudify UI',
+                            'elasticsearch.service': 'Elasticsearch',
+                            'logstash.service': 'Logstash',
+                            'nginx.service': 'Webserver'
+                            }
+                jobs = get_services(job_list)
         except ImportError:
             jobs = ['undefined']
 
