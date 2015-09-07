@@ -187,6 +187,7 @@ def setup_resources(api):
         Snapshots: 'snapshots',
         SnapshotsId: 'snapshots/<string:snapshot_id>',
         SnapshotsIdArchive: 'snapshots/<string:snapshot_id>/archive',
+        SnapshotsIdRestore: 'snapshots/<string:snapshot_id>/restore',
         Executions: 'executions',
         ExecutionsId: 'executions/<string:execution_id>',
         Deployments: 'deployments',
@@ -857,17 +858,6 @@ class SnapshotsId(SecuredResource):
         shutil.rmtree(path, ignore_errors=True)
         return snapshot, 200
 
-    @swagger.operation(
-        responseClass=responses.Snapshot,
-        nickname='restoreSnapshot',
-        notes='Restore existing snapshot.'
-    )
-    @exceptions_handled
-    @marshal_with(responses.Snapshot.resource_fields)
-    def post(self, snapshot_id):
-        get_blueprints_manager().restore_snapshot(snapshot_id)
-        return None, 200
-
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def patch(self, snapshot_id):
@@ -945,6 +935,19 @@ class SnapshotsIdArchive(SecuredResource):
             os.path.getsize(snapshot_path),
             'zip'
         )
+
+
+class SnapshotsIdRestore(SecuredResource):
+    @swagger.operation(
+        responseClass=responses.Snapshot,
+        nickname='restoreSnapshot',
+        notes='Restore existing snapshot.'
+    )
+    @exceptions_handled
+    @marshal_with(responses.Snapshot.resource_fields)
+    def post(self, snapshot_id):
+        get_blueprints_manager().restore_snapshot(snapshot_id)
+        return None, 200
 
 
 class Deployments(SecuredResource):
