@@ -205,7 +205,7 @@ def prepare_cloudify_agent(path):
             agent = json.load(f)
     else:
         agent = get_cloudify_agent()
-    agent['windows'] = os.system == 'nt'
+    agent['windows'] = os.name == 'nt'
     if 'package_url' not in agent:
         _set_package_url(agent)
     return agent
