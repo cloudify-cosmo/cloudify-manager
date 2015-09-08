@@ -13,18 +13,29 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-from flask import request
+import shutil
+import os
+import json
+import tarfile
+from uuid import uuid4
+from datetime import datetime
+
+from flask_securest.rest_security import SecuredResource
 from flask_restful_swagger import swagger
+from flask import request
 
 from manager_rest import resources
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
+                                    verify_and_convert_bool,
+                                    verify_parameter_in_request_body,
                                     verify_json_content_type,
-                                    verify_parameter_in_request_body)
-from manager_rest.resources import verify_and_convert_bool
+                                    make_streaming_response)
 from manager_rest import models
 from manager_rest import responses_v2
 from manager_rest import manager_exceptions
+from manager_rest import config
+from manager_rest import files
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.blueprints_manager import \
@@ -359,3 +370,228 @@ class ProviderContext(resources.ProviderContext):
         provider_ctx.context['cloudify'] = bootstrap_ctx
         get_storage_manager().update_provider_context(provider_ctx)
         return get_storage_manager().get_provider_context()
+
+
+class Plugins(SecuredResource):
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses_v2.NodeInstance.__name__),
+        nickname="listPlugins",
+        notes='Returns a plugins list for the optionally provided '
+              'filter parameters: {0}'.format(models.Plugin.fields),
+        parameters=_create_filter_params_list_description(
+            models.Plugin.fields,
+            'plugins'
+        )
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Plugin)
+    @verify_and_create_filters(models.Plugin.fields)
+    def get(self, _include=None, filters=None, **kwargs):
+        """
+        List uploaded plugins
+        """
+        plugins = get_storage_manager().get_plugins(include=_include,
+                                                    filters=filters)
+        return plugins
+
+    @swagger.operation(
+        responseClass=responses_v2.Plugin,
+        nickname='upload',
+        notes='Submitted plugin should be an archive containing the directory '
+              ' which contains the plugin wheel. The supported archive type '
+              'is: {archive_type}. The archive may be submitted via either'
+              ' URL or by direct upload. Archive wheels must contain a '
+              'module.json file containing required metadata for the plugin '
+              'usage.'
+        .format(archive_type='tar.gz'),
+        parameters=[{'name': 'plugin_archive_url',
+                     'description': 'url of a plugin archive file',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'},
+                    {'name': 'body',
+                     'description': 'Binary form of the tar '
+                                    'gzipped plugin directory',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'binary',
+                     'paramType': 'body'}],
+        consumes=["application/octet-stream"]
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Plugin)
+    def post(self, **kwargs):
+        """
+        Upload a plugin
+        """
+        return UploadedPluginsManager().receive_uploaded_data(str(uuid4()))
+
+
+class UploadedPluginsManager(files.UploadedDataManager):
+
+    def _get_kind(self):
+        return 'plugin'
+
+    def _get_data_url_key(self):
+        return 'plugin_archive_url'
+
+    def _get_target_dir_path(self):
+        return config.instance().file_server_uploaded_plugins_folder
+
+    def _get_archive_type(self, archive_path):
+        return 'tar.gz'
+
+    def _prepare_and_process_doc(self, data_id, file_server_root,
+                                 archive_target_path):
+        new_plugin = self._create_plugin_from_archive(data_id,
+                                                      archive_target_path)
+
+        filter_by_name = {'package_name': new_plugin.package_name}
+        plugins = get_storage_manager().get_plugins(filters=filter_by_name)
+
+        for plugin in plugins:
+            if plugin.archive_name == new_plugin.archive_name:
+                raise manager_exceptions.ConflictError(
+                    'a plugin archive by the name of {archive_name} already '
+                    'exists for package with name {package_name} and version '
+                    '{version}'.format(archive_name=new_plugin.archive_name,
+                                       package_name=new_plugin.package_name,
+                                       version=new_plugin.package_version))
+        else:
+            get_storage_manager().put_plugin(new_plugin)
+
+        return new_plugin, new_plugin.archive_name
+
+    def _create_plugin_from_archive(self, plugin_id, archive_path):
+        plugin = self._load_plugin_package_json(archive_path)
+        build_props = plugin.get('build_server_os_properties')
+        now = str(datetime.now())
+        return models.Plugin(
+            id=plugin_id,
+            package_name=plugin.get('package_name'),
+            package_version=plugin.get('package_version'),
+            archive_name=plugin.get('archive_name'),
+            package_source=plugin.get('package_source'),
+            supported_platform=plugin.get('supported_platform'),
+            distribution=build_props.get('distribution'),
+            distribution_version=build_props.get('distribution_version'),
+            distribution_release=build_props.get('distribution_release'),
+            wheels=plugin.get('wheels'),
+            excluded_wheels=plugin.get('excluded_wheels'),
+            supported_py_versions=plugin.get('supported_python_versions'),
+            uploaded_at=now)
+
+    @staticmethod
+    def _load_plugin_package_json(tar_source):
+
+        if not tarfile.is_tarfile(tar_source):
+            raise manager_exceptions.InvalidPluginError(
+                'the provided tar archive can not be read.')
+
+        with tarfile.open(tar_source) as tar:
+            tar_members = tar.getmembers()
+            # a wheel plugin will contain exactly one sub directory
+            if not tar_members:
+                raise manager_exceptions.InvalidPluginError(
+                    'archive file structure malformed. expecting exactly one '
+                    'sub directory; got none.')
+            package_json_path = os.path.join(tar_members[0].name,
+                                             'package.json')
+            try:
+                package_member = tar.getmember(package_json_path)
+            except KeyError:
+                raise manager_exceptions. \
+                    InvalidPluginError("'package.json' was not found under {0}"
+                                       .format(package_member))
+            try:
+                package_json = tar.extractfile(package_member)
+            except (tarfile.ExtractError, tarfile.EnvironmentError) as e:
+                raise manager_exceptions. \
+                    InvalidPluginError(str(e))
+            try:
+                return json.load(package_json)
+            except ValueError as e:
+                raise manager_exceptions. \
+                    InvalidPluginError("'package.json' is not a valid json: "
+                                       "{json_str}. error is {error}"
+                                       .format(json_str=package_json.read(),
+                                               error=str(e)))
+
+
+class PluginsArchive(SecuredResource):
+    """
+    GET = download previously uploaded plugin package.
+    """
+    @swagger.operation(
+        responseClass='archive file',
+        nickname="downloadPlugin",
+        notes="download a plugin archive according to the plugin ID. ",
+        )
+    @exceptions_handled
+    def get(self, plugin_id, **kwargs):
+        """
+        Download plugin archive
+        """
+        # Verify plugin exists.
+        plugin = get_blueprints_manager().get_plugin(plugin_id)
+
+        archive_name = plugin.archive_name
+        # attempting to find the archive file on the file system
+        local_path = _get_plugin_archive_path(plugin_id, archive_name)
+        if not os.path.isfile(local_path):
+            raise RuntimeError("Could not find plugins archive; "
+                               "Plugin ID: {0}".format(plugin_id))
+
+        plugin_path = '{0}/{1}/{2}/{3}'.format(
+            config.instance().file_server_base_uri,
+            'plugins',
+            plugin_id,
+            archive_name)
+
+        return make_streaming_response(
+            plugin_id,
+            plugin_path,
+            os.path.getsize(local_path),
+            'tar.gz'
+        )
+
+
+class PluginsId(SecuredResource):
+    @swagger.operation(
+        responseClass=responses_v2.BlueprintState,
+        nickname="getById",
+        notes="Returns a plugin according to its ID."
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Plugin)
+    def get(self, plugin_id, _include=None, **kwargs):
+        """
+        Returns plugin by ID
+        """
+        return get_storage_manager().get_plugin(plugin_id, include=_include)
+
+    @swagger.operation(
+        responseClass=responses_v2.Plugin,
+        nickname="deleteById",
+        notes="deletes a plugin according to its ID."
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Plugin)
+    def delete(self, plugin_id, **kwargs):
+        """
+        Delete plugin by ID
+        """
+        # Verify plugin exists.
+        plugin = get_blueprints_manager().get_plugin(plugin_id)
+        archive_name = plugin.archive_name
+        archive_path = _get_plugin_archive_path(plugin_id, archive_name)
+        shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
+        get_storage_manager().delete_plugin(plugin_id)
+        return plugin
+
+
+def _get_plugin_archive_path(plugin_id, archive_name):
+    return os.path.join(config.instance().file_server_uploaded_plugins_folder,
+                        plugin_id,
+                        archive_name)

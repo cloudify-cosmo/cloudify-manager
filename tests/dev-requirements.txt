@@ -13,3 +13,4 @@ pyzmq
 
 # test dependencies
 python-dateutil
+wagon

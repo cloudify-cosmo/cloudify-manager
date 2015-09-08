@@ -172,3 +172,28 @@ class ProviderContext(SerializableObject):
     def __init__(self, **kwargs):
         self.context = kwargs['context']
         self.name = kwargs['name']
+
+
+class Plugin(SerializableObject):
+    """
+    Represents a wheel plugin
+    """
+    fields = {'id', 'package_name', 'archive_name', 'package_source',
+              'package_version', 'supported_platform', 'distribution',
+              'distribution_version', 'distribution_release', 'wheels',
+              'excluded_wheels', 'supported_py_versions', 'uploaded_at'}
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.package_name = kwargs['package_name']
+        self.archive_name = kwargs['archive_name']
+        self.package_source = kwargs['package_source']
+        self.package_version = kwargs['package_version']
+        self.supported_platform = kwargs['supported_platform']
+        self.distribution = kwargs['distribution']
+        self.distribution_version = kwargs['distribution_version']
+        self.distribution_release = kwargs['distribution_release']
+        self.wheels = kwargs['wheels']
+        self.excluded_wheels = kwargs['excluded_wheels']
+        self.supported_py_versions = kwargs['supported_py_versions']
+        self.uploaded_at = kwargs['uploaded_at']

@@ -38,3 +38,41 @@ class BlueprintState(BlueprintStateV1):
         super(BlueprintState, self).__init__(**kwargs)
         self.description = kwargs['description']
         self.main_file_name = kwargs['main_file_name']
+
+
+@swagger.model
+class Plugin(object):
+    resource_fields = {
+        'id': fields.String,
+        'package_name': fields.String,
+        'archive_name': fields.String,
+        'package_source': fields.String,
+        'package_version': fields.String,
+        'supported_platform': fields.String,
+        'distribution': fields.String,
+        'distribution_version': fields.String,
+        'distribution_release': fields.String,
+        'wheels': fields.Raw,
+        'excluded_wheels': fields.Raw,
+        'supported_py_versions': fields.Raw,
+        'uploaded_at': fields.String,
+    }
+    fields = {'id', 'package_name', 'archive_name', 'package_source',
+              'package_version', 'supported_platform', 'distribution',
+              'distribution_version', 'distribution_release', 'wheels',
+              'excluded_wheels', 'supported_py_versions', 'uploaded_at'}
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.package_name = kwargs['package_name']
+        self.archive_name = kwargs['archive_name']
+        self.package_source = kwargs['package_source']
+        self.package_version = kwargs['package_version']
+        self.supported_platform = kwargs['supported_platform']
+        self.distribution = kwargs['distribution']
+        self.distribution_version = kwargs['distribution_version']
+        self.distribution_release = kwargs['distribution_release']
+        self.wheels = kwargs['wheels']
+        self.excluded_wheels = kwargs['excluded_wheels']
+        self.supported_py_versions = kwargs['supported_py_versions']
+        self.uploaded_at = kwargs['uploaded_at']

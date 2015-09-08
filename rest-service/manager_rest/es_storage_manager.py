@@ -25,11 +25,13 @@ from manager_rest.models import (BlueprintState,
                                  Execution,
                                  DeploymentNode,
                                  DeploymentNodeInstance,
-                                 ProviderContext)
+                                 ProviderContext,
+                                 Plugin)
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 NODE_TYPE = 'node'
 NODE_INSTANCE_TYPE = 'node_instance'
+PLUGIN_TYPE = 'plugin'
 BLUEPRINT_TYPE = 'blueprint'
 DEPLOYMENT_TYPE = 'deployment'
 DEPLOYMENT_MODIFICATION_TYPE = 'deployment_modification'
@@ -227,6 +229,12 @@ class ESStorageManager(object):
                                     filters=filters,
                                     include=include)
 
+    def get_plugins(self, include=None, filters=None):
+        return self._get_items_list(PLUGIN_TYPE,
+                                    Plugin,
+                                    filters=filters,
+                                    include=include)
+
     def get_nodes(self, include=None, filters=None):
         return self._get_items_list(NODE_TYPE,
                                     DeploymentNode,
@@ -259,6 +267,12 @@ class ESStorageManager(object):
                                              Execution,
                                              fields=include)
 
+    def get_plugin(self, plugin_id, include=None):
+        return self._get_doc_and_deserialize(PLUGIN_TYPE,
+                                             plugin_id,
+                                             Plugin,
+                                             fields=include)
+
     def put_blueprint(self, blueprint_id, blueprint):
         self._put_doc_if_not_exists(BLUEPRINT_TYPE, str(blueprint_id),
                                     blueprint.to_dict())
@@ -270,6 +284,10 @@ class ESStorageManager(object):
     def put_execution(self, execution_id, execution):
         self._put_doc_if_not_exists(EXECUTION_TYPE, str(execution_id),
                                     execution.to_dict())
+
+    def put_plugin(self, plugin):
+        self._put_doc_if_not_exists(PLUGIN_TYPE, str(plugin.id),
+                                    plugin.to_dict())
 
     def put_node(self, node):
         storage_node_id = self._storage_node_id(node.deployment_id, node.id)
@@ -288,6 +306,9 @@ class ESStorageManager(object):
     def delete_blueprint(self, blueprint_id):
         return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
                                 BlueprintState)
+
+    def delete_plugin(self, plugin_id):
+        return self._delete_doc(PLUGIN_TYPE, plugin_id, Plugin)
 
     def update_execution_status(self, execution_id, status, error):
         update_doc_data = {'status': status,

@@ -19,6 +19,7 @@ from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  DeploymentModification,
                                  Execution,
+                                 Plugin,
                                  DeploymentNode,
                                  DeploymentNodeInstance,
                                  ProviderContext)
@@ -32,6 +33,7 @@ BLUEPRINTS = 'blueprints'
 DEPLOYMENTS = 'deployments'
 DEPLOYMENT_MODIFICATIONS = 'deployment_modifications'
 EXECUTIONS = 'executions'
+PLUGINS = 'plugins'
 PROVIDER_CONTEXT = 'provider_context'
 PROVIDER_CONTEXT_ID = '1'
 
@@ -54,6 +56,7 @@ class FileStorageManager(object):
             DEPLOYMENTS: {},
             DEPLOYMENT_MODIFICATIONS: {},
             EXECUTIONS: {},
+            PLUGINS: {},
             PROVIDER_CONTEXT: {},
         }
         self._dump_data(data)
@@ -78,6 +81,9 @@ class FileStorageManager(object):
                     .iteritems()}
             deserialized_data[EXECUTIONS] = \
                 {key: Execution(**val) for key, val in data[EXECUTIONS]
+                    .iteritems()}
+            deserialized_data[PLUGINS] = \
+                {key: Plugin(**val) for key, val in data[PLUGINS]
                     .iteritems()}
             deserialized_data[PROVIDER_CONTEXT] = \
                 {key: ProviderContext(**val)
@@ -104,6 +110,9 @@ class FileStorageManager(object):
                     .iteritems()}
             serialized_data[EXECUTIONS] =\
                 {key: val.to_dict() for key, val in data[EXECUTIONS]
+                    .iteritems()}
+            serialized_data[PLUGINS] = \
+                {key: val.to_dict() for key, val in data[PLUGINS]
                     .iteritems()}
             serialized_data[PROVIDER_CONTEXT] = \
                 {key: val.to_dict() for key, val in data[PROVIDER_CONTEXT]
@@ -132,6 +141,10 @@ class FileStorageManager(object):
     def get_nodes(self, filters=None, **_):
         nodes = self._load_data()[NODES].values()
         return self.filter_data(nodes, filters)
+
+    def get_plugins(self, include=None, filters=None):
+        plugins = self._load_data()[PLUGINS].values()
+        return self.filter_data(plugins, filters)
 
     def get_node(self, deployment_id, node_id, **_):
         data = self._load_data()
@@ -247,6 +260,18 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Blueprint {0} not found".format(blueprint_id))
 
+    def get_plugin(self, plugin_id, include=None):
+        data = self._load_data()
+        if plugin_id in data[PLUGINS]:
+            plugin = data[PLUGINS][plugin_id]
+            if include:
+                for field in Plugin.fields:
+                    if field not in include:
+                        setattr(plugin, field, None)
+            return plugin
+        raise manager_exceptions.NotFoundError(
+            "Plugin {0} not found".format(plugin_id))
+
     def get_deployment(self, deployment_id, include=None):
         data = self._load_data()
         if deployment_id in data[DEPLOYMENTS]:
@@ -290,8 +315,19 @@ class FileStorageManager(object):
         data[EXECUTIONS][str(execution_id)] = execution
         self._dump_data(data)
 
+    def put_plugin(self, plugin):
+        data = self._load_data()
+        if str(plugin.id) in data[PLUGINS]:
+            raise manager_exceptions.ConflictError(
+                'Plugin {0} already exists'.format(plugin.id))
+        data[PLUGINS][str(plugin.id)] = plugin
+        self._dump_data(data)
+
     def delete_blueprint(self, blueprint_id):
         return self._delete_object(blueprint_id, BLUEPRINTS, 'Blueprint')
+
+    def delete_plugin(self, plugin_id):
+        return self._delete_object(plugin_id, PLUGINS, 'Plugin')
 
     def delete_deployment(self, deployment_id):
         data = self._load_data()

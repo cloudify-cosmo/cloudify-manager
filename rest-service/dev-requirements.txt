@@ -6,3 +6,4 @@ https://github.com/cloudify-cosmo/flask-securest/archive/0.6.zip
 mock
 python-dateutil
 itsdangerous==0.24
+wagon

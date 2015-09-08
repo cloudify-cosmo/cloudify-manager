@@ -124,6 +124,15 @@ class InvalidBlueprintError(ManagerException):
             *args, **kwargs)
 
 
+class InvalidPluginError(ManagerException):
+    INVALID_PLUGIN_ERROR_CODE = 'invalid_plugin_error'
+
+    def __init__(self, *args, **kwargs):
+        super(InvalidPluginError, self).__init__(
+            400, InvalidPluginError.INVALID_PLUGIN_ERROR_CODE,
+            *args, **kwargs)
+
+
 class ExistingRunningExecutionError(ManagerException):
     EXISTING_RUNNING_EXECUTION_ERROR_CODE = 'existing_running_execution_error'
 
