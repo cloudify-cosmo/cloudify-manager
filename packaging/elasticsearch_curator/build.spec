@@ -22,6 +22,7 @@ pip=$(which pip)
 set -e
 
 [ ! -z $pip ] || sudo curl --show-error --silent --retry 5 https://bootstrap.pypa.io/get-pip.py | sudo python
+sudo pip install wheel==0.24.0
 
 %build
 
