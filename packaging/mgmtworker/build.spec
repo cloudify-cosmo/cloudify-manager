@@ -1,10 +1,10 @@
 %define _rpmdir /tmp
 
 
-Name:           cloudify-rest-service
+Name:           cloudify-management-worker
 Version:        %{VERSION}
 Release:        %{PRERELEASE}_b%{BUILD}
-Summary:        Cloudify's REST Service
+Summary:        Cloudify's Management Worker
 Group:          Applications/Multimedia
 License:        Apache 2.0
 URL:            https://github.com/cloudify-cosmo/cloudify-manager
