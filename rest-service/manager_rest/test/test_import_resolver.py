@@ -14,15 +14,16 @@
 #  * limitations under the License.
 
 import mock
+from nose.plugins.attrib import attr
 
+from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
 from dsl_parser import constants
 from dsl_parser.utils import ResolverInstantiationError
 
-from manager_rest.test.base_test import BaseServerTestCase
 
-
-class UploadBlueprtinsWithImportResolverTests(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class UploadBlueprtinsWithImportResolverTests(base_test.BaseServerTestCase):
 
     def _create_resolver_section(self, resolver_impl=None, resolver_params=[]):
         resolver_section = {}
@@ -51,7 +52,7 @@ class UploadBlueprtinsWithImportResolverTests(BaseServerTestCase):
             create_import_resolver_inputs.append(resolver_section)
             return 'mock expected import resolver'
 
-        mock_parse_dsl.return_value = None
+        mock_parse_dsl.return_value = dict()
         with mock.patch(
                 'dsl_parser.utils.create_import_resolver',
                 new=mock_create_import_resolver):

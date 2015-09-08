@@ -12,14 +12,17 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from base_list_test import BaseListTest
 
-from cloudify_rest_client.exceptions import CloudifyClientError
+from nose.plugins.attrib import attr
 
+from manager_rest.test import base_test
+from manager_rest.test.base_list_test import BaseListTest
 from manager_rest import models
 from manager_rest import manager_exceptions
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
+@attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class ResourceListFiltersTestCase(BaseListTest):
 
     def setUp(self):

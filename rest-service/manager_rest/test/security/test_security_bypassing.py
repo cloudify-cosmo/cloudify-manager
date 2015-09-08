@@ -13,11 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from nose.plugins.attrib import attr
+
+from manager_rest.test import base_test
+from manager_rest.test.security.security_test_base import SecurityTestBase
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from manager_rest.test.security.security_test_base import SecurityTestBase
 
-
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SecurityBypassTest(SecurityTestBase):
 
     BYPASS_PORT = 56789

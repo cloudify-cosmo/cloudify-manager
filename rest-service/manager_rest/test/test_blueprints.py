@@ -16,13 +16,16 @@
 import os
 import tempfile
 
+from nose.plugins.attrib import attr
+
 from manager_rest import archiving
 from manager_rest.file_server import FileServer
-from base_test import BaseServerTestCase
+from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-class BlueprintsTestCase(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_get_empty(self):
         result = self.get('/blueprints')
@@ -64,6 +67,17 @@ class BlueprintsTestCase(BaseServerTestCase):
                                      blueprint_id='hello_world')).json
         self.assertEquals('hello_world',
                           post_blueprints_response['id'])
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_description(self):
+        post_blueprints_response = self.put_file(
+            *self.put_blueprint_args('blueprint.yaml',
+                                     blueprint_id='blueprint')).json
+        self.assertEquals('blueprint',
+                          post_blueprints_response['id'])
+        self.assertEquals("this is my blueprint's description",
+                          post_blueprints_response['description'])
 
     def test_get_blueprint_by_id(self):
         post_blueprints_response = self.put_file(
@@ -215,11 +229,8 @@ class BlueprintsTestCase(BaseServerTestCase):
             *self.put_blueprint_args(blueprint_id=blueprint_id,
                                      archive_func=archive_func)).json
         self.assertEqual(blueprint_id, put_blueprints_response['id'])
-        api_version = self.client._client.api_version
-        url = '/api/{0}{1}'.format(
-            api_version,
-            '/blueprints/{0}/archive'.format(blueprint_id))
 
+        url = self._version_url('/blueprints/{0}/archive'.format(blueprint_id))
         response = self.app.get(url)
 
         archive_filename = '{0}.{1}'.format(blueprint_id, archive_type)

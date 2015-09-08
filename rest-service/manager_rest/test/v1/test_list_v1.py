@@ -13,20 +13,21 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-from base_list_test import BaseListTest
 
-API_VERSION = 'v1'
+from nose.plugins.attrib import attr
+
+from manager_rest.test.base_list_test import BaseListTest
 
 
-class ResourceListBackwardsTestCase(BaseListTest):
+@attr(client_min_version=1, client_max_version=1)
+class TestResourceListV1(BaseListTest):
     """
     REST list operations have changed in v2. This test class assures v1
     backwards compatibility has been preserved.
     """
 
     def setUp(self):
-        super(ResourceListBackwardsTestCase, self).setUp(
-            api_version=API_VERSION)
+        super(TestResourceListV1, self).setUp()
         (self.first_blueprint_id,
          self.first_deployment_id,
          self.sec_blueprint_id,

@@ -12,7 +12,8 @@ env:
         - ACTION="run-integration-tests" SUITE_NUMBER=0
         - ACTION="run-integration-tests" SUITE_NUMBER=1
         - ACTION="run-integration-tests" SUITE_NUMBER=2
-        - ACTION="test-rest-service"
+        - ACTION="test-rest-service-v2-client"
+        - ACTION="test-rest-service-v1-client"
         - ACTION="flake8"
 
 install:
