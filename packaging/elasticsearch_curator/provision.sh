@@ -30,6 +30,9 @@ function upload_to_s3() {
         --no-preserve --progress --human-readable-sizes --check-md5 *.rpm* s3://${AWS_S3_BUCKET_PATH}/
 }
 
+export VERSION="3.3.0"
+export PRERELEASE="m4"
+
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 AWS_S3_BUCKET_PATH="gigaspaces-repository-eu/org/cloudify3/${VERSION}/${PRERELEASE}-RELEASE"
