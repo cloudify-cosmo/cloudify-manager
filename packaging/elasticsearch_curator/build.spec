@@ -1,3 +1,5 @@
+%define _rpmdir /tmp
+
 Name:           elasticsearch-curator
 Version:        3.2.3
 Release:        1
