@@ -29,9 +29,9 @@ set -e
 [ ! -z $pip ] || sudo curl --show-error --silent --retry 5 https://bootstrap.pypa.io/get-pip.py | sudo python
 sudo yum install -y git python-devel gcc
 sudo pip install virtualenv
-sudo virtualenv /tmp/manager
-sudo /tmp/manager/bin/pip install setuptools==18.1 && \
-sudo /tmp/manager/bin/pip install wheel==0.24.0 && \
+sudo virtualenv /tmp/env
+sudo /tmp/env/bin/pip install setuptools==18.1 && \
+sudo /tmp/env/bin/pip install wheel==0.24.0 && \
 
 %build
 %install
@@ -40,14 +40,17 @@ destination="/tmp/${RANDOM}.file"
 curl --retry 10 --fail --silent --show-error --location https://github.com/cloudify-cosmo/cloudify-manager/archive/%{CORE_TAG_NAME}.tar.gz --create-dirs --output $destination && \
 tar -xzf $destination --strip-components=1 -C "/tmp" && \
 
-sudo /tmp/manager/bin/pip wheel virtualenv --wheel-dir %{buildroot}/var/wheels/%{name} && \
-sudo /tmp/manager/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/%{CORE_TAG_NAME}.tar.gz && \
-sudo /tmp/manager/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-rest-client/archive/%{CORE_TAG_NAME}.tar.gz && \
-sudo /tmp/manager/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/flask-securest/archive/0.6.tar.gz && \
-sudo /tmp/manager/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/%{CORE_TAG_NAME}.tar.gz && \
-sudo /tmp/manager/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/%{PLUGINS_TAG_NAME}.tar.gz && \
-sudo /tmp/manager/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-agent/archive/%{CORE_TAG_NAME}.tar.gz && \
-sudo /tmp/manager/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} /tmp/rest-service
+mkdir -p %{buildroot}/opt/manager/resources/
+sudo cp -R "/tmp/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
+
+sudo /tmp/env/bin/pip wheel virtualenv --wheel-dir %{buildroot}/var/wheels/%{name} && \
+sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/%{CORE_TAG_NAME}.tar.gz && \
+sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-rest-client/archive/%{CORE_TAG_NAME}.tar.gz && \
+sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/flask-securest/archive/0.6.tar.gz && \
+sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/%{CORE_TAG_NAME}.tar.gz && \
+sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/%{PLUGINS_TAG_NAME}.tar.gz && \
+sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-agent/archive/%{CORE_TAG_NAME}.tar.gz && \
+sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} /tmp/rest-service
 
 
 
@@ -65,7 +68,7 @@ virtualenv /opt/manager/env && \
 /opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
 /opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-service --pre
 
-
+# sudo cp -R "/tmp/resources/rest-service/cloudify/" "/opt/manager/resources/"
 
 
 %preun
@@ -80,3 +83,4 @@ rm -rf /var/wheels/${name}
 
 %defattr(-,root,root)
 /var/wheels/%{name}/*.whl
+/opt/manager/resources

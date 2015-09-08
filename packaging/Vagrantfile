@@ -24,6 +24,30 @@ AWS_ACCESS_KEY_UPLOAD_TEMP = ENV['AWS_ACCESS_KEY_UPLOAD_TEMP']
 CENTOS7_OFFICIAL_BOX_URL = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7.box'
 
 Vagrant.configure('2') do |config|
+  config.vm.define "elasticsearch_curator" do |curator|
+    #dummy box, will be overriden
+    curator.vm.box = "dummy"
+    curator.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
+    curator.vm.provider :aws do |aws, override|
+      aws.access_key_id = AWS_ACCESS_KEY_ID
+      aws.secret_access_key = AWS_ACCESS_KEY
+      aws.ami = "ami-fd69068a"
+      aws.region = "eu-west-1"
+      aws.instance_type = "m3.medium"
+      aws.keypair_name = "vagrant_build"
+      override.ssh.username = "ec2-user"
+      override.ssh.private_key_path = "~/.ssh/aws/vagrant_build.pem"
+      override.nfs.functional = false
+      aws.tags = { "Name" => "vagrant curator build" }
+      aws.security_groups = "vagrant_linux_build"
+    end
+    curator.vm.provision "shell" do |s|
+      s.path = "elasticsearch_curator/provision.sh"
+      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
+      s.privileged = false
+    end
+  end
+
   config.vm.define "rest_service" do |rest|
     #dummy box, will be overriden
     rest.vm.box = "dummy"
@@ -38,23 +62,37 @@ Vagrant.configure('2') do |config|
       override.ssh.username = "ec2-user"
       override.ssh.private_key_path = "~/.ssh/aws/vagrant_build.pem"
       override.nfs.functional = false
-      aws.tags = { "Name" => "vagrant agent centos 7.0 build" }
+      aws.tags = { "Name" => "vagrant rest 7.0 build" }
       aws.security_groups = "vagrant_linux_build"
     end
     rest.vm.provision "shell" do |s|
-      s.path = "linux/provision.sh"
+      s.path = "restservice/provision.sh"
       s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
       s.privileged = false
     end
   end
 
-  config.vm.define :local do |local|
-    local.vm.provider :virtualbox do |vb|
-      vb.customize ['modifyvm', :id, '--memory', '1024']
+  config.vm.define "management_worker" do |mgmtworker|
+    #dummy box, will be overriden
+    mgmtworker.vm.box = "dummy"
+    mgmtworker.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
+    mgmtworker.vm.provider :aws do |aws, override|
+      aws.access_key_id = AWS_ACCESS_KEY_ID
+      aws.secret_access_key = AWS_ACCESS_KEY
+      aws.ami = "ami-fd69068a"
+      aws.region = "eu-west-1"
+      aws.instance_type = "m3.medium"
+      aws.keypair_name = "vagrant_build"
+      override.ssh.username = "ec2-user"
+      override.ssh.private_key_path = "~/.ssh/aws/vagrant_build.pem"
+      override.nfs.functional = false
+      aws.tags = { "Name" => "vagrant mgmtworker 7.0 build" }
+      aws.security_groups = "vagrant_linux_build"
     end
-    local.vm.box = "dummy"
-    local.vm.box_url = CENTOS7_OFFICIAL_BOX_URL
-    local.vm.provision "shell", path: "linux/provision.sh", privileged: false
-    # local.vm.synced_folder "restservice", "/vagrant", create: true, type: "rsync"
+    mgmtworker.vm.provision "shell" do |s|
+      s.path = "mgmtworker/provision.sh"
+      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
+      s.privileged = false
+    end
   end
 end
