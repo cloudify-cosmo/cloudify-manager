@@ -22,28 +22,18 @@ from flask import g, current_app
 
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
-from dsl_parser.import_resolver.default_import_resolver import \
-    DefaultResolverValidationException, \
-    DEFAULT_RESLOVER_RULES_KEY, \
-    DefaultImportResolver
+from dsl_parser import utils as dsl_parser_utils
 from manager_rest import models
 from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
-from manager_rest.utils import \
-    maybe_register_teardown, \
-    get_class_instance
-
+from manager_rest.utils import maybe_register_teardown
 
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
 
 
 class DslParseException(Exception):
-    pass
-
-
-class ResolverInstantiationError(Exception):
     pass
 
 
@@ -59,19 +49,18 @@ class BlueprintsManager(object):
     def sm(self):
         return get_storage_manager()
 
-    def blueprints_list(self, include=None):
-        return self.sm.blueprints_list(include=include)
+    def blueprints_list(self, include=None, filters=None):
+        return self.sm.blueprints_list(include=include, filters=filters)
 
     def snapshots_list(self, include=None):
         return self.sm.snapshots_list(include=include)
 
-    def deployments_list(self, include=None):
-        return self.sm.deployments_list(include=include)
+    def deployments_list(self, include=None, filters=None):
+        return self.sm.deployments_list(include=include, filters=filters)
 
-    def executions_list(self, deployment_id=None,
-                        is_include_system_workflows=False, include=None):
-        executions = self.sm.executions_list(deployment_id=deployment_id,
-                                             include=include)
+    def executions_list(self, include=None, is_include_system_workflows=False,
+                        filters=None):
+        executions = self.sm.executions_list(include=include, filters=filters)
         return [e for e in executions if
                 is_include_system_workflows or not e.is_system_workflow]
 
@@ -222,7 +211,9 @@ class BlueprintsManager(object):
         self.sm.get_deployment(deployment_id)
 
         # validate there are no running executions for this deployment
-        executions = self.executions_list(deployment_id=deployment_id)
+        deplyment_id_filter = self.create_filters_dict(
+            deployment_id=deployment_id)
+        executions = self.sm.executions_list(filters=deplyment_id_filter)
         if any(execution.status not in models.Execution.END_STATES for
            execution in executions):
             raise manager_exceptions.DependentExistsError(
@@ -235,8 +226,10 @@ class BlueprintsManager(object):
                               in models.Execution.END_STATES])))
 
         if not ignore_live_nodes:
-            node_instances = self.sm.get_node_instances(
+            deplyment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
+            node_instances = self.sm.get_node_instances(
+                filters=deplyment_id_filter)
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
             if any(node.state not in ('uninitialized', 'deleted') for node in
@@ -485,8 +478,10 @@ class BlueprintsManager(object):
         # verify deployment exists
         self.sm.get_deployment(deployment_id, include=['id'])
 
+        deployment_id_filter = self.create_filters_dict(
+            deployment_id=deployment_id)
         existing_modifications = self.sm.deployment_modifications_list(
-            deployment_id=deployment_id, include=['id', 'status'])
+            include=['id', 'status'])
         active_modifications = [
             m.id for m in existing_modifications
             if m.status == models.DeploymentModification.STARTED]
@@ -498,9 +493,11 @@ class BlueprintsManager(object):
                     'started deployment modifications: {0}'
                     .format(active_modifications))
 
-        nodes = [node.to_dict() for node in self.sm.get_nodes(deployment_id)]
+        nodes = [node.to_dict() for node in self.sm.get_nodes(
+            filters=deployment_id_filter)]
         node_instances = [instance.to_dict() for instance
-                          in self.sm.get_node_instances(deployment_id)]
+                          in self.sm.get_node_instances(
+                          filters=deployment_id_filter)]
         node_instances_modification = tasks.modify_deployment(
             nodes=nodes,
             previous_node_instances=node_instances,
@@ -508,7 +505,7 @@ class BlueprintsManager(object):
 
         node_instances_modification['before_modification'] = [
             instance.to_dict() for instance in
-            self.sm.get_node_instances(deployment_id)]
+            self.sm.get_node_instances(filters=deployment_id_filter)]
 
         now = str(datetime.now())
         modification_id = str(uuid.uuid4())
@@ -614,8 +611,10 @@ class BlueprintsManager(object):
                 'Cannot rollback deployment modification: {0}. It is already '
                 'in {1} status.'.format(modification_id,
                                         modification.status))
-
-        node_instances = self.sm.get_node_instances(modification.deployment_id)
+        deplyment_id_filter = self.create_filters_dict(
+            deployment_id=modification.deployment_id)
+        node_instances = self.sm.get_node_instances(
+            filters=deplyment_id_filter)
         modification.node_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
         for instance in node_instances:
@@ -624,7 +623,7 @@ class BlueprintsManager(object):
             self.sm.put_node_instance(
                 models.DeploymentNodeInstance(**instance))
         nodes_num_instances = {node.id: node for node in self.sm.get_nodes(
-            deployment_id=modification.deployment_id,
+            filters=deplyment_id_filter,
             include=['id', 'number_of_instances'])}
         for node_id, modified_node in modification.modified_nodes.items():
             self.sm.update_node(
@@ -655,7 +654,10 @@ class BlueprintsManager(object):
             context=None)
 
     def _get_node_instance_ids(self, deployment_id):
-        return self.sm.get_node_instances(deployment_id, include=['id'])
+        deplyment_id_filter = self.create_filters_dict(
+            deployment_id=deployment_id)
+        return self.sm.get_node_instances(filters=deplyment_id_filter,
+                                          include=['id'])
 
     def _create_deployment_node_instances(self,
                                           deployment_id,
@@ -681,7 +683,9 @@ class BlueprintsManager(object):
             deployment_id, include=['outputs'])
 
         def get_node_instances(node_id=None):
-            return self.sm.get_node_instances(deployment_id, node_id)
+            filters = self.create_filters_dict(deployment_id=deployment_id,
+                                               node_id=node_id)
+            return self.sm.get_node_instances(filters=filters)
 
         def get_node_instance(node_instance_id):
             return self.sm.get_node_instance(node_instance_id)
@@ -702,7 +706,9 @@ class BlueprintsManager(object):
         self.get_deployment(deployment_id, include=['id'])
 
         def get_node_instances(node_id=None):
-            return self.sm.get_node_instances(deployment_id, node_id)
+            filters = self.create_filters_dict(deployment_id=deployment_id,
+                                               node_id=node_id)
+            return self.sm.get_node_instances(filters=filters)
 
         def get_node_instance(node_instance_id):
             return self.sm.get_node_instance(node_instance_id)
@@ -814,9 +820,11 @@ class BlueprintsManager(object):
 
     def _verify_deployment_environment_created_successfully(self,
                                                             deployment_id):
+        deployment_id_filter = self.create_filters_dict(
+            deployment_id=deployment_id)
         env_creation = next(
             (execution for execution in
-             self.sm.executions_list(deployment_id=deployment_id)
+             self.sm.executions_list(filters=deployment_id_filter)
              if execution.workflow_id == 'create_deployment_environment'),
             None)
 
@@ -853,6 +861,14 @@ class BlueprintsManager(object):
             raise RuntimeError(
                 'Unexpected deployment status for deployment {0} '
                 '[status={1}]'.format(deployment_id, status))
+
+    @staticmethod
+    def create_filters_dict(**kwargs):
+        filters = {}
+        for key, val in kwargs.iteritems():
+            if val:
+                filters[key] = val
+        return filters or None
 
     def _get_create_env_params(self, deployment_plan):
         return {
@@ -895,8 +911,10 @@ class BlueprintsManager(object):
         is_transient_workers_enabled = transient_workers_config['enabled']
 
         def _get_running_executions(deployment_id=None, include_system=True):
+            deplyment_id_filter = self.create_filters_dict(
+                deployment_id=deployment_id)
             executions = self.executions_list(
-                deployment_id=deployment_id,
+                filters=deplyment_id_filter,
                 is_include_system_workflows=include_system)
             running = [
                 e.id for e in executions if
@@ -957,19 +975,11 @@ class BlueprintsManager(object):
 
     @staticmethod
     def _get_resolver_section(context):
-        resolver_class_path = None
-        params = None
         if context:
             cloudify_section = context.get(constants.CLOUDIFY)
             if cloudify_section:
-                resolver_section = \
-                    cloudify_section.get(constants.IMPORT_RESOLVER_KEY)
-                if resolver_section:
-                    resolver_class_path = resolver_section.get(
-                        constants.RESOLVER_IMPLEMENTATION_KEY)
-                    params = resolver_section.get(
-                        constants.RESLOVER_PARAMETERS_KEY)
-        return resolver_class_path, params
+                return cloudify_section.get(constants.IMPORT_RESOLVER_KEY)
+        return None
 
     def _get_resolver(self):
         if not hasattr(current_app, 'resolver'):
@@ -978,29 +988,9 @@ class BlueprintsManager(object):
         return current_app.resolver
 
     def _update_import_resolver_in_app(self, context):
-        resolver = DefaultImportResolver()
-        resolver_class_path, params = self._get_resolver_section(context)
-        if resolver_class_path:
-            try:
-                resolver = get_class_instance(resolver_class_path, params)
-            except RuntimeError, ex:
-                raise ResolverInstantiationError(
-                    'Failed to instantiate resolver ({0}). {1}'
-                    .format(resolver_class_path, str(ex)))
-        else:
-            # using the default resolver
-            if params:
-                # using custom rules for the default resolver
-                try:
-                    resolver = DefaultImportResolver(
-                        rules=params.get(DEFAULT_RESLOVER_RULES_KEY))
-                except DefaultResolverValidationException, ex:
-                    raise ResolverInstantiationError(
-                        'Wrong parameters ({0}) configured for '
-                        'the default resolver ({1}): {2}'
-                        .format(params,
-                                DefaultImportResolver.__name__, str(ex)))
-        current_app.resolver = resolver
+        resolver_section = self._get_resolver_section(context)
+        current_app.resolver = dsl_parser_utils.create_import_resolver(
+            resolver_section)
 
     def update_provider_context(self, update, provider_context):
         if update:

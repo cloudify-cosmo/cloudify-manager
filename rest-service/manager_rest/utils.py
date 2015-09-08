@@ -105,7 +105,7 @@ def get_class(class_path):
 
     module = importlib.import_module(class_module_str)
     if not hasattr(module, class_name):
-        raise ValueError('module "{0}", does not contain class "{1}"'
+        raise ValueError('module {0}, does not contain class {1}'
                          .format(class_module_str, class_name))
 
     return getattr(module, class_name)

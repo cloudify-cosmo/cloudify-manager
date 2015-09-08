@@ -32,12 +32,15 @@ from flask import (
     send_file,
     request,
     make_response,
-    current_app as app
+    current_app as app,
+    g
 )
 from flask.ext.restful import Resource, marshal, reqparse
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
 from flask_securest.rest_security import SECURED_MODE, SecuredResource
+
+from dsl_parser import utils as dsl_parser_utils
 
 from manager_rest import config
 from manager_rest import models
@@ -47,19 +50,16 @@ from manager_rest import chunked
 from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
-from manager_rest import swagger as rest_swagger
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager,
-                                             ResolverInstantiationError)
+                                             BlueprintsManager)
 from manager_rest import get_version_data
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
 SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
-
-SUPPORTED_API_VERSIONS = ['v1', 'v2']
 
 
 def exceptions_handled(func):
@@ -159,13 +159,6 @@ def _replace_workflows_field_for_deployment_response(deployment_dict):
     return deployment_dict
 
 
-def _versioned_urls(endpoint):
-    urls = []
-    for api_version in SUPPORTED_API_VERSIONS:
-        urls.append('/api/{0}/{1}'.format(api_version, endpoint))
-    return urls
-
-
 def _make_streaming_response(id, path, content_length, archive_type):
     response = make_response()
     response.headers['Content-Description'] = 'File Transfer'
@@ -177,50 +170,6 @@ def _make_streaming_response(id, path, content_length, archive_type):
     response.headers['X-Accel-Redirect'] = path
     response.headers['X-Accel-Buffering'] = 'yes'
     return response
-
-
-def setup_resources(api):
-    resources_endpoints = {
-        Blueprints: 'blueprints',
-        BlueprintsId: 'blueprints/<string:blueprint_id>',
-        BlueprintsIdArchive: 'blueprints/<string:blueprint_id>/archive',
-        Snapshots: 'snapshots',
-        SnapshotsId: 'snapshots/<string:snapshot_id>',
-        SnapshotsIdArchive: 'snapshots/<string:snapshot_id>/archive',
-        SnapshotsIdRestore: 'snapshots/<string:snapshot_id>/restore',
-        Executions: 'executions',
-        ExecutionsId: 'executions/<string:execution_id>',
-        Deployments: 'deployments',
-        DeploymentsId: 'deployments/<string:deployment_id>',
-        DeploymentsIdOutputs: 'deployments/<string:deployment_id>/outputs',
-        DeploymentModifications: 'deployment-modifications',
-        DeploymentModificationsId: 'deployment-modifications/'
-                                   '<string:modification_id>',
-        DeploymentModificationsIdFinish: 'deployment-modifications/'
-                                         '<string:modification_id>/finish',
-        DeploymentModificationsIdRollback: 'deployment-modifications/'
-                                           '<string:modification_id>/rollback',
-        Nodes: 'nodes',
-        NodeInstances: 'node-instances',
-        NodeInstancesId: 'node-instances/<string:node_instance_id>',
-        NodeInstancesIdInstallAgent: 'node-instances/<string:node_instance_id>'
-                                     '/install_agent.py',
-        Events: 'events',
-        Search: 'search',
-        Status: 'status',
-        ProviderContext: 'provider/context',
-        Version: 'version',
-        EvaluateFunctions: 'evaluate/functions',
-        Tokens: 'tokens'
-    }
-
-    for resource, endpoint in resources_endpoints.iteritems():
-        api.add_resource(resource, *_versioned_urls(endpoint))
-
-        for api_version in SUPPORTED_API_VERSIONS:
-            rest_swagger.add_swagger_resource(
-                api, api_version, resource, '/api/{0}/{1}'.format(api_version,
-                                                                  endpoint))
 
 
 class UploadedDataManager(object):
@@ -311,23 +260,6 @@ class UploadedDataManager(object):
         raise NotImplementedError('Subclass responsibility')
 
 
-class UploadedSnapshotsManager(UploadedDataManager):
-
-    def _get_kind(self):
-        return 'snapshot'
-
-    def _get_data_url_key(self):
-        return 'snapshot_archive_url'
-
-    def _get_target_dir_path(self):
-        return config.instance().file_server_uploaded_snapshots_folder
-
-    def _get_archive_type(self, archive_path):
-        return 'zip'
-
-    def _prepare_and_process_doc(self, data_id, file_server_root,
-                                 archive_target_path):
-        return get_blueprints_manager().create_snapshot_model(data_id)
 
 
 class UploadedBlueprintsManager(UploadedDataManager):
@@ -657,10 +589,12 @@ class Executions(SecuredResource):
             'include_system_workflows',
             request.args.get('include_system_workflows', 'false'))
 
+        deployment_id_filter = BlueprintsManager.create_filters_dict(
+            deployment_id=deployment_id)
         executions = get_blueprints_manager().executions_list(
-            deployment_id=deployment_id,
             is_include_system_workflows=is_include_system_workflows,
-            include=_include)
+            include=_include,
+            filters=deployment_id_filter)
         return [responses.Execution(**e.to_dict()) for e in executions]
 
     @exceptions_handled
@@ -789,165 +723,6 @@ class ExecutionsId(SecuredResource):
 
         return responses.Execution(**get_storage_manager().get_execution(
             execution_id).to_dict())
-
-
-def _get_snapshot_path(snapshot_id):
-    return os.path.join(
-        config.instance().file_server_root,
-        config.instance().file_server_uploaded_snapshots_folder,
-        snapshot_id
-    )
-
-
-class Snapshots(SecuredResource):
-
-    @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Snapshot.__name__),
-        nickname='list',
-        notes='Returns a list of existing snapshots.'
-    )
-    @exceptions_handled
-    @marshal_with(responses.Snapshot.resource_fields)
-    def get(self, _include=None):
-        return get_blueprints_manager().snapshots_list(_include)
-
-
-class SnapshotsId(SecuredResource):
-
-    @swagger.operation(
-        responseClass=responses.Snapshot,
-        nickname='createSnapshot',
-        notes='Create new snapshot of the manager.',
-        consumes=[
-            "application/json"
-        ]
-    )
-    @exceptions_handled
-    @marshal_with(responses.Snapshot.resource_fields)
-    def put(self, snapshot_id):
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('include_metrics', request_json)
-        verify_parameter_in_request_body('include_credentials', request_json)
-        include_metrics = verify_and_convert_bool(
-            'include_metrics',
-            request_json['include_metrics']
-        )
-        include_credentials = verify_and_convert_bool(
-            'include_credentials',
-            request_json['include_credentials']
-        )
-
-        snapshot = get_blueprints_manager().create_snapshot(
-            snapshot_id,
-            include_metrics,
-            include_credentials
-        )
-        return snapshot, 201
-
-    @swagger.operation(
-        responseClass=responses.Snapshot,
-        nickname='deleteSnapshot',
-        notes='Delete existing snapshot.'
-    )
-    @exceptions_handled
-    @marshal_with(responses.Snapshot.resource_fields)
-    def delete(self, snapshot_id):
-        snapshot = get_blueprints_manager().delete_snapshot(snapshot_id)
-        path = _get_snapshot_path(snapshot_id)
-        shutil.rmtree(path, ignore_errors=True)
-        return snapshot, 200
-
-    @exceptions_handled
-    @marshal_with(responses.Snapshot.resource_fields)
-    def patch(self, snapshot_id):
-        """
-        Update snapshot status by id
-        """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('status', request_json)
-
-        get_blueprints_manager().update_snapshot_status(
-            snapshot_id,
-            request_json['status'],
-            request_json.get('error', ''))
-
-        return responses.Snapshot(**get_storage_manager().get_snapshot(
-            snapshot_id).to_dict()), 200
-
-
-class SnapshotsIdArchive(SecuredResource):
-
-    @swagger.operation(
-        responseClass=responses.Snapshot,
-        nickname='uploadSnapshot',
-        notes='Submitted snapshot should be an archive.'
-              'Archive format has to be zip.'
-              ' Snapshot archive may be submitted via either URL or by '
-              'direct upload.',
-        parameters=[
-                    {'name': 'snapshot_archive_url',
-                     'description': 'url of a snapshot archive file',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'query'},
-                    {
-                        'name': 'body',
-                        'description': 'Binary form of the zip',
-                        'required': True,
-                        'allowMultiple': False,
-                        'dataType': 'binary',
-                        'paramType': 'body'}],
-        consumes=[
-            "application/octet-stream"
-        ]
-
-    )
-    @exceptions_handled
-    @marshal_with(responses.Snapshot.resource_fields)
-    def put(self, snapshot_id):
-        return UploadedSnapshotsManager().receive_uploaded_data(snapshot_id)
-
-    @swagger.operation(
-        nickname='downloadSnapshot',
-        notes='Downloads snapshot as an archive.'
-    )
-    @exceptions_handled
-    def get(self, snapshot_id):
-        get_blueprints_manager().get_snapshot(snapshot_id)
-
-        snapshot_path = os.path.join(
-            _get_snapshot_path(snapshot_id),
-            '{0}.zip'.format(snapshot_id)
-        )
-
-        snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
-            config.instance().file_server_resources_uri,
-            config.instance().file_server_uploaded_snapshots_folder,
-            snapshot_id
-        )
-
-        return _make_streaming_response(
-            snapshot_id,
-            snapshot_uri,
-            os.path.getsize(snapshot_path),
-            'zip'
-        )
-
-
-class SnapshotsIdRestore(SecuredResource):
-    @swagger.operation(
-        responseClass=responses.Snapshot,
-        nickname='restoreSnapshot',
-        notes='Restore existing snapshot.'
-    )
-    @exceptions_handled
-    @marshal_with(responses.Snapshot.resource_fields)
-    def post(self, snapshot_id):
-        get_blueprints_manager().restore_snapshot(snapshot_id)
-        return None, 200
 
 
 class Deployments(SecuredResource):
@@ -1081,7 +856,7 @@ class DeploymentModifications(SecuredResource):
                      'required': True,
                      'allowMultiple': False,
                      'dataType': requests_schema.
-                     DeploymentModificationRequest.__name__,
+                    DeploymentModificationRequest.__name__,
                      'paramType': 'body'}],
         consumes=[
             "application/json"
@@ -1104,7 +879,7 @@ class DeploymentModifications(SecuredResource):
                                          param_type=dict,
                                          optional=True)
         nodes = request_json.get('nodes', {})
-        modification = get_blueprints_manager().\
+        modification = get_blueprints_manager(). \
             start_deployment_modification(deployment_id, nodes, context)
         return responses.DeploymentModification(**modification.to_dict()), 201
 
@@ -1125,8 +900,10 @@ class DeploymentModifications(SecuredResource):
     def get(self, _include=None):
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
+        deployment_id_filter = BlueprintsManager.create_filters_dict(
+            deployment_id=deployment_id)
         modifications = get_storage_manager().deployment_modifications_list(
-            deployment_id, include=_include)
+            filters=deployment_id_filter, include=_include)
         return [responses.DeploymentModification(**m.to_dict())
                 for m in modifications]
 
@@ -1172,7 +949,7 @@ class DeploymentModificationsIdRollback(SecuredResource):
     @marshal_with(responses.DeploymentModification.resource_fields)
     def post(self, modification_id):
         modification = get_blueprints_manager(
-            ).rollback_deployment_modification(modification_id)
+        ).rollback_deployment_modification(modification_id)
         return responses.DeploymentModification(**modification.to_dict())
 
 
@@ -1216,8 +993,10 @@ class Nodes(SecuredResource):
             except manager_exceptions.NotFoundError:
                 nodes = []
         else:
-            nodes = get_storage_manager().get_nodes(deployment_id,
-                                                    include=_include)
+            deployment_id_filter = BlueprintsManager.create_filters_dict(
+                deployment_id=deployment_id)
+            nodes = get_storage_manager().get_nodes(
+                filters=deployment_id_filter, include=_include)
         return [responses.Node(**node.to_dict()) for node in nodes]
 
 
@@ -1260,10 +1039,12 @@ class NodeInstances(SecuredResource):
         """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
-        node_name = args.get('node_name')
-        nodes = get_storage_manager().get_node_instances(deployment_id,
-                                                         node_name,
-                                                         include=_include)
+        node_id = args.get('node_name')
+        params_filter = BlueprintsManager.create_filters_dict(
+            deployment_id=deployment_id, node_id=node_id)
+        nodes = get_storage_manager().get_node_instances(
+            filters=params_filter,
+            include=_include)
         return [responses.NodeInstance(**node.to_dict()) for node in nodes]
 
 
@@ -1353,7 +1134,7 @@ class NodeInstancesId(SecuredResource):
         """
         verify_json_content_type()
         if request.json.__class__ is not dict or \
-                'version' not in request.json or \
+            'version' not in request.json or \
                 request.json['version'].__class__ is not int:
 
             if request.json.__class__ is not dict:
@@ -1416,27 +1197,47 @@ class DeploymentsIdOutputs(SecuredResource):
                                            outputs=outputs)
 
 
+def _elasticsearch_connection():
+    if 'es_connection' not in g:
+        es_host = config.instance().db_address
+        es_port = config.instance().db_port
+        g.es_connection = elasticsearch.Elasticsearch(
+            hosts=[{"host": es_host, "port": es_port}])
+    return g.es_connection
+
+
+def _check_index_exists(index_name):
+    if not hasattr(app, 'cloudify_events_index_exists'):
+        es = _elasticsearch_connection()
+        app.cloudify_events_index_exists = \
+            es.indices.exists(index=[index_name])
+    return app.cloudify_events_index_exists
+
+
 def _query_elastic_search(index=None, doc_type=None, body=None):
     """Query ElasticSearch with the provided index and query body.
 
     Returns:
     Elasticsearch result as is (Python dict).
     """
-    es_host = config.instance().db_address
-    es_port = config.instance().db_port
-    es = elasticsearch.Elasticsearch(hosts=[{"host": es_host,
-                                             "port": es_port}])
+    es = _elasticsearch_connection()
     return es.search(index=index, doc_type=doc_type, body=body)
 
 
 class Events(SecuredResource):
+
+    def _set_index_name(self):
+        if _check_index_exists('cloudify_events'):
+            return 'cloudify_events'
+        else:
+            return 'logstash-*'
 
     def _query_events(self):
         """
         List events for the provided Elasticsearch query
         """
         verify_json_content_type()
-        return _query_elastic_search(index='cloudify_events',
+        return _query_elastic_search(index=self._set_index_name(),
                                      body=request.json)
 
     @swagger.operation(
@@ -1516,29 +1317,35 @@ class Status(SecuredResource):
         """
         Get the status of running system services
         """
-        job_list = {'riemann': 'Riemann',
-                    'rabbitmq-server': 'RabbitMQ',
-                    'celeryd-cloudify-management': 'Celery Management',
-                    'elasticsearch': 'Elasticsearch',
-                    'cloudify-ui': 'Cloudify UI',
-                    'logstash': 'Logstash',
-                    'nginx': 'Webserver'
-                    }
-
         try:
             if self._is_docker_env():
-                job_list.update({'rest-service': 'Manager Rest-Service',
-                                 'amqp-influx': 'AMQP InfluxDB',
-                                 })
+                job_list = {'riemann': 'Riemann',
+                            'rabbitmq-server': 'RabbitMQ',
+                            'celeryd-cloudify-management': 'Celery Management',
+                            'elasticsearch': 'Elasticsearch',
+                            'cloudify-ui': 'Cloudify UI',
+                            'logstash': 'Logstash',
+                            'nginx': 'Webserver',
+                            'rest-service': 'Manager Rest-Service',
+                            'amqp-influx': 'AMQP InfluxDB'
+                            }
                 from manager_rest.runitsupervise import get_services
                 jobs = get_services(job_list)
             else:
-                job_list.update({'manager': 'Cloudify Manager',
-                                 'rsyslog': 'Syslog',
-                                 'ssh': 'SSH',
-                                 })
-                from manager_rest.upstartdbus import get_jobs
-                jobs = get_jobs(job_list.keys(), job_list.values())
+                from manager_rest.systemddbus import get_services
+                job_list = {'cloudify-mgmtworker.service': 'Celery Management',
+                            'cloudify-restservice.service':
+                                'Manager Rest-Service',
+                            'cloudify-amqpinflux.service': 'AMQP InfluxDB',
+                            'cloudify-influxdb.service': 'InfluxDB',
+                            'cloudify-rabbitmq.service': 'RabbitMQ',
+                            'cloudify-riemann.service': 'Riemann',
+                            'cloudify-webui.service': 'Cloudify UI',
+                            'elasticsearch.service': 'Elasticsearch',
+                            'logstash.service': 'Logstash',
+                            'nginx.service': 'Webserver'
+                            }
+                jobs = get_services(job_list)
         except ImportError:
             jobs = ['undefined']
 
@@ -1602,7 +1409,7 @@ class ProviderContext(SecuredResource):
             get_blueprints_manager().update_provider_context(update, context)
             return \
                 responses.ProviderContextPostStatus(status='ok'), status_code
-        except ResolverInstantiationError, ex:
+        except dsl_parser_utils.ResolverInstantiationError, ex:
             raise manager_exceptions.ResolverInstantiationError(str(ex))
 
 
@@ -1670,7 +1477,7 @@ class Tokens(SecuredResource):
         responseClass=responses.Tokens,
         nickname="get auth token for the request user",
         notes="Generate authentication token for the request user",
-        )
+    )
     @exceptions_handled
     @marshal_with(responses.Tokens.resource_fields)
     def get(self):

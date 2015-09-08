@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,19 +12,11 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
-from setuptools import setup
-
-
-setup(
-    name='cloudify-workflows',
-    version='3.3a5',
-    author='elip',
-    author_email='elip@gigaspaces.com',
-    packages=['cloudify_system_workflows'],
-    license='LICENSE',
-    description='Various Cloudify Workflows',
-    install_requires=[
-        'cloudify-plugins-common==3.3a5',
-    ]
-)
+#
+from manager_rest.responses import (BlueprintState,  # NOQA
+                                    Snapshot, # NOQA
+                                    Execution,  # NOQA
+                                    Deployment,  # NOQA
+                                    DeploymentModification,  # NOQA
+                                    Node,  # NOQA
+                                    NodeInstance)  # NOQA
