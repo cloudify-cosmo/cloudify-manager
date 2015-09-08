@@ -19,11 +19,10 @@ from cloudify.utils import setup_logger, LocalCommandRunner
 from cloudify_agent.api import defaults
 from cloudify_agent.installer.config import configuration as agent_config
 
-import manager_rest.utils as install_utils
-
 
 _PACKAGE_URL = ('http://46.101.245.114/cfy/konrad/'
                 'ubuntu-trusty-agent-snapshots.tar.gz')
+_INSTALL_SCRIPT_PATH = 'resources/rest-service/cloudify/install_agent.py'
 
 
 def with_agent(f):
@@ -48,7 +47,9 @@ class InstallerTestBase(unittest.TestCase):
         fd, self.script_path = tempfile.mkstemp(dir=self.base_dir,
                                                 suffix='.py')
         os.close(fd)
-        install_utils.prepare_agent_installation_script({}, self.script_path)
+        repo_path = os.environ['REPOSITORY_PATH']
+        repo_script = os.path.join(repo_path, _INSTALL_SCRIPT_PATH)
+        shutil.copyfile(repo_script, self.script_path)
 
     def tearDown(self):
         shutil.rmtree(self.base_dir)
@@ -130,8 +131,7 @@ class DoubleWorkerInstallerTest(InstallerTestBase):
                 # Must end with .py:
                 installer_name = 'installer.py'
                 output = os.path.join(self.base_dir, installer_name)
-                install_utils.prepare_agent_installation_script(agent,
-                                                                output)
+                shutil.copyfile(self.script_path, output)
                 worker_name = 'celery@{0}'.format(agent['name'])
                 worker_inspect = celery.control.inspect(
                     destination=[worker_name])
@@ -146,6 +146,7 @@ class DoubleWorkerInstallerTest(InstallerTestBase):
                 result = celery_app.send_task(
                     'script_runner.tasks.run',
                     args=['http://localhost:8000/{0}'.format(installer_name)],
+                    kwargs={'cloudify_agent': agent},
                     queue=parent_agent['queue'])
                 result.get(timeout=600)
                 self.assertTrue(worker_inspect.active())
