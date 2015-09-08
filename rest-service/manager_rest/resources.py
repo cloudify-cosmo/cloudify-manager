@@ -260,8 +260,6 @@ class UploadedDataManager(object):
         raise NotImplementedError('Subclass responsibility')
 
 
-
-
 class UploadedBlueprintsManager(UploadedDataManager):
 
     def _get_kind(self):

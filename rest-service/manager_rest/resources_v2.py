@@ -245,8 +245,8 @@ class SnapshotsIdRestore(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.Snapshot.resource_fields)
     def post(self, snapshot_id):
-        get_blueprints_manager().restore_snapshot(snapshot_id)
-        return None, 200
+        execution = get_blueprints_manager().restore_snapshot(snapshot_id)
+        return execution, 200
 
 
 class Blueprints(resources.Blueprints):
