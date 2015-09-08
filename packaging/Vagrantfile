@@ -24,11 +24,11 @@ AWS_ACCESS_KEY_UPLOAD_TEMP = ENV['AWS_ACCESS_KEY_UPLOAD_TEMP']
 CENTOS7_OFFICIAL_BOX_URL = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7.box'
 
 Vagrant.configure('2') do |config|
-  config.vm.define "centos_core_manager" do |centos_final|
+  config.vm.define "rest_service" do |rest|
     #dummy box, will be overriden
-    centos_final.vm.box = "dummy"
-    centos_final.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
-    centos_final.vm.provider :aws do |aws, override|
+    rest.vm.box = "dummy"
+    rest.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
+    rest.vm.provider :aws do |aws, override|
       aws.access_key_id = AWS_ACCESS_KEY_ID
       aws.secret_access_key = AWS_ACCESS_KEY
       aws.ami = "ami-fd69068a"
@@ -41,7 +41,7 @@ Vagrant.configure('2') do |config|
       aws.tags = { "Name" => "vagrant agent centos 7.0 build" }
       aws.security_groups = "vagrant_linux_build"
     end
-    centos_final.vm.provision "shell" do |s|
+    rest.vm.provision "shell" do |s|
       s.path = "linux/provision.sh"
       s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
       s.privileged = false
