@@ -19,10 +19,9 @@ from flask_restful_swagger import swagger
 from manager_rest import resources
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled)
-from manager_rest.resources import (verify_and_convert_bool,
-                                    _replace_workflows_field_for_deployment_response)  # noqa
+from manager_rest.resources import verify_and_convert_bool
 from manager_rest import models
-from manager_rest import responses_v2 as responses
+from manager_rest import responses_v2
 from manager_rest import manager_exceptions
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import get_blueprints_manager
@@ -65,7 +64,7 @@ def _create_filter_params_list_description(parameters, list_type):
 class Blueprints(resources.Blueprints):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+        responseClass='List[{0}]'.format(responses_v2.BlueprintState.__name__),
         nickname="list",
         notes='Returns a list of submitted blueprints for the optionally '
               'provided filter parameters {0}'
@@ -76,7 +75,7 @@ class Blueprints(resources.Blueprints):
         )
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState.resource_fields)
+    @marshal_with(responses_v2.BlueprintState)
     @verify_and_create_filters(models.BlueprintState.fields)
     def get(self, _include=None, filters=None):
         """
@@ -86,10 +85,87 @@ class Blueprints(resources.Blueprints):
             _include, filters=filters)
 
 
+class BlueprintsId(resources.BlueprintsId):
+
+    @swagger.operation(
+        responseClass=responses_v2.BlueprintState,
+        nickname="getById",
+        notes="Returns a blueprint by its id."
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.BlueprintState)
+    def get(self, blueprint_id, _include=None):
+        """
+        Get blueprint by id
+        """
+        with resources.skip_nested_marshalling():
+            return super(BlueprintsId, self).get(blueprint_id=blueprint_id,
+                                                 _include=_include)
+
+    @swagger.operation(
+        responseClass=responses_v2.BlueprintState,
+        nickname="upload",
+        notes="Submitted blueprint should be an archive "
+              "containing the directory which contains the blueprint. "
+              "Archive format may be zip, tar, tar.gz or tar.bz2."
+              " Blueprint archive may be submitted via either URL or by "
+              "direct upload.",
+        parameters=[{'name': 'application_file_name',
+                     'description': 'File name of yaml '
+                                    'containing the "main" blueprint.',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query',
+                     'defaultValue': 'blueprint.yaml'},
+                    {'name': 'blueprint_archive_url',
+                     'description': 'url of a blueprint archive file',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'},
+                    {
+                        'name': 'body',
+                        'description': 'Binary form of the tar '
+                                       'gzipped blueprint directory',
+                        'required': True,
+                        'allowMultiple': False,
+                        'dataType': 'binary',
+                        'paramType': 'body'}],
+        consumes=[
+            "application/octet-stream"
+        ]
+
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.BlueprintState)
+    def put(self, blueprint_id):
+        """
+        Upload a blueprint (id specified)
+        """
+        with resources.skip_nested_marshalling():
+            return super(BlueprintsId, self).put(blueprint_id=blueprint_id)
+
+    @swagger.operation(
+        responseClass=responses_v2.BlueprintState,
+        nickname="deleteById",
+        notes="deletes a blueprint by its id."
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.BlueprintState)
+    def delete(self, blueprint_id):
+        """
+        Delete blueprint by id
+        """
+        with resources.skip_nested_marshalling():
+            return super(BlueprintsId, self).delete(
+                blueprint_id=blueprint_id)
+
+
 class Executions(resources.Executions):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Execution.__name__),
+        responseClass='List[{0}]'.format(responses_v2.Execution.__name__),
         nickname="list",
         notes='Returns a list of executions for the optionally provided filter'
               ' parameters: {0}'.format(models.Execution.fields),
@@ -105,7 +181,7 @@ class Executions(resources.Executions):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.Execution.resource_fields)
+    @marshal_with(responses_v2.Execution)
     @verify_and_create_filters(models.Execution.fields)
     def get(self, _include=None, filters=None):
         """
@@ -123,13 +199,13 @@ class Executions(resources.Executions):
             filters=filters,
             is_include_system_workflows=is_include_system_workflows,
             include=_include)
-        return [responses.Execution(**e.to_dict()) for e in executions]
+        return executions
 
 
 class Deployments(resources.Deployments):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Deployment.__name__),
+        responseClass='List[{0}]'.format(responses_v2.Deployment.__name__),
         nickname="list",
         notes='Returns a list existing deployments for the optionally provided'
               ' filter parameters: {0}'.format(models.Deployment.fields),
@@ -139,7 +215,7 @@ class Deployments(resources.Deployments):
         )
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment.resource_fields)
+    @marshal_with(responses_v2.Deployment)
     @verify_and_create_filters(models.Deployment.fields)
     def get(self, _include=None, filters=None):
         """
@@ -147,18 +223,13 @@ class Deployments(resources.Deployments):
         """
         deployments = get_blueprints_manager().deployments_list(
             include=_include, filters=filters)
-        return [
-            responses.Deployment(
-                **_replace_workflows_field_for_deployment_response(
-                    d.to_dict()))
-            for d in deployments
-        ]
+        return deployments
 
 
 class DeploymentModifications(resources.DeploymentModifications):
     @swagger.operation(
         responseClass='List[{0}]'.format(
-            responses.DeploymentModification.__name__),
+            responses_v2.DeploymentModification.__name__),
         nickname="listDeploymentModifications",
         notes='Returns a list of deployment modifications for the optionally '
               'provided filter parameters: {0}'
@@ -169,7 +240,7 @@ class DeploymentModifications(resources.DeploymentModifications):
         )
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification.resource_fields)
+    @marshal_with(responses_v2.DeploymentModification)
     @verify_and_create_filters(models.DeploymentModification.fields)
     def get(self, _include=None, filters=None):
         """
@@ -177,14 +248,13 @@ class DeploymentModifications(resources.DeploymentModifications):
         """
         modifications = get_storage_manager().deployment_modifications_list(
             include=_include, filters=filters)
-        return [responses.DeploymentModification(**m.to_dict())
-                for m in modifications]
+        return modifications
 
 
 class Nodes(resources.Nodes):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Node.__name__),
+        responseClass='List[{0}]'.format(responses_v2.Node.__name__),
         nickname="listNodes",
         notes='Returns a nodes list for the optionally provided filter '
               'parameters: {0}'.format(models.DeploymentNode.fields),
@@ -194,7 +264,7 @@ class Nodes(resources.Nodes):
         )
     )
     @exceptions_handled
-    @marshal_with(responses.Node.resource_fields)
+    @marshal_with(responses_v2.Node)
     @verify_and_create_filters(models.DeploymentNode.fields)
     def get(self, _include=None, filters=None):
         """
@@ -202,13 +272,13 @@ class Nodes(resources.Nodes):
         """
         nodes = get_storage_manager().get_nodes(include=_include,
                                                 filters=filters)
-        return [responses.Node(**node.to_dict()) for node in nodes]
+        return nodes
 
 
 class NodeInstances(resources.NodeInstances):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.NodeInstance.__name__),
+        responseClass='List[{0}]'.format(responses_v2.NodeInstance.__name__),
         nickname="listNodeInstances",
         notes='Returns a node instances list for the optionally provided '
               'filter parameters: {0}'
@@ -219,12 +289,12 @@ class NodeInstances(resources.NodeInstances):
         )
     )
     @exceptions_handled
-    @marshal_with(responses.NodeInstance.resource_fields)
+    @marshal_with(responses_v2.NodeInstance)
     @verify_and_create_filters(models.DeploymentNodeInstance.fields)
     def get(self, _include=None, filters=None):
         """
         List node instances
         """
-        nodes = get_storage_manager().get_node_instances(include=_include,
-                                                         filters=filters)
-        return [responses.NodeInstance(**node.to_dict()) for node in nodes]
+        node_instances = get_storage_manager().get_node_instances(
+            include=_include, filters=filters)
+        return node_instances

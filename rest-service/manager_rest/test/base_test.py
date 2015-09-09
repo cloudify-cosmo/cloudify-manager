@@ -22,11 +22,17 @@ import time
 import os
 
 from nose.tools import nottest
+from nose.plugins.attrib import attr
 
 from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
+try:
+    from cloudify_rest_client.client import \
+        DEFAULT_API_VERSION as CLIENT_API_VERSION
+except ImportError:
+    CLIENT_API_VERSION = 'v1'
 
 
 STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
@@ -34,7 +40,7 @@ FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
-LATEST_API_VERSION = 'v2'
+LATEST_API_VERSION = 2  # to be used by max_client_version test attribute
 
 
 def build_query_string(query_params):
@@ -78,41 +84,59 @@ def inject_test_config(f):
 
 class MockHTTPClient(HTTPClient):
 
-    def __init__(self, app, api_version=LATEST_API_VERSION, headers=None):
+    def __init__(self, app, headers=None):
         super(MockHTTPClient, self).__init__(host='localhost',
-                                             headers=headers,
-                                             api_version=api_version)
+                                             headers=headers)
         self.app = app
-        self.api_version = api_version
 
-    def version_url(self, url):
-        if self.api_version not in url:
-            url = '/api/{0}{1}'.format(self.api_version, url)
+    def do_request(self,
+                   requests_method,
+                   uri,
+                   data=None,
+                   params=None,
+                   headers=None,
+                   expected_status_code=200,
+                   stream=False):
+        if CLIENT_API_VERSION == 'v1':
+            # in v1, HTTPClient won't append the version part of the URL
+            # on its own, so it's done here instead
+            uri = '/api/{0}{1}'.format(CLIENT_API_VERSION, uri)
 
-        return url
+        return super(MockHTTPClient, self).do_request(
+            requests_method=requests_method,
+            uri=uri,
+            data=data,
+            params=params,
+            headers=headers,
+            expected_status_code=expected_status_code,
+            stream=stream)
 
     def _do_request(self, requests_method, request_url, body, params, headers,
                     expected_status_code, stream, verify):
         if 'get' in requests_method.__name__:
-            response = self.app.get(self.version_url(request_url),
+            response = self.app.get(request_url,
                                     headers=headers,
                                     query_string=build_query_string(params))
 
         elif 'put' in requests_method.__name__:
-            response = self.app.put(self.version_url(request_url),
+            response = self.app.put(request_url,
                                     headers=headers,
                                     data=body,
                                     query_string=build_query_string(params))
         elif 'post' in requests_method.__name__:
-            response = self.app.post(self.version_url(request_url),
+            response = self.app.post(request_url,
                                      headers=headers,
                                      data=body,
                                      query_string=build_query_string(params))
         elif 'patch' in requests_method.__name__:
-            response = self.app.patch(self.version_url(request_url),
+            response = self.app.patch(request_url,
                                       headers=headers,
                                       data=body,
                                       query_string=build_query_string(params))
+        elif 'delete' in requests_method.__name__:
+            response = self.app.delete(request_url,
+                                       headers=headers,
+                                       query_string=build_query_string(params))
         else:
             raise NotImplemented()
 
@@ -124,6 +148,7 @@ class MockHTTPClient(HTTPClient):
         return json.loads(response.data)
 
 
+@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
@@ -131,11 +156,9 @@ class BaseServerTestCase(unittest.TestCase):
 
     def create_client(self, headers=None):
         client = CloudifyClient(host='localhost',
-                                api_version=self.api_version,
                                 headers=headers)
         mock_http_client = MockHTTPClient(self.app,
-                                          headers=headers,
-                                          api_version=self.api_version)
+                                          headers=headers)
         client._client = mock_http_client
         client.blueprints.api = mock_http_client
         client.deployments.api = mock_http_client
@@ -150,8 +173,7 @@ class BaseServerTestCase(unittest.TestCase):
 
         return client
 
-    def setUp(self, api_version=LATEST_API_VERSION):
-        self.api_version = api_version
+    def setUp(self):
         self.tmpdir = tempfile.mkdtemp()
         self.rest_service_log = tempfile.mkstemp()[1]
         self.securest_log_file = tempfile.mkstemp()[1]
@@ -219,8 +241,16 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.securest_log_files_backup_count = 20
         return test_config
 
+    def _version_url(self, url):
+        # method for versionifying URLs for requests which don't go through
+        # the REST client; the version is taken from the REST client regardless
+        if CLIENT_API_VERSION not in url:
+            url = '/api/{0}{1}'.format(CLIENT_API_VERSION, url)
+
+        return url
+
     def post(self, resource_path, data, query_params=None):
-        url = self.client._client.version_url(resource_path)
+        url = self._version_url(resource_path)
         result = self.app.post(urllib.quote(url),
                                content_type='application/json',
                                data=json.dumps(data),
@@ -229,7 +259,7 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def post_file(self, resource_path, file_path, query_params=None):
-        url = self.client._client.version_url(resource_path)
+        url = self._version_url(resource_path)
         with open(file_path) as f:
             result = self.app.post(urllib.quote(url),
                                    data=f.read(),
@@ -239,7 +269,7 @@ class BaseServerTestCase(unittest.TestCase):
             return result
 
     def put_file(self, resource_path, file_path, query_params=None):
-        url = self.client._client.version_url(resource_path)
+        url = self._version_url(resource_path)
         with open(file_path) as f:
             result = self.app.put(urllib.quote(url),
                                   data=f.read(),
@@ -249,7 +279,7 @@ class BaseServerTestCase(unittest.TestCase):
             return result
 
     def put(self, resource_path, data=None, query_params=None):
-        url = self.client._client.version_url(resource_path)
+        url = self._version_url(resource_path)
         result = self.app.put(urllib.quote(url),
                               content_type='application/json',
                               data=json.dumps(data) if data else None,
@@ -258,7 +288,7 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def patch(self, resource_path, data):
-        url = self.client._client.version_url(resource_path)
+        url = self._version_url(resource_path)
         result = self.app.patch(urllib.quote(url),
                                 content_type='application/json',
                                 data=json.dumps(data))
@@ -266,7 +296,7 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def get(self, resource_path, query_params=None, headers=None):
-        url = self.client._client.version_url(resource_path)
+        url = self._version_url(resource_path)
         result = self.app.get(urllib.quote(url),
                               headers=headers,
                               query_string=build_query_string(query_params))
@@ -274,12 +304,12 @@ class BaseServerTestCase(unittest.TestCase):
         return result
 
     def head(self, resource_path):
-        url = self.client._client.version_url(resource_path)
+        url = self._version_url(resource_path)
         result = self.app.head(urllib.quote(url))
         return result
 
     def delete(self, resource_path, query_params=None):
-        url = self.client._client.version_url(resource_path)
+        url = self._version_url(resource_path)
         result = self.app.delete(urllib.quote(url),
                                  query_string=build_query_string(query_params))
         result.json = json.loads(result.data)
@@ -312,8 +342,9 @@ class BaseServerTestCase(unittest.TestCase):
                            archive_func=archiving.make_targzfile,
                            blueprint_dir='mock_blueprint'):
 
-        resource_path = '/api/{0}/blueprints/{1}'.format(self.api_version,
-                                                         blueprint_id)
+        resource_path = self._version_url(
+            '/blueprints/{1}'.format(CLIENT_API_VERSION, blueprint_id))
+
         result = [
             resource_path,
             self.archive_mock_blueprint(archive_func, blueprint_dir),

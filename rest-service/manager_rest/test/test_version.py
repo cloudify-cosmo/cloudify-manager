@@ -13,12 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from nose.plugins.attrib import attr
+
 from manager_rest import get_version_data
+from manager_rest.test import base_test
 
-from base_test import BaseServerTestCase
 
-
-class VersionTestCase(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class VersionTestCase(base_test.BaseServerTestCase):
 
     def test_get_version(self):
         self.assertDictEqual(self.client.manager.get_version(),

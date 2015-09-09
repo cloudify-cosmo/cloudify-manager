@@ -31,11 +31,12 @@ class SerializableObject(object):
 
 class BlueprintState(SerializableObject):
 
-    fields = {'plan', 'id', 'created_at', 'updated_at'}
+    fields = {'plan', 'id', 'description', 'created_at', 'updated_at'}
 
     def __init__(self, **kwargs):
         self.plan = kwargs['plan']
         self.id = kwargs['id']
+        self.description = kwargs['description']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 

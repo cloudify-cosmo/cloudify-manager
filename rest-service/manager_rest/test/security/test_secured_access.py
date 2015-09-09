@@ -14,12 +14,14 @@
 #  * limitations under the License.
 
 from mock import patch
+from nose.plugins.attrib import attr
 
+from manager_rest.test import base_test
+from manager_rest.test.security.security_test_base import SecurityTestBase
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
-from manager_rest.test.security.security_test_base import SecurityTestBase
 
-
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SecurityTest(SecurityTestBase):
 
     def test_secured_client(self):

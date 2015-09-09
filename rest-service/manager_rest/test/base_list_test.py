@@ -21,8 +21,7 @@ class BaseListTest(BaseServerTestCase):
                                      modified_nodes={},
                                      node_instances={},
                                      nodes={}):
-        resource_path = '/api/{0}/deployment-modifications' \
-            .format(self.api_version)
+        resource_path = '/deployment-modifications'
         data = {'deployment_id': deployment_id,
                 'modified_nodes': modified_nodes,
                 'node_instances': node_instances,
@@ -30,8 +29,8 @@ class BaseListTest(BaseServerTestCase):
         return self.post(resource_path, data).json
 
     def _mark_deployment_modification_finished(self, modification_id=None):
-        resource_path = '/api/{0}/deployment-modifications/{1}/finish' \
-            .format(self.api_version, modification_id)
+        resource_path = '/deployment-modifications/{0}/finish'.format(
+            modification_id)
         data = {'modification_id': modification_id}
         return self.post(resource_path, data).json
 

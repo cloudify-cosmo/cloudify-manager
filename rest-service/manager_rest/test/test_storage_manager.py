@@ -14,10 +14,14 @@
 #  * limitations under the License.
 
 from datetime import datetime
+
+from nose.plugins.attrib import attr
+
 from manager_rest import storage_manager, models
-import base_test
+from manager_rest.test import base_test
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_store_load_delete_blueprint(self):
@@ -25,6 +29,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
                                           updated_at=now,
+                                          description=None,
                                           plan={'name': 'my-bp'},
                                           source='bp-source')
         storage_manager.instance().put_blueprint('blueprint-id', blueprint)
@@ -46,6 +51,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
                                           updated_at=now,
+                                          description=None,
                                           plan={'name': 'my-bp'},
                                           source='bp-source')
         storage_manager.instance().put_blueprint('blueprint-id', blueprint)
@@ -136,6 +142,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
                                           updated_at=now,
+                                          description=None,
                                           plan={'name': 'my-bp'},
                                           source='bp-source')
         storage_manager.instance().put_blueprint('blueprint-id', blueprint)
