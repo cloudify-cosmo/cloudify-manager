@@ -23,8 +23,7 @@ setup(
     author='Dan Kilman',
     author_email='dank@gigaspaces.com',
     packages=['manager_rest'],
-    package_data={'manager_rest': [
-        'VERSION', 'resources/install_agent.py.template']},
+    package_data={'manager_rest': ['VERSION']},
     license='LICENSE',
     description='Cloudify manager rest service',
     zip_safe=False,

@@ -12,8 +12,8 @@ import urllib
 
 
 def get_cloudify_agent():
-    # Should replaced with real representation of agent dict.
-    return __AGENT_DESCRIPTION__
+    from cloudify.state import ctx_parameters
+    return ctx_parameters['cloudify_agent']
 
 
 def _shlex_split(command):
