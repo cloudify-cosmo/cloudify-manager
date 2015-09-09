@@ -6,7 +6,7 @@ test_rest_service_v2()
     pushd rest-service && pip install -r dev-requirements.txt && popd
     pushd rest-service && pip install . && popd
     pip install nose
-    nosetests rest-service/manager_rest/test -A 'client_min_version <= 2 and client_max_version >= 2' --nologcapture --nocapture
+    nosetests rest-service/manager_rest/test -A 'client_min_version <= 2 <= client_max_version' --nologcapture --nocapture
 }
 
 test_rest_service_v1()
@@ -17,7 +17,7 @@ test_rest_service_v1()
     pip install nose
     pip uninstall cloudify-rest-client -y
     pip install cloudify-rest-client==3.2.1
-    nosetests rest-service/manager_rest/test -A 'client_min_version <= 1 and client_max_version >= 1' --nologcapture --nocapture
+    nosetests rest-service/manager_rest/test -A 'client_min_version <= 1 <= client_max_version' --nologcapture --nocapture
 }
 
 run_intergration_tests()
