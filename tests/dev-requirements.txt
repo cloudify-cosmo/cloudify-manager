@@ -1,5 +1,5 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
+https://github.com/codilime/cloudify-rest-client/archive/snapshots-master.zip
 https://github.com/codilime/cloudify-plugins-common/archive/snapshots-master.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
