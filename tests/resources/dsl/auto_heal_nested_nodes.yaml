@@ -1,4 +1,4 @@
-tosca_definitions_version: cloudify_dsl_1_0
+tosca_definitions_version: cloudify_dsl_1_2
 
 imports:
     - plugins/mock_workflows.yaml

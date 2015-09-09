@@ -1,0 +1,13 @@
+# The tests expected this value to be 1_0 so please don't change it
+tosca_definitions_version: cloudify_dsl_1_0
+
+description: |
+  This will fail validation if the 'validate_definitions_version' is not
+  set to false
+
+node_types:
+  type: {}
+
+node_templates:
+  node:
+    type: type

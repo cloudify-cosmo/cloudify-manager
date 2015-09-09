@@ -113,9 +113,9 @@ class BlueprintsManager(object):
         application_file = os.path.join(application_dir, application_file_name)
         dsl_location = '{0}{1}'.format(resources_base, application_file)
         try:
-            resolver = self._get_resolver()
             plan = tasks.parse_dsl(
-                dsl_location, resources_base, resolver)
+                dsl_location, resources_base,
+                **self._get_parser_context())
         except Exception, ex:
             raise DslParseException(str(ex))
 
@@ -898,30 +898,39 @@ class BlueprintsManager(object):
                 if not k.startswith('__')}
 
     @staticmethod
-    def _get_resolver_section(context):
-        if context:
-            cloudify_section = context.get(constants.CLOUDIFY)
-            if cloudify_section:
-                return cloudify_section.get(constants.IMPORT_RESOLVER_KEY)
-        return None
+    def _extract_parser_context(context):
+        context = context or {}
+        cloudify_section = context.get(constants.CLOUDIFY, {})
+        return {
+            'resolver_section': cloudify_section.get(
+                constants.IMPORT_RESOLVER_KEY),
+            'validate_definitions_version': cloudify_section.get(
+                constants.VALIDATE_DEFINITIONS_VERSION, True)
+        }
 
-    def _get_resolver(self):
-        if not hasattr(current_app, 'resolver'):
-            self._update_import_resolver_in_app(
+    def _get_parser_context(self):
+        if not hasattr(current_app, 'parser_context'):
+            self._update_parser_context_in_app(
                 self.sm.get_provider_context().context)
-        return current_app.resolver
+        return current_app.parser_context
 
-    def _update_import_resolver_in_app(self, context):
-        resolver_section = self._get_resolver_section(context)
-        current_app.resolver = dsl_parser_utils.create_import_resolver(
-            resolver_section)
+    def _update_parser_context_in_app(self, context):
+        raw_parser_context = self._extract_parser_context(context)
+        resolver = dsl_parser_utils.create_import_resolver(
+            raw_parser_context['resolver_section'])
+        validate_definitions_version = raw_parser_context[
+            'validate_definitions_version']
+        current_app.parser_context = {
+            'resolver': resolver,
+            'validate_version': validate_definitions_version
+        }
 
     def update_provider_context(self, update, provider_context):
         if update:
             self.sm.update_provider_context(provider_context)
         else:
             self.sm.put_provider_context(provider_context)
-        self._update_import_resolver_in_app(provider_context.context)
+        self._update_parser_context_in_app(provider_context.context)
 
 
 def teardown_blueprints_manager(exception):
