@@ -48,23 +48,6 @@ class BlueprintValidationStatus(object):
 
 
 @swagger.model
-class Snapshot(object):
-
-    resource_fields = {
-        'id': fields.String,
-        'created_at': fields.String,
-        'status': fields.String,
-        'error': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.created_at = kwargs['created_at']
-        self.status = kwargs['status']
-        self.error = kwargs['error']
-
-
-@swagger.model
 class Workflow(object):
 
     resource_fields = {
@@ -102,12 +85,22 @@ class Deployment(object):
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
         self.blueprint_id = kwargs['blueprint_id']
-        self.workflows = kwargs['workflows']
+        self.workflows = self._responsify_workflows_field(kwargs['workflows'])
         self.inputs = kwargs['inputs']
         self.policy_types = kwargs['policy_types']
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
         self.outputs = kwargs['outputs']
+
+    @staticmethod
+    def _responsify_workflows_field(deployment_workflows):
+        if deployment_workflows is None:
+            return None
+
+        return [Workflow(name=wf_name,
+                         created_at=None,
+                         parameters=wf.get('parameters', dict()))
+                for wf_name, wf in deployment_workflows.iteritems()]
 
 
 @swagger.model
@@ -293,7 +286,7 @@ class Version(object):
 
 
 @swagger.model
-class EvaluatedFunctions():
+class EvaluatedFunctions(object):
 
     resource_fields = {
         'deployment_id': fields.String,

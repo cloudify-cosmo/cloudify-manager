@@ -12,11 +12,15 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+from nose.plugins.attrib import attr
+
 import manager_rest.storage_manager as sm
-from base_test import BaseServerTestCase
+from manager_rest.test import base_test
 
 
-class NodesTest(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class NodesTest(base_test.BaseServerTestCase):
 
     def test_get_nonexisting_node(self):
         response = self.get('/node-instances/1234')

@@ -58,10 +58,13 @@ def setup_resources(api):
 
 
 def _set_versioned_urls(api, resource_name, endpoint_suffix):
+    resource = None
     for version in SUPPORTED_API_VERSIONS:
         version_name, resources_impl = version
         if hasattr(resources_impl, resource_name):
             resource = getattr(resources_impl, resource_name)
+        # 'resource' will persist throughout iterations, holding a reference
+        # to the latest impl.
         if resource:
             endpoint = '{0}/{1}'.format(version_name, endpoint_suffix)
             url = '/api/{0}'.format(endpoint)

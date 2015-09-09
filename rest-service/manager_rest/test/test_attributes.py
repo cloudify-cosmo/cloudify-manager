@@ -14,13 +14,14 @@
 #  * limitations under the License.
 
 import uuid
+from nose.plugins.attrib import attr
 
+from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import FunctionsEvaluationError
 
-from base_test import BaseServerTestCase
 
-
-class AttributesTestCase(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class AttributesTestCase(base_test.BaseServerTestCase):
 
     def setUp(self):
         super(AttributesTestCase, self).setUp()

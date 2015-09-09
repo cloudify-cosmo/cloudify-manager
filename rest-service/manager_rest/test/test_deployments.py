@@ -15,12 +15,15 @@
 
 import uuid
 
-from base_test import BaseServerTestCase
+from nose.plugins.attrib import attr
+
+from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
-class DeploymentsTestCase(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'
 

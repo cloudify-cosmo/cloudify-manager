@@ -17,10 +17,12 @@
 from datetime import datetime
 
 import mock
+from nose.plugins.attrib import attr
 
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.test.base_test import test_config
 from manager_rest.test.base_test import inject_test_config
+from manager_rest.test.base_test import LATEST_API_VERSION
 from cloudify_rest_client import exceptions
 from manager_rest import manager_exceptions
 from manager_rest import models
@@ -29,6 +31,7 @@ from manager_rest.blueprints_manager import \
     LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE as LIMITLESS_GLOBAL_EXECUTIONS
 
 
+@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class ExecutionsTestCase(BaseServerTestCase):
 
     DEPLOYMENT_ID = 'deployment'

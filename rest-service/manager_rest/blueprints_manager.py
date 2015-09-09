@@ -183,10 +183,12 @@ class BlueprintsManager(object):
 
         now = str(datetime.now())
 
-        new_blueprint = models.BlueprintState(plan=plan,
-                                              id=blueprint_id,
-                                              created_at=now,
-                                              updated_at=now)
+        new_blueprint = models.BlueprintState(
+            plan=plan,
+            id=blueprint_id,
+            description=plan.get('description'),
+            created_at=now,
+            updated_at=now)
         self.sm.put_blueprint(new_blueprint.id, new_blueprint)
         return new_blueprint
 

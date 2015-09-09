@@ -13,13 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from cloudify_rest_client import exceptions
+from nose.plugins.attrib import attr
+
+from manager_rest.test import base_test
 from manager_rest.manager_exceptions import ConflictError
+from cloudify_rest_client import exceptions
 
-from base_test import BaseServerTestCase
 
-
-class ProviderContextTestCase(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class ProviderContextTestCase(base_test.BaseServerTestCase):
 
     def initialize_provider_context(self):
         pass  # each test in this class creates its own provider context

@@ -21,6 +21,7 @@ import tempfile
 import shutil
 import uuid
 import contextlib
+from contextlib import contextmanager
 from functools import wraps
 from os import path
 from urllib2 import urlopen, URLError
@@ -92,24 +93,54 @@ def _get_fields_to_include(model_fields):
     return model_fields
 
 
+@contextmanager
+def skip_nested_marshalling():
+    request.__skip_marshalling = True
+    yield
+    delattr(request, '__skip_marshalling')
+
+
 class marshal_with(object):
-    def __init__(self, fields):
+    def __init__(self, response_class):
         """
-        :param fields: Model resource fields to marshal result according to.
+        :param response_class: response class to marshal result with.
+         class must have a "resource_fields" class variable
         """
-        self.fields = fields
+        if not hasattr(response_class, 'resource_fields'):
+            raise RuntimeError(
+                'Response class {0} does not contain a "resource_fields" '
+                'class variable'.format(type(response_class)))
+        self.response_class = response_class
 
     def __call__(self, f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            include = _get_fields_to_include(self.fields)
+            if hasattr(request, '__skip_marshalling'):
+                return f(*args, **kwargs)
+
+            include = _get_fields_to_include(
+                self.response_class.resource_fields)
             response = f(*args, **kwargs)
+
             if isinstance(response, tuple):
                 data, code, headers = unpack(response)
+                data = self.wrap_with_response_object(data)
                 return marshal(data, include), code, headers
             else:
+                response = self.wrap_with_response_object(response)
                 return marshal(response, include)
+
         return wrapper
+
+    def wrap_with_response_object(self, data):
+        if isinstance(data, dict):
+            return self.response_class(**data)
+        elif isinstance(data, list):
+            return map(self.wrap_with_response_object, data)
+        elif isinstance(data, models.SerializableObject):
+            return self.wrap_with_response_object(data.to_dict())
+        raise RuntimeError('Unexpected response data type {0}'.format(
+            type(data)))
 
 
 def verify_json_content_type():
@@ -144,18 +175,6 @@ def verify_and_convert_bool(attribute_name, str_bool):
         return False
     raise manager_exceptions.BadParametersError(
         '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
-
-
-def _replace_workflows_field_for_deployment_response(deployment_dict):
-    deployment_workflows = deployment_dict['workflows']
-    if deployment_workflows is not None:
-        workflows = [responses.Workflow(
-            name=wf_name, created_at=None, parameters=wf.get(
-                'parameters', dict())) for wf_name, wf
-            in deployment_workflows.iteritems()]
-
-        deployment_dict['workflows'] = workflows
-    return deployment_dict
 
 
 def _make_streaming_response(id, path, content_length, archive_type):
@@ -451,7 +470,7 @@ class Blueprints(SecuredResource):
         notes="Returns a list of uploaded blueprints."
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState.resource_fields)
+    @marshal_with(responses.BlueprintState)
     def get(self, _include=None):
         """
         List uploaded blueprints
@@ -468,14 +487,12 @@ class BlueprintsId(SecuredResource):
         notes="Returns a blueprint by its id."
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState.resource_fields)
+    @marshal_with(responses.BlueprintState)
     def get(self, blueprint_id, _include=None):
         """
         Get blueprint by id
         """
-        blueprint = get_blueprints_manager().get_blueprint(blueprint_id,
-                                                           _include)
-        return responses.BlueprintState(**blueprint.to_dict())
+        return get_blueprints_manager().get_blueprint(blueprint_id, _include)
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -513,7 +530,7 @@ class BlueprintsId(SecuredResource):
 
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState.resource_fields)
+    @marshal_with(responses.BlueprintState)
     def put(self, blueprint_id):
         """
         Upload a blueprint (id specified)
@@ -526,7 +543,7 @@ class BlueprintsId(SecuredResource):
         notes="deletes a blueprint by its id."
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState.resource_fields)
+    @marshal_with(responses.BlueprintState)
     def delete(self, blueprint_id):
         """
         Delete blueprint by id
@@ -549,7 +566,7 @@ class BlueprintsId(SecuredResource):
             blueprint.id)
         shutil.rmtree(uploaded_blueprint_folder)
 
-        return responses.BlueprintState(**blueprint.to_dict()), 200
+        return blueprint, 200
 
 
 class Executions(SecuredResource):
@@ -575,7 +592,7 @@ class Executions(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.Execution.resource_fields)
+    @marshal_with(responses.Execution)
     def get(self, _include=None):
         """List executions"""
         deployment_id = request.args.get('deployment_id')
@@ -592,10 +609,10 @@ class Executions(SecuredResource):
             is_include_system_workflows=is_include_system_workflows,
             include=_include,
             filters=deployment_id_filter)
-        return [responses.Execution(**e.to_dict()) for e in executions]
+        return executions
 
     @exceptions_handled
-    @marshal_with(responses.Execution.resource_fields)
+    @marshal_with(responses.Execution)
     def post(self):
         """Execute a workflow"""
         verify_json_content_type()
@@ -622,7 +639,7 @@ class Executions(SecuredResource):
         execution = get_blueprints_manager().execute_workflow(
             deployment_id, workflow_id, parameters=parameters,
             allow_custom_parameters=allow_custom_parameters, force=force)
-        return responses.Execution(**execution.to_dict()), 201
+        return execution, 201
 
 
 class ExecutionsId(SecuredResource):
@@ -633,14 +650,13 @@ class ExecutionsId(SecuredResource):
         notes="Returns the execution state by its id.",
     )
     @exceptions_handled
-    @marshal_with(responses.Execution.resource_fields)
+    @marshal_with(responses.Execution)
     def get(self, execution_id, _include=None):
         """
         Get execution by id
         """
-        execution = get_blueprints_manager().get_execution(execution_id,
-                                                           include=_include)
-        return responses.Execution(**execution.to_dict())
+        return get_blueprints_manager().get_execution(execution_id,
+                                                      include=_include)
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -660,7 +676,7 @@ class ExecutionsId(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.Execution.resource_fields)
+    @marshal_with(responses.Execution)
     def post(self, execution_id):
         """
         Apply execution action (cancel, force-cancel) by id
@@ -704,7 +720,7 @@ class ExecutionsId(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.Execution.resource_fields)
+    @marshal_with(responses.Execution)
     def patch(self, execution_id):
         """
         Update execution status by id
@@ -718,8 +734,7 @@ class ExecutionsId(SecuredResource):
             request_json['status'],
             request_json.get('error', ''))
 
-        return responses.Execution(**get_storage_manager().get_execution(
-            execution_id).to_dict())
+        return get_storage_manager().get_execution(execution_id)
 
 
 class Deployments(SecuredResource):
@@ -730,19 +745,14 @@ class Deployments(SecuredResource):
         notes="Returns a list of existing deployments."
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment.resource_fields)
+    @marshal_with(responses.Deployment)
     def get(self, _include=None):
         """
         List deployments
         """
         deployments = get_blueprints_manager().deployments_list(
             include=_include)
-        return [
-            responses.Deployment(
-                **_replace_workflows_field_for_deployment_response(
-                    d.to_dict()))
-            for d in deployments
-        ]
+        return deployments
 
 
 class DeploymentsId(SecuredResource):
@@ -758,16 +768,13 @@ class DeploymentsId(SecuredResource):
         notes="Returns a deployment by its id."
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment.resource_fields)
+    @marshal_with(responses.Deployment)
     def get(self, deployment_id, _include=None):
         """
         Get deployment by id
         """
-        deployment = get_blueprints_manager().get_deployment(deployment_id,
-                                                             include=_include)
-        return responses.Deployment(
-            **_replace_workflows_field_for_deployment_response(
-                deployment.to_dict()))
+        return get_blueprints_manager().get_deployment(deployment_id,
+                                                       include=_include)
 
     @swagger.operation(
         responseClass=responses.Deployment,
@@ -784,7 +791,7 @@ class DeploymentsId(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment.resource_fields)
+    @marshal_with(responses.Deployment)
     def put(self, deployment_id):
         """
         Create a deployment
@@ -799,9 +806,7 @@ class DeploymentsId(SecuredResource):
         blueprint_id = request.json['blueprint_id']
         deployment = get_blueprints_manager().create_deployment(
             blueprint_id, deployment_id, inputs=request_json.get('inputs', {}))
-        return responses.Deployment(
-            **_replace_workflows_field_for_deployment_response(
-                deployment.to_dict())), 201
+        return deployment, 201
 
     @swagger.operation(
         responseClass=responses.Deployment,
@@ -818,7 +823,7 @@ class DeploymentsId(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment.resource_fields)
+    @marshal_with(responses.Deployment)
     def delete(self, deployment_id):
         """
         Delete deployment by id
@@ -830,9 +835,7 @@ class DeploymentsId(SecuredResource):
 
         deployment = get_blueprints_manager().delete_deployment(
             deployment_id, ignore_live_nodes)
-        # not using '_replace_workflows_field_for_deployment_response'
-        # method since the object returned only contains the deployment's id
-        return responses.Deployment(**deployment.to_dict()), 200
+        return deployment, 200
 
 
 class DeploymentModifications(SecuredResource):
@@ -860,7 +863,7 @@ class DeploymentModifications(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification.resource_fields)
+    @marshal_with(responses.DeploymentModification)
     def post(self):
         verify_json_content_type()
         request_json = request.json
@@ -878,7 +881,7 @@ class DeploymentModifications(SecuredResource):
         nodes = request_json.get('nodes', {})
         modification = get_blueprints_manager(). \
             start_deployment_modification(deployment_id, nodes, context)
-        return responses.DeploymentModification(**modification.to_dict()), 201
+        return modification, 201
 
     @swagger.operation(
         responseClass='List[{0}]'.format(
@@ -893,7 +896,7 @@ class DeploymentModifications(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification.resource_fields)
+    @marshal_with(responses.DeploymentModification)
     def get(self, _include=None):
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
@@ -901,8 +904,7 @@ class DeploymentModifications(SecuredResource):
             deployment_id=deployment_id)
         modifications = get_storage_manager().deployment_modifications_list(
             filters=deployment_id_filter, include=_include)
-        return [responses.DeploymentModification(**m.to_dict())
-                for m in modifications]
+        return modifications
 
 
 class DeploymentModificationsId(SecuredResource):
@@ -913,11 +915,10 @@ class DeploymentModificationsId(SecuredResource):
         notes="Get deployment modification."
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification.resource_fields)
+    @marshal_with(responses.DeploymentModification)
     def get(self, modification_id, _include=None):
-        modification = get_storage_manager().get_deployment_modification(
+        return get_storage_manager().get_deployment_modification(
             modification_id, include=_include)
-        return responses.DeploymentModification(**modification.to_dict())
 
 
 class DeploymentModificationsIdFinish(SecuredResource):
@@ -928,11 +929,10 @@ class DeploymentModificationsIdFinish(SecuredResource):
         notes="Finish deployment modification."
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification.resource_fields)
+    @marshal_with(responses.DeploymentModification)
     def post(self, modification_id):
-        modification = get_blueprints_manager().finish_deployment_modification(
+        return get_blueprints_manager().finish_deployment_modification(
             modification_id)
-        return responses.DeploymentModification(**modification.to_dict())
 
 
 class DeploymentModificationsIdRollback(SecuredResource):
@@ -943,11 +943,10 @@ class DeploymentModificationsIdRollback(SecuredResource):
         notes="Rollback deployment modification."
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification.resource_fields)
+    @marshal_with(responses.DeploymentModification)
     def post(self, modification_id):
-        modification = get_blueprints_manager(
-        ).rollback_deployment_modification(modification_id)
-        return responses.DeploymentModification(**modification.to_dict())
+        return get_blueprints_manager().rollback_deployment_modification(
+            modification_id)
 
 
 class Nodes(SecuredResource):
@@ -975,7 +974,7 @@ class Nodes(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.Node.resource_fields)
+    @marshal_with(responses.Node)
     def get(self, _include=None):
         """
         List nodes
@@ -994,7 +993,7 @@ class Nodes(SecuredResource):
                 deployment_id=deployment_id)
             nodes = get_storage_manager().get_nodes(
                 filters=deployment_id_filter, include=_include)
-        return [responses.Node(**node.to_dict()) for node in nodes]
+        return nodes
 
 
 class NodeInstances(SecuredResource):
@@ -1029,7 +1028,7 @@ class NodeInstances(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.NodeInstance.resource_fields)
+    @marshal_with(responses.NodeInstance)
     def get(self, _include=None):
         """
         List node instances
@@ -1039,10 +1038,9 @@ class NodeInstances(SecuredResource):
         node_id = args.get('node_name')
         params_filter = BlueprintsManager.create_filters_dict(
             deployment_id=deployment_id, node_id=node_id)
-        nodes = get_storage_manager().get_node_instances(
-            filters=params_filter,
-            include=_include)
-        return [responses.NodeInstance(**node.to_dict()) for node in nodes]
+        node_instances = get_storage_manager().get_node_instances(
+            filters=params_filter, include=_include)
+        return node_instances
 
 
 class NodeInstancesId(SecuredResource):
@@ -1068,22 +1066,13 @@ class NodeInstancesId(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.NodeInstance.resource_fields)
+    @marshal_with(responses.NodeInstance)
     def get(self, node_instance_id, _include=None):
         """
         Get node instance by id
         """
-        instance = get_storage_manager().get_node_instance(node_instance_id,
-                                                           include=_include)
-        return responses.NodeInstance(
-            id=node_instance_id,
-            node_id=instance.node_id,
-            host_id=instance.host_id,
-            relationships=instance.relationships,
-            deployment_id=instance.deployment_id,
-            state=instance.state,
-            runtime_properties=instance.runtime_properties,
-            version=instance.version)
+        return get_storage_manager().get_node_instance(node_instance_id,
+                                                       include=_include)
 
     @swagger.operation(
         responseClass=responses.NodeInstance,
@@ -1124,7 +1113,7 @@ class NodeInstancesId(SecuredResource):
         consumes=["application/json"]
     )
     @exceptions_handled
-    @marshal_with(responses.NodeInstance.resource_fields)
+    @marshal_with(responses.NodeInstance)
     def patch(self, node_instance_id):
         """
         Update node instance by id
@@ -1158,9 +1147,7 @@ class NodeInstancesId(SecuredResource):
             state=request.json.get('state'),
             version=request.json['version'])
         get_storage_manager().update_node_instance(node)
-        return responses.NodeInstance(
-            **get_storage_manager().get_node_instance(
-                node_instance_id).to_dict())
+        return get_storage_manager().get_node_instance(node_instance_id)
 
 
 class DeploymentsIdOutputs(SecuredResource):
@@ -1171,13 +1158,12 @@ class DeploymentsIdOutputs(SecuredResource):
         notes="Gets a specific deployment outputs."
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentOutputs.resource_fields)
+    @marshal_with(responses.DeploymentOutputs)
     def get(self, deployment_id, **_):
         """Get deployment outputs"""
         outputs = get_blueprints_manager().evaluate_deployment_outputs(
             deployment_id)
-        return responses.DeploymentOutputs(deployment_id=deployment_id,
-                                           outputs=outputs)
+        return dict(deployment_id=deployment_id, outputs=outputs)
 
 
 def _elasticsearch_connection():
@@ -1295,7 +1281,7 @@ class Status(SecuredResource):
         notes="Returns state of running system services"
     )
     @exceptions_handled
-    @marshal_with(responses.Status.resource_fields)
+    @marshal_with(responses.Status)
     def get(self):
         """
         Get the status of running system services
@@ -1332,7 +1318,7 @@ class Status(SecuredResource):
         except ImportError:
             jobs = ['undefined']
 
-        return responses.Status(status='running', services=jobs)
+        return dict(status='running', services=jobs)
 
     @staticmethod
     def _is_docker_env():
@@ -1347,13 +1333,12 @@ class ProviderContext(SecuredResource):
         notes="Get the provider context"
     )
     @exceptions_handled
-    @marshal_with(responses.ProviderContext.resource_fields)
+    @marshal_with(responses.ProviderContext)
     def get(self, _include=None):
         """
         Get provider context
         """
-        context = get_storage_manager().get_provider_context(include=_include)
-        return responses.ProviderContext(**context.to_dict())
+        return get_storage_manager().get_provider_context(include=_include)
 
     @swagger.operation(
         responseClass=responses.ProviderContextPostStatus,
@@ -1370,7 +1355,7 @@ class ProviderContext(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.ProviderContextPostStatus.resource_fields)
+    @marshal_with(responses.ProviderContextPostStatus)
     def post(self):
         """
         Create provider context
@@ -1390,8 +1375,7 @@ class ProviderContext(SecuredResource):
 
         try:
             get_blueprints_manager().update_provider_context(update, context)
-            return \
-                responses.ProviderContextPostStatus(status='ok'), status_code
+            return dict(status='ok'), status_code
         except dsl_parser_utils.ResolverInstantiationError, ex:
             raise manager_exceptions.ResolverInstantiationError(str(ex))
 
@@ -1404,12 +1388,12 @@ class Version(Resource):
         notes="Returns version information for this rest service"
     )
     @exceptions_handled
-    @marshal_with(responses.Version.resource_fields)
+    @marshal_with(responses.Version)
     def get(self):
         """
         Get version information
         """
-        return responses.Version(**get_version_data())
+        return get_version_data()
 
 
 class EvaluateFunctions(SecuredResource):
@@ -1429,7 +1413,7 @@ class EvaluateFunctions(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.EvaluatedFunctions.resource_fields)
+    @marshal_with(responses.EvaluatedFunctions)
     def post(self):
         """
         Evaluate intrinsic in payload
@@ -1450,8 +1434,7 @@ class EvaluateFunctions(SecuredResource):
             deployment_id=deployment_id,
             context=context,
             payload=payload)
-        return responses.EvaluatedFunctions(deployment_id=deployment_id,
-                                            payload=processed_payload)
+        return dict(deployment_id=deployment_id, payload=processed_payload)
 
 
 class Tokens(SecuredResource):
@@ -1462,7 +1445,7 @@ class Tokens(SecuredResource):
         notes="Generate authentication token for the request user",
     )
     @exceptions_handled
-    @marshal_with(responses.Tokens.resource_fields)
+    @marshal_with(responses.Tokens)
     def get(self):
         """
         Get authentication token
@@ -1477,4 +1460,4 @@ class Tokens(SecuredResource):
                 'not registered')
 
         token = app.auth_token_generator.generate_auth_token()
-        return responses.Tokens(value=token)
+        return dict(value=token)
