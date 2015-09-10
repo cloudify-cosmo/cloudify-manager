@@ -15,8 +15,9 @@
 
 from nose.plugins.attrib import attr
 
+from manager_rest import manager_exceptions
+from manager_rest import resources_v2
 from manager_rest.test import base_test
-from manager_rest.manager_exceptions import ConflictError
 from cloudify_rest_client import exceptions
 
 
@@ -46,7 +47,195 @@ class ProviderContextTestCase(base_test.BaseServerTestCase):
                       'context')
         except exceptions.CloudifyClientError as e:
             self.assertEqual(409, e.status_code)
-            self.assertEqual(ConflictError.CONFLICT_ERROR_CODE, e.error_code)
+            self.assertEqual(
+                manager_exceptions.ConflictError.CONFLICT_ERROR_CODE,
+                e.error_code)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_modify_global_parallel_executions_limit(self):
+        result = self.client.manager.create_context(
+            'test_provider',
+            {
+                'cloudify': {
+                    'transient_deployment_workers_mode': {
+                        'enabled': True,
+                        'global_parallel_executions_limit': 50
+                    }
+                }
+            })
+        self.assertEqual('ok', result['status'])
+
+        provider_ctx = self.client.manager.get_context()
+        self.assertEquals(
+            50,
+            provider_ctx['context']['cloudify'][
+                'transient_deployment_workers_mode'].get(
+                'global_parallel_executions_limit'))
+
+        provider_ctx_after_update = \
+            self.client.manager.set_global_parallel_executions_limit(5)
+        self.assertEquals(
+            5,
+            provider_ctx_after_update['context']['cloudify'][
+                'transient_deployment_workers_mode'][
+                'global_parallel_executions_limit'])
+
+        # ensure that other fields haven't changed in the simplest way possible
+        provider_ctx_after_update['context']['cloudify'][
+            'transient_deployment_workers_mode'][
+            'global_parallel_executions_limit'] = 50
+        self.assertEquals(provider_ctx, provider_ctx_after_update)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_modify_gpel_with_gpel_section_missing(self):
+        result = self.client.manager.create_context(
+            'test_provider',
+            {
+                'cloudify': {
+                    'transient_deployment_workers_mode': {
+                        'enabled': True,
+                    }
+                }
+            })
+        self.assertEqual('ok', result['status'])
+
+        provider_ctx = self.client.manager.get_context()
+        self.assertNotIn(
+            'global_parallel_executions_limit',
+            provider_ctx['context']['cloudify'][
+                'transient_deployment_workers_mode'])
+
+        provider_ctx_after_update = \
+            self.client.manager.set_global_parallel_executions_limit(5)
+        self.assertEquals(
+            5,
+            provider_ctx_after_update['context']['cloudify'][
+                'transient_deployment_workers_mode'][
+                'global_parallel_executions_limit'])
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_modify_gpel_with_transient_deployment_workers_mode_disabled(self):
+        result = self.client.manager.create_context(
+            'test_provider',
+            {
+                'cloudify': {
+                    'transient_deployment_workers_mode': {
+                        'enabled': False,
+                        'global_parallel_executions_limit': 50
+                    }
+                }
+            })
+        self.assertEqual('ok', result['status'])
+
+        try:
+            self.client.manager.set_global_parallel_executions_limit(5)
+            self.fail('expected call for setting global parallel executions'
+                      'limit to fail, since transient deployment workers mode'
+                      'is disabled')
+        except exceptions.CloudifyClientError as e:
+            self.assertEqual(400, e.status_code)
+            error = manager_exceptions.BadParametersError
+            self.assertEquals(error.BAD_PARAMETERS_ERROR_CODE,
+                              e.error_code)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_modify_gpel_with_transient_deployment_workers_mode_missing(self):
+        result = self.client.manager.create_context(
+            'test_provider',
+            {
+                'cloudify': {}
+            })
+        self.assertEqual('ok', result['status'])
+
+        try:
+            self.client.manager.set_global_parallel_executions_limit(5)
+            self.fail('expected call for setting global parallel executions'
+                      'limit to fail, since transient deployment workers mode'
+                      'section is missing')
+        except exceptions.CloudifyClientError as e:
+            self.assertEqual(400, e.status_code)
+            error = manager_exceptions.BadParametersError
+            self.assertEquals(error.BAD_PARAMETERS_ERROR_CODE,
+                              e.error_code)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_modify_gpel_with_tdw_mode_missing_but_enabled_by_default(self):
+        tdw_mode_enabled_default = \
+            resources_v2.TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT
+        resources_v2.TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT = True
+        try:
+            result = self.client.manager.create_context(
+                'test_provider',
+                {
+                    'cloudify': {}
+                })
+            self.assertEqual('ok', result['status'])
+
+            provider_ctx_after_update = \
+                self.client.manager.set_global_parallel_executions_limit(5)
+            self.assertEquals(
+                5,
+                provider_ctx_after_update['context']['cloudify'][
+                    'transient_deployment_workers_mode'][
+                    'global_parallel_executions_limit'])
+        finally:
+            resources_v2.TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT = \
+                tdw_mode_enabled_default
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_modify_gpel_with_transient_dep_workers_mode_enabled_missing(self):
+        result = self.client.manager.create_context(
+            'test_provider',
+            {
+                'cloudify': {
+                    'transient_deployment_workers_mode': {
+                        'global_parallel_executions_limit': 50
+                    }
+                }
+            })
+        self.assertEqual('ok', result['status'])
+
+        try:
+            self.client.manager.set_global_parallel_executions_limit(5)
+            self.fail('expected call for setting global parallel executions'
+                      'limit to fail, since transient deployment workers mode'
+                      'enabled definition is missing')
+        except exceptions.CloudifyClientError as e:
+            self.assertEqual(400, e.status_code)
+            error = manager_exceptions.BadParametersError
+            self.assertEquals(error.BAD_PARAMETERS_ERROR_CODE,
+                              e.error_code)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_modify_global_parallel_executions_limit_with_string_value(self):
+        result = self.client.manager.create_context(
+            'test_provider',
+            {
+                'cloudify': {
+                    'transient_deployment_workers_mode': {
+                        'enabled': True,
+                        'global_parallel_executions_limit': 50
+                    }
+                }
+            })
+        self.assertEqual('ok', result['status'])
+
+        try:
+            self.client.manager.set_global_parallel_executions_limit('5')
+            self.fail('expected call for setting global parallel executions'
+                      'limit to fail, since the new value was of string type')
+        except exceptions.CloudifyClientError as e:
+            self.assertEqual(400, e.status_code)
+            error = manager_exceptions.BadParametersError
+            self.assertEquals(error.BAD_PARAMETERS_ERROR_CODE,
+                              e.error_code)
 
     def test_update_provider_context(self):
         self.test_post_provider_context()

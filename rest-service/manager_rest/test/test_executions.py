@@ -531,15 +531,37 @@ class TransientDeploymentWorkersExecutionsTestCase(BaseServerTestCase):
         # verifies the value for limitless global executions is used correctly
         self._run_parallel_executions_and_verify_result(expect_failure=False)
 
-    def _run_parallel_executions_and_verify_result(self, expect_failure):
+    @attr(client_min_version=2,
+          client_max_version=LATEST_API_VERSION)
+    @test_config(enabled=True,
+                 global_parallel_executions_limit=50)
+    def test_transient_dep_workers_global_executions_updated_limit(self):
+        # verifies global executions limit updates take effect
+
+        # run parallel executions pre-modification - not expecting failures
+        self._run_parallel_executions_and_verify_result(expect_failure=False)
+        # resetting all active executions to 'terminated' status
+        executions = self.client.executions.list()
+        map(lambda execution: self.client.executions.update(
+            execution.id, 'terminated'), executions)
+
+        # modifying the global parallel executions limit and trying again
+        self.client.manager.set_global_parallel_executions_limit(2)
+        self._run_parallel_executions_and_verify_result(
+            expect_failure=True, blueprint_id='blueprint2',
+            deployment_id_prefix='deployment2')
+
+    def _run_parallel_executions_and_verify_result(
+            self, expect_failure, blueprint_id='blueprint',
+            deployment_id_prefix=DEPLOYMENT_ID):
         # runs three executions on three different deployments
         # and verifies success/failure accordingly
-        deployment1 = self.DEPLOYMENT_ID + '1'
-        deployment2 = self.DEPLOYMENT_ID + '2'
-        deployment3 = self.DEPLOYMENT_ID + '3'
+        deployment1 = deployment_id_prefix + '1'
+        deployment2 = deployment_id_prefix + '2'
+        deployment3 = deployment_id_prefix + '3'
 
         (blueprint_id, deployment_id, _, _) = \
-            self.put_deployment(deployment1)
+            self.put_deployment(deployment1, blueprint_id=blueprint_id)
         self.client.deployments.create(blueprint_id, deployment2)
         self.client.deployments.create(blueprint_id, deployment3)
 
@@ -551,7 +573,7 @@ class TransientDeploymentWorkersExecutionsTestCase(BaseServerTestCase):
         if expect_failure:
             try:
                 self.client.executions.start(deployment3, 'install')
-                self.fail('Expected global parallel running executions limit'
+                self.fail('Expected global parallel running executions limit '
                           'to have been reached')
             except exceptions.CloudifyClientError, e:
                 self.assertEqual(400, e.status_code)
