@@ -57,14 +57,13 @@ class ResourceListFiltersTestCase(BaseListTest):
         self.assertEqual(2, len(response), 'expecting 2 deployment results, '
                                            'got {0}'.format(len(response)))
 
-        expected_results = {'id': self.first_deployment_id,
-                            'blueprint_id': self.first_blueprint_id,
-                            'id': self.sec_deployment_id,
-                            'blueprint_id': self.sec_blueprint_id}
-        self.assertDictContainsSubset(expected_results, response[0],
-                                      'expecting results having '
-                                      'values {0}, got {1}'
-                                      .format(expected_results, response[0]))
+        if response[0]['id'] != self.first_deployment_id:
+            response[0], response[1] = response[1], response[0]
+
+        self.assertEquals(self.first_blueprint_id,
+                          response[0]['blueprint_id'])
+        self.assertEquals(self.sec_blueprint_id,
+                          response[1]['blueprint_id'])
 
     def test_nodes_list_with_filters(self):
         filter_params = {'deployment_id': self.first_deployment_id}

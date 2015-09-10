@@ -72,8 +72,12 @@ def exceptions_handled(func):
     return wrapper
 
 
+def _is_include_parameter_in_request():
+    return '_include' in request.args and request.args['_include']
+
+
 def _get_fields_to_include(model_fields):
-    if '_include' in request.args and request.args['_include']:
+    if _is_include_parameter_in_request():
         include = set(request.args['_include'].split(','))
         include_fields = {}
         illegal_fields = None
@@ -118,17 +122,23 @@ class marshal_with(object):
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
 
-            include = _get_fields_to_include(
+            fields_to_include = _get_fields_to_include(
                 self.response_class.resource_fields)
+            if _is_include_parameter_in_request():
+                # only pushing "_include" into kwargs when the request
+                # contained this parameter, to keep things cleaner (identical
+                # behavior for passing "_include" which contains all fields)
+                kwargs['_include'] = fields_to_include.keys()
+
             response = f(*args, **kwargs)
 
             if isinstance(response, tuple):
                 data, code, headers = unpack(response)
                 data = self.wrap_with_response_object(data)
-                return marshal(data, include), code, headers
+                return marshal(data, fields_to_include), code, headers
             else:
                 response = self.wrap_with_response_object(response)
-                return marshal(response, include)
+                return marshal(response, fields_to_include)
 
         return wrapper
 
@@ -426,7 +436,7 @@ class BlueprintsIdArchive(SecuredResource):
         notes="Downloads blueprint as an archive."
     )
     @exceptions_handled
-    def get(self, blueprint_id):
+    def get(self, blueprint_id, **kwargs):
         """
         Download blueprint's archive
         """
@@ -471,12 +481,12 @@ class Blueprints(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.BlueprintState)
-    def get(self, _include=None):
+    def get(self, _include=None, **kwargs):
         """
         List uploaded blueprints
         """
 
-        return get_blueprints_manager().blueprints_list(_include)
+        return get_blueprints_manager().blueprints_list(include=_include)
 
 
 class BlueprintsId(SecuredResource):
@@ -488,7 +498,7 @@ class BlueprintsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.BlueprintState)
-    def get(self, blueprint_id, _include=None):
+    def get(self, blueprint_id, _include=None, **kwargs):
         """
         Get blueprint by id
         """
@@ -531,7 +541,7 @@ class BlueprintsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.BlueprintState)
-    def put(self, blueprint_id):
+    def put(self, blueprint_id, **kwargs):
         """
         Upload a blueprint (id specified)
         """
@@ -544,7 +554,7 @@ class BlueprintsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.BlueprintState)
-    def delete(self, blueprint_id):
+    def delete(self, blueprint_id, **kwargs):
         """
         Delete blueprint by id
         """
@@ -593,7 +603,7 @@ class Executions(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Execution)
-    def get(self, _include=None):
+    def get(self, _include=None, **kwargs):
         """List executions"""
         deployment_id = request.args.get('deployment_id')
         if deployment_id:
@@ -613,7 +623,7 @@ class Executions(SecuredResource):
 
     @exceptions_handled
     @marshal_with(responses.Execution)
-    def post(self):
+    def post(self, **kwargs):
         """Execute a workflow"""
         verify_json_content_type()
         request_json = request.json
@@ -651,7 +661,7 @@ class ExecutionsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Execution)
-    def get(self, execution_id, _include=None):
+    def get(self, execution_id, _include=None, **kwargs):
         """
         Get execution by id
         """
@@ -677,7 +687,7 @@ class ExecutionsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Execution)
-    def post(self, execution_id):
+    def post(self, execution_id, **kwargs):
         """
         Apply execution action (cancel, force-cancel) by id
         """
@@ -721,7 +731,7 @@ class ExecutionsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Execution)
-    def patch(self, execution_id):
+    def patch(self, execution_id, **kwargs):
         """
         Update execution status by id
         """
@@ -746,7 +756,7 @@ class Deployments(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Deployment)
-    def get(self, _include=None):
+    def get(self, _include=None, **kwargs):
         """
         List deployments
         """
@@ -769,7 +779,7 @@ class DeploymentsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Deployment)
-    def get(self, deployment_id, _include=None):
+    def get(self, deployment_id, _include=None, **kwargs):
         """
         Get deployment by id
         """
@@ -792,7 +802,7 @@ class DeploymentsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Deployment)
-    def put(self, deployment_id):
+    def put(self, deployment_id, **kwargs):
         """
         Create a deployment
         """
@@ -824,7 +834,7 @@ class DeploymentsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Deployment)
-    def delete(self, deployment_id):
+    def delete(self, deployment_id, **kwargs):
         """
         Delete deployment by id
         """
@@ -864,7 +874,7 @@ class DeploymentModifications(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
-    def post(self):
+    def post(self, **kwargs):
         verify_json_content_type()
         request_json = request.json
         verify_parameter_in_request_body('deployment_id', request_json)
@@ -897,7 +907,7 @@ class DeploymentModifications(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
-    def get(self, _include=None):
+    def get(self, _include=None, **kwargs):
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
         deployment_id_filter = BlueprintsManager.create_filters_dict(
@@ -916,7 +926,7 @@ class DeploymentModificationsId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
-    def get(self, modification_id, _include=None):
+    def get(self, modification_id, _include=None, **kwargs):
         return get_storage_manager().get_deployment_modification(
             modification_id, include=_include)
 
@@ -930,7 +940,7 @@ class DeploymentModificationsIdFinish(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
-    def post(self, modification_id):
+    def post(self, modification_id, **kwargs):
         return get_blueprints_manager().finish_deployment_modification(
             modification_id)
 
@@ -944,7 +954,7 @@ class DeploymentModificationsIdRollback(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
-    def post(self, modification_id):
+    def post(self, modification_id, **kwargs):
         return get_blueprints_manager().rollback_deployment_modification(
             modification_id)
 
@@ -975,7 +985,7 @@ class Nodes(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Node)
-    def get(self, _include=None):
+    def get(self, _include=None, **kwargs):
         """
         List nodes
         """
@@ -1029,7 +1039,7 @@ class NodeInstances(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.NodeInstance)
-    def get(self, _include=None):
+    def get(self, _include=None, **kwargs):
         """
         List node instances
         """
@@ -1067,7 +1077,7 @@ class NodeInstancesId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.NodeInstance)
-    def get(self, node_instance_id, _include=None):
+    def get(self, node_instance_id, _include=None, **kwargs):
         """
         Get node instance by id
         """
@@ -1114,7 +1124,7 @@ class NodeInstancesId(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.NodeInstance)
-    def patch(self, node_instance_id):
+    def patch(self, node_instance_id, **kwargs):
         """
         Update node instance by id
         """
@@ -1159,7 +1169,7 @@ class DeploymentsIdOutputs(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.DeploymentOutputs)
-    def get(self, deployment_id, **_):
+    def get(self, deployment_id, **kwargs):
         """Get deployment outputs"""
         outputs = get_blueprints_manager().evaluate_deployment_outputs(
             deployment_id)
@@ -1222,7 +1232,7 @@ class Events(SecuredResource):
         consumes=['application/json']
     )
     @exceptions_handled
-    def get(self):
+    def get(self, **kwargs):
         """
         List events for the provided Elasticsearch query
         """
@@ -1241,7 +1251,7 @@ class Events(SecuredResource):
         consumes=['application/json']
     )
     @exceptions_handled
-    def post(self):
+    def post(self, **kwargs):
         """
         List events for the provided Elasticsearch query
         """
@@ -1264,7 +1274,7 @@ class Search(SecuredResource):
         consumes=['application/json']
     )
     @exceptions_handled
-    def post(self):
+    def post(self, **kwargs):
         """
         Search using an Elasticsearch query
         """
@@ -1282,7 +1292,7 @@ class Status(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Status)
-    def get(self):
+    def get(self, **kwargs):
         """
         Get the status of running system services
         """
@@ -1334,7 +1344,7 @@ class ProviderContext(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.ProviderContext)
-    def get(self, _include=None):
+    def get(self, _include=None, **kwargs):
         """
         Get provider context
         """
@@ -1356,7 +1366,7 @@ class ProviderContext(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.ProviderContextPostStatus)
-    def post(self):
+    def post(self, **kwargs):
         """
         Create provider context
         """
@@ -1389,7 +1399,7 @@ class Version(Resource):
     )
     @exceptions_handled
     @marshal_with(responses.Version)
-    def get(self):
+    def get(self, **kwargs):
         """
         Get version information
         """
@@ -1414,7 +1424,7 @@ class EvaluateFunctions(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.EvaluatedFunctions)
-    def post(self):
+    def post(self, **kwargs):
         """
         Evaluate intrinsic in payload
         """
@@ -1446,7 +1456,7 @@ class Tokens(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.Tokens)
-    def get(self):
+    def get(self, **kwargs):
         """
         Get authentication token
         """

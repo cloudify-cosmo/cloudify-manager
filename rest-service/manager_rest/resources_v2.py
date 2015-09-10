@@ -262,12 +262,12 @@ class Blueprints(resources.Blueprints):
     @exceptions_handled
     @marshal_with(responses_v2.BlueprintState)
     @verify_and_create_filters(models.BlueprintState.fields)
-    def get(self, _include=None, filters=None):
+    def get(self, _include=None, filters=None, **kwargs):
         """
         List uploaded blueprints
         """
         return get_blueprints_manager().blueprints_list(
-            _include, filters=filters)
+            include=_include, filters=filters)
 
 
 class BlueprintsId(resources.BlueprintsId):
@@ -279,13 +279,14 @@ class BlueprintsId(resources.BlueprintsId):
     )
     @exceptions_handled
     @marshal_with(responses_v2.BlueprintState)
-    def get(self, blueprint_id, _include=None):
+    def get(self, blueprint_id, _include=None, **kwargs):
         """
         Get blueprint by id
         """
         with resources.skip_nested_marshalling():
             return super(BlueprintsId, self).get(blueprint_id=blueprint_id,
-                                                 _include=_include)
+                                                 _include=_include,
+                                                 **kwargs)
 
     @swagger.operation(
         responseClass=responses_v2.BlueprintState,
@@ -324,12 +325,13 @@ class BlueprintsId(resources.BlueprintsId):
     )
     @exceptions_handled
     @marshal_with(responses_v2.BlueprintState)
-    def put(self, blueprint_id):
+    def put(self, blueprint_id, **kwargs):
         """
         Upload a blueprint (id specified)
         """
         with resources.skip_nested_marshalling():
-            return super(BlueprintsId, self).put(blueprint_id=blueprint_id)
+            return super(BlueprintsId, self).put(blueprint_id=blueprint_id,
+                                                 **kwargs)
 
     @swagger.operation(
         responseClass=responses_v2.BlueprintState,
@@ -338,13 +340,13 @@ class BlueprintsId(resources.BlueprintsId):
     )
     @exceptions_handled
     @marshal_with(responses_v2.BlueprintState)
-    def delete(self, blueprint_id):
+    def delete(self, blueprint_id, **kwargs):
         """
         Delete blueprint by id
         """
         with resources.skip_nested_marshalling():
             return super(BlueprintsId, self).delete(
-                blueprint_id=blueprint_id)
+                blueprint_id=blueprint_id, **kwargs)
 
 
 class Executions(resources.Executions):
@@ -368,7 +370,7 @@ class Executions(resources.Executions):
     @exceptions_handled
     @marshal_with(responses_v2.Execution)
     @verify_and_create_filters(models.Execution.fields)
-    def get(self, _include=None, filters=None):
+    def get(self, _include=None, filters=None, **kwargs):
         """
         List executions
         """
@@ -402,7 +404,7 @@ class Deployments(resources.Deployments):
     @exceptions_handled
     @marshal_with(responses_v2.Deployment)
     @verify_and_create_filters(models.Deployment.fields)
-    def get(self, _include=None, filters=None):
+    def get(self, _include=None, filters=None, **kwargs):
         """
         List deployments
         """
@@ -427,7 +429,7 @@ class DeploymentModifications(resources.DeploymentModifications):
     @exceptions_handled
     @marshal_with(responses_v2.DeploymentModification)
     @verify_and_create_filters(models.DeploymentModification.fields)
-    def get(self, _include=None, filters=None):
+    def get(self, _include=None, filters=None, **kwargs):
         """
         List deployment modifications
         """
@@ -451,7 +453,7 @@ class Nodes(resources.Nodes):
     @exceptions_handled
     @marshal_with(responses_v2.Node)
     @verify_and_create_filters(models.DeploymentNode.fields)
-    def get(self, _include=None, filters=None):
+    def get(self, _include=None, filters=None, **kwargs):
         """
         List nodes
         """
@@ -476,7 +478,7 @@ class NodeInstances(resources.NodeInstances):
     @exceptions_handled
     @marshal_with(responses_v2.NodeInstance)
     @verify_and_create_filters(models.DeploymentNodeInstance.fields)
-    def get(self, _include=None, filters=None):
+    def get(self, _include=None, filters=None, **kwargs):
         """
         List node instances
         """
