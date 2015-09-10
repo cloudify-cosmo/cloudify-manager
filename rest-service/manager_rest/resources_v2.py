@@ -134,12 +134,12 @@ class SnapshotsId(SecuredResource):
             request_json['include_credentials']
         )
 
-        snapshot = get_blueprints_manager().create_snapshot(
+        execution = get_blueprints_manager().create_snapshot(
             snapshot_id,
             include_metrics,
             include_credentials
         )
-        return snapshot, 201
+        return execution, 201
 
     @swagger.operation(
         responseClass=responses_v2.Snapshot,

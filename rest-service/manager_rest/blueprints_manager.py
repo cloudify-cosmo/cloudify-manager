@@ -141,13 +141,13 @@ class BlueprintsManager(object):
 
     def create_snapshot(self, snapshot_id,
                         include_metrics, include_credentials):
-        new_snapshot = self.create_snapshot_model(snapshot_id)
+        self.create_snapshot_model(snapshot_id)
         create_envs_params = {}
         for dep in self.deployments_list():
             bp = self.get_blueprint(dep.blueprint_id)
             dep_plan = tasks.prepare_deployment_plan(bp.plan, dep.inputs)
             create_envs_params[dep.id] = self._get_create_env_params(dep_plan)
-        self._execute_system_workflow(
+        _, execution = self._execute_system_workflow(
             wf_id='create_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.create',
             execution_parameters={
@@ -158,7 +158,7 @@ class BlueprintsManager(object):
                 'create_envs_params': create_envs_params
             }
         )
-        return new_snapshot
+        return execution
 
     def restore_snapshot(self, snapshot_id):
         self.get_snapshot(snapshot_id)  # Throws error if no snapshot found
