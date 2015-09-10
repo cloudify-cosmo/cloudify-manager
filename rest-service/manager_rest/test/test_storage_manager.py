@@ -38,8 +38,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
             storage_manager.instance().get_blueprint('blueprint-id')
         bp_from_delete = storage_manager.instance().delete_blueprint(
             'blueprint-id')
-        self.assertEquals(blueprint.__dict__, blueprint_from_list.__dict__)
-        self.assertEquals(blueprint.__dict__, blueprint_restored.__dict__)
+        self.assertEquals(blueprint.to_dict(), blueprint_from_list.to_dict())
+        self.assertEquals(blueprint.to_dict(), blueprint_restored.to_dict())
         # in bp returned from delete operation only 'id' is guaranteed to
         # return
         self.assertEquals(blueprint.id, bp_from_delete.id)
@@ -103,10 +103,13 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                 'blueprint-id')
 
         self.assertEquals(2, len(blueprint_deployments))
-        self.assertEquals(deployment1.__dict__,
-                          blueprint_deployments[0].__dict__)
-        self.assertEquals(deployment2.__dict__,
-                          blueprint_deployments[1].__dict__)
+        if blueprint_deployments[0].id != deployment1.id:
+            blueprint_deployments[0], blueprint_deployments[1] =\
+                blueprint_deployments[1], blueprint_deployments[0]
+        self.assertEquals(deployment1.to_dict(),
+                          blueprint_deployments[0].to_dict())
+        self.assertEquals(deployment2.to_dict(),
+                          blueprint_deployments[1].to_dict())
 
     def test_model_serialization(self):
         dep = models.Deployment(id='dep-id',
