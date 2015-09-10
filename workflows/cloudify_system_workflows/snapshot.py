@@ -227,7 +227,17 @@ def _update_es_node(es_node):
         if 'install_new_agents' not in workflows:
             workflows['install_new_agents'] = {
                 'operation': 'cloudify.plugins.workflows.install_new_agents',
-                'parameters': {},
+                'parameters': {
+                    'install_agent_timeout': {
+                        'default': 300
+                    },
+                    'node_ids': {
+                        'default': []
+                    },
+                    'node_instance_ids': {
+                        'default': []
+                    }
+                },
                 'plugin': 'default_workflows'
             }
     if es_node['_type'] == 'node':
@@ -238,7 +248,9 @@ def _update_es_node(es_node):
             op_name = 'cloudify.interfaces.cloudify_agent.create_amqp'
             if op_name not in operations:
                 operations[op_name] = {
-                    'inputs': {},
+                    'inputs': {
+                        'install_agent_timeout': 300
+                    },
                     'has_intrinsic_functions': False,
                     'plugin': 'agent',
                     'retry_interval': None,
