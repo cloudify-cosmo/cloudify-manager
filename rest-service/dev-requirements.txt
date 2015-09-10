@@ -1,5 +1,5 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
-git+https://github.com/codilime/cloudify-rest-client@snapshots-master#egg=cloudify-rest-client==3.3a4
+https://github.com/codilime/cloudify-rest-client/archive/snapshots-master.zip
 https://github.com/cloudify-cosmo/flask-securest/archive/0.6.zip
 
 # test dependencies
