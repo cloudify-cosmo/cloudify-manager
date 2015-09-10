@@ -115,7 +115,7 @@ def generate_create_dep_tasks_graph(ctx, deployment_plugins_to_install,
     sequence.add(
         ctx.send_event('Starting deployment policy engine core'),
         ctx.execute_task('riemann_controller.tasks.create',
-                         policy_configuration or {}))
+                         kwargs=policy_configuration or {}))
 
     return graph
 
