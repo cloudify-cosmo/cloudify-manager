@@ -115,7 +115,7 @@ class BlueprintsManager(object):
         snapshots_conf = {
             attr: getattr(config_instance, attr) for attr in (
                 'file_server_root',
-                'file_server_uploaded_snapshots_folder',
+                'file_server_snapshots_folder',
                 'file_server_blueprints_folder',
                 'file_server_uploaded_blueprints_folder',
                 'db_address',

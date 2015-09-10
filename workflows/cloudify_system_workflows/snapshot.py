@@ -130,8 +130,11 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
 
     snapshots_dir = os.path.join(
         config.file_server_root,
-        config.file_server_uploaded_snapshots_folder
+        config.file_server_snapshots_folder
     )
+
+    if not os.path.exists(snapshots_dir):
+        os.makedirs(snapshots_dir)
 
     # files/dirs copy
     _copy_data(tempdir, config)
@@ -382,7 +385,7 @@ def restore(ctx, snapshot_id, config, **kwargs):
         file_server_root = config.file_server_root
         snapshots_dir = os.path.join(
             file_server_root,
-            config.file_server_uploaded_snapshots_folder
+            config.file_server_snapshots_folder
         )
 
         snapshot_path = os.path.join(snapshots_dir, snapshot_id, '{0}.zip'

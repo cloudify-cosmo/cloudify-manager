@@ -71,7 +71,7 @@ def _create_filter_params_list_description(parameters, list_type):
 def _get_snapshot_path(snapshot_id):
     return os.path.join(
         config.instance().file_server_root,
-        config.instance().file_server_uploaded_snapshots_folder,
+        config.instance().file_server_snapshots_folder,
         snapshot_id
     )
 
@@ -85,7 +85,7 @@ class UploadedSnapshotsManager(UploadedDataManager):
         return 'snapshot_archive_url'
 
     def _get_target_dir_path(self):
-        return config.instance().file_server_uploaded_snapshots_folder
+        return config.instance().file_server_snapshots_folder
 
     def _get_archive_type(self, archive_path):
         return 'zip'
@@ -221,7 +221,7 @@ class SnapshotsIdArchive(SecuredResource):
 
         snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
             config.instance().file_server_resources_uri,
-            config.instance().file_server_uploaded_snapshots_folder,
+            config.instance().file_server_snapshots_folder,
             snapshot_id
         )
 
