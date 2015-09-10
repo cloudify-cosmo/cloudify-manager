@@ -3,21 +3,13 @@
 test_rest_service_v2()
 {
     echo "### Testing rest-service with V2 client..."
-    pushd rest-service && pip install -r dev-requirements.txt && popd
-    pushd rest-service && pip install . && popd
-    pip install nose
-    nosetests rest-service/manager_rest/test -A 'client_min_version <= 2 <= client_max_version' --nologcapture --nocapture
+    pushd rest-service && tox -e clientV2 && popd
 }
 
 test_rest_service_v1()
 {
     echo "### Testing rest-service V1 client..."
-    pushd rest-service && pip install -r dev-requirements.txt && popd
-    pushd rest-service && pip install . && popd
-    pip install nose
-    pip uninstall cloudify-rest-client -y
-    pip install cloudify-rest-client==3.2.1
-    nosetests rest-service/manager_rest/test -A 'client_min_version <= 1 <= client_max_version' --nologcapture --nocapture
+    pushd rest-service && tox -e clientV1 && popd
 }
 
 run_intergration_tests()
