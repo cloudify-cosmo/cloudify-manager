@@ -57,6 +57,8 @@ class InstallerTestBase(unittest.TestCase):
 
     def get_agent(self):
         _, _, dist = platform.dist()
+        package = _PACKAGE_URL.format(dist)
+        self.logger.info('Package url: {0}'.format(package))
         result = {
             'local': True,
             'package_url': _PACKAGE_URL.format(dist),

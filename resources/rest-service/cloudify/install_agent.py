@@ -50,6 +50,7 @@ class CommandRunner(object):
             raise Exception()
 
     def download(self, url, destination=None):
+        self.logger.debug('Retrieving file from {0}'.format(url))
         if destination is None:
             fh_num, destination = tempfile.mkstemp()
             os.close(fh_num)
