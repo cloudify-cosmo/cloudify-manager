@@ -52,4 +52,3 @@ class Snapshot(object):
         self.created_at = kwargs['created_at']
         self.status = kwargs['status']
         self.error = kwargs['error']
-

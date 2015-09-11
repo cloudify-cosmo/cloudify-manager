@@ -182,24 +182,23 @@ class SnapshotsIdArchive(SecuredResource):
               'Archive format has to be zip.'
               ' Snapshot archive may be submitted via either URL or by '
               'direct upload.',
-        parameters=[
-                    {'name': 'snapshot_archive_url',
-                     'description': 'url of a snapshot archive file',
-                     'required': False,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'query'},
-                    {
-                        'name': 'body',
-                        'description': 'Binary form of the zip',
-                        'required': True,
-                        'allowMultiple': False,
-                        'dataType': 'binary',
-                        'paramType': 'body'}],
+        parameters=[{
+            'name': 'snapshot_archive_url',
+            'description': 'url of a snapshot archive file',
+            'required': False,
+            'allowMultiple': False,
+            'dataType': 'string',
+            'paramType': 'query'
+        }, {
+            'name': 'body',
+            'description': 'Binary form of the zip',
+            'required': True,
+            'allowMultiple': False,
+            'dataType': 'binary',
+            'paramType': 'body'}],
         consumes=[
             "application/octet-stream"
         ]
-
     )
     @exceptions_handled
     @marshal_with(responses_v2.Snapshot)

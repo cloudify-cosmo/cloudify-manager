@@ -305,7 +305,8 @@ class UploadedBlueprintsManager(UploadedDataManager):
     def _prepare_and_process_doc(self, data_id, file_server_root,
                                  archive_target_path):
         application_dir = self._extract_file_to_file_server(
-                file_server_root, archive_target_path)
+            file_server_root,
+            archive_target_path)
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
                                                   data_id)
