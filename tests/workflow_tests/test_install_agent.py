@@ -21,7 +21,7 @@ from cloudify_agent.installer.config import configuration as agent_config
 
 
 _PACKAGE_URL = ('http://46.101.245.114/cfy/konrad/'
-                'ubuntu-trusty-agent-snapshots.tar.gz')
+                'ubuntu-trusty-agent-snapshots-freeze-33m5.tar.gz')
 _INSTALL_SCRIPT_PATH = 'resources/rest-service/cloudify/install_agent.py'
 
 
