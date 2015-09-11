@@ -1,6 +1,7 @@
 import getpass
 import json
 import os
+import platform
 import shutil
 import subprocess
 import tempfile
@@ -21,7 +22,7 @@ from cloudify_agent.installer.config import configuration as agent_config
 
 
 _PACKAGE_URL = ('http://46.101.245.114/cfy/konrad/'
-                'ubuntu-trusty-agent-snapshots-freeze-33m5.tar.gz')
+                'ubuntu-{0}-agent-snapshots-freeze-33m5.tar.gz')
 _INSTALL_SCRIPT_PATH = 'resources/rest-service/cloudify/install_agent.py'
 
 
@@ -55,9 +56,10 @@ class InstallerTestBase(unittest.TestCase):
         shutil.rmtree(self.base_dir)
 
     def get_agent(self):
+        _, _, dist = platform.dist()
         result = {
             'local': True,
-            'package_url': _PACKAGE_URL,
+            'package_url': _PACKAGE_URL.format(dist),
             'user': getpass.getuser(),
             'basedir': self.base_dir,
             'manager_ip': '127.0.0.1',
