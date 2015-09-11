@@ -57,6 +57,8 @@ class InstallerTestBase(unittest.TestCase):
 
     def get_agent(self):
         _, _, dist = platform.dist()
+        if not dist:
+            dist = 'precise'
         package = _PACKAGE_URL.format(dist)
         self.logger.info('Package url: {0}'.format(package))
         result = {
