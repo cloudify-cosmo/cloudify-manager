@@ -35,7 +35,7 @@ except ImportError:
     CLIENT_API_VERSION = 'v1'
 
 
-STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
+STORAGE_MANAGER_MODULE_NAME = 'manager_rest.file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
