@@ -113,13 +113,13 @@ class SnapshotsId(SecuredResource):
     @swagger.operation(
         responseClass=responses_v2.Snapshot,
         nickname='createSnapshot',
-        notes='Create new snapshot of the manager.',
+        notes='Create a new snapshot of the manager.',
         consumes=[
             "application/json"
         ]
     )
     @exceptions_handled
-    @marshal_with(responses_v2.Snapshot)
+    @marshal_with(responses_v2.Execution)
     def put(self, snapshot_id):
         verify_json_content_type()
         request_json = request.json
