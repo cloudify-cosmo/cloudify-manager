@@ -22,7 +22,8 @@ from manager_rest.responses import (BlueprintState as BlueprintStateV1,  # NOQA
                                     Deployment,
                                     DeploymentModification,
                                     Node,
-                                    NodeInstance)
+                                    NodeInstance,
+                                    ProviderContext)
 
 
 @swagger.model
