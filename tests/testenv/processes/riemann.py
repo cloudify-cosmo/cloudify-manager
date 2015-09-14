@@ -73,6 +73,8 @@ class RiemannProcess(object):
         env['LANGOHR_JAR'] = self._langohr_jar_path()
         env['MANAGEMENT_IP'] = '127.0.0.1'
         env['MANAGER_REST_PORT'] = str(MANAGER_REST_PORT)
+        env['RABBITMQ_USER'] = 'guest'
+        env['RABBITMQ_PASS'] = 'guest'
 
         command = [
             get_resource(path.join('riemann', 'riemann.sh')),
