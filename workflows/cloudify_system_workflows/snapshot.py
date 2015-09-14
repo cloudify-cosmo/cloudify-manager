@@ -25,6 +25,8 @@ import subprocess
 import elasticsearch
 import elasticsearch.helpers
 
+from datetime import datetime
+
 from cloudify.decorators import workflow
 from cloudify.exceptions import NonRecoverableError
 from cloudify.manager import get_rest_client
@@ -32,8 +34,13 @@ from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
 
 
+_METADATA_FILE = 'metadata.json'
+
+# metadata fields
+_M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
+_M_VERSION = 'snapshot_version'
+
 _VERSION = '3.3'
-_VERSION_FILE = 'version'
 _AGENTS_FILE = 'agents.json'
 _CREATE_ENVS_PARAMS_FILE = 'create_envs_params'
 _ELASTICSEARCH = 'es_data'
@@ -109,7 +116,7 @@ def _copy_data(archive_root, config, to_archive=True):
 
 def _create_es_client(config):
     return elasticsearch.Elasticsearch(hosts=[{'host': config.db_address,
-                                               'port': config.db_port}])
+                                               'port': int(config.db_port)}])
 
 
 def _except_types(s, *args):
@@ -126,6 +133,7 @@ def _clean_up_db_before_restore(es_client, wf_exec_id):
 
 def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
             create_envs_params, **kw):
+
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
     snapshots_dir = os.path.join(
@@ -136,12 +144,17 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
     if not os.path.exists(snapshots_dir):
         os.makedirs(snapshots_dir)
 
+    metadata = {}
+
     # files/dirs copy
     _copy_data(tempdir, config)
 
     # elasticsearch
     es = _create_es_client(config)
-    _dump_elasticsearch(tempdir, es)
+    has_cloudify_events = es.indices.exists(index='cloudify_events')
+    _dump_elasticsearch(tempdir, es, has_cloudify_events)
+
+    metadata[_M_HAS_CLOUDIFY_EVENTS] = has_cloudify_events
 
     # influxdb
     if include_metrics:
@@ -152,11 +165,15 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
         _dump_credentials(tempdir, es)
 
     # version
-    with open(os.path.join(tempdir, _VERSION_FILE), 'w') as f:
-        f.write(_VERSION)
+    metadata[_M_VERSION] = _VERSION
 
+    # environment parameters
     with open(os.path.join(tempdir, _CREATE_ENVS_PARAMS_FILE), 'w') as f:
         json.dump(create_envs_params, f)
+
+    # metadata
+    with open(os.path.join(tempdir, _METADATA_FILE), 'w') as f:
+        json.dump(metadata, f)
 
     # zip
     snapshot_dir = os.path.join(snapshots_dir, snapshot_id)
@@ -184,12 +201,15 @@ def create(ctx, snapshot_id, config, **kwargs):
         raise
 
 
-def _dump_elasticsearch(tempdir, es):
+def _dump_elasticsearch(tempdir, es, has_cloudify_events):
     storage_scan = elasticsearch.helpers.scan(es, index='cloudify_storage')
     storage_scan = _except_types(storage_scan,
                                  'provider_context',
                                  'snapshot')
-    event_scan = elasticsearch.helpers.scan(es, index='cloudify_events')
+    event_scan = elasticsearch.helpers.scan(
+        es,
+        index='cloudify_events' if has_cloudify_events else 'logstash-*'
+    )
 
     with open(os.path.join(tempdir, _ELASTICSEARCH), 'w') as f:
         for item in itertools.chain(storage_scan, event_scan):
@@ -263,21 +283,62 @@ def _update_es_node(es_node):
                 }
 
 
-def _restore_elasticsearch(ctx, tempdir, es):
+def _restore_elasticsearch(ctx, tempdir, es, metadata):
     ctx.send_event('Deleting all ElasticSearch data')
     elasticsearch.helpers.bulk(
         es,
         _clean_up_db_before_restore(es, ctx.execution_id))
     es.indices.flush()
 
-    def es_data_itr():
+    cloudify_events = es.indices.exists(index='cloudify_events')
+    from_cloudify_events = metadata[_M_HAS_CLOUDIFY_EVENTS]
+
+    # cloudify_events -> cloudify_events, logstash-* -> logstash-*
+    def get_data_itr():
         for line in open(os.path.join(tempdir, _ELASTICSEARCH), 'r'):
             elem = json.loads(line)
             _update_es_node(elem)
             yield elem
 
+    # logstash-* -> cloudify_events
+    def l_to_ce():
+        for elem in get_data_itr():
+            if elem['_index'] != 'cloudify_storage':
+                elem['_index'] = 'cloudify_events'
+            yield elem
+
+    # cloudify_events -> logstash-*
+    def date_to_index_name(date):
+        d = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ')
+        return 'logstash-' + d.strftime('%Y.%m.%d')
+
+    def get_event_date(e):
+        return e['_source']['@timestamp']
+
+    def ce_to_l():
+        event_indices = []
+        for elem in get_data_itr():
+            if elem['_index'] != 'cloudify_storage':
+                date = get_event_date(elem)
+                index = date_to_index_name(date)
+                if index not in event_indices and\
+                        not es.indices.exists(index=index):
+                    es.indices.create(index=index)
+                    event_indices.append(index)
+                elem['_index'] = index
+            yield elem
+
+    # choose iter
+    if (cloudify_events and from_cloudify_events) or\
+            (not cloudify_events and not from_cloudify_events):
+        data_iter = get_data_itr()
+    elif not from_cloudify_events and cloudify_events:
+        data_iter = l_to_ce()
+    else:
+        data_iter = ce_to_l()
+
     ctx.send_event('Restoring ElasticSearch data')
-    elasticsearch.helpers.bulk(es, es_data_itr())
+    elasticsearch.helpers.bulk(es, data_iter)
     es.indices.flush()
 
 
@@ -326,13 +387,14 @@ def _restore_credentials_3_3(ctx, tempdir, file_server_root, es):
     elasticsearch.helpers.bulk(es, update_actions)
 
 
-def _restore_snapshot(ctx, config, tempdir):
+def _restore_snapshot(ctx, config, tempdir, metadata):
     # files/dirs copy
     _copy_data(tempdir, config, to_archive=False)
 
     # elasticsearch
     es = _create_es_client(config)
-    _restore_elasticsearch(ctx, tempdir, es)
+
+    _restore_elasticsearch(ctx, tempdir, es, metadata)
 
     # influxdb
     _restore_influxdb_3_3(ctx, tempdir)
@@ -344,8 +406,8 @@ def _restore_snapshot(ctx, config, tempdir):
     # end
 
 
-def _restore_snapshot_format_3_3(ctx, config, tempdir):
-    _restore_snapshot(ctx, config, tempdir)
+def _restore_snapshot_format_3_3(ctx, config, tempdir, metadata):
+    _restore_snapshot(ctx, config, tempdir, metadata)
 
 
 # In 3.3 cloudify_agent dict was added to node instances runtime properties.
@@ -362,8 +424,8 @@ def insert_agents_data(client, agents):
                     runtime_properties=runtime_properties)
 
 
-def _restore_snapshot_format_3_2(ctx, config, tempdir):
-    _restore_snapshot(ctx, config, tempdir)
+def _restore_snapshot_format_3_2(ctx, config, tempdir, metadata):
+    _restore_snapshot(ctx, config, tempdir, metadata)
     ctx.send_event('Updating cloudify agent data')
     client = get_rest_client()
     with open(os.path.join(tempdir, _AGENTS_FILE)) as agents_file:
@@ -394,8 +456,10 @@ def restore(ctx, snapshot_id, config, **kwargs):
         with zipfile.ZipFile(snapshot_path, 'r') as zipf:
             zipf.extractall(tempdir)
 
-        with open(os.path.join(tempdir, _VERSION_FILE), 'r') as f:
-            from_version = f.read()
+        with open(os.path.join(tempdir, _METADATA_FILE), 'r') as f:
+            metadata = json.load(f)
+
+        from_version = metadata[_M_VERSION]
 
         if from_version not in mappings:
             raise NonRecoverableError('Manager is not able to restore snapshot'
@@ -403,7 +467,7 @@ def restore(ctx, snapshot_id, config, **kwargs):
 
         ctx.send_event('Starting restoring snapshot of manager {0}'
                        .format(from_version))
-        mappings[from_version](ctx, config, tempdir)
+        mappings[from_version](ctx, config, tempdir, metadata)
         create_envs_params_f = os.path.join(tempdir, _CREATE_ENVS_PARAMS_FILE)
         if os.path.exists(create_envs_params_f):
             with open(create_envs_params_f, 'r') as f:
