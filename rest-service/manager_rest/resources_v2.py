@@ -155,7 +155,6 @@ class SnapshotsId(SecuredResource):
         return snapshot, 200
 
     @exceptions_handled
-    @marshal_with(responses_v2.Snapshot)
     def patch(self, snapshot_id):
         """
         Update snapshot status by id
@@ -168,9 +167,6 @@ class SnapshotsId(SecuredResource):
             snapshot_id,
             request_json['status'],
             request_json.get('error', ''))
-
-        return responses_v2.Snapshot(**get_storage_manager().get_snapshot(
-            snapshot_id).to_dict()), 200
 
 
 class SnapshotsIdArchive(SecuredResource):
