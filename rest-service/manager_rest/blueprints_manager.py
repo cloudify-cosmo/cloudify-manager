@@ -142,11 +142,6 @@ class BlueprintsManager(object):
     def create_snapshot(self, snapshot_id,
                         include_metrics, include_credentials):
         self.create_snapshot_model(snapshot_id)
-        create_envs_params = {}
-        for dep in self.deployments_list():
-            bp = self.get_blueprint(dep.blueprint_id)
-            dep_plan = tasks.prepare_deployment_plan(bp.plan, dep.inputs)
-            create_envs_params[dep.id] = self._get_create_env_params(dep_plan)
         _, execution = self._execute_system_workflow(
             wf_id='create_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.create',
@@ -154,8 +149,7 @@ class BlueprintsManager(object):
                 'snapshot_id': snapshot_id,
                 'include_metrics': include_metrics,
                 'include_credentials': include_credentials,
-                'config': self._get_conf_for_snapshots_wf(),
-                'create_envs_params': create_envs_params
+                'config': self._get_conf_for_snapshots_wf()
             }
         )
         return execution
@@ -872,20 +866,7 @@ class BlueprintsManager(object):
                 filters[key] = val
         return filters or None
 
-    def _get_create_env_params(self, deployment_plan):
-        return {
-            'deployment_plugins_to_install': deployment_plan[
-                constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
-            'workflow_plugins_to_install': deployment_plan[
-                constants.WORKFLOW_PLUGINS_TO_INSTALL],
-            'policy_configuration': {
-                'policy_types': deployment_plan[constants.POLICY_TYPES],
-                'policy_triggers': deployment_plan[constants.POLICY_TRIGGERS],
-                'groups': deployment_plan[constants.GROUPS],
-            },
-        }
-
-    def _create_deployment_environment(self, deployment, deployment_plan):
+    def _create_deployment_environment(self, deployment, dep_plan):
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
@@ -894,7 +875,18 @@ class BlueprintsManager(object):
             wf_id=wf_id,
             task_mapping=deployment_env_creation_task_name,
             deployment=deployment,
-            execution_parameters=self._get_create_env_params(deployment_plan))
+            execution_parameters={
+                'deployment_plugins_to_install': dep_plan[
+                    constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
+                'workflow_plugins_to_install': dep_plan[
+                    constants.WORKFLOW_PLUGINS_TO_INSTALL],
+                'policy_configuration': {
+                    'policy_types': dep_plan[constants.POLICY_TYPES],
+                    'policy_triggers': dep_plan[constants.POLICY_TRIGGERS],
+                    'groups': dep_plan[constants.GROUPS],
+                }
+            }
+        )
 
     def _delete_deployment_environment(self, deployment_id):
         deployment = self.sm.get_deployment(deployment_id)
