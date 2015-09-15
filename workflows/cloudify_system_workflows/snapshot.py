@@ -35,7 +35,6 @@ from cloudify_system_workflows.deployment_environment import \
 _VERSION = '3.3'
 _VERSION_FILE = 'version'
 _AGENTS_FILE = 'agents.json'
-_CREATE_ENVS_PARAMS_FILE = 'create_envs_params'
 _ELASTICSEARCH = 'es_data'
 _CRED_DIR = 'credentials'
 _CRED_KEY_NAME = 'agent_key'
@@ -125,7 +124,7 @@ def _clean_up_db_before_restore(es_client, wf_exec_id):
 
 
 def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
-            create_envs_params, **kw):
+            **kw):
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
     snapshots_dir = os.path.join(
@@ -154,9 +153,6 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
     # version
     with open(os.path.join(tempdir, _VERSION_FILE), 'w') as f:
         f.write(_VERSION)
-
-    with open(os.path.join(tempdir, _CREATE_ENVS_PARAMS_FILE), 'w') as f:
-        json.dump(create_envs_params, f)
 
     # zip
     snapshot_dir = os.path.join(snapshots_dir, snapshot_id)
@@ -404,18 +400,24 @@ def restore(ctx, snapshot_id, config, **kwargs):
         ctx.send_event('Starting restoring snapshot of manager {0}'
                        .format(from_version))
         mappings[from_version](ctx, config, tempdir)
-        create_envs_params_f = os.path.join(tempdir, _CREATE_ENVS_PARAMS_FILE)
-        if os.path.exists(create_envs_params_f):
-            with open(create_envs_params_f, 'r') as f:
-                create_envs_params = json.load(f)
-        else:
-            create_envs_params = {}
 
         ctx.load_deployments_contexts()
+        rest_client = get_rest_client()
         for dep_id, dep_ctx in ctx.deployments_contexts.iteritems():
+            dep = rest_client.deployments.get(dep_id)
+            blueprint = rest_client.blueprints.get(dep_ctx.blueprint.id)
+            blueprint_plan = blueprint['plan']
             tasks_graph = generate_create_dep_tasks_graph(
                 dep_ctx,
-                **create_envs_params[dep_id]
+                deployment_plugins_to_install=blueprint_plan[
+                    'deployment_plugins_to_install'],
+                workflow_plugins_to_install=blueprint_plan[
+                    'workflow_plugins_to_install'],
+                policy_configuration={
+                    'policy_types': dep['policy_types'],
+                    'policy_triggers': dep['policy_triggers'],
+                    'groups': dep['groups']
+                }
             )
             try:
                 dep_ctx.internal.start_local_tasks_processing()
