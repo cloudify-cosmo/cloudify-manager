@@ -37,6 +37,9 @@ from manager_rest import manager_exceptions
 from manager_rest import utils
 
 
+SECURITY_BYPASS_PORT = '8101'
+
+
 # app factory
 def setup_app():
     app = Flask(__name__)
@@ -53,7 +56,7 @@ def setup_app():
                   rest_service_log_files_backup_count)
 
     # secure the app according to manager configuration
-    if cfy_config.secured_server:
+    if cfy_config.security_enabled:
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
 
@@ -173,25 +176,25 @@ def create_logger(logger_name,
 
 def init_secured_app(_app):
     cfy_config = config.instance()
-    if cfy_config.auth_token_generator:
-        register_auth_token_generator(_app,
-                                      config.instance().auth_token_generator)
+    if cfy_config.security_auth_token_generator:
+        register_auth_token_generator(
+            _app, config.instance().security_auth_token_generator)
 
     # init and configure flask-securest
     secure_app = SecuREST(_app)
     secure_app.logger = create_logger(
         logger_name='flask-securest',
-        log_level=cfy_config.securest_log_level,
-        log_file=cfy_config.securest_log_file,
-        log_file_size_MB=cfy_config.securest_log_file_size_MB,
-        log_files_backup_count=cfy_config.securest_log_files_backup_count
+        log_level=cfy_config.security_audit_log_level,
+        log_file=cfy_config.security_audit_log_file,
+        log_file_size_MB=cfy_config.security_audit_log_file_size_MB,
+        log_files_backup_count=cfy_config.security_audit_log_files_backup_count
     )
 
-    if cfy_config.securest_userstore_driver:
+    if cfy_config.security_userstore_driver:
         register_userstore_driver(secure_app,
-                                  cfy_config.securest_userstore_driver)
+                                  cfy_config.security_userstore_driver)
     register_authentication_providers(
-        secure_app, cfy_config.securest_authentication_providers)
+        secure_app, cfy_config.security_authentication_providers)
 
     def unauthorized_user_handler():
         utils.abort_error(
@@ -200,14 +203,14 @@ def init_secured_app(_app):
             hide_server_message=True)
 
     secure_app.unauthorized_user_handler = unauthorized_user_handler
-    if config.instance().security_bypass_port:
-        secure_app.request_security_bypass_handler = \
-            request_security_bypass_handler
+
+    secure_app.request_security_bypass_handler = \
+        request_security_bypass_handler
 
 
 def request_security_bypass_handler(req):
     server_port = req.headers.get('X-Server-Port')
-    return str(server_port) == str(config.instance().security_bypass_port)
+    return str(server_port) == SECURITY_BYPASS_PORT
 
 
 def register_auth_token_generator(_app, auth_token_generator):
@@ -240,16 +243,18 @@ def register_authentication_providers(secure_app, authentication_providers):
 def load_configuration():
     obj_conf = config.instance()
 
-    def load_config(env_var_name):
+    def load_config(env_var_name, namespace=''):
         if env_var_name in os.environ:
             with open(os.environ[env_var_name]) as f:
-                yaml_conf = yaml.load(f.read())
+                yaml_conf = yaml.safe_load(f.read())
             for key, value in yaml_conf.iteritems():
-                if hasattr(obj_conf, key):
-                    setattr(obj_conf, key, value)
+                config_key = '{0}_{1}'.format(namespace, key) if namespace \
+                    else key
+                if hasattr(obj_conf, config_key):
+                    setattr(obj_conf, config_key, value)
 
     load_config('MANAGER_REST_CONFIG_PATH')
-    load_config('MANAGER_REST_SECURITY_CONFIG_PATH')
+    load_config('MANAGER_REST_SECURITY_CONFIG_PATH', 'security')
 
 load_configuration()
 app = setup_app()

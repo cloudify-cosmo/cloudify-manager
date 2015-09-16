@@ -28,11 +28,11 @@ class TestSecurityAuditLog(SecurityTestBase):
 
     def create_configuration(self):
         test_config = super(TestSecurityAuditLog, self).create_configuration()
-        test_config.securest_log_level = 'DEBUG'
-        test_config.securest_log_file = tempfile.mkstemp()[1]
-        test_config.securest_log_file_size_MB = 0.1
-        test_config.securest_log_files_backup_count = 1
-        self.security_log_path = test_config.securest_log_file
+        test_config.security_audit_log_level = 'DEBUG'
+        test_config.security_audit_log_file = tempfile.mkstemp()[1]
+        test_config.security_audit_log_file_size_MB = 0.1
+        test_config.security_audit_log_files_backup_count = 1
+        self.security_log_path = test_config.security_audit_log_file
         return test_config
 
     def test_password_auth_success_log(self):
