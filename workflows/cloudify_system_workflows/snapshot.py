@@ -53,6 +53,8 @@ _INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
 _INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
                          '-d "[${{line}}]" "http://localhost:8086/db/cloudify/'
                          'series?u=root&p=root" ;done')
+_STORAGE_INDEX_NAME = 'cloudify_storage'
+_EVENTS_INDEX_NAME = 'cloudify_events'
 
 
 class _DictToAttributes(object):
@@ -151,7 +153,7 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
 
     # elasticsearch
     es = _create_es_client(config)
-    has_cloudify_events = es.indices.exists(index='cloudify_events')
+    has_cloudify_events = es.indices.exists(index=_EVENTS_INDEX_NAME)
     _dump_elasticsearch(tempdir, es, has_cloudify_events)
 
     metadata[_M_HAS_CLOUDIFY_EVENTS] = has_cloudify_events
@@ -202,13 +204,13 @@ def create(ctx, snapshot_id, config, **kwargs):
 
 
 def _dump_elasticsearch(tempdir, es, has_cloudify_events):
-    storage_scan = elasticsearch.helpers.scan(es, index='cloudify_storage')
+    storage_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME)
     storage_scan = _except_types(storage_scan,
                                  'provider_context',
                                  'snapshot')
     event_scan = elasticsearch.helpers.scan(
         es,
-        index='cloudify_events' if has_cloudify_events else 'logstash-*'
+        index=_EVENTS_INDEX_NAME if has_cloudify_events else 'logstash-*'
     )
 
     with open(os.path.join(tempdir, _ELASTICSEARCH), 'w') as f:
@@ -231,7 +233,7 @@ def _dump_credentials(tempdir, es):
     archive_cred_path = os.path.join(tempdir, _CRED_DIR)
     os.makedirs(archive_cred_path)
 
-    node_scan = elasticsearch.helpers.scan(es, index='cloudify_storage',
+    node_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME,
                                            doc_type='node')
     for n in node_scan:
         props = n['_source']['properties']
@@ -290,8 +292,8 @@ def _restore_elasticsearch(ctx, tempdir, es, metadata):
         _clean_up_db_before_restore(es, ctx.execution_id))
     es.indices.flush()
 
-    cloudify_events = es.indices.exists(index='cloudify_events')
-    from_cloudify_events = metadata[_M_HAS_CLOUDIFY_EVENTS]
+    has_cloudify_events_index = es.indices.exists(index=_EVENTS_INDEX_NAME)
+    snap_has_cloudify_events_index = metadata[_M_HAS_CLOUDIFY_EVENTS]
 
     # cloudify_events -> cloudify_events, logstash-* -> logstash-*
     def get_data_itr():
@@ -303,8 +305,8 @@ def _restore_elasticsearch(ctx, tempdir, es, metadata):
     # logstash-* -> cloudify_events
     def l_to_ce():
         for elem in get_data_itr():
-            if elem['_index'] != 'cloudify_storage':
-                elem['_index'] = 'cloudify_events'
+            if elem['_index'].startswith('logstash-'):
+                elem['_index'] = _EVENTS_INDEX_NAME
             yield elem
 
     # cloudify_events -> logstash-*
@@ -318,7 +320,7 @@ def _restore_elasticsearch(ctx, tempdir, es, metadata):
     def ce_to_l():
         event_indices = []
         for elem in get_data_itr():
-            if elem['_index'] != 'cloudify_storage':
+            if elem['_index'] == _EVENTS_INDEX_NAME:
                 date = get_event_date(elem)
                 index = date_to_index_name(date)
                 if index not in event_indices and\
@@ -329,10 +331,11 @@ def _restore_elasticsearch(ctx, tempdir, es, metadata):
             yield elem
 
     # choose iter
-    if (cloudify_events and from_cloudify_events) or\
-            (not cloudify_events and not from_cloudify_events):
+    if (has_cloudify_events_index and snap_has_cloudify_events_index) or\
+            (not has_cloudify_events_index and\
+             not snap_has_cloudify_events_index):
         data_iter = get_data_itr()
-    elif not from_cloudify_events and cloudify_events:
+    elif not snap_has_cloudify_events_index and has_cloudify_events_index:
         data_iter = l_to_ce()
     else:
         data_iter = ce_to_l()
@@ -370,7 +373,7 @@ def _restore_credentials_3_3(ctx, tempdir, file_server_root, es):
 
             update_action = {
                 '_op_type': 'update',
-                '_index': 'cloudify_storage',
+                '_index': _STORAGE_INDEX_NAME,
                 '_type': 'node',
                 '_id': node_id,
                 'doc': {
