@@ -326,7 +326,7 @@ def _restore_elasticsearch(ctx, tempdir, es, metadata):
 
     # choose iter
     if (has_cloudify_events_index and snap_has_cloudify_events_index) or\
-            (not has_cloudify_events_index and\
+            (not has_cloudify_events_index and
              not snap_has_cloudify_events_index):
         data_iter = get_data_itr()
     elif not snap_has_cloudify_events_index and has_cloudify_events_index:
