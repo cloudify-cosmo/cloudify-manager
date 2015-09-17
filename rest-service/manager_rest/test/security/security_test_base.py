@@ -47,9 +47,9 @@ class SecurityTestBase(BaseServerTestCase):
 
     def create_configuration(self):
         test_config = super(SecurityTestBase, self).create_configuration()
-        test_config.secured_server = True
+        test_config.security_enabled = True
 
-        test_config.securest_userstore_driver = {
+        test_config.security_userstore_driver = {
             'implementation':
                 'flask_securest.userstores.simple:SimpleUserstore',
             'properties': {
@@ -73,7 +73,7 @@ class SecurityTestBase(BaseServerTestCase):
                 'identifying_attribute': 'username'
             }
         }
-        test_config.auth_token_generator = {
+        test_config.security_auth_token_generator = {
             'implementation': 'flask_securest.authentication_providers.token:'
                               'TokenAuthenticator',
             'properties': {
@@ -81,7 +81,7 @@ class SecurityTestBase(BaseServerTestCase):
                 'expires_in_seconds': 600
             }
         }
-        test_config.securest_authentication_providers = [
+        test_config.security_authentication_providers = [
             {
                 'name': 'password',
                 'implementation':

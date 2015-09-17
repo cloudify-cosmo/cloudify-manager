@@ -77,10 +77,10 @@ class ManagerRestProcess(object):
                 self.rest_service_log_file_size_MB,
             'rest_service_log_files_backup_count':
                 self.rest_service_log_files_backup_count,
-            'securest_log_level': self.securest_log_level,
-            'securest_log_file': self.securest_log_file,
-            'securest_log_file_size_MB': self.securest_log_file_size_MB,
-            'securest_log_files_backup_count':
+            'security_audit_log_level': self.securest_log_level,
+            'security_audit_log_file': self.securest_log_file,
+            'security_audit_log_file_size_MB': self.securest_log_file_size_MB,
+            'security_audit_log_files_backup_count':
                 self.securest_log_files_backup_count,
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,

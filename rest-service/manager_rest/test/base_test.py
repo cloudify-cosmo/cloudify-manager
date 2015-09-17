@@ -35,7 +35,7 @@ except ImportError:
     CLIENT_API_VERSION = 'v1'
 
 
-STORAGE_MANAGER_MODULE_NAME = 'file_storage_manager'
+STORAGE_MANAGER_MODULE_NAME = 'manager_rest.file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
@@ -235,10 +235,10 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_path = self.rest_service_log
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 20
-        test_config.securest_log_level = 'DEBUG'
-        test_config.securest_log_file = self.securest_log_file
-        test_config.securest_log_file_size_MB = 100
-        test_config.securest_log_files_backup_count = 20
+        test_config.security_audit_log_level = 'DEBUG'
+        test_config.security_audit_log_file = self.securest_log_file
+        test_config.security_audit_log_file_size_MB = 100
+        test_config.security_audit_log_files_backup_count = 20
         return test_config
 
     def _version_url(self, url):

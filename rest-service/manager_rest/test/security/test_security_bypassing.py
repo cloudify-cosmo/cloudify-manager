@@ -23,12 +23,11 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SecurityBypassTest(SecurityTestBase):
 
-    BYPASS_PORT = 56789
+    BYPASS_PORT = 8101
     NOT_BYPASS_PORT = 56790
 
     def create_configuration(self):
         test_config = super(SecurityBypassTest, self).create_configuration()
-        test_config.security_bypass_port = self.BYPASS_PORT
         return test_config
 
     def test_bypass_and_correct_credentials(self):
@@ -36,7 +35,6 @@ class SecurityBypassTest(SecurityTestBase):
                                     create_auth_header(username='user1',
                                                        password='pass1'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
-
         client.blueprints.list()
 
     def test_bypass_and_incorrect_password(self):

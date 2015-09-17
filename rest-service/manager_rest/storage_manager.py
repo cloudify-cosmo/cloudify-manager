@@ -13,26 +13,21 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import imp
-import sys
-from os import path
+import importlib
 
 from flask import g, current_app
 
 from manager_rest.utils import maybe_register_teardown
 
 # storage_manager_module_name = 'file_storage_manager'
-storage_manager_module_name = 'es_storage_manager'
+storage_manager_module_name = 'manager_rest.es_storage_manager'
 
 _instance = None
 
 
 def _create_instance():
-    paths = sys.path
-    paths.append(path.dirname(__file__))
-    return imp.load_module(storage_manager_module_name,
-                           *imp.find_module(
-                               storage_manager_module_name, paths)).create()
+    module = importlib.import_module(storage_manager_module_name)
+    return module.create()
 
 
 def reset():
