@@ -278,6 +278,11 @@ def _update_es_node(es_node):
                     'operation': 'cloudify_agent.operations.create_agent_amqp'
                 }
 
+    if es_node['_type'] == 'blueprint':
+        source = es_node['_source']
+        if 'description' not in source:
+            source['description'] = ''
+
 
 def _restore_elasticsearch(ctx, tempdir, es, metadata):
     ctx.send_event('Deleting all ElasticSearch data')
