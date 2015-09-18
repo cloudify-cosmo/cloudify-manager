@@ -114,6 +114,17 @@ class SnapshotsId(SecuredResource):
 
     @swagger.operation(
         responseClass=responses_v2.Snapshot,
+        nickname='getById',
+        notes='Returns a snapshot by its id.'
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Snapshot)
+    def get(self, snapshot_id, _include=None, **kwargs):
+        return get_blueprints_manager().get_snapshot(snapshot_id,
+                                                     include=_include)
+
+    @swagger.operation(
+        responseClass=responses_v2.Snapshot,
         nickname='createSnapshot',
         notes='Create a new snapshot of the manager.',
         consumes=[
