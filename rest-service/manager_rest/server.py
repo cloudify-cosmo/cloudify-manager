@@ -206,8 +206,7 @@ def init_secured_app(_app):
             hide_server_message=True)
 
     secure_app.unauthorized_user_handler = unauthorized_user_handler
-    if config.instance().security_bypass_port:
-        secure_app.skip_auth_hook = _is_internal_request()
+    secure_app.skip_auth_hook = _is_internal_request
 
 
 def _is_internal_request(req):
