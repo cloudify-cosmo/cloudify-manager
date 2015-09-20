@@ -16,6 +16,7 @@
 
 import elasticsearch.exceptions
 from elasticsearch import Elasticsearch
+from flask_securest import rest_security
 
 from manager_rest import config
 from manager_rest import manager_exceptions
@@ -71,23 +72,33 @@ class ESStorageManager(object):
         return [self._fill_missing_fields_and_deserialize(doc, model_class)
                 for doc in docs]
 
-    def _get_doc(self, doc_type, doc_id, fields=None):
+    def _get_doc(self, doc_type, doc_id, principal_list, fields=None):
         try:
+            query = self._build_filter_terms_and_acl_query(
+                required_permission='GET', principal_list=principal_list,
+                filters={'id': doc_id})
             if fields:
-                return self._connection.get(index=STORAGE_INDEX_NAME,
-                                            doc_type=doc_type,
-                                            id=doc_id,
-                                            _source=[f for f in fields])
+                self._connection.search(index=STORAGE_INDEX_NAME,
+                                        doc_type=doc_type,
+                                        body=query,
+                                        _source=[f for f in fields])
+                # return self._connection.get(index=STORAGE_INDEX_NAME,
+                #                             doc_type=doc_type,
+                #                             id=doc_id,
+                #                             _source=[f for f in fields])
             else:
-                return self._connection.get(index=STORAGE_INDEX_NAME,
-                                            doc_type=doc_type,
-                                            id=doc_id)
+                self._connection.search(index=STORAGE_INDEX_NAME,
+                                        doc_type=doc_type,
+                                        body=query)
+                # return self._connection.get(index=STORAGE_INDEX_NAME,
+                #                             doc_type=doc_type,
+                #                             id=doc_id)
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
 
     def _get_doc_and_deserialize(self, doc_type, doc_id, model_class,
-                                 fields=None):
+                                 principal_list, fields=None):
         doc = self._get_doc(doc_type, doc_id, fields)
         if not fields:
             return model_class(**doc['_source'])
@@ -139,7 +150,9 @@ class ESStorageManager(object):
         return model_class(**fields_data)
 
     @staticmethod
-    def _build_filter_terms_query(filters=None):
+    def _build_filter_terms_and_acl_query(required_permission,
+                                          principal_list,
+                                          filters=None):
         """
         This method is used to create a search filter to receive only results
         where a specific key holds a specific value.
@@ -149,17 +162,28 @@ class ESStorageManager(object):
          value
         :return: an elasticsearch query string containing the given filters
         """
-        terms_lst = []
+        filters_terms_list = []
+        acl_terms_list = []
         query = None
         if filters:
             for key, val in filters.iteritems():
-                terms_lst.append({'term': {key: val}})
+                filters_terms_list.append({'term': {key: val}})
+            for principal in principal_list.iteritems():
+                ace = 'allow#{0}#{1}'.format(principal, required_permission)
+                acl_terms_list.append({'wildcard': {'acl': '*,{0},*'.format(ace)}})
             query = {
                 'query': {
                     'filtered': {
+                        'query': {
+                            'bool': {
+                                'should': [
+                                    acl_terms_list
+                                ]
+                            }
+                        },
                         'filter': {
                             'bool': {
-                                'must':  terms_lst
+                                'must': filters_terms_list
                             }
                         }
                     }
@@ -233,9 +257,12 @@ class ESStorageManager(object):
                                     filters=filters,
                                     include=include)
 
-    def _get_items_list(self, doc_type, model_class, include=None,
-                        filters=None):
-        query = self._build_filter_terms_query(filters=filters)
+    def _get_items_list(self, doc_type, model_class, principal_list,
+                        include=None, filters=None):
+        query = self._build_filter_terms_and_acl_query(
+            required_permission='GET',
+            principal_list=principal_list,
+            filters=filters)
         return self._list_docs(doc_type,
                                model_class,
                                query=query,
@@ -259,7 +286,8 @@ class ESStorageManager(object):
                                              Execution,
                                              fields=include)
 
-    def put_blueprint(self, blueprint_id, blueprint):
+    def put_blueprint(self, blueprint_id, blueprint, security_context):
+        blueprint.acl = rest_security.get_acl(security_context)
         self._put_doc_if_not_exists(BLUEPRINT_TYPE, str(blueprint_id),
                                     blueprint.to_dict())
 
@@ -316,9 +344,11 @@ class ESStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 'Provider Context not found')
 
-    def delete_deployment(self, deployment_id):
-        query = self._build_filter_terms_query(filters={'deployment_id':
-                                                        deployment_id})
+    def delete_deployment(self, deployment_id, principal_list):
+        query = self._build_filter_terms_and_acl_query(
+            required_permission='DELETE',
+            principal_list=principal_list,
+            filters={'deployment_id': deployment_id})
         self._delete_doc_by_query(EXECUTION_TYPE, query)
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
         self._delete_doc_by_query(NODE_TYPE, query)

@@ -196,6 +196,9 @@ def init_secured_app(_app):
     register_authentication_providers(
         secure_app, cfy_config.security_authentication_providers)
 
+    register_authorization_provider(
+        secure_app, cfy_config.security_authorization_provider)
+
     def unauthorized_user_handler():
         utils.abort_error(
             manager_exceptions.UnauthorizedError('user unauthorized'),
@@ -240,23 +243,35 @@ def register_authentication_providers(secure_app, authentication_providers):
                                                     auth_provider)
 
 
+def register_authorization_provider(secure_app, authorization_provider):
+    secure_app.app.logger.debug('registering authorization provider {0}'
+                                .format(authorization_provider))
+    provider = utils.get_class_instance(authorization_provider['implementation'],
+                                        authorization_provider['properties'])
+    secure_app.set_authorization_provider(provider)
+
+
 def load_configuration():
     obj_conf = config.instance()
 
     def load_config(env_var_name, namespace=''):
         if env_var_name in os.environ:
+            print '***** parsing {0}'.format(os.environ[env_var_name])
             with open(os.environ[env_var_name]) as f:
                 yaml_conf = yaml.safe_load(f.read())
             for key, value in yaml_conf.iteritems():
                 config_key = '{0}_{1}'.format(namespace, key) if namespace \
                     else key
+                print '***** found key: "{0}" and value: "{1}"'.format(config_key, value)
                 if hasattr(obj_conf, config_key):
+                    print '***** setting {0}'.format(config_key)
                     setattr(obj_conf, config_key, value)
 
     load_config('MANAGER_REST_CONFIG_PATH')
     load_config('MANAGER_REST_SECURITY_CONFIG_PATH', 'security')
 
 load_configuration()
+print 'configuration loaded'
 app = setup_app()
 
 

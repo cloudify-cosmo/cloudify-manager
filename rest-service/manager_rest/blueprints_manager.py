@@ -20,6 +20,8 @@ from StringIO import StringIO
 
 from flask import g, current_app
 
+from flask_securest import rest_security
+
 from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import functions
@@ -218,7 +220,8 @@ class BlueprintsManager(object):
             error='',
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
-            is_system_workflow=False)
+            is_system_workflow=False,
+            acl=rest_security.get_acl(models.Execution))
 
         self.sm.put_execution(new_execution.id, new_execution)
 
@@ -276,7 +279,8 @@ class BlueprintsManager(object):
             error='',
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
-            is_system_workflow=is_system_workflow)
+            is_system_workflow=is_system_workflow,
+            acl=rest_security.get_acl(models.Execution))
 
         self.sm.put_execution(execution.id, execution)
 
@@ -437,7 +441,8 @@ class BlueprintsManager(object):
             deployment_id=deployment_id,
             modified_nodes=modified_nodes,
             node_instances=node_instances_modification,
-            context=context)
+            context=context,
+            acl=rest_security.get_acl(models.DeploymentModification))
         self.sm.put_deployment_modification(modification_id, modification)
 
         for node_id, modified_node in modified_nodes.items():
@@ -595,7 +600,8 @@ class BlueprintsManager(object):
                 deployment_id=deployment_id,
                 state='uninitialized',
                 runtime_properties={},
-                version=None)
+                version=None,
+                acl=rest_security.get_acl(models.DeploymentNodeInstance))
             self.sm.put_node_instance(instance)
 
     def evaluate_deployment_outputs(self, deployment_id):
@@ -663,7 +669,8 @@ class BlueprintsManager(object):
                 operations=raw_node['operations'],
                 plugins=raw_node['plugins'],
                 plugins_to_install=raw_node.get('plugins_to_install'),
-                relationships=self._prepare_node_relationships(raw_node)
+                relationships=self._prepare_node_relationships(raw_node),
+                acl=rest_security.get_acl(models.DeploymentNode)
             ))
 
     @staticmethod

@@ -38,6 +38,7 @@ class Config(object):
         self._security_audit_log_files_backup_count = None
         self._security_userstore_driver = None
         self._security_authentication_providers = []
+        self._security_authorization_provider = None
 
     @property
     def db_address(self):
@@ -206,6 +207,14 @@ class Config(object):
     @security_userstore_driver.setter
     def security_userstore_driver(self, value):
         self._security_userstore_driver = value
+
+    @property
+    def security_authorization_provider(self):
+        return self._security_authorization_provider
+
+    @security_authorization_provider.setter
+    def security_authorization_provider(self, value):
+        self._security_authorization_provider = value
 
 
 _instance = Config()
