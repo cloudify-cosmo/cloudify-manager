@@ -244,8 +244,9 @@ def register_authentication_providers(secure_app, authentication_providers):
 def register_authorization_provider(secure_app, authorization_provider):
     secure_app.app.logger.debug('registering authorization provider {0}'
                                 .format(authorization_provider))
-    provider = utils.get_class_instance(authorization_provider['implementation'],
-                                        authorization_provider['properties'])
+    provider = utils.get_class_instance(
+        authorization_provider['implementation'],
+        authorization_provider['properties'])
     secure_app.set_authorization_provider(provider)
 
 
@@ -254,15 +255,12 @@ def load_configuration():
 
     def load_config(env_var_name, namespace=''):
         if env_var_name in os.environ:
-            print '***** parsing {0}'.format(os.environ[env_var_name])
             with open(os.environ[env_var_name]) as f:
                 yaml_conf = yaml.safe_load(f.read())
             for key, value in yaml_conf.iteritems():
                 config_key = '{0}_{1}'.format(namespace, key) if namespace \
                     else key
-                print '***** found key: "{0}" and value: "{1}"'.format(config_key, value)
                 if hasattr(obj_conf, config_key):
-                    print '***** setting {0}'.format(config_key)
                     setattr(obj_conf, config_key, value)
 
     load_config('MANAGER_REST_CONFIG_PATH')
