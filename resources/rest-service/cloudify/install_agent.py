@@ -239,9 +239,14 @@ def _perform_operation(operation, installer):
         installer.run_daemon_command(operation)
 
 
-def _return(value):
+def _return(value, old_agent_version):
     from cloudify import ctx
     ctx.returns(value)
+    # Due to bug in celery:
+    if os.name == 'nt' and old_agent_version == '3.2':
+        from celery import current_task
+        from cloudify.celery import celery
+        celery.backend.mark_as_done(current_task.request.id, value)
 
 
 def _main(args):
@@ -258,7 +263,7 @@ def _main(args):
     else:
         _perform_operation(command.operation, installer)
     if not command.ignore_result:
-        _return(cloudify_agent)
+        _return(cloudify_agent, cloudify_agent['old_agent_version'])
 
 
 if __name__ == '__main__':
