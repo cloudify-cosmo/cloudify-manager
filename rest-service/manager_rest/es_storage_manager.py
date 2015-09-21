@@ -286,8 +286,7 @@ class ESStorageManager(object):
                                              Execution,
                                              fields=include)
 
-    def put_blueprint(self, blueprint_id, blueprint, security_context):
-        blueprint.acl = rest_security.get_acl(security_context)
+    def put_blueprint(self, blueprint_id, blueprint):
         self._put_doc_if_not_exists(BLUEPRINT_TYPE, str(blueprint_id),
                                     blueprint.to_dict())
 

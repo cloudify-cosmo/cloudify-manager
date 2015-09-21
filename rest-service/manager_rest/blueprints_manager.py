@@ -119,8 +119,10 @@ class BlueprintsManager(object):
         new_blueprint = models.BlueprintState(plan=plan,
                                               id=blueprint_id,
                                               created_at=now,
-                                              updated_at=now)
-        self.sm.put_blueprint(new_blueprint.id, new_blueprint)
+                                              updated_at=now,
+                                              acl=rest_security.get_acl())
+        self.sm.put_blueprint(
+            new_blueprint.id, new_blueprint)
         return new_blueprint
 
     def delete_blueprint(self, blueprint_id):
@@ -221,7 +223,7 @@ class BlueprintsManager(object):
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
             is_system_workflow=False,
-            acl=rest_security.get_acl(models.Execution))
+            acl=rest_security.get_acl())
 
         self.sm.put_execution(new_execution.id, new_execution)
 
@@ -279,8 +281,7 @@ class BlueprintsManager(object):
             error='',
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
-            is_system_workflow=is_system_workflow,
-            acl=rest_security.get_acl(models.Execution))
+            is_system_workflow=is_system_workflow)
 
         self.sm.put_execution(execution.id, execution)
 
@@ -382,7 +383,8 @@ class BlueprintsManager(object):
             policy_types=deployment_plan['policy_types'],
             policy_triggers=deployment_plan['policy_triggers'],
             groups=deployment_plan['groups'],
-            outputs=deployment_plan['outputs'])
+            outputs=deployment_plan['outputs'],
+            acl=rest_security.get_acl())
 
         self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id,
@@ -442,7 +444,7 @@ class BlueprintsManager(object):
             modified_nodes=modified_nodes,
             node_instances=node_instances_modification,
             context=context,
-            acl=rest_security.get_acl(models.DeploymentModification))
+            acl=rest_security.get_acl())
         self.sm.put_deployment_modification(modification_id, modification)
 
         for node_id, modified_node in modified_nodes.items():
@@ -466,7 +468,8 @@ class BlueprintsManager(object):
                     host_id=None,
                     deployment_id=None,
                     state=None,
-                    runtime_properties=None))
+                    runtime_properties=None,
+                    acl=rest_security.get_acl()))
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
         return modification
@@ -504,7 +507,8 @@ class BlueprintsManager(object):
                     host_id=None,
                     deployment_id=None,
                     state=None,
-                    runtime_properties=None))
+                    runtime_properties=None,
+                    acl=rest_security.get_acl()))
 
         now = str(datetime.now())
         self.sm.update_deployment_modification(
@@ -516,7 +520,8 @@ class BlueprintsManager(object):
                 deployment_id=None,
                 modified_nodes=None,
                 node_instances=None,
-                context=None))
+                context=None,
+                acl=rest_security.get_acl()))
 
         return models.DeploymentModification(
             id=modification_id,
@@ -526,7 +531,8 @@ class BlueprintsManager(object):
             deployment_id=None,
             modified_nodes=None,
             node_instances=None,
-            context=None)
+            context=None,
+            acl=rest_security.get_acl())
 
     def rollback_deployment_modification(self, modification_id):
         modification = self.sm.get_deployment_modification(modification_id)
@@ -566,7 +572,8 @@ class BlueprintsManager(object):
                 deployment_id=None,
                 modified_nodes=None,
                 node_instances=modification.node_instances,
-                context=None))
+                context=None,
+                acl=rest_security.get_acl()))
 
         return models.DeploymentModification(
             id=modification_id,
@@ -576,7 +583,8 @@ class BlueprintsManager(object):
             deployment_id=None,
             modified_nodes=None,
             node_instances=None,
-            context=None)
+            context=None,
+            acl=rest_security.get_acl())
 
     def _get_node_instance_ids(self, deployment_id):
         deplyment_id_filter = self.create_filters_dict(
@@ -601,7 +609,7 @@ class BlueprintsManager(object):
                 state='uninitialized',
                 runtime_properties={},
                 version=None,
-                acl=rest_security.get_acl(models.DeploymentNodeInstance))
+                acl=rest_security.get_acl())
             self.sm.put_node_instance(instance)
 
     def evaluate_deployment_outputs(self, deployment_id):
@@ -670,7 +678,7 @@ class BlueprintsManager(object):
                 plugins=raw_node['plugins'],
                 plugins_to_install=raw_node.get('plugins_to_install'),
                 relationships=self._prepare_node_relationships(raw_node),
-                acl=rest_security.get_acl(models.DeploymentNode)
+                acl=rest_security.get_acl()
             ))
 
     @staticmethod

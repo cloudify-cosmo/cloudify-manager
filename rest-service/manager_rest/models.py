@@ -35,8 +35,7 @@ class ManagedResource(SerializableObject):
     fields = {'acl'}
 
     def __init__(self, **kwargs):
-        # by default, the resource acl allows all to do everything
-        self.acl = kwargs.get('acl', {'*': '*'})
+        self.acl = kwargs.get('acl', {'': ''})
 
 
 class BlueprintState(ManagedResource):
