@@ -241,9 +241,12 @@ class ESStorageManager(object):
 
     def get_node(self, deployment_id, node_id, include=None):
         storage_node_id = self._storage_node_id(deployment_id, node_id)
+        principals_list = rest_security.get_principals_list()
+        print '***** in get_node, got principals: {0}'.format(principals_list)
         return self._get_doc_and_deserialize(doc_id=storage_node_id,
                                              doc_type=NODE_TYPE,
                                              model_class=DeploymentNode,
+                                             principals_list=principals_list,
                                              fields=include)
 
     def get_node_instances(self, include=None, filters=None):
@@ -270,23 +273,30 @@ class ESStorageManager(object):
                                fields=include)
 
     def get_blueprint(self, blueprint_id, include=None):
-        principals = rest_security.get_all_principals_for_current_user()
+        principals_list = rest_security.get_principals_list()
+        print '***** in get_blueprint, got principals: {0}'.format(principals_list)
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE,
                                              blueprint_id,
                                              BlueprintState,
-                                             principal_list=principals,
+                                             principal_list=principals_list,
                                              fields=include)
 
     def get_deployment(self, deployment_id, include=None):
+        principals_list = rest_security.get_principals_list()
+        print '***** in get_deployment, got principals: {0}'.format(principals_list)
         return self._get_doc_and_deserialize(DEPLOYMENT_TYPE,
                                              deployment_id,
                                              Deployment,
+                                             principals_list=principals_list,
                                              fields=include)
 
     def get_execution(self, execution_id, include=None):
+        principals_list = rest_security.get_principals_list()
+        print '***** in get_execution, got principals: {0}'.format(principals_list)
         return self._get_doc_and_deserialize(EXECUTION_TYPE,
                                              execution_id,
                                              Execution,
+                                             principals_list=principals_list,
                                              fields=include)
 
     def put_blueprint(self, blueprint_id, blueprint):
@@ -427,9 +437,12 @@ class ESStorageManager(object):
                                     doc_data)
 
     def get_provider_context(self, include=None):
+        principals_list = rest_security.get_principals_list()
+        print '***** in get_provider_context, got principals: {0}'.format(principals_list)
         return self._get_doc_and_deserialize(PROVIDER_CONTEXT_TYPE,
                                              PROVIDER_CONTEXT_ID,
                                              ProviderContext,
+                                             principals_list=principals_list,
                                              fields=include)
 
     def put_deployment_modification(self, modification_id, modification):
@@ -438,9 +451,12 @@ class ESStorageManager(object):
                                     modification.to_dict())
 
     def get_deployment_modification(self, modification_id, include=None):
+        principals_list = rest_security.get_principals_list()
+        print '***** in get_deployment_modification, got principals: {0}'.format(principals_list)
         return self._get_doc_and_deserialize(DEPLOYMENT_MODIFICATION_TYPE,
                                              modification_id,
                                              DeploymentModification,
+                                             principals_list=principals_list,
                                              fields=include)
 
     def update_deployment_modification(self, modification):
