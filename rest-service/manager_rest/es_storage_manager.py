@@ -77,6 +77,7 @@ class ESStorageManager(object):
             query = self._build_filter_terms_and_acl_query(
                 required_permission='GET', principal_list=principal_list,
                 filters={'id': doc_id})
+            print 'built ES query: {0}'.format(query)
             if fields:
                 self._connection.search(index=STORAGE_INDEX_NAME,
                                         doc_type=doc_type,
@@ -99,7 +100,7 @@ class ESStorageManager(object):
 
     def _get_doc_and_deserialize(self, doc_type, doc_id, model_class,
                                  principal_list, fields=None):
-        doc = self._get_doc(doc_type, doc_id, fields)
+        doc = self._get_doc(doc_type, doc_id, principal_list, fields)
         if not fields:
             return model_class(**doc['_source'])
         else:
@@ -269,9 +270,11 @@ class ESStorageManager(object):
                                fields=include)
 
     def get_blueprint(self, blueprint_id, include=None):
+        principals = rest_security.get_all_principals_for_current_user()
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE,
                                              blueprint_id,
                                              BlueprintState,
+                                             principal_list=principals,
                                              fields=include)
 
     def get_deployment(self, deployment_id, include=None):
