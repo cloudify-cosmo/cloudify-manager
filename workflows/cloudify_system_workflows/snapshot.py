@@ -172,6 +172,9 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
     with open(os.path.join(tempdir, _METADATA_FILE), 'w') as f:
         json.dump(metadata, f)
 
+    # agents
+    _dump_agents(tempdir, ctx)
+
     # zip
     snapshot_dir = os.path.join(snapshots_dir, snapshot_id)
     os.makedirs(snapshot_dir)
@@ -242,6 +245,32 @@ def _dump_credentials(ctx, tempdir):
             shutil.copy(os.path.expanduser(agent_key_path),
                         os.path.join(archive_cred_path, node_id,
                                      _CRED_KEY_NAME))
+
+
+def _is_compute(node):
+    return 'cloudify.nodes.Compute' in node.type_hierarchy
+
+
+def _dump_agents(tempdir, ctx):
+    ctx.logger.info('Preparing agents data.')
+    client = get_rest_client()
+    result = {}
+    for deployment in client.deployments.list():
+        deployment_result = {}
+        for node in client.nodes.list(deployment_id=deployment.id):
+            if _is_compute(node):
+                node_result = {}
+                for node_instance in client.node_instances.list(
+                        deployment_id=deployment.id,
+                        node_name=node.id):
+                    node_result[node_instance.id] = {
+                        'version': node_instance.runtime_properties.get(
+                            'cloudify_agent', {}).get('version', _VERSION)
+                    }
+                deployment_result[node.id] = node_result
+        result[deployment.id] = deployment_result
+    with open(os.path.join(tempdir, _AGENTS_FILE), 'w') as out:
+        out.write(json.dumps(result))
 
 
 def _update_es_node(es_node):
@@ -393,6 +422,28 @@ def _restore_credentials_3_3(ctx, tempdir, file_server_root, es):
     elasticsearch.helpers.bulk(es, update_actions)
 
 
+def insert_agents_data(client, agents):
+    for nodes in agents.values():
+        for node_instances in nodes.values():
+            for node_instance_id, agent in node_instances.iteritems():
+                node_instance = client.node_instances.get(node_instance_id)
+                runtime_properties = node_instance.runtime_properties
+                old_agent = runtime_properties.get('cloudify_agent', {})
+                old_agent.update(agent)
+                runtime_properties['cloudify_agent'] = old_agent
+                client.node_instances.update(
+                    node_instance_id=node_instance_id,
+                    runtime_properties=runtime_properties)
+
+
+def _restore_agents_data(ctx, tempdir):
+    ctx.send_event('Updating cloudify agent data')
+    client = get_rest_client()
+    with open(os.path.join(tempdir, _AGENTS_FILE)) as agents_file:
+        agents = json.load(agents_file)
+    insert_agents_data(client, agents)
+
+
 def _restore_snapshot(ctx, config, tempdir, metadata):
     # files/dirs copy
     _copy_data(tempdir, config, to_archive=False)
@@ -409,6 +460,9 @@ def _restore_snapshot(ctx, config, tempdir, metadata):
     _restore_credentials_3_3(ctx, tempdir, config.file_server_root, es)
 
     es.indices.flush()
+
+    # agents
+    _restore_agents_data(ctx, tempdir)
     # end
 
 
@@ -416,27 +470,8 @@ def _restore_snapshot_format_3_3(ctx, config, tempdir, metadata):
     _restore_snapshot(ctx, config, tempdir, metadata)
 
 
-# In 3.3 cloudify_agent dict was added to node instances runtime properties.
-# This code is used to fill those dicts when migrating from 3.2.
-def insert_agents_data(client, agents):
-    for nodes in agents.values():
-        for node_instances in nodes.values():
-            for node_instance_id, agent in node_instances.iteritems():
-                node_instance = client.node_instances.get(node_instance_id)
-                runtime_properties = node_instance.runtime_properties
-                runtime_properties['cloudify_agent'] = agent
-                client.node_instances.update(
-                    node_instance_id=node_instance_id,
-                    runtime_properties=runtime_properties)
-
-
 def _restore_snapshot_format_3_2(ctx, config, tempdir, metadata):
     _restore_snapshot(ctx, config, tempdir, metadata)
-    ctx.send_event('Updating cloudify agent data')
-    client = get_rest_client()
-    with open(os.path.join(tempdir, _AGENTS_FILE)) as agents_file:
-        agents = json.load(agents_file)
-    insert_agents_data(client, agents)
 
 
 @workflow(system_wide=True)
