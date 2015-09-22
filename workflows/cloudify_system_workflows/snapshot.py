@@ -162,7 +162,8 @@ def _create(ctx, snapshot_id, config, include_metrics, include_credentials,
 
     # credentials
     if include_credentials:
-        _dump_credentials(tempdir, es)
+        ctx.load_deployments_contexts()
+        _dump_credentials(ctx, tempdir)
 
     # version
     metadata[_M_VERSION] = _VERSION
@@ -223,16 +224,19 @@ def _dump_influxdb(tempdir):
     os.remove(influxdb_temp_file)
 
 
-def _dump_credentials(tempdir, es):
+def _dump_credentials(ctx, tempdir):
     archive_cred_path = os.path.join(tempdir, _CRED_DIR)
     os.makedirs(archive_cred_path)
 
-    node_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME,
-                                           doc_type='node')
-    for n in node_scan:
-        props = n['_source']['properties']
+    hosts = [(dep_id, node)
+             for dep_id, wctx in ctx.deployments_contexts.iteritems()
+             for node in wctx.nodes
+             if 'cloudify.nodes.Compute' in node.type_hierarchy]
+
+    for dep_id, n in hosts:
+        props = n.properties
         if 'cloudify_agent' in props and 'key' in props['cloudify_agent']:
-            node_id = n['_id']
+            node_id = dep_id + '_' + n.id
             agent_key_path = props['cloudify_agent']['key']
             os.makedirs(os.path.join(archive_cred_path, node_id))
             shutil.copy(os.path.expanduser(agent_key_path),
