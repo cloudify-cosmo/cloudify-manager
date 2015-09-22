@@ -228,10 +228,10 @@ def _dump_credentials(ctx, tempdir):
     archive_cred_path = os.path.join(tempdir, _CRED_DIR)
     os.makedirs(archive_cred_path)
 
-    hosts = set()
-    for dep_id, wctx in ctx.deployments_contexts.iteritems():
-        for node in wctx.nodes:
-            hosts.add((dep_id, node.host_node))
+    hosts = [(dep_id, node)
+             for dep_id, wctx in ctx.deployments_contexts.iteritems()
+             for node in wctx.nodes
+             if 'cloudify.nodes.Compute' in node.type_hierarchy]
 
     for dep_id, n in hosts:
         props = n.properties
