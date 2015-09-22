@@ -227,6 +227,10 @@ def _dump_influxdb(tempdir):
     os.remove(influxdb_temp_file)
 
 
+def _is_compute(node):
+    return 'cloudify.nodes.Compute' in node.type_hierarchy
+
+
 def _dump_credentials(ctx, tempdir):
     archive_cred_path = os.path.join(tempdir, _CRED_DIR)
     os.makedirs(archive_cred_path)
@@ -234,7 +238,7 @@ def _dump_credentials(ctx, tempdir):
     hosts = [(dep_id, node)
              for dep_id, wctx in ctx.deployments_contexts.iteritems()
              for node in wctx.nodes
-             if 'cloudify.nodes.Compute' in node.type_hierarchy]
+             if _is_compute(node)]
 
     for dep_id, n in hosts:
         props = n.properties
@@ -245,10 +249,6 @@ def _dump_credentials(ctx, tempdir):
             shutil.copy(os.path.expanduser(agent_key_path),
                         os.path.join(archive_cred_path, node_id,
                                      _CRED_KEY_NAME))
-
-
-def _is_compute(node):
-    return 'cloudify.nodes.Compute' in node.type_hierarchy
 
 
 def _dump_agents(tempdir, ctx):
@@ -423,8 +423,8 @@ def _restore_credentials_3_3(ctx, tempdir, file_server_root, es):
 
 
 def insert_agents_data(client, agents):
-    for nodes in agents.values():
-        for node_instances in nodes.values():
+    for nodes in agents.itervalues():
+        for node_instances in nodes.itervalues():
             for node_instance_id, agent in node_instances.iteritems():
                 node_instance = client.node_instances.get(node_instance_id)
                 runtime_properties = node_instance.runtime_properties
