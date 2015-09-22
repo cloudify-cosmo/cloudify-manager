@@ -1,0 +1,552 @@
+##################################################################################
+# Cloudify OpenStack built in types and plugins definitions.
+##################################################################################
+
+plugins:
+  openstack:
+    executor: central_deployment_agent
+    source: http://localhost:53229/cloudify/plugins/openstack-plugin/cloudify-openstack-plugin-1.3m5.zip
+
+node_types:
+  cloudify.openstack.nodes.Server:
+    derived_from: cloudify.nodes.Compute
+    properties:
+      server:
+        default: {}
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      image:
+        default: ''
+      flavor:
+        default: ''
+      management_network_name:
+        default: ''
+      use_password:
+        default: false
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.nova_plugin.server.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        start:
+          implementation: openstack.nova_plugin.server.start
+          inputs:
+            start_retry_interval:
+              description: Polling interval until the server is active in seconds
+              type: integer
+              default: 30
+            private_key_path:
+              description: >
+                Path to private key which matches the server's
+                public key. Will be used to decrypt password in case
+                the "use_password" property is set to "true"
+              type: string
+              default: ''
+            openstack_config:
+              default: {}
+        stop:
+          implementation: openstack.nova_plugin.server.stop
+          inputs:
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.nova_plugin.server.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.nova_plugin.server.creation_validation
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nodes.WindowsServer:
+    derived_from: cloudify.openstack.nodes.Server
+    properties:
+      use_password:
+        default: true
+      os_family:
+        default: Windows
+
+  cloudify.openstack.nodes.KeyPair:
+    derived_from: cloudify.nodes.Root
+    properties:
+      keypair:
+        default: {}
+        description: >
+          the keypair object as described by Openstack. This
+          parameter can be used to override and pass parameters
+          directly to Nova client.
+          Note that in the case of keypair, the only nested parameter
+          that can be used is "name".
+      private_key_path:
+        description: >
+          the path (on the machine the plugin is running on) to
+          where the private key should be stored. If
+          use_external_resource is set to "true", the existing
+          private key is expected to be at this path.
+      use_external_resource:
+        default: false
+        description: >
+          a boolean describing whether this resource should be
+          created or rather that it already exists on Openstack
+          and should be used as-is.
+      resource_id:
+        default: ''
+        description: >
+          the name that will be given to the resource on Openstack (excluding optional prefix).
+          If not provided, a default name will be given instead.
+          If use_external_resource is set to "true", this exact
+          value (without any prefixes applied) will be looked for
+          as either the name or id of an existing keypair to be used.
+      openstack_config:
+        default: {}
+        description: >
+          endpoints and authentication configuration for Openstack.
+          Expected to contain the following nested fields:
+          username, password, tenant_name, auth_url, region.
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.nova_plugin.keypair.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.nova_plugin.keypair.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.nova_plugin.keypair.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nodes.Subnet:
+    derived_from: cloudify.nodes.Subnet
+    properties:
+      subnet:
+        default: {}
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.neutron_plugin.subnet.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.neutron_plugin.subnet.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.neutron_plugin.subnet.creation_validation
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nodes.SecurityGroup:
+    derived_from: cloudify.nodes.SecurityGroup
+    properties:
+      security_group:
+        default: {}
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      openstack_config:
+        default: {}
+      rules:
+        default: []
+      disable_default_egress_rules:
+        default: false
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.neutron_plugin.security_group.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.neutron_plugin.security_group.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.neutron_plugin.security_group.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nodes.Router:
+    derived_from: cloudify.nodes.Router
+    properties:
+      router:
+        default: {}
+      external_network:
+        default: ''
+      default_to_managers_external_network:
+        default: true
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.neutron_plugin.router.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.neutron_plugin.router.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.neutron_plugin.router.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nodes.Port:
+    derived_from: cloudify.nodes.Port
+    properties:
+      port:
+        default: {}
+      fixed_ip:
+        default: ''
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.neutron_plugin.port.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.neutron_plugin.port.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.neutron_plugin.port.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nodes.Network:
+    derived_from: cloudify.nodes.Network
+    properties:
+      network:
+        default: {}
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.neutron_plugin.network.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.neutron_plugin.network.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.neutron_plugin.network.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nodes.FloatingIP:
+    derived_from: cloudify.nodes.VirtualIP
+    properties:
+      floatingip:
+        default: {}
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.neutron_plugin.floatingip.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.neutron_plugin.floatingip.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.neutron_plugin.floatingip.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nodes.Volume:
+    derived_from: cloudify.nodes.Volume
+    properties:
+      volume:
+        default: {}
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      device_name:
+        default: auto
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.cinder_plugin.volume.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.cinder_plugin.volume.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.cinder_plugin.volume.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nova_net.nodes.FloatingIP:
+    derived_from: cloudify.nodes.VirtualIP
+    properties:
+      floatingip:
+        default: {}
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      openstack_config:
+        default: {}
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.nova_plugin.floatingip.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.nova_plugin.floatingip.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.nova_plugin.floatingip.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.nova_net.nodes.SecurityGroup:
+    derived_from: cloudify.nodes.SecurityGroup
+    properties:
+      security_group:
+        default: {}
+      use_external_resource:
+        default: false
+      resource_id:
+        default: ''
+      openstack_config:
+        default: {}
+      rules:
+        default: []
+      description:
+        description: security group description
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: openstack.nova_plugin.security_group.create
+          inputs:
+            args:
+              default: {}
+            openstack_config:
+              default: {}
+        delete:
+          implementation: openstack.nova_plugin.security_group.delete
+          inputs:
+            openstack_config:
+              default: {}
+      cloudify.interfaces.validation:
+        creation:
+          implementation: openstack.nova_plugin.security_group.creation_validation
+          inputs:
+            openstack_config:
+              default: {}
+
+relationships:
+  cloudify.openstack.port_connected_to_security_group:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: openstack.neutron_plugin.port.connect_security_group
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.subnet_connected_to_router:
+    derived_from: cloudify.relationships.connected_to
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: openstack.neutron_plugin.router.connect_subnet
+          inputs:
+            openstack_config:
+              default: {}
+        unlink:
+          implementation: openstack.neutron_plugin.router.disconnect_subnet
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.server_connected_to_floating_ip:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: openstack.nova_plugin.server.connect_floatingip
+          inputs:
+            fixed_ip:
+              description: >
+                The fixed IP to be associated with the floating IP.
+                If omitted, Openstack will choose which port to associate.
+              type: string
+              default: ''
+            openstack_config:
+              default: {}
+        unlink:
+          implementation: openstack.nova_plugin.server.disconnect_floatingip
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.port_connected_to_floating_ip:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: openstack.neutron_plugin.floatingip.connect_port
+          inputs:
+            openstack_config:
+              default: {}
+        unlink:
+          implementation: openstack.neutron_plugin.floatingip.disconnect_port
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.server_connected_to_security_group:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: openstack.nova_plugin.server.connect_security_group
+          inputs:
+            openstack_config:
+              default: {}
+        unlink:
+          implementation: openstack.nova_plugin.server.disconnect_security_group
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.server_connected_to_port:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        unlink:
+          implementation: openstack.neutron_plugin.port.detach
+          inputs:
+            openstack_config:
+              default: {}
+
+  cloudify.openstack.server_connected_to_keypair:
+    derived_from: cloudify.relationships.connected_to
+
+  cloudify.openstack.port_connected_to_subnet:
+    derived_from: cloudify.relationships.connected_to
+
+  cloudify.openstack.volume_attached_to_server:
+    derived_from: cloudify.relationships.connected_to
+    target_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        establish:
+          implementation: openstack.nova_plugin.server.attach_volume
+          inputs:
+            openstack_config:
+              default: {}
+        unlink:
+          implementation: openstack.nova_plugin.server.detach_volume
+          inputs:
+            openstack_config:
+              default: {}
