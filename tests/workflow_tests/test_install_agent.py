@@ -68,7 +68,8 @@ class InstallerTestBase(unittest.TestCase):
             'basedir': self.base_dir,
             'manager_ip': '127.0.0.1',
             'name': 'agent_{0}'.format(uuid.uuid4()),
-            'broker_url': 'amqp://'
+            'broker_url': 'amqp://',
+            'old_agent_version': '3.3'
         }
         agent_config.prepare_connection(result)
         # We specify base_dir and user directly, so runner is not needed.
