@@ -440,7 +440,7 @@ def _restore_snapshot_format_3_2(ctx, config, tempdir, metadata):
 
 
 @workflow(system_wide=True)
-def restore(ctx, snapshot_id, restore_deployment_workers, config, **kwargs):
+def restore(ctx, snapshot_id, recreate_deployments_envs, config, **kwargs):
     mappings = {
         '3.3': _restore_snapshot_format_3_3,
         '3.2': _restore_snapshot_format_3_2
@@ -475,7 +475,7 @@ def restore(ctx, snapshot_id, restore_deployment_workers, config, **kwargs):
                        .format(from_version))
         mappings[from_version](ctx, config, tempdir, metadata)
 
-        if restore_deployment_workers:
+        if recreate_deployments_envs:
             ctx.load_deployments_contexts()
             rest_client = get_rest_client()
             for dep_id, dep_ctx in ctx.deployments_contexts.iteritems():

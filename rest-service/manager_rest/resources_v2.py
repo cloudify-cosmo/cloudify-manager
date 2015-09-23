@@ -252,15 +252,15 @@ class SnapshotsIdRestore(SecuredResource):
     def post(self, snapshot_id):
         verify_json_content_type()
         request_json = request.json
-        verify_parameter_in_request_body('restore_deployment_workers',
+        verify_parameter_in_request_body('recreate_deployments_envs',
                                          request_json)
-        restore_deployment_workers = verify_and_convert_bool(
-            'restore_deployment_workers',
-            request_json['restore_deployment_workers']
+        recreate_deployments_envs = verify_and_convert_bool(
+            'recreate_deployments_envs',
+            request_json['recreate_deployments_envs']
         )
         execution = get_blueprints_manager().restore_snapshot(
             snapshot_id,
-            restore_deployment_workers
+            recreate_deployments_envs
         )
         return execution, 200
 
