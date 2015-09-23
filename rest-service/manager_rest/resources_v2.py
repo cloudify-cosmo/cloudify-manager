@@ -250,7 +250,18 @@ class SnapshotsIdRestore(SecuredResource):
     @exceptions_handled
     @marshal_with(responses_v2.Snapshot)
     def post(self, snapshot_id):
-        execution = get_blueprints_manager().restore_snapshot(snapshot_id)
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('restore_deployment_workers',
+                                         request_json)
+        restore_deployment_workers = verify_and_convert_bool(
+            'restore_deployment_workers',
+            request_json['restore_deployment_workers']
+        )
+        execution = get_blueprints_manager().restore_snapshot(
+            snapshot_id,
+            restore_deployment_workers
+        )
         return execution, 200
 
 
