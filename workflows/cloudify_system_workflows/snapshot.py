@@ -475,7 +475,7 @@ def _restore_snapshot_format_3_2(ctx, config, tempdir, metadata):
 
 
 @workflow(system_wide=True)
-def restore(ctx, snapshot_id, config, **kwargs):
+def restore(ctx, snapshot_id, recreate_deployments_envs, config, **kwargs):
     mappings = {
         '3.3': _restore_snapshot_format_3_3,
         '3.2': _restore_snapshot_format_3_2
@@ -510,33 +510,34 @@ def restore(ctx, snapshot_id, config, **kwargs):
                        .format(from_version))
         mappings[from_version](ctx, config, tempdir, metadata)
 
-        ctx.load_deployments_contexts()
-        rest_client = get_rest_client()
-        for dep_id, dep_ctx in ctx.deployments_contexts.iteritems():
-            dep = rest_client.deployments.get(dep_id)
-            blueprint = rest_client.blueprints.get(dep_ctx.blueprint.id)
-            blueprint_plan = blueprint['plan']
-            tasks_graph = generate_create_dep_tasks_graph(
-                dep_ctx,
-                deployment_plugins_to_install=blueprint_plan[
-                    'deployment_plugins_to_install'],
-                workflow_plugins_to_install=blueprint_plan[
-                    'workflow_plugins_to_install'],
-                policy_configuration={
-                    'policy_types': dep['policy_types'],
-                    'policy_triggers': dep['policy_triggers'],
-                    'groups': dep['groups']
-                }
-            )
-            try:
-                dep_ctx.internal.start_local_tasks_processing()
-                dep_ctx.internal.start_event_monitor()
-                tasks_graph.execute()
-            finally:
-                dep_ctx.internal.stop_local_tasks_processing()
-                dep_ctx.internal.stop_event_monitor()
-            ctx.send_event('Successfully created {0}\'s deployment environment'
-                           .format(dep_id))
+        if recreate_deployments_envs:
+            ctx.load_deployments_contexts()
+            rest_client = get_rest_client()
+            for dep_id, dep_ctx in ctx.deployments_contexts.iteritems():
+                dep = rest_client.deployments.get(dep_id)
+                blueprint = rest_client.blueprints.get(dep_ctx.blueprint.id)
+                blueprint_plan = blueprint['plan']
+                tasks_graph = generate_create_dep_tasks_graph(
+                    dep_ctx,
+                    deployment_plugins_to_install=blueprint_plan[
+                        'deployment_plugins_to_install'],
+                    workflow_plugins_to_install=blueprint_plan[
+                        'workflow_plugins_to_install'],
+                    policy_configuration={
+                        'policy_types': dep['policy_types'],
+                        'policy_triggers': dep['policy_triggers'],
+                        'groups': dep['groups']
+                    }
+                )
+                try:
+                    dep_ctx.internal.start_local_tasks_processing()
+                    dep_ctx.internal.start_event_monitor()
+                    tasks_graph.execute()
+                finally:
+                    dep_ctx.internal.stop_local_tasks_processing()
+                    dep_ctx.internal.stop_event_monitor()
+                ctx.send_event('Successfully created {0}\'s deployment '
+                               'environment'.format(dep_id))
         ctx.send_event('Successfully restored snapshot of manager {0}'
                        .format(from_version))
     finally:
