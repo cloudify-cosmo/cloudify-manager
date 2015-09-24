@@ -35,7 +35,7 @@ class ManagedResource(SerializableObject):
     fields = {'acl'}
 
     def __init__(self, **kwargs):
-        self.acl = kwargs.get('acl', {'': ''})
+        self.acl = kwargs.get('acl', [])
 
 
 class BlueprintState(ManagedResource):

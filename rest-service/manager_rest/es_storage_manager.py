@@ -16,6 +16,7 @@
 
 import elasticsearch.exceptions
 from elasticsearch import Elasticsearch
+from flask import current_app
 from flask_securest import rest_security
 
 from manager_rest import config
@@ -72,35 +73,47 @@ class ESStorageManager(object):
         return [self._fill_missing_fields_and_deserialize(doc, model_class)
                 for doc in docs]
 
-    def _get_doc(self, doc_type, doc_id, principal_list, fields=None):
+    def _get_doc(self, doc_type, doc_id, principals_list, fields=None):
         try:
             query = self._build_filter_terms_and_acl_query(
-                required_permission='GET', principal_list=principal_list,
+                required_permission='GET', principals_list=principals_list,
                 filters={'id': doc_id})
-            print 'built ES query: {0}'.format(query)
+            current_app.logger.error('***** built ES query: {0}'.format(query))
             if fields:
-                self._connection.search(index=STORAGE_INDEX_NAME,
-                                        doc_type=doc_type,
-                                        body=query,
-                                        _source=[f for f in fields])
+                result = self._connection.search(index=STORAGE_INDEX_NAME,
+                                                 doc_type=doc_type,
+                                                 body=query,
+                                                 _source=[f for f in fields])
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
                 #                             id=doc_id,
                 #                             _source=[f for f in fields])
             else:
-                self._connection.search(index=STORAGE_INDEX_NAME,
-                                        doc_type=doc_type,
-                                        body=query)
+                result = self._connection.search(index=STORAGE_INDEX_NAME,
+                                                 doc_type=doc_type,
+                                                 body=query)
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
                 #                             id=doc_id)
+            current_app.logger.error('***** returning result: {0}'.
+                                     format(result))
+            results_num = result.get('hits', {}).get('total', 0)
+            current_app.logger.error('***** results num: {0}'.
+                                     format(results_num))
+            if results_num == 0:
+                current_app.logger.error('***** results not found!')
+                raise manager_exceptions.NotFoundError(
+                    '{0} {1} not found'.format(doc_type, doc_id))
+            return result
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
 
     def _get_doc_and_deserialize(self, doc_type, doc_id, model_class,
-                                 principal_list, fields=None):
-        doc = self._get_doc(doc_type, doc_id, principal_list, fields)
+                                 principals_list, fields=None):
+        doc = self._get_doc(doc_type, doc_id, principals_list, fields)
+        if not doc:
+            current_app.logger.error('***** no docs found!')
         if not fields:
             return model_class(**doc['_source'])
         else:
@@ -152,7 +165,7 @@ class ESStorageManager(object):
 
     @staticmethod
     def _build_filter_terms_and_acl_query(required_permission,
-                                          principal_list,
+                                          principals_list,
                                           filters=None):
         """
         This method is used to create a search filter to receive only results
@@ -169,9 +182,14 @@ class ESStorageManager(object):
         if filters:
             for key, val in filters.iteritems():
                 filters_terms_list.append({'term': {key: val}})
-            for principal in principal_list.iteritems():
+            current_app.logger.error('***** principals list: {0}'.
+                                     format(principals_list))
+            for principal in principals_list:
                 ace = 'allow#{0}#{1}'.format(principal, required_permission)
-                acl_terms_list.append({'wildcard': {'acl': '*,{0},*'.format(ace)}})
+                acl_terms_list.append({'wildcard': {'acl': '*,{0},*'.
+                                      format(ace)}})
+            current_app.logger.error('***** acl_terms_list: {0}'.
+                                     format(acl_terms_list))
             query = {
                 'query': {
                     'filtered': {
@@ -242,7 +260,8 @@ class ESStorageManager(object):
     def get_node(self, deployment_id, node_id, include=None):
         storage_node_id = self._storage_node_id(deployment_id, node_id)
         principals_list = rest_security.get_principals_list()
-        print '***** in get_node, got principals: {0}'.format(principals_list)
+        current_app.logger.error('***** in get_node, got principals: {0}'
+                                 .format(principals_list))
         return self._get_doc_and_deserialize(doc_id=storage_node_id,
                                              doc_type=NODE_TYPE,
                                              model_class=DeploymentNode,
@@ -261,11 +280,11 @@ class ESStorageManager(object):
                                     filters=filters,
                                     include=include)
 
-    def _get_items_list(self, doc_type, model_class, principal_list,
+    def _get_items_list(self, doc_type, model_class, principals_list,
                         include=None, filters=None):
         query = self._build_filter_terms_and_acl_query(
             required_permission='GET',
-            principal_list=principal_list,
+            principals_list=principals_list,
             filters=filters)
         return self._list_docs(doc_type,
                                model_class,
@@ -274,16 +293,18 @@ class ESStorageManager(object):
 
     def get_blueprint(self, blueprint_id, include=None):
         principals_list = rest_security.get_principals_list()
-        print '***** in get_blueprint, got principals: {0}'.format(principals_list)
+        current_app.logger.error('***** in get_blueprint, got principals: {0}'
+                                 .format(principals_list))
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE,
                                              blueprint_id,
                                              BlueprintState,
-                                             principal_list=principals_list,
+                                             principals_list=principals_list,
                                              fields=include)
 
     def get_deployment(self, deployment_id, include=None):
         principals_list = rest_security.get_principals_list()
-        print '***** in get_deployment, got principals: {0}'.format(principals_list)
+        current_app.logger.error('***** in get_deployment, got principals: {0}'
+                                 .format(principals_list))
         return self._get_doc_and_deserialize(DEPLOYMENT_TYPE,
                                              deployment_id,
                                              Deployment,
@@ -292,7 +313,8 @@ class ESStorageManager(object):
 
     def get_execution(self, execution_id, include=None):
         principals_list = rest_security.get_principals_list()
-        print '***** in get_execution, got principals: {0}'.format(principals_list)
+        current_app.logger.error('***** in get_execution, got principals: {0}'
+                                 .format(principals_list))
         return self._get_doc_and_deserialize(EXECUTION_TYPE,
                                              execution_id,
                                              Execution,
@@ -356,10 +378,10 @@ class ESStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 'Provider Context not found')
 
-    def delete_deployment(self, deployment_id, principal_list):
+    def delete_deployment(self, deployment_id, principals_list):
         query = self._build_filter_terms_and_acl_query(
             required_permission='DELETE',
-            principal_list=principal_list,
+            principals_list=principals_list,
             filters={'deployment_id': deployment_id})
         self._delete_doc_by_query(EXECUTION_TYPE, query)
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
@@ -438,7 +460,8 @@ class ESStorageManager(object):
 
     def get_provider_context(self, include=None):
         principals_list = rest_security.get_principals_list()
-        print '***** in get_provider_context, got principals: {0}'.format(principals_list)
+        current_app.logger.error('***** in get_provider_context, '
+                                 'got principals: {0}'.format(principals_list))
         return self._get_doc_and_deserialize(PROVIDER_CONTEXT_TYPE,
                                              PROVIDER_CONTEXT_ID,
                                              ProviderContext,
@@ -452,7 +475,8 @@ class ESStorageManager(object):
 
     def get_deployment_modification(self, modification_id, include=None):
         principals_list = rest_security.get_principals_list()
-        print '***** in get_deployment_modification, got principals: {0}'.format(principals_list)
+        current_app.logger.error('***** in get_deployment_modification, '
+                                 'got principals: {0}'.format(principals_list))
         return self._get_doc_and_deserialize(DEPLOYMENT_MODIFICATION_TYPE,
                                              modification_id,
                                              DeploymentModification,

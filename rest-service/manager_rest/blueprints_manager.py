@@ -921,6 +921,8 @@ class BlueprintsManager(object):
             resolver_section)
 
     def update_provider_context(self, update, provider_context):
+        # this object is unique - should be readable by all
+        provider_context.acl = ['allow#*#GET']
         if update:
             self.sm.update_provider_context(provider_context)
         else:

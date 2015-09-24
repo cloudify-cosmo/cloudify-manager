@@ -159,12 +159,14 @@ def _replace_workflows_field_for_deployment_response(deployment_dict):
 
 class BlueprintsUpload(object):
     def do_request(self, blueprint_id):
+        app.logger.info('***** uploading blueprint {0}'.format(blueprint_id))
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             self._save_file_locally(archive_target_path)
             application_dir = self._extract_file_to_file_server(
                 file_server_root, archive_target_path)
+
             blueprint = self._prepare_and_submit_blueprint(file_server_root,
                                                            application_dir,
                                                            blueprint_id)
