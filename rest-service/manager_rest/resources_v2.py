@@ -13,18 +13,23 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
+import os
+import shutil
+
 from flask import request
 from flask_restful_swagger import swagger
 
+from manager_rest import config
 from manager_rest import resources
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
+                                    UploadedDataManager,
+                                    SecuredResource,
+                                    _make_streaming_response,
+                                    verify_and_convert_bool,
                                     verify_json_content_type,
                                     verify_parameter_in_request_body)
-from manager_rest.resources import verify_and_convert_bool
-from manager_rest import models
-from manager_rest import responses_v2
-from manager_rest import manager_exceptions
+from manager_rest import models, responses_v2, manager_exceptions
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.blueprints_manager import \
@@ -63,6 +68,201 @@ def _create_filter_params_list_description(parameters, list_type):
              'dataType': 'string',
              'defaultValue': None,
              'paramType': 'query'} for filter_val in parameters]
+
+
+def _get_snapshot_path(snapshot_id):
+    return os.path.join(
+        config.instance().file_server_root,
+        config.instance().file_server_snapshots_folder,
+        snapshot_id
+    )
+
+
+class UploadedSnapshotsManager(UploadedDataManager):
+
+    def _get_kind(self):
+        return 'snapshot'
+
+    def _get_data_url_key(self):
+        return 'snapshot_archive_url'
+
+    def _get_target_dir_path(self):
+        return config.instance().file_server_snapshots_folder
+
+    def _get_archive_type(self, archive_path):
+        return 'zip'
+
+    def _prepare_and_process_doc(self, data_id, file_server_root,
+                                 archive_target_path):
+        return get_blueprints_manager().create_snapshot_model(data_id)
+
+
+class Snapshots(SecuredResource):
+
+    @swagger.operation(
+        responseClass='List[{0}]'.format(responses_v2.Snapshot.__name__),
+        nickname='list',
+        notes='Returns a list of existing snapshots.'
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Snapshot)
+    def get(self, _include=None):
+        return get_blueprints_manager().snapshots_list(_include)
+
+
+class SnapshotsId(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses_v2.Snapshot,
+        nickname='getById',
+        notes='Returns a snapshot by its id.'
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Snapshot)
+    def get(self, snapshot_id, _include=None, **kwargs):
+        return get_blueprints_manager().get_snapshot(snapshot_id,
+                                                     include=_include)
+
+    @swagger.operation(
+        responseClass=responses_v2.Snapshot,
+        nickname='createSnapshot',
+        notes='Create a new snapshot of the manager.',
+        consumes=[
+            "application/json"
+        ]
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Execution)
+    def put(self, snapshot_id):
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('include_metrics', request_json)
+        verify_parameter_in_request_body('include_credentials', request_json)
+        include_metrics = verify_and_convert_bool(
+            'include_metrics',
+            request_json['include_metrics']
+        )
+        include_credentials = verify_and_convert_bool(
+            'include_credentials',
+            request_json['include_credentials']
+        )
+
+        execution = get_blueprints_manager().create_snapshot(
+            snapshot_id,
+            include_metrics,
+            include_credentials
+        )
+        return execution, 201
+
+    @swagger.operation(
+        responseClass=responses_v2.Snapshot,
+        nickname='deleteSnapshot',
+        notes='Delete existing snapshot.'
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Snapshot)
+    def delete(self, snapshot_id):
+        snapshot = get_blueprints_manager().delete_snapshot(snapshot_id)
+        path = _get_snapshot_path(snapshot_id)
+        shutil.rmtree(path, ignore_errors=True)
+        return snapshot, 200
+
+    @exceptions_handled
+    def patch(self, snapshot_id):
+        """
+        Update snapshot status by id
+        """
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('status', request_json)
+
+        get_blueprints_manager().update_snapshot_status(
+            snapshot_id,
+            request_json['status'],
+            request_json.get('error', ''))
+
+
+class SnapshotsIdArchive(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses_v2.Snapshot,
+        nickname='uploadSnapshot',
+        notes='Submitted snapshot should be an archive.'
+              'Archive format has to be zip.'
+              ' Snapshot archive may be submitted via either URL or by '
+              'direct upload.',
+        parameters=[{
+            'name': 'snapshot_archive_url',
+            'description': 'url of a snapshot archive file',
+            'required': False,
+            'allowMultiple': False,
+            'dataType': 'string',
+            'paramType': 'query'
+        }, {
+            'name': 'body',
+            'description': 'Binary form of the zip',
+            'required': True,
+            'allowMultiple': False,
+            'dataType': 'binary',
+            'paramType': 'body'}],
+        consumes=[
+            "application/octet-stream"
+        ]
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Snapshot)
+    def put(self, snapshot_id):
+        return UploadedSnapshotsManager().receive_uploaded_data(snapshot_id)
+
+    @swagger.operation(
+        nickname='downloadSnapshot',
+        notes='Downloads snapshot as an archive.'
+    )
+    @exceptions_handled
+    def get(self, snapshot_id):
+        get_blueprints_manager().get_snapshot(snapshot_id)
+
+        snapshot_path = os.path.join(
+            _get_snapshot_path(snapshot_id),
+            '{0}.zip'.format(snapshot_id)
+        )
+
+        snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
+            config.instance().file_server_resources_uri,
+            config.instance().file_server_snapshots_folder,
+            snapshot_id
+        )
+
+        return _make_streaming_response(
+            snapshot_id,
+            snapshot_uri,
+            os.path.getsize(snapshot_path),
+            'zip'
+        )
+
+
+class SnapshotsIdRestore(SecuredResource):
+    @swagger.operation(
+        responseClass=responses_v2.Snapshot,
+        nickname='restoreSnapshot',
+        notes='Restore existing snapshot.'
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.Snapshot)
+    def post(self, snapshot_id):
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('recreate_deployments_envs',
+                                         request_json)
+        recreate_deployments_envs = verify_and_convert_bool(
+            'recreate_deployments_envs',
+            request_json['recreate_deployments_envs']
+        )
+        execution = get_blueprints_manager().restore_snapshot(
+            snapshot_id,
+            recreate_deployments_envs
+        )
+        return execution, 200
 
 
 class Blueprints(resources.Blueprints):

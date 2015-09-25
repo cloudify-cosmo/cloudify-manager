@@ -42,30 +42,36 @@ class WorkflowClient(object):
                               kwargs=execution_parameters)
 
     @staticmethod
-    def execute_system_workflow(deployment, wf_id, task_id, task_mapping,
+    def execute_system_workflow(wf_id, task_id, task_mapping, deployment=None,
                                 execution_parameters=None):
         # task_id is not generated here since for system workflows,
         # the task id is equivalent to the execution id
 
-        task_queue = 'cloudify.management'
-
         context = {
             'task_id': task_id,
             'task_name': task_mapping,
-            'task_target': task_queue,
-            'blueprint_id': deployment.blueprint_id,
-            'deployment_id': deployment.id,
             'execution_id': task_id,
             'workflow_id': wf_id,
         }
-        execution_parameters = execution_parameters or {}
+
+        if deployment:
+            context['blueprint_id'] = deployment.blueprint_id
+            context['deployment_id'] = deployment.id
+
+        task_queue = 'cloudify.management'
+
+        context['task_target'] = task_queue
+
+        if execution_parameters is None:
+            execution_parameters = {}
         execution_parameters['__cloudify_context'] = context
 
         return client().execute_task(
-            task_mapping,
+            context['task_name'],
             task_queue,
-            task_id,
-            kwargs=execution_parameters)
+            context['task_id'],
+            kwargs=execution_parameters
+        )
 
 
 def workflow_client():

@@ -41,6 +41,23 @@ class BlueprintState(SerializableObject):
         self.updated_at = kwargs['updated_at']
 
 
+class Snapshot(SerializableObject):
+
+    CREATED = 'created'
+    FAILED = 'failed'
+    CREATING = 'creating'
+
+    END_STATES = [CREATED, FAILED]
+
+    fields = {'id', 'created_at', 'status', 'error'}
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.created_at = kwargs['created_at']
+        self.status = kwargs['status']
+        self.error = kwargs['error']
+
+
 class Deployment(SerializableObject):
 
     fields = {'id', 'created_at', 'updated_at', 'blueprint_id',

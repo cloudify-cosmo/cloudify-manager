@@ -42,6 +42,8 @@ run_intergration_tests()
 
     pip install nose
 
+    SCRIPT=$(readlink -f $0)
+    export REPOSITORY_PATH=$(dirname $SCRIPT)
     local config_path=$(mktemp)
     # flags that relate to test collection should follow this command
     # e.g.: -e, -i, etc...

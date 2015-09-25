@@ -20,12 +20,11 @@ from StringIO import StringIO
 
 from flask import g, current_app
 
-from dsl_parser import constants
+from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
-from dsl_parser import functions
-from dsl_parser import tasks
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import models
+from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
@@ -54,6 +53,9 @@ class BlueprintsManager(object):
     def blueprints_list(self, include=None, filters=None):
         return self.sm.blueprints_list(include=include, filters=filters)
 
+    def snapshots_list(self, include=None):
+        return self.sm.snapshots_list(include=include)
+
     def deployments_list(self, include=None, filters=None):
         return self.sm.deployments_list(include=include, filters=filters)
 
@@ -65,6 +67,9 @@ class BlueprintsManager(object):
 
     def get_blueprint(self, blueprint_id, include=None):
         return self.sm.get_blueprint(blueprint_id, include=include)
+
+    def get_snapshot(self, snapshot_id, include=None):
+        return self.sm.get_snapshot(snapshot_id, include=include)
 
     def get_deployment(self, deployment_id, include=None):
         return self.sm.get_deployment(deployment_id=deployment_id,
@@ -94,15 +99,74 @@ class BlueprintsManager(object):
                 deployment_env_creation_task_name = \
                     'cloudify_system_workflows.deployment_environment.stop'
 
-                kwargs = {
+                exec_params = {
                     'prerequisite_task_id': execution_id
                 }
 
                 self._execute_system_workflow(
-                    deployment, wf_id, deployment_env_creation_task_name,
-                    kwargs)
+                    wf_id=wf_id,
+                    task_mapping=deployment_env_creation_task_name,
+                    deployment=deployment,
+                    execution_parameters=exec_params)
 
         return self.sm.update_execution_status(execution_id, status, error)
+
+    def _get_conf_for_snapshots_wf(self):
+        config_instance = config.instance()
+        snapshots_conf = {
+            attr: getattr(config_instance, attr) for attr in (
+                'file_server_root',
+                'file_server_snapshots_folder',
+                'file_server_blueprints_folder',
+                'file_server_uploaded_blueprints_folder',
+                'db_address',
+                'db_port'
+            )
+        }
+        snapshots_conf['created_status'] = models.Snapshot.CREATED
+        snapshots_conf['failed_status'] = models.Snapshot.FAILED
+        return snapshots_conf
+
+    def create_snapshot_model(self, snapshot_id,
+                              status=models.Snapshot.CREATING):
+        now = str(datetime.now())
+        new_snapshot = models.Snapshot(id=snapshot_id,
+                                       created_at=now,
+                                       status=status,
+                                       error='')
+        self.sm.put_snapshot(snapshot_id, new_snapshot)
+        return new_snapshot
+
+    def update_snapshot_status(self, snapshot_id, status, error):
+        return self.sm.update_snapshot_status(snapshot_id, status, error)
+
+    def create_snapshot(self, snapshot_id,
+                        include_metrics, include_credentials):
+        self.create_snapshot_model(snapshot_id)
+        _, execution = self._execute_system_workflow(
+            wf_id='create_snapshot',
+            task_mapping='cloudify_system_workflows.snapshot.create',
+            execution_parameters={
+                'snapshot_id': snapshot_id,
+                'include_metrics': include_metrics,
+                'include_credentials': include_credentials,
+                'config': self._get_conf_for_snapshots_wf()
+            }
+        )
+        return execution
+
+    def restore_snapshot(self, snapshot_id, recreate_deployments_envs):
+        self.get_snapshot(snapshot_id)  # Throws error if no snapshot found
+        _, execution = self._execute_system_workflow(
+            wf_id='restore_snapshot',
+            task_mapping='cloudify_system_workflows.snapshot.restore',
+            execution_parameters={
+                'snapshot_id': snapshot_id,
+                'recreate_deployments_envs': recreate_deployments_envs,
+                'config': self._get_conf_for_snapshots_wf()
+            }
+        )
+        return execution
 
     def publish_blueprint(self, dsl_location,
                           resources_base_url, blueprint_id):
@@ -136,6 +200,9 @@ class BlueprintsManager(object):
                                   in blueprint_deployments])))
 
         return self.sm.delete_blueprint(blueprint_id)
+
+    def delete_snapshot(self, snapshot_id):
+        return self.sm.delete_snapshot(snapshot_id)
 
     def delete_deployment(self, deployment_id, ignore_live_nodes=False):
         # Verify deployment exists.
@@ -232,7 +299,10 @@ class BlueprintsManager(object):
                 'cloudify_system_workflows.deployment_environment.start'
 
             self._execute_system_workflow(
-                deployment, wf_id, deployment_env_start_task_name, timeout=300,
+                wf_id=wf_id,
+                task_mapping=deployment_env_start_task_name,
+                deployment=deployment,
+                timeout=300,
                 created_at=start_deployment_env_created_at_time)
 
         # executing the user workflow
@@ -246,7 +316,7 @@ class BlueprintsManager(object):
 
         return new_execution
 
-    def _execute_system_workflow(self, deployment, wf_id, task_mapping,
+    def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
                                  created_at=None):
         """
@@ -259,7 +329,7 @@ class BlueprintsManager(object):
          complete, and verify it finished successfully before returning
         :param created_at: creation time for the workflow execution object.
          if omitted, a value will be generated by this method.
-        :return: async task object
+        :return: (async task object, execution object)
         """
         execution_id = str(uuid.uuid4())  # will also serve as the task id
         execution_parameters = execution_parameters or {}
@@ -273,9 +343,9 @@ class BlueprintsManager(object):
             id=execution_id,
             status=models.Execution.PENDING,
             created_at=created_at or str(datetime.now()),
-            blueprint_id=deployment.blueprint_id,
+            blueprint_id=deployment.blueprint_id if deployment else None,
             workflow_id=wf_id,
-            deployment_id=deployment.id,
+            deployment_id=deployment.id if deployment else None,
             error='',
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
@@ -284,8 +354,11 @@ class BlueprintsManager(object):
         self.sm.put_execution(execution.id, execution)
 
         async_task = workflow_client().execute_system_workflow(
-            deployment, wf_id, execution_id, task_mapping,
-            execution_parameters)
+            wf_id=wf_id,
+            task_id=execution_id,
+            task_mapping=task_mapping,
+            deployment=deployment,
+            execution_parameters=execution_parameters)
 
         if timeout > 0:
             try:
@@ -293,10 +366,13 @@ class BlueprintsManager(object):
                 async_task.get(timeout=timeout, propagate=True)
             except Exception as e:
                 # error message for the user
+                if deployment:
+                    add_info = ' for deployment {0}'.format(deployment.id)
+                else:
+                    add_info = ''
                 error_msg =\
-                    'Error occurred while executing the {0} system workflow '\
-                    'for deployment {1}: {2} - {3}'.format(
-                        wf_id, deployment.id, type(e).__name__, str(e))
+                    'Error occurred while executing the {0} system workflow{1}:'\
+                    ' {2} - {3}'.format(wf_id, add_info, type(e).__name__, e)
                 # adding traceback to the log error message
                 tb = StringIO()
                 traceback.print_exc(file=tb)
@@ -309,12 +385,11 @@ class BlueprintsManager(object):
             execution = self.sm.get_execution(async_task.id)
             if execution.status != models.Execution.TERMINATED:
                 raise RuntimeError(
-                    'Failed executing the {0} system workflow for deployment '
-                    '{1}: Execution did not complete successfully before '
-                    'timeout ({2} seconds)'.format(
-                        wf_id, deployment.id, timeout))
+                    'Failed executing the {0} system workflow{1}: '
+                    'Execution did not complete successfully before '
+                    'timeout ({2} seconds)'.format(wf_id, add_info, timeout))
 
-        return async_task
+        return async_task, execution
 
     def cancel_execution(self, execution_id, force=False):
         """
@@ -793,25 +868,27 @@ class BlueprintsManager(object):
                 filters[key] = val
         return filters or None
 
-    def _create_deployment_environment(self, deployment, deployment_plan):
+    def _create_deployment_environment(self, deployment, dep_plan):
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
 
-        kwargs = {
-            constants.DEPLOYMENT_PLUGINS_TO_INSTALL: deployment_plan[
-                constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
-            'workflow_plugins_to_install': deployment_plan[
-                'workflow_plugins_to_install'],
-            'policy_configuration': {
-                'policy_types': deployment_plan['policy_types'],
-                'policy_triggers': deployment_plan['policy_triggers'],
-                'groups': deployment_plan['groups'],
-            },
-        }
-
         self._execute_system_workflow(
-            deployment, wf_id, deployment_env_creation_task_name, kwargs)
+            wf_id=wf_id,
+            task_mapping=deployment_env_creation_task_name,
+            deployment=deployment,
+            execution_parameters={
+                'deployment_plugins_to_install': dep_plan[
+                    constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
+                'workflow_plugins_to_install': dep_plan[
+                    constants.WORKFLOW_PLUGINS_TO_INSTALL],
+                'policy_configuration': {
+                    'policy_types': dep_plan[constants.POLICY_TYPES],
+                    'policy_triggers': dep_plan[constants.POLICY_TRIGGERS],
+                    'groups': dep_plan[constants.GROUPS],
+                }
+            }
+        )
 
     def _delete_deployment_environment(self, deployment_id):
         deployment = self.sm.get_deployment(deployment_id)
@@ -820,7 +897,10 @@ class BlueprintsManager(object):
             'cloudify_system_workflows.deployment_environment.delete'
 
         self._execute_system_workflow(
-            deployment, wf_id, deployment_env_deletion_task_name, timeout=300)
+            wf_id=wf_id,
+            task_mapping=deployment_env_deletion_task_name,
+            deployment=deployment,
+            timeout=300)
 
     def _check_for_active_executions(self, deployment_id, force,
                                      transient_workers_config):

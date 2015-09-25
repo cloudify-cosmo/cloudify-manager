@@ -39,6 +39,6 @@ setup(
         'PyYAML==3.10',
         'elasticsearch==1.6.0',
         'celery==3.1.17',
-        'flask-securest==0.6',
+        'flask-securest==0.6'
     ]
 )
