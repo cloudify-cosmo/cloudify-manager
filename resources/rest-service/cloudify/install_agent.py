@@ -243,7 +243,7 @@ def _return(value, old_agent_version):
     from cloudify import ctx
     ctx.returns(value)
     # Due to bug in celery:
-    if os.name == 'nt' and old_agent_version == '3.2':
+    if os.name == 'nt' and old_agent_version.startswith('3.2'):
         from celery import current_task
         from cloudify.celery import celery
         celery.backend.mark_as_done(current_task.request.id, value)
