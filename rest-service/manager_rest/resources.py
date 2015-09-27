@@ -1341,7 +1341,8 @@ class ProviderContext(SecuredResource):
         verify_parameter_in_request_body('context', request_json)
         verify_parameter_in_request_body('name', request_json)
         context = models.ProviderContext(name=request.json['name'],
-                                         context=request.json['context'])
+                                         context=request.json['context'],
+                                         acl='[ALLOW#ALL#GET]')
         update = verify_and_convert_bool(
             'update',
             request.args.get('update', 'false')

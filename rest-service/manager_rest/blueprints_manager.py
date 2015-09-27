@@ -115,7 +115,9 @@ class BlueprintsManager(object):
             raise DslParseException(str(ex))
 
         now = str(datetime.now())
-
+        the_acl = rest_security.get_acl()
+        current_app.logger.error('***** creating blueprint with acl: {0}'.
+                                 format(the_acl))
         new_blueprint = models.BlueprintState(plan=plan,
                                               id=blueprint_id,
                                               created_at=now,
@@ -922,7 +924,7 @@ class BlueprintsManager(object):
 
     def update_provider_context(self, update, provider_context):
         # this object is unique - should be readable by all
-        provider_context.acl = ',allow#*#GET,'
+        provider_context.acl = '[ALLOW#ALL#GET]'
         if update:
             self.sm.update_provider_context(provider_context)
         else:

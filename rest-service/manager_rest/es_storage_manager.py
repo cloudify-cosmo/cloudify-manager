@@ -177,7 +177,7 @@ class ESStorageManager(object):
         :return: an elasticsearch query string containing the given filters
         """
         filters_terms_list = []
-        acl_terms_list = []
+        acl_terms_list = [{'wildcard': {'acl': '*,ALLOW#ALL#GET,*'}}]
         query = None
         if filters:
             for key, val in filters.iteritems():
@@ -185,7 +185,7 @@ class ESStorageManager(object):
             current_app.logger.error('***** principals list: {0}'.
                                      format(principals_list))
             for principal in principals_list:
-                ace = 'allow#{0}#{1}'.format(principal, required_permission)
+                ace = 'ALLOW#{0}#{1}'.format(principal, required_permission)
                 acl_terms_list.append({'wildcard': {'acl': '*,{0},*'.
                                       format(ace)}})
             current_app.logger.error('***** acl_terms_list: {0}'.
