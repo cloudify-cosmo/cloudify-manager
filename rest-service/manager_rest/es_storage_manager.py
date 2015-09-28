@@ -80,31 +80,34 @@ class ESStorageManager(object):
                 filters={'_id': doc_id})
             current_app.logger.error('***** built ES query: {0}'.format(query))
             if fields:
-                result = self._connection.search(index=STORAGE_INDEX_NAME,
-                                                 doc_type=doc_type,
-                                                 body=query,
-                                                 _source=[f for f in fields])
+                results = self._connection.search(index=STORAGE_INDEX_NAME,
+                                                  doc_type=doc_type,
+                                                  body=query,
+                                                  _source=[f for f in fields])
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
                 #                             id=doc_id,
                 #                             _source=[f for f in fields])
             else:
-                result = self._connection.search(index=STORAGE_INDEX_NAME,
-                                                 doc_type=doc_type,
-                                                 body=query)
+                results = self._connection.search(index=STORAGE_INDEX_NAME,
+                                                  doc_type=doc_type,
+                                                  body=query)
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
                 #                             id=doc_id)
-            current_app.logger.error('***** returning result: {0}'.
-                                     format(result))
-            results_num = result.get('hits', {}).get('total', 0)
-            current_app.logger.error('***** results num: {0}'.
-                                     format(results_num))
-            if results_num == 0:
+            current_app.logger.info('***** all results: {0}'.
+                                    format(results))
+            results_hits = results.get('hits', {})
+            current_app.logger.info('***** results hits: {0}'.
+                                    format(results_hits))
+            results_hits_total = results_hits.get('total', 0)
+            current_app.logger.info('***** results hits total: {0}'.
+                                    format(results_hits_total))
+            if results_hits_total == 0:
                 current_app.logger.error('***** results not found!')
                 raise manager_exceptions.NotFoundError(
                     '{0} {1} not found'.format(doc_type, doc_id))
-            return result
+            return results_hits.get('hits')
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
