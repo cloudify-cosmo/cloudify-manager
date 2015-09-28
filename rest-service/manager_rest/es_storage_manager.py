@@ -77,7 +77,7 @@ class ESStorageManager(object):
         try:
             query = self._build_filter_terms_and_acl_query(
                 required_permission='GET', principals_list=principals_list,
-                filters={'id': doc_id})
+                filters={'_id': doc_id})
             current_app.logger.error('***** built ES query: {0}'.format(query))
             if fields:
                 result = self._connection.search(index=STORAGE_INDEX_NAME,
@@ -177,7 +177,7 @@ class ESStorageManager(object):
         :return: an elasticsearch query string containing the given filters
         """
         filters_terms_list = []
-        acl_terms_list = [{'wildcard': {'acl': '*,ALLOW#ALL#GET,*'}}]
+        acl_terms_list = [{'wildcard': {'acl': '*ALLOW#ALL#GET*'}}]
         query = None
         if filters:
             for key, val in filters.iteritems():
@@ -186,7 +186,7 @@ class ESStorageManager(object):
                                      format(principals_list))
             for principal in principals_list:
                 ace = 'ALLOW#{0}#{1}'.format(principal, required_permission)
-                acl_terms_list.append({'wildcard': {'acl': '*,{0},*'.
+                acl_terms_list.append({'wildcard': {'acl': '*{0}*'.
                                       format(ace)}})
             current_app.logger.error('***** acl_terms_list: {0}'.
                                      format(acl_terms_list))
