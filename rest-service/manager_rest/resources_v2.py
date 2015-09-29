@@ -94,7 +94,10 @@ class UploadedSnapshotsManager(UploadedDataManager):
 
     def _prepare_and_process_doc(self, data_id, file_server_root,
                                  archive_target_path):
-        return get_blueprints_manager().create_snapshot_model(data_id)
+        return get_blueprints_manager().create_snapshot_model(
+            data_id,
+            status=models.Snapshot.UPLOADED
+        )
 
 
 class Snapshots(SecuredResource):

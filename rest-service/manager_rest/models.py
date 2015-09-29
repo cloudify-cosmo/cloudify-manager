@@ -46,8 +46,9 @@ class Snapshot(SerializableObject):
     CREATED = 'created'
     FAILED = 'failed'
     CREATING = 'creating'
+    UPLOADED = 'uploaded'
 
-    END_STATES = [CREATED, FAILED]
+    END_STATES = [CREATED, FAILED, UPLOADED]
 
     fields = {'id', 'created_at', 'status', 'error'}
 
