@@ -123,6 +123,8 @@ class BlueprintsManager(object):
                                               created_at=now,
                                               updated_at=now,
                                               acl=rest_security.get_acl())
+        current_app.logger.error('***** putting blueprint: {0}'.
+                                 format(new_blueprint))
         self.sm.put_blueprint(
             new_blueprint.id, new_blueprint)
         return new_blueprint

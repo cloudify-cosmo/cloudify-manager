@@ -44,7 +44,7 @@ class BlueprintState(ManagedResource):
     fields = set.union(ManagedResource.fields, blueprint_fields)
 
     def __init__(self, **kwargs):
-        super(BlueprintState, self).__init__()
+        super(BlueprintState, self).__init__(**kwargs)
         self.plan = kwargs['plan']
         self.id = kwargs['id']
         self.created_at = kwargs['created_at']
@@ -59,7 +59,7 @@ class Deployment(ManagedResource):
     fields = set.union(ManagedResource.fields, deployment_fields)
 
     def __init__(self, **kwargs):
-        super(Deployment, self).__init__()
+        super(Deployment, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
@@ -87,7 +87,7 @@ class DeploymentModification(ManagedResource):
     fields = set.union(ManagedResource.fields, deployment_modification_fields)
 
     def __init__(self, **kwargs):
-        super(DeploymentModification, self).__init__()
+        super(DeploymentModification, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.created_at = kwargs['created_at']
         self.ended_at = kwargs['ended_at']
@@ -116,7 +116,7 @@ class Execution(ManagedResource):
     fields = set.union(ManagedResource.fields, execution_fields)
 
     def __init__(self, **kwargs):
-        super(Execution, self).__init__()
+        super(Execution, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.status = kwargs['status']
         self.deployment_id = kwargs['deployment_id']
@@ -142,7 +142,7 @@ class DeploymentNode(ManagedResource):
     fields = set.union(ManagedResource.fields, deployment_node_fields)
 
     def __init__(self, **kwargs):
-        super(DeploymentNode, self).__init__()
+        super(DeploymentNode, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.deployment_id = kwargs['deployment_id']
         self.blueprint_id = kwargs['blueprint_id']
@@ -172,7 +172,7 @@ class DeploymentNodeInstance(ManagedResource):
     fields = set.union(ManagedResource.fields, deployment_node_instance_fields)
 
     def __init__(self, **kwargs):
-        super(DeploymentNodeInstance, self).__init__()
+        super(DeploymentNodeInstance, self).__init__(**kwargs)
         self.id = kwargs['id']
         self.node_id = kwargs['node_id']
         self.deployment_id = kwargs['deployment_id']
@@ -189,6 +189,6 @@ class ProviderContext(ManagedResource):
     fields = set.union(ManagedResource.fields, provider_context_fields)
 
     def __init__(self, **kwargs):
-        super(ProviderContext, self).__init__()
+        super(ProviderContext, self).__init__(**kwargs)
         self.context = kwargs['context']
         self.name = kwargs['name']

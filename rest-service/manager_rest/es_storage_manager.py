@@ -107,7 +107,13 @@ class ESStorageManager(object):
                 current_app.logger.error('***** results not found!')
                 raise manager_exceptions.NotFoundError(
                     '{0} {1} not found'.format(doc_type, doc_id))
-            return results_hits.get('hits')
+            if results_hits_total > 1:
+                current_app.logger.error('***** too many documents matched'
+                                         ' the search!')
+                raise manager_exceptions.NotFoundError(
+                    'more than one document of {0} {1} found'.
+                    format(doc_type, doc_id))
+            return results_hits.get('hits')[0]
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
@@ -115,11 +121,15 @@ class ESStorageManager(object):
     def _get_doc_and_deserialize(self, doc_type, doc_id, model_class,
                                  principals_list, fields=None):
         doc = self._get_doc(doc_type, doc_id, principals_list, fields)
+        current_app.logger.info('***** _get_doc_and_deserialize working on '
+                                'doc: {0}'.format(doc))
         if not doc:
             current_app.logger.error('***** no docs found!')
         if not fields:
+            current_app.logger.error("***** no fields, getting **doc['_source']")
             return model_class(**doc['_source'])
         else:
+            current_app.logger.error("***** fields found: {0}".format(fields))
             if len(fields) != len(doc['_source']):
                 missing_fields = [field for field in fields if field not
                                   in doc['_source']]
@@ -179,33 +189,35 @@ class ESStorageManager(object):
          value
         :return: an elasticsearch query string containing the given filters
         """
-        filters_terms_list = []
-        acl_terms_list = [{'wildcard': {'acl': '*ALLOW#ALL#GET*'}}]
         query = None
+        filters_terms = []
+        acl_terms = []
+        current_app.logger.error('***** principals list: {0}'.
+                                 format(principals_list))
+        acceptable_aces = ESStorageManager._calc_acceptable_aces(
+            required_permission, principals_list)
+        current_app.logger.error('***** acceptable_aces: {0}'.
+                                 format(acceptable_aces))
         if filters:
             for key, val in filters.iteritems():
-                filters_terms_list.append({'term': {key: val}})
-            current_app.logger.error('***** principals list: {0}'.
-                                     format(principals_list))
-            for principal in principals_list:
-                ace = 'ALLOW#{0}#{1}'.format(principal, required_permission)
-                acl_terms_list.append({'wildcard': {'acl': '*{0}*'.
-                                      format(ace)}})
-            current_app.logger.error('***** acl_terms_list: {0}'.
-                                     format(acl_terms_list))
+                filters_terms.append({'term': {key: val}})
+
+        for ace in acceptable_aces:
+            acl_terms.append({'wildcard': {'acl': '*{0}*'.format(ace)}})
+
             query = {
                 'query': {
                     'filtered': {
                         'query': {
                             'bool': {
                                 'should': [
-                                    acl_terms_list
+                                    acl_terms
                                 ]
                             }
                         },
                         'filter': {
                             'bool': {
-                                'must': filters_terms_list
+                                'must': filters_terms
                             }
                         }
                     }
@@ -519,6 +531,20 @@ class ESStorageManager(object):
     @staticmethod
     def _storage_node_id(deployment_id, node_id):
         return '{0}_{1}'.format(deployment_id, node_id)
+
+    @staticmethod
+    def _calc_acceptable_aces(required_permission, principals_list):
+        all_have_all_permissions = '*ALLOW#ALL#ALL*'
+        all_have_required_permission = '*ALLOW#ALL#{0}*'.format(required_permission)
+        acceptable_aces = [all_have_all_permissions, all_have_required_permission]
+        for principal in principals_list:
+            principal_has_all_permissions = 'ALLOW#{0}#ALL'.format(principal)
+            principal_has_required_permission = 'ALLOW#{0}#{1}'.\
+                format(principal, required_permission)
+            acceptable_aces.append(principal_has_all_permissions)
+            acceptable_aces.append(principal_has_required_permission)
+
+        return acceptable_aces
 
 
 def create():
