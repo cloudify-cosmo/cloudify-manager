@@ -330,18 +330,17 @@ class BlueprintsManager(object):
 
         if executions:
             raise manager_exceptions.ExistingRunningExecutionError(
-                'You cannot start system wide execution if there are '
-                'running other executions. '
-                'Executions currently running: {0}.'
+                'You cannot start a system-wide execution if there are '
+                'other executions running. '
+                'Currently running executions: {0}'
                 .format(executions))
 
     def _check_for_active_system_wide_execution(self):
         for e in self.executions_list(is_include_system_workflows=True):
-            if e.status not in e.END_STATES and not e.deployment_id:
+            if e.status not in e.END_STATES and e.deployment_id is None:
                 raise manager_exceptions.ExistingRunningExecutionError(
-                    'You cannot start execution if there is running system '
-                    'wide execution. System wide execution '
-                    'currently running: {0}.'
+                    'You cannot start an execution if there is a running '
+                    'system-wide execution (id: {0})'
                     .format(e.id))
 
     def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
@@ -367,7 +366,9 @@ class BlueprintsManager(object):
         is_system_workflow = wf_id not in (
             'create_deployment_environment', 'delete_deployment_environment')
 
-        self._check_for_any_active_executions()
+        # It means that a system-wide workflow is about to be launched
+        if deployment is None:
+            self._check_for_any_active_executions()
 
         execution = models.Execution(
             id=execution_id,
