@@ -143,16 +143,21 @@ class BlueprintsManager(object):
     def create_snapshot(self, snapshot_id,
                         include_metrics, include_credentials):
         self.create_snapshot_model(snapshot_id)
-        _, execution = self._execute_system_workflow(
-            wf_id='create_snapshot',
-            task_mapping='cloudify_system_workflows.snapshot.create',
-            execution_parameters={
-                'snapshot_id': snapshot_id,
-                'include_metrics': include_metrics,
-                'include_credentials': include_credentials,
-                'config': self._get_conf_for_snapshots_wf()
-            }
-        )
+        try:
+            _, execution = self._execute_system_workflow(
+                wf_id='create_snapshot',
+                task_mapping='cloudify_system_workflows.snapshot.create',
+                execution_parameters={
+                    'snapshot_id': snapshot_id,
+                    'include_metrics': include_metrics,
+                    'include_credentials': include_credentials,
+                    'config': self._get_conf_for_snapshots_wf()
+                }
+            )
+        except manager_exceptions.ExistingRunningExecutionError:
+            self.delete_snapshot(snapshot_id)
+            raise
+
         return execution
 
     def restore_snapshot(self, snapshot_id, recreate_deployments_envs):
@@ -260,6 +265,7 @@ class BlueprintsManager(object):
             self._get_transient_deployment_workers_mode_config()
         is_transient_workers_enabled = transient_workers_config['enabled']
 
+        self._check_for_active_system_wide_execution()
         self._check_for_active_executions(deployment_id, force,
                                           transient_workers_config)
 
@@ -316,6 +322,28 @@ class BlueprintsManager(object):
 
         return new_execution
 
+    def _check_for_any_active_executions(self):
+        executions = [
+            e.id
+            for e in self.executions_list(is_include_system_workflows=True)
+            if e.status not in e.END_STATES
+        ]
+
+        if executions:
+            raise manager_exceptions.ExistingRunningExecutionError(
+                'You cannot start a system-wide execution if there are '
+                'other executions running. '
+                'Currently running executions: {0}'
+                .format(executions))
+
+    def _check_for_active_system_wide_execution(self):
+        for e in self.executions_list(is_include_system_workflows=True):
+            if e.status not in e.END_STATES and e.deployment_id is None:
+                raise manager_exceptions.ExistingRunningExecutionError(
+                    'You cannot start an execution if there is a running '
+                    'system-wide execution (id: {0})'
+                    .format(e.id))
+
     def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
                                  created_at=None):
@@ -338,6 +366,10 @@ class BlueprintsManager(object):
         # system workflows
         is_system_workflow = wf_id not in (
             'create_deployment_environment', 'delete_deployment_environment')
+
+        # It means that a system-wide workflow is about to be launched
+        if deployment is None:
+            self._check_for_any_active_executions()
 
         execution = models.Execution(
             id=execution_id,
