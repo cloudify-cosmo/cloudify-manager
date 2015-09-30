@@ -31,7 +31,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                           updated_at=now,
                                           description=None,
                                           plan={'name': 'my-bp'},
-                                          source='bp-source')
+                                          source='bp-source',
+                                          main_file_name='aaa')
         storage_manager.instance().put_blueprint('blueprint-id', blueprint)
         blueprint_from_list = storage_manager.instance().blueprints_list()[0]
         blueprint_restored = \
@@ -53,7 +54,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                           updated_at=now,
                                           description=None,
                                           plan={'name': 'my-bp'},
-                                          source='bp-source')
+                                          source='bp-source',
+                                          main_file_name='aaa')
         storage_manager.instance().put_blueprint('blueprint-id', blueprint)
 
         deployment1 = models.Deployment(id='dep-1',
@@ -147,7 +149,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                           updated_at=now,
                                           description=None,
                                           plan={'name': 'my-bp'},
-                                          source='bp-source')
+                                          source='bp-source',
+                                          main_file_name='aaa')
         storage_manager.instance().put_blueprint('blueprint-id', blueprint)
 
         blueprint_restored = \
@@ -157,3 +160,4 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals(now, blueprint_restored.created_at)
         self.assertEquals(None, blueprint_restored.updated_at)
         self.assertEquals(None, blueprint_restored.plan)
+        self.assertEquals(None, blueprint_restored.main_file_name)

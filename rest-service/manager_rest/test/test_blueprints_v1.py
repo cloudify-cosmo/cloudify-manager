@@ -39,6 +39,17 @@ class TestBlueprintsV1(BaseServerTestCase):
         self.assertEquals("this is my blueprint's description",
                           post_blueprints_response['plan']['description'])
 
+    def test_blueprint_main_file_name(self):
+        # main_file_name should not be returned in blueprint response.
+        blueprint_id = 'blueprint'
+        post_blueprints_response = self.put_file(
+            *self.put_blueprint_args('blueprint.yaml',
+                                     blueprint_id=blueprint_id)).json
+
+        self.assertNotIn('main_file_name', post_blueprints_response)
+        blueprint = self.client.blueprints.get(blueprint_id)
+        self.assertNotIn('main_file_name', blueprint)
+
     def test_blueprint_v1(self):
         # tests blueprint put, get, and delete in V1.
         # put isn't tested via the client since the chunked upload we use

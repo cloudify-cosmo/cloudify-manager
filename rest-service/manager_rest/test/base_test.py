@@ -20,6 +20,7 @@ import urllib2
 import tempfile
 import time
 import os
+import types
 
 from nose.tools import nottest
 from nose.plugins.attrib import attr
@@ -119,6 +120,8 @@ class MockHTTPClient(HTTPClient):
                                     query_string=build_query_string(params))
 
         elif 'put' in requests_method.__name__:
+            if isinstance(body, types.GeneratorType):
+                body = ''.join(body)
             response = self.app.put(request_url,
                                     headers=headers,
                                     data=body,
@@ -324,6 +327,10 @@ class BaseServerTestCase(unittest.TestCase):
             return True
         except urllib2.HTTPError:
             return False
+
+    def get_blueprint_path(self, blueprint_dir_name):
+        return os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), blueprint_dir_name)
 
     def archive_mock_blueprint(self, archive_func=archiving.make_targzfile,
                                blueprint_dir='mock_blueprint'):
