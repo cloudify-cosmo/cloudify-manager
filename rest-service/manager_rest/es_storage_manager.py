@@ -73,12 +73,11 @@ class ESStorageManager(object):
         return [self._fill_missing_fields_and_deserialize(doc, model_class)
                 for doc in docs]
 
-    def _get_doc(self, doc_type, doc_id, principals_list, fields=None):
+    def _get_doc(self, doc_type, doc_id, fields=None):
         try:
             query = self._build_filter_terms_and_acl_query(
-                required_permission='GET', principals_list=principals_list,
+                required_permission='GET',
                 filters={'_id': doc_id})
-            current_app.logger.error('***** built ES query: {0}'.format(query))
             if fields:
                 results = self._connection.search(index=STORAGE_INDEX_NAME,
                                                   doc_type=doc_type,
@@ -95,14 +94,8 @@ class ESStorageManager(object):
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
                 #                             id=doc_id)
-            current_app.logger.info('***** all results: {0}'.
-                                    format(results))
             results_hits = results.get('hits', {})
-            current_app.logger.info('***** results hits: {0}'.
-                                    format(results_hits))
             results_hits_total = results_hits.get('total', 0)
-            current_app.logger.info('***** results hits total: {0}'.
-                                    format(results_hits_total))
             if results_hits_total == 0:
                 current_app.logger.error('***** results not found!')
                 raise manager_exceptions.NotFoundError(
@@ -119,17 +112,18 @@ class ESStorageManager(object):
                 '{0} {1} not found'.format(doc_type, doc_id))
 
     def _get_doc_and_deserialize(self, doc_type, doc_id, model_class,
-                                 principals_list, fields=None):
-        doc = self._get_doc(doc_type, doc_id, principals_list, fields)
-        current_app.logger.info('***** _get_doc_and_deserialize working on '
-                                'doc: {0}'.format(doc))
+                                 fields=None):
+        doc = self._get_doc(doc_type, doc_id, fields)
+
         if not doc:
             current_app.logger.error('***** no docs found!')
+        else:
+            current_app.logger.info('***** got doc of type {0} and id {1}'
+                                    .format(doc_type, doc_id))
+
         if not fields:
-            current_app.logger.error("***** no fields, getting **doc['_source']")
             return model_class(**doc['_source'])
         else:
-            current_app.logger.error("***** fields found: {0}".format(fields))
             if len(fields) != len(doc['_source']):
                 missing_fields = [field for field in fields if field not
                                   in doc['_source']]
@@ -178,7 +172,6 @@ class ESStorageManager(object):
 
     @staticmethod
     def _build_filter_terms_and_acl_query(required_permission,
-                                          principals_list,
                                           filters=None):
         """
         This method is used to create a search filter to receive only results
@@ -192,8 +185,9 @@ class ESStorageManager(object):
         query = None
         filters_terms = []
         acl_terms = []
-        current_app.logger.error('***** principals list: {0}'.
-                                 format(principals_list))
+        principals_list = rest_security.get_principals_list()
+        current_app.logger.info('***** principals list: {0}'.
+                                format(principals_list))
         acceptable_aces = ESStorageManager._calc_acceptable_aces(
             required_permission, principals_list)
         current_app.logger.error('***** acceptable_aces: {0}'.
@@ -223,10 +217,13 @@ class ESStorageManager(object):
                     }
                 }
             }
+        current_app.logger.error('***** built query: {0}'.
+                                 format(query))
         return query
 
     # todo(adaml): who uses this?
     def node_instances_list(self, include=None):
+        current_app.logger.info('***** started node_instances_list')
         search_result = self._connection.search(index=STORAGE_INDEX_NAME,
                                                 doc_type=NODE_INSTANCE_TYPE,
                                                 size=DEFAULT_SEARCH_SIZE,
@@ -234,72 +231,92 @@ class ESStorageManager(object):
         docs_with_versions = \
             map(lambda hit: (hit['_source'], hit['_version']),
                 search_result['hits']['hits'])
-        return map(
+        result = map(
             lambda doc_with_version: DeploymentNodeInstance(
                 version=doc_with_version[1], **doc_with_version[0]),
             docs_with_versions)
+        current_app.logger.info('***** ended node_instances_list')
+        return result
 
     def blueprints_list(self, include=None, filters=None):
-        return self._get_items_list(BLUEPRINT_TYPE,
-                                    BlueprintState,
-                                    filters=filters,
-                                    include=include)
+        current_app.logger.info('***** ended blueprints_list')
+        result = self._get_items_list(BLUEPRINT_TYPE,
+                                      BlueprintState,
+                                      filters=filters,
+                                      include=include)
+        current_app.logger.info('***** ended blueprints_list')
+        return result
 
     def deployments_list(self, include=None, filters=None):
-        return self._get_items_list(DEPLOYMENT_TYPE,
-                                    Deployment,
-                                    filters=filters,
-                                    include=include)
+        current_app.logger.info('***** starting deployments_list')
+        result = self._get_items_list(DEPLOYMENT_TYPE,
+                                      Deployment,
+                                      filters=filters,
+                                      include=include)
+        current_app.logger.info('***** ended deployments_list')
+        return result
 
     def executions_list(self, include=None, filters=None):
-        return self._get_items_list(EXECUTION_TYPE,
-                                    Execution,
-                                    filters=filters,
-                                    include=include)
+        current_app.logger.info('***** starting executions_list')
+        result = self._get_items_list(EXECUTION_TYPE,
+                                      Execution,
+                                      filters=filters,
+                                      include=include)
+        current_app.logger.info('***** ended executions_list')
+        return result
 
     def get_blueprint_deployments(self, blueprint_id, include=None):
+        current_app.logger.info('***** starting get_blueprint_deployments')
         deployment_filters = {'blueprint_id': blueprint_id}
-        return self._get_items_list(DEPLOYMENT_TYPE,
-                                    Deployment,
-                                    filters=deployment_filters,
-                                    include=include)
+        result = self._get_items_list(DEPLOYMENT_TYPE,
+                                      Deployment,
+                                      filters=deployment_filters,
+                                      include=include)
+        current_app.logger.info('***** ended get_blueprint_deployments')
+        return result
 
     def get_node_instance(self, node_instance_id, include=None):
+        current_app.logger.info('***** starting get_node_instance')
         doc = self._get_doc(NODE_INSTANCE_TYPE,
                             node_instance_id,
                             fields=include)
         node = DeploymentNodeInstance(version=doc['_version'],
                                       **doc['_source'])
+        current_app.logger.info('***** ended get_node_instance')
         return node
 
     def get_node(self, deployment_id, node_id, include=None):
+        current_app.logger.info('***** starting get_node')
         storage_node_id = self._storage_node_id(deployment_id, node_id)
-        principals_list = rest_security.get_principals_list()
-        current_app.logger.error('***** in get_node, got principals: {0}'
-                                 .format(principals_list))
-        return self._get_doc_and_deserialize(doc_id=storage_node_id,
-                                             doc_type=NODE_TYPE,
-                                             model_class=DeploymentNode,
-                                             principals_list=principals_list,
-                                             fields=include)
+        result = self._get_doc_and_deserialize(doc_id=storage_node_id,
+                                               doc_type=NODE_TYPE,
+                                               model_class=DeploymentNode,
+                                               fields=include)
+        current_app.logger.info('***** ended get_node')
+        return result
 
     def get_node_instances(self, include=None, filters=None):
-        return self._get_items_list(NODE_INSTANCE_TYPE,
-                                    DeploymentNodeInstance,
-                                    filters=filters,
-                                    include=include)
+        current_app.logger.info('***** starting get_node_instances')
+        result = self._get_items_list(NODE_INSTANCE_TYPE,
+                                      DeploymentNodeInstance,
+                                      filters=filters,
+                                      include=include)
+        current_app.logger.info('***** ended get_node_instances')
+        return result
 
     def get_nodes(self, include=None, filters=None):
-        return self._get_items_list(NODE_TYPE,
-                                    DeploymentNode,
-                                    filters=filters,
-                                    include=include)
+        current_app.logger.info('***** starting get_nodes')
+        result = self._get_items_list(NODE_TYPE,
+                                      DeploymentNode,
+                                      filters=filters,
+                                      include=include)
+        current_app.logger.info('***** ended get_nodes')
+        return result
 
-    def _get_items_list(self, doc_type, model_class, principals_list,
-                        include=None, filters=None):
+    def _get_items_list(self, doc_type, model_class, filters=None,
+                        include=None):
         query = self._build_filter_terms_and_acl_query(
             required_permission='GET',
-            principals_list=principals_list,
             filters=filters)
         return self._list_docs(doc_type,
                                model_class,
@@ -307,66 +324,77 @@ class ESStorageManager(object):
                                fields=include)
 
     def get_blueprint(self, blueprint_id, include=None):
-        principals_list = rest_security.get_principals_list()
-        current_app.logger.error('***** in get_blueprint, got principals: {0}'
-                                 .format(principals_list))
-        return self._get_doc_and_deserialize(BLUEPRINT_TYPE,
-                                             blueprint_id,
-                                             BlueprintState,
-                                             principals_list=principals_list,
-                                             fields=include)
+        current_app.logger.info('***** starting get_blueprint')
+        result = self._get_doc_and_deserialize(BLUEPRINT_TYPE,
+                                               blueprint_id,
+                                               BlueprintState,
+                                               fields=include)
+        current_app.logger.info('***** ended get_blueprint')
+        return result
 
     def get_deployment(self, deployment_id, include=None):
-        principals_list = rest_security.get_principals_list()
-        current_app.logger.error('***** in get_deployment, got principals: {0}'
-                                 .format(principals_list))
-        return self._get_doc_and_deserialize(DEPLOYMENT_TYPE,
-                                             deployment_id,
-                                             Deployment,
-                                             principals_list=principals_list,
-                                             fields=include)
+        current_app.logger.info('***** starting get_deployment')
+        result = self._get_doc_and_deserialize(DEPLOYMENT_TYPE,
+                                               deployment_id,
+                                               Deployment,
+                                               fields=include)
+        current_app.logger.info('***** ended get_deployment')
+        return result
 
     def get_execution(self, execution_id, include=None):
-        principals_list = rest_security.get_principals_list()
-        current_app.logger.error('***** in get_execution, got principals: {0}'
-                                 .format(principals_list))
-        return self._get_doc_and_deserialize(EXECUTION_TYPE,
-                                             execution_id,
-                                             Execution,
-                                             principals_list=principals_list,
-                                             fields=include)
+        current_app.logger.info('***** starting get_execution')
+        result = self._get_doc_and_deserialize(EXECUTION_TYPE,
+                                               execution_id,
+                                               Execution,
+                                               fields=include)
+        current_app.logger.info('***** ended get_execution')
+        return result
 
     def put_blueprint(self, blueprint_id, blueprint):
+        current_app.logger.info('***** starting put_blueprint')
         self._put_doc_if_not_exists(BLUEPRINT_TYPE, str(blueprint_id),
                                     blueprint.to_dict())
+        current_app.logger.info('***** ended put_blueprint')
 
     def put_deployment(self, deployment_id, deployment):
+        current_app.logger.info('***** starting put_deployment')
         self._put_doc_if_not_exists(DEPLOYMENT_TYPE, str(deployment_id),
                                     deployment.to_dict())
+        current_app.logger.info('***** ended put_deployment')
 
     def put_execution(self, execution_id, execution):
+        current_app.logger.info('***** starting put_execution')
         self._put_doc_if_not_exists(EXECUTION_TYPE, str(execution_id),
                                     execution.to_dict())
+        current_app.logger.info('***** ended put_execution')
 
     def put_node(self, node):
+        current_app.logger.info('***** starting put_node')
         storage_node_id = self._storage_node_id(node.deployment_id, node.id)
         doc_data = node.to_dict()
         self._put_doc_if_not_exists(NODE_TYPE, storage_node_id, doc_data)
+        current_app.logger.info('***** ended put_node')
 
     def put_node_instance(self, node_instance):
+        current_app.logger.info('***** starting put_node_instance')
         node_instance_id = node_instance.id
         doc_data = node_instance.to_dict()
         del(doc_data['version'])
         self._put_doc_if_not_exists(NODE_INSTANCE_TYPE,
                                     str(node_instance_id),
                                     doc_data)
+        current_app.logger.info('***** ended put_node_instance')
         return 1
 
     def delete_blueprint(self, blueprint_id):
-        return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
-                                BlueprintState)
+        current_app.logger.info('***** starting delete_blueprint')
+        result = self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
+                                  BlueprintState)
+        current_app.logger.info('***** ended delete_blueprint')
+        return result
 
     def update_execution_status(self, execution_id, status, error):
+        current_app.logger.info('***** starting update_execution_status')
         update_doc_data = {'status': status,
                            'error': error}
         update_doc = {'doc': update_doc_data}
@@ -380,8 +408,10 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Execution {0} not found".format(execution_id))
+        current_app.logger.info('***** ended update_execution_status')
 
     def update_provider_context(self, provider_context):
+        current_app.logger.info('***** starting update_provider_context')
         doc_data = {'doc': provider_context.to_dict()}
         try:
             self._connection.update(index=STORAGE_INDEX_NAME,
@@ -392,32 +422,45 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 'Provider Context not found')
+        current_app.logger.info('***** ended update_provider_context')
 
-    def delete_deployment(self, deployment_id, principals_list):
+    def delete_deployment(self, deployment_id):
+        current_app.logger.info('***** starting delete_deployment')
         query = self._build_filter_terms_and_acl_query(
             required_permission='DELETE',
-            principals_list=principals_list,
             filters={'deployment_id': deployment_id})
         self._delete_doc_by_query(EXECUTION_TYPE, query)
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
         self._delete_doc_by_query(NODE_TYPE, query)
         self._delete_doc_by_query(DEPLOYMENT_MODIFICATION_TYPE, query)
-        return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
+        result = self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
+        current_app.logger.info('***** ended delete_deployment')
+        return result
 
     def delete_execution(self, execution_id):
-        return self._delete_doc(EXECUTION_TYPE, execution_id, Execution)
+        current_app.logger.info('***** starting delete_execution')
+        result = self._delete_doc(EXECUTION_TYPE, execution_id, Execution)
+        current_app.logger.info('***** ended delete_execution')
+        return result
 
     def delete_node(self, node_id):
-        return self._delete_doc(NODE_TYPE, node_id, DeploymentNode)
+        current_app.logger.info('***** starting delete_node')
+        result = self._delete_doc(NODE_TYPE, node_id, DeploymentNode)
+        current_app.logger.info('***** ended delete_node')
+        return result
 
     def delete_node_instance(self, node_instance_id):
-        return self._delete_doc(NODE_INSTANCE_TYPE,
-                                node_instance_id,
-                                DeploymentNodeInstance)
+        current_app.logger.info('***** starting delete_node_instance')
+        result = self._delete_doc(NODE_INSTANCE_TYPE,
+                                  node_instance_id,
+                                  DeploymentNodeInstance)
+        current_app.logger.info('***** ended delete_node_instance')
+        return result
 
     def update_node(self, deployment_id, node_id,
                     number_of_instances=None,
                     planned_number_of_instances=None):
+        current_app.logger.info('***** starting update_node')
         storage_node_id = self._storage_node_id(deployment_id, node_id)
         update_doc_data = {}
         if number_of_instances is not None:
@@ -435,8 +478,10 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))
+        current_app.logger.info('***** ended update_node')
 
     def update_node_instance(self, node):
+        current_app.logger.info('***** starting update_node_instance')
         new_state = node.state
         new_runtime_props = node.runtime_properties
         new_relationships = node.relationships
@@ -466,42 +511,46 @@ class ESStorageManager(object):
                                id=node.id,
                                body=updated,
                                **MUTATE_PARAMS)
+        current_app.logger.info('***** ended update_node_instance')
 
     def put_provider_context(self, provider_context):
+        current_app.logger.info('***** starting put_provider_context')
         doc_data = provider_context.to_dict()
         current_app.logger.error('***** in put_provider_context, putting: {0}'.
                                  format(doc_data))
         self._put_doc_if_not_exists(PROVIDER_CONTEXT_TYPE,
                                     PROVIDER_CONTEXT_ID,
                                     doc_data)
+        current_app.logger.info('***** ended put_provider_context')
 
     def get_provider_context(self, include=None):
-        principals_list = rest_security.get_principals_list()
-        current_app.logger.error('***** in get_provider_context, '
-                                 'got principals: {0}'.format(principals_list))
-        return self._get_doc_and_deserialize(PROVIDER_CONTEXT_TYPE,
-                                             PROVIDER_CONTEXT_ID,
-                                             ProviderContext,
-                                             principals_list=principals_list,
-                                             fields=include)
+        current_app.logger.info('***** starting get_provider_context')
+        result = self._get_doc_and_deserialize(PROVIDER_CONTEXT_TYPE,
+                                               PROVIDER_CONTEXT_ID,
+                                               ProviderContext,
+                                               fields=include)
+        current_app.logger.info('***** ended get_provider_context')
+        return result
 
     def put_deployment_modification(self, modification_id, modification):
+        current_app.logger.info('***** starting put_deployment_modification')
         self._put_doc_if_not_exists(DEPLOYMENT_MODIFICATION_TYPE,
                                     modification_id,
                                     modification.to_dict())
+        current_app.logger.info('***** ended put_deployment_modification')
 
     def get_deployment_modification(self, modification_id, include=None):
-        principals_list = rest_security.get_principals_list()
-        current_app.logger.error('***** in get_deployment_modification, '
-                                 'got principals: {0}'.format(principals_list))
-        return self._get_doc_and_deserialize(DEPLOYMENT_MODIFICATION_TYPE,
-                                             modification_id,
-                                             DeploymentModification,
-                                             principals_list=principals_list,
-                                             fields=include)
+        current_app.logger.info('***** starting get_deployment_modification')
+        result = self._get_doc_and_deserialize(DEPLOYMENT_MODIFICATION_TYPE,
+                                               modification_id,
+                                               DeploymentModification,
+                                               fields=include)
+        current_app.logger.info('***** ended get_deployment_modification')
+        return result
 
     def update_deployment_modification(self, modification):
-
+        current_app.logger.info('***** starting '
+                                'update_deployment_modification')
         modification_id = modification.id
         update_doc_data = {}
         if modification.status is not None:
@@ -521,12 +570,16 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Modification {0} not found".format(modification_id))
+        current_app.logger.info('***** ended update_deployment_modification')
 
     def deployment_modifications_list(self, include=None, filters=None):
-        return self._get_items_list(DEPLOYMENT_MODIFICATION_TYPE,
-                                    DeploymentModification,
-                                    filters=filters,
-                                    include=include)
+        current_app.logger.info('***** starting deployment_modifications_list')
+        result = self._get_items_list(DEPLOYMENT_MODIFICATION_TYPE,
+                                      DeploymentModification,
+                                      filters=filters,
+                                      include=include)
+        current_app.logger.info('***** ended deployment_modifications_list')
+        return result
 
     @staticmethod
     def _storage_node_id(deployment_id, node_id):
@@ -534,9 +587,11 @@ class ESStorageManager(object):
 
     @staticmethod
     def _calc_acceptable_aces(required_permission, principals_list):
-        all_have_all_permissions = '*ALLOW#ALL#ALL*'
-        all_have_required_permission = '*ALLOW#ALL#{0}*'.format(required_permission)
-        acceptable_aces = [all_have_all_permissions, all_have_required_permission]
+        all_have_all_permissions = 'ALLOW#ALL#ALL'
+        all_have_required_permission = 'ALLOW#ALL#{0}'.\
+            format(required_permission)
+        acceptable_aces = [all_have_all_permissions,
+                           all_have_required_permission]
         for principal in principals_list:
             principal_has_all_permissions = 'ALLOW#{0}#ALL'.format(principal)
             principal_has_required_permission = 'ALLOW#{0}#{1}'.\

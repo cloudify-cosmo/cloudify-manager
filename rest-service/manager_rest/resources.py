@@ -29,6 +29,7 @@ from setuptools import archive_util
 
 import elasticsearch
 from flask import (
+    current_app,
     request,
     make_response,
     current_app as app,
@@ -599,8 +600,12 @@ class ExecutionsId(SecuredResource):
         """
         Get execution by id
         """
+        current_app.logger.info('***** in resources.py ExecutionId get,'
+                                ' calling get_execution')
         execution = get_blueprints_manager().get_execution(execution_id,
                                                            include=_include)
+        current_app.logger.info('***** in resources.py ExecutionId get,'
+                                ' returning execution')
         return responses.Execution(**execution.to_dict())
 
     @swagger.operation(
@@ -679,6 +684,8 @@ class ExecutionsId(SecuredResource):
             request_json['status'],
             request_json.get('error', ''))
 
+        current_app.logger.info('***** in resources.py ExecutionId patch,'
+                                ' calling get_execution')
         return responses.Execution(**get_storage_manager().get_execution(
             execution_id).to_dict())
 
