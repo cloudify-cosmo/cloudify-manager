@@ -162,6 +162,18 @@ node_types:
           implementation: agent.cloudify_agent.operations.install_plugins
           executor: host_agent
 
+
+        #####################################################
+        # This operation will install new agent on specific
+        # machine using existing agent.
+        # ---------------------------------------------------
+        # It will be executed on central deployment agent.
+        # This agent will send installation request via AMQP
+        # to an agent that was previously installed.
+        # This request might be sent to other manager's
+        # rabbitmq server.
+        #####################################################
+
         create_amqp:
           implementation: agent.cloudify_agent.operations.create_agent_amqp
           executor: central_deployment_agent
