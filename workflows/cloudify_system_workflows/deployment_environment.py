@@ -206,8 +206,8 @@ def stop(ctx, prerequisite_task_id, prerequisite_task_timeout=60, **kwargs):
     return graph.execute()
 
 
-def _is_transient_deployment_workers_mode():
-    client = get_rest_client()
+def _is_transient_deployment_workers_mode(username, password):
+    client = get_rest_client(username, password)
     bootstrap_context = client.manager.get_context()['context']['cloudify']
     return bootstrap_context.get(
         'transient_deployment_workers_mode', {}).get('enabled', False)
