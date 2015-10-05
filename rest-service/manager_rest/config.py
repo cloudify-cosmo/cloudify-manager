@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask import current_app
 
 class Config(object):
 
@@ -31,6 +32,7 @@ class Config(object):
         self._rest_service_log_files_backup_count = None
         self._test_mode = False
         self._security_enabled = False
+        self._security_ssl = {'enabled': False}
         self._security_auth_token_generator = None
         self._security_audit_log_level = None
         self._security_audit_log_file = None
@@ -151,6 +153,14 @@ class Config(object):
     @security_enabled.setter
     def security_enabled(self, value):
         self._security_enabled = value
+
+    @property
+    def security_ssl(self):
+        return self._security_ssl
+
+    @security_ssl.setter
+    def security_ssl(self, value):
+        self._security_ssl = value
 
     @property
     def security_authentication_providers(self):

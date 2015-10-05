@@ -581,6 +581,9 @@ class Executions(SecuredResource):
                 "request body's 'parameters' field must be a dict but"
                 " is of type {0}".format(parameters.__class__.__name__))
 
+        current_app.logger.info('***** in resources.py Executions post,'
+                                ' calling execute_workflow on {0}'.
+                                format(workflow_id))
         execution = get_blueprints_manager().execute_workflow(
             deployment_id, workflow_id, parameters=parameters,
             allow_custom_parameters=allow_custom_parameters, force=force)
