@@ -45,7 +45,8 @@ class WorkflowClient(object):
     def execute_system_workflow(deployment, wf_id, task_id, task_mapping,
                                 execution_parameters=None,
                                 cloudify_username='workflow_admin',
-                                cloudify_password='workflow_admin'):
+                                cloudify_password='workflow_admin',
+                                rest_protocol='http'):
         # task_id is not generated here since for system workflows,
         # the task id is equivalent to the execution id
 
@@ -60,7 +61,8 @@ class WorkflowClient(object):
             'execution_id': task_id,
             'workflow_id': wf_id,
             'cloudify_username': cloudify_username,
-            'cloudify_password': cloudify_password
+            'cloudify_password': cloudify_password,
+            'rest_protocol': rest_protocol
         }
         execution_parameters = execution_parameters or {}
         execution_parameters['__cloudify_context'] = context
