@@ -19,6 +19,11 @@ from manager_rest.celery_client import celery_client as client
 
 class WorkflowClient(object):
 
+    def __init__(self, rest_protocol, admin_username, admin_password):
+        self.rest_protocol = rest_protocol
+        self.admin_username = admin_username
+        self.admin_password = admin_password
+
     @staticmethod
     def execute_workflow(name,
                          workflow,
@@ -41,12 +46,8 @@ class WorkflowClient(object):
                               task_id=execution_id,
                               kwargs=execution_parameters)
 
-    @staticmethod
-    def execute_system_workflow(deployment, wf_id, task_id, task_mapping,
-                                execution_parameters=None,
-                                cloudify_username='workflow_admin',
-                                cloudify_password='workflow_admin',
-                                rest_protocol='http'):
+    def execute_system_workflow(self, deployment, wf_id, task_id, task_mapping,
+                                execution_parameters=None):
         # task_id is not generated here since for system workflows,
         # the task id is equivalent to the execution id
 
@@ -60,9 +61,9 @@ class WorkflowClient(object):
             'deployment_id': deployment.id,
             'execution_id': task_id,
             'workflow_id': wf_id,
-            'cloudify_username': cloudify_username,
-            'cloudify_password': cloudify_password,
-            'rest_protocol': rest_protocol
+            'cloudify_username': self.cloudify_username,
+            'cloudify_password': self.cloudify_password,
+            'rest_protocol': self.rest_protocol
         }
         execution_parameters = execution_parameters or {}
         execution_parameters['__cloudify_context'] = context
@@ -74,5 +75,5 @@ class WorkflowClient(object):
             kwargs=execution_parameters)
 
 
-def workflow_client():
-    return WorkflowClient()
+def workflow_client(rest_protocol, admin_username, admin_password):
+    return WorkflowClient(rest_protocol, admin_username, admin_password)

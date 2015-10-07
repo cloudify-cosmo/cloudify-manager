@@ -31,7 +31,6 @@ from manager_rest import models
 from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
-from manager_rest.utils import maybe_register_teardown
 
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
 
@@ -47,6 +46,14 @@ class BlueprintAlreadyExistsException(Exception):
 
 
 class BlueprintsManager(object):
+
+    def __init__(self, rest_protocol, admin_username, admin_password):
+        self.rest_protocol = rest_protocol
+        self.admin_username = admin_username
+        self.admin_password = admin_password
+        self.workflow_client = workflow_client(self.rest_protocol,
+                                               self.admin_username,
+                                               self.admin_password)
 
     @property
     def sm(self):
@@ -256,7 +263,7 @@ class BlueprintsManager(object):
                 created_at=start_deployment_env_created_at_time)
 
         # executing the user workflow
-        workflow_client().execute_workflow(
+        self.workflow_client.execute_workflow(
             workflow_id,
             workflow,
             blueprint_id=deployment.blueprint_id,
@@ -307,7 +314,7 @@ class BlueprintsManager(object):
 
         current_app.logger.info('***** calling workflow_client().'
                                 'execute_system_workflow')
-        async_task = workflow_client().execute_system_workflow(
+        async_task = self.workflow_client.execute_system_workflow(
             deployment, wf_id, execution_id, task_mapping,
             execution_parameters)
         current_app.logger.info('***** called workflow_client().'
@@ -983,18 +990,9 @@ class BlueprintsManager(object):
         self._update_import_resolver_in_app(provider_context.context)
 
 
-def teardown_blueprints_manager(exception):
-    # print "tearing down blueprints manager!"
-    pass
-
-
 # What we need to access this manager in Flask
 def get_blueprints_manager():
     """
     Get the current blueprints manager
-    or create one if none exists for the current app context
     """
-    if 'blueprints_manager' not in g:
-        g.blueprints_manager = BlueprintsManager()
-        maybe_register_teardown(current_app, teardown_blueprints_manager)
     return g.blueprints_manager

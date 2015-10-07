@@ -21,6 +21,7 @@ import yaml
 from logging.handlers import RotatingFileHandler
 
 from flask import (
+    g,
     Flask,
     jsonify,
     request,
@@ -33,6 +34,7 @@ from flask_securest.rest_security import SecuREST
 from manager_rest import endpoint_mapper
 from manager_rest import config
 from manager_rest import storage_manager
+from manager_rest import blueprints_manager
 from manager_rest import manager_exceptions
 from manager_rest import utils
 
@@ -59,6 +61,13 @@ def setup_app():
     if cfy_config.security_enabled:
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
+        protocol = 'https' if cfy_config.security_ssl.get('enabled', False) \
+            else 'http'
+        _set_blueprints_manager(protocol,
+                                cfy_config.security_admin_username,
+                                cfy_config.security_admin_password)
+    else:
+        _set_blueprints_manager()
 
     app.before_request(log_request)
     app.after_request(log_response)
@@ -174,6 +183,17 @@ def create_logger(logger_name,
                               remove_existing_handlers=False)
 
 
+def _set_blueprints_manager(rest_protocol='http',
+                            admin_username=None,
+                            admin_password=None):
+    """
+    create and set a blueprints manager for the current app context
+    """
+    if 'blueprints_manager' not in g:
+        g.blueprints_manager = blueprints_manager.BlueprintsManager(
+            rest_protocol, admin_username, admin_password)
+
+
 def init_secured_app(_app):
     cfy_config = config.instance()
     if cfy_config.security_auth_token_generator:
@@ -206,6 +226,14 @@ def init_secured_app(_app):
             hide_server_message=True)
 
     secure_app.unauthorized_user_handler = unauthorized_user_handler
+
+    def acl_handler():
+        utils.abort_error(
+            manager_exceptions.UnauthorizedError('user unauthorized'),
+            current_app.logger,
+            hide_server_message=True)
+
+    secure_app.acl_handler = acl_handler
     secure_app.skip_auth_hook = _is_internal_request
 
 
