@@ -15,17 +15,18 @@
 
 import copy
 import uuid
-from datetime import datetime, timedelta
 import dateutil.parser
+from datetime import datetime, timedelta
+from nose.plugins.attrib import attr
 
+from manager_rest.test import base_test
 from cloudify_rest_client import exceptions
 from cloudify_rest_client.deployment_modifications import (
     DeploymentModification)
 
-from base_test import BaseServerTestCase
 
-
-class ModifyTests(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class ModifyTests(base_test.BaseServerTestCase):
 
     def test_data_model_with_finish(self):
         def expected_after_end_func(_, before_end):
@@ -78,13 +79,13 @@ class ModifyTests(BaseServerTestCase):
         mock_context = {'some': 'data'}
 
         node1_instance = self.client.node_instances.list(
-            deployment_id=deployment.id, node_id='node1')[0]
+            deployment_id=deployment.id, node_name='node1')[0]
         self.client.node_instances.update(
             node1_instance.id,
             runtime_properties={'test': 'before_start'},
             version=0)
         node2_instance = self.client.node_instances.list(
-            deployment_id=deployment.id, node_id='node2')[0]
+            deployment_id=deployment.id, node_name='node2')[0]
         self.client.node_instances.update(
             node2_instance.id,
             runtime_properties={'test': 'before_start'},

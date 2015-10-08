@@ -13,20 +13,21 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-from base_list_test import BaseListTest
 
-API_VERSION = 'v1'
+from nose.plugins.attrib import attr
+
+from manager_rest.test.base_list_test import BaseListTest
 
 
-class ResourceListBackwardsTestCase(BaseListTest):
+@attr(client_min_version=1, client_max_version=1)
+class TestResourceListV1(BaseListTest):
     """
     REST list operations have changed in v2. This test class assures v1
     backwards compatibility has been preserved.
     """
 
     def setUp(self):
-        super(ResourceListBackwardsTestCase, self).setUp(
-            api_version=API_VERSION)
+        super(TestResourceListV1, self).setUp()
         (self.first_blueprint_id,
          self.first_deployment_id,
          self.sec_blueprint_id,
@@ -55,14 +56,13 @@ class ResourceListBackwardsTestCase(BaseListTest):
         self.assertEqual(2, len(response), 'expecting 2 deployment results, '
                                            'got {0}'.format(len(response)))
 
-        expected_results = {'id': self.first_deployment_id,
-                            'blueprint_id': self.first_blueprint_id,
-                            'id': self.sec_deployment_id,
-                            'blueprint_id': self.sec_blueprint_id}
-        self.assertDictContainsSubset(expected_results, response[0],
-                                      'expecting results having '
-                                      'values {0}, got {1}'
-                                      .format(expected_results, response[0]))
+        if response[0]['id'] != self.first_deployment_id:
+            response[0], response[1] = response[1], response[0]
+
+        self.assertEquals(self.first_blueprint_id,
+                          response[0]['blueprint_id'])
+        self.assertEquals(self.sec_blueprint_id,
+                          response[1]['blueprint_id'])
 
     def test_deployments_list_with_filters(self):
         filter_fields = {'id': self.first_deployment_id,

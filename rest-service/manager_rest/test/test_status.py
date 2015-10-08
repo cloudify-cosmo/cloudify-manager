@@ -13,10 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from base_test import BaseServerTestCase
+from nose.plugins.attrib import attr
+
+from manager_rest.test import base_test
 
 
-class StatusTestCase(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class StatusTestCase(base_test.BaseServerTestCase):
 
     def test_get_empty(self):
         result = self.get('/status')

@@ -1,12 +1,15 @@
 #!/bin/bash -e
 
-test_rest_service()
+test_rest_service_v2()
 {
-    echo "### Testing rest-service..."
-    pushd rest-service && pip install -r dev-requirements.txt && popd
-    pushd rest-service && pip install . && popd
-    pip install nose
-    nosetests rest-service/manager_rest/test --nologcapture --nocapture
+    echo "### Testing rest-service with V2 client..."
+    pushd rest-service && tox -e clientV2 && popd
+}
+
+test_rest_service_v1()
+{
+    echo "### Testing rest-service V1 client..."
+    pushd rest-service && tox -e clientV1 && popd
 }
 
 run_intergration_tests()
@@ -69,7 +72,8 @@ run_flake8()
 }
 
 case $1 in
-    test-rest-service    ) test_rest_service;;
-    run-integration-tests) run_intergration_tests;;
-    flake8               ) run_flake8;;
+    test-rest-service-v2-client ) test_rest_service_v2;;
+    test-rest-service-v1-client ) test_rest_service_v1;;
+    run-integration-tests       ) run_intergration_tests;;
+    flake8                      ) run_flake8;;
 esac

@@ -32,6 +32,7 @@ from manager_rest import manager_exceptions
 from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 
+TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT = False
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
 
 
@@ -141,6 +142,7 @@ class BlueprintsManager(object):
                                  format(the_acl))
         new_blueprint = models.BlueprintState(plan=plan,
                                               id=blueprint_id,
+                                              description=plan.get('description'),
                                               created_at=now,
                                               updated_at=now,
                                               acl=rest_security.get_acl())
@@ -948,7 +950,8 @@ class BlueprintsManager(object):
 
         # setting defaults if missing
         transient_workers_config['enabled'] = \
-            transient_workers_config.get('enabled', False)
+            transient_workers_config.get(
+                'enabled', TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT)
         transient_workers_config['global_parallel_executions_limit'] = \
             transient_workers_config.get(
                 'global_parallel_executions_limit',

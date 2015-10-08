@@ -47,6 +47,7 @@ class BlueprintState(ManagedResource):
         super(BlueprintState, self).__init__(**kwargs)
         self.plan = kwargs['plan']
         self.id = kwargs['id']
+        self.description = kwargs['description']
         self.created_at = kwargs['created_at']
         self.updated_at = kwargs['updated_at']
 

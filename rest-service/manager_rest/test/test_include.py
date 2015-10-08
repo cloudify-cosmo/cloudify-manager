@@ -15,11 +15,15 @@
 
 import uuid
 
-from base_test import BaseServerTestCase
+import mock
+from nose.plugins.attrib import attr
+
+from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 
 
-class IncludeQueryParamTests(BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class IncludeQueryParamTests(base_test.BaseServerTestCase):
 
     def setUp(self):
         super(IncludeQueryParamTests, self).setUp()
@@ -28,6 +32,28 @@ class IncludeQueryParamTests(BaseServerTestCase):
 
     def initialize_provider_context(self):
         self.client.manager.create_context('test', {'hello': 'world'})
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_include_propagation_to_model(self):
+        self._test_include_propagation_to_model(dict(include=[u'id'],
+                                                     filters={}))
+
+    @attr(client_min_version=1, client_max_version=1)
+    def test_include_propagation_to_model_v1(self):
+        self._test_include_propagation_to_model(dict(include=[u'id']))
+
+    def _test_include_propagation_to_model(self,
+                                           expected_blueprints_list_kwargs):
+        # test that the "include" parameter does not only filter the response
+        # fields at the end of the request, but also propagates to the Model
+        # section, for more efficient storage queries
+        with mock.patch('manager_rest.blueprints_manager.BlueprintsManager'
+                        '.blueprints_list') as bpm_bp_list:
+            bpm_bp_list.return_value = list()
+            self.client.blueprints.list(_include=['id'])
+            bpm_bp_list.assert_called_once_with(
+                **expected_blueprints_list_kwargs)
 
     def test_blueprints(self):
         response = self.client.blueprints.list(_include=['id'])
