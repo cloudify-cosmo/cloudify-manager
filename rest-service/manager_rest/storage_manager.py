@@ -17,8 +17,6 @@ import importlib
 
 from flask import g, current_app
 
-from manager_rest.utils import maybe_register_teardown
-
 # storage_manager_module_name = 'file_storage_manager'
 storage_manager_module_name = 'manager_rest.es_storage_manager'
 
@@ -53,6 +51,5 @@ def get_storage_manager():
 
         # need to persist same instance across requests...
         g.storage_manager = instance()
-        maybe_register_teardown(current_app, teardown_storage_manager)
 
     return g.storage_manager

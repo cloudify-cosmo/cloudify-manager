@@ -61,14 +61,8 @@ def setup_app():
     if cfy_config.security_enabled:
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
-        protocol = 'https' if cfy_config.security_ssl.get('enabled', False) \
-            else 'http'
-        _set_blueprints_manager(protocol,
-                                cfy_config.security_admin_username,
-                                cfy_config.security_admin_password)
-    else:
-        _set_blueprints_manager()
 
+    app.before_first_request(_set_blueprints_manager)
     app.before_request(log_request)
     app.after_request(log_response)
 
@@ -183,12 +177,22 @@ def create_logger(logger_name,
                               remove_existing_handlers=False)
 
 
-def _set_blueprints_manager(rest_protocol='http',
-                            admin_username=None,
-                            admin_password=None):
+def _set_blueprints_manager():
     """
     create and set a blueprints manager for the current app context
     """
+    rest_protocol = 'http'
+    admin_username = None
+    admin_password = None
+    cfy_config = config.instance()
+
+    if cfy_config.security_enabled:
+        if cfy_config.security_ssl.get('enabled', False):
+            rest_protocol = 'https'
+        admin_username = cfy_config.security_admin_username
+        admin_password = cfy_config.security_admin_password
+
+    app.logger.info('using rest protocol: {0}'.format(rest_protocol))
     if 'blueprints_manager' not in g:
         g.blueprints_manager = blueprints_manager.BlueprintsManager(
             rest_protocol, admin_username, admin_password)
