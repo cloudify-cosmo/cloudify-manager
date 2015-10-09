@@ -63,6 +63,7 @@ def setup_app():
         init_secured_app(app)
 
     app.before_first_request(_set_blueprints_manager)
+    app.before_first_request(_set_storage_manager)
     app.before_request(log_request)
     app.after_request(log_response)
 
@@ -179,7 +180,9 @@ def create_logger(logger_name,
 
 def _set_storage_manager():
     if 'storage_manager' not in g:
-        g.storage_manager = storage_manager.instance()
+        sm = storage_manager.instance()
+        app.logger.info('setting storage manager: {0}'.format(sm))
+        g.storage_manager = sm
 
 
 def _set_blueprints_manager():
@@ -192,6 +195,8 @@ def _set_blueprints_manager():
     cfy_config = config.instance()
 
     if cfy_config.security_enabled:
+        app.logger.info('cfy_config.security_ssl: {0}'.
+                        format(cfy_config.security_ssl))
         if cfy_config.security_ssl.get('enabled', False):
             rest_protocol = 'https'
         admin_username = cfy_config.security_admin_username
@@ -199,8 +204,10 @@ def _set_blueprints_manager():
 
     app.logger.info('using rest protocol: {0}'.format(rest_protocol))
     if 'blueprints_manager' not in g:
-        g.blueprints_manager = blueprints_manager.BlueprintsManager(
+        blueprints_mgr = blueprints_manager.BlueprintsManager(
             rest_protocol, admin_username, admin_password)
+        app.logger.info('setting blueprints_manager: {0}'.format(blueprints_mgr))
+        g.blueprints_manager = blueprints_mgr
 
 
 def init_secured_app(_app):
