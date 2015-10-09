@@ -177,6 +177,11 @@ def create_logger(logger_name,
                               remove_existing_handlers=False)
 
 
+def _set_storage_manager():
+    if 'storage_manager' not in g:
+        g.storage_manager = storage_manager.instance()
+
+
 def _set_blueprints_manager():
     """
     create and set a blueprints manager for the current app context

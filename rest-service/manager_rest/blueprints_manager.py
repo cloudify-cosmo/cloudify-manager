@@ -140,12 +140,13 @@ class BlueprintsManager(object):
         the_acl = rest_security.get_acl()
         current_app.logger.error('***** creating blueprint with acl: {0}'.
                                  format(the_acl))
-        new_blueprint = models.BlueprintState(plan=plan,
-                                              id=blueprint_id,
-                                              description=plan.get('description'),
-                                              created_at=now,
-                                              updated_at=now,
-                                              acl=rest_security.get_acl())
+        new_blueprint = models.BlueprintState(
+            plan=plan,
+            id=blueprint_id,
+            description=plan.get('description'),
+            created_at=now,
+            updated_at=now,
+            acl=rest_security.get_acl())
         current_app.logger.error('***** putting blueprint: {0}'.
                                  format(new_blueprint))
         self.sm.put_blueprint(

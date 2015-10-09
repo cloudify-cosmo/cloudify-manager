@@ -632,10 +632,6 @@ class ExecutionsId(SecuredResource):
         """
         current_app.logger.info('***** in resources.py ExecutionId get,'
                                 ' calling get_execution')
-        execution = get_blueprints_manager().get_execution(execution_id,
-                                                           include=_include)
-        current_app.logger.info('***** in resources.py ExecutionId get,'
-                                ' returning execution')
         return get_blueprints_manager().get_execution(execution_id,
                                                       include=_include)
 

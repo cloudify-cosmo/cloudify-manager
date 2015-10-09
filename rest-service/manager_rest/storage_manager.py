@@ -15,7 +15,7 @@
 
 import importlib
 
-from flask import g, current_app
+from flask import g
 
 # storage_manager_module_name = 'file_storage_manager'
 storage_manager_module_name = 'manager_rest.es_storage_manager'
@@ -46,10 +46,4 @@ def teardown_storage_manager(exception):
 
 
 def get_storage_manager():
-    if 'storage_manager' not in g:
-        # g.storage_manager = _create_instance()  # TODO: import only once!
-
-        # need to persist same instance across requests...
-        g.storage_manager = instance()
-
     return g.storage_manager
