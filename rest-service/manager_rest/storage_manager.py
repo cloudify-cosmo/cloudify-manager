@@ -46,4 +46,7 @@ def teardown_storage_manager(exception):
 
 
 def get_storage_manager():
-    return g.storage_manager
+    """
+    Get the current storage manager
+    """
+    return getattr(g, 'storage_manager')

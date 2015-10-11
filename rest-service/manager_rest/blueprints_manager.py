@@ -999,4 +999,4 @@ def get_blueprints_manager():
     """
     Get the current blueprints manager
     """
-    return g.blueprints_manager
+    return getattr(g, 'blueprints_manager')
