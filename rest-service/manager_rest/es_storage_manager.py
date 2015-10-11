@@ -191,7 +191,7 @@ class ESStorageManager(object):
         acceptable_aces = ESStorageManager._calc_acceptable_aces(
             required_permission, principals_list)
         current_app.logger.info('***** acceptable_aces: {0}'.
-                                 format(acceptable_aces))
+                                format(acceptable_aces))
         if filters:
             for key, val in filters.iteritems():
                 filters_terms.append({'term': {key: val}})
