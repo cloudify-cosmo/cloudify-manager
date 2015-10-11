@@ -817,6 +817,7 @@ class BlueprintsManager(object):
             current_app.logger.info('***** create_deployment_environment '
                                     'not found')
 
+        # why listing all executions again? we just did..
         env_creation = next(
             (execution for execution in
              self.sm.executions_list(filters=deployment_id_filter)

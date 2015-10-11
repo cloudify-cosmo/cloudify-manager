@@ -190,7 +190,7 @@ class ESStorageManager(object):
                                 format(principals_list))
         acceptable_aces = ESStorageManager._calc_acceptable_aces(
             required_permission, principals_list)
-        current_app.logger.error('***** acceptable_aces: {0}'.
+        current_app.logger.info('***** acceptable_aces: {0}'.
                                  format(acceptable_aces))
         if filters:
             for key, val in filters.iteritems():
@@ -217,8 +217,8 @@ class ESStorageManager(object):
                     }
                 }
             }
-        current_app.logger.error('***** built query: {0}'.
-                                 format(query))
+        current_app.logger.info('***** built query: {0}'.
+                                format(query))
         return query
 
     # todo(adaml): who uses this?

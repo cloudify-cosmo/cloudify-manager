@@ -61,8 +61,8 @@ class WorkflowClient(object):
             'deployment_id': deployment.id,
             'execution_id': task_id,
             'workflow_id': wf_id,
-            'cloudify_username': self.cloudify_username,
-            'cloudify_password': self.cloudify_password,
+            'cloudify_username': self.admin_username,
+            'cloudify_password': self.admin_password,
             'rest_protocol': self.rest_protocol
         }
         execution_parameters = execution_parameters or {}
