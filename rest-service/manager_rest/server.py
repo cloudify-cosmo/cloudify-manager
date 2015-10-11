@@ -21,7 +21,6 @@ import yaml
 from logging.handlers import RotatingFileHandler
 
 from flask import (
-    g,
     Flask,
     jsonify,
     request,
@@ -179,11 +178,10 @@ def create_logger(logger_name,
 
 
 def _set_storage_manager():
-    g_storage_manager = getattr(g, 'storage_manager', None)
-    if g_storage_manager is None:
+    if not current_app.storage_manager:
         sm = storage_manager.instance()
         app.logger.info('setting storage manager: {0}'.format(sm))
-        g.storage_manager = sm
+        current_app.storage_manager = sm
 
 
 def _set_blueprints_manager():
@@ -194,10 +192,8 @@ def _set_blueprints_manager():
     admin_username = None
     admin_password = None
 
-    g_blueprints_manager = getattr(g, 'blueprints_manager', None)
-    if g_blueprints_manager is None:
+    if not current_app.blueprints_manager:
         cfy_config = config.instance()
-
         if cfy_config.security_enabled:
             app.logger.info('cfy_config.security_ssl: {0}'.
                             format(cfy_config.security_ssl))
@@ -211,7 +207,7 @@ def _set_blueprints_manager():
             rest_protocol, admin_username, admin_password)
         app.logger.info('***** setting blueprints_manager: {0}'.
                         format(blueprints_mgr))
-        g.blueprints_manager = blueprints_mgr
+        current_app.blueprints_manager = blueprints_mgr
 
 
 def init_secured_app(_app):

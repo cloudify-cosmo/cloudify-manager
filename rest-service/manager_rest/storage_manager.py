@@ -15,7 +15,7 @@
 
 import importlib
 
-from flask import g
+from flask import current_app
 
 # storage_manager_module_name = 'file_storage_manager'
 storage_manager_module_name = 'manager_rest.es_storage_manager'
@@ -49,4 +49,4 @@ def get_storage_manager():
     """
     Get the current storage manager
     """
-    return getattr(g, 'storage_manager')
+    return current_app.storage_manager

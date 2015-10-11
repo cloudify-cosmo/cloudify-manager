@@ -18,7 +18,7 @@ import traceback
 from datetime import datetime
 from StringIO import StringIO
 
-from flask import g, current_app
+from flask import current_app
 
 from flask_securest import rest_security
 
@@ -999,4 +999,4 @@ def get_blueprints_manager():
     """
     Get the current blueprints manager
     """
-    return getattr(g, 'blueprints_manager')
+    return current_app.blueprints_manager
