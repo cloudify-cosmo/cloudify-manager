@@ -49,4 +49,4 @@ def get_storage_manager():
     """
     Get the current storage manager
     """
-    return current_app.storage_manager
+    return current_app.config.get('storage_manager')

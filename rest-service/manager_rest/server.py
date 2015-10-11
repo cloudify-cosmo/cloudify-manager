@@ -178,10 +178,10 @@ def create_logger(logger_name,
 
 
 def _set_storage_manager():
-    if not current_app.storage_manager:
+    if not current_app.config.get('storage_manager'):
         sm = storage_manager.instance()
         app.logger.info('setting storage manager: {0}'.format(sm))
-        current_app.storage_manager = sm
+        current_app.config['storage_manager'] = sm
 
 
 def _set_blueprints_manager():
@@ -192,7 +192,7 @@ def _set_blueprints_manager():
     admin_username = None
     admin_password = None
 
-    if not current_app.blueprints_manager:
+    if not current_app.config.get('blueprints_manager'):
         cfy_config = config.instance()
         if cfy_config.security_enabled:
             app.logger.info('cfy_config.security_ssl: {0}'.
@@ -207,7 +207,7 @@ def _set_blueprints_manager():
             rest_protocol, admin_username, admin_password)
         app.logger.info('***** setting blueprints_manager: {0}'.
                         format(blueprints_mgr))
-        current_app.blueprints_manager = blueprints_mgr
+        current_app.config['blueprints_manager'] = blueprints_mgr
 
 
 def init_secured_app(_app):

@@ -999,4 +999,4 @@ def get_blueprints_manager():
     """
     Get the current blueprints manager
     """
-    return current_app.blueprints_manager
+    return current_app.config.get('blueprints_manager')
