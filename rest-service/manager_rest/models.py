@@ -40,7 +40,8 @@ class ManagedResource(SerializableObject):
 
 class BlueprintState(ManagedResource):
 
-    blueprint_fields = {'plan', 'id', 'created_at', 'updated_at'}
+    blueprint_fields = {'plan', 'id', 'description', 'created_at',
+                        'updated_at'}
     fields = set.union(ManagedResource.fields, blueprint_fields)
 
     def __init__(self, **kwargs):
