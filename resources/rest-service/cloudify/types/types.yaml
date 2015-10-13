@@ -1,7 +1,12 @@
 ##################################################################################
+# The types defined here make use of features only available in the
+# 'cloudify_dsl_1_2' tosca definitions version
+##################################################################################
+tosca_definitions_version: cloudify_dsl_1_2
+
+##################################################################################
 # Base type definitions
 ##################################################################################
-
 node_types:
 
   # base type for provided cloudify types
@@ -20,38 +25,29 @@ node_types:
         start: {}
         stop: {}
 
-  # A tier in a topology
-  cloudify.nodes.Tier:
-    derived_from: cloudify.nodes.Root
-
   # A host (physical / virtual or LXC) in a topology
   cloudify.nodes.Compute:
     derived_from: cloudify.nodes.Root
     properties:
-      install_agent:
-        description: |
-          Property for specifying that this Compute node will be
-          running a cloudify agent.
-        default: true
-      remote_execution:
-        description: |
-          Property specifying how will the cloudify agent be installed on
-          the Compute node. If the 'install_agent' property is false, this
-          property is ignored since this node will not be running an agent.
-          If 'install_agent' is true, this property should set to true in
-          order for cloudify to remotely install the agent, and false if the
-          agent installation process takes place outside the context of
-          cloudify (e.g userdata)
-        default: true
-      cloudify_agent:
-        default: {}
       ip:
         default: ''
       os_family:
         description: |
           Property specifying what type of operating system family
           this compute node will run.
-        default: Linux
+        default: linux
+      agent_config:
+        type: cloudify.datatypes.AgentConfig
+        default:
+          install_method: remote
+          port: 22
+
+      # DEPRECATED
+      install_agent:
+        default: ''
+      cloudify_agent:
+        default: {}
+
     interfaces:
       cloudify.interfaces.cloudify_agent:
 
@@ -174,6 +170,10 @@ node_types:
   # A Linux container with or without docker
   cloudify.nodes.Container:
     derived_from: cloudify.nodes.Compute
+
+  # A tier in a topology
+  cloudify.nodes.Tier:
+    derived_from: cloudify.nodes.Root
 
   # A storage volume in a topology
   cloudify.nodes.Volume:
@@ -400,6 +400,44 @@ workflows:
             and this property is 'true', operate on compute node instead
             of 'node_id'
         default: true
+
+##################################################################################
+# Base data type definitions
+##################################################################################
+data_types:
+
+  cloudify.datatypes.AgentConfig:
+    properties:
+      install_method:
+        type: string
+        required: true
+      user:
+        type: string
+        required: false
+      key:
+        type: string
+        required: false
+      password:
+        type: string
+        required: false
+      port:
+        type: integer
+        required: false
+      process_management:
+        required: false
+      min_workers:
+        type: integer
+        required: false
+      max_workers:
+        type: integer
+        required: false
+      disable_requiretty:
+        type: boolean
+        required: false
+      env:
+        required: false
+      extra:
+        required: false
 
 ##################################################################################
 # Base artifact definitions

@@ -23,9 +23,6 @@ from testenv.utils import execute_workflow
 class TestScriptMapping(TestCase):
 
     def test_script_mapping(self):
-        """
-        Tests policy/trigger/group creation and processing flow
-        """
         dsl_path = resource('dsl/test_script_mapping.yaml')
         deployment, _ = deploy(dsl_path)
         execute_workflow('workflow', deployment.id)
