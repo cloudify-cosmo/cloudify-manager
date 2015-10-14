@@ -48,13 +48,15 @@ class BlueprintAlreadyExistsException(Exception):
 
 class BlueprintsManager(object):
 
-    def __init__(self, rest_protocol, admin_username, admin_password):
+    def __init__(self, rest_protocol, admin_username, admin_password, verify_certificate):
         self.rest_protocol = rest_protocol
         self.admin_username = admin_username
         self.admin_password = admin_password
+        self.verify_certificate = verify_certificate
         self.workflow_client = workflow_client(self.rest_protocol,
                                                self.admin_username,
-                                               self.admin_password)
+                                               self.admin_password,
+                                               self.verify_certificate)
 
     @property
     def sm(self):

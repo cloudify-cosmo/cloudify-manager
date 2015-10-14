@@ -19,10 +19,12 @@ from manager_rest.celery_client import celery_client as client
 
 class WorkflowClient(object):
 
-    def __init__(self, rest_protocol, admin_username, admin_password):
+    def __init__(self, rest_protocol, admin_username, admin_password,
+                 verify_certificate):
         self.rest_protocol = rest_protocol
         self.admin_username = admin_username
         self.admin_password = admin_password
+        self.verify_certificate = verify_certificate
 
     @staticmethod
     def execute_workflow(name,
@@ -63,7 +65,8 @@ class WorkflowClient(object):
             'workflow_id': wf_id,
             'cloudify_username': self.admin_username,
             'cloudify_password': self.admin_password,
-            'rest_protocol': self.rest_protocol
+            'rest_protocol': self.rest_protocol,
+            'verify_certificate': self.verify_certificate
         }
         execution_parameters = execution_parameters or {}
         execution_parameters['__cloudify_context'] = context
@@ -75,5 +78,7 @@ class WorkflowClient(object):
             kwargs=execution_parameters)
 
 
-def workflow_client(rest_protocol, admin_username, admin_password):
-    return WorkflowClient(rest_protocol, admin_username, admin_password)
+def workflow_client(rest_protocol, admin_username, admin_password,
+                    verify_certificate):
+    return WorkflowClient(rest_protocol, admin_username, admin_password,
+                          verify_certificate)

@@ -191,6 +191,7 @@ def _set_blueprints_manager():
     rest_protocol = 'http'
     admin_username = None
     admin_password = None
+    verify_certificate = False
 
     if not current_app.config.get('blueprints_manager'):
         cfy_config = config.instance()
@@ -199,12 +200,15 @@ def _set_blueprints_manager():
                             format(cfy_config.security_ssl))
             if cfy_config.security_ssl.get('enabled', False):
                 rest_protocol = 'https'
+            verify_certificate = cfy_config.security_ssl.get(
+                'verify_certificate', True)
             admin_username = cfy_config.security_admin_username
             admin_password = cfy_config.security_admin_password
 
         app.logger.info('***** using rest protocol: {0}'.format(rest_protocol))
+        app.logger.info('***** verify cert: {0}'.format(verify_certificate))
         blueprints_mgr = blueprints_manager.BlueprintsManager(
-            rest_protocol, admin_username, admin_password)
+            rest_protocol, admin_username, admin_password, verify_certificate)
         app.logger.info('***** setting blueprints_manager: {0}'.
                         format(blueprints_mgr))
         current_app.config['blueprints_manager'] = blueprints_mgr
