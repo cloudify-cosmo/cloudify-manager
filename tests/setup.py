@@ -43,7 +43,7 @@ setup(
         'cloudify-plugins-common==3.3a6',
         'cloudify-diamond-plugin==1.3a6',
         'cloudify-script-plugin==1.3a6',
-        'pika==0.9.13',
+        'pika==0.9.14',
         'elasticsearch==1.0.0',
         'celery==3.1.17'
     ],
