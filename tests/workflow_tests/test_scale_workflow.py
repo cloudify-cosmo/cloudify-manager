@@ -44,6 +44,23 @@ class TestScaleWorkflow(TestCase):
         expectations['compute']['removed']['uninstall'] = 1
         self.deployment_assertions(expectations)
 
+    def test_compute_scale_out_and_in_compute_from_0(self):
+        expectations = self.deploy('scale10')
+        expectations['compute']['new']['install'] = 0
+        self.deployment_assertions(expectations)
+
+        expectations = self.scale(parameters={'node_id': 'compute'})
+        expectations['compute']['new']['install'] = 1
+        self.deployment_assertions(expectations)
+
+        expectations = self.scale(parameters={'node_id': 'compute',
+                                              'delta': -1})
+        expectations['compute']['new']['install'] = 0
+        expectations['compute']['existing']['install'] = 0
+        expectations['compute']['removed']['install'] = 1
+        expectations['compute']['removed']['uninstall'] = 1
+        self.deployment_assertions(expectations)
+
     def test_compute_scale_out_2_compute(self):
         expectations = self.deploy('scale1')
         expectations['compute']['new']['install'] = 1
@@ -204,6 +221,33 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['existing']['install'] = 2
         expectations['db']['existing']['rel_install'] = 8
         expectations['db']['existing']['rel_uninstall'] = 4
+        self.deployment_assertions(expectations)
+
+    def test_db_connected_to_compute_scale_in_and_out_compute_from_0(self):
+        expectations = self.deploy('scale11')
+        expectations['compute']['new']['install'] = 0
+        expectations['db']['new']['install'] = 1
+        expectations['db']['new']['rel_install'] = 0
+        self.deployment_assertions(expectations)
+
+        expectations = self.scale(parameters={'node_id': 'compute',
+                                              'delta': 1})
+        expectations['compute']['new']['install'] = 1
+        expectations['compute']['existing']['install'] = 0
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['rel_install'] = 0
+        expectations['db']['existing']['scale_rel_install'] = 2
+        self.deployment_assertions(expectations)
+
+        expectations = self.scale(parameters={'node_id': 'compute',
+                                              'delta': -1})
+        expectations['compute']['new']['install'] = 0
+        expectations['compute']['existing']['install'] = 0
+        expectations['compute']['removed']['install'] = 1
+        expectations['compute']['removed']['uninstall'] = 1
+        expectations['db']['existing']['install'] = 1
+        expectations['db']['existing']['scale_rel_install'] = 2
+        expectations['db']['existing']['rel_uninstall'] = 2
         self.deployment_assertions(expectations)
 
     def test_db_connected_to_compute_scale_out_db(self):
@@ -411,8 +455,8 @@ class TestScaleWorkflow(TestCase):
                         removed_expectation, len(removed_instances))})
 
         invocations = self.get_plugin_data(
-            'testmockoperations', self.deployment_id)[
-            'mock_operation_invocation']
+            'testmockoperations', self.deployment_id
+        ).get('mock_operation_invocation', [])
         total_expected_count = 0
         for instance_id, operations in calculated_expected.items():
             for operation, expected_count in operations.items():
