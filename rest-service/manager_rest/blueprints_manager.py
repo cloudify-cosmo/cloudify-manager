@@ -32,7 +32,8 @@ from manager_rest.workflow_client import workflow_client
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.utils import maybe_register_teardown
 
-TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT = False
+TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT = True
+GLOBAL_PARALLEL_EXECUTIONS_LIMIT_DEFAULT = 50
 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE = -1
 
 
@@ -888,7 +889,7 @@ class BlueprintsManager(object):
         transient_workers_config['global_parallel_executions_limit'] = \
             transient_workers_config.get(
                 'global_parallel_executions_limit',
-                LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE)
+                GLOBAL_PARALLEL_EXECUTIONS_LIMIT_DEFAULT)
 
         return transient_workers_config
 

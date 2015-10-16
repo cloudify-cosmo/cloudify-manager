@@ -18,10 +18,10 @@ from testenv import ProcessModeTestCase
 from testenv.utils import get_resource
 from testenv.utils import deploy_application
 from testenv.utils import undeploy_application
-from testenv.utils import wait_for_execution_to_end
 from testenv.utils import delete_provider_context
 from testenv.utils import restore_provider_context
-from cloudify_rest_client.executions import Execution
+from manager_rest.blueprints_manager import \
+    TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT as IS_TRANSIENT_WORKERS_MODE
 
 
 class TransientDeploymentWorkersTest(ProcessModeTestCase):
@@ -31,14 +31,17 @@ class TransientDeploymentWorkersTest(ProcessModeTestCase):
         delete_provider_context()
         self.addCleanup(restore_provider_context)
 
-    def configure(self):
+    def configure(self, transient_mode_enabled=True):
         context = {'cloudify': {
             'transient_deployment_workers_mode': {
-                'enabled': True}}}
+                'enabled': transient_mode_enabled}}}
         self.client.manager.create_context(self._testMethodName, context)
 
     def test_basic_sanity(self):
-        self.configure()
+        # despite the module/class name, this test tests the opposite of the
+        # default mode, i.e. if transient workers mode is enabled by default,
+        # this will test sanity in non transient workers mode, and vice versa
+        self.configure(transient_mode_enabled=not IS_TRANSIENT_WORKERS_MODE)
         dsl_path = get_resource('dsl/basic.yaml')
         blueprint_id = self.id()
         deployment, _ = deploy_application(
@@ -58,8 +61,7 @@ class TransientDeploymentWorkersTest(ProcessModeTestCase):
         # ip runtime property is not set in this case
         self.assertEquals(outputs['ip_address'], '')
 
-        self._wait_for_stop_dep_env_execution_to_end(deployment.id)
-        undeploy_application(deployment.id, delete_deployment=True)
+        undeploy_application(deployment.id, is_delete_deployment=True)
         deployments = self.client.deployments.list()
         self.assertEqual(0, len(deployments))
 
@@ -91,7 +93,6 @@ class TransientDeploymentWorkersTest(ProcessModeTestCase):
         self.assertEqual([executions[1], executions[3]],
                          [e for e in executions if e.is_system_workflow])
 
-        self._wait_for_stop_dep_env_execution_to_end(deployment.id)
         undeploy_application(bp_and_dep_id)
 
         executions = self.client.executions.list(include_system_workflows=True)
@@ -109,22 +110,3 @@ class TransientDeploymentWorkersTest(ProcessModeTestCase):
         self.assertEqual([executions[1], executions[3], executions[4],
                           executions[6]],
                          [e for e in executions if e.is_system_workflow])
-
-    def _wait_for_stop_dep_env_execution_to_end(self, deployment_id,
-                                                timeout_seconds=240):
-        executions = self.client.executions.list(deployment_id=deployment_id,
-                                                 include_system_workflows=True)
-        running_stop_executions = [e for e in executions if e.workflow_id ==
-                                   '_stop_deployment_environment' and
-                                   e.status not in Execution.END_STATES]
-
-        if not running_stop_executions:
-            return
-
-        if len(running_stop_executions) > 1:
-            raise RuntimeError('There is more than one running '
-                               '"_stop_deployment_environment" execution: {0}'
-                               .format(running_stop_executions))
-
-        execution = running_stop_executions[0]
-        return wait_for_execution_to_end(execution, timeout_seconds)

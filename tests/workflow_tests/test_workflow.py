@@ -24,14 +24,18 @@ import cloudify.context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 from manager_rest.file_server import FileServer
+from manager_rest.blueprints_manager import \
+    TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT as IS_TRANSIENT_WORKERS_MODE
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import do_retries
 from testenv.utils import timeout
 from testenv.utils import verify_deployment_environment_creation_complete
+from testenv.utils import _wait_for_stop_dep_env_execution_to_end_if_necessary
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
+from testenv.utils import delete_deployment
 from testenv.utils import wait_for_url
 
 
@@ -169,7 +173,8 @@ class BasicWorkflowsTest(TestCase):
         result = self.client.search.run_query({})
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
-        self.assertEquals(7, len(hits))
+        expected_num_of_hits = 9 if IS_TRANSIENT_WORKERS_MODE else 7
+        self.assertEquals(expected_num_of_hits, len(hits))
 
     def test_get_blueprint(self):
         dsl_path = resource("dsl/basic.yaml")
@@ -269,7 +274,7 @@ class BasicWorkflowsTest(TestCase):
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
 
-        self.client.deployments.delete(deployment_id, False)
+        delete_deployment(deployment_id, False)
         self.client.blueprints.delete(blueprint_id)
 
         # recreating the deployment, this time actually deploying it too
@@ -278,9 +283,10 @@ class BasicWorkflowsTest(TestCase):
                                  deployment_id=deployment_id,
                                  wait_for_execution=True)
 
-        # execution is supposed to be 'terminated' anyway, but verifying it
-        # anyway (plus elasticsearch might need time to update..)
-        change_execution_status(execution_id, Execution.TERMINATED)
+        execs = self.client.executions.list(include_system_workflows=True)
+        self.assertEqual(Execution.TERMINATED,
+                         next(execution for execution in execs if
+                              execution.id == execution_id).status)
 
         # verifying deployment exists
         result = self.client.deployments.get(deployment_id)
@@ -304,8 +310,7 @@ class BasicWorkflowsTest(TestCase):
         # attempting to delete the deployment - should fail because the
         # execution is active
         try:
-            self.client.deployments.delete(deployment_id)
-
+            delete_deployment(deployment_id)
             self.fail("Deleted deployment {0} successfully even though it "
                       "should have had a running execution"
                       .format(deployment_id))
@@ -329,7 +334,7 @@ class BasicWorkflowsTest(TestCase):
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
         try:
-            self.client.deployments.delete(deployment_id)
+            delete_deployment(deployment_id)
             self.fail("Deleted deployment {0} successfully even though it "
                       "should have had live nodes and the ignore_live_nodes "
                       "flag was set to False".format(deployment_id))
@@ -338,8 +343,7 @@ class BasicWorkflowsTest(TestCase):
 
         # deleting deployment - this time there's no execution running,
         # and using the ignore_live_nodes parameter to force deletion
-        deleted_deployment_id = self.client.deployments.delete(
-            deployment_id, True).id
+        deleted_deployment_id = delete_deployment(deployment_id, True).id
         self.assertEqual(deployment_id, deleted_deployment_id)
 
         # verifying deployment does no longer exist
@@ -380,7 +384,7 @@ class BasicWorkflowsTest(TestCase):
 
         # trying to delete a nonexistent deployment
         try:
-            self.client.deployments.delete(deployment_id)
+            delete_deployment(deployment_id)
             self.fail("Deleted deployment {0} successfully even though it "
                       "wasn't expected to exist".format(deployment_id))
         except CloudifyClientError, e:
@@ -544,6 +548,8 @@ class BasicWorkflowsTest(TestCase):
         deployment_workflows_worker_name = '{0}_workflows'\
             .format(deployment.id)
 
+        # have to call this explicitly here to get the latest plugin data
+        _wait_for_stop_dep_env_execution_to_end_if_necessary(deployment.id)
         data = self.get_plugin_data(plugin_name='agent',
                                     deployment_id=deployment.id)
 
@@ -551,17 +557,22 @@ class BasicWorkflowsTest(TestCase):
         # were installed, started and restarted
         # this is because we both install a custom
         # workflow and a deployment plugin
+        workers_expected_states = \
+            ['created', 'configured', 'started', 'restarted']
+        if IS_TRANSIENT_WORKERS_MODE:
+            # workers mode changes during install workflow
+            workers_expected_states.extend(['stopped', 'started', 'stopped'])
+
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['created', 'configured', 'started', 'restarted'])
+                         workers_expected_states)
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['created', 'configured', 'started', 'restarted'])
+                         workers_expected_states)
 
         # assert plugin installer installed
         # the necessary plugins.
         agent_data = self.get_plugin_data(
             plugin_name='agent',
-            deployment_id=deployment.id
-        )
+            deployment_id=deployment.id)
 
         # cloudmock should have been installed
         # on the deployment worker
@@ -578,19 +589,22 @@ class BasicWorkflowsTest(TestCase):
                          ]['mock_workflows'],
                          ['installed'])
 
-        undeploy(deployment.id, delete_deployment=True)
+        undeploy(deployment.id, is_delete_deployment=True)
 
         data = self.get_plugin_data(plugin_name='agent',
                                     deployment_id=deployment.id)
 
         # assert both deployment and workflows plugins
         # were stopped and uninstalled
+        if IS_TRANSIENT_WORKERS_MODE:
+            # workers mode changes during uninstall workflow
+            workers_expected_states.extend(['started', 'stopped'])
+
+        workers_expected_states.extend(['stopped', 'deleted'])
         self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         ['created', 'configured', 'started', 'restarted',
-                         'stopped', 'deleted'])
+                         workers_expected_states)
         self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         ['created', 'configured', 'started', 'restarted',
-                          'stopped', 'deleted'])
+                         workers_expected_states)
 
         self.assertFalse(_is_riemann_core_up())
 

@@ -27,8 +27,10 @@ from cloudify_rest_client import exceptions
 from manager_rest import manager_exceptions
 from manager_rest import models
 from manager_rest import storage_manager
-from manager_rest.blueprints_manager import \
-    LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE as LIMITLESS_GLOBAL_EXECUTIONS
+from manager_rest.blueprints_manager import (
+    TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT as IS_TRANSIENT_WORKERS_MODE,
+    LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE as LIMITLESS_GLOBAL_EXECUTIONS,
+    GLOBAL_PARALLEL_EXECUTIONS_LIMIT_DEFAULT as GLOBAL_EXECS_LIMIT_DEFAULT)
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
@@ -411,7 +413,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         self._test_execute_more_than_one_workflow(False, 400)
 
     def test_execute_more_than_one_workflow_succeeds_with_force(self):
-        self._test_execute_more_than_one_workflow(True, 201)
+        expected_status_code = 400 if IS_TRANSIENT_WORKERS_MODE else 201
+        self._test_execute_more_than_one_workflow(True, expected_status_code)
 
     def _test_execute_more_than_one_workflow(self, is_use_force,
                                              expected_status_code):
@@ -421,7 +424,11 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.client.executions.start(deployment_id, 'install')
         self._modify_execution_status(execution.id, 'pending')
 
-        if expected_status_code >= 400:
+        if expected_status_code < 400:
+            self.client.executions.start(deployment_id,
+                                         'install',
+                                         force=is_use_force)
+        else:
             try:
                 self.client.executions.start(deployment_id,
                                              'install',
@@ -497,8 +504,8 @@ class TransientDeploymentWorkersExecutionsTestCase(BaseServerTestCase):
         # deployment workers mode configuration
 
         expected_default_config = {
-            'enabled': False,
-            'global_parallel_executions_limit': LIMITLESS_GLOBAL_EXECUTIONS
+            'enabled': True,
+            'global_parallel_executions_limit': GLOBAL_EXECS_LIMIT_DEFAULT
         }
 
         with mock.patch('manager_rest.blueprints_manager.BlueprintsManager.'
