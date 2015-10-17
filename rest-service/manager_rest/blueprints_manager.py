@@ -48,7 +48,8 @@ class BlueprintAlreadyExistsException(Exception):
 
 class BlueprintsManager(object):
 
-    def __init__(self, rest_protocol, admin_username, admin_password, verify_certificate):
+    def __init__(self, rest_protocol, admin_username, admin_password,
+                 verify_certificate):
         self.rest_protocol = rest_protocol
         self.admin_username = admin_username
         self.admin_password = admin_password
@@ -222,7 +223,8 @@ class BlueprintsManager(object):
                     workflow_id, deployment_id))
         workflow = deployment.workflows[workflow_id]
         current_app.logger.info('***** got workflow {0}'.format(workflow))
-        current_app.logger.info('***** verifying deployment env created successfully...')
+        current_app.logger.info('***** verifying deployment env created '
+                                'successfully...')
         self._verify_deployment_environment_created_successfully(deployment_id)
         current_app.logger.info('***** verified!')
 
@@ -805,8 +807,8 @@ class BlueprintsManager(object):
 
     def _verify_deployment_environment_created_successfully(self,
                                                             deployment_id):
-        current_app.logger.info('***** creating filter with deployment_id: {0}'.
-                                format(deployment_id))
+        current_app.logger.info('***** creating filter with deployment_id: {0}'
+                                .format(deployment_id))
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
         current_app.logger.info('***** deployment_id_filter: {0}'.
@@ -835,7 +837,8 @@ class BlueprintsManager(object):
              if execution.workflow_id == 'create_deployment_environment'),
             None)
         if env_creation:
-            current_app.logger.info('***** env creation: {0}'.format(env_creation))
+            current_app.logger.info('***** env creation: {0}'.
+                                    format(env_creation))
         else:
             current_app.logger.info('***** env creation is NONE!')
         if not env_creation:
@@ -843,7 +846,8 @@ class BlueprintsManager(object):
                                ' execution for deployment {0}'.format(
                                    deployment_id))
         status = env_creation.status
-        current_app.logger.info('***** env creation status: {0}'.format(status))
+        current_app.logger.info('***** env creation status: {0}'.
+                                format(status))
         if status == models.Execution.TERMINATED:
             return
         elif status == models.Execution.PENDING:

@@ -136,11 +136,13 @@ class ESStorageManager(object):
     def _put_doc_if_not_exists(self, doc_type, doc_id, value):
         try:
             current_app.logger.info('***** starting _put_doc_if_not_exists')
-            current_app.logger.info('***** STORAGE_INDEX_NAME: {0}'.format(STORAGE_INDEX_NAME))
+            current_app.logger.info('***** STORAGE_INDEX_NAME: {0}'.
+                                    format(STORAGE_INDEX_NAME))
             current_app.logger.info('***** doc_type: {0}'.format(doc_type))
             current_app.logger.info('***** doc_id: {0}'.format(doc_id))
             current_app.logger.info('***** body: {0}'.format(value))
-            current_app.logger.info('***** MUTATE_PARAMS: {0}'.format(MUTATE_PARAMS))
+            current_app.logger.info('***** MUTATE_PARAMS: {0}'.
+                                    format(MUTATE_PARAMS))
             self._connection.create(index=STORAGE_INDEX_NAME,
                                     doc_type=doc_type, id=doc_id,
                                     body=value,
