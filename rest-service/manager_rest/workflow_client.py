@@ -42,7 +42,9 @@ class WorkflowClient(object):
             'deployment_id': deployment_id,
             'execution_id': execution_id
         }
-
+        print '***** in execute_workflow, calling execute_task ' \
+              'with __cloudify_context: {0}'.\
+            format(execution_parameters['__cloudify_context'])
         client().execute_task(task_name=task_name,
                               task_queue=task_queue,
                               task_id=execution_id,
@@ -69,6 +71,8 @@ class WorkflowClient(object):
             'verify_certificate': self.verify_certificate
         }
         execution_parameters = execution_parameters or {}
+        print '***** in execute_system_workflow, setting __cloudify_context' \
+              ' to: {0}'.format(context)
         execution_parameters['__cloudify_context'] = context
 
         return client().execute_task(
