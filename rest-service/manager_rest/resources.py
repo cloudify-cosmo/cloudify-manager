@@ -713,8 +713,10 @@ class ExecutionsId(SecuredResource):
 
         current_app.logger.info('***** in resources.py ExecutionId patch,'
                                 ' calling get_execution')
-        return responses.Execution(**get_storage_manager().get_execution(
-            execution_id))
+        execution = get_storage_manager().get_execution(execution_id)
+        current_app.logger.info('***** in resources.py ExecutionId patch,'
+                                ' got execution: {0}'.format(execution))
+        return execution
 
 
 class Deployments(SecuredResource):

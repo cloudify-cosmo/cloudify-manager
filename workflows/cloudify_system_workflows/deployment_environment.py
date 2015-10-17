@@ -33,7 +33,8 @@ def create(ctx, **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    is_transient_workers = _is_transient_deployment_workers_mode()
+    is_transient_workers = _is_transient_deployment_workers_mode(
+        ctx.cloudify_username, ctx.cloudify_password)
 
     deployment_plugins = kwargs['deployment_plugins_to_install']
 
