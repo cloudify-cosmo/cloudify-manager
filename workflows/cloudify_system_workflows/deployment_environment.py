@@ -29,7 +29,7 @@ WORKFLOWS_WORKER_PAYLOAD = {
 
 @workflow
 def create(ctx, **kwargs):
-
+    print '***** in deployment_environment.create, ctx is: {0}'.format(ctx)
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
