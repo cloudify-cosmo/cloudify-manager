@@ -38,9 +38,6 @@ from manager_rest import manager_exceptions
 from manager_rest import utils
 
 
-SECURITY_BYPASS_PORT = '8101'
-
-
 # app factory
 def setup_app():
     app = Flask(__name__)
@@ -261,12 +258,6 @@ def init_secured_app(_app):
             hide_server_message=True)
 
     secure_app.acl_handler = acl_handler
-    secure_app.skip_auth_hook = _is_internal_request
-
-
-def _is_internal_request(req):
-    server_port = req.headers.get('X-Server-Port')
-    return str(server_port) == SECURITY_BYPASS_PORT
 
 
 def register_auth_token_generator(_app, auth_token_generator):
