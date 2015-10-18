@@ -41,28 +41,35 @@ def create(policy_types=None,
            policy_triggers=None,
            groups=None,
            **_):
-
+    print '***** starting operation riemann create'
     policy_types = policy_types or {}
     groups = groups or {}
     policy_triggers = policy_triggers or {}
-
+    print '***** calling _process_types_and_triggers'
     _process_types_and_triggers(groups, policy_types, policy_triggers)
     deployment_config_dir_path = _deployment_config_dir()
     if not os.path.isdir(deployment_config_dir_path):
+        print '***** creating deployment_config_dir_path'
         os.makedirs(deployment_config_dir_path)
         os.chmod(deployment_config_dir_path, 0777)
     with open(_deployment_config_template()) as f:
+        print '***** reading _deployment_config_template'
         deployment_config_template = f.read()
     with open(os.path.join(_deployment_config_dir(), 'groups'), 'w') as f:
+        print '***** writing groups json into groups file'
         f.write(json.dumps(groups))
     with open(path.join(deployment_config_dir_path,
                         'deployment.config'), 'w') as f:
+        print '***** writing into deployment.config'
         f.write(config.create(ctx,
                               policy_types,
                               policy_triggers,
                               groups,
                               deployment_config_template))
+    print '***** calling publishing configuration event'
     _publish_configuration_event('start', deployment_config_dir_path)
+    print '***** calling verifying core is up, deployment_config_dir_path:' \
+          ' {0}'.format(deployment_config_dir_path)
     _verify_core_up(deployment_config_dir_path)
 
 
