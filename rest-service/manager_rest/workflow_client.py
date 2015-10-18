@@ -19,12 +19,13 @@ from manager_rest.celery_client import celery_client as client
 
 class WorkflowClient(object):
 
-    def __init__(self, rest_protocol, admin_username, admin_password,
-                 verify_certificate):
-        self.rest_protocol = rest_protocol
+    def __init__(self, security_enabled, ssl_enabled, verify_ssl_certificate,
+                 admin_username, admin_password):
+        self.security_enabled = security_enabled
+        self.ssl_enabled = ssl_enabled
+        self.verify_ssl_certificate = verify_ssl_certificate
         self.admin_username = admin_username
         self.admin_password = admin_password
-        self.verify_certificate = verify_certificate
 
     @staticmethod
     def execute_workflow(name,
@@ -67,8 +68,9 @@ class WorkflowClient(object):
             'workflow_id': wf_id,
             'cloudify_username': self.admin_username,
             'cloudify_password': self.admin_password,
-            'rest_protocol': self.rest_protocol,
-            'verify_certificate': self.verify_certificate
+            'security_enabled': self.security_enabled,
+            'ssl_enabled': self.ssl_enabled,
+            'verify_ssl_certificate': self.verify_ssl_certificate
         }
         execution_parameters = execution_parameters or {}
         print '***** in execute_system_workflow, setting __cloudify_context' \
@@ -82,7 +84,10 @@ class WorkflowClient(object):
             kwargs=execution_parameters)
 
 
-def workflow_client(rest_protocol, admin_username, admin_password,
-                    verify_certificate):
-    return WorkflowClient(rest_protocol, admin_username, admin_password,
-                          verify_certificate)
+def workflow_client(security_enabled, ssl_enabled, verify_ssl_certificate,
+                    admin_username, admin_password):
+    return WorkflowClient(security_enabled,
+                          ssl_enabled,
+                          verify_ssl_certificate,
+                          admin_username,
+                          admin_password)

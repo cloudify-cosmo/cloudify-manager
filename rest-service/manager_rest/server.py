@@ -188,27 +188,34 @@ def _set_blueprints_manager():
     """
     create and set a blueprints manager for the current app context
     """
-    rest_protocol = 'http'
-    admin_username = None
-    admin_password = None
-    verify_certificate = False
-
     if not current_app.config.get('blueprints_manager'):
+        security_enabled = False
+        ssl_enabled = False
+        verify_ssl_certificate = False
+        cloudify_username = None
+        cloudify_password = None
+
         cfy_config = config.instance()
         if cfy_config.security_enabled:
-            app.logger.info('cfy_config.security_ssl: {0}'.
-                            format(cfy_config.security_ssl))
+            security_enabled = True
             if cfy_config.security_ssl.get('enabled', False):
-                rest_protocol = 'https'
-            verify_certificate = cfy_config.security_ssl.get(
-                'verify_certificate', True)
-            admin_username = cfy_config.security_admin_username
-            admin_password = cfy_config.security_admin_password
+                ssl_enabled = True
+                verify_ssl_certificate = cfy_config.security_ssl.get(
+                    'verify_certificate', True)
+            cloudify_username = cfy_config.security_admin_username
+            cloudify_password = cfy_config.security_admin_password
 
-        app.logger.info('***** using rest protocol: {0}'.format(rest_protocol))
-        app.logger.info('***** verify cert: {0}'.format(verify_certificate))
+        app.logger.info('***** in _set_blueprints_manager, '
+                        'security_enabled: {0}'.format(security_enabled))
+        app.logger.info('***** in _set_blueprints_manager, '
+                        'ssl_enabled: {0}'.format(ssl_enabled))
+        app.logger.info('***** verify cert: {0}'.
+                        format(verify_ssl_certificate))
+        app.logger.info('***** cloudify username: {0}'.
+                        format(cloudify_username))
         blueprints_mgr = blueprints_manager.BlueprintsManager(
-            rest_protocol, admin_username, admin_password, verify_certificate)
+            security_enabled, ssl_enabled, verify_ssl_certificate,
+            cloudify_username, cloudify_password)
         app.logger.info('***** setting blueprints_manager: {0}'.
                         format(blueprints_mgr))
         current_app.config['blueprints_manager'] = blueprints_mgr
