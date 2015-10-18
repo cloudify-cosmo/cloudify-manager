@@ -54,7 +54,7 @@ class BlueprintsManager(object):
         self.ssl_enabled = ssl_enabled
         self.admin_username = admin_username
         self.admin_password = admin_password
-        self.verify_certificate = verify_ssl_certificate
+        self.verify_ssl_certificate = verify_ssl_certificate
         self.workflow_client = workflow_client(self.security_enabled,
                                                self.ssl_enabled,
                                                self.verify_ssl_certificate,
