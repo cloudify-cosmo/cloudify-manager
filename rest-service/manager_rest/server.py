@@ -41,7 +41,10 @@ SECURITY_BYPASS_PORT = '8101'
 
 
 # app factory
-def setup_app():
+def setup_app(warnings=None):
+    if warnings is None:
+        warnings = []
+
     app = Flask(__name__)
     cfy_config = config.instance()
 
@@ -54,6 +57,10 @@ def setup_app():
                   log_file_size_MB=cfy_config.rest_service_log_file_size_MB,
                   log_files_backup_count=cfy_config.
                   rest_service_log_files_backup_count)
+
+    # log all warnings passed to function
+    for w in warnings:
+        app.logger.warning(w)
 
     # secure the app according to manager configuration
     if cfy_config.security_enabled:
@@ -244,6 +251,7 @@ def load_configuration():
     obj_conf = config.instance()
 
     def load_config(env_var_name, namespace=''):
+        warnings = []
         if env_var_name in os.environ:
             with open(os.environ[env_var_name]) as f:
                 yaml_conf = yaml.safe_load(f.read())
@@ -252,12 +260,19 @@ def load_configuration():
                     else key
                 if hasattr(obj_conf, config_key):
                     setattr(obj_conf, config_key, value)
+                else:
+                    warnings.append(
+                        "Ignoring unknown key '{0}' in configuration"
+                        "file '{1}'"
+                        .format(key, os.environ[env_var_name]))
+        return warnings
 
-    load_config('MANAGER_REST_CONFIG_PATH')
-    load_config('MANAGER_REST_SECURITY_CONFIG_PATH', 'security')
+    warnings = load_config('MANAGER_REST_CONFIG_PATH')
+    warnings.extend(load_config('MANAGER_REST_SECURITY_CONFIG_PATH',
+                                'security'))
+    return warnings
 
-load_configuration()
-app = setup_app()
+app = setup_app(load_configuration())
 
 
 @app.errorhandler(500)
