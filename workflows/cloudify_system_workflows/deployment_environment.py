@@ -210,4 +210,4 @@ def _is_transient_deployment_workers_mode():
     client = get_rest_client()
     bootstrap_context = client.manager.get_context()['context']['cloudify']
     return bootstrap_context.get(
-        'transient_deployment_workers_mode', {}).get('enabled', False)
+        'transient_deployment_workers_mode', {}).get('enabled', True)

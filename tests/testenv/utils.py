@@ -20,16 +20,19 @@ import pika
 import requests
 import time
 import urllib
-
+from os import path
 from contextlib import contextmanager
 from functools import wraps
-from celery import Celery
 from multiprocessing import Process
+
+from celery import Celery
+
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
-from os import path
 from testenv.processes.manager_rest import MANAGER_REST_PORT
+from manager_rest.blueprints_manager import \
+    TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT as IS_TRANSIENT_WORKERS_MODE
 
 
 PROVIDER_CONTEXT = {
@@ -147,6 +150,7 @@ def execute_workflow(workflow_name, deployment_id,
     if wait_for_execution:
         wait_for_execution_to_end(execution,
                                   timeout_seconds=timeout_seconds)
+        _wait_for_stop_dep_env_execution_to_end_if_necessary(deployment_id)
 
     return execution
 
@@ -171,11 +175,13 @@ def verify_deployment_environment_creation_complete(deployment_id):
 
 def undeploy_application(deployment_id,
                          timeout_seconds=240,
-                         delete_deployment=False):
+                         is_delete_deployment=False):
     """
     A blocking method which undeploys an application from the provided dsl
     path.
     """
+    _wait_for_stop_dep_env_execution_to_end_if_necessary(deployment_id)
+
     client = create_rest_client()
     execution = client.executions.start(deployment_id,
                                         'uninstall')
@@ -184,9 +190,17 @@ def undeploy_application(deployment_id,
     if execution.error and execution.error != 'None':
         raise RuntimeError(
             'Workflow execution failed: {0}'.format(execution.error))
-    if delete_deployment:
+    if is_delete_deployment:
         time.sleep(5)  # elasticsearch...
-        client.deployments.delete(deployment_id)
+        delete_deployment(deployment_id)
+
+
+def delete_deployment(deployment_id, ignore_live_nodes=False):
+    _wait_for_stop_dep_env_execution_to_end_if_necessary(deployment_id)
+
+    client = create_rest_client()
+    return client.deployments.delete(deployment_id,
+                                     ignore_live_nodes=ignore_live_nodes)
 
 
 def is_node_started(node_id):
@@ -378,6 +392,30 @@ def update_storage(ctx):
     with open(storage_file_path, 'w') as f:
         json.dump(data, f, indent=2)
         f.write(os.linesep)
+
+
+def _wait_for_stop_dep_env_execution_to_end_if_necessary(
+        deployment_id, timeout_seconds=30):
+    if not IS_TRANSIENT_WORKERS_MODE:
+        return
+
+    client = create_rest_client()
+    executions = client.executions.list(deployment_id=deployment_id,
+                                        include_system_workflows=True)
+    running_stop_executions = [e for e in executions if e.workflow_id ==
+                               '_stop_deployment_environment' and
+                               e.status not in Execution.END_STATES]
+
+    if not running_stop_executions:
+        return
+
+    if len(running_stop_executions) > 1:
+        raise RuntimeError('There is more than one running '
+                           '"_stop_deployment_environment" execution: {0}'
+                           .format(running_stop_executions))
+
+    execution = running_stop_executions[0]
+    return wait_for_execution_to_end(execution, timeout_seconds)
 
 
 class TimeoutException(Exception):

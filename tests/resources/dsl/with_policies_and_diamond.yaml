@@ -48,7 +48,6 @@ groups:
                         type: cloudify.policies.triggers.execute_workflow
                         parameters:
                             workflow: some_workflow
-                            force: true
                             workflow_parameters:
                                 key: metric
                                 value: { get_property: [SELF, metric] }
