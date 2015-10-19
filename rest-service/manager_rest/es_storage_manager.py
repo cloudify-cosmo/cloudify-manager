@@ -528,8 +528,8 @@ class ESStorageManager(object):
     def put_provider_context(self, provider_context):
         current_app.logger.info('***** starting put_provider_context')
         doc_data = provider_context.to_dict()
-        current_app.logger.error('***** in put_provider_context, putting: {0}'.
-                                 format(doc_data))
+        current_app.logger.info('***** in put_provider_context, putting: {0}'.
+                                format(doc_data))
         self._put_doc_if_not_exists(PROVIDER_CONTEXT_TYPE,
                                     PROVIDER_CONTEXT_ID,
                                     doc_data)

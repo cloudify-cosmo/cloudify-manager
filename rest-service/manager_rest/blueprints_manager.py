@@ -93,7 +93,7 @@ class BlueprintsManager(object):
         return execution
 
     def update_execution_status(self, execution_id, status, error):
-
+        current_app.logger.info('***** starting update_execution_status')
         if self._get_transient_deployment_workers_mode_config()['enabled'] and\
                 status in models.Execution.END_STATES:
             execution = self.get_execution(execution_id)
@@ -981,7 +981,8 @@ class BlueprintsManager(object):
             transient_workers_config.get(
                 'global_parallel_executions_limit',
                 LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE)
-
+        current_app.logger.info('***** transient_workers_config: {0}'.
+                                format(transient_workers_config))
         return transient_workers_config
 
     @staticmethod
