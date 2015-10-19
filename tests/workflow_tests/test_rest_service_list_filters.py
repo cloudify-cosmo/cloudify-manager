@@ -98,6 +98,23 @@ class TestRestServiceListFilters(TestCase):
             self.assertEquals(node_instance.deployment_id,
                               self.first_deployment_id)
 
+    def test_node_instances_list_with_filters_multiple_values(self):
+        self.multiple_value_filters = \
+            {'deployment_id': [self.first_deployment_id,
+                               self.sec_deployment_id],
+             'node_id': ['webserver',
+                         'compute']}
+        res = \
+            self.client.node_instances.list(
+                **self.multiple_value_filters)
+        self.assertEquals(len(res), 4, 'expecting 4 node instance results'
+                                       ' matching {0}'
+                          .format(self.multiple_value_filters))
+        for node_instance in res:
+            for key in self.multiple_value_filters:
+                self.assertIn(node_instance[key],
+                              self.multiple_value_filters[key])
+
     def test_node_instances_list_no_filters(self):
         response = self.client.node_instances.list()
         self.assertEquals(len(response), 6, 'expecting 6 node instance results'

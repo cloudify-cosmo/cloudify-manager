@@ -51,8 +51,15 @@ def verify_and_create_filters(fields):
     """
     def verify_and_create_filters_dec(f):
         def verify_and_create(*args, **kw):
-            filters = {k: v for k, v in request.args.iteritems()
-                       if not k.startswith('_')}
+            filters = {}
+            args_without_meta_keys = \
+                [(k, v) for (k, v) in request.args.iteritems(multi=True)
+                 if not k.startswith('_')]
+            for k, v in args_without_meta_keys:
+                if k in filters:
+                    filters[k].append(v)
+                else:
+                    filters[k] = [v]
             unknowns = [k for k in filters.iterkeys() if k not in fields]
             if unknowns:
                 raise manager_exceptions.BadParametersError(
