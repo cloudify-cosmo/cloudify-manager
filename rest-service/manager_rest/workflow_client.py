@@ -20,13 +20,13 @@ from manager_rest.celery_client import celery_client as client
 class WorkflowClient(object):
 
     def __init__(self, security_enabled, ssl_enabled, verify_ssl_certificate,
-                 admin_username, admin_password):
+                 cloudify_username, cloudify_password):
         self.security_context = {
             'security_enabled': security_enabled,
             'ssl_enabled': ssl_enabled,
             'verify_ssl_certificate': verify_ssl_certificate,
-            'admin_username': admin_username,
-            'admin_password': admin_password
+            'cloudify_username': cloudify_username,
+            'cloudify_password': cloudify_password
         }
 
     def execute_workflow(self,
@@ -82,9 +82,9 @@ class WorkflowClient(object):
 
 
 def workflow_client(security_enabled, ssl_enabled, verify_ssl_certificate,
-                    admin_username, admin_password):
+                    cloudify_username, cloudify_password):
     return WorkflowClient(security_enabled,
                           ssl_enabled,
                           verify_ssl_certificate,
-                          admin_username,
-                          admin_password)
+                          cloudify_username,
+                          cloudify_password)

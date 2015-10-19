@@ -49,17 +49,17 @@ class BlueprintAlreadyExistsException(Exception):
 class BlueprintsManager(object):
 
     def __init__(self, security_enabled, ssl_enabled, verify_ssl_certificate,
-                 admin_username, admin_password):
+                 cloudify_username, cloudify_password):
         self.security_enabled = security_enabled
         self.ssl_enabled = ssl_enabled
-        self.admin_username = admin_username
-        self.admin_password = admin_password
+        self.cloudify_username = cloudify_username
+        self.cloudify_password = cloudify_password
         self.verify_ssl_certificate = verify_ssl_certificate
         self.workflow_client = workflow_client(self.security_enabled,
                                                self.ssl_enabled,
                                                self.verify_ssl_certificate,
-                                               self.admin_username,
-                                               self.admin_password)
+                                               self.cloudify_username,
+                                               self.cloudify_password)
 
     @property
     def sm(self):
