@@ -214,9 +214,9 @@ class FileStorageManager(object):
         result = []
         if filters:
             for item in items_lst:
-                for key, val in filters.iteritems():
+                for key, val_lst in filters.iteritems():
                     # filter keys have already been verified
-                    if getattr(item, key) != val:
+                    if getattr(item, key) not in val_lst:
                         break
                 else:
                     result.append(item)

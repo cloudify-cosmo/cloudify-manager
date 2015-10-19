@@ -193,6 +193,33 @@ class NodesTest(base_test.BaseServerTestCase):
         finally:
             sm.instance().update_node_instance = prev_update_node_func
 
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_list_node_instances_multiple_value_filter(self):
+        self.put_node_instance(node_id='1', instance_id='11',
+                               deployment_id='111')
+        self.put_node_instance(node_id='1', instance_id='12',
+                               deployment_id='111')
+        self.put_node_instance(node_id='2', instance_id='21',
+                               deployment_id='111')
+        self.put_node_instance(node_id='2', instance_id='22',
+                               deployment_id='111')
+        self.put_node_instance(node_id='3', instance_id='31',
+                               deployment_id='222')
+        self.put_node_instance(node_id='3', instance_id='32',
+                               deployment_id='222')
+        self.put_node_instance(node_id='4', instance_id='41',
+                               deployment_id='222')
+        self.put_node_instance(node_id='4', instance_id='42',
+                               deployment_id='222')
+
+        all_instances = self.client.node_instances.list()
+        dep1_node_instances = \
+            self.client.node_instances.list('111', ['1', '2', '3', '4'])
+
+        self.assertEqual(8, len(all_instances))
+        self.assertEquals(4, len(dep1_node_instances))
+
     def test_list_node_instances(self):
         self.put_node_instance(node_id='1', instance_id='11',
                                deployment_id='111')

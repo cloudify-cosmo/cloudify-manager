@@ -153,7 +153,8 @@ class ESStorageManager(object):
         query = None
         if filters:
             for key, val in filters.iteritems():
-                terms_lst.append({'term': {key: val}})
+                filter_type = 'terms' if isinstance(val, list) else 'term'
+                terms_lst.append({filter_type: {key: val}})
             query = {
                 'query': {
                     'filtered': {

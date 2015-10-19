@@ -28,6 +28,11 @@ class TestRestServiceListFilters(TestCase):
             self.sec_blueprint_id = self._put_two_deployments()
         self.deployment_id_filter = {'deployment_id': self.first_deployment_id}
         self.blueprint_id_filter = {'blueprint_id': self.first_blueprint_id}
+        self.multiple_value_filters = \
+            {'deployment_id': [self.first_deployment_id,
+                               self.sec_deployment_id],
+             'node_id': ['webserver',
+                         'compute']}
 
     def _put_two_deployments(self):
         dsl_path = resource("dsl/deployment_modification_operations.yaml")
@@ -94,6 +99,18 @@ class TestRestServiceListFilters(TestCase):
         for node_instance in res:
             self.assertEquals(node_instance.deployment_id,
                               self.first_deployment_id)
+
+    def test_node_instances_list_with_filters_multiple_values(self):
+        res = \
+            self.client.node_instances.list(
+                **self.multiple_value_filters)
+        self.assertEquals(len(res), 4, 'expecting 4 node instance results'
+                                       ' matching {0}'
+                          .format(self.multiple_value_filters))
+        for node_instance in res:
+            for key in self.multiple_value_filters:
+                self.assertIn(node_instance[key],
+                              self.multiple_value_filters[key])
 
     def test_node_instances_list_no_filters(self):
         response = self.client.node_instances.list()

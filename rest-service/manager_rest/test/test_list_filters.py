@@ -44,6 +44,13 @@ class ResourceListFiltersTestCase(BaseListTest):
                                       'filters {0}, got {1}'
                                       .format(filter_fields, response[0]))
 
+    def test_deployments_list_with_filters_multiple_values(self):
+        filter_fields = \
+            {'id': [self.first_deployment_id, self.sec_deployment_id]}
+        self._test_multiple_values_filter('/deployments',
+                                          filter_fields,
+                                          2)
+
     def test_deployments_list_non_existent_filters(self):
         filter_fields = {'non_existing_field': 'just_some_value'}
         try:
@@ -74,6 +81,11 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.assertEquals(node['deployment_id'], self.first_deployment_id)
             self.assertEquals(node['blueprint_id'], self.first_blueprint_id)
 
+    def test_nodes_list_with_filters_multiple_values(self):
+        filter_params = {'deployment_id':
+                         [self.first_deployment_id, self.sec_deployment_id]}
+        self._test_multiple_values_filter('/nodes', filter_params, 4)
+
     def test_nodes_list_no_filters(self):
         response = self.get('/nodes', query_params=None).json
         self.assertEqual(4, len(response), 'expecting 4 node results, '
@@ -101,6 +113,13 @@ class ResourceListFiltersTestCase(BaseListTest):
         execution = response[0]
         self.assertEqual(execution['deployment_id'], self.first_deployment_id)
         self.assertEquals(execution['status'], 'terminated')
+
+    def test_executions_list_with_filters_multiple_values(self):
+        filter_params = {'deployment_id':
+                         [self.first_deployment_id, self.sec_deployment_id],
+                         'workflow_id': 'create_deployment_environment',
+                         '_include_system_workflows': True}
+        self._test_multiple_values_filter('/executions', filter_params, 2)
 
     def test_executions_list_no_filters(self):
         response = self.get('/executions', query_params=None).json
@@ -150,6 +169,11 @@ class ResourceListFiltersTestCase(BaseListTest):
                              self.first_deployment_id)
             self.assertEquals(node_instance['state'], 'uninitialized')
 
+    def test_node_instances_list_with_filters_multiple_values(self):
+        filter_fields = {'deployment_id': [self.first_deployment_id,
+                                           self.sec_deployment_id]}
+        self._test_multiple_values_filter('/node-instances', filter_fields, 4)
+
     def test_node_instances_list_non_existent_filters(self):
         filter_fields = {'non_existing_field': 'just_some_value'}
         try:
@@ -197,6 +221,14 @@ class ResourceListFiltersTestCase(BaseListTest):
                                       .format(filter_params, modification))
         self.assertEquals(modification['status'], 'finished')
 
+    def test_deployment_modifications_list_with_filters_multiple_values(self):
+        self._put_two_deployment_modifications()
+        filter_fields = {'deployment_id': [self.first_deployment_id,
+                                           self.sec_deployment_id]}
+        self._test_multiple_values_filter('/deployment-modifications',
+                                          filter_fields,
+                                          2)
+
     def test_deployment_modifications_list_non_existent_filters(self):
         self._put_two_deployment_modifications()
         filter_fields = {'non_existing_field': 'just_some_value'}
@@ -220,6 +252,14 @@ class ResourceListFiltersTestCase(BaseListTest):
         self.assertEquals(self.first_blueprint_id, blueprint['id'])
         self.assertIsNotNone(response[0]['plan'])
 
+    def test_blueprints_list_with_filters_multiple_values(self):
+
+        filter_fields = \
+            {'id': [self.first_blueprint_id, self.sec_blueprint_id]}
+        self._test_multiple_values_filter('/blueprints',
+                                          filter_fields,
+                                          2)
+
     def test_blueprints_list_no_filters(self):
         response = self.get('/blueprints', query_params=None).json
         self.assertEqual(2, len(response), 'expecting 2 blueprint result,'
@@ -236,3 +276,29 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
             self.assert_bad_parameter_error(models.BlueprintState.fields, e)
+
+    def _test_multiple_values_filter(self, url, filter_fields, expected_count):
+        type_name = url.replace('-', ' ').replace('/', '')
+        response = self.get(url,
+                            query_params=filter_fields).json
+        self.assertEqual(len(response), expected_count,
+                         'expecting {0} {1}'
+                         ' results, '
+                         'got {2}'.format(expected_count,
+                                          type_name,
+                                          len(response)))
+
+        for field in filter_fields:
+            if field.startswith('_'):
+                continue
+            requested_values = filter_fields[field]
+            if not isinstance(requested_values, list):
+                requested_values = [requested_values]
+            retrieved_values = \
+                [element[field] for element in response]
+            for value in requested_values:
+                self.assertIn(value,
+                              retrieved_values,
+                              'expecting filtered results containing '
+                              '{0}={1}, got {2}'
+                              .format(field, value, retrieved_values))
