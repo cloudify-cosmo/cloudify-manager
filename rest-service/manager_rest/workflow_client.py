@@ -21,14 +21,16 @@ class WorkflowClient(object):
 
     def __init__(self, security_enabled, ssl_enabled, verify_ssl_certificate,
                  admin_username, admin_password):
-        self.security_enabled = security_enabled
-        self.ssl_enabled = ssl_enabled
-        self.verify_ssl_certificate = verify_ssl_certificate
-        self.admin_username = admin_username
-        self.admin_password = admin_password
+        self.security_context = {
+            'security_enabled': security_enabled,
+            'ssl_enabled': ssl_enabled,
+            'verify_ssl_certificate': verify_ssl_certificate,
+            'admin_username': admin_username,
+            'admin_password': admin_password
+        }
 
-    @staticmethod
-    def execute_workflow(name,
+    def execute_workflow(self,
+                         name,
                          workflow,
                          blueprint_id,
                          deployment_id,
@@ -36,12 +38,12 @@ class WorkflowClient(object):
                          execution_parameters=None):
         task_name = workflow['operation']
         task_queue = '{}_workflows'.format(deployment_id)
-
         execution_parameters['__cloudify_context'] = {
             'workflow_id': name,
             'blueprint_id': blueprint_id,
             'deployment_id': deployment_id,
-            'execution_id': execution_id
+            'execution_id': execution_id,
+            'security_ctx': self.security_context
         }
         print '***** in execute_workflow, calling execute_task ' \
               'with __cloudify_context: {0}'.\
@@ -57,7 +59,6 @@ class WorkflowClient(object):
         # the task id is equivalent to the execution id
 
         task_queue = 'cloudify.management'
-
         context = {
             'task_id': task_id,
             'task_name': task_mapping,
@@ -66,11 +67,7 @@ class WorkflowClient(object):
             'deployment_id': deployment.id,
             'execution_id': task_id,
             'workflow_id': wf_id,
-            'cloudify_username': self.admin_username,
-            'cloudify_password': self.admin_password,
-            'security_enabled': self.security_enabled,
-            'ssl_enabled': self.ssl_enabled,
-            'verify_ssl_certificate': self.verify_ssl_certificate
+            'security_ctx': self.security_context
         }
         execution_parameters = execution_parameters or {}
         print '***** in execute_system_workflow, setting __cloudify_context' \
