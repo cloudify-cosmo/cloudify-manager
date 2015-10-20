@@ -39,7 +39,7 @@ function upload_to_s3() {
 export VERSION="3.3.0"
 export PRERELEASE="m7"
 export BUILD="277"
-CORE_TAG_NAME="3.3.0m7"
+CORE_TAG_NAME="3.3m7"
 PLUGINS_TAG_NAME="1.3m7"
 
 AWS_ACCESS_KEY_ID=$1
