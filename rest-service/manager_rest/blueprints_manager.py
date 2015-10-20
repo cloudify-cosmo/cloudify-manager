@@ -75,6 +75,9 @@ class BlueprintsManager(object):
     def get_execution(self, execution_id, include=None):
         return self.sm.get_execution(execution_id, include=include)
 
+    def get_plugin(self, plugin_id, include=None):
+        return self.sm.get_plugin(plugin_id, include=include)
+
     def update_execution_status(self, execution_id, status, error):
 
         if self._get_transient_deployment_workers_mode_config()['enabled'] and\

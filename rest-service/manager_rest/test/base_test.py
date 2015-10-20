@@ -24,6 +24,7 @@ import types
 
 from nose.tools import nottest
 from nose.plugins.attrib import attr
+from wagon.wagon import Wagon
 
 from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
@@ -173,6 +174,9 @@ class BaseServerTestCase(unittest.TestCase):
         client.manager.api = mock_http_client
         client.evaluate.api = mock_http_client
         client.tokens.api = mock_http_client
+        # only exists in v2 and above
+        if CLIENT_API_VERSION != 'v1':
+            client.plugins.api = mock_http_client
 
         return client
 
@@ -384,6 +388,18 @@ class BaseServerTestCase(unittest.TestCase):
                                                     deployment_id,
                                                     inputs=inputs)
         return blueprint_id, deployment.id, blueprint_response, deployment
+
+    def upload_plugin(self, package_name, package_version):
+        temp_file_path = self.create_wheel(package_name, package_version)
+        response = self.post_file('/plugins', temp_file_path)
+        os.remove(temp_file_path)
+        return response
+
+    def create_wheel(self, package_name, package_version):
+        module_src = '{0}=={1}'.format(package_name, package_version)
+        wagon_client = Wagon(module_src)
+        return wagon_client.create(
+            archive_destination_dir=tempfile.gettempdir(), force=True)
 
     def wait_for_url(self, url, timeout=5):
         end = time.time() + timeout

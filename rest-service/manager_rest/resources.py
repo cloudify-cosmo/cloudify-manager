@@ -186,6 +186,19 @@ def verify_and_convert_bool(attribute_name, str_bool):
         '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
 
 
+def make_streaming_response(res_id, res_path, content_length, archive_type):
+    response = make_response()
+    response.headers['Content-Description'] = 'File Transfer'
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Content-Type'] = 'application/octet-stream'
+    response.headers['Content-Disposition'] = \
+        'attachment; filename={0}.{1}'.format(res_id, archive_type)
+    response.headers['Content-Length'] = content_length
+    response.headers['X-Accel-Redirect'] = res_path
+    response.headers['X-Accel-Buffering'] = 'yes'
+    return response
+
+
 class BlueprintsUpload(object):
     def do_request(self, blueprint_id):
         file_server_root = config.instance().file_server_root

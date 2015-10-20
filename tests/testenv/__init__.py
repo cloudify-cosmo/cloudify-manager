@@ -27,9 +27,11 @@ import pika
 import yaml
 from os.path import dirname
 from os import path
+import tempfile
 
 from cloudify.utils import setup_logger
 from cloudify.logs import create_event_message_prefix
+from wagon.wagon import Wagon
 
 import mock_plugins
 from testenv.constants import MANAGER_REST_PORT
@@ -162,6 +164,19 @@ class TestCase(unittest.TestCase):
         utils.publish_event(queue,
                             routing_key,
                             event)
+
+    def upload_plugin(self, package_name, package_version):
+        temp_file_path = self._create_wheel(package_name, package_version)
+        response = self.client.plugins.upload(temp_file_path)
+        os.remove(temp_file_path)
+        return response
+
+    def _create_wheel(self, package_name, package_version):
+        module_src = '{0}=={1}'.format(package_name, package_version)
+        wagon_client = Wagon(module_src)
+        return wagon_client.create(
+            archive_destination_dir=tempfile.gettempdir(),
+            force=True)
 
 
 class ProcessModeTestCase(TestCase):

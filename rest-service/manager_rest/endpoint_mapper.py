@@ -46,7 +46,10 @@ def setup_resources(api):
         'ProviderContext': 'provider/context',
         'Version': 'version',
         'EvaluateFunctions': 'evaluate/functions',
-        'Tokens': 'tokens'
+        'Tokens': 'tokens',
+        'Plugins': 'plugins',
+        'PluginsId': 'plugins/<string:plugin_id>',
+        'PluginsArchive': 'plugins/<string:plugin_id>/archive'
     }
 
     for resource, endpoint_suffix in resources_endpoints.iteritems():

@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import os
 
 
 class Config(object):
@@ -174,6 +175,12 @@ class Config(object):
     @security_audit_log_level.setter
     def security_audit_log_level(self, value):
         self._security_audit_log_level = value
+
+    @property
+    def file_server_uploaded_plugins_folder(self):
+        if not self._file_server_root:
+            return None
+        return os.path.join(self._file_server_root, 'plugins')
 
     @property
     def security_audit_log_file(self):
