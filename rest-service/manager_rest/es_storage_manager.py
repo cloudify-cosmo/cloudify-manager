@@ -59,10 +59,16 @@ class ESStorageManager(object):
 
     def _list_docs(self, doc_type, model_class, query=None, fields=None):
         include = list(fields) if fields else True
+        current_app.logger.info(
+            '***** in _list_docs, running:'
+            'self._connection.search(index=STORAGE_INDEX_NAME, doc_type={0}, '
+            'size=DEFAULT_SEARCH_SIZE, body={1}, version="FORCE", _source={2}'
+            .format(doc_type, query, include))
         search_result = self._connection.search(index=STORAGE_INDEX_NAME,
                                                 doc_type=doc_type,
                                                 size=DEFAULT_SEARCH_SIZE,
                                                 body=query,
+                                                version="FORCE",
                                                 _source=include)
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
 
@@ -79,18 +85,30 @@ class ESStorageManager(object):
                 required_permission='GET',
                 filters={'_id': doc_id})
             if fields:
+                current_app.logger.info(
+                    "in get_doc, running: "
+                    "self._connection.search(index=STORAGE_INDEX_NAME, "
+                    "doc_type={0}, body={1}, version=\"FORCE\", "
+                    "_source={2})".format(doc_type, query, [f for f in fields]))
                 results = self._connection.search(index=STORAGE_INDEX_NAME,
                                                   doc_type=doc_type,
                                                   body=query,
+                                                  version="FORCE",
                                                   _source=[f for f in fields])
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
                 #                             id=doc_id,
                 #                             _source=[f for f in fields])
             else:
+                current_app.logger.info(
+                    "in get_doc, running: "
+                    "self._connection.search(index=STORAGE_INDEX_NAME, "
+                    "doc_type={0}, body={1}, version=\"FORCE\"".format(
+                        doc_type, query))
                 results = self._connection.search(index=STORAGE_INDEX_NAME,
                                                   doc_type=doc_type,
-                                                  body=query)
+                                                  body=query,
+                                                  version="FORCE")
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
                 #                             id=doc_id)
@@ -236,9 +254,15 @@ class ESStorageManager(object):
     # todo(adaml): who uses this?
     def node_instances_list(self, include=None):
         current_app.logger.info('***** started node_instances_list')
+        current_app.logger.info(
+            "in node_instances_list, running: "
+            "self._connection.search(index=STORAGE_INDEX_NAME, "
+            "doc_type=NODE_INSTANCE_TYPE, size=DEFAULT_SEARCH_SIZE, "
+            "version=\"FORCE\", _source={0})".format(include or True))
         search_result = self._connection.search(index=STORAGE_INDEX_NAME,
                                                 doc_type=NODE_INSTANCE_TYPE,
                                                 size=DEFAULT_SEARCH_SIZE,
+                                                version="FORCE",
                                                 _source=include or True)
         docs_with_versions = \
             map(lambda hit: (hit['_source'], hit['_version']),
@@ -391,6 +415,8 @@ class ESStorageManager(object):
         current_app.logger.info('***** starting put_node_instance')
         node_instance_id = node_instance.id
         doc_data = node_instance.to_dict()
+        current_app.logger.info('***** putting node instance with values:'
+                                ' {0}'.format(doc_data))
         del(doc_data['version'])
         self._put_doc_if_not_exists(NODE_INSTANCE_TYPE,
                                     str(node_instance_id),
@@ -516,6 +542,7 @@ class ESStorageManager(object):
             current.relationships = new_relationships
 
         updated = current.to_dict()
+        current_app.logger.info('***** updating node instance values to {0}'.format(updated))
         del updated['version']
 
         self._connection.index(index=STORAGE_INDEX_NAME,
