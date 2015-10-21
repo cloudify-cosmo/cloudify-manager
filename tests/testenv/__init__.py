@@ -222,6 +222,8 @@ class TestEnvironment(object):
             self.test_working_dir, 'rest-security-audit.log')
         self.securest_log_file_size_MB = 100
         self.securest_log_files_backup_count = 20
+        self.amqp_username = 'guest'
+        self.amqp_password = 'guest'
         self.events_and_logs_dir = \
             path.join(self.test_working_dir, 'tests-events-and-logs')
         os.mkdir(self.events_and_logs_dir)
@@ -321,7 +323,9 @@ class TestEnvironment(object):
             self.securest_log_file,
             self.securest_log_file_size_MB,
             self.securest_log_files_backup_count,
-            self.test_working_dir)
+            self.test_working_dir,
+            self.amqp_username,
+            self.amqp_password)
         self.manager_rest_process.start()
 
     def start_elasticsearch(self):

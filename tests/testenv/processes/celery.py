@@ -13,12 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import json
 import os
+from os import path
 import shutil
 import subprocess
 import sys
 import time
-from os import path
 
 import pika
 
@@ -84,11 +85,32 @@ class CeleryWorkerProcess(object):
         if os.path.exists(self.envdir):
             shutil.rmtree(self.envdir)
 
+    def create_config(
+        self,
+        username='guest',
+        password='guest',
+        hostname='localhost',
+        ssl_enabled=False,
+        cert_path='',
+    ):
+        config = {
+            'broker_username': username,
+            'broker_password': password,
+            'broker_hostname': hostname,
+            'broker_ssl_enabled': ssl_enabled,
+            'broker_cert_path': cert_path,
+        }
+        conf_path = os.path.join(self.workdir, 'broker_config.json')
+        with open(conf_path, 'w') as conf_handle:
+            json.dump(config, conf_handle)
+
     def start(self):
 
         _delete_amqp_queues(self.name, self.queues.split(','))
 
         self.create_dirs()
+
+        self.create_config()
 
         # includes should always have
         # the initial includes configuration.

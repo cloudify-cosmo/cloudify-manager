@@ -46,7 +46,9 @@ class ManagerRestProcess(object):
                  securest_log_file,
                  securest_log_file_size_MB,
                  securest_log_files_backup_count,
-                 tempdir):
+                 tempdir,
+                 amqp_username,
+                 amqp_password):
         self.process = None
         self.port = port or MANAGER_REST_PORT
         self.file_server_dir = file_server_dir
@@ -66,6 +68,8 @@ class ManagerRestProcess(object):
         self.securest_log_files_backup_count = securest_log_files_backup_count
         self.client = CloudifyClient('localhost', port=port)
         self.tempdir = tempdir
+        self.amqp_username = amqp_username
+        self.amqp_password = amqp_password
 
     def start(self, timeout=10):
         end_time = time.time() + timeout
@@ -74,20 +78,23 @@ class ManagerRestProcess(object):
             'rest_service_log_level': self.rest_service_log_level,
             'rest_service_log_path': self.rest_service_log_path,
             'rest_service_log_file_size_MB':
-                self.rest_service_log_file_size_MB,
+            self.rest_service_log_file_size_MB,
             'rest_service_log_files_backup_count':
-                self.rest_service_log_files_backup_count,
+            self.rest_service_log_files_backup_count,
             'security_audit_log_level': self.securest_log_level,
             'security_audit_log_file': self.securest_log_file,
             'security_audit_log_file_size_MB': self.securest_log_file_size_MB,
             'security_audit_log_files_backup_count':
-                self.securest_log_files_backup_count,
+            self.securest_log_files_backup_count,
             'file_server_root': self.file_server_dir,
             'file_server_base_uri': self.file_server_base_uri,
             'file_server_uploaded_blueprints_folder':
             self.file_server_uploaded_blueprints_folder,
             'file_server_resources_uri': self.file_server_resources_uri,
-            'file_server_blueprints_folder': self.file_server_blueprints_folder
+            'file_server_blueprints_folder':
+            self.file_server_blueprints_folder,
+            'amqp_username': self.amqp_username,
+            'amqp_password': self.amqp_password,
         }
 
         config_path = os.path.join(self.tempdir, 'manager_config.json')
