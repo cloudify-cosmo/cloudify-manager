@@ -13,8 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import ssl
+
 from celery import Celery
-from cloudify import utils
 
 from manager_rest import config
 
@@ -28,7 +29,7 @@ TASK_STATE_FAILURE = 'FAILURE'
 class CeleryClient(object):
 
     def __init__(self):
-        _, ssl_settings = utils.internal.get_broker_ssl_and_port(
+        ssl_settings = self._get_broker_ssl_settings(
             ssl_enabled=config.instance().amqp_ssl_enabled,
             cert_path=config.instance().amqp_ca_path,
         )
@@ -83,6 +84,28 @@ class CeleryClient(object):
         """
         async_result = self.celery.AsyncResult(task_id)
         return async_result.result
+
+    @staticmethod
+    def _get_broker_ssl_settings(ssl_enabled, cert_path):
+        # Input vars may be None if not set. Explicitly defining defaults.
+        ssl_enabled = ssl_enabled or False
+        cert_path = cert_path or ''
+
+        if ssl_enabled:
+            if not cert_path:
+                raise ValueError(
+                    "Broker SSL enabled but no SSL cert was provided. "
+                    "If rabbitmq_ssl_enabled is True in the inputs, "
+                    "rabbitmq_cert_public (and private) must be populated."
+                )
+            ssl_options = {
+                'ca_certs': cert_path,
+                'cert_reqs': ssl.CERT_REQUIRED,
+            }
+        else:
+            ssl_options = {}
+
+        return ssl_options
 
 
 def celery_client():
