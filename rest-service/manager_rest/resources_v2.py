@@ -544,7 +544,7 @@ class PluginsArchive(SecuredResource):
                                "Plugin ID: {0}".format(plugin_id))
 
         plugin_path = '{0}/{1}/{2}/{3}'.format(
-            config.instance().file_server_base_uri,
+            config.instance().file_server_resources_uri,
             'plugins',
             plugin_id,
             archive_name)
