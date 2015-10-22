@@ -50,9 +50,10 @@ MUTATE_PARAMS = {
 
 class ESStorageManager(object):
 
-    def __init__(self, host, port):
+    def __init__(self, host, port, security_enabled):
         self.es_host = host
         self.es_port = port
+        self.security_enabled = security_enabled
 
     @property
     def _connection(self):
@@ -184,8 +185,8 @@ class ESStorageManager(object):
                 fields_data[field] = None
         return model_class(**fields_data)
 
-    @staticmethod
-    def _build_filter_terms_and_acl_query(required_permission,
+    def _build_filter_terms_and_acl_query(self,
+                                          required_permission=None,
                                           filters=None):
         """
         This method is used to create a search filter to receive only results
@@ -196,41 +197,57 @@ class ESStorageManager(object):
          value
         :return: an elasticsearch query string containing the given filters
         """
-        query = None
         filters_terms = []
         acl_terms = []
-        principals_list = rest_security.get_principals_list()
-        current_app.logger.info('***** principals list: {0}'.
-                                format(principals_list))
-        acceptable_aces = ESStorageManager._calc_acceptable_aces(
-            required_permission, principals_list)
-        current_app.logger.info('***** acceptable_aces: {0}'.
-                                format(acceptable_aces))
+        query = None
+        sub_queries = []
+
+        if self.security_enabled:
+            principals_list = rest_security.get_principals_list()
+            current_app.logger.info('***** principals list: {0}'.
+                                    format(principals_list))
+            acceptable_aces = ESStorageManager._calc_acceptable_aces(
+                required_permission, principals_list)
+            current_app.logger.info('***** acceptable_aces: {0}'.
+                                    format(acceptable_aces))
+            for ace in acceptable_aces:
+                acl_terms.append({'wildcard': {'acl': '*{0}*'.format(ace)}})
+
         if filters:
             for key, val in filters.iteritems():
                 filters_terms.append({'term': {key: val}})
 
-        for ace in acceptable_aces:
-            acl_terms.append({'wildcard': {'acl': '*{0}*'.format(ace)}})
-
-            query = {
-                'query': {
-                    'filtered': {
-                        'query': {
-                            'bool': {
-                                'should': [
-                                    acl_terms
-                                ]
-                            }
-                        },
-                        'filter': {
-                            'bool': {
-                                'must': filters_terms
-                            }
-                        }
+        if filters_terms:
+            filter_query = {
+                'filter': {
+                    'bool': {
+                        'must': filters_terms
                     }
                 }
             }
+            sub_queries.append(filter_query)
+
+        if acl_terms:
+            acl_query = {
+                'query': {
+                    'bool': {
+                        'should': [
+                            acl_terms
+                        ]
+                    }
+                }
+            }
+            sub_queries.append(acl_query)
+
+        if len(sub_queries) > 0:
+            query = {
+                'query': {
+                    'filtered': {
+                        sub_queries
+                    }
+                }
+            }
+
         current_app.logger.info('***** built query: {0}'.
                                 format(query))
         return query
@@ -637,7 +654,9 @@ class ESStorageManager(object):
 
 
 def create():
+    configuration = config.instance()
     return ESStorageManager(
-        config.instance().db_address,
-        config.instance().db_port
+        configuration.db_address,
+        configuration.db_port,
+        configuration.security_enabled
     )

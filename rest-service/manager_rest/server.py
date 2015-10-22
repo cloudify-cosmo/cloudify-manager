@@ -187,7 +187,7 @@ def create_logger(logger_name,
 def _set_storage_manager():
     if not current_app.config.get('storage_manager'):
         sm = storage_manager.instance()
-        app.logger.info('setting storage manager: {0}'.format(sm))
+        app.logger.info('***** setting storage_manager: {0}'.format(sm))
         current_app.config['storage_manager'] = sm
 
 
