@@ -42,6 +42,22 @@ from manager_rest.blueprints_manager import \
     TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT
 
 
+def paginate(func):
+    """
+    Decorator for adding pagination
+    """
+    def verify_and_create_pagination_params(*args, **kw):
+        offset = request.args.get("_offset")
+        page_size = request.args.get("_size")
+        pagination_params = {}
+        if offset:
+            pagination_params["offset"] = int(offset)
+        if offset:
+            pagination_params["page_size"] = int(page_size)
+        return func(pagination=pagination_params, *args, **kw)
+    return verify_and_create_pagination_params
+
+
 def verify_and_create_filters(fields):
     """
     Decorator for extracting filter parameters from the request arguments and
@@ -77,7 +93,6 @@ def _create_filter_params_list_description(parameters, list_type):
 
 
 class Blueprints(resources.Blueprints):
-
     @swagger.operation(
         responseClass='List[{0}]'.format(responses_v2.BlueprintState.__name__),
         nickname="list",
@@ -92,12 +107,13 @@ class Blueprints(resources.Blueprints):
     @exceptions_handled
     @marshal_with(responses_v2.BlueprintState)
     @verify_and_create_filters(models.BlueprintState.fields)
-    def get(self, _include=None, filters=None, **kwargs):
+    @paginate
+    def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
         List uploaded blueprints
         """
         return get_blueprints_manager().blueprints_list(
-            include=_include, filters=filters)
+            include=_include, filters=filters, pagination=pagination)
 
 
 class BlueprintsId(resources.BlueprintsId):
@@ -180,7 +196,6 @@ class BlueprintsId(resources.BlueprintsId):
 
 
 class Executions(resources.Executions):
-
     @swagger.operation(
         responseClass='List[{0}]'.format(responses_v2.Execution.__name__),
         nickname="list",
@@ -200,7 +215,8 @@ class Executions(resources.Executions):
     @exceptions_handled
     @marshal_with(responses_v2.Execution)
     @verify_and_create_filters(models.Execution.fields)
-    def get(self, _include=None, filters=None, **kwargs):
+    @paginate
+    def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
         List executions
         """
@@ -213,14 +229,13 @@ class Executions(resources.Executions):
             request.args.get('_include_system_workflows', 'false'))
 
         executions = get_blueprints_manager().executions_list(
-            filters=filters,
+            filters=filters, pagination=pagination,
             is_include_system_workflows=is_include_system_workflows,
             include=_include)
         return executions
 
 
 class Deployments(resources.Deployments):
-
     @swagger.operation(
         responseClass='List[{0}]'.format(responses_v2.Deployment.__name__),
         nickname="list",
@@ -234,12 +249,13 @@ class Deployments(resources.Deployments):
     @exceptions_handled
     @marshal_with(responses_v2.Deployment)
     @verify_and_create_filters(models.Deployment.fields)
-    def get(self, _include=None, filters=None, **kwargs):
+    @paginate
+    def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
         List deployments
         """
         deployments = get_blueprints_manager().deployments_list(
-            include=_include, filters=filters)
+            include=_include, filters=filters, pagination=pagination)
         return deployments
 
 
@@ -259,17 +275,17 @@ class DeploymentModifications(resources.DeploymentModifications):
     @exceptions_handled
     @marshal_with(responses_v2.DeploymentModification)
     @verify_and_create_filters(models.DeploymentModification.fields)
-    def get(self, _include=None, filters=None, **kwargs):
+    @paginate
+    def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
         List deployment modifications
         """
         modifications = get_storage_manager().deployment_modifications_list(
-            include=_include, filters=filters)
+            include=_include, filters=filters, pagination=pagination)
         return modifications
 
 
 class Nodes(resources.Nodes):
-
     @swagger.operation(
         responseClass='List[{0}]'.format(responses_v2.Node.__name__),
         nickname="listNodes",
@@ -283,17 +299,18 @@ class Nodes(resources.Nodes):
     @exceptions_handled
     @marshal_with(responses_v2.Node)
     @verify_and_create_filters(models.DeploymentNode.fields)
-    def get(self, _include=None, filters=None, **kwargs):
+    @paginate
+    def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
         List nodes
         """
         nodes = get_storage_manager().get_nodes(include=_include,
+                                                pagination=pagination,
                                                 filters=filters)
         return nodes
 
 
 class NodeInstances(resources.NodeInstances):
-
     @swagger.operation(
         responseClass='List[{0}]'.format(responses_v2.NodeInstance.__name__),
         nickname="listNodeInstances",
@@ -308,12 +325,13 @@ class NodeInstances(resources.NodeInstances):
     @exceptions_handled
     @marshal_with(responses_v2.NodeInstance)
     @verify_and_create_filters(models.DeploymentNodeInstance.fields)
-    def get(self, _include=None, filters=None, **kwargs):
+    @paginate
+    def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
         List node instances
         """
         node_instances = get_storage_manager().get_node_instances(
-            include=_include, filters=filters)
+            include=_include, filters=filters, pagination=pagination)
         return node_instances
 
 

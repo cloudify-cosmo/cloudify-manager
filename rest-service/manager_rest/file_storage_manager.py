@@ -38,6 +38,15 @@ PROVIDER_CONTEXT = 'provider_context'
 PROVIDER_CONTEXT_ID = '1'
 
 
+def paginate_list(list_of_objects, pagination=None):
+    if pagination:
+        if pagination.get("offset"):
+            list_of_objects = list_of_objects[pagination.get("offset"):]
+        if pagination.get("page_size"):
+            list_of_objects = list_of_objects[:pagination.get("page_size")]
+    return list_of_objects
+
+
 class FileStorageManager(object):
     """
     file based storage manager for tests.
@@ -123,9 +132,11 @@ class FileStorageManager(object):
             json.dump(serialized_data, f)
 
     # todo(adaml): who's calling this function?
-    def node_instances_list(self, **_):
+    def node_instances_list(self, pagination=None, **_):
         data = self._load_data()
-        return data[NODE_INSTANCES].values()
+        result = data[NODE_INSTANCES].values()
+        return paginate_list(result,
+                             pagination=pagination)
 
     def get_node_instance(self, node_id, **_):
         data = self._load_data()
@@ -134,13 +145,17 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Node {0} not found".format(node_id))
 
-    def get_node_instances(self, filters=None, **_):
+    def get_node_instances(self, filters=None, pagination=None, **_):
         instances = self._load_data()[NODE_INSTANCES].values()
-        return self.filter_data(instances, filters)
+        result = self.filter_data(instances, filters)
+        return paginate_list(result,
+                             pagination=pagination)
 
-    def get_nodes(self, filters=None, **_):
+    def get_nodes(self, filters=None, pagination=None, **_):
         nodes = self._load_data()[NODES].values()
-        return self.filter_data(nodes, filters)
+        result = self.filter_data(nodes, filters)
+        return paginate_list(result,
+                             pagination=pagination)
 
     def get_plugins(self, include=None, filters=None):
         plugins = self._load_data()[PLUGINS].values()
@@ -218,9 +233,11 @@ class FileStorageManager(object):
         data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 
-    def blueprints_list(self, filters=None, **_):
+    def blueprints_list(self, filters=None, pagination=None, **_):
         blueprints = self._load_data()[BLUEPRINTS].values()
-        return self.filter_data(blueprints, filters)
+        result = self.filter_data(blueprints, filters)
+        return paginate_list(result,
+                             pagination=pagination)
 
     @staticmethod
     def filter_data(items_lst, filters=None):
@@ -237,13 +254,17 @@ class FileStorageManager(object):
             result = items_lst
         return result
 
-    def deployments_list(self, filters=None, **_):
+    def deployments_list(self, filters=None, pagination=None, **_):
         deployments = self._load_data()[DEPLOYMENTS].values()
-        return self.filter_data(deployments, filters)
+        result = self.filter_data(deployments, filters)
+        return paginate_list(result,
+                             pagination=pagination)
 
-    def executions_list(self, filters=None, **_):
+    def executions_list(self, filters=None, pagination=None, **_):
         executions = self._load_data()[EXECUTIONS].values()
-        return self.filter_data(executions, filters)
+        result = self.filter_data(executions, filters)
+        return paginate_list(result,
+                             pagination=pagination)
 
     def get_blueprint_deployments(self, blueprint_id, **_):
         return self.deployments_list(filters={'blueprint_id': blueprint_id})
@@ -405,25 +426,30 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Deployment modification {0} not found".format(modification_id))
 
-    def update_deployment_modification(self, modification):
-        modification_id = modification.id
-        data = self._load_data()
-        if modification_id not in data[DEPLOYMENT_MODIFICATIONS]:
-            raise manager_exceptions.NotFoundError(
-                'Deployment modification {0} not found'
-                .format(modification_id))
-        updated_modification = data[DEPLOYMENT_MODIFICATIONS][modification_id]
-        if modification.status is not None:
-            updated_modification.status = modification.status
-        if modification.ended_at is not None:
-            updated_modification.ended_at = modification.ended_at
-        if modification.node_instances is not None:
-            updated_modification.node_instances = modification.node_instances
-        self._dump_data(data)
-
-    def deployment_modifications_list(self, include=None, filters=None):
+    def deployment_modifications_list(self, include=None,
+                                      filters=None, pagination=None):
         modifications = self._load_data()[DEPLOYMENT_MODIFICATIONS].values()
-        return self.filter_data(modifications, filters)
+        result = self.filter_data(modifications, filters)
+        return paginate_list(result,
+                             pagination=pagination)
+
+    def update_deployment_modification(self, modification):
+            modification_id = modification.id
+            data = self._load_data()
+            if modification_id not in data[DEPLOYMENT_MODIFICATIONS]:
+                raise manager_exceptions.NotFoundError(
+                    'Deployment modification {0} not found'
+                    .format(modification_id))
+            updated_modification = \
+                data[DEPLOYMENT_MODIFICATIONS][modification_id]
+            if modification.status is not None:
+                updated_modification.status = modification.status
+            if modification.ended_at is not None:
+                updated_modification.ended_at = modification.ended_at
+            if modification.node_instances is not None:
+                updated_modification.node_instances = \
+                    modification.node_instances
+            self._dump_data(data)
 
 
 def create():

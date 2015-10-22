@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2013 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,3 +51,10 @@ class BaseListTest(BaseServerTestCase):
         self._mark_deployment_modification_finished(
             modification_id=response['id'])
         self._put_deployment_modification(deployment_id=self.sec_deployment_id)
+
+    def _put_n_deployments(self, number_of_deployments,
+                           deployment_id):
+        for i in range(0, number_of_deployments):
+            temp_id = "{0}{1}".format(deployment_id, str(i))
+            self.put_deployment(deployment_id=temp_id,
+                                blueprint_id=temp_id)
