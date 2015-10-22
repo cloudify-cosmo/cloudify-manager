@@ -68,8 +68,6 @@ def setup_app(warnings=None):
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
 
-    _set_blueprints_manager()
-
     app.before_first_request(_set_blueprints_manager)
     app.before_first_request(_set_storage_manager)
     app.before_request(log_request)
