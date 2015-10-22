@@ -46,9 +46,7 @@ class ManagerRestProcess(object):
                  securest_log_file,
                  securest_log_file_size_MB,
                  securest_log_files_backup_count,
-                 tempdir,
-                 amqp_username,
-                 amqp_password):
+                 tempdir):
         self.process = None
         self.port = port or MANAGER_REST_PORT
         self.file_server_dir = file_server_dir
@@ -68,8 +66,6 @@ class ManagerRestProcess(object):
         self.securest_log_files_backup_count = securest_log_files_backup_count
         self.client = CloudifyClient('localhost', port=port)
         self.tempdir = tempdir
-        self.amqp_username = amqp_username
-        self.amqp_password = amqp_password
 
     def start(self, timeout=10):
         end_time = time.time() + timeout
@@ -93,8 +89,6 @@ class ManagerRestProcess(object):
             'file_server_resources_uri': self.file_server_resources_uri,
             'file_server_blueprints_folder':
             self.file_server_blueprints_folder,
-            'amqp_username': self.amqp_username,
-            'amqp_password': self.amqp_password,
         }
 
         config_path = os.path.join(self.tempdir, 'manager_config.json')
