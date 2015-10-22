@@ -53,15 +53,18 @@ class BlueprintsManager(object):
     def sm(self):
         return get_storage_manager()
 
-    def blueprints_list(self, include=None, filters=None):
-        return self.sm.blueprints_list(include=include, filters=filters)
+    def blueprints_list(self, include=None, filters=None, pagination=None):
+        return self.sm.blueprints_list(include=include, filters=filters,
+                                       pagination=pagination)
 
-    def deployments_list(self, include=None, filters=None):
-        return self.sm.deployments_list(include=include, filters=filters)
+    def deployments_list(self, include=None, filters=None, pagination=None):
+        return self.sm.deployments_list(include=include, filters=filters,
+                                        pagination=pagination)
 
     def executions_list(self, include=None, is_include_system_workflows=False,
-                        filters=None):
-        executions = self.sm.executions_list(include=include, filters=filters)
+                        filters=None, pagination=None):
+        executions = self.sm.executions_list(include=include, filters=filters,
+                                             pagination=pagination)
         return [e for e in executions if
                 is_include_system_workflows or not e.is_system_workflow]
 

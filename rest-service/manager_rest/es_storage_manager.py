@@ -183,21 +183,24 @@ class ESStorageManager(object):
                 version=doc_with_version[1], **doc_with_version[0]),
             docs_with_versions)
 
-    def blueprints_list(self, include=None, filters=None):
+    def blueprints_list(self, include=None, filters=None, pagination=None):
         return self._get_items_list(BLUEPRINT_TYPE,
                                     BlueprintState,
+                                    pagination=pagination,
                                     filters=filters,
                                     include=include)
 
-    def deployments_list(self, include=None, filters=None):
+    def deployments_list(self, include=None, filters=None, pagination=None):
         return self._get_items_list(DEPLOYMENT_TYPE,
                                     Deployment,
+                                    pagination=pagination,
                                     filters=filters,
                                     include=include)
 
-    def executions_list(self, include=None, filters=None):
+    def executions_list(self, include=None, filters=None, pagination=None):
         return self._get_items_list(EXECUTION_TYPE,
                                     Execution,
+                                    pagination=pagination,
                                     filters=filters,
                                     include=include)
 
@@ -223,11 +226,12 @@ class ESStorageManager(object):
                                              model_class=DeploymentNode,
                                              fields=include)
 
-    def get_node_instances(self, include=None, filters=None):
+    def get_node_instances(self, include=None, filters=None, pagination=None):
         return self._get_items_list(NODE_INSTANCE_TYPE,
                                     DeploymentNodeInstance,
                                     filters=filters,
-                                    include=include)
+                                    include=include,
+                                    pagination=pagination)
 
     def get_plugins(self, include=None, filters=None):
         return self._get_items_list(PLUGIN_TYPE,
@@ -235,19 +239,32 @@ class ESStorageManager(object):
                                     filters=filters,
                                     include=include)
 
-    def get_nodes(self, include=None, filters=None):
+    def get_nodes(self, include=None, filters=None, pagination=None):
         return self._get_items_list(NODE_TYPE,
                                     DeploymentNode,
                                     filters=filters,
+                                    pagination=pagination,
                                     include=include)
 
     def _get_items_list(self, doc_type, model_class, include=None,
-                        filters=None):
+                        filters=None, pagination=None):
+        def paginate_list(list_of_objects, pagination=None):
+            if pagination:
+                if pagination.get("offset"):
+                    list_of_objects = \
+                        list_of_objects[pagination.get("offset"):]
+                if pagination.get("page_size"):
+                    list_of_objects = \
+                        list_of_objects[:pagination.get("page_size")]
+            return list_of_objects
+
         query = self._build_filter_terms_query(filters=filters)
-        return self._list_docs(doc_type,
-                               model_class,
-                               query=query,
-                               fields=include)
+        response = self._list_docs(doc_type,
+                                   model_class,
+                                   query=query,
+                                   fields=include)
+        return paginate_list(response,
+                             pagination=pagination)
 
     def get_blueprint(self, blueprint_id, include=None):
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE,
@@ -454,11 +471,13 @@ class ESStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 "Modification {0} not found".format(modification_id))
 
-    def deployment_modifications_list(self, include=None, filters=None):
+    def deployment_modifications_list(self, include=None, filters=None,
+                                      pagination=None):
         return self._get_items_list(DEPLOYMENT_MODIFICATION_TYPE,
                                     DeploymentModification,
                                     filters=filters,
-                                    include=include)
+                                    include=include,
+                                    pagination=pagination)
 
     @staticmethod
     def _storage_node_id(deployment_id, node_id):

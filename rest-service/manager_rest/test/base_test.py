@@ -97,6 +97,7 @@ class MockHTTPClient(HTTPClient):
                    data=None,
                    params=None,
                    headers=None,
+                   pagination=None,
                    expected_status_code=200,
                    stream=False):
         if CLIENT_API_VERSION == 'v1':
