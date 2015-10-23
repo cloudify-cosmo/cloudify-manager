@@ -270,18 +270,16 @@ def init_secured_app(_app):
     )
 
     if cfy_config.security_userstore_driver:
-        register_userstore_driver(secure_app,
-                                  cfy_config.security_userstore_driver)
+        register_userstore_driver(cfy_config.security_userstore_driver)
+
     register_authentication_providers(
-        secure_app, cfy_config.security_authentication_providers)
+        cfy_config.security_authentication_providers)
 
     register_authorization_provider(
-        secure_app, cfy_config.security_authorization_provider)
+        cfy_config.security_authorization_provider)
 
     secure_app.unauthorized_user_handler = unauthorized_user_handler
-
     secure_app.acl_handler = acl_handler
-
     secure_app.skip_auth_hook = _is_internal_request
 
 
