@@ -230,7 +230,7 @@ def init_secured_app(_app):
             secure_app.register_authentication_provider(provider['name'],
                                                         auth_provider)
 
-    def register_authorization_provider(secure_app, authorization_provider):
+    def register_authorization_provider(authorization_provider):
         secure_app.app.logger.debug('registering authorization provider {0}'
                                     .format(authorization_provider))
         provider = utils.get_class_instance(
