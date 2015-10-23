@@ -30,7 +30,8 @@ from dsl_parser import tasks
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import models
 from manager_rest import manager_exceptions
-from manager_rest.storage_manager import get_storage_manager
+from manager_rest import storage_manager
+from manager_rest import workflow_client as wf_client
 
 TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT = True
 GLOBAL_PARALLEL_EXECUTIONS_LIMIT_DEFAULT = 50
@@ -51,7 +52,11 @@ class BlueprintsManager(object):
 
     @property
     def sm(self):
-        return get_storage_manager()
+        return storage_manager.get_storage_manager()
+
+    @property
+    def workflow_client(self):
+        return wf_client.get_workflow_client()
 
     def blueprints_list(self, include=None, filters=None):
         return self.sm.blueprints_list(include=include, filters=filters)
@@ -323,8 +328,7 @@ class BlueprintsManager(object):
         current_app.logger.info('***** calling put_execution')
         self.sm.put_execution(execution.id, execution)
 
-        current_app.logger.info('***** calling workflow_client().'
-                                'execute_system_workflow')
+        current_app.logger.info('***** calling execute_system_workflow')
         async_task = self.workflow_client.execute_system_workflow(
             deployment, wf_id, execution_id, task_mapping,
             execution_parameters)
@@ -1023,9 +1027,17 @@ class BlueprintsManager(object):
         self._update_parser_context_in_app(provider_context.context)
 
 
+def init_blueprints_manager(**kwargs):
+    """
+    Set and return the current app's blueprints manager
+    """
+    current_app.config['blueprints_manager'] = BlueprintsManager
+    return get_blueprints_manager()
+
+
 # What we need to access this manager in Flask
 def get_blueprints_manager():
     """
-    Get the current blueprints manager
+    Get the current app's blueprints manager
     """
     return current_app.config.get('blueprints_manager')

@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 import importlib
-
 from flask import current_app
 
 # storage_manager_module_name = 'file_storage_manager'
@@ -33,7 +32,7 @@ def reset():
     _instance = _create_instance()
 
 
-def instance():
+def _get_instance():
     global _instance
     if _instance is None:
         _instance = _create_instance()
@@ -45,8 +44,16 @@ def teardown_storage_manager(exception):
     pass
 
 
+def init_storage_manager(**kwargs):
+    """
+    Set and return the current app's storage manager
+    """
+    current_app.config['storage_manager'] = _get_instance(**kwargs)
+    return get_storage_manager()
+
+
 def get_storage_manager():
     """
-    Get the current storage manager
+    Get the current app's storage manager
     """
     return current_app.config.get('storage_manager')

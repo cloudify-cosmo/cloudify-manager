@@ -33,6 +33,7 @@ from flask_securest.rest_security import SecuREST
 from manager_rest import endpoint_mapper
 from manager_rest import config
 from manager_rest import storage_manager
+from manager_rest import workflow_client
 from manager_rest import blueprints_manager
 from manager_rest import manager_exceptions
 from manager_rest import utils
@@ -68,8 +69,9 @@ def setup_app(warnings=None):
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
 
-    app.before_first_request(_set_blueprints_manager)
-    app.before_first_request(_set_storage_manager)
+    app.before_first_request(_init_blueprints_manager)
+    app.before_first_request(_init_storage_manager)
+    app.before_first_request(_init_workflow_client)
     app.before_request(log_request)
     app.after_request(log_response)
 
@@ -184,22 +186,25 @@ def create_logger(logger_name,
                               remove_existing_handlers=False)
 
 
-def _set_storage_manager():
-    if not current_app.config.get('storage_manager'):
-        sm = storage_manager.instance()
-        app.logger.info('***** setting storage_manager: {0}'.format(sm))
-        current_app.config['storage_manager'] = sm
+def _init_storage_manager():
+    """
+    create and set a storage manager for the current app
+    """
+    storage_manager.init_storage_manager()
 
 
-def _set_blueprints_manager():
+def _init_workflow_client():
     """
-    create and set a blueprints manager for the current app context
+    create and set a workflow client for the current app
     """
-    if not current_app.config.get('blueprints_manager'):
-        blueprints_mgr = blueprints_manager.BlueprintsManager()
-        app.logger.info('***** setting blueprints_manager: {0}'.
-                        format(blueprints_mgr))
-        current_app.config['blueprints_manager'] = blueprints_mgr
+    workflow_client.init_workflow_client()
+
+
+def _init_blueprints_manager():
+    """
+    create and set a blueprints manager for the current app
+    """
+    blueprints_manager.init_blueprints_manager()
 
 
 def init_secured_app(_app):
