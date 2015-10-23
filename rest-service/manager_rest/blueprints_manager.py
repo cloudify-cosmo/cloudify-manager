@@ -1031,7 +1031,7 @@ def init_blueprints_manager(**kwargs):
     """
     Set and return the current app's blueprints manager
     """
-    current_app.config['blueprints_manager'] = BlueprintsManager
+    current_app.config['blueprints_manager'] = BlueprintsManager()
     return get_blueprints_manager()
 
 
