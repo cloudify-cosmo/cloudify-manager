@@ -199,7 +199,7 @@ class ESStorageManager(object):
         """
         filters_terms = []
         acl_terms = []
-        query = None
+        query_as_dict = None
         sub_queries = []
 
         if self.security_enabled:
@@ -240,17 +240,18 @@ class ESStorageManager(object):
             sub_queries.append(acl_query)
 
         if len(sub_queries) > 0:
-            query = {
+            query_as_dict = {
                 'query': {
                     'filtered': {
-                        sub_queries
                     }
                 }
             }
+            for sub_query in sub_queries:
+                query_as_dict['query']['filtered'].update(sub_query)
 
         current_app.logger.info('***** built query: {0}'.
-                                format(query))
-        return query
+                                format(query_as_dict))
+        return query_as_dict
 
     # todo(adaml): who uses this?
     def node_instances_list(self, include=None):
@@ -393,8 +394,7 @@ class ESStorageManager(object):
                                              Plugin,
                                              fields=include)
 
-    def put_blueprint(self, blueprint_id, blueprint, security_context):
-        blueprint.acl = rest_security.get_acl(security_context)
+    def put_blueprint(self, blueprint_id, blueprint):
         current_app.logger.info('***** starting put_blueprint')
         self._put_doc_if_not_exists(BLUEPRINT_TYPE, str(blueprint_id),
                                     blueprint.to_dict())
