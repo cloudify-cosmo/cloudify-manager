@@ -344,6 +344,9 @@ class ESStorageManager(object):
 
     def get_nodes(self, include=None, filters=None):
         current_app.logger.info('***** starting get_nodes')
+        import traceback
+        with open('/tmp/manager_log.tmp', 'a') as logfile:
+            traceback.print_stack(file=logfile)
         result = self._get_items_list(NODE_TYPE,
                                       DeploymentNode,
                                       filters=filters,
@@ -643,12 +646,14 @@ class ESStorageManager(object):
             format(required_permission)
         acceptable_aces = [all_have_all_permissions,
                            all_have_required_permission]
-        for principal in principals_list:
-            principal_has_all_permissions = 'ALLOW#{0}#ALL'.format(principal)
-            principal_has_required_permission = 'ALLOW#{0}#{1}'.\
-                format(principal, required_permission)
-            acceptable_aces.append(principal_has_all_permissions)
-            acceptable_aces.append(principal_has_required_permission)
+        if principals_list:
+            for principal in principals_list:
+                principal_has_all_permissions = 'ALLOW#{0}#ALL'.\
+                    format(principal)
+                principal_has_required_permission = 'ALLOW#{0}#{1}'.\
+                    format(principal, required_permission)
+                acceptable_aces.append(principal_has_all_permissions)
+                acceptable_aces.append(principal_has_required_permission)
 
         return acceptable_aces
 
