@@ -68,5 +68,16 @@ class WorkflowClient(object):
             kwargs=execution_parameters)
 
 
-def workflow_client():
-    return WorkflowClient()
+def init_workflow_client(**kwargs):
+    """
+    Set and return the current app's workflow client
+    """
+    current_app.config['workflow_client'] = WorkflowClient()
+    return get_workflow_client()
+
+
+def get_workflow_client():
+    """
+    Get the current app's workflow client
+    """
+    return current_app.config.get('workflow_client')

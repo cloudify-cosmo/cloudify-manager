@@ -197,7 +197,7 @@ def _init_workflow_client():
     """
     create and set a workflow client for the current app
     """
-    # workflow_client.init_workflow_client()
+    workflow_client.init_workflow_client()
 
 
 def _init_blueprints_manager():
