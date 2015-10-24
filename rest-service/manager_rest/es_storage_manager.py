@@ -51,12 +51,9 @@ MUTATE_PARAMS = {
 class ESStorageManager(object):
 
     def __init__(self, host, port, security_enabled):
-        self.es_host = 'localhost'
-        self.es_port = '9200'
-        self.security_enabled = True
-        # self.es_host = host
-        # self.es_port = port
-        # self.security_enabled = security_enabled
+        self.es_host = host
+        self.es_port = port
+        self.security_enabled = security_enabled
 
     @property
     def _connection(self):
@@ -69,6 +66,7 @@ class ESStorageManager(object):
                                                 doc_type=doc_type,
                                                 size=DEFAULT_SEARCH_SIZE,
                                                 body=query,
+                                                version="FORCE",
                                                 _source=include)
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
 
@@ -88,6 +86,7 @@ class ESStorageManager(object):
                 results = self._connection.search(index=STORAGE_INDEX_NAME,
                                                   doc_type=doc_type,
                                                   body=query,
+                                                  version="FORCE",
                                                   _source=[f for f in fields])
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
@@ -96,7 +95,8 @@ class ESStorageManager(object):
             else:
                 results = self._connection.search(index=STORAGE_INDEX_NAME,
                                                   doc_type=doc_type,
-                                                  body=query)
+                                                  body=query,
+                                                  version="FORCE")
                 # return self._connection.get(index=STORAGE_INDEX_NAME,
                 #                             doc_type=doc_type,
                 #                             id=doc_id)
@@ -348,7 +348,7 @@ class ESStorageManager(object):
     def get_nodes(self, include=None, filters=None):
         current_app.logger.info('***** starting get_nodes')
         import traceback
-        with open('/tmp/manager_log.tmp', 'a') as logfile:
+        with open('/tmp/get_nodes.tmp', 'a') as logfile:
             traceback.print_stack(file=logfile)
         result = self._get_items_list(NODE_TYPE,
                                       DeploymentNode,
