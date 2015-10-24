@@ -49,7 +49,6 @@ class WorkflowClient(object):
         # the task id is equivalent to the execution id
 
         task_queue = 'cloudify.management'
-
         context = {
             'task_id': task_id,
             'task_name': task_mapping,
@@ -69,16 +68,5 @@ class WorkflowClient(object):
             kwargs=execution_parameters)
 
 
-def init_workflow_client(**kwargs):
-    """
-    Set and return the current app's workflow client
-    """
-    current_app.config['workflow_client'] = WorkflowClient()
-    return get_workflow_client()
-
-
-def get_workflow_client():
-    """
-    Get the current app's workflow client
-    """
-    return current_app.config.get('workflow_client')
+def workflow_client():
+    return WorkflowClient()
