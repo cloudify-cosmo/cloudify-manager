@@ -24,6 +24,12 @@ class ManagerException(Exception):
         self.error_code = error_code
 
 
+class GeneralError(ManagerException):
+    def __init__(self, *args, **kwargs):
+        super(GeneralError, self).__init__(
+            400, 'general_error', *args, **kwargs)
+
+
 class ConflictError(ManagerException):
     CONFLICT_ERROR_CODE = 'conflict_error'
 

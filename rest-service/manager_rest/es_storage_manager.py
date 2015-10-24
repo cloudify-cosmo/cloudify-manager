@@ -51,9 +51,12 @@ MUTATE_PARAMS = {
 class ESStorageManager(object):
 
     def __init__(self, host, port, security_enabled):
-        self.es_host = host
-        self.es_port = port
-        self.security_enabled = security_enabled
+        self.es_host = 'localhost'
+        self.es_port = '9200'
+        self.security_enabled = True
+        # self.es_host = host
+        # self.es_port = port
+        # self.security_enabled = security_enabled
 
     @property
     def _connection(self):
@@ -154,7 +157,7 @@ class ESStorageManager(object):
             raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
         except Exception as e:
-            raise manager_exceptions.ManagerException(
+            raise manager_exceptions.GeneralError(
                 'Failed to create document {0} in {1}, error: {2}'.
                 format(doc_id, doc_type, e.message))
 
