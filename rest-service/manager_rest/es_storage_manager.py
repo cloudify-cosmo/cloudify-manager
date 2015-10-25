@@ -57,12 +57,11 @@ class ESStorageManager(object):
         return Elasticsearch(hosts=[{'host': self.es_host,
                                      'port': self.es_port}])
 
-    def _list_docs(self, doc_type, model_class, query=None, fields=None):
+    def _list_docs(self, doc_type, model_class, body=None, fields=None):
         include = list(fields) if fields else True
         search_result = self._connection.search(index=STORAGE_INDEX_NAME,
                                                 doc_type=doc_type,
-                                                size=DEFAULT_SEARCH_SIZE,
-                                                body=query,
+                                                body=body,
                                                 _source=include)
         docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
 
@@ -141,48 +140,50 @@ class ESStorageManager(object):
         return model_class(**fields_data)
 
     @staticmethod
-    def _build_filter_terms_query(filters=None):
+    def _build_request_body(filters=None, pagination=None, skip_size=False):
         """
-        This method is used to create a search filter to receive only results
-        where a specific key holds a specific value.
+        This method is used to create an elasticsearch request based on the
+        Query DSL.
+        It performs two actions:
+        1. Based on the `filters` param passed to it, it builds a filter based
+        query to only return elements that match the provided filters.
         Filters are faster than queries as they are cached and don't
         influence the score.
-        :param filters: a dictionary containing filters keys and their expected
-         value
-        :return: an elasticsearch query string containing the given filters
+        2. Based on the `pagination` param, it sets the `size` and `from`
+        parameters of the built query to make use of elasticsearch paging
+        capabilities.
+
+        :param filters: A dictionary containing filter keys and their expected
+                        value.
+        :param pagination: A dictionary with optional `page_size` and `offset`
+                           keys.
+        :param skip_size: If set to `True`, will not add `size` to the
+                          body result.
+        :return: An elasticsearch Query DSL body.
         """
         terms_lst = []
-        query = None
+        body = {}
+        if pagination:
+            if not skip_size:
+                body['size'] = pagination.get('page_size', DEFAULT_SEARCH_SIZE)
+            if 'offset' in pagination:
+                body['from'] = pagination['offset']
+        elif not skip_size:
+            body['size'] = DEFAULT_SEARCH_SIZE
         if filters:
             for key, val in filters.iteritems():
                 filter_type = 'terms' if isinstance(val, list) else 'term'
                 terms_lst.append({filter_type: {key: val}})
-            query = {
-                'query': {
-                    'filtered': {
-                        'filter': {
-                            'bool': {
-                                'must':  terms_lst
-                            }
+            body['query'] = {
+                'filtered': {
+                    'filter': {
+                        'bool': {
+                            'must':  terms_lst
                         }
                     }
                 }
             }
-        return query
-
-    # todo(adaml): who uses this?
-    def node_instances_list(self, include=None):
-        search_result = self._connection.search(index=STORAGE_INDEX_NAME,
-                                                doc_type=NODE_INSTANCE_TYPE,
-                                                size=DEFAULT_SEARCH_SIZE,
-                                                _source=include or True)
-        docs_with_versions = \
-            map(lambda hit: (hit['_source'], hit['_version']),
-                search_result['hits']['hits'])
-        return map(
-            lambda doc_with_version: DeploymentNodeInstance(
-                version=doc_with_version[1], **doc_with_version[0]),
-            docs_with_versions)
+        return body
 
     def blueprints_list(self, include=None, filters=None, pagination=None):
         return self._get_items_list(BLUEPRINT_TYPE,
@@ -234,11 +235,12 @@ class ESStorageManager(object):
                                     include=include,
                                     pagination=pagination)
 
-    def get_plugins(self, include=None, filters=None):
+    def get_plugins(self, include=None, filters=None, pagination=None):
         return self._get_items_list(PLUGIN_TYPE,
                                     Plugin,
                                     filters=filters,
-                                    include=include)
+                                    include=include,
+                                    pagination=pagination)
 
     def get_nodes(self, include=None, filters=None, pagination=None):
         return self._get_items_list(NODE_TYPE,
@@ -249,23 +251,12 @@ class ESStorageManager(object):
 
     def _get_items_list(self, doc_type, model_class, include=None,
                         filters=None, pagination=None):
-        def paginate_list(list_of_objects, pagination=None):
-            if pagination:
-                if pagination.get("offset"):
-                    list_of_objects = \
-                        list_of_objects[pagination.get("offset"):]
-                if pagination.get("page_size"):
-                    list_of_objects = \
-                        list_of_objects[:pagination.get("page_size")]
-            return list_of_objects
-
-        query = self._build_filter_terms_query(filters=filters)
-        response = self._list_docs(doc_type,
-                                   model_class,
-                                   query=query,
-                                   fields=include)
-        return paginate_list(response,
-                             pagination=pagination)
+        body = self._build_request_body(filters=filters,
+                                        pagination=pagination)
+        return self._list_docs(doc_type,
+                               model_class,
+                               body=body,
+                               fields=include)
 
     def get_blueprint(self, blueprint_id, include=None):
         return self._get_doc_and_deserialize(BLUEPRINT_TYPE,
@@ -356,8 +347,9 @@ class ESStorageManager(object):
                 'Provider Context not found')
 
     def delete_deployment(self, deployment_id):
-        query = self._build_filter_terms_query(filters={'deployment_id':
-                                                        deployment_id})
+        query = self._build_request_body(filters={'deployment_id':
+                                                  deployment_id},
+                                         skip_size=True)
         self._delete_doc_by_query(EXECUTION_TYPE, query)
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
         self._delete_doc_by_query(NODE_TYPE, query)

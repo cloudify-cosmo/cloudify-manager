@@ -131,13 +131,6 @@ class FileStorageManager(object):
                     DEPLOYMENT_MODIFICATIONS].iteritems()}
             json.dump(serialized_data, f)
 
-    # todo(adaml): who's calling this function?
-    def node_instances_list(self, pagination=None, **_):
-        data = self._load_data()
-        result = data[NODE_INSTANCES].values()
-        return paginate_list(result,
-                             pagination=pagination)
-
     def get_node_instance(self, node_id, **_):
         data = self._load_data()
         if node_id in data[NODE_INSTANCES]:
@@ -157,9 +150,11 @@ class FileStorageManager(object):
         return paginate_list(result,
                              pagination=pagination)
 
-    def get_plugins(self, include=None, filters=None):
+    def get_plugins(self, include=None, filters=None, pagination=None):
         plugins = self._load_data()[PLUGINS].values()
-        return self.filter_data(plugins, filters)
+        result = self.filter_data(plugins, filters)
+        return paginate_list(result,
+                             pagination=pagination)
 
     def get_node(self, deployment_id, node_id, **_):
         data = self._load_data()
