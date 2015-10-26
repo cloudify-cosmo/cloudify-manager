@@ -411,12 +411,14 @@ class Plugins(SecuredResource):
     @exceptions_handled
     @marshal_with(responses_v2.Plugin)
     @verify_and_create_filters(models.Plugin.fields)
-    def get(self, _include=None, filters=None, **kwargs):
+    @paginate
+    def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
         List uploaded plugins
         """
         plugins = get_storage_manager().get_plugins(include=_include,
-                                                    filters=filters)
+                                                    filters=filters,
+                                                    pagination=pagination)
         return plugins
 
     @swagger.operation(

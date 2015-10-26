@@ -102,6 +102,26 @@ class ExecutionsTestCase(BaseServerTestCase):
                           executions[0]['workflow_id'])
         self.assertEquals(system_wf_id, executions[1]['workflow_id'])
 
+        return deployment_id, system_wf_id
+
+    @attr(client_min_version=2,
+          client_max_version=LATEST_API_VERSION)
+    def test_list_system_executions_with_filters(self):
+        deployment_id, system_wf_id = self.test_list_system_executions()
+
+        # explicitly listing only non-system executions
+        executions = self.client.executions.list(deployment_id=deployment_id,
+                                                 is_system_workflow=False)
+        self.assertEquals(1, len(executions))
+        self.assertEqual('create_deployment_environment',
+                         executions[0]['workflow_id'])
+
+        # listing only system executions
+        executions = self.client.executions.list(deployment_id=deployment_id,
+                                                 is_system_workflow=True)
+        self.assertEquals(1, len(executions))
+        self.assertEqual(system_wf_id, executions[0]['workflow_id'])
+
     def test_execute_with_custom_parameters(self):
         # note that this test also tests for passing custom parameters for an
         #  execution of a workflow which doesn't have any workflow parameters

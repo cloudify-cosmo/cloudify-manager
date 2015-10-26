@@ -63,10 +63,17 @@ class BlueprintsManager(object):
 
     def executions_list(self, include=None, is_include_system_workflows=False,
                         filters=None, pagination=None):
-        executions = self.sm.executions_list(include=include, filters=filters,
-                                             pagination=pagination)
-        return [e for e in executions if
-                is_include_system_workflows or not e.is_system_workflow]
+        filters = filters or {}
+        is_system_workflow = filters.get('is_system_workflow')
+        if is_system_workflow:
+            filters['is_system_workflow'] = []
+            for value in is_system_workflow:
+                value = str(value).lower() == 'true'
+                filters['is_system_workflow'].append(value)
+        elif not is_include_system_workflows:
+            filters['is_system_workflow'] = [False]
+        return self.sm.executions_list(include=include, filters=filters,
+                                       pagination=pagination)
 
     def get_blueprint(self, blueprint_id, include=None):
         return self.sm.get_blueprint(blueprint_id, include=include)
