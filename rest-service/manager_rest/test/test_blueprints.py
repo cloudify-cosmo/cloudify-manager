@@ -28,8 +28,8 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 class BlueprintsTestCase(base_test.BaseServerTestCase):
 
     def test_get_empty(self):
-        result = self.get('/blueprints')
-        self.assertEquals(0, len(result.json))
+        result = self.client.blueprints.list()
+        self.assertEquals(0, len(result))
 
     def test_get_nonexistent_blueprint(self):
         try:
@@ -47,7 +47,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         post_blueprints_response = self.put_file(
             *self.put_blueprint_args(blueprint_id='hello_world')).json
         self.assertEquals('hello_world', post_blueprints_response['id'])
-        get_blueprints_response = self.get('/blueprints').json
+        get_blueprints_response = self.client.blueprints.list()
         self.assertEquals(1, len(get_blueprints_response))
         self.assertEquals(post_blueprints_response, get_blueprints_response[0])
 

@@ -170,7 +170,7 @@ def verify_deployment_environment_creation_complete(deployment_id):
             "Expected a single execution for workflow "
             "'create_deployment_environment' with status 'terminated'; "
             "Found these executions instead: {0}.\nCelery log:\n{1}".format(
-                json.dumps(execs, indent=2), logs))
+                json.dumps(execs.items, indent=2), logs))
 
 
 def undeploy_application(deployment_id,

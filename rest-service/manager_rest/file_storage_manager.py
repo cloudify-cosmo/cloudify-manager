@@ -15,6 +15,8 @@
 
 import os
 import json
+
+from manager_rest.storage_manager import ListResult
 from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  DeploymentModification,
@@ -39,12 +41,23 @@ PROVIDER_CONTEXT_ID = '1'
 
 
 def paginate_list(list_of_objects, pagination=None):
+    total = len(list_of_objects)
     if pagination:
-        if pagination.get("offset"):
-            list_of_objects = list_of_objects[pagination.get("offset"):]
-        if pagination.get("page_size"):
-            list_of_objects = list_of_objects[:pagination.get("page_size")]
-    return list_of_objects
+        offset = pagination.get('offset')
+        size = pagination.get('size')
+        if offset is not None:
+            list_of_objects = list_of_objects[offset:]
+        if size is not None:
+            list_of_objects = list_of_objects[:size]
+    else:
+        offset = None
+        size = None
+
+    pagination = {'total': total,
+                  'size': size,
+                  'offset': offset}
+    meta = {'pagination': pagination}
+    return ListResult(list_of_objects, meta)
 
 
 class FileStorageManager(object):

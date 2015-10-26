@@ -24,6 +24,7 @@ from flask_securest.rest_security import SecuredResource
 
 from flask_restful_swagger import swagger
 from flask import request
+from flask.ext.restful import marshal
 
 from manager_rest import resources
 from manager_rest.resources import (marshal_with,
@@ -38,6 +39,7 @@ from manager_rest import manager_exceptions
 from manager_rest import config
 from manager_rest import files
 from manager_rest.storage_manager import get_storage_manager
+from manager_rest.storage_manager import ListResult
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.blueprints_manager import \
     TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT
@@ -94,19 +96,34 @@ def sortable(func):
     return create_sort_params
 
 
+def marshal_events(func):
+    """
+    Decorator for marshalling raw event responses
+    """
+    def marshal_response(*args, **kwargs):
+        return marshal(func(*args, **kwargs),
+                       responses_v2.ListResponse.resource_fields)
+    return marshal_response
+
+
 def paginate(func):
     """
     Decorator for adding pagination
     """
     def verify_and_create_pagination_params(*args, **kw):
-        offset = request.args.get("_offset")
-        page_size = request.args.get("_size")
+        offset = request.args.get('_offset')
+        size = request.args.get('_size')
         pagination_params = {}
         if offset:
-            pagination_params["offset"] = int(offset)
-        if offset:
-            pagination_params["page_size"] = int(page_size)
-        return func(pagination=pagination_params, *args, **kw)
+            pagination_params['offset'] = int(offset)
+        if size:
+            pagination_params['size'] = int(size)
+        result = func(pagination=pagination_params, *args, **kw)
+
+        return responses_v2.ListResponse(
+            items=result.items,
+            metadata=result.metadata)
+
     return verify_and_create_pagination_params
 
 
@@ -720,7 +737,8 @@ class UploadedPluginsManager(files.UploadedDataManager):
                                                       archive_target_path)
 
         filter_by_name = {'package_name': new_plugin.package_name}
-        plugins = get_storage_manager().get_plugins(filters=filter_by_name)
+        plugins = get_storage_manager().get_plugins(
+            filters=filter_by_name).items
 
         for plugin in plugins:
             if plugin.archive_name == new_plugin.archive_name:
@@ -893,10 +911,19 @@ class Events(resources.Events):
                                sort=sort,
                                range_filters=range_filters)
 
-    @staticmethod
-    def _search(query, include=None):
+    def list_events(self, query, include=None):
+        result = self._search(query, include=include)
+        result_items = result['hits']['hits']
+        events = [item['_source'] for item in result_items]
+
+        metadata = ManagerElasticsearch.build_list_result_metadata(query,
+                                                                   result)
+        return ListResult(events, metadata)
+
+    def _search(self, query, include=None):
         es = ManagerElasticsearch.get_connection()
-        return es.search(index=Events._set_index_name(),
+
+        return es.search(index=self._set_index_name(),
                          body=query,
                          _source=include or True)
 
@@ -906,6 +933,7 @@ class Events(resources.Events):
         notes='Returns a list of events for optionally provided filters'
     )
     @exceptions_handled
+    @marshal_events
     @create_filters()
     @paginate
     @rangeable
@@ -916,26 +944,11 @@ class Events(resources.Events):
         """
         List events
         """
-        query = Events._build_query(filters=filters,
-                                    pagination=pagination,
-                                    sort=sort,
-                                    range_filters=range_filters)
-        search_result = Events._search(query, include=_include)
-        result_items = search_result['hits']['hits']
-        total_events = search_result['hits']['total']
-        events = [item['_source'] for item in result_items]
-
-        response = {
-            'metadata': {
-                'pagination': {
-                    'total': total_events,
-                    'offset': pagination.get('offset', 0),
-                    'size': pagination.get('page_size', len(events))
-                }
-            },
-            'items': events
-        }
-        return response
+        query = self._build_query(filters=filters,
+                                  pagination=pagination,
+                                  sort=sort,
+                                  range_filters=range_filters)
+        return self.list_events(query, include=_include)
 
     @exceptions_handled
     def post(self):

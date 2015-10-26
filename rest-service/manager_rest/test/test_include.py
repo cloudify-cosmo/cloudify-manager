@@ -19,6 +19,7 @@ import mock
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
+from manager_rest.storage_manager import ListResult
 from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 
 
@@ -51,7 +52,10 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         # section, for more efficient storage queries
         with mock.patch('manager_rest.blueprints_manager.BlueprintsManager'
                         '.blueprints_list') as bpm_bp_list:
-            bpm_bp_list.return_value = list()
+            mock_meta = {'pagination': {'total': 0,
+                                        'size': 0,
+                                        'offset': 0}}
+            bpm_bp_list.return_value = ListResult([], mock_meta)
             self.client.blueprints.list(_include=['id'])
             bpm_bp_list.assert_called_once_with(
                 **expected_blueprints_list_kwargs)

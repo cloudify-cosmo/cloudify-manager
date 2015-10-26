@@ -38,13 +38,13 @@ class EventsTest(TestCase):
         super(EventsTest, self).tearDown()
 
     def test_events_without_logs(self):
-        events = self.client.events.list(include_logs=False)['items']
+        events = self.client.events.list(include_logs=False)
         for event in events:
             self.assertEqual(event['type'], 'cloudify_event',
                              'Expected events only')
 
     def test_timestamp_range(self):
-        all_events = self.client.events.list(_sort='@timestamp')['items']
+        all_events = self.client.events.list(_sort='@timestamp')
         first_event = all_events[0]
         median_event = all_events[len(all_events) / 2 - 1]
         min_time = first_event['@timestamp']
@@ -52,22 +52,22 @@ class EventsTest(TestCase):
         # get only half of the events by timestamp
         ranged_events = \
             self.client.events.list(from_datetime=min_time,
-                                    to_datetime=max_time)['items']
+                                    to_datetime=max_time)
         self.assertEquals(len(ranged_events), len(all_events) / 2)
 
     def test_sorted_events(self):
-        events = self.client.events.list(_sort='-@timestamp')['items']
+        events = self.client.events.list(_sort='-@timestamp')
         self.assertGreater(len(events), 0, 'No events')
         sorted_events = \
             sorted(events, key=lambda x: x.get('@timestamp'), reverse=True)
-        self.assertListEqual(events, sorted_events)
+        self.assertListEqual(events.items, sorted_events)
 
     def test_filtered_events(self):
         deployment_id = self.deployment_id
         # create another deployment to test correct filtering
         self._create_deployment()
         filters = {'deployment_id': deployment_id}
-        events = self.client.events.list(**filters)['items']
+        events = self.client.events.list(**filters)
         self.assertGreater(len(events), 0, 'No events')
         for event in events:
             self.assertEqual(event['context']['deployment_id'],
@@ -78,17 +78,16 @@ class EventsTest(TestCase):
     def test_paginated_events(self):
         size = 5
         offset = 3
-        response = self.client.events.list(_offset=offset, _size=size)
-        events = response['items']
-        pagination_info = response['metadata']['pagination']
+        events = self.client.events.list(_offset=offset, _size=size)
+        pagination_info = events.metadata.pagination
         self.assertEquals(len(events), size)
-        self.assertEquals(pagination_info['offset'], offset)
-        self.assertEquals(pagination_info['size'], size)
+        self.assertEquals(pagination_info.offset, offset)
+        self.assertEquals(pagination_info.size, size)
 
     def test_search_event_message(self):
-        all_events = self.client.events.list()['items']
+        all_events = self.client.events.list()
         message = 'sending'
-        searched_events = self.client.events.list(message=message)['items']
+        searched_events = self.client.events.list(message=message)
         self.assertGreater(len(searched_events), 0, 'No events')
         # assert the search actually returned a partial result
         self.assertLess(len(searched_events), len(all_events))
@@ -98,7 +97,7 @@ class EventsTest(TestCase):
 
     def test_list_with_include_option(self):
         _include = ['@timestamp', 'type']
-        events = self.client.events.list(_include=_include)['items']
+        events = self.client.events.list(_include=_include)
         self.assertGreater(len(events), 0, 'No events')
         for event in events:
             self.assertListEqual(_include, event.keys(),
@@ -107,7 +106,7 @@ class EventsTest(TestCase):
                                  .format(_include, event.keys()))
 
     def test_events_with_logs(self):
-        events = self.client.events.list(include_logs=True)['items']
+        events = self.client.events.list(include_logs=True)
         self.assertGreater(len(events), 0, 'No events')
         for event in events:
             if event['type'] == 'cloudify_log':

@@ -19,6 +19,7 @@ from elasticsearch import Elasticsearch
 
 from manager_rest import config
 from manager_rest import manager_exceptions
+from manager_rest.storage_manager import ListResult
 from manager_rest.models import (BlueprintState,
                                  Snapshot,
                                  Deployment,
@@ -61,18 +62,21 @@ class ESStorageManager(object):
 
     def _list_docs(self, doc_type, model_class, body=None, fields=None):
         include = list(fields) if fields else True
-        search_result = self._connection.search(index=STORAGE_INDEX_NAME,
-                                                doc_type=doc_type,
-                                                body=body,
-                                                _source=include)
-        docs = [hit['_source'] for hit in search_result['hits']['hits']]
+        result = self._connection.search(index=STORAGE_INDEX_NAME,
+                                         doc_type=doc_type,
+                                         body=body,
+                                         _source=include)
+        docs = [hit['_source'] for hit in result['hits']['hits']]
 
         # ES doesn't return _version if using its search API.
         if doc_type == NODE_INSTANCE_TYPE:
             for doc in docs:
                 doc['version'] = None
-        return [self._fill_missing_fields_and_deserialize(doc, model_class)
-                for doc in docs]
+        items = [self._fill_missing_fields_and_deserialize(doc, model_class)
+                 for doc in docs]
+        metadata = ManagerElasticsearch.build_list_result_metadata(body,
+                                                                   result)
+        return ListResult(items, metadata)
 
     def _get_doc(self, doc_type, doc_id, fields=None):
         try:

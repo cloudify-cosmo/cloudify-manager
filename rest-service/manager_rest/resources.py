@@ -45,6 +45,7 @@ from manager_rest import requests_schema
 from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
+from manager_rest import responses_v2
 from manager_rest.files import UploadedDataManager
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
@@ -129,6 +130,11 @@ class marshal_with(object):
 
             response = f(*args, **kwargs)
 
+            if isinstance(response, responses_v2.ListResponse):
+                wrapped_items = self.wrap_with_response_object(response.items)
+                response.items = marshal(wrapped_items, fields_to_include)
+                return marshal(response,
+                               responses_v2.ListResponse.resource_fields)
             if isinstance(response, tuple):
                 data, code, headers = unpack(response)
                 data = self.wrap_with_response_object(data)
@@ -404,7 +410,9 @@ class Blueprints(SecuredResource):
         List uploaded blueprints
         """
 
-        return get_blueprints_manager().blueprints_list(include=_include)
+        blueprints = get_blueprints_manager().blueprints_list(
+            include=_include)
+        return blueprints.items
 
 
 class BlueprintsId(SecuredResource):
@@ -537,7 +545,7 @@ class Executions(SecuredResource):
             is_include_system_workflows=is_include_system_workflows,
             include=_include,
             filters=deployment_id_filter)
-        return executions
+        return executions.items
 
     @exceptions_handled
     @marshal_with(responses.Execution)
@@ -680,7 +688,7 @@ class Deployments(SecuredResource):
         """
         deployments = get_blueprints_manager().deployments_list(
             include=_include)
-        return deployments
+        return deployments.items
 
 
 class DeploymentsId(SecuredResource):
@@ -832,7 +840,7 @@ class DeploymentModifications(SecuredResource):
             deployment_id=deployment_id)
         modifications = get_storage_manager().deployment_modifications_list(
             filters=deployment_id_filter, include=_include)
-        return modifications
+        return modifications.items
 
 
 class DeploymentModificationsId(SecuredResource):
@@ -920,7 +928,7 @@ class Nodes(SecuredResource):
             deployment_id_filter = BlueprintsManager.create_filters_dict(
                 deployment_id=deployment_id)
             nodes = get_storage_manager().get_nodes(
-                filters=deployment_id_filter, include=_include)
+                filters=deployment_id_filter, include=_include).items
         return nodes
 
 
@@ -968,7 +976,7 @@ class NodeInstances(SecuredResource):
             deployment_id=deployment_id, node_id=node_id)
         node_instances = get_storage_manager().get_node_instances(
             filters=params_filter, include=_include)
-        return node_instances
+        return node_instances.items
 
 
 class NodeInstancesId(SecuredResource):

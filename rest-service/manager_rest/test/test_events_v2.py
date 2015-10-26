@@ -32,8 +32,10 @@ class EventsTest(base_test.BaseServerTestCase):
     def test_list_events(self):
         Events._search = self._mock_es_search
         response = self.client.events.list()
-        self.assertIn('metadata', response)
-        self.assertIn('items', response)
+        total = self._mock_es_search()['hits']['total']
+        hits = self._mock_es_search()['hits']['hits']
+        self.assertEquals(total, response.metadata.pagination.total)
+        self.assertEquals(len(hits), len(response.items))
 
     def test_build_query(self):
 
@@ -42,8 +44,10 @@ class EventsTest(base_test.BaseServerTestCase):
                                     sort=sort,
                                     pagination=pagination,
                                     range_filters=range_filters)
+        # sort dict internal list for comparison reasons
+        server_query = self.sort_query_list(query)
         expected_query = self._get_expected_query()
-        self.assertDictEqual(expected_query, query)
+        self.assertDictEqual(expected_query, server_query)
 
     def _get_build_query_args(self):
 
@@ -52,7 +56,7 @@ class EventsTest(base_test.BaseServerTestCase):
             'type': ['cloudify_event', 'cloudify_logs']
         }
         pagination = {
-            'page_size': 5,
+            'size': 5,
             'offset': 3
         }
         sort = {
@@ -66,7 +70,7 @@ class EventsTest(base_test.BaseServerTestCase):
         }
         return filters, pagination, sort, range_filters
 
-    def _mock_es_search(self, query, include):
+    def _mock_es_search(self, query=None, include=None):
         result = {
             'hits': {
                 'total': 10,
@@ -121,4 +125,10 @@ class EventsTest(base_test.BaseServerTestCase):
             'size': 5,
             'from': 3
         }
-        return expected_query
+        return self.sort_query_list(expected_query)
+
+    def sort_query_list(self, query):
+        query['query']['filtered']['filter']['bool']['must'].sort()
+        query['query']['filtered']['filter']['bool']['must'][
+            2]['terms']['type'].sort()
+        return query

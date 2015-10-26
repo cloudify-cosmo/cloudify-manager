@@ -28,13 +28,14 @@ class TestResourceListV1(BaseListTest):
 
     def setUp(self):
         super(TestResourceListV1, self).setUp()
-        (self.first_blueprint_id,
-         self.first_deployment_id,
-         self.sec_blueprint_id,
-         self.sec_deployment_id) = self._put_two_test_deployments()
+        self._put_n_deployments(id_prefix='test', number_of_deployments=2)
+        self.first_blueprint_id = 'test0_blueprint'
+        self.first_deployment_id = 'test0_deployment'
+        self.sec_blueprint_id = 'test1_blueprint'
+        self.sec_deployment_id = 'test1_deployment'
 
     def test_blueprints_list_no_params(self):
-        response = self.get('/blueprints', query_params=None).json
+        response = self.client.blueprints.list()
         self.assertEqual(2, len(response), 'expecting 2 blueprint result,'
                                            ' got {0}'.format(len(response)))
         for blueprint in response:
@@ -42,17 +43,8 @@ class TestResourceListV1(BaseListTest):
                           (self.first_blueprint_id, self.sec_blueprint_id))
             self.assertIsNotNone(blueprint['plan'])
 
-    def test_blueprints_list_with_params(self):
-        response = self.get('/blueprints', query_params=None).json
-        self.assertEqual(2, len(response), 'expecting 2 blueprint result,'
-                                           ' got {0}'.format(len(response)))
-        for blueprint in response:
-            self.assertIn(response[0]['id'],
-                          (self.first_blueprint_id, self.sec_blueprint_id))
-            self.assertIsNotNone(blueprint['plan'])
-
     def test_deployments_list_no_params(self):
-        response = self.get('/deployments', query_params=None).json
+        response = self.client.deployments.list()
         self.assertEqual(2, len(response), 'expecting 2 deployment results, '
                                            'got {0}'.format(len(response)))
 
@@ -64,17 +56,8 @@ class TestResourceListV1(BaseListTest):
         self.assertEquals(self.sec_blueprint_id,
                           response[1]['blueprint_id'])
 
-    def test_deployments_list_with_filters(self):
-        filter_fields = {'id': self.first_deployment_id,
-                         'blueprint_id': self.first_blueprint_id}
-        response = self.get('/deployments', query_params=filter_fields).json
-
-        self.assertEqual(2, len(response), 'filter should not be applied, '
-                                           'expecting 2 results, got {0}'
-                         .format(len(response)))
-
     def test_nodes_list_no_params(self):
-        response = self.get('/nodes', query_params=None).json
+        response = self.client.nodes.list()
         self.assertEqual(4, len(response), 'expecting 4 node results, '
                                            'got {0}'.format(len(response)))
         for node in response:
@@ -85,7 +68,7 @@ class TestResourceListV1(BaseListTest):
 
     def test_nodes_list_with_params(self):
         params = {'deployment_id': self.first_deployment_id}
-        response = self.get('/nodes', query_params=params).json
+        response = self.client.nodes.list(**params)
         self.assertEqual(2, len(response), 'expecting 1 node result, '
                                            'got {0}'.format(len(response)))
         for node in response:
@@ -93,7 +76,7 @@ class TestResourceListV1(BaseListTest):
             self.assertEquals(node['blueprint_id'], self.first_blueprint_id)
 
     def test_executions_list_no_params(self):
-        response = self.get('/executions', query_params=None).json
+        response = self.client.executions.list()
         self.assertEqual(2, len(response), 'expecting 2 executions results, '
                                            'got {0}'.format(len(response)))
         for execution in response:
@@ -105,7 +88,7 @@ class TestResourceListV1(BaseListTest):
 
     def test_executions_list_with_params(self):
         params = {'deployment_id': self.first_deployment_id}
-        response = self.get('/executions', query_params=params).json
+        response = self.client.executions.list(**params)
         self.assertEqual(1, len(response), 'expecting 1 executions result, '
                                            'got {0}'.format(len(response)))
         for execution in response:
@@ -116,7 +99,7 @@ class TestResourceListV1(BaseListTest):
             self.assertEquals(execution['status'], 'terminated')
 
     def test_node_instances_list_no_params(self):
-        response = self.get('/node-instances', query_params=None).json
+        response = self.client.node_instances.list()
         self.assertEqual(4, len(response), 'expecting 4 node instance results,'
                                            ' got {0}'.format(len(response)))
         for node_instance in response:
@@ -126,7 +109,7 @@ class TestResourceListV1(BaseListTest):
 
     def test_node_instances_list_with_params(self):
         params = {'deployment_id': self.first_deployment_id}
-        response = self.get('/node-instances', query_params=params).json
+        response = self.client.node_instances.list(**params)
         self.assertEqual(2, len(response), 'expecting 2 node instance results,'
                                            ' got {0}'.format(len(response)))
         for instance in response:
@@ -136,7 +119,7 @@ class TestResourceListV1(BaseListTest):
     # special parameter 'node_name' is converted to 'node_id' on the server
     def test_node_instances_list_with_node_name_filter(self):
         filter_params = {'node_name': 'http_web_server'}
-        response = self.get('/node-instances', query_params=filter_params).json
+        response = self.client.node_instances.list(**filter_params)
         self.assertEqual(2, len(response), 'expecting 1 node instance result,'
                                            ' got {0}'.format(len(response)))
         for node_instance in response:
@@ -144,10 +127,10 @@ class TestResourceListV1(BaseListTest):
                           (self.first_deployment_id, self.sec_deployment_id))
             self.assertEquals(node_instance['state'], 'uninitialized')
 
-    def test_deployment_modifications_list_no_params(self):
-        self._put_two_deployment_modifications()
-        response = self.get('/deployment-modifications',
-                            query_params=None).json
+        self._put_n_deployment_modifications(id_prefix='test',
+                                             number_of_modifications=2,
+                                             skip_creation=True)
+        response = self.client.deployment_modifications.list()
         self.assertEqual(2, len(response), 'expecting 2 deployment mod '
                                            'results, got {0}'
                          .format(len(response)))
@@ -158,9 +141,10 @@ class TestResourceListV1(BaseListTest):
 
     def test_deployment_modifications_list_with_params(self):
         params = {'deployment_id': self.first_deployment_id}
-        self._put_two_deployment_modifications()
-        response = self.get('/deployment-modifications',
-                            query_params=params).json
+        self._put_n_deployment_modifications(id_prefix='test',
+                                             number_of_modifications=2,
+                                             skip_creation=True)
+        response = self.client.deployment_modifications.list(**params)
         self.assertEqual(1, len(response), 'expecting 1 deployment mod '
                                            'results, got {0}'
                          .format(len(response)))
