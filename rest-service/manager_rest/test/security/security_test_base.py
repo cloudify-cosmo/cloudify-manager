@@ -27,8 +27,8 @@ class SecurityTestBase(BaseServerTestCase):
 
     def initialize_provider_context(self):
         client = self.create_client(
-            headers=SecurityTestBase.create_auth_header(username='user1',
-                                                        password='pass1'))
+            headers=SecurityTestBase.create_auth_header(username='admin',
+                                                        password='admin'))
         super(SecurityTestBase, self).initialize_provider_context(
             client=client)
 
@@ -50,29 +50,20 @@ class SecurityTestBase(BaseServerTestCase):
         test_config.security_enabled = True
 
         test_config.security_userstore_driver = {
-            'implementation':
-                'flask_securest.userstores.simple:SimpleUserstore',
+            'implementation': 'flask_securest.userstores.simple:'
+                              'SimpleUserstore',
             'properties': {
                 'userstore': {
-                    'user1': {
-                        'username': 'user1',
-                        'password': 'pass1',
-                        'email': 'user1@domain.dom'
-                    },
-                    'user2': {
-                        'username': 'user2',
-                        'password': 'pass2',
-                        'email': 'user2@domain.dom'
-                    },
-                    'user3': {
-                        'username': 'user3',
-                        'password': 'pass3',
-                        'email': 'user3@domain.dom'
-                    },
-                    },
+                    'user': {
+                        'username': 'admin',
+                        'password': 'admin',
+                        'email': 'admin@domain.dom'
+                    }
+                },
                 'identifying_attribute': 'username'
             }
         }
+
         test_config.security_auth_token_generator = {
             'implementation': 'flask_securest.authentication_providers.token:'
                               'TokenAuthenticator',
@@ -81,6 +72,7 @@ class SecurityTestBase(BaseServerTestCase):
                 'expires_in_seconds': 600
             }
         }
+
         test_config.security_authentication_providers = [
             {
                 'name': 'password',
