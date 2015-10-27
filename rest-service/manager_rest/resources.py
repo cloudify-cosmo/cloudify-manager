@@ -26,12 +26,10 @@ from os import path
 
 from setuptools import archive_util
 
-import elasticsearch
 from flask import (
     request,
     make_response,
-    current_app as app,
-    g
+    current_app as app
 )
 from flask.ext.restful import Resource, marshal, reqparse
 from flask_restful_swagger import swagger
@@ -53,6 +51,7 @@ from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager,
                                              BlueprintsManager)
 from manager_rest import get_version_data
+from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -1095,48 +1094,24 @@ class DeploymentsIdOutputs(SecuredResource):
         return dict(deployment_id=deployment_id, outputs=outputs)
 
 
-def _elasticsearch_connection():
-    if 'es_connection' not in g:
-        es_host = config.instance().db_address
-        es_port = config.instance().db_port
-        g.es_connection = elasticsearch.Elasticsearch(
-            hosts=[{"host": es_host, "port": es_port}])
-    return g.es_connection
-
-
-def _check_index_exists(index_name):
-    if not hasattr(app, 'cloudify_events_index_exists'):
-        es = _elasticsearch_connection()
-        app.cloudify_events_index_exists = \
-            es.indices.exists(index=[index_name])
-    return app.cloudify_events_index_exists
-
-
-def _query_elastic_search(index=None, doc_type=None, body=None):
-    """Query ElasticSearch with the provided index and query body.
-
-    Returns:
-    Elasticsearch result as is (Python dict).
-    """
-    es = _elasticsearch_connection()
-    return es.search(index=index, doc_type=doc_type, body=body)
-
-
 class Events(SecuredResource):
 
-    def _set_index_name(self):
-        if _check_index_exists('cloudify_events'):
+    @staticmethod
+    def _set_index_name():
+        if ManagerElasticsearch.check_index_exists('cloudify_events'):
             return 'cloudify_events'
         else:
             return 'logstash-*'
 
+    @staticmethod
     def _query_events(self):
         """
         List events for the provided Elasticsearch query
         """
         verify_json_content_type()
-        return _query_elastic_search(index=self._set_index_name(),
-                                     body=request.json)
+        return ManagerElasticsearch.search(
+            index=Events._set_index_name(),
+            body=request.json)
 
     @swagger.operation(
         nickname='events',
@@ -1155,7 +1130,7 @@ class Events(SecuredResource):
         """
         List events for the provided Elasticsearch query
         """
-        return self._query_events()
+        return Events._query_events()
 
     @swagger.operation(
         nickname='events',
@@ -1174,7 +1149,7 @@ class Events(SecuredResource):
         """
         List events for the provided Elasticsearch query
         """
-        return self._query_events()
+        return Events._query_events()
 
 
 class Search(SecuredResource):
@@ -1198,8 +1173,9 @@ class Search(SecuredResource):
         Search using an Elasticsearch query
         """
         verify_json_content_type()
-        return _query_elastic_search(index='cloudify_storage',
-                                     body=request.json)
+        return ManagerElasticsearch.search(
+            index='cloudify_storage',
+            body=request.json)
 
 
 class Status(SecuredResource):

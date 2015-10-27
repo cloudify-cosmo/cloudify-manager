@@ -32,6 +32,7 @@ RABBITMQ_VERBOSE_MESSAGES_ENABLED = os.environ.get(
     RABBITMQ_VERBOSE_MESSAGES_KEY, 'false').lower() == 'true'
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
+LOG_INDICES_PREFIX = 'logstash-'
 
 PLUGIN_STORAGE_PATHS = {
     'worker_installer': '{0}/agent-installer-data.json',

@@ -42,6 +42,57 @@ from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.blueprints_manager import \
     TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT
 
+from manager_rest.manager_elasticsearch import ManagerElasticsearch
+
+
+def projection(func):
+    """Decorator for enabling projection
+    """
+    def create_projection_params(*args, **kw):
+        projection_params = None
+        if '_include' in request.args:
+            projection_params = request.args["_include"].split(',')
+        return func(_include=projection_params, *args, **kw)
+    return create_projection_params
+
+
+def rangeable(func):
+    """
+    Decorator for enabling range
+    """
+    def create_range_params(*args, **kw):
+        range_args = request.args.getlist("_range")
+        range_params = {}
+        for range_arg in range_args:
+            try:
+                range_key, range_from, range_to = \
+                    range_arg.split(',')
+            except ValueError:
+                raise ValueError('Range parameter requires 3 values')
+            range_param = {}
+            if range_from:
+                range_param['from'] = range_from
+            if range_to:
+                range_param['to'] = range_to
+            if range_param:
+                range_params[range_key] = range_param
+
+        return func(range_filters=range_params, *args, **kw)
+    return create_range_params
+
+
+def sortable(func):
+    """
+    Decorator for enabling sort
+    """
+    def create_sort_params(*args, **kw):
+        sort_args = request.args.getlist("_sort")
+        sort_params = \
+            {k.lstrip('-+'): "desc" if k[0] == '-' else "asc"
+             for k in sort_args}
+        return func(sort=sort_params, *args, **kw)
+    return create_sort_params
+
 
 def paginate(func):
     """
@@ -59,33 +110,28 @@ def paginate(func):
     return verify_and_create_pagination_params
 
 
-def verify_and_create_filters(fields):
+def create_filters(fields=None):
     """
     Decorator for extracting filter parameters from the request arguments and
-    verifying their validity according to the provided fields.
+    optionally verifying their validity according to the provided fields.
     :param fields: a set of valid filter fields.
     :return: a Decorator for creating and validating the accepted fields.
     """
-    def verify_and_create_filters_dec(f):
-        def verify_and_create(*args, **kw):
-            filters = {}
-            args_without_meta_keys = \
-                [(k, v) for (k, v) in request.args.iteritems(multi=True)
-                 if not k.startswith('_')]
-            for k, v in args_without_meta_keys:
-                if k in filters:
-                    filters[k].append(v)
-                else:
-                    filters[k] = [v]
-            unknowns = [k for k in filters.iterkeys() if k not in fields]
-            if unknowns:
-                raise manager_exceptions.BadParametersError(
-                    'Filter keys \'{key_names}\' do not exist. Allowed '
-                    'filters are: {fields}'
-                    .format(key_names=unknowns, fields=list(fields)))
+    def create_filters_dec(f):
+        def some_func(*args, **kw):
+            request_args = request.args.to_dict(flat=False)
+            filters = {k: v for k, v in
+                       request_args.iteritems() if not k.startswith('_')}
+            if fields:
+                unknowns = [k for k in filters.iterkeys() if k not in fields]
+                if unknowns:
+                    raise manager_exceptions.BadParametersError(
+                        'Filter keys \'{key_names}\' do not exist. Allowed '
+                        'filters are: {fields}'
+                        .format(key_names=unknowns, fields=list(fields)))
             return f(filters=filters, *args, **kw)
-        return verify_and_create
-    return verify_and_create_filters_dec
+        return some_func
+    return create_filters_dec
 
 
 def _create_filter_params_list_description(parameters, list_type):
@@ -312,7 +358,7 @@ class Blueprints(resources.Blueprints):
     )
     @exceptions_handled
     @marshal_with(responses_v2.BlueprintState)
-    @verify_and_create_filters(models.BlueprintState.fields)
+    @create_filters(models.BlueprintState.fields)
     @paginate
     def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
@@ -420,7 +466,7 @@ class Executions(resources.Executions):
     )
     @exceptions_handled
     @marshal_with(responses_v2.Execution)
-    @verify_and_create_filters(models.Execution.fields)
+    @create_filters(models.Execution.fields)
     @paginate
     def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
@@ -454,7 +500,7 @@ class Deployments(resources.Deployments):
     )
     @exceptions_handled
     @marshal_with(responses_v2.Deployment)
-    @verify_and_create_filters(models.Deployment.fields)
+    @create_filters(models.Deployment.fields)
     @paginate
     def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
@@ -480,7 +526,7 @@ class DeploymentModifications(resources.DeploymentModifications):
     )
     @exceptions_handled
     @marshal_with(responses_v2.DeploymentModification)
-    @verify_and_create_filters(models.DeploymentModification.fields)
+    @create_filters(models.DeploymentModification.fields)
     @paginate
     def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
@@ -504,7 +550,7 @@ class Nodes(resources.Nodes):
     )
     @exceptions_handled
     @marshal_with(responses_v2.Node)
-    @verify_and_create_filters(models.DeploymentNode.fields)
+    @create_filters(models.DeploymentNode.fields)
     @paginate
     def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
@@ -530,7 +576,7 @@ class NodeInstances(resources.NodeInstances):
     )
     @exceptions_handled
     @marshal_with(responses_v2.NodeInstance)
-    @verify_and_create_filters(models.DeploymentNodeInstance.fields)
+    @create_filters(models.DeploymentNodeInstance.fields)
     @paginate
     def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
@@ -609,7 +655,7 @@ class Plugins(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses_v2.Plugin)
-    @verify_and_create_filters(models.Plugin.fields)
+    @create_filters(models.Plugin.fields)
     @paginate
     def get(self, _include=None, filters=None, pagination=None, **kwargs):
         """
@@ -752,8 +798,8 @@ class PluginsArchive(SecuredResource):
     @swagger.operation(
         responseClass='archive file',
         nickname="downloadPlugin",
-        notes="download a plugin archive according to the plugin ID. ",
-        )
+        notes="download a plugin archive according to the plugin ID. "
+    )
     @exceptions_handled
     def get(self, plugin_id, **kwargs):
         """
@@ -815,6 +861,85 @@ class PluginsId(SecuredResource):
         shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
         get_storage_manager().delete_plugin(plugin_id)
         return plugin
+
+
+class Events(resources.Events):
+
+    @staticmethod
+    def _build_query(filters=None, pagination=None, sort=None,
+                     range_filters=None):
+
+        ctx_fields = [
+            'blueprint_id',
+            'deployment_id',
+            'execution_id',
+            'node_id',
+            'node_instance_id',
+            'workflow_id'
+        ]
+
+        # append 'context.' prefix to context fields in all constructs
+        query_constructs = \
+            [filters, pagination, sort, range_filters]
+        for ctx_field in ctx_fields:
+            for construct in query_constructs:
+                if construct and ctx_field in construct:
+                    construct['context.{0}'.format(ctx_field)] = \
+                        construct.pop(ctx_field)
+
+        return ManagerElasticsearch.\
+            build_request_body(filters=filters,
+                               pagination=pagination,
+                               sort=sort,
+                               range_filters=range_filters)
+
+    @staticmethod
+    def _search(query, include=None):
+        es = ManagerElasticsearch.get_connection()
+        return es.search(index=Events._set_index_name(),
+                         body=query,
+                         _source=include or True)
+
+    @swagger.operation(
+        responseclass='List[Event]',
+        nickname="list events",
+        notes='Returns a list of events for optionally provided filters'
+    )
+    @exceptions_handled
+    @create_filters()
+    @paginate
+    @rangeable
+    @projection
+    @sortable
+    def get(self, _include=None, filters=None,
+            pagination=None, sort=None, range_filters=None, **kwargs):
+        """
+        List events
+        """
+        query = Events._build_query(filters=filters,
+                                    pagination=pagination,
+                                    sort=sort,
+                                    range_filters=range_filters)
+        search_result = Events._search(query, include=_include)
+        result_items = search_result['hits']['hits']
+        total_events = search_result['hits']['total']
+        events = [item['_source'] for item in result_items]
+
+        response = {
+            'metadata': {
+                'pagination': {
+                    'total': total_events,
+                    'offset': pagination.get('offset', 0),
+                    'size': pagination.get('page_size', len(events))
+                }
+            },
+            'items': events
+        }
+        return response
+
+    @exceptions_handled
+    def post(self):
+        raise manager_exceptions.MethodNotAllowedError()
 
 
 def _get_plugin_archive_path(plugin_id, archive_name):

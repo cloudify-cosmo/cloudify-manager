@@ -24,6 +24,7 @@ import elasticsearch
 
 from cloudify.utils import setup_logger
 from testenv.constants import STORAGE_INDEX_NAME
+from testenv.constants import LOG_INDICES_PREFIX
 
 
 logger = setup_logger('elasticsearch_process')
@@ -120,6 +121,30 @@ class ElasticSearchProcess(object):
     def reset_data(self):
         self._remove_index_if_exists()
         self._create_schema()
+
+    @staticmethod
+    def remove_log_indices():
+        es = elasticsearch.Elasticsearch()
+        from elasticsearch.client import IndicesClient
+        es_index = IndicesClient(es)
+        log_index_pattern = '{0}*'.format(LOG_INDICES_PREFIX)
+        if es_index.exists(log_index_pattern):
+            logger.info(
+                "Elasticsearch indices '{0}' already exist and "
+                "will be deleted".format(log_index_pattern))
+            try:
+                es_index.delete(log_index_pattern)
+                logger.info('Verifying Elasticsearch index was deleted...')
+                deadline = time.time() + 45
+                while es_index.exists(log_index_pattern):
+                    if time.time() > deadline:
+                        raise RuntimeError(
+                            'Elasticsearch index was not deleted after '
+                            '30 seconds')
+                    time.sleep(0.5)
+            except BaseException as e:
+                logger.warn('Ignoring caught exception on Elasticsearch delete'
+                            ' index - {0}: {1}'.format(e.__class__, e.message))
 
     @staticmethod
     def _remove_index_if_exists():

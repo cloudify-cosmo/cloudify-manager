@@ -300,3 +300,15 @@ class ResolverInstantiationError(ManagerException):
             *args,
             **kwargs
         )
+
+
+class MethodNotAllowedError(ManagerException):
+    ERROR_CODE = 'method_not_allowed_error'
+
+    def __init__(self, *args, **kwargs):
+        super(MethodNotAllowedError, self).__init__(
+            405,
+            MethodNotAllowedError.ERROR_CODE,
+            *args,
+            **kwargs
+        )

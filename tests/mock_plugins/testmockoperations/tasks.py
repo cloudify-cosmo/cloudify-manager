@@ -458,3 +458,9 @@ def retrieve_template(ctx, rendering_tests_demo_conf, mode, **_):
 
     with update_storage(ctx) as data:
         data['rendered_resource'] = resource
+
+
+@operation
+def do_nothing(ctx, **kwargs):
+    ctx.logger.info('dummy workflow executed')
+    return

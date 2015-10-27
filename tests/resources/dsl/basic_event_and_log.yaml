@@ -1,0 +1,14 @@
+tosca_definitions_version: cloudify_dsl_1_2
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations.yaml
+
+node_templates:
+    dummy:
+        type: cloudify.nodes.Compute
+        properties:
+            install_agent: false
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start: testmockoperations.testmockoperations.tasks.do_nothing
