@@ -19,7 +19,7 @@ import os
 from datetime import datetime
 from StringIO import StringIO
 
-from flask import g, current_app
+from flask import current_app
 
 from dsl_parser import constants
 from dsl_parser import exceptions as parser_exceptions
@@ -28,9 +28,8 @@ from dsl_parser import tasks
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import models
 from manager_rest import manager_exceptions
-from manager_rest.workflow_client import workflow_client
-from manager_rest.storage_manager import get_storage_manager
-from manager_rest.utils import maybe_register_teardown
+from manager_rest import storage_manager
+from manager_rest import workflow_client as wf_client
 
 TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT = True
 GLOBAL_PARALLEL_EXECUTIONS_LIMIT_DEFAULT = 50
@@ -49,9 +48,9 @@ class BlueprintAlreadyExistsException(Exception):
 
 class BlueprintsManager(object):
 
-    @property
-    def sm(self):
-        return get_storage_manager()
+    def __init__(self):
+        self.sm = storage_manager.get_storage_manager()
+        self.workflow_client = wf_client.get_workflow_client()
 
     def blueprints_list(self, include=None, filters=None, pagination=None):
         return self.sm.blueprints_list(include=include, filters=filters,
@@ -257,7 +256,7 @@ class BlueprintsManager(object):
                 created_at=start_deployment_env_created_at_time)
 
         # executing the user workflow
-        workflow_client().execute_workflow(
+        self.workflow_client.execute_workflow(
             workflow_id,
             workflow,
             blueprint_id=deployment.blueprint_id,
@@ -304,7 +303,7 @@ class BlueprintsManager(object):
 
         self.sm.put_execution(execution.id, execution)
 
-        async_task = workflow_client().execute_system_workflow(
+        async_task = self.workflow_client.execute_system_workflow(
             deployment, wf_id, execution_id, task_mapping,
             execution_parameters)
 
@@ -947,18 +946,13 @@ class BlueprintsManager(object):
         self._update_parser_context_in_app(provider_context.context)
 
 
-def teardown_blueprints_manager(exception):
-    # print "tearing down blueprints manager!"
-    pass
-
-
 # What we need to access this manager in Flask
 def get_blueprints_manager():
     """
-    Get the current blueprints manager
-    or create one if none exists for the current app context
+    Get the current app's blueprints manager, create if necessary
     """
-    if 'blueprints_manager' not in g:
-        g.blueprints_manager = BlueprintsManager()
-        maybe_register_teardown(current_app, teardown_blueprints_manager)
-    return g.blueprints_manager
+    manager = current_app.config.get('blueprints_manager')
+    if not manager:
+        current_app.config['blueprints_manager'] = BlueprintsManager()
+        manager = current_app.config.get('blueprints_manager')
+    return manager

@@ -26,6 +26,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_store_load_delete_blueprint(self):
         now = str(datetime.now())
+        sm = storage_manager._get_instance()
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
                                           updated_at=now,
@@ -33,22 +34,21 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                           plan={'name': 'my-bp'},
                                           source='bp-source',
                                           main_file_name='aaa')
-        storage_manager.instance().put_blueprint('blueprint-id', blueprint)
-        blueprint_from_list = storage_manager.instance().blueprints_list()[0]
-        blueprint_restored = \
-            storage_manager.instance().get_blueprint('blueprint-id')
-        bp_from_delete = storage_manager.instance().delete_blueprint(
-            'blueprint-id')
+        sm.put_blueprint('blueprint-id', blueprint)
+        blueprint_from_list = sm.blueprints_list()[0]
+        blueprint_restored = sm.get_blueprint('blueprint-id')
+        bp_from_delete = sm.delete_blueprint('blueprint-id')
         self.assertEquals(blueprint.to_dict(), blueprint_from_list.to_dict())
         self.assertEquals(blueprint.to_dict(), blueprint_restored.to_dict())
         # in bp returned from delete operation only 'id' is guaranteed to
         # return
         self.assertEquals(blueprint.id, bp_from_delete.id)
-        self.assertEquals(0,
-                          len(storage_manager.instance().blueprints_list()))
+        blueprints_list = sm.blueprints_list()
+        self.assertEquals(0, len(blueprints_list))
 
     def test_get_blueprint_deployments(self):
         now = str(datetime.now())
+        sm = storage_manager._get_instance()
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
                                           updated_at=now,
@@ -56,7 +56,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                           plan={'name': 'my-bp'},
                                           source='bp-source',
                                           main_file_name='aaa')
-        storage_manager.instance().put_blueprint('blueprint-id', blueprint)
+        sm.put_blueprint('blueprint-id', blueprint)
 
         deployment1 = models.Deployment(id='dep-1',
                                         created_at=now,
@@ -70,7 +70,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         policy_triggers={},
                                         groups={},
                                         outputs={})
-        storage_manager.instance().put_deployment('dep-1', deployment1)
+        sm.put_deployment('dep-1', deployment1)
 
         deployment2 = models.Deployment(id='dep-2',
                                         created_at=now,
@@ -84,7 +84,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         policy_triggers={},
                                         groups={},
                                         outputs={})
-        storage_manager.instance().put_deployment('dep-2', deployment2)
+        sm.put_deployment('dep-2', deployment2)
 
         deployment3 = models.Deployment(id='dep-3',
                                         created_at=now,
@@ -98,11 +98,9 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         policy_triggers={},
                                         groups={},
                                         outputs={})
-        storage_manager.instance().put_deployment('dep-3', deployment3)
+        sm.put_deployment('dep-3', deployment3)
 
-        blueprint_deployments = storage_manager.instance()\
-            .get_blueprint_deployments(
-                'blueprint-id')
+        blueprint_deployments = sm.get_blueprint_deployments('blueprint-id')
 
         self.assertEquals(2, len(blueprint_deployments))
         if blueprint_deployments[0].id != deployment1.id:
@@ -151,11 +149,11 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                           plan={'name': 'my-bp'},
                                           source='bp-source',
                                           main_file_name='aaa')
-        storage_manager.instance().put_blueprint('blueprint-id', blueprint)
+        sm = storage_manager._get_instance()
+        sm.put_blueprint('blueprint-id', blueprint)
 
-        blueprint_restored = \
-            storage_manager.instance().get_blueprint('blueprint-id',
-                                                     {'id', 'created_at'})
+        blueprint_restored = sm.get_blueprint('blueprint-id',
+                                              {'id', 'created_at'})
         self.assertEquals('blueprint-id', blueprint_restored.id)
         self.assertEquals(now, blueprint_restored.created_at)
         self.assertEquals(None, blueprint_restored.updated_at)
