@@ -26,5 +26,6 @@ setup(
     description='Various Cloudify Workflows',
     install_requires=[
         'cloudify-plugins-common==3.3rc1',
+        'elasticsearch==1.6.0'
     ]
 )

@@ -76,3 +76,20 @@ class Plugin(object):
         self.excluded_wheels = kwargs['excluded_wheels']
         self.supported_py_versions = kwargs['supported_py_versions']
         self.uploaded_at = kwargs['uploaded_at']
+
+
+@swagger.model
+class Snapshot(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'created_at': fields.String,
+        'status': fields.String,
+        'error': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.created_at = kwargs['created_at']
+        self.status = kwargs['status']
+        self.error = kwargs['error']

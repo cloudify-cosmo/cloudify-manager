@@ -20,6 +20,7 @@ from elasticsearch import Elasticsearch
 from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest.models import (BlueprintState,
+                                 Snapshot,
                                  Deployment,
                                  DeploymentModification,
                                  Execution,
@@ -33,6 +34,7 @@ NODE_TYPE = 'node'
 NODE_INSTANCE_TYPE = 'node_instance'
 PLUGIN_TYPE = 'plugin'
 BLUEPRINT_TYPE = 'blueprint'
+SNAPSHOT_TYPE = 'snapshot'
 DEPLOYMENT_TYPE = 'deployment'
 DEPLOYMENT_MODIFICATION_TYPE = 'deployment_modification'
 EXECUTION_TYPE = 'execution'
@@ -192,6 +194,13 @@ class ESStorageManager(object):
                                     filters=filters,
                                     include=include)
 
+    def snapshots_list(self, include=None, filters=None, pagination=None):
+        return self._get_items_list(SNAPSHOT_TYPE,
+                                    Snapshot,
+                                    include=include,
+                                    filters=filters,
+                                    pagination=pagination)
+
     def deployments_list(self, include=None, filters=None, pagination=None):
         return self._get_items_list(DEPLOYMENT_TYPE,
                                     Deployment,
@@ -264,6 +273,12 @@ class ESStorageManager(object):
                                              BlueprintState,
                                              fields=include)
 
+    def get_snapshot(self, snapshot_id, include=None):
+        return self._get_doc_and_deserialize(SNAPSHOT_TYPE,
+                                             snapshot_id,
+                                             Snapshot,
+                                             fields=include)
+
     def get_deployment(self, deployment_id, include=None):
         return self._get_doc_and_deserialize(DEPLOYMENT_TYPE,
                                              deployment_id,
@@ -285,6 +300,10 @@ class ESStorageManager(object):
     def put_blueprint(self, blueprint_id, blueprint):
         self._put_doc_if_not_exists(BLUEPRINT_TYPE, str(blueprint_id),
                                     blueprint.to_dict())
+
+    def put_snapshot(self, snapshot_id, snapshot):
+        self._put_doc_if_not_exists(SNAPSHOT_TYPE, str(snapshot_id),
+                                    snapshot.to_dict())
 
     def put_deployment(self, deployment_id, deployment):
         self._put_doc_if_not_exists(DEPLOYMENT_TYPE, str(deployment_id),
@@ -318,6 +337,24 @@ class ESStorageManager(object):
 
     def delete_plugin(self, plugin_id):
         return self._delete_doc(PLUGIN_TYPE, plugin_id, Plugin)
+
+    def delete_snapshot(self, snapshot_id):
+        return self._delete_doc(SNAPSHOT_TYPE, snapshot_id,
+                                Snapshot)
+
+    def update_snapshot_status(self, snapshot_id, status, error):
+        update_doc_data = {'status': status,
+                           'error': error}
+        update_doc = {'doc': update_doc_data}
+        try:
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=SNAPSHOT_TYPE,
+                                    id=str(snapshot_id),
+                                    body=update_doc,
+                                    **MUTATE_PARAMS)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Snapshot {0} not found".format(snapshot_id))
 
     def update_execution_status(self, execution_id, status, error):
         update_doc_data = {'status': status,

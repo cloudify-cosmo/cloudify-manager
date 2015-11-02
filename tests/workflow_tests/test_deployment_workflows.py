@@ -30,7 +30,7 @@ class TestDeploymentWorkflows(TestCase):
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
         workflows = self.client.deployments.get(deployment_id).workflows
-        self.assertEqual(6, len(workflows))
+        self.assertEqual(7, len(workflows))
         wf_ids = [x.name for x in workflows]
         self.assertIn('uninstall', wf_ids)
         self.assertIn('install', wf_ids)
@@ -38,6 +38,7 @@ class TestDeploymentWorkflows(TestCase):
         self.assertIn('custom', wf_ids)
         self.assertIn('scale', wf_ids)
         self.assertIn('heal', wf_ids)
+        self.assertIn('install_new_agents', wf_ids)
 
     def test_workflow_parameters_pass_from_blueprint(self):
         dsl_path = resource('dsl/workflow_parameters.yaml')
