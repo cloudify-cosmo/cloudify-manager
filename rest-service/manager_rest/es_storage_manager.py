@@ -113,6 +113,10 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.ConflictError:
             raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
+        except Exception as e:
+            raise manager_exceptions.ManagerException(
+                'Failed to create document {0} in {1}, error: {2}'.
+                format(doc_id, doc_type, e.message))
 
     def _delete_doc(self, doc_type, doc_id, model_class, id_field='id'):
         try:
