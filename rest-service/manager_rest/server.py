@@ -33,8 +33,6 @@ from flask_securest.rest_security import SecuREST
 from manager_rest import endpoint_mapper
 from manager_rest import config
 from manager_rest import storage_manager
-from manager_rest import blueprints_manager
-from manager_rest import workflow_client
 from manager_rest import manager_exceptions
 from manager_rest import utils
 
@@ -71,7 +69,6 @@ def setup_app(warnings=None):
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
 
-    app.before_first_request(_init_app_managers)
     app.before_request(log_request)
     app.after_request(log_response)
 
