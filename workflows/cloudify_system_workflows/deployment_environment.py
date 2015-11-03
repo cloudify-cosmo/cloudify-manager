@@ -27,24 +27,19 @@ WORKFLOWS_WORKER_PAYLOAD = {
 }
 
 
-@workflow
-def create(ctx, **kwargs):
-    print '***** in deployment_environment.create, ctx is: {0}'.format(ctx)
+def generate_create_dep_tasks_graph(ctx, deployment_plugins_to_install,
+                                    workflow_plugins_to_install,
+                                    policy_configuration=None):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    is_transient_workers = _is_transient_deployment_workers_mode(
-        ctx.security_ctx)
-
-    deployment_plugins = kwargs['deployment_plugins_to_install']
+    is_transient_workers = _is_transient_deployment_workers_mode()
 
     deployment_plugins = filter(lambda plugin: plugin['install'],
-                                deployment_plugins)
-
-    workflow_plugins = kwargs['workflow_plugins_to_install']
+                                deployment_plugins_to_install)
 
     workflow_plugins = filter(lambda plugin: plugin['install'],
-                              workflow_plugins)
+                              workflow_plugins_to_install)
 
     # installing the operations worker
     sequence.add(
@@ -120,14 +115,24 @@ def create(ctx, **kwargs):
     sequence.add(
         ctx.send_event('Starting deployment policy engine core'),
         ctx.execute_task('riemann_controller.tasks.create',
-                         kwargs=kwargs.get('policy_configuration', {})))
+                         kwargs=policy_configuration or {}))
 
+    return graph
+
+
+@workflow
+def create(ctx, deployment_plugins_to_install, workflow_plugins_to_install,
+           policy_configuration, **_):
+    graph = generate_create_dep_tasks_graph(
+        ctx,
+        deployment_plugins_to_install,
+        workflow_plugins_to_install,
+        policy_configuration)
     return graph.execute()
 
 
 @workflow
 def delete(ctx, **kwargs):
-
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
@@ -207,8 +212,8 @@ def stop(ctx, prerequisite_task_id, prerequisite_task_timeout=60, **kwargs):
     return graph.execute()
 
 
-def _is_transient_deployment_workers_mode(security_ctx):
-    client = get_rest_client(security_ctx)
+def _is_transient_deployment_workers_mode():
+    client = get_rest_client()
     bootstrap_context = client.manager.get_context()['context']['cloudify']
     return bootstrap_context.get(
         'transient_deployment_workers_mode', {}).get('enabled', True)

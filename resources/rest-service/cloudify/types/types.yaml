@@ -158,6 +158,26 @@ node_types:
           implementation: agent.cloudify_agent.operations.install_plugins
           executor: host_agent
 
+
+        #####################################################
+        # This operation will install new agent on specific
+        # machine using existing agent.
+        # ---------------------------------------------------
+        # It will be executed on central deployment agent.
+        # This agent will send installation request via AMQP
+        # to an agent that was previously installed.
+        # This request might be sent to other manager's
+        # rabbitmq server.
+        #####################################################
+
+        create_amqp:
+          implementation: agent.cloudify_agent.operations.create_agent_amqp
+          executor: central_deployment_agent
+          inputs:
+            install_agent_timeout:
+              default: 300
+
+
       cloudify.interfaces.host:  # DEPRECATED
         get_state: {}
 
@@ -400,6 +420,16 @@ workflows:
             and this property is 'true', operate on compute node instead
             of 'node_id'
         default: true
+
+  install_new_agents:
+    mapping: default_workflows.cloudify.plugins.workflows.install_new_agents
+    parameters:
+      install_agent_timeout:
+        default: 300
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
 
 ##################################################################################
 # Base data type definitions
