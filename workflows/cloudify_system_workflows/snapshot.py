@@ -27,7 +27,6 @@ import elasticsearch.helpers
 
 from datetime import datetime
 
-from cloudify import utils
 from cloudify.workflows import ctx
 from cloudify.constants import COMPUTE_NODE_TYPE
 from cloudify.context import BootstrapContext
@@ -295,29 +294,14 @@ def _dump_credentials(tempdir):
                                      _CRED_KEY_NAME))
 
 
-def _get_broker_configuration(client):
-    bootstrap_context_dict = client.manager.get_context()
-    bootstrap_context_dict = bootstrap_context_dict['context']['cloudify']
-    bootstrap_context = BootstrapContext(bootstrap_context_dict)
-    bootstrap_agent = bootstrap_context.cloudify_agent
-
-    broker_user, broker_pass = utils.internal.get_broker_credentials(
-        bootstrap_agent
-    )
-    attributes = {}
-    attributes['broker_user'] = broker_user
-    attributes['broker_pass'] = broker_pass
-    attributes['broker_ip'] = bootstrap_agent.broker_ip
-    attributes['broker_ssl_enabled'] = bootstrap_agent.broker_ssl_enabled
-    attributes['broker_ssl_cert'] = bootstrap_agent.broker_ssl_cert
-    return attributes
-
-
 def _dump_agents(tempdir):
     ctx.send_event('Preparing agents data')
     client = get_rest_client()
-    defaults = _get_broker_configuration(client)
-    defaults['version'] = _get_manager_version(client)
+    broker_config = BootstrapContext(ctx.bootstrap_context).broker_config()
+    defaults = {
+        'version': _get_manager_version(client),
+        'broker_config': broker_config
+    }
     result = {}
     for deployment in client.deployments.list():
         deployment_result = {}
