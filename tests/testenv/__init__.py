@@ -28,10 +28,12 @@ import yaml
 from os.path import dirname
 from os import path
 import tempfile
+from datetime import datetime
 
 from cloudify.utils import setup_logger
 from cloudify.logs import create_event_message_prefix
 from wagon.wagon import Wagon
+from elasticsearch import Elasticsearch
 
 import mock_plugins
 from testenv.constants import MANAGER_REST_PORT
@@ -377,6 +379,27 @@ class TestEnvironment(object):
 
     def handle_logs(self, output, event):
         pass
+
+    def handle_logs_with_es(self, index):
+        """
+        set this test environment to store logs
+        in a custom elasticsearch index
+
+        :param index: index name to use
+        """
+        def es_log_handler(_, event):
+            timestamp = datetime.now()
+            event['@timestamp'] = timestamp
+            es_client = Elasticsearch()
+            doc_type = event['type']
+
+            # simulate log index
+            res = es_client.index(index=index,
+                                  doc_type=doc_type,
+                                  body=event)
+            if not res['created']:
+                raise Exception('failed to write to elasticsearch')
+        self.handle_logs = es_log_handler
 
     def _logs_handler_retriever(self):
         return self.handle_logs

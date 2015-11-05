@@ -28,6 +28,7 @@ from manager_rest.models import (BlueprintState,
                                  DeploymentNodeInstance,
                                  ProviderContext,
                                  Plugin)
+from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 NODE_TYPE = 'node'
@@ -41,7 +42,6 @@ EXECUTION_TYPE = 'execution'
 PROVIDER_CONTEXT_TYPE = 'provider_context'
 PROVIDER_CONTEXT_ID = 'CONTEXT'
 
-DEFAULT_SEARCH_SIZE = 10000
 
 MUTATE_PARAMS = {
     'refresh': True
@@ -65,7 +65,7 @@ class ESStorageManager(object):
                                                 doc_type=doc_type,
                                                 body=body,
                                                 _source=include)
-        docs = map(lambda hit: hit['_source'], search_result['hits']['hits'])
+        docs = [hit['_source'] for hit in search_result['hits']['hits']]
 
         # ES doesn't return _version if using its search API.
         if doc_type == NODE_INSTANCE_TYPE:
@@ -141,52 +141,6 @@ class ESStorageManager(object):
                 fields_data[field] = None
         return model_class(**fields_data)
 
-    @staticmethod
-    def _build_request_body(filters=None, pagination=None, skip_size=False):
-        """
-        This method is used to create an elasticsearch request based on the
-        Query DSL.
-        It performs two actions:
-        1. Based on the `filters` param passed to it, it builds a filter based
-        query to only return elements that match the provided filters.
-        Filters are faster than queries as they are cached and don't
-        influence the score.
-        2. Based on the `pagination` param, it sets the `size` and `from`
-        parameters of the built query to make use of elasticsearch paging
-        capabilities.
-
-        :param filters: A dictionary containing filter keys and their expected
-                        value.
-        :param pagination: A dictionary with optional `page_size` and `offset`
-                           keys.
-        :param skip_size: If set to `True`, will not add `size` to the
-                          body result.
-        :return: An elasticsearch Query DSL body.
-        """
-        terms_lst = []
-        body = {}
-        if pagination:
-            if not skip_size:
-                body['size'] = pagination.get('page_size', DEFAULT_SEARCH_SIZE)
-            if 'offset' in pagination:
-                body['from'] = pagination['offset']
-        elif not skip_size:
-            body['size'] = DEFAULT_SEARCH_SIZE
-        if filters:
-            for key, val in filters.iteritems():
-                filter_type = 'terms' if isinstance(val, list) else 'term'
-                terms_lst.append({filter_type: {key: val}})
-            body['query'] = {
-                'filtered': {
-                    'filter': {
-                        'bool': {
-                            'must':  terms_lst
-                        }
-                    }
-                }
-            }
-        return body
-
     def blueprints_list(self, include=None, filters=None, pagination=None):
         return self._get_items_list(BLUEPRINT_TYPE,
                                     BlueprintState,
@@ -260,8 +214,8 @@ class ESStorageManager(object):
 
     def _get_items_list(self, doc_type, model_class, include=None,
                         filters=None, pagination=None):
-        body = self._build_request_body(filters=filters,
-                                        pagination=pagination)
+        body = ManagerElasticsearch.build_request_body(filters=filters,
+                                                       pagination=pagination)
         return self._list_docs(doc_type,
                                model_class,
                                body=body,
@@ -384,9 +338,10 @@ class ESStorageManager(object):
                 'Provider Context not found')
 
     def delete_deployment(self, deployment_id):
-        query = self._build_request_body(filters={'deployment_id':
-                                                  deployment_id},
-                                         skip_size=True)
+        query = ManagerElasticsearch.build_request_body(
+            filters={'deployment_id': deployment_id},
+            skip_size=True
+        )
         self._delete_doc_by_query(EXECUTION_TYPE, query)
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
         self._delete_doc_by_query(NODE_TYPE, query)

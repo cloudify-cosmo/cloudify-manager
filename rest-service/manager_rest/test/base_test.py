@@ -179,6 +179,7 @@ class BaseServerTestCase(unittest.TestCase):
         # only exists in v2 and above
         if CLIENT_API_VERSION != 'v1':
             client.plugins.api = mock_http_client
+            client.events.api = mock_http_client
 
         return client
 
