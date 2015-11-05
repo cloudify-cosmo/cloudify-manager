@@ -138,7 +138,9 @@ class BlueprintsManager(object):
             'db_address': config.instance().db_address,
             'db_port': config.instance().db_port,
             'created_status': models.Snapshot.CREATED,
-            'failed_status':  models.Snapshot.FAILED
+            'failed_status':  models.Snapshot.FAILED,
+            'file_server_uploaded_plugins_folder':
+                config.instance().file_server_uploaded_plugins_folder
         }
 
     def create_snapshot_model(self, snapshot_id,

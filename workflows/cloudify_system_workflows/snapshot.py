@@ -114,7 +114,8 @@ def _copy_data(archive_root, config, to_archive=True):
     # absolute then should point to proper data in manager/snapshot archive
     data_to_copy = [
         (config.file_server_blueprints_folder, 'blueprints'),
-        (config.file_server_uploaded_blueprints_folder, 'uploaded-blueprints')
+        (config.file_server_uploaded_blueprints_folder, 'uploaded-blueprints'),
+        (config.file_server_uploaded_plugins_folder, 'plugins')
     ]
 
     for (p1, p2) in data_to_copy:
