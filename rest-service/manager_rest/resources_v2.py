@@ -996,3 +996,52 @@ def _get_plugin_archive_path(plugin_id, archive_name):
     return os.path.join(config.instance().file_server_uploaded_plugins_folder,
                         plugin_id,
                         archive_name)
+
+
+def _agent_expected(node):
+    install_agent = node.properties.get('install_agent')
+    if install_agent is True or install_agent is False:
+        return install_agent
+    install_method = node.properties.get('agent_config', {}).get(
+        'install_method', 'none')
+    return install_method != 'none'
+
+
+class Agents(SecuredResource):
+
+    @exceptions_handled
+    @marshal_with(responses_v2.Agent)
+    @create_filters(models.DeploymentNodeInstance.fields)
+    def get(self, filters=None, **kwargs):
+        sm = get_storage_manager()
+        node_instances = sm.get_node_instances(filters=filters)
+        deployments = {}
+        results = []
+        for node_instance in node_instances.items:
+            deployment_id = node_instance.deployment_id
+            if deployment_id not in deployments:
+                deployments[deployment_id] = {}
+            nodes = deployments[deployment_id]
+            node_id = node_instance.node_id
+            if node_id not in nodes:
+                nodes[node_id] = sm.get_node(deployment_id=deployment_id,
+                                             node_id=node_id)
+            node = nodes[node_id]
+            if 'cloudify.nodes.Compute' in node.type_hierarchy and \
+                    _agent_expected(node):
+                validated = 'agent_status' in node_instance.runtime_properties
+                agent_status = node_instance.runtime_properties.get(
+                    'agent_status', {})
+                agent = models.Agent(
+                    id=node_instance.id,
+                    deployment_id=deployment_id,
+                    node_id=node_id,
+                    alive=agent_status.get('agent_alive', False),
+                    installable=agent_status.get('agent_alive_crossbroker',
+                                                 False),
+                    last_validation_timestamp=agent_status.get('timestamp', 0),
+                    validated=validated,
+                    state=node_instance.state
+                )
+                results.append(agent)
+        return results

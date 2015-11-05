@@ -53,7 +53,8 @@ def setup_resources(api):
         'Tokens': 'tokens',
         'Plugins': 'plugins',
         'PluginsId': 'plugins/<string:plugin_id>',
-        'PluginsArchive': 'plugins/<string:plugin_id>/archive'
+        'PluginsArchive': 'plugins/<string:plugin_id>/archive',
+        'Agents': 'agents'
     }
 
     for resource, endpoint_suffix in resources_endpoints.iteritems():

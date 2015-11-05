@@ -178,6 +178,25 @@ node_types:
               default: 300
 
 
+        #####################################################
+        # This operation attempts to communicate with agent
+        # that has already been installed. This operation
+        # should not have side effects.
+        # ---------------------------------------------------
+        # It will be executed on central deployment agent.
+        # This request might be sent to other manager's
+        # rabbitmq server.
+        #####################################################
+
+        validate_amqp:
+          implementation: agent.cloudify_agent.operations.validate_agent_amqp
+          executor: central_deployment_agent
+          inputs:
+            validate_agent_timeout:
+              default: 20
+
+
+
       cloudify.interfaces.host:  # DEPRECATED
         get_state: {}
 
@@ -430,6 +449,10 @@ workflows:
         default: []
       node_instance_ids:
         default: []
+      validate:
+        default: True
+      install:
+        default: True
 
 ##################################################################################
 # Base data type definitions

@@ -99,3 +99,22 @@ class ListResponse(object):
     def __init__(self, **kwargs):
         self.metadata = kwargs['metadata']
         self.items = kwargs['items']
+
+
+@swagger.model
+class Agent(object):
+
+    resource_fields = {
+        'id': fields.String,
+        'deployment_id': fields.String,
+        'node_id': fields.String,
+        'alive': fields.Boolean,
+        'installable': fields.Boolean,
+        'last_validation_timestamp': fields.String,
+        'state': fields.String,
+        'validated': fields.Boolean
+    }
+
+    def __init__(self, **kwargs):
+        for field in self.resource_fields:
+            setattr(self, field, kwargs[field])

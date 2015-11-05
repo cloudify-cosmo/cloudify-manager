@@ -206,7 +206,10 @@ def _main(args):
     logger = _setup_logger('installer')
     runner = _prepare_runner(logger)
     installer = Installer(logger, runner, cloudify_agent)
-    result = installer.install()
+    if ctx_parameters.get('validate_only'):
+        result = cloudify_agent
+    else:
+        result = installer.install()
     _return(result, cloudify_agent['old_agent_version'])
 
 

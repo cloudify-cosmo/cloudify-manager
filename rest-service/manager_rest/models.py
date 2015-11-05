@@ -218,3 +218,15 @@ class Plugin(SerializableObject):
         self.excluded_wheels = kwargs['excluded_wheels']
         self.supported_py_versions = kwargs['supported_py_versions']
         self.uploaded_at = kwargs['uploaded_at']
+
+
+class Agent(SerializableObject):
+
+    fields = {
+        'id', 'deployment_id', 'node_id', 'alive', 'installable',
+        'last_validation_timestamp', 'validated', 'state'
+    }
+
+    def __init__(self, **kwargs):
+        for field in self.fields:
+            setattr(self, field, kwargs[field])
