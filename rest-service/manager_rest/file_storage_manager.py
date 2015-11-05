@@ -22,7 +22,8 @@ from manager_rest.models import (BlueprintState,
                                  Plugin,
                                  DeploymentNode,
                                  DeploymentNodeInstance,
-                                 ProviderContext)
+                                 ProviderContext,
+                                 Snapshot)
 from manager_rest import manager_exceptions
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
@@ -34,8 +35,21 @@ DEPLOYMENTS = 'deployments'
 DEPLOYMENT_MODIFICATIONS = 'deployment_modifications'
 EXECUTIONS = 'executions'
 PLUGINS = 'plugins'
+SNAPSHOTS = 'snapshots'
 PROVIDER_CONTEXT = 'provider_context'
 PROVIDER_CONTEXT_ID = '1'
+
+
+def sort_list(list_of_objects, sort=None):
+    if not sort:
+        return list_of_objects
+
+    for key, order in sort.iteritems():
+        is_reversed = True if order == "desc" else False
+        list_of_objects = sorted(list_of_objects,
+                                 key=lambda obj: getattr(obj, key),
+                                 reverse=is_reversed)
+    return list_of_objects
 
 
 def paginate_list(list_of_objects, pagination=None):
@@ -67,6 +81,7 @@ class FileStorageManager(object):
             EXECUTIONS: {},
             PLUGINS: {},
             PROVIDER_CONTEXT: {},
+            SNAPSHOTS: {}
         }
         self._dump_data(data)
 
@@ -100,7 +115,9 @@ class FileStorageManager(object):
             deserialized_data[DEPLOYMENT_MODIFICATIONS] = \
                 {key: DeploymentModification(**val) for key, val in
                  data[DEPLOYMENT_MODIFICATIONS].iteritems()}
-
+            deserialized_data[SNAPSHOTS] = \
+                {key: Snapshot(**val) for key, val in
+                 data[SNAPSHOTS].iteritems()}
             return deserialized_data
 
     def _dump_data(self, data):
@@ -129,6 +146,9 @@ class FileStorageManager(object):
             serialized_data[DEPLOYMENT_MODIFICATIONS] = \
                 {key: val.to_dict() for key, val in data[
                     DEPLOYMENT_MODIFICATIONS].iteritems()}
+            serialized_data[SNAPSHOTS] = \
+                {key: val.to_dict() for key, val in data[
+                    SNAPSHOTS].iteritems()}
             json.dump(serialized_data, f)
 
     def get_node_instance(self, node_id, **_):
@@ -138,21 +158,35 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Node {0} not found".format(node_id))
 
-    def get_node_instances(self, filters=None, pagination=None, **_):
+    def get_node_instances(self, filters=None, pagination=None,
+                           sort=None, **_):
         instances = self._load_data()[NODE_INSTANCES].values()
+        instances = sort_list(instances, sort)
         result = self.filter_data(instances, filters)
         return paginate_list(result,
                              pagination=pagination)
 
-    def get_nodes(self, filters=None, pagination=None, **_):
+    def get_nodes(self, filters=None, pagination=None,
+                  sort=None, **_):
         nodes = self._load_data()[NODES].values()
+        nodes = sort_list(nodes, sort)
         result = self.filter_data(nodes, filters)
         return paginate_list(result,
                              pagination=pagination)
 
-    def get_plugins(self, include=None, filters=None, pagination=None):
+    def get_plugins(self, include=None, filters=None, pagination=None,
+                    sort=None):
         plugins = self._load_data()[PLUGINS].values()
+        plugins = sort_list(plugins, sort)
         result = self.filter_data(plugins, filters)
+        return paginate_list(result,
+                             pagination=pagination)
+
+    def snapshots_list(self, include=None, filters=None, pagination=None,
+                       sort=None):
+        snapshots = self._load_data()[SNAPSHOTS].values()
+        snapshots = sort_list(snapshots, sort)
+        result = self.filter_data(snapshots, filters)
         return paginate_list(result,
                              pagination=pagination)
 
@@ -228,8 +262,10 @@ class FileStorageManager(object):
         data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 
-    def blueprints_list(self, filters=None, pagination=None, **_):
+    def blueprints_list(self, filters=None, pagination=None,
+                        sort=None, **_):
         blueprints = self._load_data()[BLUEPRINTS].values()
+        blueprints = sort_list(blueprints, sort)
         result = self.filter_data(blueprints, filters)
         return paginate_list(result,
                              pagination=pagination)
@@ -249,14 +285,18 @@ class FileStorageManager(object):
             result = items_lst
         return result
 
-    def deployments_list(self, filters=None, pagination=None, **_):
+    def deployments_list(self, filters=None, pagination=None,
+                         sort=None, **_):
         deployments = self._load_data()[DEPLOYMENTS].values()
+        deployments = sort_list(deployments, sort)
         result = self.filter_data(deployments, filters)
         return paginate_list(result,
                              pagination=pagination)
 
-    def executions_list(self, filters=None, pagination=None, **_):
+    def executions_list(self, filters=None, pagination=None,
+                        sort=None, **_):
         executions = self._load_data()[EXECUTIONS].values()
+        executions = sort_list(executions, sort)
         result = self.filter_data(executions, filters)
         return paginate_list(result,
                              pagination=pagination)
@@ -337,6 +377,14 @@ class FileStorageManager(object):
             raise manager_exceptions.ConflictError(
                 'Plugin {0} already exists'.format(plugin.id))
         data[PLUGINS][str(plugin.id)] = plugin
+        self._dump_data(data)
+
+    def put_snapshot(self, snapshot_id, snapshot):
+        data = self._load_data()
+        if str(snapshot_id) in data[SNAPSHOTS]:
+            raise manager_exceptions.ConflictError(
+                'Snapshot {0} already exists'.format(snapshot_id))
+        data[SNAPSHOTS][str(snapshot_id)] = snapshot
         self._dump_data(data)
 
     def delete_blueprint(self, blueprint_id):
@@ -421,9 +469,10 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Deployment modification {0} not found".format(modification_id))
 
-    def deployment_modifications_list(self, include=None,
-                                      filters=None, pagination=None):
+    def deployment_modifications_list(self, include=None, filters=None,
+                                      pagination=None, sort=None):
         modifications = self._load_data()[DEPLOYMENT_MODIFICATIONS].values()
+        modifications = sort_list(modifications, sort)
         result = self.filter_data(modifications, filters)
         return paginate_list(result,
                              pagination=pagination)

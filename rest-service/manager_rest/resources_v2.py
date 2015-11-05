@@ -19,6 +19,7 @@ import json
 import tarfile
 from uuid import uuid4
 from datetime import datetime
+from collections import OrderedDict
 
 from flask_securest.rest_security import SecuredResource
 
@@ -87,9 +88,12 @@ def sortable(func):
     """
     def create_sort_params(*args, **kw):
         sort_args = request.args.getlist("_sort")
-        sort_params = \
-            {k.lstrip('-+'): "desc" if k[0] == '-' else "asc"
-             for k in sort_args}
+        # maintain order of sort fields
+        sort_params = OrderedDict()
+        for sort_arg in sort_args:
+            field = sort_arg.lstrip('-+')
+            order = "desc" if sort_arg[0] == '-' else "asc"
+            sort_params.update({field: order})
         return func(sort=sort_params, *args, **kw)
     return create_sort_params
 
@@ -185,10 +189,14 @@ class Snapshots(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses_v2.Snapshot)
-    def get(self, _include=None, filters=None, pagination=None, **kwargs):
+    @paginate
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None,
+            sort=None, **kwargs):
         return get_blueprints_manager().snapshots_list(include=_include,
                                                        filters=filters,
-                                                       pagination=pagination)
+                                                       pagination=pagination,
+                                                       sort=sort)
 
 
 class SnapshotsId(SecuredResource):
@@ -360,12 +368,15 @@ class Blueprints(resources.Blueprints):
     @marshal_with(responses_v2.BlueprintState)
     @create_filters(models.BlueprintState.fields)
     @paginate
-    def get(self, _include=None, filters=None, pagination=None, **kwargs):
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None, sort=None,
+            **kwargs):
         """
         List uploaded blueprints
         """
         return get_blueprints_manager().blueprints_list(
-            include=_include, filters=filters, pagination=pagination)
+            include=_include, filters=filters,
+            pagination=pagination, sort=sort)
 
 
 class BlueprintsId(resources.BlueprintsId):
@@ -468,7 +479,9 @@ class Executions(resources.Executions):
     @marshal_with(responses_v2.Execution)
     @create_filters(models.Execution.fields)
     @paginate
-    def get(self, _include=None, filters=None, pagination=None, **kwargs):
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None,
+            sort=None, **kwargs):
         """
         List executions
         """
@@ -481,7 +494,7 @@ class Executions(resources.Executions):
             request.args.get('_include_system_workflows', 'false'))
 
         executions = get_blueprints_manager().executions_list(
-            filters=filters, pagination=pagination,
+            filters=filters, pagination=pagination, sort=sort,
             is_include_system_workflows=is_include_system_workflows,
             include=_include)
         return executions
@@ -502,12 +515,15 @@ class Deployments(resources.Deployments):
     @marshal_with(responses_v2.Deployment)
     @create_filters(models.Deployment.fields)
     @paginate
-    def get(self, _include=None, filters=None, pagination=None, **kwargs):
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None, sort=None,
+            **kwargs):
         """
         List deployments
         """
         deployments = get_blueprints_manager().deployments_list(
-            include=_include, filters=filters, pagination=pagination)
+            include=_include, filters=filters, pagination=pagination,
+            sort=sort)
         return deployments
 
 
@@ -528,12 +544,15 @@ class DeploymentModifications(resources.DeploymentModifications):
     @marshal_with(responses_v2.DeploymentModification)
     @create_filters(models.DeploymentModification.fields)
     @paginate
-    def get(self, _include=None, filters=None, pagination=None, **kwargs):
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None,
+            sort=None, **kwargs):
         """
         List deployment modifications
         """
         modifications = get_storage_manager().deployment_modifications_list(
-            include=_include, filters=filters, pagination=pagination)
+            include=_include, filters=filters, pagination=pagination,
+            sort=sort)
         return modifications
 
 
@@ -552,13 +571,16 @@ class Nodes(resources.Nodes):
     @marshal_with(responses_v2.Node)
     @create_filters(models.DeploymentNode.fields)
     @paginate
-    def get(self, _include=None, filters=None, pagination=None, **kwargs):
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None,
+            sort=None, **kwargs):
         """
         List nodes
         """
         nodes = get_storage_manager().get_nodes(include=_include,
                                                 pagination=pagination,
-                                                filters=filters)
+                                                filters=filters,
+                                                sort=sort)
         return nodes
 
 
@@ -578,12 +600,15 @@ class NodeInstances(resources.NodeInstances):
     @marshal_with(responses_v2.NodeInstance)
     @create_filters(models.DeploymentNodeInstance.fields)
     @paginate
-    def get(self, _include=None, filters=None, pagination=None, **kwargs):
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None,
+            sort=None, **kwargs):
         """
         List node instances
         """
         node_instances = get_storage_manager().get_node_instances(
-            include=_include, filters=filters, pagination=pagination)
+            include=_include, filters=filters,
+            pagination=pagination, sort=sort)
         return node_instances
 
 
@@ -657,13 +682,16 @@ class Plugins(SecuredResource):
     @marshal_with(responses_v2.Plugin)
     @create_filters(models.Plugin.fields)
     @paginate
-    def get(self, _include=None, filters=None, pagination=None, **kwargs):
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None,
+            sort=None, **kwargs):
         """
         List uploaded plugins
         """
         plugins = get_storage_manager().get_plugins(include=_include,
                                                     filters=filters,
-                                                    pagination=pagination)
+                                                    pagination=pagination,
+                                                    sort=sort)
         return plugins
 
     @swagger.operation(
