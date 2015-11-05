@@ -323,6 +323,19 @@ def _dump_agents(tempdir):
         out.write(json.dumps(result))
 
 
+def _add_operation(operations, op_name, inputs, implementation):
+    if op_name not in operations:
+        operations[op_name] = {
+            'inputs': inputs,
+            'has_intrinsic_functions': False,
+            'plugin': 'agent',
+            'retry_interval': None,
+            'max_retries': None,
+            'executor': 'central_deployment_agent',
+            'operation': implementation
+        }
+
+
 def _update_es_node(es_node):
     if es_node['_type'] == 'deployment':
         workflows = es_node['_source']['workflows']
@@ -347,20 +360,18 @@ def _update_es_node(es_node):
         type_hierarchy = source.get('type_hierarchy', [])
         if COMPUTE_NODE_TYPE in type_hierarchy:
             operations = source['operations']
-            op_name = 'cloudify.interfaces.cloudify_agent.create_amqp'
-            if op_name not in operations:
-                operations[op_name] = {
-                    'inputs': {
-                        'install_agent_timeout': 300
-                    },
-                    'has_intrinsic_functions': False,
-                    'plugin': 'agent',
-                    'retry_interval': None,
-                    'max_retries': None,
-                    'executor': 'central_deployment_agent',
-                    'operation': 'cloudify_agent.operations.create_agent_amqp'
-                }
-
+            _add_operation(operations,
+                           'cloudify.interfaces.cloudify_agent.create_amqp',
+                           {
+                               'install_agent_timeout': 300
+                           },
+                           'cloudify_agent.operations.create_agent_amqp')
+            _add_operation(operations,
+                           'cloudify.interfaces.cloudify_agent.validate_amqp',
+                           {
+                               'validate_agent_timeout': 20
+                           },
+                           'cloudify_agent.operations.validate_agent_amqp')
     if es_node['_type'] == 'blueprint':
         source = es_node['_source']
         if 'description' not in source:
