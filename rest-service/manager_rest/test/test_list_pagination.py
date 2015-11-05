@@ -24,18 +24,18 @@ from manager_rest.test import base_test
 class ResourceListTestCase(BaseListTest):
 
     def _test_pagination(self, list_func, total):
-        all_results = list_func().items
+        all_results = list_func(_sort=['id']).items
         num_all = len(all_results)
         # sanity
         self.assertGreaterEqual(num_all, total)
         for offset in range(num_all + 1):
             for size in range(num_all + 1):
-                response = list_func(_offset=offset, _size=size)
+                response = list_func(_offset=offset, _size=size, _sort=['id'])
                 self.assertEqual(response.metadata.pagination.total, num_all)
                 self.assertEqual(response.metadata.pagination.offset, offset)
                 self.assertEqual(response.metadata.pagination.size, size)
                 self.assertEqual(response.items,
-                                 all_results[offset:offset+size])
+                                 all_results[offset:offset + size])
 
     def test_deployments_list_paginated(self):
         self._put_n_deployments(id_prefix='test', number_of_deployments=4)
@@ -69,3 +69,7 @@ class ResourceListTestCase(BaseListTest):
     def test_plugins_list_paginated(self):
         self._put_n_plugins(number_of_plugins=3)
         self._test_pagination(self.client.plugins.list, 3)
+
+    def test_snapshots_list_paginated(self):
+        self._put_n_snapshots(3)
+        self._test_pagination(self.client.snapshots.list, 3)

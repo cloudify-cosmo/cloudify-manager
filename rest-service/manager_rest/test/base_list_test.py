@@ -75,3 +75,9 @@ class BaseListTest(BaseServerTestCase):
                     deployment_id=deployment_id)
                 self._mark_deployment_modification_finished(
                     modification_id=response['id'])
+
+    def _put_n_snapshots(self, number_of_snapshots):
+        for i in range(number_of_snapshots):
+            self.client.snapshots.create(snapshot_id='oh-snap{0}'.format(i),
+                                         include_metrics=False,
+                                         include_credentials=False)
