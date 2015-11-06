@@ -307,6 +307,7 @@ def _get_broker_configuration(client):
     attributes = {}
     attributes['broker_user'] = broker_user
     attributes['broker_pass'] = broker_pass
+    attributes['broker_ip'] = bootstrap_agent.broker_ip
     attributes['broker_ssl_enabled'] = bootstrap_agent.broker_ssl_enabled
     attributes['broker_ssl_cert'] = bootstrap_agent.broker_ssl_cert
     return attributes
