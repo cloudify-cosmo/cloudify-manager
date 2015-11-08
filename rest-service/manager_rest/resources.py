@@ -1104,7 +1104,7 @@ class Events(SecuredResource):
             return 'logstash-*'
 
     @staticmethod
-    def _query_events(self):
+    def _query_events():
         """
         List events for the provided Elasticsearch query
         """
