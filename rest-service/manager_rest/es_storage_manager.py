@@ -141,33 +141,41 @@ class ESStorageManager(object):
                 fields_data[field] = None
         return model_class(**fields_data)
 
-    def blueprints_list(self, include=None, filters=None, pagination=None):
+    def blueprints_list(self, include=None, filters=None, pagination=None,
+                        sort=None):
         return self._get_items_list(BLUEPRINT_TYPE,
                                     BlueprintState,
                                     pagination=pagination,
                                     filters=filters,
-                                    include=include)
+                                    include=include,
+                                    sort=sort)
 
-    def snapshots_list(self, include=None, filters=None, pagination=None):
+    def snapshots_list(self, include=None, filters=None, pagination=None,
+                       sort=None):
         return self._get_items_list(SNAPSHOT_TYPE,
                                     Snapshot,
                                     include=include,
                                     filters=filters,
-                                    pagination=pagination)
+                                    pagination=pagination,
+                                    sort=sort)
 
-    def deployments_list(self, include=None, filters=None, pagination=None):
+    def deployments_list(self, include=None, filters=None, pagination=None,
+                         sort=None):
         return self._get_items_list(DEPLOYMENT_TYPE,
                                     Deployment,
                                     pagination=pagination,
                                     filters=filters,
-                                    include=include)
+                                    include=include,
+                                    sort=sort)
 
-    def executions_list(self, include=None, filters=None, pagination=None):
+    def executions_list(self, include=None, filters=None, pagination=None,
+                        sort=None):
         return self._get_items_list(EXECUTION_TYPE,
                                     Execution,
                                     pagination=pagination,
                                     filters=filters,
-                                    include=include)
+                                    include=include,
+                                    sort=sort)
 
     def get_blueprint_deployments(self, blueprint_id, include=None):
         deployment_filters = {'blueprint_id': blueprint_id}
@@ -191,31 +199,38 @@ class ESStorageManager(object):
                                              model_class=DeploymentNode,
                                              fields=include)
 
-    def get_node_instances(self, include=None, filters=None, pagination=None):
+    def get_node_instances(self, include=None, filters=None, pagination=None,
+                           sort=None):
         return self._get_items_list(NODE_INSTANCE_TYPE,
                                     DeploymentNodeInstance,
                                     filters=filters,
                                     include=include,
-                                    pagination=pagination)
+                                    pagination=pagination,
+                                    sort=sort)
 
-    def get_plugins(self, include=None, filters=None, pagination=None):
+    def get_plugins(self, include=None, filters=None, pagination=None,
+                    sort=None):
         return self._get_items_list(PLUGIN_TYPE,
                                     Plugin,
                                     filters=filters,
                                     include=include,
-                                    pagination=pagination)
+                                    pagination=pagination,
+                                    sort=sort)
 
-    def get_nodes(self, include=None, filters=None, pagination=None):
+    def get_nodes(self, include=None, filters=None, pagination=None,
+                  sort=None):
         return self._get_items_list(NODE_TYPE,
                                     DeploymentNode,
                                     filters=filters,
                                     pagination=pagination,
-                                    include=include)
+                                    include=include,
+                                    sort=sort)
 
     def _get_items_list(self, doc_type, model_class, include=None,
-                        filters=None, pagination=None):
+                        filters=None, pagination=None, sort=None):
         body = ManagerElasticsearch.build_request_body(filters=filters,
-                                                       pagination=pagination)
+                                                       pagination=pagination,
+                                                       sort=sort)
         return self._list_docs(doc_type,
                                model_class,
                                body=body,
@@ -457,12 +472,13 @@ class ESStorageManager(object):
                 "Modification {0} not found".format(modification_id))
 
     def deployment_modifications_list(self, include=None, filters=None,
-                                      pagination=None):
+                                      pagination=None, sort=None):
         return self._get_items_list(DEPLOYMENT_MODIFICATION_TYPE,
                                     DeploymentModification,
                                     filters=filters,
                                     include=include,
-                                    pagination=pagination)
+                                    pagination=pagination,
+                                    sort=sort)
 
     @staticmethod
     def _storage_node_id(deployment_id, node_id):

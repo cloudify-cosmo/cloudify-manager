@@ -51,20 +51,23 @@ class BlueprintsManager(object):
         self.sm = storage_manager.get_storage_manager()
         self.workflow_client = wf_client.get_workflow_client()
 
-    def blueprints_list(self, include=None, filters=None, pagination=None):
+    def blueprints_list(self, include=None, filters=None,
+                        pagination=None, sort=None):
         return self.sm.blueprints_list(include=include, filters=filters,
-                                       pagination=pagination)
+                                       pagination=pagination, sort=sort)
 
-    def deployments_list(self, include=None, filters=None, pagination=None):
+    def deployments_list(self, include=None, filters=None, pagination=None,
+                         sort=None):
         return self.sm.deployments_list(include=include, filters=filters,
-                                        pagination=pagination)
+                                        pagination=pagination, sort=sort)
 
-    def snapshots_list(self, include=None, filters=None, pagination=None):
+    def snapshots_list(self, include=None, filters=None, pagination=None,
+                       sort=None):
         return self.sm.snapshots_list(include=include, filters=filters,
-                                      pagination=pagination)
+                                      pagination=pagination, sort=sort)
 
     def executions_list(self, include=None, is_include_system_workflows=False,
-                        filters=None, pagination=None):
+                        filters=None, pagination=None, sort=None):
         filters = filters or {}
         is_system_workflow = filters.get('is_system_workflow')
         if is_system_workflow:
@@ -75,7 +78,7 @@ class BlueprintsManager(object):
         elif not is_include_system_workflows:
             filters['is_system_workflow'] = [False]
         return self.sm.executions_list(include=include, filters=filters,
-                                       pagination=pagination)
+                                       pagination=pagination, sort=sort)
 
     def get_blueprint(self, blueprint_id, include=None):
         return self.sm.get_blueprint(blueprint_id, include=include)
@@ -138,7 +141,7 @@ class BlueprintsManager(object):
             'db_address': config.instance().db_address,
             'db_port': config.instance().db_port,
             'created_status': models.Snapshot.CREATED,
-            'failed_status':  models.Snapshot.FAILED
+            'failed_status': models.Snapshot.FAILED
         }
 
     def create_snapshot_model(self, snapshot_id,
