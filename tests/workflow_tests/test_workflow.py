@@ -23,21 +23,36 @@ from os import path
 from cloudify import context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
-from manager_rest.blueprints_manager import \
-    TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT as IS_TRANSIENT_WORKERS_MODE
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import do_retries
 from testenv.utils import timeout
 from testenv.utils import verify_deployment_environment_creation_complete
-from testenv.utils import _wait_for_stop_dep_env_execution_to_end_if_necessary
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
 from testenv.utils import delete_deployment
+from testenv.utils import execute_workflow
+from testenv.utils import wait_for_execution_to_end
 
 
 class BasicWorkflowsTest(TestCase):
+
+    def _test1(self):
+        num_deps = 5
+        for i in range(num_deps):
+            deploy(resource('dsl/basic.yaml'), deployment_id='d{0}'.format(i))
+        while True:
+            for workflow in ['uninstall', 'install']:
+                executions = []
+                for i in range(num_deps):
+                    execution = execute_workflow(
+                        workflow,
+                        deployment_id='d{0}'.format(i),
+                        wait_for_execution=False)
+                    executions.append(execution)
+                for execution in executions:
+                    wait_for_execution_to_end(execution)
 
     def test_execute_operation(self):
         dsl_path = resource('dsl/basic.yaml')
@@ -171,7 +186,7 @@ class BasicWorkflowsTest(TestCase):
         result = self.client.search.run_query({})
         hits = map(lambda x: x['_source'], result['hits']['hits'])
 
-        expected_num_of_hits = 9 if IS_TRANSIENT_WORKERS_MODE else 7
+        expected_num_of_hits = 7
         self.assertEquals(expected_num_of_hits, len(hits))
 
     def test_get_blueprint(self):
@@ -431,7 +446,7 @@ class BasicWorkflowsTest(TestCase):
         # agent on host should have been started and restarted
         self.assertEqual(
             agent_data[webserver_node.host_id]['states'],
-            ['created', 'configured', 'started', 'restarted'])
+            ['created', 'configured', 'started'])
 
         self.assertEqual(
             agent_data[
@@ -460,7 +475,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(
             agent_data[webserver_node.host_id]['states'],
             ['created', 'configured', 'started',
-             'restarted', 'stopped', 'deleted'])
+             'stopped', 'deleted'])
 
     def test_deploy_with_operation_executor_override(self):
         dsl_path = resource('dsl/operation_executor_override.yaml')
@@ -478,7 +493,7 @@ class BasicWorkflowsTest(TestCase):
             deployment_id=deployment.id
         )[webserver_node.id]['start']
 
-        expected_start_invocation = {'target': deployment.id}
+        expected_start_invocation = {'target': 'cloudify.management'}
         self.assertEqual(expected_start_invocation, start_invocation)
 
         agent_data = self.get_plugin_data(
@@ -486,15 +501,11 @@ class BasicWorkflowsTest(TestCase):
             deployment_id=deployment.id
         )
 
-        deployment_operations_worker_name = deployment.id
         # target_aware_mock_plugin should have been installed
-        # on the deployment worker as well because 'start'
-        # overrides the executor
-        self.assertEqual(
-            agent_data[
-                deployment_operations_worker_name
-            ]['target_aware_mock_plugin'],
-            ['installed'])
+        # on the management worker as well because 'start'
+        # overrides the executor (with a local task)
+        self.assertEqual(agent_data['local']['target_aware_mock_plugin'],
+                         ['installed'])
         undeploy(deployment_id=deployment.id)
 
     def test_deployment_creation_workflow(self):
@@ -517,67 +528,29 @@ class BasicWorkflowsTest(TestCase):
 
         self.assertTrue(_is_riemann_core_up())
 
-        deployment_operations_worker_name = deployment.id
-        deployment_workflows_worker_name = '{0}_workflows'\
-            .format(deployment.id)
-
-        # have to call this explicitly here to get the latest plugin data
-        _wait_for_stop_dep_env_execution_to_end_if_necessary(deployment.id)
-        data = self.get_plugin_data(plugin_name='agent',
-                                    deployment_id=deployment.id)
-
-        # assert both deployment and workflows plugins
-        # were installed, started and restarted
-        # this is because we both install a custom
-        # workflow and a deployment plugin
-        workers_expected_states = \
-            ['created', 'configured', 'started', 'restarted']
-        if IS_TRANSIENT_WORKERS_MODE:
-            # workers mode changes during install workflow
-            workers_expected_states.extend(['stopped', 'started', 'stopped'])
-
-        self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         workers_expected_states)
-        self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         workers_expected_states)
-
         # assert plugin installer installed
         # the necessary plugins.
         agent_data = self.get_plugin_data(
             plugin_name='agent',
             deployment_id=deployment.id)
 
-        # cloudmock should have been installed
-        # on the deployment worker
-        self.assertEqual(
-            agent_data[
-                deployment_operations_worker_name
-            ]['cloudmock'],
-            ['installed'])
-
-        # mock_workflows should have been
-        # installed on the workflows worker
-        self.assertEqual(agent_data[
-                         deployment_workflows_worker_name
-                         ]['mock_workflows'],
-                         ['installed'])
+        # cloudmock and mock_workflows should have been installed
+        # on the management worker as local tasks
+        installed = ['installed']
+        self.assertEqual(agent_data['local']['cloudmock'], installed)
+        self.assertEqual(agent_data['local']['mock_workflows'], installed)
 
         undeploy(deployment.id, is_delete_deployment=True)
 
-        data = self.get_plugin_data(plugin_name='agent',
-                                    deployment_id=deployment.id)
+        # assert plugin installer uninstalled
+        # the necessary plugins.
+        agent_data = self.get_plugin_data(
+            plugin_name='agent',
+            deployment_id=deployment.id)
 
-        # assert both deployment and workflows plugins
-        # were stopped and uninstalled
-        if IS_TRANSIENT_WORKERS_MODE:
-            # workers mode changes during uninstall workflow
-            workers_expected_states.extend(['started', 'stopped'])
-
-        workers_expected_states.extend(['stopped', 'deleted'])
-        self.assertEqual(data[deployment_operations_worker_name]['states'],
-                         workers_expected_states)
-        self.assertEqual(data[deployment_workflows_worker_name]['states'],
-                         workers_expected_states)
+        uninstalled = ['installed', 'uninstalled']
+        self.assertEqual(agent_data['local']['cloudmock'], uninstalled)
+        self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
 
         self.assertFalse(_is_riemann_core_up())
 

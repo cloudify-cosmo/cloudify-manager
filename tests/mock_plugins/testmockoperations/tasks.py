@@ -363,18 +363,6 @@ def fail(ctx, **kwargs):
     raise exception
 
 
-class UserException(Exception):
-    pass
-
-
-class RecoverableUserException(RecoverableError):
-    pass
-
-
-class NonRecoverableUserException(NonRecoverableError):
-    pass
-
-
 @operation
 def retry(ctx, retry_count=1, retry_after=1, **kwargs):
     with update_storage(ctx) as data:
@@ -387,26 +375,6 @@ def retry(ctx, retry_count=1, retry_after=1, **kwargs):
     if ctx.operation.retry_number < retry_count:
         return ctx.operation.retry(message='Retrying operation',
                                    retry_after=retry_after)
-
-
-@operation
-def fail_user_exception(ctx, exception_type, **kwargs):
-    with update_storage(ctx) as data:
-        data['failure_invocation'] = data.get('failure_invocation', [])
-        data['failure_invocation'].append(time.time())
-
-    if exception_type == 'user_exception':
-        raise UserException(
-            'Failing task on user defined exception'
-        )
-    if exception_type == 'user_exception_recoverable':
-        raise RecoverableUserException(
-            'Failing task on user defined exception'
-        )
-    if exception_type == 'user_exception_non_recoverable':
-        raise NonRecoverableUserException(
-            'Failing task on user defined exception'
-        )
 
 
 @operation

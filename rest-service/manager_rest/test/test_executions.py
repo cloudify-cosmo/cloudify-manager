@@ -20,17 +20,11 @@ import mock
 from nose.plugins.attrib import attr
 
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.test.base_test import test_config
-from manager_rest.test.base_test import inject_test_config
 from manager_rest.test.base_test import LATEST_API_VERSION
 from cloudify_rest_client import exceptions
 from manager_rest import manager_exceptions
 from manager_rest import models
 from manager_rest import storage_manager
-from manager_rest.blueprints_manager import (
-    TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT as IS_TRANSIENT_WORKERS_MODE,
-    LIMITLESS_GLOBAL_PARALLEL_EXECUTIONS_VALUE as LIMITLESS_GLOBAL_EXECUTIONS,
-    GLOBAL_PARALLEL_EXECUTIONS_LIMIT_DEFAULT as GLOBAL_EXECS_LIMIT_DEFAULT)
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
@@ -433,7 +427,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self._test_execute_more_than_one_workflow(False, 400)
 
     def test_execute_more_than_one_workflow_succeeds_with_force(self):
-        expected_status_code = 400 if IS_TRANSIENT_WORKERS_MODE else 201
+        expected_status_code = 201
         self._test_execute_more_than_one_workflow(True, expected_status_code)
 
     def _test_execute_more_than_one_workflow(self, is_use_force,
@@ -483,141 +477,3 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.client.executions.update(execution_id, new_status)
         self.assertEquals(new_status, execution.status)
         return execution
-
-
-class TransientDeploymentWorkersExecutionsTestCase(BaseServerTestCase):
-
-    DEPLOYMENT_ID = 'deployment'
-
-    @inject_test_config
-    def initialize_provider_context(self, test_config):
-        provider_context = {
-            'cloudify': {
-                'transient_deployment_workers_mode': test_config
-            }
-        }
-        self.client.manager.create_context(self.id(), provider_context)
-
-    @test_config(enabled=True,
-                 global_parallel_executions_limit=LIMITLESS_GLOBAL_EXECUTIONS)
-    def test_transient_dep_workers_force_execute(self):
-        # verifies force-executing a workflow is disabled in transient
-        # deployment workers mode - regardless of whether other workflows
-        # are currently executing or not
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-
-        try:
-            self.client.executions.start(deployment_id, 'install', force=True)
-            self.fail('Expected force-executing a workflow to be disabled'
-                      'in transient deployment workers mode')
-        except exceptions.CloudifyClientError, e:
-            self.assertEqual(400, e.status_code)
-            expected_error_code = \
-                manager_exceptions.ExistingRunningExecutionError.\
-                EXISTING_RUNNING_EXECUTION_ERROR_CODE
-            self.assertEqual(expected_error_code, e.error_code)
-
-    @test_config()
-    def test_transient_dep_workers_default_config(self):
-        # verifies default values in the REST service for the transient
-        # deployment workers mode configuration
-
-        expected_default_config = {
-            'enabled': True,
-            'global_parallel_executions_limit': GLOBAL_EXECS_LIMIT_DEFAULT
-        }
-
-        with mock.patch('manager_rest.blueprints_manager.BlueprintsManager.'
-                        '_check_for_active_executions') as m:
-            (blueprint_id, deployment_id, blueprint_response,
-             deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-
-            self.client.executions.start(deployment_id, 'install')
-
-            m.assert_called_once_with(deployment_id, False,
-                                      expected_default_config)
-
-    @test_config(enabled=True,
-                 global_parallel_executions_limit=2)
-    def test_transient_dep_workers_global_executions_limit(self):
-        # verifies global executions limit takes effect when transient
-        # deployment workers mode is enabled
-        self._run_parallel_executions_and_verify_result(expect_failure=True)
-
-    @test_config(enabled=False,
-                 global_parallel_executions_limit=1)
-    def test_transient_dep_workers_disabled_global_executions_limit(self):
-        # verifies global executions limit has no effect when transient
-        # deployment workers mode is disabled
-        self._run_parallel_executions_and_verify_result(expect_failure=False)
-
-    @test_config(enabled=True,
-                 global_parallel_executions_limit=LIMITLESS_GLOBAL_EXECUTIONS)
-    def test_transient_dep_workers_limitless_global_executions(self):
-        # verifies the value for limitless global executions is used correctly
-        self._run_parallel_executions_and_verify_result(expect_failure=False)
-
-    @attr(client_min_version=2,
-          client_max_version=LATEST_API_VERSION)
-    @test_config(enabled=True,
-                 global_parallel_executions_limit=50)
-    def test_transient_dep_workers_global_executions_updated_limit(self):
-        # verifies global executions limit updates take effect
-
-        # run parallel executions pre-modification - not expecting failures
-        self._run_parallel_executions_and_verify_result(expect_failure=False)
-        # resetting all active executions to 'terminated' status
-        executions = self.client.executions.list()
-        map(lambda execution: self.client.executions.update(
-            execution.id, 'terminated'), executions)
-
-        # modifying the global parallel executions limit and trying again
-        self.client.manager.set_global_parallel_executions_limit(2)
-        self._run_parallel_executions_and_verify_result(
-            expect_failure=True, blueprint_id='blueprint2',
-            deployment_id_prefix='deployment2')
-
-    def _run_parallel_executions_and_verify_result(
-            self, expect_failure, blueprint_id='blueprint',
-            deployment_id_prefix=DEPLOYMENT_ID):
-        # runs three executions on three different deployments
-        # and verifies success/failure accordingly
-        deployment1 = deployment_id_prefix + '1'
-        deployment2 = deployment_id_prefix + '2'
-        deployment3 = deployment_id_prefix + '3'
-
-        (blueprint_id, deployment_id, _, _) = \
-            self.put_deployment(deployment1, blueprint_id=blueprint_id)
-        self.client.deployments.create(blueprint_id, deployment2)
-        self.client.deployments.create(blueprint_id, deployment3)
-
-        execution1 = self.client.executions.start(deployment1, 'install')
-        self.client.executions.update(execution1.id, 'started')
-        execution2 = self.client.executions.start(deployment2, 'install')
-        self.client.executions.update(execution2.id, 'started')
-
-        if expect_failure:
-            try:
-                self.client.executions.start(deployment3, 'install')
-                self.fail('Expected global parallel running executions limit '
-                          'to have been reached')
-            except exceptions.CloudifyClientError, e:
-                self.assertEqual(400, e.status_code)
-                expected_error_code = \
-                    manager_exceptions. \
-                    GlobalParallelRunningExecutionsLimitReachedError. \
-                    GLOBAL_PARALLEL_RUNNING_EXECUTIONS_LIMIT_REACHED_ERROR_CODE
-                self.assertEqual(expected_error_code, e.error_code)
-        else:
-            execution3 = self.client.executions.start(deployment3, 'install')
-            executions = self.client.executions.list()
-            executions = sorted(executions, key=lambda e: e.created_at)
-            # expecting 6 executions - first three are deployment env creation
-            self.assertEquals(6, len(executions))
-            self.assertEquals(execution1.id,
-                              executions[3]['id'])
-            self.assertEquals(execution2.id,
-                              executions[4]['id'])
-            self.assertEquals(execution3.id,
-                              executions[5]['id'])

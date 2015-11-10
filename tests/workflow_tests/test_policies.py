@@ -30,8 +30,6 @@ from testenv.utils import execute_workflow
 
 class PoliciesTestsBase(TestCase):
     NUM_OF_INITIAL_WORKFLOWS = 2
-    # In test's blueprint set this value decreased by 1 (1s safety time buffer)
-    MIN_INTERVAL_BETWEEN_WORKFLOWS = 2
 
     def tearDown(self):
         super(PoliciesTestsBase, self).tearDown()
@@ -180,13 +178,17 @@ class TestPolicies(PoliciesTestsBase):
                         current_executions=2,
                         current_invocations=0)
 
+        # In test's blueprint set this value decreased by 1
+        # (1s safety time buffer)
+        min_interval_between_workflows = 4
+
         for _ in range(2):
             tester.publish_above_threshold(self.deployment.id, do_assert=True)
             tester.publish_above_threshold(self.deployment.id, do_assert=False)
-            time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
+            time.sleep(min_interval_between_workflows)
             tester.publish_below_threshold(self.deployment.id, do_assert=True)
             tester.publish_below_threshold(self.deployment.id, do_assert=False)
-            time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
+            time.sleep(min_interval_between_workflows)
 
 
 class TestAutohealPolicies(PoliciesTestsBase):
@@ -341,7 +343,7 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._wait_for_event_expiration()
 
     def _wait_for_terminated_execution(self,
-                                       timeout=30,
+                                       timeout=60,
                                        workflow_id='heal',
                                        num_of_workflows=1):
         def is_workflow_terminated():
@@ -501,8 +503,11 @@ class TestAutohealPolicies(PoliciesTestsBase):
         self._wait_for_event_expiration()
         self._wait_for_terminated_execution(workflow_id='auto_heal_workflow')
 
+        # In test's blueprint set this value decreased by 1
+        # (1s safety time buffer)
         # Wait for interval between workflows pass
-        time.sleep(self.MIN_INTERVAL_BETWEEN_WORKFLOWS)
+        min_interval_between_workflows = 2
+        time.sleep(min_interval_between_workflows)
 
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()

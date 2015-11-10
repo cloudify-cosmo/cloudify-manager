@@ -23,8 +23,8 @@ import time
 
 import pika
 
-from cloudify.celery import celery as celery_client
 from cloudify.utils import setup_logger
+from cloudify_agent.app import app as celery_client
 
 from testenv.constants import FILE_SERVER_PORT
 from testenv.constants import MANAGER_REST_PORT
@@ -105,16 +105,13 @@ class CeleryWorkerProcess(object):
             json.dump(config, conf_handle)
 
     def start(self):
-
         _delete_amqp_queues(self.name, self.queues.split(','))
-
         self.create_dirs()
-
         self.create_config()
 
         # includes should always have
         # the initial includes configuration.
-        includes = self._build_includes()
+        includes = ['cloudify.dispatch']
         includes.extend(self.additional_includes)
 
         python_path = sys.executable
@@ -132,7 +129,11 @@ class CeleryWorkerProcess(object):
             '--pidfile={0}'.format(self.celery_pid_file),
             '--queues={0}'.format(self.queues),
             '--autoscale={0},1'.format(self.concurrency),
-            '--include={0}'.format(','.join(includes))
+            '--include={0}'.format(','.join(includes)),
+            '--with-gate-keeper',
+            '--gate-keeper-bucket-size=2',
+            '--with-logging-server',
+            '--logging-server-logdir={0}/logs'.format(self.workdir)
         ]
 
         env_conf = dict(
@@ -148,7 +149,10 @@ class CeleryWorkerProcess(object):
             MANAGER_FILE_SERVER_URL='http://localhost:{0}'
             .format(FILE_SERVER_PORT),
             AGENT_IP='localhost',
-            VIRTUALENV=path.dirname(path.dirname(python_path))
+            VIRTUALENV=path.dirname(path.dirname(python_path)),
+            # See cloudify-plugins-common dispatch.py
+            # used to add mock_plugins to pythonpath of dispatch
+            PREPEND_CWD_TO_PYTHONPATH='true',
         )
 
         environment = os.environ.copy()
@@ -222,27 +226,6 @@ class CeleryWorkerProcess(object):
             with open(self.celery_log_file, 'r') as f:
                 return f.read()
         return None
-
-    def _build_includes(self):
-
-        includes = [
-            # this module will apply various monkey-patches
-            # to the process.
-            'testenv.mocks',
-        ]
-
-        for root, _, filenames in os.walk(self.envdir):
-            for filename in filenames:
-                file_path = os.path.join(root, filename)
-                if '__init__' in file_path:
-                    continue
-                if 'pyc' in file_path:
-                    continue
-                module = os.path.splitext(file_path)[0].replace(
-                    self.envdir, '').strip('/').replace('/', '.')
-                includes.append(module)
-
-        return includes
 
 
 # copied from worker_installer/tasks.py:_delete_amqp_queues

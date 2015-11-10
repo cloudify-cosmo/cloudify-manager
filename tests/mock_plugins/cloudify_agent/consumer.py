@@ -20,3 +20,6 @@ class ConsumerBackedPluginInstaller(PluginInstaller):
 
     def install(self, plugin):
         pass
+
+    def uninstall(self, plugins):
+        pass

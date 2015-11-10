@@ -380,12 +380,6 @@ def not_exist_operation_graph_mode_workflow(ctx, **kwargs):
 
 
 @workflow
-def not_exist_stop_operation_workflow(ctx, **kwargs):
-    node_instance = get_instance(ctx)
-    node_instance.execute_operation('cloudify.interfaces.lifecycle.stop')
-
-
-@workflow
 def ignore_handler_on_not_exist_operation_workflow(ctx, **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()

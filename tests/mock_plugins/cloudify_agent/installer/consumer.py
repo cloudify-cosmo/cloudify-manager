@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from cloudify.celery import celery
+from cloudify_agent.app import app
 
 from mock_plugins.cloudify_agent.installer import AgentInstaller
 
@@ -27,13 +27,13 @@ class ConsumerBackedAgentInstaller(AgentInstaller):
         pass
 
     def start(self):
-        celery.control.add_consumer(
+        app.control.add_consumer(
             queue=self.agent_queue,
             destination=['celery@cloudify.management']
         )
 
     def stop(self):
-        celery.control.cancel_consumer(
+        app.control.cancel_consumer(
             queue=self.agent_queue,
             destination=['celery@cloudify.management']
         )

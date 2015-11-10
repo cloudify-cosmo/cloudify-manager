@@ -42,8 +42,6 @@ from manager_rest import files
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.storage_manager import ListResult
 from manager_rest.blueprints_manager import get_blueprints_manager
-from manager_rest.blueprints_manager import \
-    TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT
 from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 
@@ -633,61 +631,6 @@ class NodeInstances(resources.NodeInstances):
             include=_include, filters=filters,
             pagination=pagination, sort=sort)
         return node_instances
-
-
-class ProviderContext(resources.ProviderContext):
-    @swagger.operation(
-        responseClass=responses_v2.ProviderContext,
-        notes="Updates the provider context",
-        parameters=[{'name': 'global_parallel_executions_limit',
-                     'description': "the global parallel executions limit",
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'int',
-                     'paramType': 'body'},
-                    ],
-        consumes=[
-            "application/json"
-        ]
-    )
-    @exceptions_handled
-    @marshal_with(responses_v2.ProviderContext)
-    def patch(self, **kwargs):
-        """
-        modifies provider context configuration
-        """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('global_parallel_executions_limit',
-                                         request_json)
-
-        provider_ctx = get_storage_manager().get_provider_context()
-        bootstrap_ctx = provider_ctx.context.get('cloudify', {})
-
-        transient_dep_workers_mode_enabled = bootstrap_ctx.get(
-            'transient_deployment_workers_mode', {}).get(
-            'enabled', TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT)
-        if not transient_dep_workers_mode_enabled:
-            raise manager_exceptions.BadParametersError(
-                "can't modify global_parallel_executions_limit since transient"
-                ' deployment workers mode is disabled')
-
-        limit = request_json['global_parallel_executions_limit']
-        if type(limit) is not int:
-            raise manager_exceptions.BadParametersError(
-                'global_parallel_executions_limit parameter should be of type'
-                ' int, but is instead of type {0}'.format(
-                    type(limit).__name__))
-
-        trans_dep_workers_mode = bootstrap_ctx.get(
-            'transient_deployment_workers_mode', {})
-        trans_dep_workers_mode['global_parallel_executions_limit'] = limit
-
-        bootstrap_ctx['transient_deployment_workers_mode'] = \
-            trans_dep_workers_mode
-        provider_ctx.context['cloudify'] = bootstrap_ctx
-        get_storage_manager().update_provider_context(provider_ctx)
-        return get_storage_manager().get_provider_context()
 
 
 class Plugins(SecuredResource):

@@ -11,13 +11,10 @@ node_templates:
         interfaces:
             test:
                 operation: cloudmock.cloudmock.tasks.non_existent
-            cloudify.interfaces.lifecycle:
-                stop: cloudmock.cloudmock.tasks.non_existent
 
 workflows:
     not_exist_operation_workflow: mock_workflows.mock_workflows.workflows.not_exist_operation_workflow
     not_exist_operation_graph_mode_workflow: mock_workflows.mock_workflows.workflows.not_exist_operation_graph_mode_workflow
-    not_exist_stop_operation_workflow: mock_workflows.mock_workflows.workflows.not_exist_stop_operation_workflow
     ignore_handler_on_not_exist_operation_workflow: mock_workflows.mock_workflows.workflows.ignore_handler_on_not_exist_operation_workflow
     retry_handler_on_not_exist_operation_workflow: mock_workflows.mock_workflows.workflows.retry_handler_on_not_exist_operation_workflow
     continue_handler_on_not_exist_operation_workflow: mock_workflows.mock_workflows.workflows.continue_handler_on_not_exist_operation_workflow

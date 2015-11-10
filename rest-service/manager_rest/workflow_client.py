@@ -14,8 +14,9 @@
 #  * limitations under the License.
 
 
-from manager_rest import celery_client
 from flask import current_app
+
+from manager_rest import celery_client
 
 
 class WorkflowClient(object):
@@ -23,33 +24,48 @@ class WorkflowClient(object):
     @staticmethod
     def execute_workflow(name,
                          workflow,
+                         workflow_plugins,
                          blueprint_id,
                          deployment_id,
                          execution_id,
                          execution_parameters=None):
+        execution_parameters = execution_parameters or {}
         task_name = workflow['operation']
-        task_queue = '{}_workflows'.format(deployment_id)
+        task_queue = 'cloudify.management'
 
+        plugin_name = workflow['plugin']
+        plugin = [p for p in workflow_plugins if p['name'] == plugin_name][0]
         execution_parameters['__cloudify_context'] = {
+            'type': 'workflow',
+            'task_name': task_name,
+            'task_id': execution_id,
+            'task_target': task_queue,
             'workflow_id': name,
             'blueprint_id': blueprint_id,
             'deployment_id': deployment_id,
-            'execution_id': execution_id
+            'execution_id': execution_id,
+            'plugin': {
+                'name': plugin_name,
+                'package_name': plugin.get('package_name'),
+                'package_version': plugin.get('package_version')
+            }
         }
-
-        return execute_task(task_name, task_queue, execution_id,
-                            execution_parameters)
+        return execute_task(task_queue=task_queue,
+                            execution_id=execution_id,
+                            execution_parameters=execution_parameters)
 
     @staticmethod
     def execute_system_workflow(wf_id, task_id, task_mapping, deployment=None,
                                 execution_parameters=None):
+        execution_parameters = execution_parameters or {}
         # task_id is not generated here since for system workflows,
         # the task id is equivalent to the execution id
-
         task_queue = 'cloudify.management'
         context = {
+            'type': 'workflow',
             'task_id': task_id,
             'task_name': task_mapping,
+            'task_target': task_queue,
             'execution_id': task_id,
             'workflow_id': wf_id,
         }
@@ -58,14 +74,9 @@ class WorkflowClient(object):
             context['blueprint_id'] = deployment.blueprint_id
             context['deployment_id'] = deployment.id
 
-        context['task_target'] = task_queue
-
-        if execution_parameters is None:
-            execution_parameters = {}
         execution_parameters['__cloudify_context'] = context
 
-        return execute_task(task_name=context['task_name'],
-                            task_queue=task_queue,
+        return execute_task(task_queue=task_queue,
                             execution_id=context['task_id'],
                             execution_parameters=execution_parameters)
 
@@ -82,11 +93,10 @@ def get_workflow_client():
     return wf_client
 
 
-def execute_task(task_name, task_queue, execution_id, execution_parameters):
+def execute_task(task_queue, execution_id, execution_parameters):
     celery = celery_client.get_client()
     try:
-        return celery.execute_task(task_name=task_name,
-                                   task_queue=task_queue,
+        return celery.execute_task(task_queue=task_queue,
                                    task_id=execution_id,
                                    kwargs=execution_parameters)
     finally:

@@ -24,14 +24,13 @@ from contextlib import contextmanager
 from functools import wraps
 from multiprocessing import Process
 
+import fasteners
 from celery import Celery
 
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
 from testenv.processes.manager_rest import MANAGER_REST_PORT
-from manager_rest.blueprints_manager import \
-    TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT as IS_TRANSIENT_WORKERS_MODE
 
 
 PROVIDER_CONTEXT = {
@@ -149,7 +148,6 @@ def execute_workflow(workflow_name, deployment_id,
     if wait_for_execution:
         wait_for_execution_to_end(execution,
                                   timeout_seconds=timeout_seconds)
-        _wait_for_stop_dep_env_execution_to_end_if_necessary(deployment_id)
 
     return execution
 
@@ -179,8 +177,6 @@ def undeploy_application(deployment_id,
     A blocking method which undeploys an application from the provided dsl
     path.
     """
-    _wait_for_stop_dep_env_execution_to_end_if_necessary(deployment_id)
-
     client = create_rest_client()
     execution = client.executions.start(deployment_id,
                                         'uninstall')
@@ -195,8 +191,6 @@ def undeploy_application(deployment_id,
 
 
 def delete_deployment(deployment_id, ignore_live_nodes=False):
-    _wait_for_stop_dep_env_execution_to_end_if_necessary(deployment_id)
-
     client = create_rest_client()
     return client.deployments.delete(deployment_id,
                                      ignore_live_nodes=ignore_live_nodes)
@@ -361,44 +355,21 @@ def update_storage(ctx):
         '{0}.json'.format(plugin_name)
     )
 
-    # create storage file
-    # if it doesn't exist
-    if not os.path.exists(storage_file_path):
+    with fasteners.InterProcessLock('{0}.lock'.format(storage_file_path)):
+        # create storage file
+        # if it doesn't exist
+        if not os.path.exists(storage_file_path):
+            with open(storage_file_path, 'w') as f:
+                json.dump({}, f)
+
+        with open(storage_file_path, 'r') as f:
+            data = json.load(f)
+            if deployment_id not in data:
+                data[deployment_id] = {}
+            yield data.get(deployment_id)
         with open(storage_file_path, 'w') as f:
-            json.dump({}, f)
-
-    with open(storage_file_path, 'r') as f:
-        data = json.load(f)
-        if deployment_id not in data:
-            data[deployment_id] = {}
-        yield data.get(deployment_id)
-    with open(storage_file_path, 'w') as f:
-        json.dump(data, f, indent=2)
-        f.write(os.linesep)
-
-
-def _wait_for_stop_dep_env_execution_to_end_if_necessary(
-        deployment_id=None, timeout_seconds=30):
-    if not IS_TRANSIENT_WORKERS_MODE:
-        return
-
-    client = create_rest_client()
-    executions = client.executions.list(deployment_id=deployment_id,
-                                        include_system_workflows=True)
-    running_stop_executions = [e for e in executions if e.workflow_id ==
-                               '_stop_deployment_environment' and
-                               e.status not in Execution.END_STATES]
-
-    if not running_stop_executions:
-        return
-
-    if len(running_stop_executions) > 1:
-        raise RuntimeError('There is more than one running '
-                           '"_stop_deployment_environment" execution: {0}'
-                           .format(running_stop_executions))
-
-    execution = running_stop_executions[0]
-    return wait_for_execution_to_end(execution, timeout_seconds)
+            json.dump(data, f, indent=2)
+            f.write(os.linesep)
 
 
 class TimeoutException(Exception):
