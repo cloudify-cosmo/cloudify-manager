@@ -42,7 +42,7 @@ class ManagerElasticsearch:
 
         :param filters: A dictionary containing filter keys and their expected
                         value.
-        :param pagination: A dictionary with optional `page_size` and `offset`
+        :param pagination: A dictionary with optional `size` and `offset`
                            keys.
         :param skip_size: If set to `True`, will not add `size` to the
                           body result.
@@ -64,7 +64,7 @@ class ManagerElasticsearch:
 
         if pagination:
             if not skip_size:
-                body['size'] = pagination.get('page_size', DEFAULT_SEARCH_SIZE)
+                body['size'] = pagination.get('size', DEFAULT_SEARCH_SIZE)
             if 'offset' in pagination:
                 body['from'] = pagination['offset']
         elif not skip_size:
@@ -128,3 +128,12 @@ class ManagerElasticsearch:
         """
         es = ManagerElasticsearch.get_connection()
         return es.search(index=index, doc_type=doc_type, body=body)
+
+    @staticmethod
+    def build_list_result_metadata(query, search_result):
+
+        pagination = {'total': search_result['hits']['total'],
+                      'size': query.get('size'),
+                      'offset': query.get('from')}
+        metadata = {'pagination': pagination}
+        return metadata

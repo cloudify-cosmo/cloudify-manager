@@ -55,12 +55,7 @@ class Plugin(object):
         'wheels': fields.Raw,
         'excluded_wheels': fields.Raw,
         'supported_py_versions': fields.Raw,
-        'uploaded_at': fields.String,
-    }
-    fields = {'id', 'package_name', 'archive_name', 'package_source',
-              'package_version', 'supported_platform', 'distribution',
-              'distribution_version', 'distribution_release', 'wheels',
-              'excluded_wheels', 'supported_py_versions', 'uploaded_at'}
+        'uploaded_at': fields.String}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
@@ -93,3 +88,14 @@ class Snapshot(object):
         self.created_at = kwargs['created_at']
         self.status = kwargs['status']
         self.error = kwargs['error']
+
+
+@swagger.model
+class ListResponse(object):
+    resource_fields = {
+        'metadata': fields.Raw,
+        'items': fields.List(fields.Raw)}
+
+    def __init__(self, **kwargs):
+        self.metadata = kwargs['metadata']
+        self.items = kwargs['items']

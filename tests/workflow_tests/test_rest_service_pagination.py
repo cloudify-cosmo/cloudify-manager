@@ -64,7 +64,8 @@ class TestRestServiceListPagination(TestCase):
 
     def test_node_instances_pagination(self):
         deployment = deploy(resource('dsl/pagination-node-instances.yaml'))
-        self._test_pagination(partial(self.client.node_instances.list,
+        self._test_pagination(partial(
+            self.client.node_instances.list,
                               deployment_id=deployment.id))
 
     def test_plugins_pagination(self):
@@ -80,11 +81,15 @@ class TestRestServiceListPagination(TestCase):
         self._test_pagination(self.client.plugins.list)
 
     def _test_pagination(self, list_func):
-        all_results = list_func()
+        all_results = list_func().items
         num_all = len(all_results)
         # sanity
         self.assertGreaterEqual(num_all, 10)
         for offset in range(num_all + 1):
             for size in range(num_all + 1):
                 response = list_func(_offset=offset, _size=size)
-                self.assertEqual(response, all_results[offset:offset+size])
+                self.assertEqual(response.metadata.pagination.total, num_all)
+                self.assertEqual(response.metadata.pagination.offset, offset)
+                self.assertEqual(response.metadata.pagination.size, size)
+                self.assertEqual(response.items,
+                                 all_results[offset:offset+size])

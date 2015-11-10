@@ -28,8 +28,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     DEPLOYMENT_ID = 'deployment'
 
     def test_get_empty(self):
-        result = self.get('/deployments')
-        self.assertEquals(0, len(result.json))
+        result = self.client.deployments.list()
+        self.assertEquals(0, len(result))
 
     def test_put(self):
         (blueprint_id,
@@ -90,7 +90,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        get_deployments_response = self.get('/deployments').json
+        get_deployments_response = self.client.deployments.list()
         self.assertEquals(1, len(get_deployments_response))
         single_deployment = get_deployments_response[0]
         self.assertEquals(deployment_id, single_deployment['id'])
@@ -175,8 +175,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        nodes = self.get('/node-instances',
-                         query_params={'deployment_id': deployment_id}).json
+        nodes = self.client.node_instances.list(deployment_id=deployment_id)
+
         self.assertTrue(len(nodes) > 0)
         nodes_ids = [node['id'] for node in nodes]
 
@@ -196,8 +196,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
         # modifying a node's state so there'll be a node in a state other
         # than 'uninitialized'
-        nodes = self.get('/node-instances',
-                         query_params={'deployment_id': deployment_id}).json
+        nodes = self.client.node_instances.list(deployment_id=deployment_id)
 
         resp = self.patch('/node-instances/{0}'.format(nodes[0]['id']), {
             'version': 0,
@@ -230,8 +229,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        nodes = self.get('/node-instances',
-                         query_params={'deployment_id': deployment_id}).json
+        nodes = self.client.node_instances.list(deployment_id=deployment_id)
 
         # modifying nodes states
         for node in nodes:
@@ -277,8 +275,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
-        nodes = self.get('/node-instances',
-                         query_params={'deployment_id': deployment_id}).json
+        nodes = self.client.node_instances.list(deployment_id=deployment_id)
+
         self.assertEquals(2, len(nodes))
 
         def assert_node_exists(starts_with):

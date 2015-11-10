@@ -216,7 +216,8 @@ class BlueprintsManager(object):
         return new_blueprint
 
     def delete_blueprint(self, blueprint_id):
-        blueprint_deployments = self.sm.get_blueprint_deployments(blueprint_id)
+        blueprint_deployments = self.sm.get_blueprint_deployments(
+            blueprint_id).items
 
         if len(blueprint_deployments) > 0:
             raise manager_exceptions.DependentExistsError(
@@ -238,7 +239,8 @@ class BlueprintsManager(object):
         # validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
-        executions = self.sm.executions_list(filters=deplyment_id_filter)
+        executions = self.sm.executions_list(
+            filters=deplyment_id_filter).items
         if any(execution.status not in models.Execution.END_STATES for
            execution in executions):
             raise manager_exceptions.DependentExistsError(
@@ -254,7 +256,7 @@ class BlueprintsManager(object):
             deplyment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
             node_instances = self.sm.get_node_instances(
-                filters=deplyment_id_filter)
+                filters=deplyment_id_filter).items
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
             if any(node.state not in ('uninitialized', 'deleted') for node in
@@ -366,7 +368,7 @@ class BlueprintsManager(object):
             'status': models.Execution.ACTIVE_STATES
         }
         for e in self.executions_list(is_include_system_workflows=True,
-                                      filters=filters):
+                                      filters=filters).items:
             if e.deployment_id is None:
                 raise manager_exceptions.ExistingRunningExecutionError(
                     'You cannot start an execution if there is a running '
@@ -540,7 +542,7 @@ class BlueprintsManager(object):
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
         existing_modifications = self.sm.deployment_modifications_list(
-            include=['id', 'status'])
+            include=['id', 'status']).items
         active_modifications = [
             m.id for m in existing_modifications
             if m.status == models.DeploymentModification.STARTED]
@@ -553,10 +555,10 @@ class BlueprintsManager(object):
                     .format(active_modifications))
 
         nodes = [node.to_dict() for node in self.sm.get_nodes(
-            filters=deployment_id_filter)]
+            filters=deployment_id_filter).items]
         node_instances = [instance.to_dict() for instance
                           in self.sm.get_node_instances(
-                          filters=deployment_id_filter)]
+                          filters=deployment_id_filter).items]
         node_instances_modification = tasks.modify_deployment(
             nodes=nodes,
             previous_node_instances=node_instances,
@@ -564,7 +566,7 @@ class BlueprintsManager(object):
 
         node_instances_modification['before_modification'] = [
             instance.to_dict() for instance in
-            self.sm.get_node_instances(filters=deployment_id_filter)]
+            self.sm.get_node_instances(filters=deployment_id_filter).items]
 
         now = str(datetime.now())
         modification_id = str(uuid.uuid4())
@@ -673,7 +675,7 @@ class BlueprintsManager(object):
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=modification.deployment_id)
         node_instances = self.sm.get_node_instances(
-            filters=deplyment_id_filter)
+            filters=deplyment_id_filter).items
         modification.node_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
         for instance in node_instances:
@@ -683,7 +685,7 @@ class BlueprintsManager(object):
                 models.DeploymentNodeInstance(**instance))
         nodes_num_instances = {node.id: node for node in self.sm.get_nodes(
             filters=deplyment_id_filter,
-            include=['id', 'number_of_instances'])}
+            include=['id', 'number_of_instances']).items}
         for node_id, modified_node in modification.modified_nodes.items():
             self.sm.update_node(
                 modification.deployment_id, node_id,
@@ -744,7 +746,7 @@ class BlueprintsManager(object):
         def get_node_instances(node_id=None):
             filters = self.create_filters_dict(deployment_id=deployment_id,
                                                node_id=node_id)
-            return self.sm.get_node_instances(filters=filters)
+            return self.sm.get_node_instances(filters=filters).items
 
         def get_node_instance(node_instance_id):
             return self.sm.get_node_instance(node_instance_id)
@@ -767,7 +769,7 @@ class BlueprintsManager(object):
         def get_node_instances(node_id=None):
             filters = self.create_filters_dict(deployment_id=deployment_id,
                                                node_id=node_id)
-            return self.sm.get_node_instances(filters=filters)
+            return self.sm.get_node_instances(filters=filters).items
 
         def get_node_instance(node_instance_id):
             return self.sm.get_node_instance(node_instance_id)
@@ -883,7 +885,7 @@ class BlueprintsManager(object):
             deployment_id=deployment_id)
         env_creation = next(
             (execution for execution in
-             self.sm.executions_list(filters=deployment_id_filter)
+             self.sm.executions_list(filters=deployment_id_filter).items
              if execution.workflow_id == 'create_deployment_environment'),
             None)
 
@@ -973,7 +975,7 @@ class BlueprintsManager(object):
                 deployment_id=deployment_id)
             executions = self.executions_list(
                 filters=deplyment_id_filter,
-                is_include_system_workflows=include_system)
+                is_include_system_workflows=include_system).items
             running = [
                 e.id for e in executions if
                 self.sm.get_execution(e.id).status

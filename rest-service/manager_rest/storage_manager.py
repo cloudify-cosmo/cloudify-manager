@@ -54,3 +54,12 @@ def get_storage_manager():
         current_app.config['storage_manager'] = _get_instance()
         manager = current_app.config.get('storage_manager')
     return manager
+
+
+class ListResult(object):
+    """
+    a ListResult contains results about the requested items.
+    """
+    def __init__(self, items, metadata):
+        self.items = items
+        self.metadata = metadata

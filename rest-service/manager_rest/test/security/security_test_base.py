@@ -26,12 +26,6 @@ BASIC_AUTH_PREFIX = 'Basic '
 
 class SecurityTestBase(BaseServerTestCase):
 
-    def setUp(self):
-        super(SecurityTestBase, self).setUp()
-
-    def cleanup(self):
-        super(SecurityTestBase, self).cleanup()
-
     def initialize_provider_context(self):
         client = self.create_client(
             headers=SecurityTestBase.create_auth_header(username='admin',

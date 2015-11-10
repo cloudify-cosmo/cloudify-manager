@@ -168,7 +168,8 @@ class TestDeploymentModification(TestCase):
             deployment_id = deployment.id
 
         nodes_before_modification = {
-            node.id: node for node in self.client.nodes.list(deployment_id)
+            node.id: node for node in
+            self.client.nodes.list(deployment_id)
         }
 
         before_modifications = self.client.deployment_modifications.list(

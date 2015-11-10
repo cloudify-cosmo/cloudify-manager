@@ -19,6 +19,8 @@ import dateutil.parser
 from datetime import datetime, timedelta
 from nose.plugins.attrib import attr
 
+from base_test import CLIENT_API_VERSION
+
 from manager_rest.test import base_test
 from cloudify_rest_client import exceptions
 from cloudify_rest_client.deployment_modifications import (
@@ -91,7 +93,8 @@ class ModifyTests(base_test.BaseServerTestCase):
             runtime_properties={'test': 'before_start'},
             version=0)
 
-        before_modification = self.client.node_instances.list(deployment.id)
+        before_modification = self.list_items(self.client.node_instances.list,
+                                              deployment.id)
         modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes, context=mock_context)
@@ -114,11 +117,13 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.assertEqual(modification.status,
                          DeploymentModification.STARTED)
 
-        before_end = self.client.node_instances.list(deployment.id)
+        before_end = self.list_items(self.client.node_instances.list,
+                                     deployment.id)
 
         end_func(modification_id)
 
-        after_end = self.client.node_instances.list(deployment.id)
+        after_end = self.list_items(self.client.node_instances.list,
+                                    deployment.id)
 
         node_assertions(**expected_end_node_counts)
 
@@ -132,13 +137,16 @@ class ModifyTests(base_test.BaseServerTestCase):
         ended_at = dateutil.parser.parse(modification.ended_at)
         self.assertTrue(datetime.now() - timedelta(seconds=5) <=
                         created_at <= ended_at <= datetime.now())
-        all_modifications = self.client.deployment_modifications.list()
-        dep_modifications = self.client.deployment_modifications.list(
+        all_modifications = self.list_items(
+            self.client.deployment_modifications.list)
+        dep_modifications = self.list_items(
+            self.client.deployment_modifications.list,
             deployment_id=deployment.id)
-        self.assertEqual(all_modifications, dep_modifications)
         self.assertEqual(len(dep_modifications), 1)
         self.assertEqual(dep_modifications[0], modification)
-        self.assertEqual([], self.client.deployment_modifications.list(
+        self.assertEqual(all_modifications, dep_modifications)
+        self.assertEqual([], self.list_items(
+            self.client.deployment_modifications.list,
             deployment_id='i_really_should_not_exist'))
         self.assertEqual(modification.node_instances.before_modification,
                          before_modification)
@@ -148,6 +156,7 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.assertEqual(after_end,
                          expected_after_end_func(before_modification,
                                                  before_end))
+
         self.assertEqual(modification.context, mock_context)
 
         self.assertEqual(expected_after_end_count, len(after_end))
@@ -160,6 +169,12 @@ class ModifyTests(base_test.BaseServerTestCase):
             self.client.node_instances.get(
                 node2_instance.id).runtime_properties['test'],
             expected_after_end_runtime_property)
+
+    def list_items(self, list_func, *args, **kwargs):
+        if CLIENT_API_VERSION != 'v1':
+            return list_func(*args, **kwargs).items
+        else:
+            return list_func(*args, **kwargs)
 
     def test_no_concurrent_modifications(self):
         _, _, _, deployment = self.put_deployment(

@@ -35,7 +35,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                           source='bp-source',
                                           main_file_name='aaa')
         sm.put_blueprint('blueprint-id', blueprint)
-        blueprint_from_list = sm.blueprints_list()[0]
+        blueprint_from_list = sm.blueprints_list().items[0]
         blueprint_restored = sm.get_blueprint('blueprint-id')
         bp_from_delete = sm.delete_blueprint('blueprint-id')
         self.assertEquals(blueprint.to_dict(), blueprint_from_list.to_dict())
@@ -43,7 +43,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         # in bp returned from delete operation only 'id' is guaranteed to
         # return
         self.assertEquals(blueprint.id, bp_from_delete.id)
-        blueprints_list = sm.blueprints_list()
+        blueprints_list = sm.blueprints_list().items
         self.assertEquals(0, len(blueprints_list))
 
     def test_get_blueprint_deployments(self):
@@ -101,6 +101,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         sm.put_deployment('dep-3', deployment3)
 
         blueprint_deployments = sm.get_blueprint_deployments('blueprint-id')
+        blueprint_deployments = sm.get_blueprint_deployments(
+            'blueprint-id').items
 
         self.assertEquals(2, len(blueprint_deployments))
         if blueprint_deployments[0].id != deployment1.id:
