@@ -17,6 +17,7 @@
 from nose.plugins.attrib import attr
 
 from manager_rest.test.base_list_test import BaseListTest
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 @attr(client_min_version=1, client_max_version=1)
@@ -34,6 +35,28 @@ class TestResourceListV1(BaseListTest):
         self.sec_blueprint_id = 'test1_blueprint'
         self.sec_deployment_id = 'test1_deployment'
 
+    def test_insecure_endpoints_disabled(self):
+        from manager_rest import config
+
+        def config_instance_dec(func):
+            def instance(*args, **kwargs):
+                new_instance = func(*args, **kwargs)
+                new_instance.insecure_endpoints_disabled = True
+                return new_instance
+            return instance
+        # store original function before decorating it
+        original_instance_func = config.instance
+
+        config.instance = config_instance_dec(config.instance)
+        try:
+            self.client.events.get(execution_id='111')
+            self.fail()
+        except CloudifyClientError, e:
+            self.assertEqual(405, e.status_code)
+        finally:
+            # restore original function
+            config.instance = original_instance_func
+
     def test_blueprints_list_no_params(self):
         response = self.client.blueprints.list()
         self.assertEqual(2, len(response), 'expecting 2 blueprint result,'
@@ -44,17 +67,18 @@ class TestResourceListV1(BaseListTest):
             self.assertIsNotNone(blueprint['plan'])
 
     def test_deployments_list_no_params(self):
-        response = self.client.deployments.list()
-        self.assertEqual(2, len(response), 'expecting 2 deployment results, '
-                                           'got {0}'.format(len(response)))
+        deployments = self.client.deployments.list()
+        self.assertEqual(2, len(deployments),
+                         'expecting 2 deployment results, got {0}'
+                         .format(len(deployments)))
 
-        if response[0]['id'] != self.first_deployment_id:
-            response[0], response[1] = response[1], response[0]
+        if deployments[0]['id'] != self.first_deployment_id:
+            deployments[0], deployments[1] = deployments[1], deployments[0]
 
         self.assertEquals(self.first_blueprint_id,
-                          response[0]['blueprint_id'])
+                          deployments[0]['blueprint_id'])
         self.assertEquals(self.sec_blueprint_id,
-                          response[1]['blueprint_id'])
+                          deployments[1]['blueprint_id'])
 
     def test_nodes_list_no_params(self):
         response = self.client.nodes.list()

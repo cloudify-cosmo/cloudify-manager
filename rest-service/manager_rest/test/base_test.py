@@ -177,10 +177,10 @@ class BaseServerTestCase(unittest.TestCase):
         client.manager.api = mock_http_client
         client.evaluate.api = mock_http_client
         client.tokens.api = mock_http_client
+        client.events.api = mock_http_client
         # only exists in v2 and above
         if CLIENT_API_VERSION != 'v1':
             client.plugins.api = mock_http_client
-            client.events.api = mock_http_client
             client.snapshots.api = mock_http_client
 
         return client

@@ -60,6 +60,18 @@ CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
 
 
+def insecure_rest_method(func):
+    """block an insecure REST method if manager disabled insecure endpoints
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        cfg = config.instance()
+        if cfg.insecure_endpoints_disabled:
+            raise manager_exceptions.MethodNotAllowedError()
+        return func(*args, **kwargs)
+    return wrapper
+
+
 def exceptions_handled(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -1134,6 +1146,7 @@ class Events(SecuredResource):
         consumes=['application/json']
     )
     @exceptions_handled
+    @insecure_rest_method
     def get(self, **kwargs):
         """
         List events for the provided Elasticsearch query
@@ -1153,6 +1166,7 @@ class Events(SecuredResource):
         consumes=['application/json']
     )
     @exceptions_handled
+    @insecure_rest_method
     def post(self, **kwargs):
         """
         List events for the provided Elasticsearch query
@@ -1176,6 +1190,7 @@ class Search(SecuredResource):
         consumes=['application/json']
     )
     @exceptions_handled
+    @insecure_rest_method
     def post(self, **kwargs):
         """
         Search using an Elasticsearch query
