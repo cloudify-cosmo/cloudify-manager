@@ -381,8 +381,8 @@ def update_storage(ctx):
     # create storage file
     # if it doesn't exist
     if not os.path.exists(storage_file_path):
-        f = open(storage_file_path, 'w')
-        json.dump({}, f)
+        with open(storage_file_path, 'w') as f:
+            json.dump({}, f)
 
     with open(storage_file_path, 'r') as f:
         data = json.load(f)
@@ -395,7 +395,7 @@ def update_storage(ctx):
 
 
 def _wait_for_stop_dep_env_execution_to_end_if_necessary(
-        deployment_id, timeout_seconds=30):
+        deployment_id=None, timeout_seconds=30):
     if not IS_TRANSIENT_WORKERS_MODE:
         return
 

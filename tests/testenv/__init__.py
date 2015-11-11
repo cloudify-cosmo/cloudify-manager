@@ -71,6 +71,7 @@ class TestCase(unittest.TestCase):
             self._write_test_events_and_logs_to_file
 
     def tearDown(self):
+        utils._wait_for_stop_dep_env_execution_to_end_if_necessary()
         TestEnvironment.stop_celery_management_worker()
         TestEnvironment.stop_all_celery_processes()
         TestEnvironment.reset_elasticsearch_data()
