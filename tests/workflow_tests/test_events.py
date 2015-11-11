@@ -86,7 +86,8 @@ class EventsTest(TestCase):
 
     def test_search_event_message(self):
         all_events = self.client.events.list()
-        message = 'sending'
+        # checking partial word and case insensitivity ('sending')
+        message = 'SeNdIN'
         searched_events = self.client.events.list(message=message)
         self.assertGreater(len(searched_events), 0, 'No events')
         # assert the search actually returned a partial result
