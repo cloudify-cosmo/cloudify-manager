@@ -202,6 +202,7 @@ class Snapshots(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses_v2.Snapshot)
+    @paginate
     def get(self, _include=None, filters=None, pagination=None, **kwargs):
         return get_blueprints_manager().snapshots_list(include=_include,
                                                        filters=filters,

@@ -353,7 +353,7 @@ class BlueprintsManager(object):
         executions = [
             e.id
             for e in self.executions_list(is_include_system_workflows=True,
-                                          filters=filters)
+                                          filters=filters).items
         ]
 
         if executions:

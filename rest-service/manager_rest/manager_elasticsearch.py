@@ -134,6 +134,6 @@ class ManagerElasticsearch:
 
         pagination = {'total': search_result['hits']['total'],
                       'size': query.get('size'),
-                      'offset': query.get('from')}
+                      'offset': query.get('from', 0)}
         metadata = {'pagination': pagination}
         return metadata
