@@ -27,7 +27,7 @@ class ManagerElasticsearch:
 
     @staticmethod
     def build_request_body(filters=None, pagination=None, skip_size=False,
-                           sort=None, range_filters=None):
+                           sort=None, range_filters=None, wildcards=None):
         """
         This method is used to create an elasticsearch request based on the
         Query DSL.
@@ -56,6 +56,10 @@ class ManagerElasticsearch:
             return {"query": {"match":
                               {k: {"query": v, "operator": "and"}}}}
 
+        def _build_wildcard_condition(k, v):
+            return {"query": {"query_string":
+                              {"query": '{k}:*{v}*'.format(k=k, v=v)}}}
+
         mandatory_conditions = []
         body = {}
 
@@ -69,7 +73,6 @@ class ManagerElasticsearch:
                 body['from'] = pagination['offset']
         elif not skip_size:
             body['size'] = DEFAULT_SEARCH_SIZE
-
         if filters:
             filter_conditions = []
             for key, val in filters.iteritems():
@@ -87,6 +90,12 @@ class ManagerElasticsearch:
             range_conditions = \
                 [{'range': {k: v} for k, v in range_filters.iteritems()}]
             mandatory_conditions.extend(range_conditions)
+
+        if wildcards:
+            wildcard_conditions = \
+                [_build_wildcard_condition(k, v) for k, v
+                 in wildcards.iteritems()]
+            mandatory_conditions.extend(wildcard_conditions)
 
         if mandatory_conditions:
             body['query'] = {

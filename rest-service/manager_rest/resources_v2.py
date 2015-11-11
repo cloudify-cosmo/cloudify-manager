@@ -141,6 +141,7 @@ def create_filters(fields=None):
     def create_filters_dec(f):
         def some_func(*args, **kw):
             request_args = request.args.to_dict(flat=False)
+            # NOTE: all filters are created as lists
             filters = {k: v for k, v in
                        request_args.iteritems() if not k.startswith('_')}
             if fields:
@@ -933,11 +934,17 @@ class Events(resources.Events):
                     construct['context.{0}'.format(ctx_field)] = \
                         construct.pop(ctx_field)
 
+        # TODO: monkey patching a wildcard with a filter, should be refactored
+        wildcards = dict()
+        if filters and 'message.text' in filters:
+            wildcards['message.text'] = filters.pop('message.text')[0]
+
         return ManagerElasticsearch.\
             build_request_body(filters=filters,
                                pagination=pagination,
                                sort=sort,
-                               range_filters=range_filters)
+                               range_filters=range_filters,
+                               wildcards=wildcards)
 
     def list_events(self, query, include=None):
         result = self._search(query, include=include)
