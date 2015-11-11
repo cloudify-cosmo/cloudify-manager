@@ -44,15 +44,19 @@ class EventsTest(base_test.BaseServerTestCase):
                                     sort=sort,
                                     pagination=pagination,
                                     range_filters=range_filters)
-        # sort dict internal list for comparison reasons
-        server_query = self.sort_query_list(query)
         expected_query = self._get_expected_query()
-        self.assertDictEqual(expected_query, server_query)
+        # match the order of conditions list in both queries
+        # to overcome order differences in comparison
+        self._sort_query_conditions_list(expected_query)
+        self._sort_query_conditions_list(query)
+
+        self.assertDictEqual(expected_query, query)
 
     def _get_build_query_args(self):
 
         filters = {
             'blueprint_id': 'some_blueprint',
+            'deployment_id': 'some_deployment',
             'type': ['cloudify_event', 'cloudify_logs']
         }
         pagination = {
@@ -79,6 +83,10 @@ class EventsTest(base_test.BaseServerTestCase):
         }
         return result
 
+    def _sort_query_conditions_list(self, query):
+        conditions = query['query']['filtered']['filter']['bool']['must']
+        conditions.sort()
+
     def _get_expected_query(self):
         conditions = [
             {
@@ -86,6 +94,16 @@ class EventsTest(base_test.BaseServerTestCase):
                     'match': {
                         'context.blueprint_id': {
                             'query': 'some_blueprint',
+                            'operator': 'and'
+                        }
+                    }
+                }
+            },
+            {
+                'query': {
+                    'match': {
+                        'context.deployment_id': {
+                            'query': 'some_deployment',
                             'operator': 'and'
                         }
                     }
@@ -125,10 +143,4 @@ class EventsTest(base_test.BaseServerTestCase):
             'size': 5,
             'from': 3
         }
-        return self.sort_query_list(expected_query)
-
-    def sort_query_list(self, query):
-        query['query']['filtered']['filter']['bool']['must'].sort()
-        query['query']['filtered']['filter']['bool']['must'][
-            2]['terms']['type'].sort()
-        return query
+        return expected_query

@@ -81,15 +81,15 @@ class TestRestServiceListPagination(TestCase):
         self._test_pagination(self.client.plugins.list)
 
     def _test_pagination(self, list_func):
-        all_results = list_func().items
+        all_results = list_func(_sort=['id']).items
         num_all = len(all_results)
         # sanity
         self.assertGreaterEqual(num_all, 10)
         for offset in range(num_all + 1):
             for size in range(num_all + 1):
-                response = list_func(_offset=offset, _size=size)
+                response = list_func(_offset=offset, _size=size, _sort=['id'])
                 self.assertEqual(response.metadata.pagination.total, num_all)
                 self.assertEqual(response.metadata.pagination.offset, offset)
                 self.assertEqual(response.metadata.pagination.size, size)
                 self.assertEqual(response.items,
-                                 all_results[offset:offset+size])
+                                 all_results[offset:offset + size])

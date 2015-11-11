@@ -99,6 +99,7 @@ class MockHTTPClient(HTTPClient):
                    params=None,
                    headers=None,
                    pagination=None,
+                   sort=None,
                    expected_status_code=200,
                    stream=False):
         if CLIENT_API_VERSION == 'v1':
@@ -180,6 +181,7 @@ class BaseServerTestCase(unittest.TestCase):
         if CLIENT_API_VERSION != 'v1':
             client.plugins.api = mock_http_client
             client.events.api = mock_http_client
+            client.snapshots.api = mock_http_client
 
         return client
 
