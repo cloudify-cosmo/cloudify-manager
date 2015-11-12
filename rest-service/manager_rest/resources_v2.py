@@ -363,9 +363,11 @@ class SnapshotsIdRestore(SecuredResource):
             'recreate_deployments_envs',
             request_json['recreate_deployments_envs']
         )
+        force = verify_and_convert_bool('force', request_json['force'])
         execution = get_blueprints_manager().restore_snapshot(
             snapshot_id,
-            recreate_deployments_envs
+            recreate_deployments_envs,
+            force
         )
         return execution, 200
 
