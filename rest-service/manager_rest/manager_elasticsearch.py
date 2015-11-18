@@ -64,7 +64,8 @@ class ManagerElasticsearch:
         body = {}
 
         if sort:
-            body['sort'] = map(lambda k: {k: {"order": sort[k]}}, sort)
+            body['sort'] = map(lambda k: {k: {"order": sort[k],
+                                              "ignore_unmapped": True}}, sort)
 
         if pagination:
             if not skip_size:
