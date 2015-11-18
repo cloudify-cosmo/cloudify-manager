@@ -58,8 +58,8 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                         post_blueprints_response.json['message'])
         self.assertEqual(409, post_blueprints_response.status_code)
 
-    def test_put_blueprint(self):
-        self._test_put_blueprint(archiving.make_targzfile, 'tar.gz')
+    def test_put_blueprint_archive(self):
+        self._test_put_blueprint_archive(archiving.make_targzfile, 'tar.gz')
 
     def test_post_without_application_file_form_data(self):
         post_blueprints_response = self.put_file(
@@ -122,31 +122,33 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.check_if_resource_on_fileserver('hello_world',
                                              'plugins/stub-installer.zip')
 
-    def test_put_blueprint_from_url(self):
+    def test_put_blueprint_archive_from_url(self):
         port = 53230
         blueprint_id = 'new_blueprint_id'
-        resource_path = '/blueprints/{0}'.format(blueprint_id)
 
-        archive_path = self.archive_mock_blueprint()
+        archive_path = self.archive_mock_blueprint(
+            archive_func=archiving.make_tarbz2file)
         archive_filename = os.path.basename(archive_path)
         archive_dir = os.path.dirname(archive_path)
+
+        archive_url = 'http://localhost:{0}/{1}'.format(
+            port, archive_filename)
 
         fs = FileServer(archive_dir, False, port)
         fs.start()
         try:
-            archive_url = 'http://localhost:{0}/{1}'.format(
-                port, archive_filename)
             self.wait_for_url(archive_url)
 
-            response = self.put(
-                resource_path,
-                None,
-                {'blueprint_archive_url': archive_url})
-            self.assertEqual(blueprint_id, response.json['id'])
+            blueprint_id = self.client.blueprints.publish_archive(
+                archive_url,
+                blueprint_id).id
+            # verifying blueprint exists
+            result = self.client.blueprints.get(blueprint_id)
+            self.assertEqual(blueprint_id, result.id)
         finally:
             fs.stop()
 
-    def test_put_blueprint_from_unavailable_url(self):
+    def test_put_blueprint_archive_from_unavailable_url(self):
         blueprint_id = 'new_blueprint_id'
         resource_path = '/blueprints/{0}'.format(blueprint_id)
         response = self.put(
@@ -157,7 +159,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                         response.json['message'])
         self.assertEqual(400, response.status_code)
 
-    def test_put_blueprint_from_malformed_url(self):
+    def test_put_blueprint_archive_from_malformed_url(self):
         blueprint_id = 'new_blueprint_id'
         resource_path = '/blueprints/{0}'.format(blueprint_id)
         response = self.put(
@@ -168,7 +170,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
                       response.json['message'])
         self.assertEqual(400, response.status_code)
 
-    def test_put_blueprint_from_url_and_data(self):
+    def test_put_blueprint_archive_from_url_and_data(self):
         blueprint_id = 'new_blueprint_id'
         resource_path = '/blueprints/{0}'.format(blueprint_id)
         response = self.put(
@@ -178,14 +180,14 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertIn("Can't pass both", response.json['message'])
         self.assertEqual(400, response.status_code)
 
-    def test_put_zip_blueprint(self):
-        self._test_put_blueprint(archiving.make_zipfile, 'zip')
+    def test_put_zip_archive(self):
+        self._test_put_blueprint_archive(archiving.make_zipfile, 'zip')
 
-    def test_put_tar_blueprint(self):
-        self._test_put_blueprint(archiving.make_tarfile, 'tar')
+    def test_put_tar_archive(self):
+        self._test_put_blueprint_archive(archiving.make_tarfile, 'tar')
 
-    def test_put_bz2_blueprint(self):
-        self._test_put_blueprint(archiving.make_tarbz2file, 'tar.bz2')
+    def test_put_bz2_archive(self):
+        self._test_put_blueprint_archive(archiving.make_tarbz2file, 'tar.bz2')
 
     def test_put_unsupported_archive_blueprint(self):
         archive_path = tempfile.mkstemp()[1]
@@ -270,7 +272,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(blueprint_id, response.id)
         self.assertEqual(main_file_name, response.main_file_name)
 
-    def _test_put_blueprint(self, archive_func, archive_type):
+    def _test_put_blueprint_archive(self, archive_func, archive_type):
         blueprint_id = 'new_blueprint_id'
         put_blueprints_response = self.put_file(
             *self.put_blueprint_args(blueprint_id=blueprint_id,
