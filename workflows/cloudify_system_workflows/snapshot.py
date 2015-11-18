@@ -402,16 +402,16 @@ def _assert_clean_elasticsearch(es, log_warning=False):
         else:
             raise NonRecoverableError(message)
 
-    # check events
-    has_cloudify_events_index = es.indices.exists(index=_EVENTS_INDEX_NAME)
-    if has_cloudify_events_index:
-        events_index_name = _EVENTS_INDEX_NAME
-    else:
-        events_index_name = 'logstash-*'
-
-    res = es.count(index=events_index_name)
-    if res['count'] != '0':
-        _raise_or_log()
+    # # check events
+    # has_cloudify_events_index = es.indices.exists(index=_EVENTS_INDEX_NAME)
+    # if has_cloudify_events_index:
+    #     events_index_name = _EVENTS_INDEX_NAME
+    # else:
+    #     events_index_name = 'logstash-*'
+    #
+    # res = es.count(index=events_index_name)
+    # if res['count'] != '0':
+    #     _raise_or_log()
 
     # check storage
     storage_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME)
