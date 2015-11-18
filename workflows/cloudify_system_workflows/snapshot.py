@@ -415,7 +415,10 @@ def _assert_clean_elasticsearch(es, log_warning=False):
 
     # check storage
     storage_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME)
-    storage_scan = _except_types(storage_scan, 'provider_context', 'snapshot')
+    storage_scan = _except_types(storage_scan,
+                                 'provider_context',
+                                 'snapshot',
+                                 'execution')
     if next(storage_scan, False):
         _raise_or_log()
 
