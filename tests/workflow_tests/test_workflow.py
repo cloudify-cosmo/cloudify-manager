@@ -23,7 +23,6 @@ from os import path
 import cloudify.context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
-from manager_rest.file_server import FileServer
 from manager_rest.blueprints_manager import \
     TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT as IS_TRANSIENT_WORKERS_MODE
 
@@ -36,7 +35,6 @@ from testenv.utils import _wait_for_stop_dep_env_execution_to_end_if_necessary
 from testenv.utils import deploy_application as deploy
 from testenv.utils import undeploy_application as undeploy
 from testenv.utils import delete_deployment
-from testenv.utils import wait_for_url
 
 
 class BasicWorkflowsTest(TestCase):
@@ -194,31 +192,6 @@ class BasicWorkflowsTest(TestCase):
         # verifying blueprint exists
         result = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, result.id)
-
-    def test_publish_bz2_archive_from_url(self):
-        port = 53231
-
-        archive_location = self._make_archive_file("dsl/basic.yaml", 'w:bz2')
-
-        archive_filename = os.path.basename(archive_location)
-        archive_dir = os.path.dirname(archive_location)
-
-        archive_url = 'http://localhost:{0}/{1}'.format(
-            port, archive_filename)
-
-        fs = FileServer(archive_dir, False, port)
-        fs.start()
-        try:
-            wait_for_url(archive_url, timeout=30)
-            blueprint_id = self.client.blueprints.publish_archive(
-                archive_url,
-                str(uuid.uuid4()),
-                'basic.yaml').id
-            # verifying blueprint exists
-            result = self.client.blueprints.get(blueprint_id)
-            self.assertEqual(blueprint_id, result.id)
-        finally:
-            fs.stop()
 
     def _make_archive_file(self, blueprint_path, write_mode='w'):
         dsl_path = resource(blueprint_path)
