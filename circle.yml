@@ -1,0 +1,27 @@
+machine:
+
+  python:
+    version: 2.7.6
+    
+
+  services:
+    - rabbitmq-server
+
+  environment: 
+    ACTION: run-integration-tests SUITE_NUMBER=0 NUMBER_OF_SUITES=3
+    ACTION: run-integration-tests SUITE_NUMBER=1 NUMBER_OF_SUITES=3
+    ACTION: run-integration-tests SUITE_NUMBER=2 NUMBER_OF_SUITES=3
+    ACTION: test-rest-service-v2-client
+    ACTION: test-rest-service-v1-client
+    ACTION: flake8
+
+dependencies:
+  override:
+    - pip install tox
+
+test:
+  override:
+    - ./run-tests.sh $ACTION
+
+# notify:
+#   flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
