@@ -250,8 +250,7 @@ def do_retries(func,
     deadline = time.time() + timeout_seconds
     while True:
         try:
-            func(**kwargs)
-            break
+            return func(**kwargs)
         except exception_class:
             if time.time() > deadline:
                 raise
