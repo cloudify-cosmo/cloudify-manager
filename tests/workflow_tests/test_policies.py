@@ -61,17 +61,13 @@ class PoliciesTestsBase(TestCase):
 
     def wait_for_invocations(self, deployment_id, expected_count):
         def assertion():
-            _invocations = self.get_plugin_data(
+            invocations = self.get_plugin_data(
                 plugin_name='testmockoperations',
                 deployment_id=deployment_id
             )['mock_operation_invocation']
-            self.assertEqual(expected_count, len(_invocations))
-        utils.do_retries(assertion)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment_id
-        )['mock_operation_invocation']
-        return invocations
+            self.assertEqual(expected_count, len(invocations))
+            return invocations
+        return utils.do_retries(assertion)
 
     def publish(self, metric, ttl=60, node_name='node',
                 service='service', node_id=''):
@@ -104,11 +100,12 @@ class TestPolicies(PoliciesTestsBase):
 
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
         invocations = self.wait_for_invocations(self.deployment.id, 2)
-        self.assertEqual(
-            self.get_node_instance_by_name('node').id,
-            invocations[0]['node_id']
-        )
-        self.assertEqual(metric_value, invocations[1]['metric'])
+
+        def value(key):
+            return [i for i in invocations if key in i][0][key]
+        self.assertEqual(self.get_node_instance_by_name('node').id,
+                         value('node_id'))
+        self.assertEqual(metric_value, value('metric'))
 
     def test_policies_flow_with_diamond(self):
         try:
