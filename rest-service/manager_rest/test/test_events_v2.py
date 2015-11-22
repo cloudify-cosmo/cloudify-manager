@@ -55,8 +55,8 @@ class EventsTest(base_test.BaseServerTestCase):
     def _get_build_query_args(self):
 
         filters = {
-            'blueprint_id': 'some_blueprint',
-            'deployment_id': 'some_deployment',
+            'blueprint_id': ['some_blueprint'],
+            'deployment_id': ['some_deployment'],
             'type': ['cloudify_event', 'cloudify_logs']
         }
         pagination = {
