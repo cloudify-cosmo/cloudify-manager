@@ -38,7 +38,7 @@ class EventsTest(base_test.BaseServerTestCase):
         self.assertEquals(len(hits), len(response.items))
 
     def test_build_query(self):
-
+        self.maxDiff = None
         filters, pagination, sort, range_filters = self._get_build_query_args()
         query = Events._build_query(filters=filters,
                                     sort=sort,
@@ -136,7 +136,8 @@ class EventsTest(base_test.BaseServerTestCase):
             'sort': [
                 {
                     '@timestamp': {
-                        'order': 'desc'
+                        'order': 'desc',
+                        'ignore_unmapped': True
                     }
                 }
             ],
