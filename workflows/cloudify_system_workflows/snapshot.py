@@ -133,13 +133,21 @@ def _copy_data(archive_root, config, to_archive=True):
         if not os.path.exists(p1):
             continue
 
-        # copy data (and override if target exists)
+        # copy data
         if os.path.isfile(p1):
             shutil.copy(p1, p2)
         else:
-            if os.path.exists(p2):
-                shutil.rmtree(p2, ignore_errors=True)
-            shutil.copytree(p1, p2)
+            if not os.path.exists(p2):
+                os.makedirs(p2)
+
+            for item in os.listdir(p1):
+                s = os.path.join(p1, item)
+                d = os.path.join(p2, item)
+
+                if os.path.isdir(s):
+                    shutil.copytree(s, d)
+                else:
+                    shutil.copy2(s, d)
 
 
 def _create_es_client(config):
