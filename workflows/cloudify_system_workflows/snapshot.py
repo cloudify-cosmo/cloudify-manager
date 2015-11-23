@@ -385,31 +385,25 @@ def _update_es_node(es_node):
             source['main_file_name'] = ''
 
 
-def _assert_clean_elasticsearch(es, log_warning=False):
+def _assert_clean_elasticsearch(log_warning=False):
     """
     Check if manager ElasticSearch is clean and raise error (or just
     log warning) if it isn't.
 
-    :param es: ElasticSearch proxy object
     :param log_warning: instead raising error just log warning
     """
 
-    def _raise_or_log():
-        message = ('Manager is not clean, snapshot is allowed to be '
-                   'restored only on a clean manager.')
-        if log_warning:
-            ctx.logger.warning(message)
-        else:
-            raise NonRecoverableError(message)
+    client = get_rest_client()
 
-    # check storage
-    storage_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME)
-    storage_scan = _except_types(storage_scan,
-                                 'provider_context',
-                                 'snapshot',
-                                 'execution')
-    if next(storage_scan, False):
-        _raise_or_log()
+    # No blueprints implies that there are no deployments and executions
+    # corresponding to deployments.
+    if client.blueprints.list().items:
+        if log_warning:
+            ctx.logger.warning(
+                "Forcing snapshot restoration on a dirty manager.")
+        else:
+            raise NonRecoverableError(
+                "Snapshot restoration on a dirty manager is not permitted.")
 
 
 def _check_conflicts(es, restored_data):
@@ -647,9 +641,7 @@ def restore(snapshot_id, recreate_deployments_envs, config, force, **kwargs):
 
     config = _DictToAttributes(config)
 
-    es = _create_es_client(config)
-
-    _assert_clean_elasticsearch(es, log_warning=force)
+    _assert_clean_elasticsearch(log_warning=force)
 
     tempdir = tempfile.mkdtemp('-snapshot-data')
 
