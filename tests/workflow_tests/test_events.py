@@ -63,17 +63,25 @@ class EventsTest(TestCase):
         self.assertListEqual(events.items, sorted_events)
 
     def test_filtered_events(self):
-        deployment_id = self.deployment_id
-        # create another deployment to test correct filtering
-        self._create_deployment()
-        filters = {'deployment_id': deployment_id}
+        # create multiple deployments
+        deployment_ids = []
+        for i in range(3):
+            deployment_ids.append(self._create_deployment())
+
+        # filter a subset of the deployments
+        expected_deployment_ids = deployment_ids[:2]
+        filters = {'deployment_id': expected_deployment_ids}
         events = self.client.events.list(**filters)
+
         self.assertGreater(len(events), 0, 'No events')
-        for event in events:
-            self.assertEqual(event['context']['deployment_id'],
-                             deployment_id,
-                             'Expected only events related to'
-                             ' deployment id {0}'.format(deployment_id))
+        deployments_with_events = \
+            {event['context']['deployment_id'] for event in events}
+        self.assertEquals(sorted(deployments_with_events),
+                          sorted(expected_deployment_ids),
+                          'Expected events of deployment ids {0} exactly, '
+                          'received deployment ids {1} instead'
+                          .format(expected_deployment_ids,
+                                  deployments_with_events))
 
     def test_paginated_events(self):
         size = 5

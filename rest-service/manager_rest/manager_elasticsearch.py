@@ -52,9 +52,27 @@ class ManagerElasticsearch:
                         and values are the range limits of that field
         :return: An elasticsearch Query DSL body.
         """
-        def _build_query_match_condition(k, v):
-            return {"query": {"match":
-                              {k: {"query": v, "operator": "and"}}}}
+        def _build_query_match_condition(k, val_list):
+            if len(val_list) == 1:
+                condition = \
+                    {"query": {
+                        "match": {
+                            k: {"query": val_list[0], "operator": "and"}}}}
+            else:
+                condition = {
+                    "or": {
+                        "filters": [
+                            {
+                                "query": {
+                                    "match": {
+                                        k: {"query": val, "operator": "and"}
+                                    }
+                                }
+                            } for val in val_list
+                        ]
+                    }
+                }
+            return condition
 
         def _build_wildcard_condition(k, v):
             return {"query": {"query_string":
@@ -76,15 +94,17 @@ class ManagerElasticsearch:
             body['size'] = DEFAULT_SEARCH_SIZE
         if filters:
             filter_conditions = []
-            for key, val in filters.iteritems():
+            for key, val_list in filters.iteritems():
                 if '.' in key:
                     # nested objects require special care...
                     # TODO: try to replace query_match with filter_term
-                    query_condition = _build_query_match_condition(key, val)
+                    query_condition = \
+                        _build_query_match_condition(key, val_list)
                     filter_conditions.append(query_condition)
                 else:
-                    filter_type = 'terms' if isinstance(val, list) else 'term'
-                    filter_conditions.append({filter_type: {key: val}})
+                    filter_type = \
+                        'terms' if isinstance(val_list, list) else 'term'
+                    filter_conditions.append({filter_type: {key: val_list}})
             mandatory_conditions.extend(filter_conditions)
 
         if range_filters:
