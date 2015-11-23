@@ -49,6 +49,7 @@ class Config(object):
         self._security_userstore_driver = None
         self._security_authentication_providers = []
         self._security_authorization_provider = None
+        self._insecure_endpoints_disabled = False
 
     @property
     def db_address(self):
@@ -263,6 +264,14 @@ class Config(object):
     @security_authorization_provider.setter
     def security_authorization_provider(self, value):
         self._security_authorization_provider = value
+
+    @property
+    def insecure_endpoints_disabled(self):
+        return self._insecure_endpoints_disabled
+
+    @insecure_endpoints_disabled.setter
+    def insecure_endpoints_disabled(self, value):
+        self._insecure_endpoints_disabled = value
 
 
 _instance = Config()
