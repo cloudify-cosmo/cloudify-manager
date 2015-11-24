@@ -477,24 +477,11 @@ def _restore_elasticsearch(tempdir, es, metadata):
                 elem['_index'] = _EVENTS_INDEX_NAME
             yield elem
 
-    # cloudify_events -> logstash-*
-    def date_to_index_name(date):
-        d = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S.%fZ')
-        return 'logstash-' + d.strftime('%Y.%m.%d')
-
-    def get_event_date(e):
-        return e['_source']['@timestamp']
-
     def cloudify_events_to_logstash():
-        event_indices = []
+        d = datetime.now()
+        index = 'logstash-{0}'.format(d.strftime('%Y.%m.%d'))
         for elem in get_data_itr():
             if elem['_index'] == _EVENTS_INDEX_NAME:
-                date = get_event_date(elem)
-                index = date_to_index_name(date)
-                if index not in event_indices and\
-                        not es.indices.exists(index=index):
-                    es.indices.create(index=index)
-                    event_indices.append(index)
                 elem['_index'] = index
             yield elem
 
