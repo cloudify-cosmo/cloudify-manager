@@ -143,11 +143,15 @@ def _copy_data(archive_root, config, to_archive=True):
             for item in os.listdir(p1):
                 s = os.path.join(p1, item)
                 d = os.path.join(p2, item)
-
-                if os.path.isdir(s):
-                    shutil.copytree(s, d)
-                else:
-                    shutil.copy2(s, d)
+                # The only case when it is possible that `d` exists is when
+                # restoring snapshot with plugins on the same manager this
+                # snapshot was created on. It means it is the same plugin so
+                # we are ok with not copying it.
+                if not os.path.exists(d):
+                    if os.path.isdir(s):
+                        shutil.copytree(s, d)
+                    else:
+                        shutil.copy2(s, d)
 
 
 def _create_es_client(config):
