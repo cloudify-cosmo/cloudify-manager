@@ -30,6 +30,7 @@ from manager_rest import utils, config, storage_manager, archiving
 from manager_rest.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
+from cloudify_rest_client.executions import Execution
 
 try:
     from cloudify_rest_client.client import \
@@ -426,3 +427,28 @@ class BaseServerTestCase(unittest.TestCase):
             os.remove(file_path)
         except:
             pass
+
+    def wait_for_deployment_creation(self, client, deployment_id):
+        env_creation_execution = None
+        deployment_executions = client.executions.list(deployment_id)
+        for execution in deployment_executions:
+            if execution.workflow_id == 'create_deployment_environment':
+                env_creation_execution = execution
+                break
+        if env_creation_execution:
+            self.wait_for_execution(client, env_creation_execution)
+
+    @staticmethod
+    def wait_for_execution(client, execution, timeout=900):
+        # Poll for execution status until execution ends
+        deadline = time.time() + timeout
+        while True:
+            if time.time() > deadline:
+                raise Exception(
+                    'execution of operation {0} for deployment {1} timed out'.
+                    format(execution.workflow_id, execution.deployment_id))
+
+            execution = client.executions.get(execution.id)
+            if execution.status in Execution.END_STATES:
+                break
+            time.sleep(3)

@@ -28,8 +28,8 @@ class SecurityTestBase(BaseServerTestCase):
 
     def initialize_provider_context(self):
         client = self.create_client(
-            headers=SecurityTestBase.create_auth_header(username='admin',
-                                                        password='admin'))
+            headers=SecurityTestBase.create_auth_header(
+                username='alice', password='alice_password'))
         super(SecurityTestBase, self).initialize_provider_context(
             client=client)
 
@@ -95,24 +95,23 @@ class SecurityTestBase(BaseServerTestCase):
                 'userstore': {
                     'users': [
                         {
-                            'username': 'admin',
-                            'password': 'admin',
+                            'username': 'alice',
+                            'password': 'alice_password',
                             'groups': ['cfy_admins']
                         },
                         {
-                            'username': 'deployment_manager',
-                            'password': 'deployment_manager',
-                            'groups': ['managers', 'users']
+                            'username': 'bob',
+                            'password': 'bob_password',
+                            'groups': ['managers']
                         },
                         {
-                            'username': 'deployment_viewer',
-                            'password': 'deployment_viewer',
-                            'groups': ['users'],
+                            'username': 'clair',
+                            'password': 'clair_password',
                             'roles': ['viewer']
                         },
                         {
-                            'username': 'user',
-                            'password': 'user',
+                            'username': 'dave',
+                            'password': 'dave_password',
                             'groups': ['users']
                         }
                     ],
@@ -123,7 +122,7 @@ class SecurityTestBase(BaseServerTestCase):
                         },
                         {
                             'name': 'managers',
-                            'roles': ['deployer', 'viewer']
+                            'roles': ['deployer']
                         },
                         {
                             'name': 'users',

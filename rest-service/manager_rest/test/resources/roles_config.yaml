@@ -1,79 +1,33 @@
+# This file maps roles to allowed and denied permissions.
+# Access will be granted only to allowed permissions, that do not appear in the deny dictionary.
+# Each permission is a dict of <endpoint>:<http methods as list>
+# See the commented configuration below for examples.
+
 administrator:
   allow:
     '*':
       - '*'
+
+################################################################################
+# The deployer role can access any endpoint, and call any method except DELETE
+################################################################################
 deployer:
   allow:
     '*':
       - '*'
   deny:
-    'v2/blueprints/*':
+    '*':
       - DELETE
-    'v2/executions/*':
-      - DELETE
-    'v2/deployments/*':
-      - DELETE
-    'v2/nodes/*':
-      - DELETE
-    'v2/node-instances/*':
-      - DELETE
-    'v2/events/*':
-      - DELETE
-    'v2/provider/*':
-      - DELETE
-    'v2/version/*':
-      - DELETE
-    'v2/deployment-modifications/*':
-      - DELETE
-    'v2/tokens/*':
-      - DELETE
-    'v2/plugins/*':
-      - DELETE
-    'v2/status':
-      - DELETE
-    'v1/blueprints/*':
-      - DELETE
-    'v1/executions/*':
-      - DELETE
-    'v1/deployments/*':
-      - DELETE
-    'v1/nodes/*':
-      - DELETE
-    'v1/node-instances/*':
-      - DELETE
-    'v1/events/*':
-      - DELETE
-    'v1/provider/*':
-      - DELETE
-    'v1/version/*':
-      - DELETE
-    'v1/deployment-modifications/*':
-      - DELETE
-    'v1/tokens/*':
-      - DELETE
-    'v1/plugins/*':
-      - DELETE
-    'v1/status':
-      - DELETE
+
+#############################################################################
+# The viewer role can can access any endpoint, but only call the GET method
+#############################################################################
 viewer:
   allow:
-    'v2/blueprints':
+    '*':
       - GET
-    'v2/deployments':
-      - GET
-    'v2/nodes':
-      - GET
-    'v2/nodeInstances':
-      - GET
-    'v2/status':
-      - GET
-    'v1/blueprints':
-      - GET
-    'v1/deployments':
-      - GET
-    'v1/nodes':
-      - GET
-    'v1/nodeInstances':
-      - GET
-    'v1/status':
-      - GET
+  deny:
+    '/api/v1/blueprints/blueprint_2':
+      - '*'
+    '/api/v2/blueprints/blueprint_2':
+      - '*'
