@@ -163,14 +163,6 @@ def _except_types(s, *args):
     return (e for e in s if e['_type'] not in args)
 
 
-def _clean_up_db_before_restore(es_client, wf_exec_id):
-    s = elasticsearch.helpers.scan(es_client)
-    for doc in _except_types(s, 'provider_context', 'snapshot'):
-        if doc['_id'] != wf_exec_id:
-            doc['_op_type'] = 'delete'
-            yield doc
-
-
 def _get_manager_version(client=None):
     if client is None:
         client = get_rest_client()
