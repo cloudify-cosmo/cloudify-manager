@@ -31,16 +31,16 @@ class SecurityBypassTest(SecurityTestBase):
         return test_config
 
     def test_bypass_and_correct_credentials(self):
-        client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='admin',
-                                                       password='admin'))
+        client = self.create_client(
+            headers=SecurityTestBase.create_auth_header(
+                username='alice', password='alice_password'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
         client.blueprints.list()
 
     def test_bypass_and_incorrect_password(self):
-        client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='admin',
-                                                       password='wrong_pass'))
+        client = self.create_client(
+            headers=SecurityTestBase.create_auth_header(
+                username='alice', password='wrong_password'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
 
         client.blueprints.list()
@@ -48,7 +48,7 @@ class SecurityBypassTest(SecurityTestBase):
     def test_bypass_and_nonexisting_user(self):
         client = self.create_client(
             headers=SecurityTestBase.create_auth_header(
-                username='nonexisting-user', password='admin'))
+                username='nonexisting-user', password='alice_password'))
         self._modify_client_to_pass_bypass_header(client, self.BYPASS_PORT)
         client.blueprints.list()
 
@@ -58,17 +58,17 @@ class SecurityBypassTest(SecurityTestBase):
         client.blueprints.list()
 
     def test_bypass_not_bypass_port_and_correct_credentials(self):
-        client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='admin',
-                                                       password='admin'))
+        client = self.create_client(
+            headers=SecurityTestBase.create_auth_header(
+                username='alice', password='alice_password'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         client.blueprints.list()
 
     def test_bypass_not_bypass_port_and_incorrect_password(self):
-        client = self.create_client(headers=SecurityTestBase.
-                                    create_auth_header(username='admin',
-                                                       password='wrong-pass'))
+        client = self.create_client(
+            headers=SecurityTestBase.create_auth_header(
+                username='alice', password='wrong-password'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         try:
@@ -81,7 +81,7 @@ class SecurityBypassTest(SecurityTestBase):
     def test_bypass_not_bypass_port_and_nonexisting_user(self):
         client = self.create_client(
             headers=SecurityTestBase.create_auth_header(
-                username='nonexisting-user', password='admin'))
+                username='nonexisting-user', password='some_password'))
         self._modify_client_to_pass_bypass_header(client,
                                                   self.NOT_BYPASS_PORT)
         try:
