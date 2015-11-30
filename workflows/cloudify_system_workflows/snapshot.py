@@ -422,7 +422,7 @@ def _check_conflicts(es, restored_data):
     """
 
     old_data = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME,
-                                          doc_type='blueprint, deployment')
+                                          doc_type='blueprint,deployment')
     old_data = list(old_data)
     # if there is no data in manager then just return
     if not len(old_data):
@@ -599,9 +599,11 @@ def _restore_snapshot_format_3_2(config, tempdir, metadata):
     _restore_snapshot(config, tempdir, metadata)
 
 
-def recreate_deployments_environments():
+def recreate_deployments_environments(deployments_to_skip):
     rest_client = get_rest_client()
     for dep_id, dep_ctx in ctx.deployments_contexts.iteritems():
+        if dep_id in deployments_to_skip:
+            continue
         with dep_ctx:
             dep = rest_client.deployments.get(dep_id)
             blueprint = rest_client.blueprints.get(dep_ctx.blueprint.id)
@@ -657,13 +659,15 @@ def restore(snapshot_id, recreate_deployments_envs, config, force, **kwargs):
         if from_version not in mappings:
             raise NonRecoverableError('Manager is not able to restore snapshot'
                                       ' of manager {0}'.format(from_version))
-
+        client = get_rest_client()
+        existing_deployments_ids = [dep.id for dep in client.deployments.list()]
         ctx.send_event('Starting restoring snapshot of manager {0}'
                        .format(from_version))
         mappings[from_version](config, tempdir, metadata)
 
         if recreate_deployments_envs:
-            recreate_deployments_environments()
+            recreate_deployments_environments(
+                deployments_to_skip=existing_deployments_ids)
 
         ctx.send_event('Successfully restored snapshot of manager {0}'
                        .format(from_version))
