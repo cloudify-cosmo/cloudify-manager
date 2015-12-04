@@ -26,7 +26,7 @@ from cloudify.celery import celery as celery_client
 from cloudify import manager
 from cloudify import utils
 
-from worker_installer import init_worker_installer
+from worker_installer import init_worker_installer, get_machine_distro
 from worker_installer.utils import is_on_management_worker
 from worker_installer.utils import download_resource_on_host
 
@@ -287,13 +287,14 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     create_celery_includes_file(ctx, runner, agent_config)
     loader = jinja2.FunctionLoader(resource_loader)
     env = jinja2.Environment(loader=loader)
+    agent_name = agent_config['name']
     config_template_path = get_agent_resource_local_path(
         ctx, agent_config, 'celery_config_path')
     config_template = env.get_template(config_template_path)
     config_template_values = {
         'includes_file_path': agent_config['includes_file'],
         'celery_base_dir': agent_config['celery_base_dir'],
-        'worker_modifier': agent_config['name'],
+        'worker_modifier': agent_name,
         'management_ip': utils.get_manager_ip(),
         'broker_ip': utils.get_manager_ip(),
         'agent_ip': get_agent_ip(ctx, agent_config),
@@ -313,7 +314,7 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
     init_template = env.get_template(init_template_path)
     init_template_values = {
         'celery_base_dir': agent_config['celery_base_dir'],
-        'worker_modifier': agent_config['name']
+        'worker_modifier': agent_name
     }
 
     ctx.logger.debug(
@@ -328,6 +329,22 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
 
     runner.put(agent_config['config_file'], config, use_sudo=True)
     runner.put(agent_config['init_file'], init, use_sudo=True)
+
+    # Add to init files.
+
+    distro = agent_config['distro']
+
+    if distro=='Ubuntu':
+        commands = ['sudo update-rc.d celeryd-{0} defaults'.format(agent_name)]
+    elif distro=='redhat':
+        commands = ['sudo /sbin/chkconfig --add celeryd-{0}'.format(agent_name)]
+    else:
+        ctx.logger.warn('Unrecognized distro ({0}) - will skip adding agent '
+                        'startup script to init sequence'.format(agent_name))
+        commands = []
+
+    for command in commands:
+        runner.run(command)
 
 
 def create_celery_includes_file(ctx, runner, agent_config):

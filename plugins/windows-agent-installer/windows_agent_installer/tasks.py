@@ -117,7 +117,6 @@ def install(ctx, runner=None, cloudify_agent=None, **kwargs):
               '-Q {1} '
               '--hostname={1} '
               '--logfile={2}\celery{{0}}.log '
-              '--pidfile={2}\celery.pid '
               '--autoscale={3},{4} '
               '--include={5} '
               '--without-gossip '
