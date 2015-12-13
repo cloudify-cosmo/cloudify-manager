@@ -19,6 +19,7 @@ from cloudify import celery
 from cloudify.decorators import workflow
 from cloudify.manager import get_rest_client
 from cloudify.workflows.workflow_context import task_config
+from cloudify.workflows import tasks as workflow_tasks
 
 
 WORKFLOWS_WORKER_PAYLOAD = {
@@ -147,29 +148,36 @@ def delete(ctx, **kwargs):
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
-    sequence.add(
-        # uninstalling the operations worker
-        ctx.send_event('Stopping deployment operations worker'),
-        ctx.execute_task(
+    tasks = {
+        'stop_operations_worker': ctx.execute_task(
             task_name='cloudify_agent.installer.operations.stop'),
-        ctx.send_event('Deleting deployment operations worker'),
-        ctx.execute_task(
+        'delete_operations_worker': ctx.execute_task(
             task_name='cloudify_agent.installer.operations.delete'),
-
-        # uninstalling the workflows worker
-        ctx.send_event('Stopping deployment workflows worker'),
-        ctx.execute_task(
+        'stop_workflows_worker': ctx.execute_task(
             task_name='cloudify_agent.installer.operations.stop',
             kwargs=WORKFLOWS_WORKER_PAYLOAD),
-        ctx.send_event('Deleting deployment workflows worker'),
-        ctx.execute_task(
+        'delete_workflows_worker': ctx.execute_task(
             task_name='cloudify_agent.installer.operations.delete',
-            kwargs=WORKFLOWS_WORKER_PAYLOAD))
+            kwargs=WORKFLOWS_WORKER_PAYLOAD),
+        'stop_deployment_policy_engine_core':
+            ctx.execute_task('riemann_controller.tasks.delete')
+    }
 
-    # Stop deployment policy engine core
+    # quick fix for ignoring errors when deleting deployments in 3.3.x
+    for task in tasks.itervalues():
+        _ignore_task_on_fail_and_send_event(task, ctx)
+
     sequence.add(
+        ctx.send_event('Stopping deployment operations worker'),
+        tasks['stop_operations_worker'],
+        ctx.send_event('Deleting deployment operations worker'),
+        tasks['delete_operations_worker'],
+        ctx.send_event('Stopping deployment workflows worker'),
+        tasks['stop_workflows_worker'],
+        ctx.send_event('Deleting deployment workflows worker'),
+        tasks['delete_workflows_worker'],
         ctx.send_event('Stopping deployment policy engine core'),
-        ctx.execute_task('riemann_controller.tasks.delete'))
+        tasks['stop_deployment_policy_engine_core'])
 
     return graph.execute()
 
@@ -228,3 +236,10 @@ def _is_transient_deployment_workers_mode():
     bootstrap_context = client.manager.get_context()['context']['cloudify']
     return bootstrap_context.get(
         'transient_deployment_workers_mode', {}).get('enabled', True)
+
+
+def _ignore_task_on_fail_and_send_event(task, ctx):
+    def failure_handler(tsk):
+        ctx.send_event('Ignoring task {0} failure'.format(tsk.name))
+        return workflow_tasks.HandlerResult.ignore()
+    task.on_failure = failure_handler

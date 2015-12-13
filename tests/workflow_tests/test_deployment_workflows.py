@@ -14,6 +14,8 @@
 #    * limitations under the License.
 
 import uuid
+import os
+import json
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
@@ -21,6 +23,7 @@ from testenv.utils import verify_deployment_environment_creation_complete
 from testenv.utils import do_retries
 from testenv.utils import wait_for_execution_to_end
 from testenv.utils import deploy_application as deploy
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class TestDeploymentWorkflows(TestCase):
@@ -82,3 +85,37 @@ class TestDeploymentWorkflows(TestCase):
             }
         }
         self.assertEqual(expected_params, execute_op_workflow.parameters)
+
+    def test_delete_botched_deployment(self):
+
+        from testenv import testenv_instance
+        storage_file_path = os.path.join(
+            testenv_instance.plugins_storage_dir,
+            'agent.json'
+        )
+
+        dsl_path = resource('dsl/basic.yaml')
+        _id = uuid.uuid1()
+        blueprint_id = 'blueprint_{0}'.format(_id)
+        deployment_id = 'deployment_{0}'.format(_id)
+
+        data = {
+            deployment_id: {'raise_exception_on_delete': True}
+        }
+        with open(storage_file_path, 'w') as f:
+            json.dump(data, f)
+
+        self.client.blueprints.upload(dsl_path, blueprint_id)
+        self.client.deployments.create(blueprint_id, deployment_id)
+        execution = \
+            self.client.executions.list(deployment_id,
+                                        include_system_workflows=True)[0]
+
+        wait_for_execution_to_end(execution)
+        self.client.deployments.delete(deployment_id)
+
+        try:
+            self.client.deployments.get(deployment_id)
+            self.fail("Expected deployment to be deleted")
+        except CloudifyClientError as e:
+            self.assertEquals(404, e.status_code)
