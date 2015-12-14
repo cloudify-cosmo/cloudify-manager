@@ -26,7 +26,7 @@ from cloudify.celery import celery as celery_client
 from cloudify import manager
 from cloudify import utils
 
-from worker_installer import init_worker_installer, get_machine_distro
+from worker_installer import init_worker_installer
 from worker_installer.utils import is_on_management_worker
 from worker_installer.utils import download_resource_on_host
 
@@ -334,10 +334,11 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
 
     distro = agent_config['distro']
 
-    if distro=='Ubuntu':
+    if distro == 'Ubuntu':
         commands = ['sudo update-rc.d celeryd-{0} defaults'.format(agent_name)]
-    elif distro=='redhat':
-        commands = ['sudo /sbin/chkconfig --add celeryd-{0}'.format(agent_name)]
+    elif distro == 'redhat':
+        commands = [
+            'sudo /sbin/chkconfig --add celeryd-{0}'.format(agent_name)]
     else:
         ctx.logger.warn('Unrecognized distro ({0}) - will skip adding agent '
                         'startup script to init sequence'.format(agent_name))
