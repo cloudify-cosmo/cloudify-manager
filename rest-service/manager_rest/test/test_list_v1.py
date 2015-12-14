@@ -57,6 +57,12 @@ class TestResourceListV1(BaseListTest):
             # restore original function
             config.instance = original_instance_func
 
+    def test_insecure_endpoints_enabled_by_default(self):
+        try:
+            self.client.events.get(execution_id='111')
+        except CloudifyClientError, e:
+            self.assertNotEquals(405, e.status_code)
+
     def test_blueprints_list_no_params(self):
         response = self.client.blueprints.list()
         self.assertEqual(2, len(response), 'expecting 2 blueprint result,'
