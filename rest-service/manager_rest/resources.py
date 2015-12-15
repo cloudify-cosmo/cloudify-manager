@@ -1117,21 +1117,12 @@ class DeploymentsIdOutputs(SecuredResource):
 class Events(SecuredResource):
 
     @staticmethod
-    def _set_index_name():
-        if ManagerElasticsearch.check_index_exists('cloudify_events'):
-            return 'cloudify_events'
-        else:
-            return 'logstash-*'
-
-    @staticmethod
     def _query_events():
         """
         List events for the provided Elasticsearch query
         """
         verify_json_content_type()
-        return ManagerElasticsearch.search(
-            index=Events._set_index_name(),
-            body=request.json)
+        return ManagerElasticsearch.search_events(body=request.json)
 
     @swagger.operation(
         nickname='events',
@@ -1151,7 +1142,7 @@ class Events(SecuredResource):
         """
         List events for the provided Elasticsearch query
         """
-        return Events._query_events()
+        return self._query_events()
 
     @swagger.operation(
         nickname='events',
@@ -1171,7 +1162,7 @@ class Events(SecuredResource):
         """
         List events for the provided Elasticsearch query
         """
-        return Events._query_events()
+        return self._query_events()
 
 
 class Search(SecuredResource):

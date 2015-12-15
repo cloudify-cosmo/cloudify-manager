@@ -44,7 +44,7 @@ setup(
         'cloudify-diamond-plugin==1.3',
         'cloudify-script-plugin==1.3',
         'pika==0.9.14',
-        'elasticsearch==1.0.0',
+        'elasticsearch==1.6.0',
         'celery==3.1.17'
     ],
     entry_points={
