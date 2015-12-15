@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 from datetime import datetime
+import re
 
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
@@ -91,6 +92,28 @@ class EventsTest(TestCase):
         self.assertEquals(len(events), size)
         self.assertEquals(pagination_info.offset, offset)
         self.assertEquals(pagination_info.size, size)
+
+    def test_query_with_reserved_characters(self):
+        message = '+ - = && || > < ! ( ) { } [ ] ^ " ~ * ? : \ /'
+        self.client.events.list(message=message)
+
+    def test_search_event_message_with_reserved_characters(self):
+        from manager_rest.manager_elasticsearch import RESERVED_CHARS_REGEX
+
+        # expecting to find a message containing 'dummy workflow'
+        message = 'dum-my *low: ++**'
+        searched_events = self.client.events.list(message=message,
+                                                  include_logs=True)
+        self.assertGreater(len(searched_events), 0, 'No events')
+        message_without_reserved_chars = \
+            re.sub(RESERVED_CHARS_REGEX, '', message)
+
+        keywords = message_without_reserved_chars.lower().split()
+
+        # assert some search results contain requested message
+        for event in searched_events:
+            text = event['message']['text'].lower()
+            self.assertTrue(all([keyword in text for keyword in keywords]))
 
     def test_search_event_message(self):
         all_events = self.client.events.list()

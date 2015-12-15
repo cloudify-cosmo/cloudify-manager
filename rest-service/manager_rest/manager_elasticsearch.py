@@ -11,6 +11,8 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import re
+
 import elasticsearch
 from flask import g
 
@@ -18,6 +20,8 @@ from manager_rest import config
 
 DEFAULT_SEARCH_SIZE = 10000
 EVENTS_INDICES_PATTERN = 'logstash-*'
+
+RESERVED_CHARS_REGEX = '([\(\)\{\}\+\-\=\>\<\!\[\]\^\"\~\*\?\:\\/]|&&|\|\|\s)'
 
 
 # Singleton class
@@ -53,6 +57,12 @@ class ManagerElasticsearch:
                         and values are the range limits of that field
         :return: An elasticsearch Query DSL body.
         """
+        def _escape_reserved_es_chars(val):
+            return re.sub(RESERVED_CHARS_REGEX, r'\\\1', val)
+
+        def _omit_reserved_es_chars(val):
+            return re.sub(RESERVED_CHARS_REGEX, r' ', val)
+
         def _build_query_match_condition(k, val_list):
             if len(val_list) == 1:
                 condition = \
@@ -76,8 +86,15 @@ class ManagerElasticsearch:
             return condition
 
         def _build_wildcard_condition(k, v):
+            field_name = _escape_reserved_es_chars(k)
+            keywords = _omit_reserved_es_chars(v).strip().split()
+            query_string = \
+                " AND ".join(['{field}:*{keyword}*'
+                             .format(field=field_name, keyword=keyword)
+                              for keyword in keywords])
             return {"query": {"query_string":
-                              {"query": '{k}:*{v}*'.format(k=k, v=v)}}}
+                              {"query": "{0}"
+                                  .format(query_string)}}}
 
         mandatory_conditions = []
         body = {}

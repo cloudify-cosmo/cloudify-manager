@@ -462,5 +462,5 @@ def retrieve_template(ctx, rendering_tests_demo_conf, mode, **_):
 
 @operation
 def do_nothing(ctx, **kwargs):
-    ctx.logger.info('dummy workflow executed')
+    ctx.logger.info('dummy workflow: */(executed)+')
     return
