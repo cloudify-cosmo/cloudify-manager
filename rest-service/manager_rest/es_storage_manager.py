@@ -66,7 +66,7 @@ class ESStorageManager(object):
                                          doc_type=doc_type,
                                          body=body,
                                          _source=include)
-        docs = [hit['_source'] for hit in result['hits']['hits']]
+        docs = ManagerElasticsearch.extract_search_result_values(result)
 
         # ES doesn't return _version if using its search API.
         if doc_type == NODE_INSTANCE_TYPE:
