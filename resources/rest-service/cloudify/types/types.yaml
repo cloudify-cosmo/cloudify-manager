@@ -179,13 +179,13 @@ node_types:
 
 
         #####################################################
-        # This operation attempts to communicate with agent
-        # that has already been installed. This operation
-        # should not have side effects.
+        # This operation attempts to communicate with an
+        # agent that has already been installed. This
+        # operation should not have side effects.
         # ---------------------------------------------------
-        # It will be executed on central deployment agent.
-        # This request might be sent to other manager's
-        # rabbitmq server.
+        # It will be executed on the central deployment
+        # agent. This request might be sent to a different
+        # manager's RabbitMQ server
         #####################################################
 
         validate_amqp:
