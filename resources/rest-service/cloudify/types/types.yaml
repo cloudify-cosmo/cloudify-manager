@@ -437,36 +437,79 @@ workflows:
 data_types:
 
   cloudify.datatypes.AgentConfig:
+    description: >
+      Cloudify agent configuration schema.
     properties:
       install_method:
+        description: |
+          Specifies how (and if) the cloudify agent should be installed.
+          Valid values are:
+          * none - No agent will be installed on the host.
+          * remote - An agent will be installed using SSH on linux hosts and WinRM on windows hosts.
+          * init_script - An agent will be installed via a script that will run on the host when it gets created.
+                          This method is only supported for specific IaaS plugins.
+          * provided - An agent is assumed to already be installed on the host image.
+                       That agent will be configured and started via a script that will run on the host when it gets created.
+                       This method is only supported for specific IaaS plugins.
         type: string
         required: true
       user:
+        description: >
+          For host agents, the agent will be installed for this user.
         type: string
         required: false
       key:
+        description: >
+          For host agents that are installed via SSH, this is the path to the private
+          key that will be used to connect to the host.
+          In most cases, this value will be derived automatically during bootstrap.
         type: string
         required: false
       password:
+        description: >
+          For host agents that are installed via SSH (on linux) and WinRM (on windows)
+          this property can be used to connect to the host.
+          For linux hosts, this property is optional in case the key property is properly configured
+          (either explicitly or implicitly during bootstrap).
+          For windows hosts that are installed via WinRM, this property is also optional
+          and depends on whether the password runtime property has been set by the relevant IaaS plugin,
+          prior to the agent installation.
         type: string
         required: false
       port:
+        description: >
+          For host agents that are installed via SSH (on linux) and WinRM (on windows),
+          this is the port used to connect to the host.
+          The default values are 22 for linux hosts and 5985 for windows hosts.
         type: integer
         required: false
       process_management:
+        description: >
+          Process management specific configuration. (type: dictionary)
         required: false
       min_workers:
+        description: >
+          Minimum number of agent workers. By default, the value will be 0.
+          Note: For windows based agents, this property is ignored and min_workers is set to the value of max_workers.
         type: integer
         required: false
       max_workers:
+        description: >
+          Maximum number of agent workers. By default, the value will be 5.
         type: integer
         required: false
       disable_requiretty:
+        description: >
+          For linux based agents, disables the requiretty setting in the sudoers file. By default, this value will be true.
         type: boolean
         required: false
       env:
+        description: >
+          Optional environment variables that the agent will be started with. (type: dictionary)
         required: false
       extra:
+        description: >
+          Optional additional low level configuration details. (type: dictionary)
         required: false
 
 ##################################################################################
