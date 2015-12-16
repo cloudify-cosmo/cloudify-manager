@@ -21,11 +21,11 @@ from uuid import uuid4
 from datetime import datetime
 from collections import OrderedDict
 
-from flask_securest.rest_security import SecuredResource
-
 from flask_restful_swagger import swagger
 from flask import request
 from flask.ext.restful import marshal
+
+from flask_securest.rest_security import SecuredResource
 
 from manager_rest import resources
 from manager_rest.resources import (marshal_with,
@@ -44,7 +44,6 @@ from manager_rest.storage_manager import ListResult
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.blueprints_manager import \
     TRANSIENT_WORKERS_MODE_ENABLED_DEFAULT
-
 from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 
@@ -948,21 +947,14 @@ class Events(resources.Events):
                                range_filters=range_filters,
                                wildcards=wildcards)
 
-    def list_events(self, query, include=None):
-        result = self._search(query, include=include)
-        result_items = result['hits']['hits']
-        events = [item['_source'] for item in result_items]
-
+    @staticmethod
+    def list_events(query, include=None):
+        result = ManagerElasticsearch.search_events(body=query,
+                                                    include=include)
+        events = ManagerElasticsearch.extract_search_result_values(result)
         metadata = ManagerElasticsearch.build_list_result_metadata(query,
                                                                    result)
         return ListResult(events, metadata)
-
-    def _search(self, query, include=None):
-        es = ManagerElasticsearch.get_connection()
-
-        return es.search(index=self._set_index_name(),
-                         body=query,
-                         _source=include or True)
 
     @swagger.operation(
         responseclass='List[Event]',

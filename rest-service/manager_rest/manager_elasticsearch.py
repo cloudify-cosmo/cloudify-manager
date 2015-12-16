@@ -12,11 +12,12 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 import elasticsearch
-from flask import g, current_app as app
+from flask import g
 
 from manager_rest import config
 
 DEFAULT_SEARCH_SIZE = 10000
+EVENTS_INDICES_PATTERN = 'logstash-*'
 
 
 # Singleton class
@@ -142,22 +143,39 @@ class ManagerElasticsearch:
         return g.es_connection
 
     @staticmethod
-    def check_index_exists(index_name):
-        if not hasattr(app, 'cloudify_events_index_exists'):
-            es = ManagerElasticsearch.get_connection()
-            app.cloudify_events_index_exists = \
-                es.indices.exists(index=[index_name])
-        return app.cloudify_events_index_exists
-
-    @staticmethod
-    def search(index=None, doc_type=None, body=None):
+    def search(index, doc_type=None, body=None, include=None, **kwargs):
         """Query ElasticSearch with the provided index and query body.
 
         Returns:
         Elasticsearch result as is (Python dict).
         """
         es = ManagerElasticsearch.get_connection()
-        return es.search(index=index, doc_type=doc_type, body=body)
+        return es.search(index=index,
+                         doc_type=doc_type,
+                         body=body,
+                         _source=include or True,
+                         **kwargs)
+
+    @staticmethod
+    def search_events(doc_type=None, body=None, include=None):
+        try:
+            return ManagerElasticsearch.search(index=EVENTS_INDICES_PATTERN,
+                                               doc_type=doc_type,
+                                               body=body,
+                                               include=include,
+                                               ignore_unavailable=True,
+                                               allow_no_indices=True,
+                                               expand_wildcards='open')
+        except elasticsearch.TransportError as e:
+            code = e.status_code
+            if code == 503 and 'SearchPhaseExecutionException' in e.error:
+                return {'hits': {'hits': [], 'total': 0}}
+            else:
+                raise
+
+    @staticmethod
+    def extract_search_result_values(search_result):
+        return [item['_source'] for item in search_result['hits']['hits']]
 
     @staticmethod
     def build_list_result_metadata(query, search_result):

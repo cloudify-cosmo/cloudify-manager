@@ -16,6 +16,7 @@ from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
 from manager_rest.resources_v2 import Events
+from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
@@ -30,7 +31,7 @@ class EventsTest(base_test.BaseServerTestCase):
         Events._build_query()
 
     def test_list_events(self):
-        Events._search = self._mock_es_search
+        ManagerElasticsearch.search_events = self._mock_es_search
         response = self.client.events.list()
         total = self._mock_es_search()['hits']['total']
         hits = self._mock_es_search()['hits']['hits']
@@ -74,7 +75,7 @@ class EventsTest(base_test.BaseServerTestCase):
         }
         return filters, pagination, sort, range_filters
 
-    def _mock_es_search(self, query=None, include=None):
+    def _mock_es_search(self, *args, **kwargs):
         result = {
             'hits': {
                 'total': 10,
