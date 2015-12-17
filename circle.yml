@@ -1,27 +1,34 @@
 machine:
-
   python:
-    version: 2.7.6
-    
-
+    version: 2.7.9
   services:
     - rabbitmq-server
-
-  environment: 
-    ACTION: run-integration-tests SUITE_NUMBER=0 NUMBER_OF_SUITES=3
-    ACTION: run-integration-tests SUITE_NUMBER=1 NUMBER_OF_SUITES=3
-    ACTION: run-integration-tests SUITE_NUMBER=2 NUMBER_OF_SUITES=3
-    ACTION: test-rest-service-v2-client
-    ACTION: test-rest-service-v1-client
-    ACTION: flake8
 
 dependencies:
   override:
     - pip install tox
+    - pip install setuptools --upgrade
 
 test:
   override:
-    - ./run-tests.sh $ACTION
-
-# notify:
-#   flowdock: 1f4ec6febcf1ac9b35ae6c1f0049471f
+    - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh run-integration-tests ;; esac:
+        parallel: true
+        environment:
+          NUMBER_OF_SUITES: 3
+          SUITE_NUMBER: 0
+    - case $CIRCLE_NODE_INDEX in 1) ./run-tests.sh run-integration-tests ;; esac:
+        parallel: true
+        environment:
+          NUMBER_OF_SUITES: 3
+          SUITE_NUMBER: 1
+    - case $CIRCLE_NODE_INDEX in 2) ./run-tests.sh run-integration-tests ;; esac:
+        parallel: true
+        environment:
+          NUMBER_OF_SUITES: 3
+          SUITE_NUMBER: 2
+    - case $CIRCLE_NODE_INDEX in 3) ./run-tests.sh test-rest-service-v1-client ;; esac:
+        parallel: true
+    - case $CIRCLE_NODE_INDEX in 3) ./run-tests.sh test-rest-service-v2-client ;; esac:
+        parallel: true
+    - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh flake8 ;; esac:
+        parallel: true
