@@ -27,7 +27,6 @@ import elasticsearch.helpers
 
 from datetime import datetime
 
-from cloudify import utils
 from cloudify.workflows import ctx
 from cloudify.constants import COMPUTE_NODE_TYPE
 from cloudify.context import BootstrapContext
@@ -299,29 +298,14 @@ def _dump_credentials(tempdir):
                                      _CRED_KEY_NAME))
 
 
-def _get_broker_configuration(client):
-    bootstrap_context_dict = client.manager.get_context()
-    bootstrap_context_dict = bootstrap_context_dict['context']['cloudify']
-    bootstrap_context = BootstrapContext(bootstrap_context_dict)
-    bootstrap_agent = bootstrap_context.cloudify_agent
-
-    broker_user, broker_pass = utils.internal.get_broker_credentials(
-        bootstrap_agent
-    )
-    attributes = {}
-    attributes['broker_user'] = broker_user
-    attributes['broker_pass'] = broker_pass
-    attributes['broker_ip'] = bootstrap_agent.broker_ip
-    attributes['broker_ssl_enabled'] = bootstrap_agent.broker_ssl_enabled
-    attributes['broker_ssl_cert'] = bootstrap_agent.broker_ssl_cert
-    return attributes
-
-
 def _dump_agents(tempdir):
     ctx.send_event('Preparing agents data')
     client = get_rest_client()
-    defaults = _get_broker_configuration(client)
-    defaults['version'] = _get_manager_version(client)
+    broker_config = BootstrapContext(ctx.bootstrap_context).broker_config()
+    defaults = {
+        'version': _get_manager_version(client),
+        'broker_config': broker_config
+    }
     result = {}
     for deployment in client.deployments.list():
         deployment_result = {}
@@ -341,6 +325,19 @@ def _dump_agents(tempdir):
         result[deployment.id] = deployment_result
     with open(os.path.join(tempdir, _AGENTS_FILE), 'w') as out:
         out.write(json.dumps(result))
+
+
+def _add_operation(operations, op_name, inputs, implementation):
+    if op_name not in operations:
+        operations[op_name] = {
+            'inputs': inputs,
+            'has_intrinsic_functions': False,
+            'plugin': 'agent',
+            'retry_interval': None,
+            'max_retries': None,
+            'executor': 'central_deployment_agent',
+            'operation': implementation
+        }
 
 
 def _update_es_node(es_node):
@@ -367,20 +364,18 @@ def _update_es_node(es_node):
         type_hierarchy = source.get('type_hierarchy', [])
         if COMPUTE_NODE_TYPE in type_hierarchy:
             operations = source['operations']
-            op_name = 'cloudify.interfaces.cloudify_agent.create_amqp'
-            if op_name not in operations:
-                operations[op_name] = {
-                    'inputs': {
-                        'install_agent_timeout': 300
-                    },
-                    'has_intrinsic_functions': False,
-                    'plugin': 'agent',
-                    'retry_interval': None,
-                    'max_retries': None,
-                    'executor': 'central_deployment_agent',
-                    'operation': 'cloudify_agent.operations.create_agent_amqp'
-                }
-
+            _add_operation(operations,
+                           'cloudify.interfaces.cloudify_agent.create_amqp',
+                           {
+                               'install_agent_timeout': 300
+                           },
+                           'cloudify_agent.operations.create_agent_amqp')
+            _add_operation(operations,
+                           'cloudify.interfaces.cloudify_agent.validate_amqp',
+                           {
+                               'validate_agent_timeout': 20
+                           },
+                           'cloudify_agent.operations.validate_agent_amqp')
     if es_node['_type'] == 'blueprint':
         source = es_node['_source']
         if 'description' not in source:
@@ -551,11 +546,31 @@ def insert_agents_data(client, agents):
     for nodes in agents.itervalues():
         for node_instances in nodes.itervalues():
             for node_instance_id, agent in node_instances.iteritems():
+                # We need to retrieve broker_config:
+                # 3.3.1 and later
+                if 'broker_config' in agent:
+                    broker_config = agent['broker_config']
+                # 3.3 and earlier
+                else:
+                    broker_config = {}
+                    for k in ['broker_user', 'broker_pass', 'broker_ip',
+                              'broker_ssl_enabled', 'broker_ssl_cert']:
+                        broker_config[k] = agent.pop(k)
+                    if broker_config['broker_ssl_enabled']:
+                        broker_config['broker_port'] = '5671'
+                    else:
+                        broker_config['broker_port'] = '5672'
                 node_instance = client.node_instances.get(node_instance_id)
                 runtime_properties = node_instance.runtime_properties
                 old_agent = runtime_properties.get('cloudify_agent', {})
+                if not broker_config.get('broker_ip'):
+                    broker_config['broker_ip'] = old_agent['manager_ip']
+                agent['broker_config'] = broker_config
                 old_agent.update(agent)
                 runtime_properties['cloudify_agent'] = old_agent
+                # Results of agent validation on old manager.
+                # Might be incorrect for new manager.
+                runtime_properties.pop('agent_status', None)
                 client.node_instances.update(
                     node_instance_id=node_instance_id,
                     runtime_properties=runtime_properties)
