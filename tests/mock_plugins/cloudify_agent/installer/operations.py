@@ -71,10 +71,13 @@ def stop(cloudify_agent=None, **_):
 
 @operation
 def delete(cloudify_agent=None, **_):
+
     installer = get_backend(cloudify_agent)
     installer.delete()
     worker_name = installer.agent_name
     with update_storage(ctx) as data:
+        if 'raise_exception_on_delete' in data:
+            raise Exception("Exception raised intentionally")
         data[worker_name] = data.get(worker_name, {})
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('deleted')
