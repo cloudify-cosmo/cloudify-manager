@@ -122,6 +122,7 @@ class MockHTTPClient(HTTPClient):
         if 'get' in requests_method.__name__:
             response = self.app.get(request_url,
                                     headers=headers,
+                                    data=body,
                                     query_string=build_query_string(params))
 
         elif 'put' in requests_method.__name__:
