@@ -11,24 +11,22 @@ dependencies:
 
 test:
   override:
-    - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh run-integration-tests ;; esac:
+    - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh test-rest-service-v1-client 1) ;; ./run-tests.sh test-rest-service-v2-client ;; esac:
         parallel: true
-        environment:
-          NUMBER_OF_SUITES: 3
-          SUITE_NUMBER: 0
-    - case $CIRCLE_NODE_INDEX in 1) ./run-tests.sh run-integration-tests ;; esac:
-        parallel: true
-        environment:
-          NUMBER_OF_SUITES: 3
-          SUITE_NUMBER: 1
     - case $CIRCLE_NODE_INDEX in 2) ./run-tests.sh run-integration-tests ;; esac:
         parallel: true
         environment:
           NUMBER_OF_SUITES: 3
+          SUITE_NUMBER: 0
+    - case $CIRCLE_NODE_INDEX in 3) ./run-tests.sh run-integration-tests ;; esac:
+        parallel: true
+        environment:
+          NUMBER_OF_SUITES: 3
+          SUITE_NUMBER: 1
+    - case $CIRCLE_NODE_INDEX in 1) ./run-tests.sh run-integration-tests ;; esac:
+        parallel: true
+        environment:
+          NUMBER_OF_SUITES: 3
           SUITE_NUMBER: 2
-    - case $CIRCLE_NODE_INDEX in 3) ./run-tests.sh test-rest-service-v1-client ;; esac:
-        parallel: true
-    - case $CIRCLE_NODE_INDEX in 3) ./run-tests.sh test-rest-service-v2-client ;; esac:
-        parallel: true
     - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh flake8 ;; esac:
         parallel: true
