@@ -11,7 +11,7 @@ dependencies:
 
 test:
   override:
-    - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh test-rest-service-v1-client 1) ;; ./run-tests.sh test-rest-service-v2-client ;; esac:
+    - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh test-rest-service-v1-client ;; 1) ./run-tests.sh test-rest-service-v2-client ;; esac:
         parallel: true
     - case $CIRCLE_NODE_INDEX in 2) ./run-tests.sh run-integration-tests ;; esac:
         parallel: true
