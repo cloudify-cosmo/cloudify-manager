@@ -4,7 +4,7 @@ machine:
   services:
     - rabbitmq-server
   environment:
-    NUMBER_OF_SUITES:3
+    NUMBER_OF_SUITES: 3
 
 dependencies:
   override:
