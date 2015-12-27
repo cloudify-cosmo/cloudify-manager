@@ -86,49 +86,54 @@ class SecurityTestBase(BaseServerTestCase):
             }
         ]
 
-    @staticmethod
-    def get_userstore_configuration():
+    def get_users(self):
+        return [
+            {
+                'username': 'alice',
+                'password': 'alice_password',
+                'groups': ['cfy_admins']
+            },
+            {
+                'username': 'bob',
+                'password': 'bob_password',
+                'groups': ['managers']
+            },
+            {
+                'username': 'clair',
+                'password': 'clair_password',
+                'roles': ['viewer']
+            },
+            {
+                'username': 'dave',
+                'password': 'dave_password',
+                'groups': ['users']
+            }
+        ]
+
+    def get_groups(self):
+        return [
+            {
+                'name': 'cfy_admins',
+                'roles': ['administrator']
+            },
+            {
+                'name': 'managers',
+                'roles': ['deployer']
+            },
+            {
+                'name': 'users',
+                'roles': []
+            }
+        ]
+
+    def get_userstore_configuration(self):
         return {
             'implementation':
                 'flask_securest.userstores.simple:SimpleUserstore',
             'properties': {
                 'userstore': {
-                    'users': [
-                        {
-                            'username': 'alice',
-                            'password': 'alice_password',
-                            'groups': ['cfy_admins']
-                        },
-                        {
-                            'username': 'bob',
-                            'password': 'bob_password',
-                            'groups': ['managers']
-                        },
-                        {
-                            'username': 'clair',
-                            'password': 'clair_password',
-                            'roles': ['viewer']
-                        },
-                        {
-                            'username': 'dave',
-                            'password': 'dave_password',
-                            'groups': ['users']
-                        }
-                    ],
-                    'groups': [
-                        {
-                            'name': 'cfy_admins',
-                            'roles': ['administrator']
-                        },
-                        {
-                            'name': 'managers',
-                            'roles': ['deployer']
-                        },
-                        {
-                            'name': 'users',
-                            'roles': []
-                        }
-                    ]
+                    'users': self.get_users(),
+                    'groups': self.get_groups()
                 }
             }
         }
