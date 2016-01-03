@@ -20,7 +20,7 @@ import tempfile
 import tarfile
 from os import path
 
-import cloudify.context
+from cloudify import context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 from manager_rest.blueprints_manager import \
@@ -590,7 +590,7 @@ class BasicWorkflowsTest(TestCase):
         invocations = data['invocations']
         self.assertEqual(2, len([
             i for i in invocations
-            if i == cloudify.context.RELATIONSHIP_INSTANCE]))
+            if i == context.RELATIONSHIP_INSTANCE]))
         self.assertEqual(1, len([
             i for i in invocations
-            if i == cloudify.context.NODE_INSTANCE]))
+            if i == context.NODE_INSTANCE]))

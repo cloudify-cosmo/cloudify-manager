@@ -49,6 +49,10 @@ class CeleryClient(object):
         if config.instance().amqp_ssl_enabled:
             self.celery.conf.update(BROKER_USE_SSL=ssl_settings)
 
+    def close(self):
+        if self.celery:
+            self.celery.close()
+
     def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
         """
             Execute a task
@@ -108,7 +112,7 @@ class CeleryClient(object):
         return ssl_options
 
 
-def celery_client():
+def get_client():
     if config.instance().test_mode:
         from test.mocks import MockCeleryClient
         return MockCeleryClient()
