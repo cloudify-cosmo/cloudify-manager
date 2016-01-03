@@ -40,5 +40,6 @@ setup(
         'elasticsearch==1.6.0',
         'celery==3.1.17',
         'flask-securest==0.8',
+        'psutil==3.3.0'
     ]
 )

@@ -18,6 +18,7 @@ import functools
 import traceback
 import os
 import yaml
+import psutil
 from logging.handlers import RotatingFileHandler
 
 from flask import (
@@ -49,6 +50,8 @@ def setup_app(warnings=None):
 
     app = Flask(__name__)
     cfy_config = config.instance()
+
+    _detect_debug_environment()
 
     app.logger_name = 'manager-rest'
     # setting up the app logger with a rotating file handler, in addition to
@@ -292,6 +295,36 @@ def load_configuration():
     warnings.extend(load_config('MANAGER_REST_SECURITY_CONFIG_PATH',
                                 'security'))
     return warnings
+
+
+def _is_listening_to_port(port, connection_type='tcp'):
+    """
+    Check if a port is being listened to
+    :param port: port # to check
+    :param type: connection types to scan. see psutil docs for options
+    """
+    conns = psutil.net_connections(connection_type)
+    return any([(conn.laddr[1] == port and conn.status == 'LISTEN')
+                for conn in conns])
+
+
+def _detect_debug_environment():
+    """
+    Detect whether server is running in a debug environment
+    if so, connect to debug server at a port stored in env[DEBUG_REST_SERVICE]
+    """
+    if os.environ.get('DEBUG_REST_SERVICE'):
+        try:
+            import pydevd
+            debug_port = int(os.environ.get('DEBUG_REST_SERVICE'))
+            if _is_listening_to_port(debug_port):
+                pydevd.settrace(port=debug_port,
+                                stdoutToServer=True,
+                                stderrToServer=True,
+                                suspend=False)
+        except Exception, e:
+            raise Exception('Failed to connect to debug server, {0}: {1}'.
+                            format(type(e).__name__, str(e)))
 
 app = setup_app(load_configuration())
 
