@@ -35,6 +35,10 @@ class MockCeleryClient(object):
     def get_failed_task_error(self, task_id):
         return RuntimeError('mock error')
 
+    # this is just to be on par with the CeleryClient API
+    def close(self):
+        pass
+
 
 class MockAsyncResult(object):
 

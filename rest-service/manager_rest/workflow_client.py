@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 
-from manager_rest.celery_client import celery_client as client
+from manager_rest import celery_client
 from flask import current_app
 
 
@@ -37,10 +37,8 @@ class WorkflowClient(object):
             'execution_id': execution_id
         }
 
-        client().execute_task(task_name=task_name,
-                              task_queue=task_queue,
-                              task_id=execution_id,
-                              kwargs=execution_parameters)
+        return execute_task(task_name, task_queue, execution_id,
+                            execution_parameters)
 
     @staticmethod
     def execute_system_workflow(wf_id, task_id, task_mapping, deployment=None,
@@ -66,12 +64,10 @@ class WorkflowClient(object):
             execution_parameters = {}
         execution_parameters['__cloudify_context'] = context
 
-        return client().execute_task(
-            context['task_name'],
-            task_queue,
-            context['task_id'],
-            kwargs=execution_parameters
-        )
+        return execute_task(task_name=context['task_name'],
+                            task_queue=task_queue,
+                            execution_id=context['task_id'],
+                            execution_parameters=execution_parameters)
 
 
 # What we need to access this manager in Flask
@@ -84,3 +80,14 @@ def get_workflow_client():
         current_app.config['workflow_client'] = WorkflowClient()
         wf_client = current_app.config.get('workflow_client')
     return wf_client
+
+
+def execute_task(task_name, task_queue, execution_id, execution_parameters):
+    celery = celery_client.get_client()
+    try:
+        return celery.execute_task(task_name=task_name,
+                                   task_queue=task_queue,
+                                   task_id=execution_id,
+                                   kwargs=execution_parameters)
+    finally:
+        celery.close()
