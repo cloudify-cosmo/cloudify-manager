@@ -13,9 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 import tempfile
-import yaml
 import time
+import os
+import shutil
 
+import yaml
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 from nose.plugins.attrib import attr
 
@@ -23,17 +25,24 @@ from manager_rest.test import base_test
 from manager_rest.test.security.security_test_base import SecurityTestBase
 
 _, USERSTORE_FILE = tempfile.mkstemp(prefix='userstore')
+_, ROLES_CONFIG_FILE = tempfile.mkstemp(prefix='roles_config')
 USERSTORE_LOADED_SUCCESSFULLY = 'Loading of userstore ended successfully'
 USERSTORE_MISSING_USERS = 'Users not found in'
 USERSTORE_FILE_INVALID_DICT = 'yaml is not a valid dict'
 USERSTORE_INVALID_YAML = 'Failed parsing'
+
+ROLES_CONFIG_FILE_INVALID_DICT = 'Failed parsing'
+ROLES_CONFIG_LOADED_SUCCESSFULLY = 'Loading of roles configuration ended ' \
+                                   'successfully'
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class TestUserstoreReloadFile(SecurityTestBase):
 
     def setUp(self):
-        self.modify_userstore_file(self.get_users(), self.get_groups())
+        self.create_roles_config_copy()
+        self.restore_userstore_file()
+        self.restore_roles_config()
         super(TestUserstoreReloadFile, self).setUp()
 
     def create_configuration(self):
@@ -42,19 +51,42 @@ class TestUserstoreReloadFile(SecurityTestBase):
         self.security_log_path = test_config.security_audit_log_file
         return test_config
 
+    def create_roles_config_copy(self):
+        abs_path = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(abs_path, '../resources/roles_config.yaml')
+        shutil.copyfile(file_path, ROLES_CONFIG_FILE)
+
+    def get_roles_config_file_path(self):
+        return ROLES_CONFIG_FILE
+
     def _init_test(self):
         self.clear_log_file()
         self.modify_userstore_file(self.get_users(),
                                    self.get_groups(),
                                    USERSTORE_LOADED_SUCCESSFULLY)
+        self.restore_roles_config(ROLES_CONFIG_LOADED_SUCCESSFULLY)
+
+    def _create_secured_client(self):
         auth_header = SecurityTestBase. \
             create_auth_header(username='alice',
                                password='alice_password')
         client = self.create_client(headers=auth_header)
         return client
 
+    def restore_userstore_file(self):
+        self.modify_userstore_file(self.get_users(), self.get_groups())
+
+    def restore_roles_config(self, message=None):
+        with open(self.get_roles_config_file_path(), 'w') as outfile:
+            outfile.write(yaml.safe_dump(self.get_valid_roles_config(),
+                                         default_flow_style=True))
+        if message:
+            self.wait_for_log_message(message)
+
     def test_reload_userstore(self):
-        client = self._init_test()
+        self._init_test()
+
+        client = self._create_secured_client()
         # alice should be able to do everything
         client.deployments.list()
 
@@ -84,7 +116,9 @@ class TestUserstoreReloadFile(SecurityTestBase):
         self._test_invalid_userstore('{invalid_yaml}}', USERSTORE_INVALID_YAML)
 
     def _test_invalid_userstore(self, userstore_file_text, error_msg):
-        client = self._init_test()
+        self._init_test()
+
+        client = self._create_secured_client()
         # alice should be able to do everything
         client.deployments.list()
 
@@ -94,6 +128,39 @@ class TestUserstoreReloadFile(SecurityTestBase):
 
         # Userstore changes should not have been applied
         client.deployments.list()
+
+    def test_reload_invalid_roles_config_dict(self):
+        self._init_test()
+
+        client = self._create_secured_client()
+
+        with open(self.get_roles_config_file_path(), 'w') as outfile:
+            outfile.write('{invalid_roles_config}}')
+
+        self.wait_for_log_message(ROLES_CONFIG_FILE_INVALID_DICT)
+
+        # assert changes did not take effect
+        client.deployments.list()
+
+    def test_reload_valid_roles_config_dict(self):
+        self._init_test()
+
+        client = self._create_secured_client()
+
+        # as an admin, alice is authorized to list all deployments
+        client.deployments.list()
+
+        # modify admin's role config do deny all GET requests
+        roles_config = self.get_valid_roles_config()
+        roles_config['administrator']['deny'] = ['GET']
+        with open(self.get_roles_config_file_path(), 'w') as outfile:
+            outfile.write(yaml.dump(roles_config,
+                                    default_flow_style=True))
+
+        self.wait_for_log_message(ROLES_CONFIG_LOADED_SUCCESSFULLY)
+
+        # Assert alice can no longer perform GET requests
+        self.assertRaises(UserUnauthorizedError, client.deployments.list)
 
     def modify_userstore_file(self, users, groups, message=None):
         userstore_settings = {
@@ -143,5 +210,27 @@ class TestUserstoreReloadFile(SecurityTestBase):
                               'FileUserstore',
             'properties': {
                 'userstore_file_path': USERSTORE_FILE
+            }
+        }
+
+    def get_valid_roles_config(self):
+        return {
+            'deployer': {
+                'deny': {
+                    '*': ['DELETE']
+                },
+                'allow': {
+                    '*': ['*']
+                }
+            },
+            'viewer': {
+                'allow': {
+                    '*': ['GET']
+                }
+            },
+            'administrator': {
+                'allow': {
+                    '*': ['*']
+                }
             }
         }
