@@ -138,11 +138,12 @@ class SecurityTestBase(BaseServerTestCase):
             }
         }
 
-    @staticmethod
-    def get_authorization_provider_configuration():
+    def get_roles_config_file_path(self):
         abs_path = os.path.dirname(os.path.abspath(__file__))
-        roles_config_file_path = os.path.join(abs_path,
-                                              '../resources/roles_config.yaml')
+        return os.path.join(abs_path, '../resources/roles_config.yaml')
+
+    def get_authorization_provider_configuration(self):
+        roles_config_file_path = self.get_roles_config_file_path()
         return {
             'implementation': 'flask_securest.authorization_providers.'
                               'role_based_authorization_provider:'
