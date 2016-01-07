@@ -564,7 +564,8 @@ def insert_agents_data(client, agents):
                 runtime_properties = node_instance.runtime_properties
                 old_agent = runtime_properties.get('cloudify_agent', {})
                 if not broker_config.get('broker_ip'):
-                    broker_config['broker_ip'] = old_agent['manager_ip']
+                    broker_config['broker_ip'] = old_agent.get('manager_ip',
+                                                               '')
                 agent['broker_config'] = broker_config
                 old_agent.update(agent)
                 runtime_properties['cloudify_agent'] = old_agent
