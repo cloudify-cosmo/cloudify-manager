@@ -102,6 +102,11 @@ class ManagerRestProcess(object):
             f.write(yaml.dump(configuration))
 
         env = os.environ.copy()
+
+        # set port for debug server when using IDE
+        if 'PYCHARM_HELPERS_DIR' in env:
+            env['DEBUG_REST_SERVICE'] = '1985'
+
         env['MANAGER_REST_CONFIG_PATH'] = config_path
 
         python_path = sys.executable
