@@ -42,7 +42,12 @@ groups:
         members: [node]
         policies:
             some_policy:
-                type: answer_to_life
+                type: cloudify.policies.types.threshold
+                properties:
+                    service: my.example
+                    threshold: 40
+                    upper_bound: true
+                    stability_time: 5
                 triggers:
                     some_workflow_trigger:
                         type: cloudify.policies.triggers.execute_workflow
@@ -60,3 +65,4 @@ workflows:
                 description: a key to write
             value:
                 description: a value to write
+
