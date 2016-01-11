@@ -180,7 +180,12 @@ class BlueprintsManager(object):
         return execution
 
     def restore_snapshot(self, snapshot_id, recreate_deployments_envs, force):
-        self.get_snapshot(snapshot_id)  # Throws error if no snapshot found
+        # Throws error if no snapshot found
+        snap = self.get_snapshot(snapshot_id)
+        if snap.status == models.Snapshot.FAILED:
+            raise manager_exceptions.SnapshotActionError(
+                'Failed snapshot cannot be restored'
+            )
         _, execution = self._execute_system_workflow(
             wf_id='restore_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.restore',

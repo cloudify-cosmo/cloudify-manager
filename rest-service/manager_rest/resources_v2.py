@@ -324,7 +324,11 @@ class SnapshotsIdArchive(SecuredResource):
     )
     @exceptions_handled
     def get(self, snapshot_id):
-        get_blueprints_manager().get_snapshot(snapshot_id)
+        snap = get_blueprints_manager().get_snapshot(snapshot_id)
+        if snap.status == models.Snapshot.FAILED:
+            raise manager_exceptions.SnapshotActionError(
+                'Failed snapshot cannot be downloaded'
+            )
 
         snapshot_path = os.path.join(
             _get_snapshot_path(snapshot_id),

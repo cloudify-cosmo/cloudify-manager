@@ -312,3 +312,15 @@ class MethodNotAllowedError(ManagerException):
             *args,
             **kwargs
         )
+
+
+class SnapshotActionError(ManagerException):
+    ERROR_CODE = 'snapshot_action_error'
+
+    def __init__(self, *args, **kwargs):
+        super(SnapshotActionError, self).__init__(
+            400,
+            SnapshotActionError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
