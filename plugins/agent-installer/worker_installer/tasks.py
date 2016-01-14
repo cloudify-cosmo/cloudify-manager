@@ -336,7 +336,7 @@ def create_celery_configuration(ctx, runner, agent_config, resource_loader):
 
     if distro == 'Ubuntu':
         commands = ['sudo update-rc.d celeryd-{0} defaults'.format(agent_name)]
-    elif distro == 'redhat':
+    elif distro in ['redhat', 'centos']:
         commands = [
             'sudo /sbin/chkconfig --add celeryd-{0}'.format(agent_name)]
     else:
