@@ -437,9 +437,9 @@ class BlueprintsManager(object):
                     add_info = ' for deployment {0}'.format(deployment.id)
                 else:
                     add_info = ''
-                error_msg =\
-                    'Error occurred while executing the {0} system workflow{1}:'\
-                    ' {2} - {3}'.format(wf_id, add_info, type(e).__name__, e)
+                error_msg = 'Error occurred while executing the {0} ' \
+                            'system workflow{1}: {2} - {3}'.format(
+                                wf_id, add_info, type(e).__name__, e)
                 # adding traceback to the log error message
                 tb = StringIO()
                 traceback.print_exc(file=tb)

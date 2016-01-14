@@ -35,6 +35,7 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.manager import get_rest_client
 from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
+from cloudify.utils import ManagerVersion
 
 
 _METADATA_FILE = 'metadata.json'
@@ -166,8 +167,7 @@ def _get_manager_version(client=None):
     if client is None:
         client = get_rest_client()
 
-    version_json = client.manager.get_version()
-    return '.'.join(version_json['version'].split('.')[0:2])
+    return ManagerVersion(client.manager.get_version()['version'])
 
 
 def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
@@ -203,7 +203,7 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
             _dump_credentials(tempdir)
 
         # version
-        metadata[_M_VERSION] = _get_manager_version()
+        metadata[_M_VERSION] = str(_get_manager_version())
 
         # metadata
         with open(os.path.join(tempdir, _METADATA_FILE), 'w') as f:
@@ -303,7 +303,7 @@ def _dump_agents(tempdir):
     client = get_rest_client()
     broker_config = BootstrapContext(ctx.bootstrap_context).broker_config()
     defaults = {
-        'version': _get_manager_version(client),
+        'version': str(_get_manager_version(client)),
         'broker_config': broker_config
     }
     result = {}
@@ -607,14 +607,6 @@ def _restore_snapshot(config, tempdir, metadata):
     # end
 
 
-def _restore_snapshot_format_3_3(config, tempdir, metadata):
-    _restore_snapshot(config, tempdir, metadata)
-
-
-def _restore_snapshot_format_3_2(config, tempdir, metadata):
-    _restore_snapshot(config, tempdir, metadata)
-
-
 def recreate_deployments_environments(deployments_to_skip):
     rest_client = get_rest_client()
     for dep_id, dep_ctx in ctx.deployments_contexts.iteritems():
@@ -643,10 +635,8 @@ def recreate_deployments_environments(deployments_to_skip):
 
 @workflow(system_wide=True)
 def restore(snapshot_id, recreate_deployments_envs, config, force, **kwargs):
-    mappings = {
-        '3.3': _restore_snapshot_format_3_3,
-        '3.2': _restore_snapshot_format_3_2
-    }
+
+    ctx.logger.info('Restoring snapshot {0}'.format(snapshot_id))
 
     config = _DictToAttributes(config)
 
@@ -670,16 +660,24 @@ def restore(snapshot_id, recreate_deployments_envs, config, force, **kwargs):
         with open(os.path.join(tempdir, _METADATA_FILE), 'r') as f:
             metadata = json.load(f)
 
-        from_version = metadata[_M_VERSION]
-
-        if from_version not in mappings:
-            raise NonRecoverableError('Manager is not able to restore snapshot'
-                                      ' of manager {0}'.format(from_version))
         client = get_rest_client()
+
+        manager_version = _get_manager_version(client)
+        from_version = ManagerVersion(metadata[_M_VERSION])
+
+        ctx.logger.info('Manager version = {0}, snapshot version = {1}'.format(
+            str(manager_version), str(from_version)))
+
+        if from_version.greater_than(manager_version):
+            raise NonRecoverableError(
+                'Cannot restore a newer manager\'s snapshot on this manager '
+                '[{0} > {1}]'.format(str(from_version), str(manager_version)))
+
         existing_deployments_ids = [d.id for d in client.deployments.list()]
         ctx.send_event('Starting restoring snapshot of manager {0}'
                        .format(from_version))
-        mappings[from_version](config, tempdir, metadata)
+
+        _restore_snapshot(config, tempdir, metadata)
 
         if recreate_deployments_envs:
             recreate_deployments_environments(existing_deployments_ids)
