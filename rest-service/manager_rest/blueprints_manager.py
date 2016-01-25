@@ -428,18 +428,16 @@ class BlueprintsManager(object):
             execution_parameters=execution_parameters)
 
         if timeout > 0:
+            dep_info = ' for deployment {0}'.format(deployment.id) \
+                if deployment else ''
             try:
                 # wait for the workflow execution to complete
                 async_task.get(timeout=timeout, propagate=True)
             except Exception as e:
                 # error message for the user
-                if deployment:
-                    add_info = ' for deployment {0}'.format(deployment.id)
-                else:
-                    add_info = ''
-                error_msg =\
-                    'Error occurred while executing the {0} system workflow{1}:'\
-                    ' {2} - {3}'.format(wf_id, add_info, type(e).__name__, e)
+                error_msg = 'Error occurred while executing the {0} system ' \
+                            'workflow{1}: {2} - {3}'.\
+                    format(wf_id, dep_info, type(e).__name__, e)
                 # adding traceback to the log error message
                 tb = StringIO()
                 traceback.print_exc(file=tb)
@@ -454,7 +452,7 @@ class BlueprintsManager(object):
                 raise RuntimeError(
                     'Failed executing the {0} system workflow{1}: '
                     'Execution did not complete successfully before '
-                    'timeout ({2} seconds)'.format(wf_id, add_info, timeout))
+                    'timeout ({2} seconds)'.format(wf_id, dep_info, timeout))
 
         return async_task, execution
 
