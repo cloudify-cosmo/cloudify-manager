@@ -5,7 +5,7 @@ https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
 
-pyzmq
+pyzmq==15.1.0
 
 # Manually install:
 # cloudify-manager/workflows

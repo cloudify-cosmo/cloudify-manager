@@ -42,10 +42,9 @@ class TestInstallWorkflowBackwards(TestCase):
             deployment_id=deployment.id
         )
 
-        # agent on host should have been started and restarted
         self.assertEqual(
             agent_installer_data[webserver_node.host_id]['states'],
-            ['created', 'configured', 'started', 'restarted'])
+            ['created', 'configured', 'started'])
 
         plugin_installer_data = self.get_plugin_data(
             plugin_name='plugin_installer',
@@ -79,7 +78,7 @@ class TestInstallWorkflowBackwards(TestCase):
         self.assertEqual(
             agent_installer_data[webserver_node.host_id]['states'],
             ['created', 'configured', 'started',
-             'restarted', 'stopped', 'deleted'])
+             'stopped', 'deleted'])
 
     def test_deploy_with_agent_worker_windows_3_2(self):
         dsl_path = resource('dsl/with_agent_worker_windows_3_2.yaml')
@@ -102,10 +101,9 @@ class TestInstallWorkflowBackwards(TestCase):
             deployment_id=deployment.id
         )
 
-        # agent on host should have been started and restarted
         self.assertEqual(
             agent_installer_data[webserver_node.host_id]['states'],
-            ['created', 'configured', 'started', 'restarted'])
+            ['created', 'configured', 'started'])
 
         plugin_installer_data = self.get_plugin_data(
             plugin_name='windows_plugin_installer',
@@ -139,4 +137,4 @@ class TestInstallWorkflowBackwards(TestCase):
         self.assertEqual(
             agent_installer_data[webserver_node.host_id]['states'],
             ['created', 'configured', 'started',
-             'restarted', 'stopped', 'deleted'])
+             'stopped', 'deleted'])

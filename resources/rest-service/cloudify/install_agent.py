@@ -197,8 +197,11 @@ def _return(value, old_agent_version):
     # https://github.com/celery/celery/issues/897
     if os.name == 'nt' and old_agent_version.startswith('3.2'):
         from celery import current_task
-        from cloudify.celery import celery
-        celery.backend.mark_as_done(current_task.request.id, value)
+        try:
+            from cloudify_agent.app import app
+        except ImportError:
+            from cloudify.celery import celery as app
+        app.backend.mark_as_done(current_task.request.id, value)
 
 
 def _main(args):

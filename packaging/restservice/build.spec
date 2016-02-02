@@ -27,7 +27,7 @@ pip=$(which pip)
 set -e
 
 [ ! -z $pip ] || sudo curl --show-error --silent --retry 5 https://bootstrap.pypa.io/get-pip.py | sudo python
-sudo yum install -y git python-devel gcc
+sudo yum install -y git python-devel gcc gcc-c++
 sudo pip install virtualenv
 sudo virtualenv /tmp/env
 sudo /tmp/env/bin/pip install setuptools==18.1 && \

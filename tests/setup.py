@@ -45,7 +45,8 @@ setup(
         'cloudify-script-plugin==1.3.1',
         'pika==0.9.14',
         'elasticsearch==1.6.0',
-        'celery==3.1.17'
+        'celery==3.1.17',
+        'fasteners==0.13.0'
     ],
     entry_points={
         'nose.plugins.0.10': [

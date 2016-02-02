@@ -19,6 +19,8 @@ from celery import Celery
 
 from manager_rest import config
 
+# These are the states that may be returned from the
+# CeleryClient.get_task_status method
 TASK_STATE_PENDING = 'PENDING'
 TASK_STATE_STARTED = 'STARTED'
 TASK_STATE_SUCCESS = 'SUCCESS'
@@ -53,18 +55,17 @@ class CeleryClient(object):
         if self.celery:
             self.celery.close()
 
-    def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
+    def execute_task(self, task_queue, task_id=None, kwargs=None):
         """
             Execute a task
 
-            :param task_name: the task name
             :param task_queue: the task queue
             :param task_id: optional id for the task
             :param kwargs: optional kwargs to be passed to the task
             :return: the celery task async result
         """
 
-        return self.celery.send_task(task_name,
+        return self.celery.send_task('cloudify.dispatch.dispatch',
                                      queue=task_queue,
                                      task_id=task_id,
                                      kwargs=kwargs)

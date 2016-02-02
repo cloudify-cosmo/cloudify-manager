@@ -26,17 +26,28 @@ from testenv.utils import update_storage
 
 @operation
 def install_plugins(plugins, **_):
+    _operate_on_plugins(plugins, 'installed')
 
+
+@operation
+def uninstall_plugins(plugins, **_):
+    _operate_on_plugins(plugins, 'uninstalled')
+
+
+def _operate_on_plugins(plugins, new_state):
     plugin_installer = get_backend()
-
+    func = plugin_installer.install if 'installed' \
+        else plugin_installer.uninstall
     for plugin in plugins:
         with update_storage(ctx) as data:
-            plugin_installer.install(plugin)
+            func(plugin)
             plugin_name = plugin['name']
-            data[ctx.task_target] = data.get(ctx.task_target, {})
-            data[ctx.task_target][plugin_name] = \
-                data[ctx.task_target].get(plugin_name, [])
-            data[ctx.task_target][plugin_name].append('installed')
+            task_target = ctx.task_target or 'local'
+            data[task_target] = data.get(task_target, {})
+            data[task_target][plugin_name] = \
+                data[task_target].get(plugin_name, [])
+            data[task_target][plugin_name].append(new_state)
+        ctx.logger.info('Plugin {0} {1}'.format(plugin['name'], new_state))
 
 
 def get_backend():

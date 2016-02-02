@@ -41,7 +41,7 @@ class TestMultiInstanceApplication(TestCase):
 
     def test_deploy_multi_instance_many_different_hosts(self):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = deploy(dsl_path, timeout_seconds=60)
         machines = set(self.get_plugin_data(
             plugin_name='cloudmock',
             deployment_id=deployment.id

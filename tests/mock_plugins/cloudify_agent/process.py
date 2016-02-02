@@ -23,11 +23,8 @@ class ProcessBackedPluginInstaller(PluginInstaller):
 
     def install(self, plugin):
 
-        source_plugin_path = os.path.join(
-            os.environ['MOCK_PLUGINS_PATH'], plugin['source'])
-
-        target_plugin_path = os.path.join(
-            os.environ['ENV_DIR'], plugin['source'])
+        source_plugin_path = self.source_path(plugin)
+        target_plugin_path = self.target_path(plugin)
 
         if not os.path.exists(target_plugin_path):
             # just copy the plugin
@@ -38,3 +35,18 @@ class ProcessBackedPluginInstaller(PluginInstaller):
                 dst=target_plugin_path,
                 ignore=shutil.ignore_patterns('*.pyc')
             )
+
+    def uninstall(self, plugin):
+        target_plugin_path = self.target_path(plugin)
+        if os.path.exists(target_plugin_path):
+            shutil.rmtree(target_plugin_path, ignore_errors=True)
+
+    @staticmethod
+    def source_path(plugin):
+        return os.path.join(
+            os.environ['MOCK_PLUGINS_PATH'], plugin['source'])
+
+    @staticmethod
+    def target_path(plugin):
+        return os.path.join(
+            os.environ['ENV_DIR'], plugin['source'])

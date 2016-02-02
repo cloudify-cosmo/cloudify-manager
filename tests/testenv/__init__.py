@@ -71,7 +71,7 @@ class TestCase(unittest.TestCase):
             self._write_test_events_and_logs_to_file
 
     def tearDown(self):
-        utils._wait_for_stop_dep_env_execution_to_end_if_necessary()
+        TestEnvironment.stop_dispatch_processes()
         TestEnvironment.stop_celery_management_worker()
         TestEnvironment.stop_all_celery_processes()
         TestEnvironment.reset_elasticsearch_data()
@@ -262,32 +262,10 @@ class TestEnvironment(object):
         self.celery_management_worker_process = CeleryWorkerProcess(
             queues=['cloudify.management'],
             test_working_dir=self.test_working_dir,
-
-            # these plugins are already installed.
-            # so we just need to append to the includes.
-            # note that these are not mocks, but the actual production
-            # code plugins.
-
-            additional_includes=[
-                'riemann_controller.tasks',
-                'cloudify_system_workflows.deployment_environment',
-                'cloudify.plugins.workflows',
-                'diamond_agent.tasks',
-                'script_runner.tasks',
-
-                # modules in the agent intended for backwards compatibility
-                'worker_installer.tasks',
-                'windows_agent_installer.tasks',
-                'plugin_installer.tasks',
-                'windows_plugin_installer.tasks',
-            ],
-
-            # we need higher concurrency since
-            # 'deployment_environment.create' calls
-            # 'plugin_installer.install' as a sub-task
-            # and they are both executed inside
-            # this worker
-            concurrency=2
+            # we need high concurrency since all management and
+            # central deployment operations/workflow will be executed
+            # by this worker
+            concurrency=10
         )
 
         # copy plugins to worker env
@@ -439,6 +417,11 @@ class TestEnvironment(object):
     def stop_all_celery_processes(cls):
         logger.info('Shutting down all celery processes')
         os.system("pkill -9 -f 'celery worker'")
+
+    @classmethod
+    def stop_dispatch_processes(cls):
+        logger.info('Shutting down all dispatch processes')
+        os.system("pkill -9 -f 'cloudify/dispatch.py'")
 
     @staticmethod
     def start_celery_management_worker():

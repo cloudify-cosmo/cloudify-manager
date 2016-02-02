@@ -23,7 +23,7 @@ def task_state():
 
 class MockCeleryClient(object):
 
-    def execute_task(self, task_name, task_queue, task_id=None, kwargs=None):
+    def execute_task(self, task_queue, task_id=None, kwargs=None):
         get_storage_manager().update_execution_status(task_id,
                                                       task_state(),
                                                       '')
