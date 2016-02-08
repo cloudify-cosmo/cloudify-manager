@@ -552,6 +552,14 @@ plugins:
     executor: host_agent
     install: false
 
+  windows_agent_installer:
+    executor: central_deployment_agent
+    install: false
+
+  windows_plugin_installer:
+    executor: host_agent
+    install: false
+
 ##################################################################################
 # Policy types definitions
 ##################################################################################
