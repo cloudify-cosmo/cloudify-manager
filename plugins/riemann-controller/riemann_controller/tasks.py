@@ -33,7 +33,7 @@ from cloudify import broker_config, utils
 from riemann_controller import config
 
 RIEMANN_CONFIGS_DIR = 'RIEMANN_CONFIGS_DIR'
-RIEMANN_LOG_PATH = '/tmp/riemann.log'
+RIEMANN_LOG_PATH = '/var/log/cloudify/riemann/riemann.log'
 
 
 @operation
