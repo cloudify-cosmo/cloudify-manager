@@ -26,3 +26,11 @@ test:
         parallel: true
     - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh flake8 ;; 3) ./run-tests.sh test-rest-service-v1-client ;; esac:
         parallel: true
+
+deployment:
+  release:
+    tag: /[0-9]+(\.[0-9]+)*/
+    owner: circleci
+    commands:
+      - "true"
+
