@@ -548,6 +548,74 @@ class Deployments(resources.Deployments):
         return deployments
 
 
+class DeploymentUpdateSteps(SecuredResource):
+    # @swagger.operation(
+    #         responseClass='List[{0}]'.format(
+    #                 responses_v2.DeploymentUpdate.__name__),
+    #         nickname="listDeploymentUpdateSteps",
+    #         notes='Returns a list of deployment update steps',
+    #         parameters=_create_filter_params_list_description(
+    #                 models.DeploymentUpdate.fields,
+    #                 'deployment update steps'
+    #         )
+    # )
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdateStep)
+    def post(self, update_id):
+        verify_json_content_type()
+        request_json = request.json
+
+        manager = get_blueprints_manager()
+        update_step = \
+            manager.create_deployment_update_step(
+                update_id,
+                request_json.get('operation'),
+                request_json.get('entity_type'),
+                request_json.get('entity_id')
+            )
+        return update_step
+
+
+class DeploymentUpdates(SecuredResource):
+    @swagger.operation(
+        responseClass='List[{0}]'.format(
+            responses_v2.DeploymentUpdate.__name__),
+        nickname="listDeploymentUpdates",
+        notes='Returns a list of deployment updates',
+        parameters=_create_filter_params_list_description(
+            models.DeploymentUpdate.fields,
+            'deployment updates'
+        )
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdate)
+    @create_filters(models.DeploymentUpdate.fields)
+    @paginate
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None,
+            sort=None, **kwargs):
+        """
+        List deployment modification stages
+        """
+        raise NotImplementedError()
+
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdate)
+    def post(self, **kwargs):
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('deployment_id', request_json)
+        deployment_id = request_json['deployment_id']
+        verify_parameter_in_request_body('blueprint',
+                                         request_json,
+                                         param_type=dict,
+                                         optional=True)
+        blueprint = request_json.get('blueprint', {})
+        update = get_blueprints_manager(). \
+            stage_deployment_update(deployment_id, blueprint)
+        return update, 201
+
+
 class DeploymentModifications(resources.DeploymentModifications):
     @swagger.operation(
         responseClass='List[{0}]'.format(

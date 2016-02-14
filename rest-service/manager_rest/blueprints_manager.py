@@ -107,7 +107,7 @@ class BlueprintsManager(object):
             'db_address': config.instance().db_address,
             'db_port': config.instance().db_port,
             'created_status': models.Snapshot.CREATED,
-            'failed_status':  models.Snapshot.FAILED,
+            'failed_status': models.Snapshot.FAILED,
             'file_server_uploaded_plugins_folder':
                 config.instance().file_server_uploaded_plugins_folder
         }
@@ -988,6 +988,15 @@ class BlueprintsManager(object):
         else:
             self.sm.put_provider_context(provider_context)
         self._update_parser_context_in_app(provider_context.context)
+
+    def stage_deployment_update(self, deployment_id, staged_blueprint):
+        return models.DeploymentUpdate(deployment_id)
+
+    def create_deployment_update_step(self, modification_id,
+                                      operation, entity_type, entity_id):
+        return models.DeploymentUpdateStep(operation,
+                                           entity_type,
+                                           entity_id)
 
 
 # What we need to access this manager in Flask
