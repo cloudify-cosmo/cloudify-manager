@@ -140,6 +140,7 @@ class CeleryWorkerProcess(object):
             CELERY_QUEUES=self.queues,
             RIEMANN_CONFIGS_DIR=self.riemann_config_dir,
             CELERY_WORK_DIR=self.workdir,
+            CELERY_LOG_DIR=self.workdir,
             TEST_WORKING_DIR=self.test_working_dir,
             ENV_DIR=self.envdir,
             MANAGER_REST_PORT=str(self.manager_rest_port),
