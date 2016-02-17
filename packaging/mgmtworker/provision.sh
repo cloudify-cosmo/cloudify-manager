@@ -44,7 +44,7 @@ PLUGINS_TAG_NAME="1.3.1"
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
-AWS_S3_BUCKET_PATH="gigaspaces-repository-eu/org/cloudify3/${VERSION}/${PRERELEASE}-RELEASE"
+AWS_S3_BUCKET_PATH="gigaspaces-repository-eu/org/cloudify3/${VERSION}/SEC1-PATCH"
 
 echo "VERSION: ${VERSION}"
 echo "PRERELEASE: ${PRERELEASE}"
