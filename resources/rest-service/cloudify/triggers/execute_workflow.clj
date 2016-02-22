@@ -18,6 +18,7 @@
       (clj-http.client/post resource-uri
         {:content-type   :json
          :accept         :json
+         :insecure?      true
          :socket-timeout (:socket_timeout parameters)
          :conn-timeout   (:conn_timeout parameters)
          :body           body})))

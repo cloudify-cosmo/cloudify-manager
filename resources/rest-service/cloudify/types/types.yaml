@@ -634,4 +634,4 @@ policy_triggers:
       conn_timeout:
         description: Connection timeout when making request to manager REST in ms
         default: 1000
-    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3/resources/rest-service/cloudify/triggers/execute_workflow.clj
+    source: https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager/3.3.1-sec1/resources/rest-service/cloudify/triggers/execute_workflow.clj
