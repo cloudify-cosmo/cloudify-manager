@@ -17,7 +17,9 @@ import shutil
 import os
 import json
 import tarfile
+import tempfile
 from uuid import uuid4
+
 from datetime import datetime
 from collections import OrderedDict
 
@@ -25,9 +27,11 @@ from flask_restful_swagger import swagger
 from flask import request
 from flask.ext.restful import marshal
 
+from dsl_parser.parser import parse_from_path
 from flask_securest.rest_security import SecuredResource
 
 from manager_rest import resources
+from manager_rest import utils
 from manager_rest.deployment_updates_manager import \
     get_deployment_updates_manager
 from manager_rest.resources import (marshal_with,
@@ -35,7 +39,8 @@ from manager_rest.resources import (marshal_with,
                                     verify_and_convert_bool,
                                     verify_parameter_in_request_body,
                                     verify_json_content_type,
-                                    make_streaming_response)
+                                    make_streaming_response,
+                                    CONVENTION_APPLICATION_BLUEPRINT_FILE)
 from manager_rest import models
 from manager_rest import responses_v2
 from manager_rest import manager_exceptions
@@ -597,20 +602,78 @@ class DeploymentUpdates(SecuredResource):
                 sort=None, **kwargs)
         return deployment_updates
 
+    @swagger.operation(
+        responseClass=responses_v2.DeploymentUpdate,
+        nickname="uploadDeploymentUpdate",
+        notes="Uploads an archive for staging",
+        parameters=[{'name': 'deployment_id',
+                     'description': 'The deployment id to update',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'},
+                    {'name': 'application_file_name',
+                     'description': 'The name of the app blueprint',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'string',
+                     'defaultValue': 'blueprint.yaml'},
+                    {'name': 'blueprint_archive_url',
+                     'description': 'The path of the archive (only if the '
+                                    'archive is an online resource',
+                     'required': False,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'query'}
+                    ]
+    )
     @exceptions_handled
     @marshal_with(responses_v2.DeploymentUpdate)
     def post(self, **kwargs):
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('deployment_id', request_json)
-        deployment_id = request_json['deployment_id']
-        verify_parameter_in_request_body('blueprint',
-                                         request_json,
-                                         param_type=dict,
-                                         optional=True)
-        blueprint = request_json.get('blueprint', {})
-        update = get_deployment_updates_manager(). \
-            stage_deployment_update(deployment_id, blueprint)
+        """
+        Receives an archive to stage. This archive must contain a
+        main blueprint file, and specify its name in the application_file_name,
+        defaults to 'blueprint.yaml'
+
+        :param kwargs:
+        :return: update response
+        """
+        query_params = request.args
+        main_blueprint_key = 'application_file_name'
+        blueprint_archive_url_key = 'blueprint_archive_url'
+        deployment_id = query_params['deployment_id']
+
+        blueprint_filename = \
+            query_params.get(main_blueprint_key,
+                             CONVENTION_APPLICATION_BLUEPRINT_FILE)
+
+        temp_dir = tempfile.mkdtemp()
+        try:
+            archive_destination = \
+                os.path.join(temp_dir, "{0}-{1}"
+                             .format(deployment_id, blueprint_filename))
+
+            # Saving the archive locally
+            utils.save_request_content_to_file(request, archive_destination,
+                                               blueprint_archive_url_key,
+                                               'blueprint')
+
+            # Unpacking the archive
+            relative_app_dir = \
+                utils.extract_blueprint_archive_to_mgr(archive_destination,
+                                                       temp_dir)
+
+            # retrieving and parsing the blueprint
+            temp_app_path = os.path.join(temp_dir, relative_app_dir,
+                                         blueprint_filename)
+            blueprint = parse_from_path(temp_app_path)
+
+            # create a staging object
+            update = get_deployment_updates_manager().\
+                stage_deployment_update(deployment_id, blueprint)
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
         return update, 201
 
 
