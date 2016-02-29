@@ -13,6 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import glob
+import os
+
 from cloudify.decorators import workflow
 from cloudify.workflows import tasks as workflow_tasks
 
@@ -78,6 +81,36 @@ def delete(ctx,
         _ignore_task_on_fail_and_send_event(task, ctx)
 
     return graph.execute()
+
+
+@workflow(system_wide=True)
+def delete_logs(ctx, deployment_id):
+    log_dir = os.environ.get('CELERY_LOG_DIR')
+    if log_dir:
+        log_file_path = os.path.join(log_dir, 'logs',
+                                     '{0}.log'.format(deployment_id))
+        if os.path.exists(log_file_path):
+            try:
+                with open(log_file_path, 'w') as f:
+                    # Truncating instead of deleting because the logging
+                    # server currently holds a file descriptor open to this
+                    # file. If we delete the file, the logs for new
+                    # deployments that get created with the same deployment
+                    # id, will get written to a stale file descriptor and
+                    # will essentially be lost.
+                    f.truncate()
+            except IOError:
+                ctx.logger.warn(
+                        'Failed truncating {0}.'.format(log_file_path,
+                                                        exc_info=True))
+        for rotated_log_file_path in glob.glob('{0}.*'.format(
+                log_file_path)):
+            try:
+                os.remove(rotated_log_file_path)
+            except IOError:
+                ctx.logger.exception(
+                        'Failed removing rotated log file {0}.'.format(
+                                rotated_log_file_path, exc_info=True))
 
 
 def _ignore_task_on_fail_and_send_event(task, ctx):

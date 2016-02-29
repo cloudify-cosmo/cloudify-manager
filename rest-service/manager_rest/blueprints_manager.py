@@ -245,6 +245,7 @@ class BlueprintsManager(object):
                                      ('uninitialized', 'deleted')])))
 
         self._delete_deployment_environment(deployment_id)
+        self._delete_deployment_logs(deployment_id)
         return self.sm.delete_deployment(deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
@@ -329,7 +330,8 @@ class BlueprintsManager(object):
 
     def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
-                                 created_at=None):
+                                 created_at=None,
+                                 verify_no_executions=True):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -351,7 +353,7 @@ class BlueprintsManager(object):
             'create_deployment_environment', 'delete_deployment_environment')
 
         # It means that a system-wide workflow is about to be launched
-        if deployment is None:
+        if deployment is None and verify_no_executions:
             self._check_for_any_active_executions()
 
         execution = models.Execution(
@@ -400,9 +402,9 @@ class BlueprintsManager(object):
             execution = self.sm.get_execution(async_task.id)
             if execution.status != models.Execution.TERMINATED:
                 raise RuntimeError(
-                    'Failed executing the {0} system workflow{1}: '
+                    'Failed executing the {0} system workflow: '
                     'Execution did not complete successfully before '
-                    'timeout ({2} seconds)'.format(wf_id, add_info, timeout))
+                    'timeout ({1} seconds)'.format(wf_id, timeout))
 
         return async_task, execution
 
@@ -925,13 +927,25 @@ class BlueprintsManager(object):
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
             })
 
+    def _delete_deployment_logs(self, deployment_id):
+        self._execute_system_workflow(
+            wf_id='delete_deployment_logs',
+            task_mapping='cloudify_system_workflows.deployment_environment'
+                         '.delete_logs',
+            execution_parameters={
+                'deployment_id': deployment_id
+            },
+            verify_no_executions=False,
+            timeout=300,
+        )
+
     def _check_for_active_executions(self, deployment_id, force):
 
         def _get_running_executions(deployment_id=None, include_system=True):
-            deplyment_id_filter = self.create_filters_dict(
+            deployment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
             executions = self.executions_list(
-                filters=deplyment_id_filter,
+                filters=deployment_id_filter,
                 is_include_system_workflows=include_system).items
             running = [
                 e.id for e in executions if
