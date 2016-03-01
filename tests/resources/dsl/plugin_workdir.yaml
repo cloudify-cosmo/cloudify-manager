@@ -1,0 +1,34 @@
+tosca_definitions_version: cloudify_dsl_1_2
+
+imports:
+  - cloudify/types/types.yaml
+  - plugins/testmockoperations.yaml
+
+inputs:
+  filename: {}
+  host_content: {}
+  central_content: {}
+
+node_templates:
+  host:
+    type: cloudify.nodes.Compute
+
+  contained_in_host:
+    type: cloudify.nodes.Root
+    relationships:
+      - target: host
+        type: cloudify.relationships.contained_in
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create:
+          implementation: testmockoperations.testmockoperations.tasks.write_to_workdir
+          executor: host_agent
+          inputs:
+            filename: { get_input: filename }
+            content: { get_input: host_content }
+        start:
+          implementation: testmockoperations.testmockoperations.tasks.write_to_workdir
+          executor: central_deployment_agent
+          inputs:
+            filename: { get_input: filename }
+            content: { get_input: central_content }
