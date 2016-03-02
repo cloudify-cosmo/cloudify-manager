@@ -100,7 +100,7 @@ node_types:
 
         #####################################################
         # This operation will stop the agent process
-        # whithout connecting to the remote host.
+        # without connecting to the remote host.
         # ---------------------------------------------------
         # It will be executed on the agent host via AMQP
         #####################################################
@@ -133,7 +133,7 @@ node_types:
 
         #####################################################
         # This operation will restart the agent process
-        # whithout connecting to the remote host.
+        # without connecting to the remote host.
         # the agent will have a new name after this
         # operation, but will of course listen to the same
         # queue.
