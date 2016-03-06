@@ -14,43 +14,45 @@
 #  * limitations under the License.
 #
 
-import sys
 import os
+import zipfile
+import urllib
 import shutil
-import tempfile
+import sys
 from datetime import datetime
 
-from flask import request
 from flask.ext.restful_swagger import swagger
-
-from dsl_parser import tasks
 from flask_securest.rest_security import SecuredResource
+from flask import request
 from flask_securest import rest_security
 
+from manager_rest.files import UploadedDataManager
+from manager_rest.resources import (marshal_with,
+                                    exceptions_handled,
+                                    verify_json_content_type,
+                                    verify_parameter_in_request_body,
+                                    verify_and_convert_bool,
+                                    CONVENTION_APPLICATION_BLUEPRINT_FILE)
+from manager_rest import models
 from manager_rest import resources
 from manager_rest import resources_v2
-from manager_rest import models
 from manager_rest import responses_v2_1
 from manager_rest import config
-from manager_rest import utils
+from manager_rest import archiving
 from manager_rest import manager_exceptions
-from manager_rest.utils import create_filter_params_list_description
-from manager_rest.resources_v2 import create_filters, paginate, sortable
+from manager_rest import utils
+from manager_rest.blueprints_manager import (get_blueprints_manager,
+                                             DslParseException)
+from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
+                                    MAINTENANCE_MODE_ACTIVATING,
+                                    MAINTENANCE_MODE_DEACTIVATED)
 from manager_rest.maintenance import (get_maintenance_file_path,
                                       prepare_maintenance_dict,
                                       get_running_executions)
 from manager_rest.manager_exceptions import BadParametersError
-from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
-                                    MAINTENANCE_MODE_ACTIVATING,
-                                    MAINTENANCE_MODE_DEACTIVATED)
-from manager_rest.resources import (marshal_with,
-                                    exceptions_handled,
-                                    verify_json_content_type,
-                                    verify_and_convert_bool,
-                                    get_blueprints_manager,
-                                    CONVENTION_APPLICATION_BLUEPRINT_FILE)
-from manager_rest.deployment_update.manager import (
-    get_deployment_updates_manager)
+from deployment_update.manager import get_deployment_updates_manager
+from manager_rest.resources_v2 import create_filters, paginate, sortable
+from manager_rest.utils import create_filter_params_list_description
 
 
 def override_marshal_with(f, model):
@@ -60,6 +62,152 @@ def override_marshal_with(f, model):
         with resources.skip_nested_marshalling():
             return f(*args, **kwargs)
     return wrapper
+
+
+class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
+
+    def _get_kind(self):
+        return 'deployment'
+
+    def _get_data_url_key(self):
+        return 'blueprint_archive_url'
+
+    def _get_target_dir_path(self):
+        return config.instance().file_server_deployments_folder
+
+    def _get_archive_type(self, archive_path):
+        return archiving.get_archive_type(archive_path)
+
+    def _prepare_and_process_doc(self,
+                                 data_id,
+                                 file_server_root,
+                                 archive_target_path,
+                                 additional_inputs=None):
+        application_dir = self._extract_file_to_file_server(
+            archive_target_path,
+            file_server_root
+        )
+        return self._prepare_and_submit_blueprint(
+                file_server_root,
+                application_dir,
+                data_id,
+                additional_inputs), archive_target_path
+
+    def _move_archive_to_uploaded_dir(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def _prepare_and_submit_blueprint(cls,
+                                      file_server_root,
+                                      app_dir,
+                                      deployment_id,
+                                      additional_inputs=None):
+
+        app_dir, app_file_name = \
+            cls._extract_application_file(file_server_root, app_dir)
+
+        # add to deployment update manager (will also dsl_parse it)
+        try:
+            cls._process_plugins(file_server_root, app_dir, deployment_id)
+            update = get_deployment_updates_manager().stage_deployment_update(
+                    deployment_id,
+                    app_dir,
+                    app_file_name,
+                    additional_inputs=additional_inputs or {}
+                )
+
+            # Moving the contents of the app dir to the dest dir, while
+            # overwriting any file encountered
+
+            # create the destination root dir
+            file_server_deployment_root = \
+                os.path.join(file_server_root,
+                             config.instance().file_server_deployments_folder,
+                             deployment_id)
+
+            app_root_dir = os.path.join(file_server_root, app_dir)
+
+            for root, dirs, files in os.walk(app_root_dir):
+                # Creates a corresponding dir structure in the deployment dir
+                dest_rel_dir = os.path.relpath(root, app_root_dir)
+                dest_dir = os.path.abspath(
+                        os.path.join(file_server_deployment_root,
+                                     dest_rel_dir))
+                os.makedirs(dest_dir)
+
+                # Calculate source dir
+                source_dir = os.path.join(file_server_root, app_dir, root)
+
+                for file_name in files:
+                    source_file = os.path.join(source_dir, file_name)
+                    relative_dest_path = os.path.relpath(source_file,
+                                                         app_root_dir)
+                    dest_file = os.path.join(file_server_deployment_root,
+                                             relative_dest_path)
+                    shutil.copy(source_file, dest_file)
+
+            return update
+        except DslParseException, ex:
+            shutil.rmtree(os.path.join(file_server_root, app_dir))
+            raise manager_exceptions.InvalidBlueprintError(
+                    'Invalid deployment update - {0}'.format(ex.message))
+
+    @classmethod
+    def _extract_application_file(cls, file_server_root, application_dir):
+
+        full_application_dir = os.path.join(file_server_root, application_dir)
+
+        if 'application_file_name' in request.args:
+            application_file_name = urllib.unquote(
+                    request.args['application_file_name']).decode('utf-8')
+            application_file = os.path.join(full_application_dir,
+                                            application_file_name)
+            if not os.path.isfile(application_file):
+                raise manager_exceptions.BadParametersError(
+                        '{0} does not exist in the application '
+                        'directory'.format(application_file_name)
+                )
+        else:
+            application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
+            application_file = os.path.join(full_application_dir,
+                                            application_file_name)
+            if not os.path.isfile(application_file):
+                raise manager_exceptions.BadParametersError(
+                        'application directory is missing blueprint.yaml and '
+                        'application_file_name query parameter was not passed')
+
+        # return relative path from the file server root since this path
+        # is appended to the file server base uri
+        return application_dir, application_file_name
+
+    @classmethod
+    def _process_plugins(cls, file_server_root, app_dir, deployment_id):
+        plugins_directory = os.path.join(file_server_root, app_dir, 'plugins')
+        if not os.path.isdir(plugins_directory):
+            return
+        plugins = [os.path.join(plugins_directory, directory)
+                   for directory in os.listdir(plugins_directory)
+                   if os.path.isdir(os.path.join(plugins_directory,
+                                                 directory))]
+
+        for plugin_dir in plugins:
+            final_zip_name = '{0}.zip'.format(os.path.basename(plugin_dir))
+            target_zip_path = os.path.join(file_server_root, app_dir,
+                                           'plugins', final_zip_name)
+            cls._zip_dir(plugin_dir, target_zip_path)
+
+    @classmethod
+    def _zip_dir(cls, dir_to_zip, target_zip_path):
+        zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
+        try:
+            plugin_dir_base_name = os.path.basename(dir_to_zip)
+            rootlen = len(dir_to_zip) - len(plugin_dir_base_name)
+            for base, dirs, files in os.walk(dir_to_zip):
+                for entry in files:
+                    fn = os.path.join(base, entry)
+                    zipf.write(fn, fn[rootlen:])
+        finally:
+            zipf.close()
 
 
 class MaintenanceMode(SecuredResource):
@@ -137,11 +285,39 @@ class DeploymentUpdateSteps(SecuredResource):
         update_step = \
             manager.create_deployment_update_step(
                     update_id,
-                    request_json.get('operation'),
+                    request_json.get('action'),
                     request_json.get('entity_type'),
                     request_json.get('entity_id')
             )
         return update_step
+
+
+class DeploymentUpdate(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses_v2_1.DeploymentUpdate,
+        nickname="DeploymentUpdate",
+        notes='Return a single deployment update',
+        parameters=create_filter_params_list_description(
+            models.DeploymentUpdate.fields, 'deployment update'
+        )
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2_1.DeploymentUpdate)
+    def get(self, update_id):
+        return \
+            get_deployment_updates_manager().get_deployment_update(update_id)
+
+
+class DeploymentUpdatesSteps(SecuredResource):
+    @exceptions_handled
+    @marshal_with(responses_v2_1.DeploymentUpdate)
+    def post(self, update_id):
+        manager = get_deployment_updates_manager()
+        deployment_update = \
+            manager.extract_steps_from_deployment_update(update_id)
+
+        return deployment_update
 
 
 class DeploymentUpdates(SecuredResource):
@@ -208,56 +384,23 @@ class DeploymentUpdates(SecuredResource):
         :param kwargs:
         :return: update response
         """
-        query_params = request.args
-        main_blueprint_key = 'application_file_name'
-        blueprint_archive_url_key = 'blueprint_archive_url'
-        deployment_id = query_params['deployment_id']
+        request_json = request.args
+        verify_parameter_in_request_body('deployment_id', request_json)
+        inputs = {k[1:]: v for k, v in request.args.iteritems()
+                  if k.startswith('_')}
 
-        blueprint_filename = \
-            query_params.get(main_blueprint_key,
-                             CONVENTION_APPLICATION_BLUEPRINT_FILE)
-
-        temp_dir = tempfile.mkdtemp()
-        try:
-            archive_destination = \
-                os.path.join(temp_dir, "{0}-{1}"
-                             .format(deployment_id, blueprint_filename))
-
-            # Saving the archive locally
-            utils.save_request_content_to_file(request, archive_destination,
-                                               blueprint_archive_url_key,
-                                               'blueprint')
-
-            # Unpacking the archive
-            relative_app_dir = \
-                utils.extract_blueprint_archive_to_mgr(archive_destination,
-                                                       temp_dir)
-
-            # retrieving and parsing the blueprint
-            temp_app_path = os.path.join(temp_dir, relative_app_dir,
-                                         blueprint_filename)
-
-            # TODO: pass resolver and validate_version
-            resources_base = '{0}/'.format(
-                config.instance().file_server_base_uri)
-            blueprint = tasks.parse_dsl(
-                'file://{0}'.format(temp_app_path),
-                resources_base_url=resources_base)
-
-            # create a staging object
-            update = get_deployment_updates_manager(). \
-                stage_deployment_update(deployment_id, blueprint)
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-        return update, 201
+        return UploadedBlueprintsDeploymentUpdateManager().\
+            receive_uploaded_data(request_json['deployment_id'],
+                                  additional_inputs=inputs)
 
 
 class DeploymentUpdateCommit(SecuredResource):
     @exceptions_handled
     @marshal_with(responses_v2_1.DeploymentUpdate)
     def post(self, update_id):
+        workflow_id = request.json.get('workflow_id')
         manager = get_deployment_updates_manager()
-        return manager.commit_deployment_update(update_id)
+        return manager.commit_deployment_update(update_id, workflow_id)
 
 
 class DeploymentUpdateFinalizeCommit(SecuredResource):
@@ -339,3 +482,9 @@ class PluginsId(resources_v2.PluginsId):
             raise manager_exceptions.PluginInstallationError(
                 'Failed during plugin un-installation. ({0}: {1})'
                 .format(tp.__name__, ex)), None, tb
+
+
+def write_maintenance_state(state):
+    maintenance_file_path = get_maintenance_file_path()
+    with open(maintenance_file_path, 'w') as f:
+        f.write(state)

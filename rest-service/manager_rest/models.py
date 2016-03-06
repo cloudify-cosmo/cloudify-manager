@@ -18,8 +18,8 @@ import uuid
 
 import jsonpickle
 from deployment_update.constants import (ENTITY_TYPES,
-                                         OPERATION_TYPE,
-                                         STATE)
+                                         ACTION_TYPES,
+                                         STATES)
 
 from manager_exceptions import UnknownModificationStageError
 
@@ -69,9 +69,9 @@ class Snapshot(SerializableObject):
 
 
 class Deployment(SerializableObject):
-    fields = {'id', 'created_at', 'updated_at', 'blueprint_id',
-              'workflows', 'permalink', 'inputs', 'policy_types',
-              'policy_triggers', 'groups', 'outputs',
+    fields = {'id', 'description', 'created_at', 'updated_at', 'blueprint_id',
+              'workflows', 'permalink', 'base_inputs', 'inputs',
+              'policy_types', 'policy_triggers', 'groups', 'outputs',
               'scaling_groups'}
 
     def __init__(self, **kwargs):
@@ -80,41 +80,72 @@ class Deployment(SerializableObject):
         self.updated_at = kwargs['updated_at']
         self.blueprint_id = kwargs['blueprint_id']
         self.workflows = kwargs['workflows']
+        self.base_inputs = kwargs['base_inputs']
         self.inputs = kwargs['inputs']
         self.policy_types = kwargs['policy_types']
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
         self.scaling_groups = kwargs['scaling_groups']
         self.outputs = kwargs['outputs']
+        self.description = kwargs.get('description')
         self.permalink = None  # TODO: implement
 
 
 class DeploymentUpdateStep(SerializableObject):
 
-    fields = {'id', 'operation', 'entity_type', 'entity_id'}
+    fields = {'id', 'action', 'entity_type', 'entity_id'}
 
-    def __init__(self, operation, entity_type, entity_id,
+    def __init__(self, action, entity_type, entity_id,
                  id=str(uuid.uuid4())):
 
         if entity_type not in ENTITY_TYPES:
             raise UnknownModificationStageError(
                 'illegal modification entity type')
 
-        if operation not in OPERATION_TYPE:
+        if action not in ACTION_TYPES:
             raise UnknownModificationStageError(
                 'illegal modification operation')
 
         self.id = str(id)
-        self.operation = operation
+        self.action = action
         self.entity_type = entity_type
         self.entity_id = entity_id
+
+    def __hash__(self):
+        return hash((self.id, self.entity_id))
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __cmp__(self, other):
+        if self.action != other.action:
+            # the order is 'add' < 'modify' < 'remove'
+            if self.action == 'add' and other.action != 'add':
+                return -1
+            elif self.action == 'modify':
+                return -1 if other.action == 'remove' else 1
+            else:
+                return 1
+        else:
+            if self.action == 'add':
+                if (self.entity_type == 'node' and
+                        other.entity_type == 'relationship'):
+                    # add node before adding relationships
+                    return -1
+            elif self.action == 'remove':
+                if (self.entity_type == 'relationship' and
+                        other.entity_type == 'node'):
+                    # remove relationships before removing nodes
+                    return -1
+        # other comparisons don't matter
+        return 0
 
 
 class DeploymentUpdate(SerializableObject):
 
     fields = {'id', 'deployment_id', 'steps', 'state', 'blueprint',
               'deployment_update_nodes', 'deployment_update_node_instances',
-              'modified_entity_ids'}
+              'deployment_update_deployment', 'modified_entity_ids'}
 
     # states = {'staged', 'committed', 'reverted', 'committing', 'failed'}
 
@@ -126,6 +157,7 @@ class DeploymentUpdate(SerializableObject):
                  steps=[],
                  deployment_update_nodes=[],
                  deployment_update_node_instances=[],
+                 deployment_update_deployment=[],
                  modified_entity_ids=[]):
         self.id = id or '{0}-{1}'.format(deployment_id, uuid.uuid4())
         self.deployment_id = deployment_id
@@ -135,6 +167,7 @@ class DeploymentUpdate(SerializableObject):
         self.deployment_update_nodes = deployment_update_nodes
         self.deployment_update_node_instances = \
             deployment_update_node_instances
+        self.deployment_update_deployment = deployment_update_deployment
         self.modified_entity_ids = modified_entity_ids
 
     def step(self, operation, entity, content):
@@ -160,23 +193,23 @@ class DeploymentUpdate(SerializableObject):
         raise NotImplementedError()
 
     def commit(self):
-        allowed_states = {STATE.STAGED, STATE.REVERTED, STATE.FAILED}
+        allowed_states = {STATES.STAGED, STATES.REVERTED, STATES.FAILED}
         if self.state not in allowed_states:
             raise RuntimeError('commit is not allowed when {0}'
                                .format(self.state))
         self._sort_steps()
         self._validate()
-        self.state = STATE.COMMITTING
+        self.state = STATES.COMMITTING
         is_updated = self._update_storage()
-        self.state = STATE.COMMITTED if is_updated else STATE.FAILED
+        self.state = STATES.COMMITTED if is_updated else STATES.FAILED
 
     def revert(self):
-        allowed_states = {STATE.COMMITTED}
+        allowed_states = {STATES.COMMITTED}
         if self.state not in allowed_states:
             raise RuntimeError('revert is not allowed when {0}'
                                .format(self.state))
         # do some rollback stuff
-        self.state = STATE.REVERTED
+        self.state = STATES.REVERTED
 
 
 class DeploymentModification(SerializableObject):
