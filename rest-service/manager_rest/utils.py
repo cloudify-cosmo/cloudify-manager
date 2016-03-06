@@ -19,7 +19,9 @@ import shutil
 import importlib
 import traceback
 import StringIO
+import errno
 from os import path
+from os import makedirs
 from flask.ext.restful import abort
 
 
@@ -130,3 +132,13 @@ def abort_error(error, logger, hide_server_message=False):
           message=str(error),
           error_code=error.error_code,
           server_traceback=s_traceback.getvalue())
+
+
+def mkdirs(folder_path):
+    try:
+        makedirs(folder_path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and path.isdir(folder_path):
+            pass
+        else:
+            raise

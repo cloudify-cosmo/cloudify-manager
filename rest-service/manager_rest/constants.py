@@ -13,15 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask.ext.restful import fields
-from flask_restful_swagger import swagger
-
-
-@swagger.model
-class MaintenanceMode(object):
-    resource_fields = {
-        'status': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.status = kwargs['status']
+MAINTENANCE_MODE_STATUS_FILE = 'status.txt'
+ACTIVATING_MAINTENANCE_MODE = 'activating'
+MAINTENANCE_MODE_ACTIVE = 'activated'
+NOT_IN_MAINTENANCE_MODE = 'deactivated'
+MAINTENANCE_MODE_ACTIVE_ERROR_CODE = 'maintenance_mode_active'
+ACTIVATING_MAINTENANCE_MODE_ERROR_CODE = 'entering_maintenance_mode'

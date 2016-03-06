@@ -215,6 +215,8 @@ class TestEnvironment(object):
         )
         os.makedirs(self.plugins_storage_dir)
         self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
+        self.maintenance_folder = path.join(self.test_working_dir,
+                                            'maintenance')
         self.rest_service_log_level = 'DEBUG'
         self.rest_service_log_path = path.join(
             self.test_working_dir, 'cloudify-rest-service.log')
@@ -306,7 +308,8 @@ class TestEnvironment(object):
             self.securest_log_files_backup_count,
             self.test_working_dir,
             self.amqp_username,
-            self.amqp_password)
+            self.amqp_password,
+            self.maintenance_folder)
         self.manager_rest_process.start()
 
     def start_elasticsearch(self):

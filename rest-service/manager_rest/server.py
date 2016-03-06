@@ -36,7 +36,11 @@ from manager_rest import config
 from manager_rest import storage_manager
 from manager_rest import manager_exceptions
 from manager_rest import utils
-
+from manager_rest.constants import (MAINTENANCE_MODE_ACTIVE,
+                                    MAINTENANCE_MODE_ACTIVE_ERROR_CODE,
+                                    MAINTENANCE_MODE_STATUS_FILE,
+                                    ACTIVATING_MAINTENANCE_MODE,
+                                    ACTIVATING_MAINTENANCE_MODE_ERROR_CODE)
 
 SECURITY_BYPASS_PORT = '8101'
 IMPLEMENTATION_KEY = 'implementation'
@@ -71,6 +75,8 @@ def setup_app(warnings=None):
     if cfy_config.security_enabled:
         app.logger.info('initializing rest-service security')
         init_secured_app(app)
+
+    app.before_request(handle_maintenance_mode)
 
     app.before_request(log_request)
     app.after_request(log_response)
@@ -150,6 +156,52 @@ def log_response(response):
             response.status,
             headers_pretty_print(response.headers)))
     return response
+
+
+def handle_maintenance_mode():
+
+    allowed_endpoints = ['maintenance',
+                         'status',
+                         'version']
+
+    # Removing v*/ from the endpoint
+    index = request.endpoint.find('/')
+    request_endpoint = request.endpoint[index+1:]
+
+    for endpoint in allowed_endpoints:
+        if request_endpoint.startswith(endpoint):
+            return
+
+    maintenance_file = os.path.join(
+        config.instance().maintenance_folder,
+        MAINTENANCE_MODE_STATUS_FILE)
+
+    if os.path.isfile(maintenance_file):
+        with open(maintenance_file, 'r') as f:
+            status = f.read()
+
+        if status == MAINTENANCE_MODE_ACTIVE:
+            return maintenance_mode_error()
+        if status == ACTIVATING_MAINTENANCE_MODE:
+            forbidden_requests = ['POST', 'PATCH', 'PUT']
+
+            if request_endpoint == 'snapshots/<string:snapshot_id>':
+                if request.method in forbidden_requests:
+                    return activating_maintenance_mode_error()
+            if request_endpoint == 'snapshots/<string:snapshot_id>/restore':
+                return activating_maintenance_mode_error()
+
+            if request_endpoint == 'executions':
+                if request.method in forbidden_requests:
+                    return activating_maintenance_mode_error()
+
+            if request_endpoint == 'deployments/<string:deployment_id>':
+                if request.method in forbidden_requests:
+                    return activating_maintenance_mode_error()
+
+            if request_endpoint == 'deployment-modifications':
+                if request.method in forbidden_requests:
+                    return activating_maintenance_mode_error()
 
 
 def headers_pretty_print(headers):
@@ -342,4 +394,32 @@ def internal_error(e):
          "error_code": manager_exceptions.INTERNAL_SERVER_ERROR_CODE,
          "server_traceback": s_traceback.getvalue()})
     response.status_code = 500
+    return response
+
+
+def maintenance_mode_error():
+    # app.logger.exception(e)  # gets logged automatically
+    s_traceback = StringIO.StringIO()
+    traceback.print_exc(file=s_traceback)
+
+    response = jsonify(
+        {"message":
+            "Request rejected since maintenance mode is active",
+         "error_code": MAINTENANCE_MODE_ACTIVE_ERROR_CODE,
+         "server_traceback": s_traceback.getvalue()})
+    response.status_code = 503
+    return response
+
+
+def activating_maintenance_mode_error():
+    # app.logger.exception(e)  # gets logged automatically
+    s_traceback = StringIO.StringIO()
+    traceback.print_exc(file=s_traceback)
+
+    response = jsonify(
+        {"message":
+            "Request rejected while activating maintenance mode",
+         "error_code": ACTIVATING_MAINTENANCE_MODE_ERROR_CODE,
+         "server_traceback": s_traceback.getvalue()})
+    response.status_code = 503
     return response
