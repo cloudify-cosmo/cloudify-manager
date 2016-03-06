@@ -7,5 +7,9 @@ description: >
   Micro web sites hosting.
 
 node_templates:
-  server:
+  site1:
     type: cloudify.nodes.Compute
+
+outputs:
+  custom_output:
+    value: 0

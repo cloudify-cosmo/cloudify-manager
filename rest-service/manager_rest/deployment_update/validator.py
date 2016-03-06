@@ -23,11 +23,13 @@ class StepValidator(object):
             ENTITY_TYPES.NODE: self._validate_node,
             ENTITY_TYPES.RELATIONSHIP: self._validate_relationship,
             ENTITY_TYPES.PROPERTY: self._validate_property,
-            ENTITY_TYPES.OPERATION: self._validate_operation
+            ENTITY_TYPES.OPERATION: self._validate_operation,
+            ENTITY_TYPES.WORKFLOW: self._validate_workflow,
+            ENTITY_TYPES.OUTPUT: self._validate_output
         }
         if step.entity_type in ENTITY_TYPES:
-            validator = validation_mapper[step.entity_type]
-            if validator(dep_update, step):
+            validate = validation_mapper[step.entity_type]
+            if validate(dep_update=dep_update, step=step):
                 return
 
         raise \
@@ -44,7 +46,7 @@ class StepValidator(object):
         """
         entity_keys = utils.get_entity_keys(step.entity_id)
         if len(entity_keys) < 4:
-            return False
+            return
         NODES, source_node_id, RELATIONSHIPS, relationship_index = entity_keys
 
         # assert the index is indeed readable
@@ -52,23 +54,31 @@ class StepValidator(object):
         if not relationship_index:
             return
 
-        if step.operation == ACTION_TYPES.REMOVE:
-            source_node = self.sm.get_node(dep_update.deployment_id,
-                                           source_node_id).to_dict()
-        else:
-            source_node = utils.get_raw_node(dep_update.blueprint,
-                                             source_node_id)
-        if not source_node or \
-           len(source_node[RELATIONSHIPS]) < relationship_index:
+        storage_source_node = \
+            self._get_storage_node(dep_update.deployment_id, source_node_id)
+
+        raw_source_node = \
+            utils.get_raw_node(dep_update.blueprint, source_node_id)
+
+        source_node = (storage_source_node
+                       if step.operation == OPERATION_TYPE.REMOVE else
+                       raw_source_node)
+        if (not source_node or
+           len(source_node[RELATIONSHIPS]) <= relationship_index):
             return
 
-        relationship = source_node[RELATIONSHIPS][relationship_index]
-        target_node_id = relationship['target_id']
+        target_node_id = \
+            source_node[RELATIONSHIPS][relationship_index]['target_id']
 
-        if step.operation == ACTION_TYPES.REMOVE:
-            return self.sm.get_node(dep_update.deployment_id, target_node_id)
-        else:
-            return utils.get_raw_node(dep_update.blueprint, target_node_id)
+        in_old = self._get_storage_node(dep_update.deployment_id,
+                                        target_node_id)
+        in_new = utils.get_raw_node(dep_update.blueprint, target_node_id)
+
+        return {
+            ACTION_TYPES.ADD: in_new,
+            ACTION_TYPES.REMOVE: in_old,
+            ACTION_TYPES.MODIFY: in_new and in_old
+        }[step.operation]
 
     def _validate_node(self, dep_update, step):
         """ validates node type entity id
@@ -78,51 +88,106 @@ class StepValidator(object):
         :return:
         """
         NODES, node_id = utils.get_entity_keys(step.entity_id)
-        if step.operation == ACTION_TYPES.REMOVE:
-            return self.sm.get_node(dep_update.deployment_id, node_id)
-        else:
-            return utils.get_raw_node(dep_update.blueprint, node_id)
+
+        in_old = self._get_storage_node(dep_update.deployment_id, node_id)
+        in_new = utils.get_raw_node(dep_update.blueprint, node_id)
+        return {
+            ACTION_TYPES.ADD: in_new and not in_old,
+            ACTION_TYPES.REMOVE: in_old and not in_new,
+            ACTION_TYPES.MODIFY: in_new and in_old
+        }[step.operation]
 
     def _validate_property(self, dep_update, step):
         property_keys = utils.get_entity_keys(step.entity_id)
 
         if len(property_keys) < 2:
             return
-        NODES, node_id, PROPERTIES = property_keys[:3]
-        property_id = property_keys[3:]
+        NODES, node_id = property_keys[:2]
+        property_id = property_keys[2:]
 
-        storage_node = self.sm.get_node(dep_update.deployment_id, node_id)
+        storage_node = \
+            self._get_storage_node(dep_update.deployment_id, node_id)
         raw_node = utils.get_raw_node(dep_update.blueprint, node_id)
 
-        is_in_old = utils.traverse_object(storage_node.properties, property_id)
-        is_in_new = utils.traverse_object(raw_node[PROPERTIES], property_id)
+        in_old = utils.traverse_object(storage_node, property_id)
+        in_new = utils.traverse_object(raw_node, property_id)
 
-        if step.operation == ACTION_TYPES.REMOVE:
-            return is_in_old
-        elif step.operation == ACTION_TYPES.ADD:
-            return is_in_new
-        else:
-            return is_in_old and is_in_new
+        return {
+            ACTION_TYPES.ADD: in_new and not in_old,
+            ACTION_TYPES.REMOVE: in_old and not in_new,
+            ACTION_TYPES.MODIFY: in_new and in_old
+        }[step.operation]
 
     def _validate_operation(self, dep_update, step):
         operation_keys = utils.get_entity_keys(step.entity_id)
         if len(operation_keys) < 2:
             return
 
-        NODES, node_id, operation_host = operation_keys[:3]
-        operation_id = operation_keys[3:]
+        NODES, node_id = operation_keys[:2]
+        operation_id = operation_keys[2:]
 
-        base_node = self.sm.get_node(dep_update.deployment_id, node_id)
-        is_in_old = utils.traverse_object(getattr(base_node, operation_host),
+        storage_node = \
+            self._get_storage_node(dep_update.deployment_id, node_id)
+        in_old = utils.traverse_object(storage_node, operation_id)
+
+        raw_node = utils.get_raw_node(dep_update.blueprint, node_id)
+        in_new = utils.traverse_object(raw_node, operation_id)
                                           operation_id)
+        return {
+            ACTION_TYPES.ADD: in_new,
+            ACTION_TYPES.REMOVE: in_old,
+            ACTION_TYPES.MODIFY: in_new and in_old
+        }[step.operation]
 
-        modified_node = utils.get_raw_node(dep_update.blueprint, node_id)
-        is_in_new = utils.traverse_object(modified_node[operation_host],
-                                          operation_id)
+    def _validate_workflow(self, dep_update, step):
+        workflow_keys = utils.get_entity_keys(step.entity_id)
 
-        if step.operation == ACTION_TYPES.REMOVE:
-            return is_in_old
-        elif step.operation == ACTION_TYPES.ADD:
-            return is_in_new
-        else:
-            return is_in_old and is_in_new
+        if len(workflow_keys) < 2:
+            return
+
+        WORKFLOWS = workflow_keys[0]
+        entity_id = workflow_keys[1:]
+
+        storage_workflows = getattr(
+                self.sm.get_deployment(dep_update.deployment_id),
+                WORKFLOWS,
+                {}
+        )
+        raw_workflows = dep_update.blueprint[WORKFLOWS]
+
+        in_old = utils.traverse_object(storage_workflows, entity_id)
+        in_new = utils.traverse_object(raw_workflows, entity_id)
+
+        return {
+            OPERATION_TYPE.ADD: in_new and not in_old,
+            OPERATION_TYPE.REMOVE: in_old and not in_new,
+            OPERATION_TYPE.MODIFY: in_new and in_old
+        }[step.operation]
+
+    def _validate_output(self, dep_update, step):
+        output_keys = utils.get_entity_keys(step.entity_id)
+
+        if len(output_keys) < 2:
+            return
+
+        OUTPUTS = output_keys[0]
+        entity_id = output_keys[1:]
+
+        storage_outputs = getattr(
+                self.sm.get_deployment(dep_update.deployment_id),
+                OUTPUTS,
+                {})
+        raw_outputs = dep_update.blueprint[OUTPUTS]
+
+        in_old = utils.traverse_object(storage_outputs, entity_id)
+        in_new = utils.traverse_object(raw_outputs, entity_id)
+
+        return {
+            OPERATION_TYPE.ADD: in_new and not in_old,
+            OPERATION_TYPE.REMOVE: in_old and not in_new,
+            OPERATION_TYPE.MODIFY: in_new and in_old
+        }[step.operation]
+
+    def _get_storage_node(self, deployment_id, node_id):
+        nodes = self.sm.get_nodes(filters={'id': node_id})
+        return nodes.items[0].to_dict() if nodes.items else {}
