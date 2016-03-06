@@ -27,7 +27,7 @@ from flask import current_app
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import utils as dsl_parser_utils
-
+from manager_rest import app_context
 from manager_rest import models
 from manager_rest import config
 from manager_rest import utils
@@ -273,9 +273,9 @@ class BlueprintsManager(object):
         application_file = os.path.join(application_dir, application_file_name)
         dsl_location = '{0}{1}'.format(resources_base, application_file)
         try:
-            plan = tasks.parse_dsl(
-                dsl_location, resources_base,
-                **self._get_parser_context())
+            plan = tasks.parse_dsl(dsl_location,
+                                   resources_base,
+                                   **app_context.get_parser_context())
         except Exception, ex:
             raise DslParseException(str(ex))
 
@@ -560,7 +560,124 @@ class BlueprintsManager(object):
             execution_id, new_status, '')
         return self.get_execution(execution_id)
 
+    @staticmethod
+    def prepare_deployment_for_storage(blueprint_id, deployment_id,
+                                       deployment_plan, inputs=None):
+
+        now = str(datetime.now())
+        new_deployment = models.Deployment(
+            id=deployment_id,
+            blueprint_id=blueprint_id,
+            created_at=now,
+            updated_at=now,
+            workflows=deployment_plan['workflows'],
+            base_inputs=inputs,
+            description=deployment_plan['description'],
+            inputs=deployment_plan['inputs'],
+            policy_types=deployment_plan['policy_types'],
+            policy_triggers=deployment_plan['policy_triggers'],
+            groups=deployment_plan['groups'],
+            scaling_groups=deployment_plan['scaling_groups'],
+            outputs=deployment_plan['outputs'])
+
+        return new_deployment
+
+    def prepare_deployment_nodes_for_storage(self, blueprint_id,
+                                             deployment_id,
+                                             deployment_plan,
+                                             node_ids=None):
+        """
+        create deployment nodes in storage based on a provided blueprint
+        :param blueprint_id: blueprint id
+        :param deployment_id: deployment id
+        :param deployment_plan: deployment_plan
+        :param node_ids: optionally create only nodes with these ids
+        """
+        node_ids = node_ids or []
+        if not isinstance(node_ids, list):
+            node_ids = [node_ids]
+
+        raw_nodes = deployment_plan['nodes']
+        if node_ids:
+            raw_nodes = \
+                [node for node in raw_nodes if node['id'] in node_ids]
+        nodes = []
+        for raw_node in raw_nodes:
+            scalable = raw_node['capabilities']['scalable']['properties']
+            nodes.append(models.DeploymentNode(
+                id=raw_node['name'],
+                deployment_id=deployment_id,
+                blueprint_id=blueprint_id,
+                type=raw_node['type'],
+                type_hierarchy=raw_node['type_hierarchy'],
+                number_of_instances=scalable['current_instances'],
+                planned_number_of_instances=scalable['current_instances'],
+                deploy_number_of_instances=scalable['default_instances'],
+                min_number_of_instances=scalable['min_instances'],
+                max_number_of_instances=scalable['max_instances'],
+                host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
+                properties=raw_node['properties'],
+                operations=raw_node['operations'],
+                plugins=raw_node['plugins'],
+                plugins_to_install=raw_node.get('plugins_to_install'),
+                relationships=self._prepare_node_relationships(raw_node)))
+        return nodes
+
+    def _store_deployment_nodes(self, nodes):
+        for node in nodes:
+            self.sm.put_node(node)
+
+    @staticmethod
+    def _prepare_deployment_node_instances_for_storage(deployment_id,
+                                                       dsl_node_instances):
+        node_instances = []
+        for node_instance in dsl_node_instances:
+            instance_id = node_instance['id']
+            node_id = node_instance['node_id']
+            scaling_groups = node_instance.get('scaling_groups', [])
+            relationships = node_instance.get('relationships', [])
+            host_id = node_instance.get('host_id')
+            instance = models.DeploymentNodeInstance(
+                id=instance_id,
+                node_id=node_id,
+                host_id=host_id,
+                relationships=relationships,
+                deployment_id=deployment_id,
+                state='uninitialized',
+                runtime_properties={},
+                version=None,
+                scaling_groups=scaling_groups)
+            node_instances.append(instance)
+
+        return node_instances
+
+    def _store_deployment_node_instances(self, node_instances):
+        for node_instance in node_instances:
+            self.sm.put_node_instance(node_instance)
+
+    def _create_deployment_nodes(self, blueprint_id, deployment_id, plan,
+                                 node_ids=None):
+        nodes = self.prepare_deployment_nodes_for_storage(
+            blueprint_id,
+            deployment_id,
+            plan,
+            node_ids)
+        self._store_deployment_nodes(nodes)
+
+    def _create_deployment_node_instances(self,
+                                          deployment_id,
+                                          dsl_node_instances):
+        node_instances = self._prepare_deployment_node_instances_for_storage(
+            deployment_id,
+            dsl_node_instances)
+
+        self._store_deployment_node_instances(node_instances)
+
+    def _store_deployment(self, deployment_id, deployment):
+        self.sm.put_deployment(deployment_id, deployment)
+
     def create_deployment(self, blueprint_id, deployment_id, inputs=None):
+
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         try:
@@ -571,26 +688,21 @@ class BlueprintsManager(object):
         except parser_exceptions.UnknownInputError, e:
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
 
-        now = str(datetime.now())
-        new_deployment = models.Deployment(
-            id=deployment_id,
-            blueprint_id=blueprint_id, created_at=now, updated_at=now,
-            workflows=deployment_plan['workflows'],
-            inputs=deployment_plan['inputs'],
-            policy_types=deployment_plan['policy_types'],
-            policy_triggers=deployment_plan['policy_triggers'],
-            groups=deployment_plan['groups'],
-            scaling_groups=deployment_plan['scaling_groups'],
-            outputs=deployment_plan['outputs'])
+        new_deployment = self.prepare_deployment_for_storage(
+            blueprint_id,
+            deployment_id,
+            deployment_plan,
+            inputs=inputs)
+        self._store_deployment(deployment_id, new_deployment)
 
-        self.sm.put_deployment(deployment_id, new_deployment)
         self._create_deployment_nodes(blueprint_id,
                                       deployment_id,
                                       deployment_plan)
 
-        node_instances = deployment_plan['node_instances']
-        self._create_deployment_node_instances(deployment_id,
-                                               node_instances)
+        self._create_deployment_node_instances(
+            deployment_id,
+            dsl_node_instances=deployment_plan['node_instances'])
+
         self._create_deployment_environment(new_deployment, deployment_plan)
         return new_deployment
 
@@ -829,27 +941,6 @@ class BlueprintsManager(object):
         return self.sm.get_node_instances(filters=deplyment_id_filter,
                                           include=['id'])
 
-    def _create_deployment_node_instances(self,
-                                          deployment_id,
-                                          dsl_node_instances):
-        for node_instance in dsl_node_instances:
-            instance_id = node_instance['id']
-            node_id = node_instance['node_id']
-            scaling_groups = node_instance.get('scaling_groups', [])
-            relationships = node_instance.get('relationships', [])
-            host_id = node_instance.get('host_id')
-            instance = models.DeploymentNodeInstance(
-                id=instance_id,
-                node_id=node_id,
-                host_id=host_id,
-                relationships=relationships,
-                deployment_id=deployment_id,
-                state='uninitialized',
-                runtime_properties={},
-                version=None,
-                scaling_groups=scaling_groups)
-            self.sm.put_node_instance(instance)
-
     def evaluate_deployment_outputs(self, deployment_id):
         deployment = self.get_deployment(
             deployment_id, include=['outputs'])
@@ -897,44 +988,6 @@ class BlueprintsManager(object):
                 get_node_method=get_node)
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.FunctionsEvaluationError(str(e))
-
-    def _create_deployment_nodes(self, blueprint_id, deployment_id, plan,
-                                 node_ids=None):
-        """
-        create deployment nodes in storage based on a provided blueprint
-        :param blueprint_id: blueprint id
-        :param deployment_id: deployment id
-        :param plan: blueprint plan
-        :param node_ids: optionally create only nodes with these ids
-        """
-        node_ids = node_ids or []
-        if not isinstance(node_ids, list):
-            node_ids = [node_ids]
-
-        raw_nodes = plan['nodes']
-        if node_ids:
-            raw_nodes = \
-                [node for node in raw_nodes if node['id'] in node_ids]
-        for raw_node in raw_nodes:
-            scalable = raw_node['capabilities']['scalable']['properties']
-            self.sm.put_node(models.DeploymentNode(
-                id=raw_node['name'],
-                deployment_id=deployment_id,
-                blueprint_id=blueprint_id,
-                type=raw_node['type'],
-                type_hierarchy=raw_node['type_hierarchy'],
-                number_of_instances=scalable['current_instances'],
-                planned_number_of_instances=scalable['current_instances'],
-                deploy_number_of_instances=scalable['default_instances'],
-                min_number_of_instances=scalable['min_instances'],
-                max_number_of_instances=scalable['max_instances'],
-                host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
-                properties=raw_node['properties'],
-                operations=raw_node['operations'],
-                plugins=raw_node['plugins'],
-                plugins_to_install=raw_node.get('plugins_to_install'),
-                relationships=self._prepare_node_relationships(raw_node)
-            ))
 
     @staticmethod
     def _merge_and_validate_execution_parameters(
@@ -1143,40 +1196,12 @@ class BlueprintsManager(object):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
 
-    @staticmethod
-    def _extract_parser_context(context):
-        context = context or {}
-        cloudify_section = context.get(constants.CLOUDIFY, {})
-        return {
-            'resolver_section': cloudify_section.get(
-                constants.IMPORT_RESOLVER_KEY),
-            'validate_definitions_version': cloudify_section.get(
-                constants.VALIDATE_DEFINITIONS_VERSION, True)
-        }
-
-    def _get_parser_context(self):
-        if not hasattr(current_app, 'parser_context'):
-            self._update_parser_context_in_app(
-                self.sm.get_provider_context().context)
-        return current_app.parser_context
-
-    def _update_parser_context_in_app(self, context):
-        raw_parser_context = self._extract_parser_context(context)
-        resolver = dsl_parser_utils.create_import_resolver(
-            raw_parser_context['resolver_section'])
-        validate_definitions_version = raw_parser_context[
-            'validate_definitions_version']
-        current_app.parser_context = {
-            'resolver': resolver,
-            'validate_version': validate_definitions_version
-        }
-
     def update_provider_context(self, update, provider_context):
         if update:
             self.sm.update_provider_context(provider_context)
         else:
             self.sm.put_provider_context(provider_context)
-        self._update_parser_context_in_app(provider_context.context)
+        app_context.update_parser_context(provider_context.context)
 
 
 # What we need to access this manager in Flask

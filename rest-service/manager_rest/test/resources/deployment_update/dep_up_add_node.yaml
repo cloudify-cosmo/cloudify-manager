@@ -7,10 +7,16 @@ description: >
   Micro web sites hosting.
 
 node_templates:
-  server:
+  site0:
     type: cloudify.nodes.Compute
 
-  site_1: # added node
+  site1:
+    type: cloudify.nodes.Compute
+    relationships:
+    - type: cloudify.relationships.contained_in
+      target: site0
+
+  site2: # added node
     type: cloudify.nodes.WebServer
     properties:
       port: 8081
@@ -19,11 +25,9 @@ node_templates:
           create: scripts/increment.sh # resource already exists
           configure: scripts/increment.sh
           start: scripts/increment.sh
-        cloudify.interfaces.monitoring:
-#          start: scripts/increment.sh
     relationships:
       - type: cloudify.relationships.contained_in # added relationship
-        target: server
+        target: site1
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
             preconfigure: scripts/increment.sh

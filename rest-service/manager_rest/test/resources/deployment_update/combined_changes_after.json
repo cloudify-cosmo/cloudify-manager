@@ -1,0 +1,5644 @@
+{
+  "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+  "id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+  "inputs": {}, 
+  "nodes": {
+    "node0": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node0", 
+      "id": "node0", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "script", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "script", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }, 
+    "node10": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node10", 
+      "id": "node10", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [
+        {
+          "properties": {
+            "connection_type": "all_to_all"
+          }, 
+          "source_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "target_id": "node2", 
+          "target_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "type": "cloudify.relationships.connected_to", 
+          "type_hierarchy": [
+            "cloudify.relationships.depends_on", 
+            "cloudify.relationships.connected_to"
+          ]
+        }
+      ], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }, 
+    "node11": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node11", 
+      "id": "node11", 
+      "number_of_instances": 1, 
+      "operations": {
+        "added_operation": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "script_path": "scripts/increment.sh"
+          }, 
+          "max_retries": null, 
+          "operation": "script_runner.tasks.run", 
+          "plugin": "script", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "intact_operation": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "script_path": "scripts/increment.sh"
+          }, 
+          "max_retries": null, 
+          "operation": "script_runner.tasks.run", 
+          "plugin": "script", 
+          "retry_interval": null
+        }, 
+        "interface1.added_operation": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "script_path": "scripts/increment.sh"
+          }, 
+          "max_retries": null, 
+          "operation": "script_runner.tasks.run", 
+          "plugin": "script", 
+          "retry_interval": null
+        }, 
+        "interface1.intact_operation": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "script_path": "scripts/increment.sh"
+          }, 
+          "max_retries": null, 
+          "operation": "script_runner.tasks.run", 
+          "plugin": "script", 
+          "retry_interval": null
+        }, 
+        "interface1.modified_operation": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "script_path": "scripts/stub_script.sh"
+          }, 
+          "max_retries": null, 
+          "operation": "script_runner.tasks.run", 
+          "plugin": "script", 
+          "retry_interval": null
+        }, 
+        "modified_operation": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "script_path": "scripts/stub_script.sh"
+          }, 
+          "max_retries": null, 
+          "operation": "script_runner.tasks.run", 
+          "plugin": "script", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "script", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "script", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [], 
+      "type": "operations_node", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute", 
+        "operations_node"
+      ]
+    }, 
+    "node12": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node12", 
+      "id": "node12", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "script", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "script", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [
+        {
+          "properties": {
+            "connection_type": "all_to_all"
+          }, 
+          "source_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "intact_operation": {
+              "executor": "host_agent", 
+              "has_intrinsic_functions": false, 
+              "inputs": {
+                "script_path": "scripts/increment.sh"
+              }, 
+              "max_retries": null, 
+              "operation": "script_runner.tasks.run", 
+              "plugin": "script", 
+              "retry_interval": null
+            }, 
+            "interface_for_intact_and_removed.intact_operation": {
+              "executor": "host_agent", 
+              "has_intrinsic_functions": false, 
+              "inputs": {
+                "script_path": "scripts/increment.sh"
+              }, 
+              "max_retries": null, 
+              "operation": "script_runner.tasks.run", 
+              "plugin": "script", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "target_id": "node0", 
+          "target_operations": {
+            "added_operation": {
+              "executor": "host_agent", 
+              "has_intrinsic_functions": false, 
+              "inputs": {
+                "script_path": "scripts/increment.sh"
+              }, 
+              "max_retries": null, 
+              "operation": "script_runner.tasks.run", 
+              "plugin": "script", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "interface_for_modified_and_added.added_operation": {
+              "executor": "host_agent", 
+              "has_intrinsic_functions": false, 
+              "inputs": {
+                "script_path": "scripts/increment.sh"
+              }, 
+              "max_retries": null, 
+              "operation": "script_runner.tasks.run", 
+              "plugin": "script", 
+              "retry_interval": null
+            }, 
+            "interface_for_modified_and_added.modified_operation": {
+              "executor": "host_agent", 
+              "has_intrinsic_functions": false, 
+              "inputs": {
+                "script_path": "scripts/stub_script.sh"
+              }, 
+              "max_retries": null, 
+              "operation": "script_runner.tasks.run", 
+              "plugin": "script", 
+              "retry_interval": null
+            }, 
+            "modified_operation": {
+              "executor": "host_agent", 
+              "has_intrinsic_functions": false, 
+              "inputs": {
+                "script_path": "scripts/stub_script.sh"
+              }, 
+              "max_retries": null, 
+              "operation": "script_runner.tasks.run", 
+              "plugin": "script", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "type": "operations_relationship", 
+          "type_hierarchy": [
+            "cloudify.relationships.depends_on", 
+            "cloudify.relationships.connected_to", 
+            "operations_relationship"
+          ]
+        }
+      ], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }, 
+    "node2": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node2", 
+      "id": "node2", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }, 
+    "node3": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": null, 
+      "id": "node3", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [], 
+      "plugins_to_install": null, 
+      "properties": {}, 
+      "relationships": [], 
+      "type": "cloudify.nodes.Root", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root"
+      ]
+    }, 
+    "node4": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": null, 
+      "id": "node4", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [], 
+      "plugins_to_install": null, 
+      "properties": {
+        "added_prop": "added_value", 
+        "intact_prop": "value", 
+        "modified_prop": "value_after"
+      }, 
+      "relationships": [], 
+      "type": "properties_node", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "properties_node"
+      ]
+    }, 
+    "node5": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node5", 
+      "id": "node5", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [
+        {
+          "properties": {
+            "connection_type": "all_to_all"
+          }, 
+          "source_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "target_id": "node0", 
+          "target_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "type": "cloudify.relationships.contained_in", 
+          "type_hierarchy": [
+            "cloudify.relationships.depends_on", 
+            "cloudify.relationships.contained_in"
+          ]
+        }
+      ], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }, 
+    "node6": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node6", 
+      "id": "node6", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }, 
+    "node7": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node7", 
+      "id": "node7", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [
+        {
+          "properties": {
+            "connection_type": "all_to_all"
+          }, 
+          "source_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "target_id": "node0", 
+          "target_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "type": "cloudify.relationships.contained_in", 
+          "type_hierarchy": [
+            "cloudify.relationships.depends_on", 
+            "cloudify.relationships.contained_in"
+          ]
+        }
+      ], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }, 
+    "node8": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node8", 
+      "id": "node8", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [
+        {
+          "properties": {
+            "connection_type": "all_to_all"
+          }, 
+          "source_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "target_id": "node0", 
+          "target_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "type": "cloudify.relationships.connected_to", 
+          "type_hierarchy": [
+            "cloudify.relationships.depends_on", 
+            "cloudify.relationships.connected_to"
+          ]
+        }
+      ], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }, 
+    "node9": {
+      "blueprint_id": "d6e54735-6f5a-4568-89f6-47cfb420203e", 
+      "deploy_number_of_instances": 1, 
+      "deployment_id": "73eb36fb-cb2a-4367-b04f-0f79ca1bc9c6", 
+      "host_id": "node9", 
+      "id": "node9", 
+      "number_of_instances": 1, 
+      "operations": {
+        "cloudify.interfaces.cloudify_agent.configure": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.configure", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.create", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.delete": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.delete", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.start": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.start", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.cloudify_agent.validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.host.get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.configure": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.create": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.delete": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.lifecycle.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.start": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.stop": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.monitoring_agent.uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "cloudify.interfaces.validation.deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "create_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "install_agent_timeout": 300
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.create_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "creation": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "deletion": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "get_state": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "install_plugins": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.install_plugins", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.installer.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "restart_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.restart", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "stop_amqp": {
+          "executor": "host_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.stop", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }, 
+        "uninstall": {
+          "executor": null, 
+          "has_intrinsic_functions": false, 
+          "inputs": {}, 
+          "max_retries": null, 
+          "operation": "", 
+          "plugin": "", 
+          "retry_interval": null
+        }, 
+        "validate_amqp": {
+          "executor": "central_deployment_agent", 
+          "has_intrinsic_functions": false, 
+          "inputs": {
+            "validate_agent_timeout": 20
+          }, 
+          "max_retries": null, 
+          "operation": "cloudify_agent.operations.validate_agent_amqp", 
+          "plugin": "agent", 
+          "retry_interval": null
+        }
+      }, 
+      "planned_number_of_instances": 1, 
+      "plugins": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "central_deployment_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }, 
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "plugins_to_install": [
+        {
+          "distribution": null, 
+          "distribution_release": null, 
+          "distribution_version": null, 
+          "executor": "host_agent", 
+          "install": false, 
+          "install_arguments": null, 
+          "name": "agent", 
+          "package_name": null, 
+          "package_version": null, 
+          "source": null, 
+          "supported_platform": null
+        }
+      ], 
+      "properties": {
+        "agent_config": {
+          "install_method": "remote", 
+          "port": 22
+        }, 
+        "cloudify_agent": {}, 
+        "install_agent": "", 
+        "ip": "", 
+        "os_family": "linux"
+      }, 
+      "relationships": [
+        {
+          "properties": {
+            "connection_type": "all_to_all"
+          }, 
+          "source_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "target_id": "node2", 
+          "target_operations": {
+            "cloudify.interfaces.relationship_lifecycle.establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "cloudify.interfaces.relationship_lifecycle.unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "establish": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "postconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "preconfigure": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }, 
+            "unlink": {
+              "executor": null, 
+              "has_intrinsic_functions": false, 
+              "inputs": {}, 
+              "max_retries": null, 
+              "operation": "", 
+              "plugin": "", 
+              "retry_interval": null
+            }
+          }, 
+          "type": "cloudify.relationships.contained_in", 
+          "type_hierarchy": [
+            "cloudify.relationships.depends_on", 
+            "cloudify.relationships.contained_in"
+          ]
+        }
+      ], 
+      "type": "cloudify.nodes.Compute", 
+      "type_hierarchy": [
+        "cloudify.nodes.Root", 
+        "cloudify.nodes.Compute"
+      ]
+    }
+  }, 
+  "outputs": {
+    "added_output": {
+      "value": "value"
+    }, 
+    "intact_output": {
+      "value": "value"
+    }, 
+    "modified_output": {
+      "value": "value_after"
+    }
+  }, 
+  "workflows": {
+    "added_workflow": {
+      "operation": "mapping", 
+      "parameters": {}, 
+      "plugin": "plugin_for_workflows"
+    }, 
+    "execute_operation": {
+      "operation": "cloudify.plugins.workflows.execute_operation", 
+      "parameters": {
+        "allow_kwargs_override": {
+          "default": null
+        }, 
+        "node_ids": {
+          "default": []
+        }, 
+        "node_instance_ids": {
+          "default": []
+        }, 
+        "operation": {}, 
+        "operation_kwargs": {
+          "default": {}
+        }, 
+        "run_by_dependency_order": {
+          "default": false
+        }, 
+        "type_names": {
+          "default": []
+        }
+      }, 
+      "plugin": "default_workflows"
+    }, 
+    "heal": {
+      "operation": "cloudify.plugins.workflows.auto_heal_reinstall_node_subgraph", 
+      "parameters": {
+        "diagnose_value": {
+          "default": "Not provided", 
+          "description": "Diagnosed reason of failure"
+        }, 
+        "node_instance_id": {
+          "description": "Which node instance has failed"
+        }
+      }, 
+      "plugin": "default_workflows"
+    }, 
+    "install": {
+      "operation": "cloudify.plugins.workflows.install", 
+      "parameters": {}, 
+      "plugin": "default_workflows"
+    }, 
+    "install_new_agents": {
+      "operation": "cloudify.plugins.workflows.install_new_agents", 
+      "parameters": {
+        "install": {
+          "default": true
+        }, 
+        "install_agent_timeout": {
+          "default": 300
+        }, 
+        "node_ids": {
+          "default": []
+        }, 
+        "node_instance_ids": {
+          "default": []
+        }, 
+        "validate": {
+          "default": true
+        }
+      }, 
+      "plugin": "default_workflows"
+    }, 
+    "intact_workflow": {
+      "operation": "mapping", 
+      "parameters": {}, 
+      "plugin": "plugin_for_workflows"
+    }, 
+    "modified_workflow": {
+      "operation": "mapping_after", 
+      "parameters": {}, 
+      "plugin": "plugin_for_workflows"
+    }, 
+    "scale": {
+      "operation": "cloudify.plugins.workflows.scale", 
+      "parameters": {
+        "delta": {
+          "default": 1, 
+          "description": "How many nodes should be added/removed. A positive number denotes increase of instances. A negative number denotes decrease of instances.\n"
+        }, 
+        "node_id": {
+          "description": "Which node (not node instance) to scale"
+        }, 
+        "scale_compute": {
+          "default": true, 
+          "description": "If node is contained (transitively) within a compute node and this property is 'true', operate on compute node instead of 'node_id'\n"
+        }
+      }, 
+      "plugin": "default_workflows"
+    }, 
+    "uninstall": {
+      "operation": "cloudify.plugins.workflows.uninstall", 
+      "parameters": {}, 
+      "plugin": "default_workflows"
+    }, 
+    "update": {
+      "operation": "cloudify.plugins.workflows.update", 
+      "parameters": {
+        "added_instance_ids": {
+          "default": []
+        }, 
+        "added_target_instances_ids": {
+          "default": []
+        }, 
+        "extend_target_instance_ids": {
+          "default": []
+        }, 
+        "extended_instance_ids": {
+          "default": []
+        }, 
+        "modified_entity_ids": {
+          "default": []
+        }, 
+        "reduce_target_instance_ids": {
+          "default": []
+        }, 
+        "reduced_instance_ids": {
+          "default": []
+        }, 
+        "remove_target_instance_ids": {
+          "default": []
+        }, 
+        "removed_instance_ids": {
+          "default": []
+        }, 
+        "update_id": {
+          "default": ""
+        }
+      }, 
+      "plugin": "default_workflows"
+    }
+  }
+}

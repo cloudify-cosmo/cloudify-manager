@@ -66,6 +66,7 @@ class Deployment(object):
 
     resource_fields = {
         'id': fields.String,
+        'description': fields.String,
         'created_at': fields.String,
         'updated_at': fields.String,
         'blueprint_id': fields.String,
@@ -89,6 +90,7 @@ class Deployment(object):
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
         self.outputs = kwargs['outputs']
+        self.description = kwargs.get('description')
 
     @staticmethod
     def _responsify_workflows_field(deployment_workflows):

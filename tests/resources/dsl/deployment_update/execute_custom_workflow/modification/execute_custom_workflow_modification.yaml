@@ -1,0 +1,39 @@
+tosca_definitions_version: 'cloudify_dsl_1_3'
+
+description: >
+  Micro web sites hosting.
+
+imports:
+  - cloudify/types/types.yaml
+
+node_templates:
+  site1:
+    type: cloudify.nodes.Compute
+    interfaces:
+      custom_lifecycle:
+        custom_operation: push_into_props.py
+
+workflows:
+  custom_workflow:
+    mapping: custom_workflow.py
+    parameters:
+      update_id:
+        default: ''
+      added_instance_ids:
+        default: []
+      added_target_instances_ids:
+        default: []
+      removed_instance_ids:
+        default: []
+      remove_target_instance_ids:
+        default: []
+      modified_entity_ids:
+        default: []
+      extended_instance_ids:
+        default: []
+      extend_target_instance_ids:
+        default: []
+      reduced_instance_ids:
+        default: []
+      reduce_target_instance_ids:
+        default: []

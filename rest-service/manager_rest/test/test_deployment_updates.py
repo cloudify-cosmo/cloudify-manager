@@ -52,7 +52,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         deployment_update_id = self._stage(deployment_id).id
         step = {'operation': 'illegal_operation',
                 'entity_type': 'node',
-                'entity_id': 'site_1'}
+                'entity_id': 'site1'}
         self.assertRaisesRegexp(CloudifyClientError,
                                 'illegal modification operation',
                                 self.client.deployment_updates.step,
@@ -62,22 +62,91 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
     def test_step_non_existent_entity_id(self):
         deployment_id = 'dep'
         deployment_update_id = self._stage(deployment_id).id
-        step = {'operation': 'add',
-                'entity_type': 'node',
-                'entity_id': 'nodes:non_existent_id'}
-        self.assertRaisesRegexp(CloudifyClientError,
-                                "entity id {} doesn't exist"
-                                .format(step['entity_id']),
-                                self.client.deployment_updates.step,
-                                deployment_update_id,
-                                **step)
+
+        non_existing_entity_id_steps = [
+            # nodes
+            {'operation': 'add',
+             'entity_type': 'node',
+             'entity_id': 'nodes:non_existent_id'},
+            {'operation': 'remove',
+             'entity_type': 'node',
+             'entity_id': 'nodes:non_existent_id'},
+
+            # relationships
+            {'operation': 'add',
+             'entity_type': 'relationship',
+             'entity_id': 'nodes:site1:relationships:[1]'},
+            {'operation': 'remove',
+             'entity_type': 'relationship',
+             'entity_id': 'nodes:site1:relationships:[1]'},
+
+            # relationship operations
+            {'operation': 'add',
+             'entity_type': 'operation',
+             'entity_id': 'nodes:site1:relationships:[1]:source_operations:'
+                          'cloudify.interfaces.relationship_lifecycle'
+                          '.establish'},
+            {'operation': 'remove',
+             'entity_type': 'operation',
+             'entity_id': 'nodes:site1:relationships:[1]:source_operations:'
+                          'cloudify.interfaces.relationship_lifecycle'
+                          '.establish'},
+            {'operation': 'modify',
+             'entity_type': 'operation',
+             'entity_id': 'nodes:site1:relationships:[1]:source_operations:'
+                          'cloudify.interfaces.relationship_lifecycle'
+                          '.establish'},
+
+            # node operations
+            {'operation': 'add',
+             'entity_type': 'operation',
+             'entity_id': 'nodes:site1:operations:'
+                          'cloudify.interfaces.lifecycle.create1'},
+            {'operation': 'remove',
+             'entity_type': 'operation',
+             'entity_id': 'nodes:site1:operations:'
+                          'cloudify.interfaces.lifecycle.create1'},
+            {'operation': 'modify',
+             'entity_type': 'operation',
+             'entity_id': 'nodes:site1:operations:'
+                          'cloudify.interfaces.lifecycle.create1'},
+
+            # properties
+            {'operation': 'add',
+             'entity_type': 'property',
+             'entity_id': 'nodes:site1:properties:ip'},
+            {'operation': 'remove',
+             'entity_type': 'operation',
+             'entity_id': 'nodes:site1:properties:ip'},
+            {'operation': 'modify',
+             'entity_type': 'operation',
+             'entity_id': 'nodes:site1:properties:ip'},
+
+        ]
+
+        for step in non_existing_entity_id_steps:
+            try:
+                self.client.deployment_updates.step(deployment_update_id,
+                                                    **step)
+            except CloudifyClientError as e:
+                self.assertEqual(e.status_code, 400)
+                self.assertEqual(e.error_code,
+                                 'unknown_modification_stage_error')
+                self.assertIn(
+                        "Entity type {0} with entity id {1}:"
+                        .format(step['entity_type'], step['entity_id']),
+                        e.message)
+                break
+            self.fail("entity id {0} of entity type {1} shouldn't be valid"
+                      .format(step['entity_id'], step['entity_type']))
 
     def test_step_non_existent_entity_type(self):
         deployment_id = 'dep'
         deployment_update_id = self._stage(deployment_id).id
         step = {'operation': 'add',
                 'entity_type': 'non_existent_type',
-                'entity_id': 'site_1'}
+                'entity_id': 'site1'}
+
         self.assertRaisesRegexp(CloudifyClientError,
                                 'illegal modification entity type',
                                 self.client.deployment_updates.step,
@@ -89,7 +158,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         deployment_update_id = self._stage(deployment_id).id
         step = {'operation': 'add',
                 'entity_type': 'node',
-                'entity_id': 'nodes:site_1'}
+                'entity_id': 'nodes:site1'}
         self.client.deployment_updates.step(deployment_update_id,
                                             **step)
         dep_update = \
@@ -133,7 +202,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
             return \
                 self.client.deployment_updates.\
-                stage_archive(deployment_id,
+                _stage_archive(deployment_id,
                               archive_url,
                               'dep_up_add_node.yaml')
         finally:
