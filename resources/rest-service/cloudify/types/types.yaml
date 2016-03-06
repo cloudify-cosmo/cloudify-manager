@@ -394,6 +394,14 @@ workflows:
 
   install: default_workflows.cloudify.plugins.workflows.install
 
+  update:
+    mapping: default_workflows.cloudify.plugins.workflows.update
+    parameters:
+      added_instance_ids:
+        default: []
+      related_instance_ids:
+        default: []
+
   uninstall: default_workflows.cloudify.plugins.workflows.uninstall
 
   execute_operation:

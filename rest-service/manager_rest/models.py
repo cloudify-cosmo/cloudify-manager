@@ -14,19 +14,22 @@
 #  * limitations under the License.
 
 import json
+import uuid
+import jsonpickle
+
+from manager_exceptions import UnknownModificationStageError
 
 
 class SerializableObject(object):
 
-    def to_dict(self):
-        # attr_and_values = ((attr, getattr(self, attr)) for attr in dir(self)
-        #                    if not attr.startswith("__"))
-        # return {attr: value for attr, value in
-        #         attr_and_values if not callable(value)}
+    def __getstate__(self):
         return {field: getattr(self, field) for field in self.fields}
 
+    def to_dict(self):
+        return json.loads(jsonpickle.encode(self, unpicklable=False))
+
     def to_json(self):
-        return json.dumps(self.to_dict())
+        return jsonpickle.encode(self, unpicklable=False)
 
 
 class BlueprintState(SerializableObject):
@@ -81,6 +84,89 @@ class Deployment(SerializableObject):
         self.groups = kwargs['groups']
         self.outputs = kwargs['outputs']
         self.permalink = None  # TODO: implement
+
+
+class DeploymentUpdateStep(SerializableObject):
+
+    fields = {'id', 'operation', 'entity_type', 'entity_id'}
+
+    OPERATIONS = {'add', 'remove'}
+    TYPES = {'node', 'resource'}
+
+    def __init__(self, operation, entity_type, entity_id,
+                 id=str(uuid.uuid4())):
+
+        if entity_type not in DeploymentUpdateStep.TYPES:
+            raise UnknownModificationStageError(
+                'illegal modification entity type')
+
+        if operation not in DeploymentUpdateStep.OPERATIONS:
+            raise UnknownModificationStageError(
+                'illegal modification operation')
+
+        self.id = str(id)
+        self.operation = operation
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+
+
+class DeploymentUpdate(SerializableObject):
+
+    fields = {'id', 'deployment_id', 'steps', 'state', 'blueprint'}
+
+    COMMITTED = 'committed'
+    COMMITTING = 'committing'
+
+    # states = {'staged', 'committed', 'reverted', 'committing', 'failed'}
+
+    def __init__(self, deployment_id, blueprint, state='staged', id=None,
+                 steps=[]):
+        self.id = id or '{}-{}'.format(deployment_id, uuid.uuid4())
+        self.deployment_id = deployment_id
+        self.blueprint = blueprint
+        self.state = state
+        self.steps = [DeploymentUpdateStep(**step) for step in steps]
+
+    def step(self, operation, entity, content):
+        step = DeploymentUpdateStep(operation, entity, content)
+        self.steps.append(step)
+
+    def add(self, entity, content):
+        self.step(operation='add', entity=entity, content=content)
+
+    def remove(self, entity, content):
+        self.step(operation='remove', entity=entity, content=content)
+
+    def _sort_steps(self):
+        # TODO: sort order of steps to execute modification properly
+        raise NotImplementedError()
+
+    def _validate(self):
+        # TODO: validate modification
+        raise NotImplementedError()
+
+    def _update_storage(self):
+        # TODO: update the data storage with this modification based on steps
+        raise NotImplementedError()
+
+    def commit(self):
+        allowed_states = {'staged', 'reverted', 'failed'}
+        if self.state not in allowed_states:
+            raise RuntimeError('commit is not allowed when {}'
+                               .format(self.state))
+        self._sort_steps()
+        self._validate()
+        self.state = 'committing'
+        is_updated = self._update_storage()
+        self.state = 'committed' if is_updated else 'failed'
+
+    def revert(self):
+        allowed_states = {'committed'}
+        if self.state not in allowed_states:
+            raise RuntimeError('revert is not allowed when {}'
+                               .format(self.state))
+        # do some rollback stuff
+        self.state = 'reverted'
 
 
 class DeploymentModification(SerializableObject):

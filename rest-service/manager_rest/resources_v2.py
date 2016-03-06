@@ -28,6 +28,8 @@ from flask.ext.restful import marshal
 from flask_securest.rest_security import SecuredResource
 
 from manager_rest import resources
+from manager_rest.deployment_updates_manager import \
+    get_deployment_updates_manager
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_and_convert_bool,
@@ -42,6 +44,8 @@ from manager_rest import files
 from manager_rest.storage_manager import get_storage_manager
 from manager_rest.storage_manager import ListResult
 from manager_rest.blueprints_manager import get_blueprints_manager
+
+
 from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 
@@ -546,6 +550,76 @@ class Deployments(resources.Deployments):
             include=_include, filters=filters, pagination=pagination,
             sort=sort)
         return deployments
+
+
+class DeploymentUpdateSteps(SecuredResource):
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdateStep)
+    def post(self, update_id):
+        verify_json_content_type()
+        request_json = request.json
+
+        manager = get_deployment_updates_manager()
+        update_step = \
+            manager.create_deployment_update_step(
+                update_id,
+                request_json.get('operation'),
+                request_json.get('entity_type'),
+                request_json.get('entity_id')
+            )
+        return update_step
+
+
+class DeploymentUpdates(SecuredResource):
+    @swagger.operation(
+        responseClass='List[{0}]'.format(
+            responses_v2.DeploymentUpdate.__name__),
+        nickname="listDeploymentUpdates",
+        notes='Returns a list of deployment updates',
+        parameters=_create_filter_params_list_description(
+            models.DeploymentUpdate.fields,
+            'deployment updates'
+        )
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdate)
+    @create_filters(models.DeploymentUpdate.fields)
+    @paginate
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None,
+            sort=None, **kwargs):
+        """
+        List deployment modification stages
+        """
+        deployment_updates = \
+            get_deployment_updates_manager().deployment_updates_list(
+                include=None, filters=None, pagination=None,
+                sort=None, **kwargs)
+        return deployment_updates
+
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdate)
+    def post(self, **kwargs):
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('deployment_id', request_json)
+        deployment_id = request_json['deployment_id']
+        verify_parameter_in_request_body('blueprint',
+                                         request_json,
+                                         param_type=dict,
+                                         optional=True)
+        blueprint = request_json.get('blueprint', {})
+        update = get_deployment_updates_manager(). \
+            stage_deployment_update(deployment_id, blueprint)
+        return update, 201
+
+
+class DeploymentUpdateCommit(SecuredResource):
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdate)
+    def post(self, update_id):
+        manager = get_deployment_updates_manager()
+        return manager.commit_deployment_update(update_id)
 
 
 class DeploymentModifications(resources.DeploymentModifications):

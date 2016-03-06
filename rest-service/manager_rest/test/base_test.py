@@ -184,6 +184,7 @@ class BaseServerTestCase(unittest.TestCase):
         if CLIENT_API_VERSION != 'v1':
             client.plugins.api = mock_http_client
             client.snapshots.api = mock_http_client
+            client.deployment_updates.api = mock_http_client
 
         return client
 
