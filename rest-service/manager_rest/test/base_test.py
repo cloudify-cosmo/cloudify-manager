@@ -190,6 +190,8 @@ class BaseServerTestCase(unittest.TestCase):
             # only exists in v2.1 and above
             if CLIENT_API_VERSION != 'v2':
                 client.maintenance_mode.api = mock_http_client
+                client.deployment_updates.api = mock_http_client
+
         return client
 
     def setUp(self):

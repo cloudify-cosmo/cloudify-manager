@@ -2,8 +2,8 @@ https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.3-build.zip
+https://github.com/cloudify-cosmo/cloudify-agent/archive/3.4m3-build.zip
 
 pyzmq==15.1.0
 
@@ -14,4 +14,4 @@ pyzmq==15.1.0
 # test dependencies
 python-dateutil
 wagon
-elasticsearch
+elasticsearch==1.6.0

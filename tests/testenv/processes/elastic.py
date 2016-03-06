@@ -105,6 +105,7 @@ class ElasticSearchProcess(object):
         command = 'elasticsearch'
         logger.info('Starting elasticsearch service with command {0}'
                     .format(command))
+        self._add_append_script()
         self._process = subprocess.Popen(shlex.split(command))
         self._verify_service_started()
         self._verify_service_responsiveness()
@@ -179,3 +180,37 @@ class ElasticSearchProcess(object):
             raise RuntimeError(
                 'Elasticsearch create schema exited with {0}'.format(status))
         logger.info("Elasticsearch schema created successfully")
+
+    @staticmethod
+    def _add_append_script():
+        """
+        write the 'append to list' ES script to a file and store it at
+        ES scripts path (<ES>/config/scripts)
+        """
+
+        # get elasticsearch base dir and resolve script file destination
+        es_path = os.path.dirname(
+            os.path.dirname(
+                subprocess.check_output('which elasticsearch',
+                                        shell=True).rstrip('\r\n')))
+        es_scripts_path = os.path.join(es_path, 'config/scripts')
+        script_path = os.path.join(es_scripts_path, 'append.groovy')
+
+        if os.path.exists(script_path):
+            return
+
+        use_sudo = os.environ.get('CI') == 'true'
+        script = ('if (ctx._source.containsKey(key))'
+                  ' {ctx._source[key] += value;}'
+                  ' else {ctx._source[key] = [value]}').replace('"', r'\"')
+
+        if not os.path.exists(es_scripts_path):
+            os.system('{0} mkdir -p {1}'.format(
+                'sudo' if use_sudo else '',
+                es_scripts_path))
+
+        os.system('echo "{0}" | {1} tee {2}'.format(
+            script,
+            'sudo' if use_sudo else '',
+            script_path
+        ))

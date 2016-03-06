@@ -14,14 +14,26 @@
 #  * limitations under the License.
 
 import json
+import uuid
+
+import jsonpickle
+from deployment_update.constants import (ENTITY_TYPES,
+                                         OPERATION_TYPE,
+                                         STATE)
+
+from manager_exceptions import UnknownModificationStageError
 
 
 class SerializableObject(object):
-    def to_dict(self):
+
+    def __getstate__(self):
         return {field: getattr(self, field) for field in self.fields}
 
+    def to_dict(self):
+        return json.loads(jsonpickle.encode(self, unpicklable=False))
+
     def to_json(self):
-        return json.dumps(self.to_dict())
+        return jsonpickle.encode(self, unpicklable=False)
 
 
 class BlueprintState(SerializableObject):
@@ -73,6 +85,96 @@ class Deployment(SerializableObject):
         self.groups = kwargs['groups']
         self.outputs = kwargs['outputs']
         self.permalink = None  # TODO: implement
+
+
+class DeploymentUpdateStep(SerializableObject):
+
+    fields = {'id', 'operation', 'entity_type', 'entity_id'}
+
+    def __init__(self, operation, entity_type, entity_id,
+                 id=str(uuid.uuid4())):
+
+        if entity_type not in ENTITY_TYPES:
+            raise UnknownModificationStageError(
+                'illegal modification entity type')
+
+        if operation not in OPERATION_TYPE:
+            raise UnknownModificationStageError(
+                'illegal modification operation')
+
+        self.id = str(id)
+        self.operation = operation
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+
+
+class DeploymentUpdate(SerializableObject):
+
+    fields = {'id', 'deployment_id', 'steps', 'state', 'blueprint',
+              'deployment_update_nodes', 'deployment_update_node_instances',
+              'modified_entity_ids'}
+
+    # states = {'staged', 'committed', 'reverted', 'committing', 'failed'}
+
+    def __init__(self,
+                 deployment_id,
+                 blueprint,
+                 state='staged',
+                 id=None,
+                 steps=[],
+                 deployment_update_nodes=[],
+                 deployment_update_node_instances=[],
+                 modified_entity_ids=[]):
+        self.id = id or '{0}-{1}'.format(deployment_id, uuid.uuid4())
+        self.deployment_id = deployment_id
+        self.blueprint = blueprint
+        self.state = state
+        self.steps = [DeploymentUpdateStep(**step) for step in steps]
+        self.deployment_update_nodes = deployment_update_nodes
+        self.deployment_update_node_instances = \
+            deployment_update_node_instances
+        self.modified_entity_ids = modified_entity_ids
+
+    def step(self, operation, entity, content):
+        step = DeploymentUpdateStep(operation, entity, content)
+        self.steps.append(step)
+
+    def add(self, entity, content):
+        self.step(operation='add', entity=entity, content=content)
+
+    def remove(self, entity, content):
+        self.step(operation='remove', entity=entity, content=content)
+
+    def _sort_steps(self):
+        # TODO: sort order of steps to execute modification properly
+        raise NotImplementedError()
+
+    def _validate(self):
+        # TODO: validate modification
+        raise NotImplementedError()
+
+    def _update_storage(self):
+        # TODO: update the data storage with this modification based on steps
+        raise NotImplementedError()
+
+    def commit(self):
+        allowed_states = {STATE.STAGED, STATE.REVERTED, STATE.FAILED}
+        if self.state not in allowed_states:
+            raise RuntimeError('commit is not allowed when {0}'
+                               .format(self.state))
+        self._sort_steps()
+        self._validate()
+        self.state = STATE.COMMITTING
+        is_updated = self._update_storage()
+        self.state = STATE.COMMITTED if is_updated else STATE.FAILED
+
+    def revert(self):
+        allowed_states = {STATE.COMMITTED}
+        if self.state not in allowed_states:
+            raise RuntimeError('revert is not allowed when {0}'
+                               .format(self.state))
+        # do some rollback stuff
+        self.state = STATE.REVERTED
 
 
 class DeploymentModification(SerializableObject):
