@@ -17,14 +17,10 @@
 import os
 import zipfile
 import urllib
-import tempfile
 import shutil
-import uuid
 from contextlib import contextmanager
 from functools import wraps
 from os import path
-
-from setuptools import archive_util
 
 from flask import (
     request,
@@ -37,7 +33,6 @@ from flask.ext.restful.utils import unpack
 from flask_securest.rest_security import SECURED_MODE, SecuredResource
 
 from dsl_parser import utils as dsl_parser_utils
-
 from manager_rest import config
 from manager_rest import models
 from manager_rest import responses
@@ -271,37 +266,8 @@ class UploadedBlueprintsManager(UploadedDataManager):
     @classmethod
     def _extract_file_to_file_server(cls, file_server_root,
                                      archive_target_path):
-        # extract application to file server
-        tempdir = tempfile.mkdtemp('-blueprint-submit')
-        try:
-            try:
-                archive_util.unpack_archive(archive_target_path, tempdir)
-            except archive_util.UnrecognizedFormat:
-                raise manager_exceptions.BadParametersError(
-                    'Blueprint archive is of an unrecognized format. '
-                    'Supported formats are: {0}'.format(
-                        SUPPORTED_ARCHIVE_TYPES))
-            archive_file_list = os.listdir(tempdir)
-            if len(archive_file_list) != 1 or not path.isdir(
-                    path.join(tempdir, archive_file_list[0])):
-                raise manager_exceptions.BadParametersError(
-                    'archive must contain exactly 1 directory')
-            application_dir_base_name = archive_file_list[0]
-            # generating temporary unique name for app dir, to allow multiple
-            # uploads of apps with the same name (as it appears in the file
-            # system, not the app name field inside the blueprint.
-            # the latter is guaranteed to be unique).
-            generated_app_dir_name = '{0}-{1}'.format(
-                application_dir_base_name, uuid.uuid4())
-            temp_application_dir = path.join(tempdir,
-                                             application_dir_base_name)
-            temp_application_target_dir = path.join(tempdir,
-                                                    generated_app_dir_name)
-            shutil.move(temp_application_dir, temp_application_target_dir)
-            shutil.move(temp_application_target_dir, file_server_root)
-            return generated_app_dir_name
-        finally:
-            shutil.rmtree(tempdir)
+        return utils.extract_blueprint_archive_to_mgr(archive_target_path,
+                                                      file_server_root)
 
     @classmethod
     def _prepare_and_submit_blueprint(cls, file_server_root,

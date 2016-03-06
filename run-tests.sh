@@ -34,6 +34,7 @@ run_intergration_tests()
     wget https://download.elastic.co/elasticsearch/elasticsearch/elasticsearch-1.6.0.deb
     sudo dpkg -i elasticsearch-1.6.0.deb
     export PATH=/usr/share/elasticsearch/bin:$PATH
+
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
     wget http://aphyr.com/riemann/riemann_0.2.6_all.deb

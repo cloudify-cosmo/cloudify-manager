@@ -394,6 +394,30 @@ workflows:
 
   install: default_workflows.cloudify.plugins.workflows.install
 
+  update:
+    mapping: default_workflows.cloudify.plugins.workflows.update
+    parameters:
+      update_id:
+        default: ''
+      added_instance_ids:
+        default: []
+      added_target_instances_ids:
+        default: []
+      removed_instance_ids:
+        default: []
+      remove_target_instance_ids:
+        default: []
+      modified_entity_ids:
+        default: []
+      extended_instance_ids:
+        default: []
+      extend_target_instance_ids:
+        default: []
+      reduced_instance_ids:
+        default: []
+      reduce_target_instance_ids:
+        default: []
+
   uninstall: default_workflows.cloudify.plugins.workflows.uninstall
 
   execute_operation:

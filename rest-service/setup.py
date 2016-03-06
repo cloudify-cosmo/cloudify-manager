@@ -22,7 +22,8 @@ setup(
     version='3.4a4',
     author='Dan Kilman',
     author_email='dank@gigaspaces.com',
-    packages=['manager_rest'],
+    packages=['manager_rest',
+              'manager_rest.deployment_update'],
     package_data={'manager_rest': ['VERSION']},
     license='LICENSE',
     description='Cloudify manager rest service',
@@ -40,6 +41,7 @@ setup(
         'elasticsearch==1.6.0',
         'celery==3.1.17',
         'flask-securest==0.8',
-        'psutil==3.3.0'
+        'psutil==3.3.0',
+        'jsonpickle==0.9.2'
     ]
 )
