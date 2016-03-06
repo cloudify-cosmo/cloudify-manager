@@ -8,7 +8,10 @@ def get_entity_context(plan, deployment_id, entity_type, entity_id):
         ENTITY_TYPES.NODE: NodeContext,
         ENTITY_TYPES.RELATIONSHIP: RelationshipContext,
         ENTITY_TYPES.PROPERTY: PropertyContext,
-        ENTITY_TYPES.OPERATION: _operation_context
+        ENTITY_TYPES.OPERATION: _operation_context,
+        ENTITY_TYPES.WORKFLOW: WorkflowContext,
+        ENTITY_TYPES.OUTPUT: OutputContext,
+        ENTITY_TYPES.DESCRIPTION: DescriptionContext
     }
 
     context = entity_context_by_type[entity_type]
@@ -30,51 +33,56 @@ class EntityContextBase(object):
     RELATIONSHIPS = utils.pluralize(ENTITY_TYPES.RELATIONSHIP)
     OPERATIONS = utils.pluralize(ENTITY_TYPES.OPERATION)
     PROPERTIES = utils.pluralize(ENTITY_TYPES.PROPERTY)
+    WORKFLOWS = utils.pluralize(ENTITY_TYPES.WORKFLOW)
+    OUTPUTS = utils.pluralize(ENTITY_TYPES.OUTPUT)
+    DESCRIPTION = 'description'
     PLUGINS = 'plugins'
 
-    def __init__(self, plan, deployment_id, entity_type, node_id):
+    def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
         self.sm = storage_manager.get_storage_manager()
         self._deployment_id = deployment_id
         self._entity_type = entity_type
-        self._node_id = node_id
+        self._top_level_entity_id = top_level_entity_id
         self._plan = plan
-        self._raw_node = utils.get_raw_node(self.blueprint, self._node_id)
 
     @property
-    def blueprint(self):
+    def deployment_plan(self):
         return self._plan
-
-    @property
-    def entity_id(self):
-        raise NotImplementedError
 
     @property
     def entity_type(self):
         return self._entity_type
 
     @property
-    def storage_node(self):
-        return self.sm.get_node(self._deployment_id, self._node_id) or {}
+    def deployment_id(self):
+        return self._deployment_id
 
     @property
-    def storage_node_instance(self):
-        old_node_instances = self.sm.get_node_instance(
-                filters={'deployment_id': self._deployment_id,
-                         'node_id': self._node_id}
-        )
-        return old_node_instances[0] if old_node_instances else {}
+    def entity_id(self):
+        raise NotImplementedError
 
     @property
-    def raw_node(self):
-        return self._raw_node
+    def storage_entity_value(self):
+        raise NotImplementedError
 
     @property
-    def raw_node_id(self):
-        return self.raw_node['id']
+    def raw_entity_value(self):
+        raise NotImplementedError
+
+
+class NodeContextBase(EntityContextBase):
+
+    def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
+        super(NodeContextBase, self).__init__(plan,
+                                              deployment_id,
+                                              entity_type,
+                                              top_level_entity_id)
+        self._raw_super_entity = \
+            utils.get_raw_node(self.deployment_plan, self._top_level_entity_id)
 
     @property
-    def storage_node_id(self):
-        return self.storage_node.id
+    def entity_id(self):
+        raise NotImplementedError
 
     @property
     def storage_entity_value(self):
@@ -85,22 +93,43 @@ class EntityContextBase(object):
         raise NotImplementedError
 
     @property
-    def deployment_id(self):
-        return self._deployment_id
+    def storage_node(self):
+        return self.sm.get_node(self._deployment_id,
+                                self._top_level_entity_id) or {}
+
+    @property
+    def storage_node_instance(self):
+        old_node_instances = self.sm.get_node_instance(
+                filters={'deployment_id': self._deployment_id,
+                         'node_id': self._top_level_entity_id}
+        )
+        return old_node_instances[0] if old_node_instances else {}
+
+    @property
+    def raw_node(self):
+        return self._raw_super_entity
+
+    @property
+    def raw_node_id(self):
+        return self.raw_node['id']
+
+    @property
+    def storage_node_id(self):
+        return self.storage_node.id
 
 
-class NodeContext(EntityContextBase):
+class NodeContext(NodeContextBase):
     def __init__(self,
                  plan,
                  deployment_id,
                  nodes_key,
-                 node_id,
+                 top_level_entity_id,
                  *modification_breadcrumbs):
         super(NodeContext, self).__init__(plan,
                                           deployment_id,
                                           ENTITY_TYPES.NODE,
-                                          node_id)
-        entity_keys = [nodes_key, node_id]
+                                          top_level_entity_id)
+        entity_keys = [nodes_key, top_level_entity_id]
         entity_keys.extend(modification_breadcrumbs)
         self._entity_id = ':'.join(entity_keys)
 
@@ -117,25 +146,25 @@ class NodeContext(EntityContextBase):
         return self._entity_id
 
 
-class RelationshipContext(EntityContextBase):
+class RelationshipContext(NodeContextBase):
     def __init__(self,
                  plan,
                  deployment_id,
                  nodes_key,
-                 node_id,
+                 top_level_entity_id,
                  relationships_key,
                  relationship_index,
                  *modification_breadcrumbs):
         super(RelationshipContext, self).__init__(plan,
                                                   deployment_id,
                                                   ENTITY_TYPES.RELATIONSHIP,
-                                                  node_id)
+                                                  top_level_entity_id)
 
         self._relationship_index = utils.parse_index(relationship_index)
         self._modification_breadcrumbs = modification_breadcrumbs
-        self._raw_target_node = utils.get_raw_node(self.blueprint,
+        self._raw_target_node = utils.get_raw_node(self.deployment_plan,
                                                    self.target_id)
-        entity_keys = [nodes_key, node_id, relationships_key,
+        entity_keys = [nodes_key, top_level_entity_id, relationships_key,
                        relationship_index]
         entity_keys.extend(modification_breadcrumbs)
         self._entity_id = ':'.join(entity_keys)
@@ -180,23 +209,24 @@ class RelationshipContext(EntityContextBase):
         return self._entity_id
 
 
-class PropertyContext(EntityContextBase):
+class PropertyContext(NodeContextBase):
     def __init__(self,
                  plan,
                  deployment_id,
                  nodes_key,
-                 node_id,
+                 top_level_entity_id,
                  properties_key,
                  property_id,
                  *modification_breadcrumbs):
         super(PropertyContext, self).__init__(plan,
                                               deployment_id,
                                               ENTITY_TYPES.PROPERTY,
-                                              node_id)
+                                              top_level_entity_id)
 
         self._property_id = property_id
         self._modification_breadcrumbs = modification_breadcrumbs
-        entity_keys = [nodes_key, node_id, properties_key, property_id]
+        entity_keys = \
+            [nodes_key, top_level_entity_id, properties_key, property_id]
         entity_keys.extend(modification_breadcrumbs)
         self._entity_id = ':'.join(entity_keys)
 
@@ -231,13 +261,13 @@ class PropertyContext(EntityContextBase):
         return self._modification_breadcrumbs
 
 
-class NodeInterfaceOperationContext(EntityContextBase):
+class NodeInterfaceOperationContext(NodeContextBase):
 
     def __init__(self,
                  plan,
                  deployment_id,
                  nodes_key,
-                 node_id,
+                 top_level_entity_id,
                  operations_key,
                  operation_id,
                  *modification_breadcrumbs):
@@ -245,11 +275,11 @@ class NodeInterfaceOperationContext(EntityContextBase):
                 plan,
                 deployment_id,
                 ENTITY_TYPES.OPERATION,
-                node_id)
+                top_level_entity_id)
 
         self._operation_id = operation_id
         self._modification_breadcrumbs = modification_breadcrumbs
-        entity_keys = [nodes_key, node_id, operation_id]
+        entity_keys = [nodes_key, top_level_entity_id, operation_id]
         entity_keys.extend(modification_breadcrumbs)
         self._entity_id = ':'.join(entity_keys)
 
@@ -284,13 +314,13 @@ class NodeInterfaceOperationContext(EntityContextBase):
         return self._entity_id
 
 
-class RelationshipInterfaceOperationContext(EntityContextBase):
+class RelationshipInterfaceOperationContext(NodeContextBase):
 
     def __init__(self,
                  plan,
                  deployment_id,
                  nodes_key,
-                 node_id,
+                 top_level_entity_id,
                  relatonships_key,
                  relationship_index,
                  operations_key,
@@ -300,13 +330,13 @@ class RelationshipInterfaceOperationContext(EntityContextBase):
             plan,
             deployment_id,
             ENTITY_TYPES.OPERATION,
-            node_id)
+            top_level_entity_id)
 
         self._relationships_index = utils.parse_index(relationship_index)
         self._operations_key = operations_key
         self._operation_id = operation_id
         self._modification_breadcrumbs = modification_breadcrumbs
-        entity_keys = [nodes_key, node_id, relatonships_key,
+        entity_keys = [nodes_key, top_level_entity_id, relatonships_key,
                        relationship_index, operation_id]
         entity_keys.extend(modification_breadcrumbs)
         self._entity_id = ':'.join(entity_keys)
@@ -369,3 +399,152 @@ class RelationshipInterfaceOperationContext(EntityContextBase):
     @property
     def entity_id(self):
         return self._entity_id
+
+
+class DeploymentContextBase(EntityContextBase):
+
+    def entity_id(self):
+        raise NotImplementedError
+
+    def storage_entity_value(self):
+        raise NotImplementedError
+
+    def raw_entity_value(self):
+        raise NotImplementedError
+
+    def _get_entity(self, top_level_entity):
+        return top_level_entity[self._top_level_entity_id]
+
+    def _get_entity_value(self, source_entity):
+        if self._modification_breadcrumbs:
+            return utils.traverse_object(source_entity,
+                                         self.modification_breadcrumbs)
+        else:
+            return source_entity
+
+
+class WorkflowContext(DeploymentContextBase):
+
+    def __init__(self,
+                 plan,
+                 deployment_id,
+                 workflows_key,
+                 top_level_entity_id,
+                 *modification_breadcrumbs):
+        super(WorkflowContext, self).__init__(plan,
+                                              deployment_id,
+                                              ENTITY_TYPES.WORKFLOW,
+                                              top_level_entity_id)
+        self._modification_breadcrumbs = modification_breadcrumbs
+        entity_keys = [workflows_key, top_level_entity_id]
+        entity_keys.extend(modification_breadcrumbs)
+        self._entity_id = ':'.join(entity_keys)
+
+    @property
+    def storage_entity(self):
+        deployment = self.sm.get_deployment(deployment_id=self.deployment_id)
+        return self._get_entity(deployment[self.WORKFLOWS])
+
+    @property
+    def raw_entity(self):
+        return self._get_entity(self.deployment_plan[self.WORKFLOWS])
+
+    @property
+    def entity_id(self):
+        return self._entity_id
+
+    @property
+    def storage_entity_value(self):
+        return self._get_entity_value(self.storage_entity)
+
+    @property
+    def raw_entity_value(self):
+        return self._get_entity_value(self.raw_entity)
+
+    @property
+    def workflow_id(self):
+        return self._top_level_entity_id
+
+    @property
+    def modification_breadcrumbs(self):
+        return self._modification_breadcrumbs
+
+
+class DescriptionContext(DeploymentContextBase):
+
+    def __init__(self,
+                 plan,
+                 deployment_id,
+                 description_key):
+        super(DescriptionContext, self).__init__(plan,
+                                                 deployment_id,
+                                                 ENTITY_TYPES.DESCRIPTION,
+                                                 description_key)
+
+    @property
+    def entity_id(self):
+        return self._top_level_entity_id
+
+    @property
+    def storage_entity(self):
+        deployment = self.sm.get_deployment(deployment_id=self.deployment_id)
+        return self._get_entity(deployment.to_dict())
+
+    @property
+    def raw_entity(self):
+        return self._get_entity(self.deployment_plan)
+
+    @property
+    def raw_entity_value(self):
+        return self.raw_entity
+
+    @property
+    def storage_entity_value(self):
+        return self.storage_entity
+
+
+class OutputContext(DeploymentContextBase):
+
+    def __init__(self,
+                 plan,
+                 deployment_id,
+                 workflows_key,
+                 top_level_entity_id,
+                 *modification_breadcrumbs):
+        super(OutputContext, self).__init__(plan,
+                                            deployment_id,
+                                            ENTITY_TYPES.OUTPUT,
+                                            top_level_entity_id)
+        self._modification_breadcrumbs = modification_breadcrumbs
+        entity_keys = [workflows_key, top_level_entity_id]
+        entity_keys.extend(modification_breadcrumbs)
+        self._entity_id = ':'.join(entity_keys)
+
+    @property
+    def storage_entity(self):
+        deployment = self.sm.get_deployment(deployment_id=self.deployment_id)
+        return self._get_entity(deployment[self.OUTPUTS])
+
+    @property
+    def raw_entity(self):
+        return self._get_entity(self.deployment_plan[self.OUTPUTS])
+
+    @property
+    def entity_id(self):
+        return self._entity_id
+
+    @property
+    def storage_entity_value(self):
+        return self._get_entity_value(self.storage_entity)
+
+    @property
+    def raw_entity_value(self):
+        return self._get_entity_value(self.raw_entity)
+
+    @property
+    def output_id(self):
+        return self._top_level_entity_id
+
+    @property
+    def modification_breadcrumbs(self):
+        return self._modification_breadcrumbs
