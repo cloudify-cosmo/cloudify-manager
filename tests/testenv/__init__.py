@@ -495,9 +495,10 @@ def start_events_and_logs_polling(logs_handler_retriever=None):
                 output = '\n{0}'.format(json.dumps(event, indent=4))
             else:
                 output = create_event_message_prefix(event)
-            logger.info(output)
+            if output:
+                logger.info(output)
             if logs_handler_retriever:
-                logs_handler_retriever()(output, event)
+                logs_handler_retriever()(output or '', event)
         except Exception as e:
             logger.error('event/log format error - output: {0} [message={1}]'
                          .format(body, e.message))
