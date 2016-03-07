@@ -21,6 +21,7 @@ import time
 import sys
 import os
 import elasticsearch
+import tempfile
 
 from cloudify.utils import setup_logger
 from testenv.constants import STORAGE_INDEX_NAME
@@ -121,6 +122,7 @@ class ElasticSearchProcess(object):
     def reset_data(self):
         self._remove_index_if_exists()
         self._create_schema()
+        # self._add_append_script()
 
     @staticmethod
     def remove_log_indices():
@@ -179,3 +181,18 @@ class ElasticSearchProcess(object):
             raise RuntimeError(
                 'Elasticsearch create schema exited with {0}'.format(status))
         logger.info("Elasticsearch schema created successfully")
+
+    @staticmethod
+    def _add_append_script():
+        script = ('if (ctx._source.containsKey(key))'
+                  ' {ctx._source[key] += value;}'
+                  ' else {ctx._source[key] = [value]}').replace('"', r'\"')
+        ES_SCRIPTS_PATH = '/usr/share/elasticsearch/config/scripts'
+        os.system('sudo mkdir -p {0}'.format(ES_SCRIPTS_PATH))
+        _, tmp_path = tempfile.mkstemp()
+        with open(tmp_path, 'w') as f:
+            f.write(script)
+        os.system('sudo mv {0} {1}'.format(tmp_path,
+                                           os.path.join(ES_SCRIPTS_PATH,
+                                                        'append.groovy')))
+        return
