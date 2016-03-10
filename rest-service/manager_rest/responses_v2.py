@@ -91,6 +91,38 @@ class Snapshot(object):
 
 
 @swagger.model
+class DeploymentUpdateStep(object):
+    resource_fields = {
+        'id': fields.String,
+        'operation': fields.String,
+        'entity_type': fields.String,
+        'entity_id': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.operation = kwargs['operation']
+        self.entity_type = kwargs['entity_type']
+        self.entity_id = kwargs['entity_id']
+
+
+@swagger.model
+class DeploymentUpdate(object):
+    resource_fields = {
+        'id': fields.String,
+        'deployment_id': fields.String,
+        'state': fields.String,
+        'steps': fields.Raw
+    }
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.deployment_id = kwargs['deployment_id']
+        self.steps = kwargs['steps']
+        self.state = kwargs['state']
+
+
+@swagger.model
 class ListResponse(object):
     resource_fields = {
         'metadata': fields.Raw,

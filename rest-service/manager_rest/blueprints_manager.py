@@ -107,7 +107,7 @@ class BlueprintsManager(object):
             'db_address': config.instance().db_address,
             'db_port': config.instance().db_port,
             'created_status': models.Snapshot.CREATED,
-            'failed_status':  models.Snapshot.FAILED,
+            'failed_status': models.Snapshot.FAILED,
             'file_server_uploaded_plugins_folder':
                 config.instance().file_server_uploaded_plugins_folder
         }
@@ -679,7 +679,7 @@ class BlueprintsManager(object):
                                           dsl_node_instances):
         for node_instance in dsl_node_instances:
             instance_id = node_instance['id']
-            node_id = node_instance['name']
+            node_id = node_instance['node_id']
             relationships = node_instance.get('relationships', [])
             host_id = node_instance.get('host_id')
             instance = models.DeploymentNodeInstance(
@@ -741,8 +741,24 @@ class BlueprintsManager(object):
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.FunctionsEvaluationError(str(e))
 
-    def _create_deployment_nodes(self, blueprint_id, deployment_id, plan):
-        for raw_node in plan['nodes']:
+    def _create_deployment_nodes(self, blueprint_id, deployment_id, plan,
+                                 node_ids=None):
+        """
+        create deployment nodes in storage based on a provided blueprint
+        :param blueprint_id: blueprint id
+        :param deployment_id: deployment id
+        :param plan: blueprint plan
+        :param node_ids: optionally create only nodes with these ids
+        """
+        node_ids = node_ids or []
+        if not isinstance(node_ids, list):
+            node_ids = [node_ids]
+
+        raw_nodes = plan['nodes']
+        if node_ids:
+            raw_nodes = \
+                [node for node in raw_nodes if node['id'] in node_ids]
+        for raw_node in raw_nodes:
             num_instances = raw_node['instances']['deploy']
             self.sm.put_node(models.DeploymentNode(
                 id=raw_node['name'],
