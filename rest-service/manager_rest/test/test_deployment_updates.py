@@ -119,7 +119,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
     def _stage(self, deployment_id, blueprint_path=None, deploy_first=True):
         blueprint_path = \
             blueprint_path or \
-            resource('deployment_update/dep_up_add_node.yaml')
+            resource('deployment_update/dep_up_add_node_modification.yaml')
         blueprint = parse_from_path(blueprint_path)
 
         if deploy_first:

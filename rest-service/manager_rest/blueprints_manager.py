@@ -536,7 +536,7 @@ class BlueprintsManager(object):
         self.sm.put_deployment_modification(modification_id, modification)
 
         for node_id, modified_node in modified_nodes.items():
-            self.sm.update_node(
+            self.sm.handle(
                 modification.deployment_id, node_id,
                 planned_number_of_instances=modified_node['instances'])
         added_and_related = node_instances_modification['added_and_related']
@@ -572,8 +572,8 @@ class BlueprintsManager(object):
 
         modified_nodes = modification.modified_nodes
         for node_id, modified_node in modified_nodes.items():
-            self.sm.update_node(modification.deployment_id, node_id,
-                                number_of_instances=modified_node['instances'])
+            self.sm.handle(modification.deployment_id, node_id,
+                           number_of_instances=modified_node['instances'])
         node_instances = modification.node_instances
         for node_instance in node_instances['removed_and_related']:
             if node_instance.get('modification') == 'removed':
@@ -641,7 +641,7 @@ class BlueprintsManager(object):
             filters=deplyment_id_filter,
             include=['id', 'number_of_instances']).items}
         for node_id, modified_node in modification.modified_nodes.items():
-            self.sm.update_node(
+            self.sm.handle(
                 modification.deployment_id, node_id,
                 planned_number_of_instances=nodes_num_instances[
                     node_id].number_of_instances)

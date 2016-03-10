@@ -675,6 +675,14 @@ class DeploymentUpdateCommit(SecuredResource):
         return manager.commit_deployment_update(update_id)
 
 
+class DeploymentUpdateFinalizeCommit(SecuredResource):
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdate)
+    def post(self, update_id):
+        manager = get_deployment_updates_manager()
+        return manager.finalize_update(update_id)
+
+
 class DeploymentModifications(resources.DeploymentModifications):
     @swagger.operation(
         responseClass='List[{0}]'.format(

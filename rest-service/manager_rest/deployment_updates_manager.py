@@ -27,12 +27,500 @@ import manager_rest.workflow_client as wf_client
 
 from dsl_parser import constants
 
+RELATIONSHIP_TYPE = 'relationship'
+NODE_TYPE = 'node'
+
+
+class UpdateHandler(object):
+    def __init__(self):
+        self.sm = storage_manager.get_storage_manager()
+
+
+class DeploymentUpdateNodeHandler(UpdateHandler):
+
+    def __init__(self):
+        super(DeploymentUpdateNodeHandler, self).__init__()
+        self.modified_entities = {
+            NODE_TYPE: [],
+            RELATIONSHIP_TYPE: []
+        }
+
+    def handle(self, dep_update):
+        current_nodes = self.sm.get_nodes(
+            filters={'deployment_id': dep_update.deployment_id}).items
+        nodes = {node.id: node for node in current_nodes}
+
+        entities_updater = {
+            'add': self._add_entity,
+            'remove': self._remove_entity
+        }
+
+        for step in dep_update.steps:
+            entity_id, affected_node = \
+                entities_updater[step.operation](dep_update,
+                                                 step.entity_type,
+                                                 step.entity_id)
+
+            self.modified_entities[step.entity_type].append(entity_id)
+
+            if step.operation == 'remove' and step.entity_type == 'node':
+                del(nodes[affected_node.id])
+            else:
+                nodes[affected_node.id] = affected_node
+
+        return self.modified_entities, nodes.values()
+
+    def _add_entity(self, dep_update, entity_type, entity_id):
+        """ handles adding an entity
+
+        :param dep_update:
+        :param entity_type:
+        :param entity_id:
+        :return: the entity id and the node which contains the added entity
+        """
+        add_entity_mapper = {
+            NODE_TYPE: self._add_node,
+            RELATIONSHIP_TYPE: self._add_relationship
+        }
+
+        add_entity_handler = add_entity_mapper[entity_type]
+
+        updated_node = add_entity_handler(dep_update, entity_id)
+
+        return entity_id, updated_node
+
+    def _add_node(self, dep_update, entity_id):
+        """ handles adding a node
+
+        :param dep_update:
+        :param entity_id:
+        :return: the new node
+        """
+        get_blueprints_manager()._create_deployment_nodes(
+                deployment_id=dep_update.deployment_id,
+                blueprint_id='N/A',
+                plan=dep_update.blueprint,
+                node_ids=entity_id
+        )
+
+        # Update new node relationships target nodes
+        raw_node = [n for n in dep_update.blueprint['nodes']
+                    if n['id'] == entity_id][0]
+
+        target_ids = [r['target_id'] for r in raw_node['relationships']]
+
+        target_raw_nodes = {n['id']: n for n in dep_update.blueprint['nodes']
+                            if n['id'] in target_ids}
+
+        for target_id in target_ids:
+            self.sm.update_node(deployment_id=dep_update.deployment_id,
+                                node_id=target_id,
+                                changes={
+                                    'plugins':
+                                        target_raw_nodes[target_id]['plugins']
+                                })
+
+        return self.sm.get_node(dep_update.deployment_id, entity_id)
+
+    def _add_relationship(self, dep_update, entity_id):
+        """Handles adding a relationship
+
+        :param dep_update:
+        :param entity_id:
+        :return: the modified node
+        """
+        source_node_id, target_node_id = entity_id.split(':')
+        pluralized_entity_type = _pluralize(NODE_TYPE)
+        raw_nodes = dep_update.blueprint[pluralized_entity_type]
+        source_raw_node = \
+            [n for n in raw_nodes if n['id'] == source_node_id][0]
+        target_raw_node = \
+            [n for n in raw_nodes if n['id'] == target_node_id][0]
+
+        # This currently assures that only new plugins could be inserted,
+        # no new implementation of an old plugin is currently allowed
+
+        # Update source relationships and plugins
+        source_plugins = \
+            self.sm.get_node(dep_update.deployment_id, source_node_id).plugins
+        source_plugins += source_raw_node['plugins']
+        source_changes = {
+            'relationships': source_raw_node['relationships'],
+            'plugins': source_plugins
+        }
+        self.sm.update_node(deployment_id=dep_update.deployment_id,
+                            node_id=source_node_id,
+                            changes=source_changes)
+
+        # Update target plugins
+        target_plugins = \
+            self.sm.get_node(dep_update.deployment_id, target_node_id).plugins
+        target_plugins += target_raw_node['plugins']
+
+        target_changes = {
+            'plugins': target_plugins
+        }
+
+        self.sm.update_node(deployment_id=dep_update.deployment_id,
+                            node_id=target_node_id,
+                            changes=target_changes)
+
+        return self.sm.get_node(dep_update.deployment_id, source_node_id)
+
+    def _remove_entity(self, dep_update, entity_type, entity_id):
+        """Handles removing an entity
+
+        :param dep_update:
+        :param entity_type:
+        :param entity_id:
+        :return: entity id and it's modified node
+        """
+        remove_entity_mapper = {
+            NODE_TYPE: self._remove_node,
+            RELATIONSHIP_TYPE: self._remove_relationship
+        }
+
+        add_entity_handler = remove_entity_mapper[entity_type]
+
+        updated_node = add_entity_handler(dep_update, entity_id)
+
+        return entity_id, updated_node
+
+    def _remove_node(self, dep_update, entity_id):
+        """Handles removing a node
+
+        :param dep_update:
+        :param entity_id:
+        :return: the removed node
+        """
+        return self.sm.get_node(dep_update.deployment_id, entity_id)
+
+    def _remove_relationship(self, dep_update, entity_id):
+        """Handles removing a relationship
+
+        :param dep_update:
+        :param entity_id:
+        :return: the modified node
+        """
+        source_node_id, target_node_id = entity_id.split(':')
+        node = self.sm.get_node(dep_update.deployment_id, source_node_id)
+
+        modified_relationship = [r for r in node.relationships
+                                 if r['target_id'] == target_node_id][0]
+
+        node.relationships.remove(modified_relationship)
+
+        return node
+
+    def finalize_nodes(self,
+                       dep_update,
+                       deployment_update_nodes,
+                       deployment_update_node_instances):
+        """update any removed entity from nodes
+
+        :param dep_update: the deployment update object itself.
+        :param deployment_update_nodes:
+        :param deployment_update_node_instances:
+        :return:
+        """
+        reduced_node_instances = \
+            deployment_update_node_instances[
+                models.DeploymentUpdate.REDUCED_AND_RELATED].get(
+                    models.DeploymentUpdate.AFFECTED, [])
+        deleted_node_instances = \
+            deployment_update_node_instances[
+                models.DeploymentUpdate.REMOVED_AND_RELATED].get(
+                    models.DeploymentUpdate.AFFECTED, [])
+
+        for reduced_node_instance in reduced_node_instances:
+            node = [n for n in deployment_update_nodes
+                    if n['id'] == reduced_node_instance['node_id']][0]
+            self.sm.update_node(deployment_id=dep_update.deployment_id,
+                                node_id=reduced_node_instance['node_id'],
+                                changes=node)
+
+        for deleted_node_instance in deleted_node_instances:
+            self.sm.delete_node(dep_update.deployment_id,
+                                deleted_node_instance['node_id'])
+
+
+class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
+
+    def __init__(self):
+        super(DeploymentUpdateNodeInstanceHandler, self).__init__()
+        self.modified_entities = {
+            NODE_TYPE: [],
+            RELATIONSHIP_TYPE: []
+        }
+
+    def handle(self, dep_update, updated_instances):
+        """Handles updating node instances according to the updated_instances
+
+        :param dep_update:
+        :param updated_instances:
+        :return: dictionary of modified node instances with key as modification
+        type
+        """
+        handlers_mapper = {
+            models.DeploymentUpdate.ADDED_AND_RELATED:
+                self._handle_node_instance_adding,
+            models.DeploymentUpdate.EXTENDED_AND_RELATED:
+                self._handle_relationship_instance_adding,
+            models.DeploymentUpdate.REDUCED_AND_RELATED:
+                self._handle_relationship_instance_removing,
+            models.DeploymentUpdate.REMOVED_AND_RELATED:
+                self._handle_node_instance_removing
+        }
+
+        instances = \
+            {k: {} for k, _ in handlers_mapper.iteritems()}
+
+        for change_type, handler in handlers_mapper.iteritems():
+            if updated_instances[change_type]:
+                instances[change_type] = \
+                    handler(updated_instances[change_type], dep_update)
+
+        return instances
+
+    def _handle_node_instance_adding(self, raw_instances, dep_update):
+        """Handles adding a node instance
+
+        :param raw_instances:
+        :param dep_update:
+        :return: the added and related node instances
+        """
+        added_instances = []
+        added_related_instances = []
+
+        for raw_node_instance in raw_instances:
+            if raw_node_instance.get('modification') == 'added':
+                changes = {
+                    'deployment_id': dep_update.deployment_id,
+                    'version': None,
+                    'state': None,
+                    'runtime_properties': {}
+                }
+                raw_node_instance.update(changes)
+                node_instance = \
+                    models.DeploymentNodeInstance(**raw_node_instance)
+
+                added_instances.append(node_instance)
+            else:
+                node_instance = \
+                    models.DeploymentNodeInstance(**raw_node_instance)
+                added_related_instances.append(node_instance)
+                self._update_node_instance(node_instance.to_dict())
+
+        get_blueprints_manager()._create_deployment_node_instances(
+                dep_update.deployment_id,
+                [instance.to_dict() for instance in added_instances]
+        )
+
+        return {
+            models.DeploymentUpdate.AFFECTED: added_instances,
+            models.DeploymentUpdate.RELATED: added_related_instances
+        }
+
+    @staticmethod
+    def _handle_node_instance_removing(instances, *_):
+        """Handles removing a node instance
+
+        :param raw_instances:
+        :return: the removed and related node instances
+        """
+        removed_raw_instanes = []
+        remove_related_raw_instances = []
+
+        for raw_node_instance in instances:
+            node_instance = models.DeploymentNodeInstance(**raw_node_instance)
+            if raw_node_instance.get('modification') == 'removed':
+                removed_raw_instanes.append(node_instance)
+            else:
+                remove_related_raw_instances.append(node_instance)
+
+        return {
+            models.DeploymentUpdate.AFFECTED: removed_raw_instanes,
+            models.DeploymentUpdate.RELATED: remove_related_raw_instances
+        }
+
+    def _handle_relationship_instance_adding(self, instances, *_):
+        """Handles adding a relationship to a node instance
+
+        :param raw_instances:
+        :return: the extended and related node instances
+        """
+        modified_raw_instances = []
+        modify_related_raw_instances = []
+
+        for raw_node_instance in instances:
+            node_instance = models.DeploymentNodeInstance(**raw_node_instance)
+            if raw_node_instance.get('modification') == 'extended':
+
+                # adding new relationships to the current relationships
+                modified_raw_instances.append(node_instance)
+                self._update_node_instance(node_instance.to_dict())
+            else:
+                modify_related_raw_instances.append(node_instance)
+
+        return \
+            {
+                models.DeploymentUpdate.AFFECTED: modified_raw_instances,
+                models.DeploymentUpdate.RELATED: modify_related_raw_instances
+            }
+
+    def _handle_relationship_instance_removing(self, instances, *_):
+        """Handles removing a relationship to a node instance
+
+        :param raw_instances:
+        :return: the reduced and related node instances
+        """
+        modified_raw_instances = []
+        modify_related_raw_instances = []
+
+        for raw_node_instance in instances:
+            if raw_node_instance.get('modification') == 'reduced':
+                modified_node = \
+                    self.sm.get_node_instance(raw_node_instance['id'])
+                # changing the new state of relationships on the instance
+                # to not include the removed relationship
+                target_ids = [rel['target_id']
+                              for rel in raw_node_instance['relationships']]
+                relationships = [rel for rel in modified_node.relationships
+                                 if rel['target_id'] not in target_ids]
+                modified_node.relationships = relationships
+
+                modified_raw_instances.append(modified_node)
+            else:
+                node_instance = \
+                    models.DeploymentNodeInstance(**raw_node_instance)
+                modify_related_raw_instances.append(node_instance)
+
+        return {
+            models.DeploymentUpdate.AFFECTED: modified_raw_instances,
+            models.DeploymentUpdate.RELATED: modify_related_raw_instances
+        }
+
+    def finalize_node_instances(self, deployment_update_node_instances):
+        """update any removed entity from node instances
+
+        :param deployment_update_node_instances: the required final for
+        reduced node instances, and the removed nodes for any removed node
+        :return:
+        """
+        reduced_node_instances = \
+            deployment_update_node_instances[
+                models.DeploymentUpdate.REDUCED_AND_RELATED].get(
+                    models.DeploymentUpdate.AFFECTED, [])
+        removed_node_instances = \
+            deployment_update_node_instances[
+                models.DeploymentUpdate.REMOVED_AND_RELATED].get(
+                    models.DeploymentUpdate.AFFECTED, [])
+
+        for reduced_node_instance in reduced_node_instances:
+            self._update_node_instance(reduced_node_instance,
+                                       overwrite_relationships=True)
+
+        for removed_node_instance in removed_node_instances:
+            self.sm.delete_node_instance(removed_node_instance['id'])
+
+    def _update_node_instance(self, raw_node_instance,
+                              overwrite_relationships=False):
+        current = self.sm.get_node_instance(raw_node_instance['id'])
+        raw_node_instance['version'] = current.version
+        if not overwrite_relationships:
+            raw_relationship_target_id = \
+                [r['target_id']
+                 for r in raw_node_instance.get('relationships', {})]
+            if raw_relationship_target_id:
+                new_relationships = \
+                    [r for r in current.relationships
+                     if r['target_id'] not in raw_relationship_target_id]
+                raw_node_instance['relationships'].extend(new_relationships)
+        self.sm.update_node_instance(
+                models.DeploymentNodeInstance(**raw_node_instance)
+        )
+
+
+class StepValidator(UpdateHandler):
+
+    def validate(self, dep_update, step):
+        """
+        validate an entity id of provided type exists in provided blueprint.
+        raises error if id doesn't exist
+        :param blueprint: a blueprint (plan)
+        :param entity_type: singular entity type name, e.g.NODE_TYPE
+        :param entity_id: id of the entity, e.g. 'node1'
+        """
+
+        validation_mapper = {
+            NODE_TYPE: self._validate_node_entity_id,
+            RELATIONSHIP_TYPE: self._validate_relationship_entity_id
+        }
+
+        validator = validation_mapper[step.entity_type]
+
+        if validator(dep_update, step):
+            return
+        else:
+            raise manager_exceptions.UnknownModificationStageError(
+                    "entity id {} doesn't exist".format(step.entity_id))
+
+    def _validate_relationship_entity_id(self, dep_update, step):
+        """ validates relation type entity id
+
+        :param dep_update:
+        :param step: deployment update step
+        :return:
+        """
+        if ':' not in step.entity_id:
+            return False
+
+        source_id, target_id = step.entity_id.split(':')
+
+        if step.operation == 'remove':
+            current_nodes = self.sm.get_nodes().items
+            source_node = [n for n in current_nodes if n.id == source_id][0]
+
+            conditions = [n.id for n in current_nodes if n.id == target_id]
+            conditions += filter(lambda r: r['target_id'] == target_id,
+                                 source_node.relationships)
+        else:
+            new_nodes = dep_update.blueprint['nodes']
+
+            source_node = [n for n in new_nodes if n['id'] == source_id][0]
+
+            conditions = [n['id'] for n in new_nodes if n['id'] == target_id]
+            conditions += filter(lambda r: r['target_id'] == target_id,
+                                 source_node['relationships'])
+
+        return any(conditions)
+
+    def _validate_node_entity_id(self, dep_update, step):
+        """ validates node type entity id
+
+        :param dep_update:
+        :param step: deployment update step
+        :return:
+        """
+        if step.operation == 'remove':
+            current_node_instnaces = self.sm.get_node_instances(
+                    filters={'deployment_id': dep_update.deployment_id}
+            )
+            return step.entity_id in \
+                [i.node_id for i in current_node_instnaces.items]
+        else:
+            new_nodes = dep_update.blueprint[_pluralize('node')]
+            return step.entity_id in _extract_ids(new_nodes)
+
 
 class DeploymentUpdateManager(object):
 
     def __init__(self):
         self.sm = storage_manager.get_storage_manager()
         self.workflow_client = wf_client.get_workflow_client()
+        self._node_handler = DeploymentUpdateNodeHandler()
+        self._node_instance_handler = DeploymentUpdateNodeInstanceHandler()
+        self._step_validator = StepValidator()
 
     def get_deployment_update(self, deployment_update_id, include=None):
         return self.sm.get_deployment_update(deployment_update_id,
@@ -56,17 +544,67 @@ class DeploymentUpdateManager(object):
 
     def create_deployment_update_step(self, deployment_update_id,
                                       operation, entity_type, entity_id):
+        """Create deployment update step
+
+        :param deployment_update_id:
+        :param operation: add/remove/modify
+        :param entity_type: add/relationship
+        :param entity_id:
+        :return:
+        """
         step = models.DeploymentUpdateStep(operation,
                                            entity_type,
                                            entity_id)
         dep_update = self.sm.get_deployment_update(deployment_update_id)
 
-        self._validate_entity_id(dep_update.blueprint,
-                                 entity_type,
-                                 entity_id)
+        self._step_validator.validate(dep_update, step)
 
         self.sm.put_deployment_update_step(deployment_update_id, step)
         return step
+
+    def commit_deployment_update(self, deployment_update_id):
+        """commit the deployment update steps
+
+        :param deployment_update_id:
+        :return:
+        """
+        dep_update = self.sm.get_deployment_update(deployment_update_id)
+
+        # mark deployment update as committing
+        dep_update.state = models.DeploymentUpdate.COMMITTING
+        self.sm.update_deployment_update(dep_update)
+
+        # Update the nodes on the storage
+        modified_entity_ids, depup_nodes = \
+            self._node_handler.handle(dep_update)
+
+        # Extract changes from raw nodes
+        node_instance_changes = self._extract_changes(dep_update,
+                                                      depup_nodes)
+
+        # Create (and update for adding step type) node instances
+        # according to the changes in raw_nodes
+        depup_node_instances = \
+            self._node_instance_handler.handle(dep_update,
+                                               node_instance_changes)
+
+        # Saving the needed changes back to sm for future use
+        # (removing entities).
+        dep_update.deployment_update_nodes = depup_nodes
+        dep_update.deployment_update_node_instances = depup_node_instances
+        self.sm.update_deployment_update(dep_update)
+
+        # Execute update workflow using added and related instances
+        # This workflow will call a finalize_update, since removing entities
+        # should be done after the executions.
+        # The raw_node_instances are being used only for their ids, Thus
+        # They should really hold the finished version for the node instance.
+        self._execute_update_workflow(dep_update,
+                                      depup_node_instances,
+                                      modified_entity_ids)
+
+        return models.DeploymentUpdate(deployment_update_id,
+                                       dep_update.blueprint)
 
     def _validate_no_active_updates_per_deployment(self, deployment_id):
         """
@@ -90,106 +628,143 @@ class DeploymentUpdateManager(object):
                 .format(active_update.id)
             )
 
-    @staticmethod
-    def _validate_entity_id(blueprint, entity_type, entity_id):
+    def _extract_changes(self, dep_update, raw_nodes):
+        """Extracts the changes between the current node_instances and
+        the raw_nodes specified
+
+        :param dep_update:
+        :param raw_nodes:
+        :return: a dictionary of modification type and node instanced modifed
         """
-        validate an entity id of provided type exists in provided blueprint.
-        raises error if id doesn't exist
-        :param blueprint: a blueprint (plan)
-        :param entity_type: singular entity type name, e.g. 'node'
-        :param entity_id: id of the entity, e.g. 'node1'
-        """
-        entity_type_plural = _pluralize(entity_type)
-        entity_ids = [e['id'] for e in blueprint[entity_type_plural]]
-        if entity_id not in entity_ids:
-            raise manager_exceptions.UnknownModificationStageError(
-                "entity id {} doesn't exist".format(entity_id))
+        deployment_id_filter = \
+            {'deployment_id': dep_update.deployment_id}
 
-    @staticmethod
-    def _process_deployment_update_step(deployment_id, step, blueprint):
-        if step.operation == 'add' and step.entity_type == 'node':
-            get_blueprints_manager()\
-                ._create_deployment_nodes(deployment_id=deployment_id,
-                                          blueprint_id='N/A',
-                                          plan=blueprint,
-                                          node_ids=step.entity_id)
-
-    def commit_deployment_update(self, deployment_update_id):
-        deployment_update = self.sm.get_deployment_update(deployment_update_id)
-
-        # mark deployment update as committing
-        deployment_update.state = models.DeploymentUpdate.COMMITTING
-        self.sm.update_deployment_update(deployment_update)
-
-        deployment_id = deployment_update.deployment_id
-        blueprint = deployment_update.blueprint
-
-        deployment_id_filter = {'deployment_id': deployment_id}
-
-        node_instances = [instance.to_dict() for instance
-                          in self.sm.get_node_instances(
-                          filters=deployment_id_filter).items]
-
-        for step in deployment_update.steps:
-            self._process_deployment_update_step(deployment_id,
-                                                 step,
-                                                 blueprint)
-        nodes = [node.to_dict() for node in self.sm.get_nodes(
-            filters=deployment_id_filter).items]
+        # By this point the node_instances aren't updated yet
+        raw_node_instances = \
+            [instance.to_dict() for instance in
+             self.sm.get_node_instances(filters=deployment_id_filter).items]
 
         # project changes in deployment
-        changes = tasks.modify_deployment(
-            nodes=nodes,
-            previous_node_instances=node_instances,
-            modified_nodes={})
-        added_raw_instances = []
-        related_raw_instances = []
+        return tasks.modify_deployment(
+                nodes=[n.to_dict() for n in raw_nodes],
+                previous_node_instances=raw_node_instances,
+                modified_nodes=()
+        )
 
-        # act on changes, which are either new instances or new relationships
-        for node_instance in changes['added_and_related']:
-            if node_instance.get('modification') == 'added':
-                added_raw_instances.append(node_instance)
-            else:
-                related_raw_instances.append(node_instance)
-                current = self.sm.get_node_instance(node_instance['id'])
-                new_relationships = current.relationships
-                new_relationships += node_instance['relationships']
-                self.sm.update_node_instance(models.DeploymentNodeInstance(
-                    id=node_instance['id'],
-                    relationships=new_relationships,
-                    version=current.version,
-                    node_id=None,
-                    host_id=None,
-                    deployment_id=None,
-                    state=None,
-                    runtime_properties=None))
+    def _execute_update_workflow(self,
+                                 dep_update,
+                                 node_instances,
+                                 modified_entity_ids):
+        """Executed the update workflow
 
-        # create added instances
-        get_blueprints_manager().\
-            _create_deployment_node_instances(deployment_id,
-                                              added_raw_instances)
+        :param dep_update:
+        :param node_instances: a dictionary of modification type and
+        modified instances
+        :param modified_entity_ids: the entire modified entities list (by id)
+        :return:
+        """
 
-        # execute update workflow using added and related instances
-        added_instance_ids = \
-            [instance['id'] for instance in added_raw_instances]
-        related_instance_ids = \
-            [instance['id'] for instance in related_raw_instances]
-        self.execute_workflow(deployment_id=deployment_id,
-                              workflow_id='update',
-                              parameters={
-                                  'added_instance_ids': added_instance_ids,
-                                  'related_instance_ids': related_instance_ids
-                              })
+        added_instances = \
+            node_instances[models.DeploymentUpdate.ADDED_AND_RELATED]
+        extended_instances = \
+            node_instances[models.DeploymentUpdate.EXTENDED_AND_RELATED]
+        reduced_instances = \
+            node_instances[models.DeploymentUpdate.REDUCED_AND_RELATED]
+        removed_instances = \
+            node_instances[models.DeploymentUpdate.REMOVED_AND_RELATED]
+
+        screened_relationships = \
+            screen_relationships(added_instances, modified_entity_ids)
+
+        modified_entity_ids[RELATIONSHIP_TYPE] = screened_relationships
+
+        instance_ids = {
+            # needed in order to finalize the commit
+            'update_id': dep_update.id,
+
+            # For any added node instance
+            'added_instance_ids':
+                _extract_ids(added_instances.get(
+                        models.DeploymentUpdate.AFFECTED)),
+            'add_related_instance_ids':
+                _extract_ids(added_instances.get(
+                        models.DeploymentUpdate.RELATED)),
+
+            # encapsulated all the change entity_ids (in a dictionary with
+            # 'node' and 'relationship' keys.
+            'modified_entity_ids': modified_entity_ids,
+
+            # Any nodes which were extended (positive modification)
+            'extended_instance_ids':
+                _extract_ids(extended_instances.get(
+                        models.DeploymentUpdate.AFFECTED)),
+            'extend_related_instance_ids':
+                _extract_ids(extended_instances.get(
+                        models.DeploymentUpdate.RELATED)),
+
+            # Any nodes which were reduced (negative modification)
+            'reduced_instance_ids':
+                _extract_ids(reduced_instances.get(
+                        models.DeploymentUpdate.AFFECTED)),
+            'reduce_related_instance_ids':
+                _extract_ids(reduced_instances.get(
+                        models.DeploymentUpdate.RELATED)),
+
+            # Any nodes which were removed as a whole
+            'removed_instance_ids':
+                _extract_ids(removed_instances.get(
+                        models.DeploymentUpdate.AFFECTED)),
+            'remove_related_instance_ids':
+                _extract_ids(removed_instances.get(
+                        models.DeploymentUpdate.RELATED))
+        }
+
+        return self.execute_workflow(deployment_id=dep_update.deployment_id,
+                                     workflow_id='update',
+                                     parameters=instance_ids)
+
+    def finalize_update(self, deployment_update_id):
+        """ finalizes the update process by removing any removed
+        node/node instances and updating any reduced node
+
+        :param deployment_update_id:
+        :return:
+        """
+
+        dep_update = self.sm.get_deployment_update(deployment_update_id)
+        deployment_update_nodes = dep_update.deployment_update_nodes
+        deployment_update_node_instances = \
+            dep_update.deployment_update_node_instances
+
+        self._node_instance_handler.finalize_node_instances(
+                deployment_update_node_instances)
+
+        self._node_handler.finalize_nodes(dep_update,
+                                          deployment_update_nodes,
+                                          deployment_update_node_instances)
 
         # mark deployment update as committed
-        deployment_update.state = models.DeploymentUpdate.COMMITTED
-        self.sm.update_deployment_update(deployment_update)
+        dep_update.state = models.DeploymentUpdate.COMMITTED
+        self.sm.update_deployment_update(dep_update)
 
-        return models.DeploymentUpdate(deployment_id, blueprint)
+        return models.DeploymentUpdate(deployment_update_id,
+                                       dep_update.blueprint)
 
-    def execute_workflow(self, deployment_id, workflow_id,
+    def execute_workflow(self,
+                         deployment_id,
+                         workflow_id,
                          parameters=None,
-                         allow_custom_parameters=False, force=False):
+                         allow_custom_parameters=False,
+                         force=False):
+        """Executes the specified workflow
+
+        :param deployment_id:
+        :param workflow_id:
+        :param parameters:
+        :param allow_custom_parameters:
+        :param force:
+        :return:
+        """
         deployment = self.sm.get_deployment(deployment_id)
         blueprint = self.sm.get_blueprint(deployment.blueprint_id)
 
@@ -249,3 +824,27 @@ def get_deployment_updates_manager():
 
 def _pluralize(input):
     return '{}s'.format(input)
+
+
+def _extract_ids(node_instances, key='id'):
+    if node_instances:
+        return [instance[key]
+                if isinstance(instance, dict) else getattr(instance, key)
+                for instance in node_instances]
+    else:
+        return []
+
+
+def screen_relationships(target_instances_to_remove, modified_entity_ids):
+        screened_relationships = []
+
+        affected_instances = \
+            target_instances_to_remove.get(models.DeploymentUpdate.AFFECTED)
+        except_instance_ids = _extract_ids(affected_instances, key='node_id')
+
+        for modified_entity_id in modified_entity_ids[RELATIONSHIP_TYPE]:
+            _, t_id = modified_entity_id.split(':')
+            if t_id not in except_instance_ids:
+                screened_relationships.append(modified_entity_id)
+
+        return screened_relationships
