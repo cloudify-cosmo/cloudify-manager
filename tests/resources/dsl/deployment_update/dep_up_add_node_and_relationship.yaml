@@ -19,13 +19,16 @@ node_templates:
           create: scripts/increment.sh # resource already exists
           configure: scripts/increment.sh
           start: scripts/increment.sh
-        cloudify.interfaces.monitoring:
-#          start: scripts/increment.sh
+
     relationships:
-      - type: cloudify.relationships.contained_in # added relationship
+      - type: my_custom_relationship # added relationship
         target: server
-        source_interfaces:
-          cloudify.interfaces.relationship_lifecycle:
-            preconfigure: scripts/increment.sh
-            establish: scripts/increment.sh
-            postconfigure: scripts/increment.sh
+
+relationships:
+  my_custom_relationship:
+    derived_from: cloudify.relationships.contained_in
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure: scripts/increment.sh
+        establish: scripts/increment.sh
+        postconfigure: scripts/increment.sh

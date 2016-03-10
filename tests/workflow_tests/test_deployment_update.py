@@ -22,6 +22,9 @@ from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import tar_blueprint
 
+blueprints_base_path = 'dsl/deployment_update'
+predicted_relationship = 'my_custom_relationship'
+
 
 class TestDeploymentUpdate(TestCase):
 
@@ -48,11 +51,12 @@ class TestDeploymentUpdate(TestCase):
           all related operations were executed as well
         """
         initial_blueprint_path = \
-            resource('dsl/deployment_update/dep_up_initial.yaml')
+            resource(os.path.join(blueprints_base_path, 'dep_up_initial.yaml'))
         deployment, _ = deploy(initial_blueprint_path)
 
         new_blueprint_path = \
-            resource('dsl/deployment_update/dep_up_add_node.yaml')
+            resource(os.path.join(blueprints_base_path,
+                                  'dep_up_add_node_and_relationship.yaml'))
 
         tempdir = tempfile.mkdtemp()
         try:
@@ -91,14 +95,18 @@ class TestDeploymentUpdate(TestCase):
             # assert that node has a relationship
             node = added_nodes[0]
             self.assertEquals(1, len(node.relationships))
-            self._assert_relationship_exists(node.relationships,
-                                             target='server')
+            self._assert_relationship_exists(
+                    node.relationships,
+                    target='server',
+                    expected_type=predicted_relationship)
 
             # assert that node instance has a relationship
             added_instance = added_instances[0]
             self.assertEquals(1, len(added_instance.relationships))
-            self._assert_relationship_exists(added_instance.relationships,
-                                             target='server')
+            self._assert_relationship_exists(
+                 added_instance.relationships,
+                 target='server',
+                 expected_type=predicted_relationship)
 
             # assert all operations in 'update' ('install') workflow
             # are executed by making them increment a runtime property
