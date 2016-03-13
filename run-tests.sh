@@ -23,11 +23,6 @@ run_intergration_tests()
     sudo dpkg -i elasticsearch-1.6.0.deb
     export PATH=/usr/share/elasticsearch/bin:$PATH
 
-    # allow dynamic scripting in elasticsearch
-    sudo mkdir -p /usr/share/elasticsearch/config
-    sudo cp /etc/elasticsearch/elasticsearch.yml /usr/share/elasticsearch/config
-    echo "script.engine.groovy.inline.update: on" | sudo tee -a /usr/share/elasticsearch/config/elasticsearch.yml
-
     sudo mkdir -p /usr/share/elasticsearch/data
     sudo chmod 777 /usr/share/elasticsearch/data
     wget http://aphyr.com/riemann/riemann_0.2.6_all.deb
@@ -52,7 +47,7 @@ run_intergration_tests()
     # flags that relate to test collection should follow this command
     # e.g.: -e, -i, etc...
     nosetests \
-        tests/workflow_tests/test_deployment_update.py \
+        tests/workflow_tests \
         --with-suitesplitter \
         --suite-total=${NUMBER_OF_SUITES} \
         --suite-number=${SUITE_NUMBER} \

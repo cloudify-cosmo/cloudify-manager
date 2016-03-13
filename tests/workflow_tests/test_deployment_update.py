@@ -56,6 +56,7 @@ class TestDeploymentUpdate(TestCase):
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
                                                  blueprint)
+
         self.client.deployment_updates.add(dep_update.id,
                                            entity_type='node',
                                            entity_id='site_1')

@@ -95,6 +95,26 @@ class ESStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
 
+    def _append_doc_list_field(self, doc_type, doc_id, field, value):
+        """
+        Appends a value to a list field in a document (or creates the list)
+        NOTE: append.groovy file has to be located in es scripts path
+        :param doc_type: document type
+        :param doc_id: document id
+        :param field: name of field which stores the list
+        :param value: value to append to list
+        """
+        self._connection.update(
+            index=STORAGE_INDEX_NAME,
+            doc_type=doc_type,
+            id=doc_id,
+            script='append',
+            body={
+                'params': {
+                    'key': field,
+                    'value': value
+                }})
+
     def _update_doc(self, doc_type, doc_id, update_doc):
         return self._connection.update(index=STORAGE_INDEX_NAME,
                                        doc_type=doc_type,
@@ -337,20 +357,10 @@ class ESStorageManager(object):
                                 deployment_update)
 
     def put_deployment_update_step(self, deployment_update_id, step):
-
-        script = ('if (ctx._source.containsKey(\"steps\"))'
-                  ' {ctx._source.steps += step;}'
-                  ' else {ctx._source.steps = [step]}')
-        self._connection.update(
-            index=STORAGE_INDEX_NAME,
-            doc_type=DEPLOYMENT_UPDATE_TYPE,
-            id=deployment_update_id,
-            body={
-                'script': script,
-                'params': {
-                    'step': step.to_dict()
-                }
-            })
+        self._append_doc_list_field(doc_type=DEPLOYMENT_UPDATE_TYPE,
+                                    doc_id=deployment_update_id,
+                                    field='steps',
+                                    value=step.to_dict())
 
     def delete_blueprint(self, blueprint_id):
         return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
