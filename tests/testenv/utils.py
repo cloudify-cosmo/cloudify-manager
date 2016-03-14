@@ -342,8 +342,8 @@ def update_storage(ctx):
     """
 
     deployment_id = ctx.deployment.id
-    plugin_name = ctx.plugin
-    if plugin_name is None:
+    plugin_name = ctx.plugin.name
+    if not plugin_name:
 
         # hack for tasks that are executed locally.
         if ctx.task_name.startswith('cloudify_agent'):

@@ -515,6 +515,11 @@ class BasicWorkflowsTest(TestCase):
         )
         deployment, _ = deploy(dsl_path)
 
+        from testenv import testenv_instance
+        deployment_dir_path = os.path.join(
+                testenv_instance.test_working_dir, 'cloudify.management',
+                'work', 'deployments', deployment.id)
+
         def _is_riemann_core_up():
             try:
                 with open(path.join(self.riemann_workdir,
@@ -527,6 +532,7 @@ class BasicWorkflowsTest(TestCase):
                 raise
 
         self.assertTrue(_is_riemann_core_up())
+        self.assertTrue(os.path.isdir(deployment_dir_path))
 
         # assert plugin installer installed
         # the necessary plugins.
@@ -553,6 +559,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
 
         self.assertFalse(_is_riemann_core_up())
+        self.assertFalse(os.path.isdir(deployment_dir_path))
 
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion

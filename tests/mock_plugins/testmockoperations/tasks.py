@@ -437,3 +437,10 @@ def do_nothing(ctx, **kwargs):
 @operation
 def log(ctx, message, **kwargs):
     ctx.logger.info(message)
+
+
+@operation
+def write_to_workdir(ctx, filename, content):
+    filepath = os.path.join(ctx.plugin.workdir, filename)
+    with open(filepath, 'w') as f:
+        f.write(content)

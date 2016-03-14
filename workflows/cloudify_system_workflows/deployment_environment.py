@@ -15,9 +15,11 @@
 
 import glob
 import os
+import shutil
 
 from cloudify.decorators import workflow
 from cloudify.workflows import tasks as workflow_tasks
+from cloudify.workflows import workflow_context
 
 
 def generate_create_dep_tasks_graph(ctx,
@@ -40,6 +42,11 @@ def generate_create_dep_tasks_graph(ctx,
         ctx.send_event('Starting deployment policy engine core'),
         ctx.execute_task('riemann_controller.tasks.create',
                          kwargs=policy_configuration or {}))
+
+    sequence.add(
+        ctx.send_event('Creating deployment work directory'),
+        ctx.local_task(_create_deployment_workdir,
+                       kwargs={'deployment_id': ctx.deployment.id}))
 
     return graph
 
@@ -75,7 +82,10 @@ def delete(ctx,
                 task_name='cloudify_agent.operations.uninstall_plugins',
                 kwargs={'plugins': plugins_to_uninstall}),
             ctx.send_event('Stopping deployment policy engine core'),
-            ctx.execute_task('riemann_controller.tasks.delete'))
+            ctx.execute_task('riemann_controller.tasks.delete'),
+            ctx.send_event('Deleting deployment work directory'),
+            ctx.local_task(_delete_deployment_workdir,
+                           kwargs={'deployment_id': ctx.deployment.id}))
 
     for task in graph.tasks_iter():
         _ignore_task_on_fail_and_send_event(task, ctx)
@@ -118,3 +128,18 @@ def _ignore_task_on_fail_and_send_event(task, ctx):
         ctx.send_event('Ignoring task {0} failure'.format(tsk.name))
         return workflow_tasks.HandlerResult.ignore()
     task.on_failure = failure_handler
+
+
+@workflow_context.task_config(send_task_events=False)
+def _create_deployment_workdir(deployment_id):
+    os.makedirs(_workdir(deployment_id))
+
+
+@workflow_context.task_config(send_task_events=False)
+def _delete_deployment_workdir(deployment_id):
+    shutil.rmtree(_workdir(deployment_id), ignore_errors=True)
+
+
+def _workdir(deployment_id):
+    base_workdir = os.environ['CELERY_WORK_DIR']
+    return os.path.join(base_workdir, 'deployments', deployment_id)
