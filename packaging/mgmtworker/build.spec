@@ -71,9 +71,8 @@ virtualenv /opt/mgmtworker/env && \
 %preun
 %postun
 
-rm -rf /opt/manager
+rm -rf /opt/mgmtworker/env
 rm -rf /var/wheels/${name}
-
 
 
 %files
