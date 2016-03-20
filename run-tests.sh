@@ -1,5 +1,11 @@
 #!/bin/bash -e
 
+test_rest_service_v2_1()
+{
+    echo "### Testing rest-service with V2.1 client..."
+    pushd rest-service && tox -e clientV2_1 && popd
+}
+
 test_rest_service_v2()
 {
     echo "### Testing rest-service with V2 client..."
@@ -72,6 +78,7 @@ run_flake8()
 }
 
 case $1 in
+    test-rest-service-v2_1-client ) test_rest_service_v2_1;;
     test-rest-service-v2-client ) test_rest_service_v2;;
     test-rest-service-v1-client ) test_rest_service_v1;;
     run-integration-tests       ) run_intergration_tests;;
