@@ -44,7 +44,7 @@ FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
-LATEST_API_VERSION = 2  # to be used by max_client_version test attribute
+LATEST_API_VERSION = 2.1  # to be used by max_client_version test attribute
 
 
 def build_query_string(query_params):
