@@ -235,7 +235,8 @@ class AuthorizationTests(SecurityTestBase):
             self.viewer_client.blueprints.get(standard_blueprint_id),
             expected_id=standard_blueprint_id)
 
-        # viewers should not be able to get blueprint_2
+        # viewers should not be able to get blueprint_2.
+        # NOTE: update roles_config.yaml for every rest version supported.
         self._assert_unauthorized(self.viewer_client.blueprints.get,
                                   secret_blueprint_id)
 
