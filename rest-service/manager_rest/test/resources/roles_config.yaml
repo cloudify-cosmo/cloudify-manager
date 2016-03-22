@@ -31,3 +31,5 @@ viewer:
       - '*'
     '/api/v2/blueprints/blueprint_2':
       - '*'
+    '/api/v2.1/blueprints/blueprint_2':
+      - '*'
