@@ -60,15 +60,14 @@ class TestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self.logger = setup_logger(self._testMethodName,
-                                   logging.INFO)
+        self.logger = setup_logger(self._testMethodName, logging.INFO)
         self.client = utils.create_rest_client()
+        self.es_db_client = utils.create_es_db_client()
         utils.restore_provider_context()
         TestEnvironment.start_celery_management_worker()
         self.test_logs_file = path.join(testenv_instance.events_and_logs_dir,
                                         '{0}.log'.format(self.id()))
-        testenv_instance.handle_logs = \
-            self._write_test_events_and_logs_to_file
+        testenv_instance.handle_logs = self._write_test_events_and_logs_to_file
 
     def tearDown(self):
         TestEnvironment.stop_dispatch_processes()

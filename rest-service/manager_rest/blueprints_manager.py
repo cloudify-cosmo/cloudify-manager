@@ -93,7 +93,32 @@ class BlueprintsManager(object):
         return self.sm.get_plugin(plugin_id, include=include)
 
     def update_execution_status(self, execution_id, status, error):
-        return self.sm.update_execution_status(execution_id, status, error)
+        execution = self.get_execution(execution_id)
+        if not self._validate_execution_update(execution.status, status):
+            raise manager_exceptions.InvalidExecutionUpdateStatus(
+                "Invalid relationship - can't change status from {0} to {1}"
+                .format(execution.status, status))
+
+        return self.sm.update_execution_status(
+            execution_id, status, error)
+
+    def _validate_execution_update(self, current_status, future_status):
+        if current_status in models.Execution.END_STATES:
+            return False
+
+        invalid_cancel_statuses = models.Execution.ACTIVE_STATES + [
+            models.Execution.TERMINATED]
+        if all((current_status == models.Execution.CANCELLING,
+                future_status in invalid_cancel_statuses)):
+            return False
+
+        invalid_force_cancel_statuses = invalid_cancel_statuses + [
+            models.Execution.CANCELLING]
+        if all((current_status == models.Execution.FORCE_CANCELLING,
+                future_status in invalid_force_cancel_statuses)):
+            return False
+
+        return True
 
     def _get_conf_for_snapshots_wf(self):
         return {

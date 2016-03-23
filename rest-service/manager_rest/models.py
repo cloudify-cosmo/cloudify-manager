@@ -17,12 +17,7 @@ import json
 
 
 class SerializableObject(object):
-
     def to_dict(self):
-        # attr_and_values = ((attr, getattr(self, attr)) for attr in dir(self)
-        #                    if not attr.startswith("__"))
-        # return {attr: value for attr, value in
-        #         attr_and_values if not callable(value)}
         return {field: getattr(self, field) for field in self.fields}
 
     def to_json(self):
@@ -30,7 +25,6 @@ class SerializableObject(object):
 
 
 class BlueprintState(SerializableObject):
-
     fields = {
         'plan', 'id', 'description', 'created_at', 'updated_at',
         'main_file_name'
@@ -46,7 +40,6 @@ class BlueprintState(SerializableObject):
 
 
 class Snapshot(SerializableObject):
-
     CREATED = 'created'
     FAILED = 'failed'
     CREATING = 'creating'
@@ -64,7 +57,6 @@ class Snapshot(SerializableObject):
 
 
 class Deployment(SerializableObject):
-
     fields = {'id', 'created_at', 'updated_at', 'blueprint_id',
               'workflows', 'permalink', 'inputs', 'policy_types',
               'policy_triggers', 'groups', 'outputs'}
@@ -84,7 +76,6 @@ class Deployment(SerializableObject):
 
 
 class DeploymentModification(SerializableObject):
-
     STARTED = 'started'
     FINISHED = 'finished'
     ROLLEDBACK = 'rolledback'
@@ -106,7 +97,6 @@ class DeploymentModification(SerializableObject):
 
 
 class Execution(SerializableObject):
-
     TERMINATED = 'terminated'
     FAILED = 'failed'
     CANCELLED = 'cancelled'
@@ -169,7 +159,6 @@ class DeploymentNodeInstance(SerializableObject):
     """
     Represents a node instance in a deployment.
     """
-
     fields = {
         'id', 'deployment_id', 'runtime_properties', 'state', 'version',
         'relationships', 'node_id', 'host_id'
@@ -187,7 +176,6 @@ class DeploymentNodeInstance(SerializableObject):
 
 
 class ProviderContext(SerializableObject):
-
     fields = {'context', 'name'}
 
     def __init__(self, **kwargs):

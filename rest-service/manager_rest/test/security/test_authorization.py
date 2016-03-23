@@ -17,6 +17,7 @@ from os import path
 
 from nose.plugins.attrib import attr
 
+from manager_rest import storage_manager, models
 from manager_rest.test import base_test
 from manager_rest.test.security.security_test_base import SecurityTestBase
 from cloudify_rest_client.exceptions import UserUnauthorizedError
@@ -315,6 +316,8 @@ class AuthorizationTests(SecurityTestBase):
 
     def _test_cancel_executions(self, execution1_id, execution2_id):
         # preparing executions for delete
+        self._reset_execution_status_in_db(execution1_id)
+        self._reset_execution_status_in_db(execution2_id)
         self.deployer_client.executions.update(execution1_id, 'pending')
         self.deployer_client.executions.update(execution2_id, 'pending')
 
@@ -330,6 +333,7 @@ class AuthorizationTests(SecurityTestBase):
 
     def _test_update_executions(self, execution_id):
         # admins and deployers should be able to update executions...
+        self._reset_execution_status_in_db(execution_id)
         execution = self.admin_client.executions.update(
             execution_id, 'dummy_status1')
         self._assert_execution(execution,
@@ -557,3 +561,10 @@ class AuthorizationTests(SecurityTestBase):
     def _get_client_by_token(self, token):
         token_header = SecurityTestBase.create_auth_header(token=token)
         return self.create_client(headers=token_header)
+
+    def _reset_execution_status_in_db(self, execution_id):
+        storage_manager._get_instance().update_execution_status(
+            execution_id, models.Execution.STARTED, error='')
+        updated_execution = self.admin_client.executions.get(
+            execution_id=execution_id)
+        self.assertEqual(models.Execution.STARTED, updated_execution['status'])

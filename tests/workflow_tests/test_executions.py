@@ -139,11 +139,13 @@ class ExecutionsTest(TestCase):
 
     def test_update_execution_status(self):
         dsl_path = resource("dsl/basic.yaml")
-        _, execution_id = deploy(dsl_path,
-                                 wait_for_execution=True)
+        _, execution_id = deploy(dsl_path, wait_for_execution=True)
         execution = self.client.executions.get(execution_id)
         self.assertEquals(Execution.TERMINATED, execution.status)
-        execution = self.client.executions.update(execution_id, 'new-status')
+
+        self.es_db_client.update_execution_status(
+            execution_id, 'new-status', '')
+        execution = self.client.executions.get(execution_id)
         self.assertEquals('new-status', execution.status)
         execution = self.client.executions.update(execution_id,
                                                   'another-new-status',
@@ -152,8 +154,7 @@ class ExecutionsTest(TestCase):
         self.assertEquals('some-error', execution.error)
         # verifying that updating only the status field also resets the
         # error field to an empty string
-        execution = self.client.executions.update(execution_id,
-                                                  'final-status')
+        execution = self.client.executions.update(execution_id, 'final-status')
         self.assertEquals('final-status', execution.status)
         self.assertEquals('', execution.error)
 
