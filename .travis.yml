@@ -15,6 +15,7 @@ env:
         - ACTION="test-rest-service-v2_1-client"
         - ACTION="test-rest-service-v2-client"
         - ACTION="test-rest-service-v1-client"
+        - ACTION="test-system-workflows"
         - ACTION="flake8"
 
 install:

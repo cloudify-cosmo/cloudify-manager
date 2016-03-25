@@ -23,6 +23,23 @@ from cloudify.workflows import tasks as workflow_tasks
 from cloudify.workflows import workflow_context
 
 
+def _should_create_policy_engine_core(policy_configuration):
+    """Examine the policy_configuration and decide to start a riemann core
+    """
+    groups = policy_configuration['groups']
+    policy_types = policy_configuration['policy_types']
+
+    if not groups or not policy_types:
+        return False
+
+    for group in groups.values():
+        for policy_config in group.get('policies', {}).values():
+            if policy_config['type'] in policy_types:
+                return True
+
+    return False
+
+
 def generate_create_dep_tasks_graph(ctx,
                                     deployment_plugins_to_install,
                                     workflow_plugins_to_install,
@@ -39,10 +56,15 @@ def generate_create_dep_tasks_graph(ctx,
             ctx.execute_task('cloudify_agent.operations.install_plugins',
                              kwargs={'plugins': plugins_to_install}))
 
-    sequence.add(
-        ctx.send_event('Starting deployment policy engine core'),
-        ctx.execute_task('riemann_controller.tasks.create',
-                         kwargs=policy_configuration or {}))
+    if _should_create_policy_engine_core(policy_configuration):
+        sequence.add(
+            ctx.send_event('Starting deployment policy engine core'),
+            ctx.execute_task('riemann_controller.tasks.create',
+                             kwargs=policy_configuration))
+    else:
+        sequence.add(
+            ctx.send_event('Skipping starting deployment policy engine '
+                           'core - no policies defined'))
 
     sequence.add(
         ctx.send_event('Creating deployment work directory'),
@@ -85,7 +107,8 @@ def delete(ctx,
                 kwargs={'plugins': plugins_to_uninstall}))
 
     sequence.add(
-        ctx.send_event('Stopping deployment policy engine core'),
+        ctx.send_event('Stopping deployment policy engine core '
+                       '(if applicable)'),
         ctx.execute_task('riemann_controller.tasks.delete'))
 
     sequence.add(

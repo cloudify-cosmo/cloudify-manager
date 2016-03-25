@@ -1,5 +1,11 @@
 #!/bin/bash -e
 
+test_system_workflows()
+{
+    echo "### Testing rest-service with V2.1 client..."
+    pushd workflows && tox && popd
+}
+
 test_rest_service_v2_1()
 {
     echo "### Testing rest-service with V2.1 client..."
@@ -83,4 +89,5 @@ case $1 in
     test-rest-service-v1-client ) test_rest_service_v1;;
     run-integration-tests       ) run_intergration_tests;;
     flake8                      ) run_flake8;;
+    test-system-workflows       ) test_system_workflows;;
 esac
