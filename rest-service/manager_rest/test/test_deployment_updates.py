@@ -12,15 +12,17 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import tempfile
 
 import re
+import shutil
 
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
-from dsl_parser.parser import parse_from_path
 from utils import get_resource as resource
+from utils import tar_blueprint
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
@@ -120,9 +122,19 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         blueprint_path = \
             blueprint_path or \
             resource('deployment_update/dep_up_add_node.yaml')
-        blueprint = parse_from_path(blueprint_path)
 
         if deploy_first:
             self.put_deployment(deployment_id)
 
-        return self.client.deployment_updates.stage(deployment_id, blueprint)
+        tempdir = tempfile.mkdtemp()
+        try:
+            archive_path = tar_blueprint(blueprint_path, tempdir)
+            archive_url = 'file://{0}'.format(archive_path)
+
+            return \
+                self.client.deployment_updates.\
+                stage_archive(deployment_id,
+                              archive_url,
+                              'dep_up_add_node.yaml')
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
