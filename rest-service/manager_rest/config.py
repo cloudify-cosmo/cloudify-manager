@@ -32,6 +32,7 @@ class Config(object):
         self._file_server_uploaded_blueprints_folder = None
         self._file_server_snapshots_folder = None
         self._file_server_resources_uri = None
+        self._maintenance_folder = None
         self._rest_service_log_level = None
         self._rest_service_log_path = None
         self._rest_service_log_file_size_MB = None
@@ -122,6 +123,14 @@ class Config(object):
     @file_server_resources_uri.setter
     def file_server_resources_uri(self, value):
         self._file_server_resources_uri = value
+
+    @property
+    def maintenance_folder(self):
+        return self._maintenance_folder
+
+    @maintenance_folder.setter
+    def maintenance_folder(self, value):
+        self._maintenance_folder = value
 
     @property
     def rest_service_log_path(self):

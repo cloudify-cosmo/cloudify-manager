@@ -54,7 +54,9 @@ def setup_resources(api):
         'Tokens': 'tokens',
         'Plugins': 'plugins',
         'PluginsId': 'plugins/<string:plugin_id>',
-        'PluginsArchive': 'plugins/<string:plugin_id>/archive'
+        'PluginsArchive': 'plugins/<string:plugin_id>/archive',
+        'MaintenanceMode': 'maintenance',
+        'MaintenanceModeAction': 'maintenance/<string:maintenance_action>'
     }
 
     for resource, endpoint_suffix in resources_endpoints.iteritems():

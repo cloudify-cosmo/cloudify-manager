@@ -21,6 +21,7 @@ import tempfile
 import time
 import os
 import types
+import shutil
 
 from nose.tools import nottest
 from nose.plugins.attrib import attr
@@ -185,6 +186,9 @@ class BaseServerTestCase(unittest.TestCase):
             client.plugins.api = mock_http_client
             client.snapshots.api = mock_http_client
 
+            # only exists in v2.1 and above
+            if CLIENT_API_VERSION != 'v2':
+                client.maintenance_mode.api = mock_http_client
         return client
 
     def setUp(self):
@@ -192,6 +196,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.rest_service_log = tempfile.mkstemp()[1]
         self.securest_log_file = tempfile.mkstemp()[1]
         self.file_server = FileServer(self.tmpdir)
+        self.maintenance_mode_dir = tempfile.mkdtemp()
         self.addCleanup(self.cleanup)
         self.file_server.start()
         storage_manager.storage_manager_module_name = \
@@ -224,6 +229,7 @@ class BaseServerTestCase(unittest.TestCase):
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)
         self.quiet_delete(self.securest_log_file)
+        self.quiet_delete_directory(self.maintenance_mode_dir)
         if self.file_server:
             self.file_server.stop()
 
@@ -253,6 +259,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.security_audit_log_file = self.securest_log_file
         test_config.security_audit_log_file_size_MB = 100
         test_config.security_audit_log_files_backup_count = 20
+        test_config._maintenance_folder = self.maintenance_mode_dir
         return test_config
 
     def _version_url(self, url):
@@ -428,6 +435,10 @@ class BaseServerTestCase(unittest.TestCase):
             os.remove(file_path)
         except:
             pass
+
+    @staticmethod
+    def quiet_delete_directory(file_path):
+        shutil.rmtree(file_path, ignore_errors=True)
 
     def wait_for_deployment_creation(self, client, deployment_id):
         env_creation_execution = None

@@ -48,7 +48,8 @@ class ManagerRestProcess(object):
                  securest_log_files_backup_count,
                  tempdir,
                  amqp_username,
-                 amqp_password):
+                 amqp_password,
+                 maintenance_folder):
         self.process = None
         self.port = port or MANAGER_REST_PORT
         self.file_server_dir = file_server_dir
@@ -70,6 +71,7 @@ class ManagerRestProcess(object):
         self.tempdir = tempdir
         self.amqp_username = amqp_username
         self.amqp_password = amqp_password
+        self.maintenance_folder = maintenance_folder
 
     def start(self, timeout=10):
         end_time = time.time() + timeout
@@ -95,6 +97,7 @@ class ManagerRestProcess(object):
             self.file_server_blueprints_folder,
             'amqp_username': self.amqp_username,
             'amqp_password': self.amqp_password,
+            'maintenance_folder': self.maintenance_folder
         }
 
         config_path = os.path.join(self.tempdir, 'manager_config.json')
