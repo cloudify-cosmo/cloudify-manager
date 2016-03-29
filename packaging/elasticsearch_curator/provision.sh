@@ -19,7 +19,7 @@ function generate_checksum() {
     cd /tmp/x86_64 && md5sum=$(md5sum *.rpm) && echo $md5sum | sudo tee ${md5sum##* }.md5
 }
 
-CORE_TAG_NAME="3.4m4"
+CORE_TAG_NAME="3.4m3"
 curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
 
