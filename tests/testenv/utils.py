@@ -30,6 +30,7 @@ from celery import Celery
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
+from manager_rest.es_storage_manager import ESStorageManager
 from testenv.processes.manager_rest import MANAGER_REST_PORT
 
 
@@ -204,6 +205,10 @@ def is_node_started(node_id):
 
 def create_rest_client():
     return CloudifyClient(host='localhost', port=MANAGER_REST_PORT)
+
+
+def create_es_db_client():
+    return ESStorageManager(host='localhost', port=9200)
 
 
 def get_resource(resource):

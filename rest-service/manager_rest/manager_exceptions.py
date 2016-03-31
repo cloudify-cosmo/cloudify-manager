@@ -154,6 +154,16 @@ class GlobalParallelRunningExecutionsLimitReachedError(ManagerException):
             *args, **kwargs)
 
 
+class InvalidExecutionUpdateStatus(ManagerException):
+    INVALID_STATUS_UPDATE = 'invalid_exception_status_update'
+
+    def __init__(self, *args, **kwargs):
+        super(InvalidExecutionUpdateStatus, self).__init__(
+            400,
+            self.INVALID_STATUS_UPDATE,
+            *args, **kwargs)
+
+
 class ExistingStartedDeploymentModificationError(ManagerException):
     EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR = \
         'existing_started_deployment_modification_error'

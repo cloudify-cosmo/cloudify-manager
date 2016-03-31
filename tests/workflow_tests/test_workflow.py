@@ -13,51 +13,30 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import os
 import uuid
 import errno
-import os
-import tempfile
 import tarfile
-from os import path
+import tempfile
+from contextlib import contextmanager
 
 from cloudify import context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 
 from testenv import TestCase
-from testenv.utils import get_resource as resource
-from testenv.utils import do_retries
-from testenv.utils import timeout
-from testenv.utils import verify_deployment_environment_creation_complete
-from testenv.utils import deploy_application as deploy
-from testenv.utils import undeploy_application as undeploy
-from testenv.utils import delete_deployment
-from testenv.utils import execute_workflow
-from testenv.utils import wait_for_execution_to_end
+from testenv.utils import (
+    get_resource, do_retries, timeout, delete_deployment,
+    verify_deployment_environment_creation_complete,
+    deploy_application, undeploy_application,
+)
 
 
 class BasicWorkflowsTest(TestCase):
-
-    def _test1(self):
-        num_deps = 5
-        for i in range(num_deps):
-            deploy(resource('dsl/basic.yaml'), deployment_id='d{0}'.format(i))
-        while True:
-            for workflow in ['uninstall', 'install']:
-                executions = []
-                for i in range(num_deps):
-                    execution = execute_workflow(
-                        workflow,
-                        deployment_id='d{0}'.format(i),
-                        wait_for_execution=False)
-                    executions.append(execution)
-                for execution in executions:
-                    wait_for_execution_to_end(execution)
-
     def test_execute_operation(self):
-        dsl_path = resource('dsl/basic.yaml')
+        dsl_path = get_resource('dsl/basic.yaml')
         blueprint_id = self.id()
-        deployment, _ = deploy(
+        deployment, _ = deploy_application(
             dsl_path,
             blueprint_id=blueprint_id,
             timeout_seconds=15
@@ -75,9 +54,9 @@ class BasicWorkflowsTest(TestCase):
         self.assertEquals(outputs['ip_address'], '')
 
     def test_dependencies_order_with_two_nodes(self):
-        dsl_path = resource("dsl/dependencies_order_with_two_nodes.yaml")
+        dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
         blueprint_id = self.id()
-        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = deploy_application(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEquals(blueprint_id, deployment.blueprint_id)
 
@@ -92,9 +71,9 @@ class BasicWorkflowsTest(TestCase):
     @timeout(seconds=120)
     def test_execute_operation_failure(self):
         deployment_id = str(uuid.uuid4())
-        dsl_path = resource("dsl/basic.yaml")
+        dsl_path = get_resource("dsl/basic.yaml")
         try:
-            deploy(dsl_path, deployment_id=deployment_id)
+            deploy_application(dsl_path, deployment_id=deployment_id)
             self.fail('expected exception')
         except Exception as e:
             if e.message:
@@ -102,8 +81,8 @@ class BasicWorkflowsTest(TestCase):
             pass
 
     def test_cloudify_runtime_properties_injection(self):
-        dsl_path = resource("dsl/dependencies_order_with_two_nodes.yaml")
-        deployment, _ = deploy(dsl_path)
+        dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
+        deployment, _ = deploy_application(dsl_path)
         states = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -120,12 +99,12 @@ class BasicWorkflowsTest(TestCase):
                               node_runtime_props))
 
     def test_non_existing_operation_exception(self):
-        dsl_path = resource("dsl/wrong_operation_name.yaml")
-        self.assertRaises(RuntimeError, deploy, dsl_path)
+        dsl_path = get_resource("dsl/wrong_operation_name.yaml")
+        self.assertRaises(RuntimeError, deploy_application, dsl_path)
 
     def test_inject_properties_to_operation(self):
-        dsl_path = resource("dsl/hardcoded_operation_properties.yaml")
-        deployment, _ = deploy(dsl_path)
+        dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
+        deployment, _ = deploy_application(dsl_path)
         states = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -140,8 +119,8 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(states[0]['id'], invocation['id'])
 
     def test_start_monitor_node_operation(self):
-        dsl_path = resource("dsl/hardcoded_operation_properties.yaml")
-        deployment, _ = deploy(dsl_path)
+        dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
+        deployment, _ = deploy_application(dsl_path)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -151,15 +130,15 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual('start_monitor', invocation['operation'])
 
     def test_plugin_get_resource(self):
-        dsl_path = resource("dsl/get_resource_in_plugin.yaml")
-        deployment, _ = deploy(dsl_path)
+        dsl_path = get_resource("dsl/get_resource_in_plugin.yaml")
+        deployment, _ = deploy_application(dsl_path)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
         )['get_resource_operation_invocation']
         self.assertEquals(1, len(invocations))
         invocation = invocations[0]
-        with open(resource("dsl/basic.yaml")) as f:
+        with open(get_resource("dsl/basic.yaml")) as f:
             basic_data = f.read()
 
         # checking the resources are the correct data
@@ -172,9 +151,9 @@ class BasicWorkflowsTest(TestCase):
                           invocation['res2_path'])
 
     def test_search(self):
-        dsl_path = resource("dsl/basic.yaml")
+        dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'
-        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = deploy_application(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprint_id)
 
@@ -190,9 +169,9 @@ class BasicWorkflowsTest(TestCase):
         self.assertEquals(expected_num_of_hits, len(hits))
 
     def test_get_blueprint(self):
-        dsl_path = resource("dsl/basic.yaml")
+        dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = str(uuid.uuid4())
-        deployment, _ = deploy(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = deploy_application(dsl_path, blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprint_id)
         blueprint = self.client.blueprints.get(blueprint_id)
@@ -209,7 +188,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(blueprint_id, result.id)
 
     def _make_archive_file(self, blueprint_path, write_mode='w'):
-        dsl_path = resource(blueprint_path)
+        dsl_path = get_resource(blueprint_path)
         blueprint_dir = os.path.dirname(dsl_path)
         archive_location = tempfile.mkstemp()[1]
         arcname = os.path.basename(blueprint_dir)
@@ -218,9 +197,10 @@ class BasicWorkflowsTest(TestCase):
         return archive_location
 
     def test_delete_blueprint(self):
-        dsl_path = resource("dsl/basic.yaml")
-        blueprint_id = self.client.blueprints.upload(dsl_path,
-                                                     str(uuid.uuid4())).id
+        dsl_path = get_resource("dsl/basic.yaml")
+        blueprint_id = self.client.blueprints.upload(
+            dsl_path, str(uuid.uuid4())).id
+
         # verifying blueprint exists
         result = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, result.id)
@@ -243,42 +223,48 @@ class BasicWorkflowsTest(TestCase):
             pass
 
     def test_delete_deployment(self):
-        dsl_path = resource("dsl/basic.yaml")
+        dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = self.id()
         deployment_id = str(uuid.uuid4())
 
-        def change_execution_status(_execution_id, status):
-            self.client.executions.update(_execution_id, status)
-            executions = self.client.executions.list(deployment_id)
-            updated_execution = next(execution for execution in executions
-                                     if execution.id == _execution_id)
+        def change_execution_status(execution_id, status):
+            self.client.executions.update(execution_id, status)
+            updated_execution = self.client.executions.get(deployment_id)
             self.assertEqual(status, updated_execution.status)
+
+        @contextmanager
+        def client_error_check(expect_in_error_message, failer_message):
+            try:
+                yield
+                self.fail(failer_message)
+            except CloudifyClientError as exc:
+                self.assertTrue(expect_in_error_message in str(exc))
 
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
         # 'uninitialized' state.
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
-        do_retries(verify_deployment_environment_creation_complete, 30,
+        do_retries(verify_deployment_environment_creation_complete,
+                   timeout_seconds=30,
                    deployment_id=deployment_id)
 
-        delete_deployment(deployment_id, False)
+        delete_deployment(deployment_id, ignore_live_nodes=False)
         self.client.blueprints.delete(blueprint_id)
 
         # recreating the deployment, this time actually deploying it too
-        _, execution_id = deploy(dsl_path,
-                                 blueprint_id=blueprint_id,
-                                 deployment_id=deployment_id,
-                                 wait_for_execution=True)
+        _, execution_id = deploy_application(
+            dsl_path,
+            blueprint_id=blueprint_id,
+            deployment_id=deployment_id,
+            wait_for_execution=True)
 
-        execs = self.client.executions.list(include_system_workflows=True)
-        self.assertEqual(Execution.TERMINATED,
-                         next(execution for execution in execs if
-                              execution.id == execution_id).status)
+        execution = self.client.executions.get(execution_id)
+        self.assertEqual(Execution.TERMINATED, execution.status)
 
         # verifying deployment exists
-        result = self.client.deployments.get(deployment_id)
-        self.assertEqual(deployment_id, result.id)
+        deployment = self.client.deployments.get(deployment_id)
+        self.assertEqual(deployment_id, deployment.id)
 
         # retrieving deployment nodes
         nodes = self.client.node_instances.list(deployment_id=deployment_id)
@@ -287,27 +273,8 @@ class BasicWorkflowsTest(TestCase):
         # setting one node's state to 'started' (making it a 'live' node)
         # node must be read using get in order for it to have a version.
         node = self.client.node_instances.get(nodes[0].id)
-        self.client.node_instances.update(node.id,
-                                          state='started',
-                                          version=node.version)
-
-        # setting the execution's status to 'started' so it'll prevent the
-        # deployment deletion
-        change_execution_status(execution_id, Execution.STARTED)
-
-        # attempting to delete the deployment - should fail because the
-        # execution is active
-        try:
-            delete_deployment(deployment_id)
-            self.fail("Deleted deployment {0} successfully even though it "
-                      "should have had a running execution"
-                      .format(deployment_id))
-        except CloudifyClientError, e:
-            self.assertTrue('running executions' in str(e))
-
-        # setting the execution's status to 'terminated' so it won't prevent
-        #  the deployment deletion
-        change_execution_status(execution_id, Execution.TERMINATED)
+        self.client.node_instances.update(
+            node.id, state='started', version=node.version)
 
         modification = self.client.deployment_modifications.start(
             deployment_id,
@@ -321,13 +288,13 @@ class BasicWorkflowsTest(TestCase):
 
         # attempting to delete deployment - should fail because there are
         # live nodes for this deployment
-        try:
+        with client_error_check(
+                failer_message='Deleted deployment {0} successfully even '
+                               'though it should have had live nodes and the '
+                               'ignore_live_nodes flag was set to False'
+                               .format(deployment_id),
+                expect_in_error_message='live nodes'):
             delete_deployment(deployment_id)
-            self.fail("Deleted deployment {0} successfully even though it "
-                      "should have had live nodes and the ignore_live_nodes "
-                      "flag was set to False".format(deployment_id))
-        except CloudifyClientError, e:
-            self.assertTrue('live nodes' in str(e))
 
         # deleting deployment - this time there's no execution running,
         # and using the ignore_live_nodes parameter to force deletion
@@ -335,51 +302,48 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(deployment_id, deleted_deployment_id)
 
         # verifying deployment does no longer exist
-        try:
+        with client_error_check(
+                failer_message="Got deployment {0} successfully even though "
+                               "it wasn't expected to exist"
+                               .format(deployment_id),
+                expect_in_error_message='not found'):
             self.client.deployments.get(deployment_id)
-            self.fail("Got deployment {0} successfully even though it "
-                      "wasn't expected to exist".format(deployment_id))
-        except CloudifyClientError, e:
-            self.assertTrue('not found' in str(e))
 
         # verifying deployment's execution does no longer exist
-        try:
+        with client_error_check(
+                failer_message='execution {0} still exists even though it '
+                               'should have been deleted when its deployment '
+                               'was deleted'.format(execution_id),
+                expect_in_error_message='not found'):
             self.client.executions.get(execution_id)
-            self.fail('execution {0} still exists even though it should have '
-                      'been deleted when its deployment was deleted'
-                      .format(execution_id))
-        except CloudifyClientError, e:
-            self.assertTrue('not found' in str(e))
 
         # verifying deployment modification no longer exists
-        try:
+        with client_error_check(
+                failer_message='deployment modification {0} still exists even '
+                               'though it should have been deleted when its '
+                               'deployment was deleted',
+                expect_in_error_message='not found'):
             self.client.deployment_modifications.get(modification.id)
-            self.fail('deployment modification {0} still exists even though '
-                      'it should have been deleted when its deployment was '
-                      'deleted')
-        except CloudifyClientError, e:
-            self.assertTrue('not found' in str(e))
 
         # verifying deployment's nodes do no longer exist
         for node_id in nodes_ids:
-            try:
+            with client_error_check(
+                    failer_message='node {0} still exists even though it '
+                                   'should have been deleted when its '
+                                   'deployment was deleted'.format(node_id),
+                    expect_in_error_message='not found'):
                 self.client.node_instances.get(node_id)
-                self.fail('node {0} still exists even though it should have '
-                          'been deleted when its deployment was deleted'
-                          .format(node_id))
-            except CloudifyClientError, e:
-                self.assertTrue('not found' in str(e))
 
         # trying to delete a nonexistent deployment
-        try:
+        with client_error_check(
+                failer_message="Deleted deployment {0} successfully even "
+                               "though it wasn't expected to exist"
+                               .format(deployment_id),
+                expect_in_error_message='not found'):
             delete_deployment(deployment_id)
-            self.fail("Deleted deployment {0} successfully even though it "
-                      "wasn't expected to exist".format(deployment_id))
-        except CloudifyClientError, e:
-            self.assertTrue('not found' in str(e))
 
     def test_node_state_uninitialized(self):
-        dsl_path = resource('dsl/node_states.yaml')
+        dsl_path = get_resource('dsl/node_states.yaml')
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
@@ -400,13 +364,14 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual('uninitialized', node_instance.state)
 
     def test_node_states(self):
-        dsl_path = resource('dsl/node_states.yaml')
+        dsl_path = get_resource('dsl/node_states.yaml')
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
-        deployment, _ = deploy(dsl_path,
-                               blueprint_id=blueprint_id,
-                               deployment_id=deployment_id)
+        deployment, _ = deploy_application(
+            dsl_path,
+            blueprint_id=blueprint_id,
+            deployment_id=deployment_id)
         node_states = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -423,8 +388,8 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual('started', node_instance.state)
 
     def test_deploy_with_agent_worker(self):
-        dsl_path = resource('dsl/with_agent_worker.yaml')
-        deployment, _ = deploy(dsl_path)
+        dsl_path = get_resource('dsl/with_agent_worker.yaml')
+        deployment, _ = deploy_application(dsl_path)
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment.id
         )
@@ -457,7 +422,7 @@ class BasicWorkflowsTest(TestCase):
         expected_invocations = ['create', 'start']
         self.assertListEqual(invocations, expected_invocations)
 
-        undeploy(deployment_id=deployment.id)
+        undeploy_application(deployment_id=deployment.id)
         invocations = self.get_plugin_data(
             plugin_name='mock_agent_plugin',
             deployment_id=deployment.id
@@ -478,8 +443,8 @@ class BasicWorkflowsTest(TestCase):
              'stopped', 'deleted'])
 
     def test_deploy_with_operation_executor_override(self):
-        dsl_path = resource('dsl/operation_executor_override.yaml')
-        deployment, _ = deploy(dsl_path)
+        dsl_path = get_resource('dsl/operation_executor_override.yaml')
+        deployment, _ = deploy_application(dsl_path)
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment.id
         )
@@ -506,14 +471,14 @@ class BasicWorkflowsTest(TestCase):
         # overrides the executor (with a local task)
         self.assertEqual(agent_data['local']['target_aware_mock_plugin'],
                          ['installed'])
-        undeploy(deployment_id=deployment.id)
+        undeploy_application(deployment_id=deployment.id)
 
     def test_deployment_creation_workflow(self):
 
-        dsl_path = resource(
+        dsl_path = get_resource(
             'dsl/basic_with_deployment_plugin_and_workflow_plugin.yaml'
         )
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = deploy_application(dsl_path)
 
         from testenv import testenv_instance
         deployment_dir_path = os.path.join(
@@ -522,9 +487,8 @@ class BasicWorkflowsTest(TestCase):
 
         def _is_riemann_core_up():
             try:
-                with open(path.join(self.riemann_workdir,
-                                    deployment.id,
-                                    'ok')) as f:
+                with open(os.path.join(
+                        self.riemann_workdir, deployment.id, 'ok')) as f:
                     return f.read().strip() == 'ok'
             except IOError, e:
                 if e.errno == errno.ENOENT:
@@ -546,7 +510,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(agent_data['local']['cloudmock'], installed)
         self.assertEqual(agent_data['local']['mock_workflows'], installed)
 
-        undeploy(deployment.id, is_delete_deployment=True)
+        undeploy_application(deployment.id, is_delete_deployment=True)
 
         # assert plugin installer uninstalled
         # the necessary plugins.
@@ -563,8 +527,8 @@ class BasicWorkflowsTest(TestCase):
 
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
-        dsl_path = resource('dsl/get_attributes.yaml')
-        deployment, _ = deploy(dsl_path)
+        dsl_path = get_resource('dsl/get_attributes.yaml')
+        deployment, _ = deploy_application(dsl_path)
         data = self.get_plugin_data(plugin_name='get_attribute',
                                     deployment_id=deployment.id)
         invocations = data['invocations']

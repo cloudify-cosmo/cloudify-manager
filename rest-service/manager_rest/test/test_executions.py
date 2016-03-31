@@ -15,6 +15,7 @@
 
 
 from datetime import datetime
+from itertools import dropwhile
 
 import mock
 from nose.plugins.attrib import attr
@@ -33,9 +34,7 @@ class ExecutionsTestCase(BaseServerTestCase):
     DEPLOYMENT_ID = 'deployment'
 
     def test_get_deployment_executions_empty(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
-
+        _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
         executions = self.client.executions.list(deployment_id=deployment_id)
 
         # expecting 1 execution (create_deployment_environment)
@@ -44,7 +43,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                           executions[0]['workflow_id'])
 
     def test_get_execution_by_id(self):
-        (blueprint_id, deployment_id, blueprint_response,
+        (blueprint_id, deployment_id, _,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         execution = self.client.executions.start(deployment_id, 'install')
@@ -55,7 +54,7 @@ class ExecutionsTestCase(BaseServerTestCase):
                           deployment_response['id'])
         self.assertIsNotNone(get_execution['created_at'])
 
-        return execution
+        return get_execution
 
     def test_list_system_executions(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -273,9 +272,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.client.executions.get(execution.id)
         self.assertEquals('terminated', execution.status)
 
-    def test_bad_update_execution_status(self):
-        (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
+    def test_bad_parameters_on_update_execution_status(self):
+        _, deployment_id, _, _ = self.put_deployment(self.DEPLOYMENT_ID)
 
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
@@ -289,6 +287,70 @@ class ExecutionsTestCase(BaseServerTestCase):
             resp.json['error_code'],
             manager_exceptions.BadParametersError.BAD_PARAMETERS_ERROR_CODE)
 
+    def test_bad_update_execution_status(self):
+        execution = self.test_get_execution_by_id()
+        resource_path = '/executions/{0}'.format(execution['id'])
+        expected_error = manager_exceptions.InvalidExecutionUpdateStatus()
+        expected_message = (
+            "Invalid relationship - can't change status from {0} to {1}")
+
+        force_cancelling_invalid_future_statuses = (
+            models.Execution.ACTIVE_STATES + [models.Execution.TERMINATED])
+        cancelling_invalid_future_statuses = dropwhile(
+            lambda status: status == models.Execution.CANCELLING,
+            force_cancelling_invalid_future_statuses)
+        invalid_status_map = {
+            models.Execution.TERMINATED: models.Execution.STATES,
+            models.Execution.FAILED: models.Execution.STATES,
+            models.Execution.CANCELLED: models.Execution.STATES,
+            models.Execution.CANCELLING: cancelling_invalid_future_statuses,
+            models.Execution.FORCE_CANCELLING:
+                force_cancelling_invalid_future_statuses,
+        }
+
+        def assert_invalid_update():
+            self._modify_execution_status_in_database(
+                execution=execution, new_status=last_status)
+            response = self.patch(resource_path, {'status': next_status})
+            self.assertEqual(
+                expected_error.http_code, response.status_code)
+            self.assertEqual(
+                expected_error.error_code, response.json['error_code'])
+            self.assertEqual(
+                expected_message.format(last_status, next_status),
+                response.json['message'])
+
+        for last_status, status_list in invalid_status_map.iteritems():
+            for next_status in status_list:
+                assert_invalid_update()
+
+    @attr(client_min_version=2.1, client_max_version=LATEST_API_VERSION)
+    def test_bad_update_execution_status_client_exception(self):
+        execution = self.test_get_execution_by_id()
+        expected_message = (
+            "Invalid relationship - can't change status from {0} to {1}")
+        last_status = models.Execution.TERMINATED
+        next_status = models.Execution.STARTED
+        self._modify_execution_status_in_database(
+            execution=execution,
+            new_status=last_status)
+
+        try:
+            self.client.executions.update(
+                execution_id=execution['id'],
+                status=next_status,
+                error='')
+            self.fail('changing status from {0} to {1} should raise error'
+                      .format(last_status, next_status))
+        except exceptions.InvalidExecutionUpdateStatus as exc:
+            self.assertEqual(400, exc.status_code)
+            self.assertEqual(
+                exceptions.InvalidExecutionUpdateStatus.ERROR_CODE,
+                exc.error_code)
+            self.assertIn(
+                expected_message.format(last_status, next_status),
+                str(exc))
+
     def test_update_execution_status(self):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
@@ -296,6 +358,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
         self.assertEquals('terminated', execution.status)
+        self._modify_execution_status_in_database(
+            execution, models.Execution.STARTED)
         self._modify_execution_status(execution.id, 'new_status')
 
     def test_update_execution_status_with_error(self):
@@ -306,15 +370,17 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.client.executions.get(execution.id)
         self.assertEquals('terminated', execution.status)
         self.assertEquals('', execution.error)
-        execution = self.client.executions.update(execution.id,
-                                                  'new-status',
-                                                  'some error')
+        self._modify_execution_status_in_database(
+            execution, models.Execution.STARTED)
+
+        execution = self.client.executions.update(
+            execution.id, 'new-status', 'some error')
         self.assertEquals('new-status', execution.status)
         self.assertEquals('some error', execution.error)
         # verifying that updating only the status field also resets the
         # error field to an empty string
-        execution = self._modify_execution_status(execution.id,
-                                                  'final-status')
+        execution = self._modify_execution_status(
+            execution.id, 'final-status')
         self.assertEquals('', execution.error)
 
     def test_update_nonexistent_execution(self):
@@ -325,9 +391,11 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.test_get_execution_by_id()
         # modifying execution status back to 'pending' to 'cancel' will be a
         #  legal action
-        resource_path = '/executions/{0}'.format(execution['id'])
-        execution = self._modify_execution_status(execution['id'], 'pending')
+        self._modify_execution_status_in_database(
+            execution=execution,
+            new_status=models.Execution.PENDING)
 
+        resource_path = '/executions/{0}'.format(execution['id'])
         cancel_response = self.post(resource_path, {
             'action': 'cancel'
         }).json
@@ -336,10 +404,10 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_force_cancel_execution_by_id(self):
         execution = self.test_get_execution_by_id()
-        # modifying execution status back to 'pending' to 'cancel' will be a
-        #  legal action
+        self._modify_execution_status_in_database(
+            execution=execution,
+            new_status=models.Execution.PENDING)
         resource_path = '/executions/{0}'.format(execution['id'])
-        execution = self._modify_execution_status(execution['id'], 'pending')
 
         cancel_response = self.post(
             resource_path, {'action': 'force-cancel'}).json
@@ -355,7 +423,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         def attempt_cancel_on_status(new_status,
                                      force=False,
                                      expect_failure=True):
-            self._modify_execution_status(execution['id'], new_status)
+            self._modify_execution_status_in_database(execution, new_status)
 
             action = 'force-cancel' if force else 'cancel'
             cancel_response = self.post(resource_path, {'action': action})
@@ -436,7 +504,9 @@ class ExecutionsTestCase(BaseServerTestCase):
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
 
         execution = self.client.executions.start(deployment_id, 'install')
-        self._modify_execution_status(execution.id, 'pending')
+        self._modify_execution_status_in_database(
+            execution=execution,
+            new_status=models.Execution.PENDING)
 
         if expected_status_code < 400:
             self.client.executions.start(deployment_id,
@@ -477,3 +547,15 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.client.executions.update(execution_id, new_status)
         self.assertEquals(new_status, execution.status)
         return execution
+
+    def _modify_execution_status_in_database(
+            self, execution, new_status):
+        try:
+            execution_id = execution['id']
+        except TypeError:
+            execution_id = execution.id
+        storage_manager._get_instance().update_execution_status(
+            execution_id, new_status, error='')
+        updated_execution = self.client.executions.get(
+            execution_id=execution_id)
+        self.assertEqual(new_status, updated_execution['status'])
