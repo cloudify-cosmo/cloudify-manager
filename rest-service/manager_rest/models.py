@@ -91,7 +91,7 @@ class DeploymentUpdateStep(SerializableObject):
     fields = {'id', 'operation', 'entity_type', 'entity_id'}
 
     OPERATIONS = {'add', 'remove'}
-    TYPES = {'node', 'resource', 'relationship'}
+    TYPES = {'node', 'relationship', 'property'}
 
     def __init__(self, operation, entity_type, entity_id,
                  id=str(uuid.uuid4())):

@@ -29,6 +29,7 @@ from dsl_parser import constants
 
 RELATIONSHIP_TYPE = 'relationship'
 NODE_TYPE = 'node'
+PROPERTY_TYPE = 'property'
 
 
 class UpdateHandler(object):
@@ -42,7 +43,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         super(DeploymentUpdateNodeHandler, self).__init__()
         self.modified_entities = {
             NODE_TYPE: [],
-            RELATIONSHIP_TYPE: []
+            RELATIONSHIP_TYPE: [],
+            PROPERTY_TYPE: []
         }
 
     def handle(self, dep_update):
@@ -80,7 +82,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """
         add_entity_mapper = {
             NODE_TYPE: self._add_node,
-            RELATIONSHIP_TYPE: self._add_relationship
+            RELATIONSHIP_TYPE: self._add_relationship,
+            PROPERTY_TYPE: self._add_property
         }
 
         add_entity_handler = add_entity_mapper[entity_type]
@@ -167,6 +170,24 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
         return self.sm.get_node(dep_update.deployment_id, source_node_id)
 
+    def _add_property(self, dep_update, entity_id):
+        node_id, property_name = entity_id.split('.')
+
+        new_node = [n for n in dep_update.blueprint['nodes']
+                    if n['id'] == node_id][0]
+
+        changes = {
+            'properties': {
+                property_name: new_node['properties'][property_name]
+            }
+        }
+
+        self.sm.update_node(deployment_id=dep_update.deployment_id,
+                            node_id=node_id,
+                            changes=changes)
+
+        return self.sm.get_node(dep_update.deployment_id, node_id)
+
     def _remove_entity(self, dep_update, entity_type, entity_id):
         """Handles removing an entity
 
@@ -177,7 +198,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """
         remove_entity_mapper = {
             NODE_TYPE: self._remove_node,
-            RELATIONSHIP_TYPE: self._remove_relationship
+            RELATIONSHIP_TYPE: self._remove_relationship,
+            PROPERTY_TYPE: self._remove_property
         }
 
         add_entity_handler = remove_entity_mapper[entity_type]
@@ -212,6 +234,14 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
         return node
 
+    def _remove_property(self, dep_update, entity_id):
+        node_id, property_name = entity_id.split('.')
+
+        node = self.sm.get_node(dep_update.deployment_id, node_id)
+        del(node.properties[property_name])
+
+        return node
+
     def finalize_nodes(self,
                        dep_update,
                        deployment_update_nodes,
@@ -223,21 +253,23 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         :param deployment_update_node_instances:
         :return:
         """
-        reduced_node_instances = \
-            deployment_update_node_instances[
-                models.DeploymentUpdate.REDUCED_AND_RELATED].get(
-                    models.DeploymentUpdate.AFFECTED, [])
         deleted_node_instances = \
             deployment_update_node_instances[
                 models.DeploymentUpdate.REMOVED_AND_RELATED].get(
                     models.DeploymentUpdate.AFFECTED, [])
 
-        for reduced_node_instance in reduced_node_instances:
-            node = [n for n in deployment_update_nodes
-                    if n['id'] == reduced_node_instance['node_id']][0]
-            self.sm.update_node(deployment_id=dep_update.deployment_id,
-                                node_id=reduced_node_instance['node_id'],
-                                changes=node)
+        deleted_node_ids = _extract_ids(deleted_node_instances, 'node_id')
+
+        modified_nodes = [n for n in deployment_update_nodes
+                          if n['id'] not in deleted_node_ids]
+
+        for node in modified_nodes:
+            current_node = self.sm.get_node(dep_update.deployment_id,
+                                            node['id']).to_dict()
+            changes = {str(k): v for k, v in node.iteritems()
+                       if cmp(current_node[k], v) != 0}
+            self.sm.update_node(dep_update.deployment_id, node['id'],
+                                changes=changes)
 
         for deleted_node_instance in deleted_node_instances:
             self.sm.delete_node(dep_update.deployment_id,
@@ -250,7 +282,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         super(DeploymentUpdateNodeInstanceHandler, self).__init__()
         self.modified_entities = {
             NODE_TYPE: [],
-            RELATIONSHIP_TYPE: []
+            RELATIONSHIP_TYPE: [],
+            PROPERTY_TYPE: []
         }
 
     def handle(self, dep_update, updated_instances):
@@ -321,28 +354,6 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
             models.DeploymentUpdate.RELATED: added_related_instances
         }
 
-    @staticmethod
-    def _handle_node_instance_removing(instances, *_):
-        """Handles removing a node instance
-
-        :param raw_instances:
-        :return: the removed and related node instances
-        """
-        removed_raw_instanes = []
-        remove_related_raw_instances = []
-
-        for raw_node_instance in instances:
-            node_instance = models.DeploymentNodeInstance(**raw_node_instance)
-            if raw_node_instance.get('modification') == 'removed':
-                removed_raw_instanes.append(node_instance)
-            else:
-                remove_related_raw_instances.append(node_instance)
-
-        return {
-            models.DeploymentUpdate.AFFECTED: removed_raw_instanes,
-            models.DeploymentUpdate.RELATED: remove_related_raw_instances
-        }
-
     def _handle_relationship_instance_adding(self, instances, *_):
         """Handles adding a relationship to a node instance
 
@@ -367,6 +378,31 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 models.DeploymentUpdate.AFFECTED: modified_raw_instances,
                 models.DeploymentUpdate.RELATED: modify_related_raw_instances
             }
+
+    def _handle_property_instance_adding(self, instances, *_):
+        pass
+
+    @staticmethod
+    def _handle_node_instance_removing(instances, *_):
+        """Handles removing a node instance
+
+        :param raw_instances:
+        :return: the removed and related node instances
+        """
+        removed_raw_instanes = []
+        remove_related_raw_instances = []
+
+        for raw_node_instance in instances:
+            node_instance = models.DeploymentNodeInstance(**raw_node_instance)
+            if raw_node_instance.get('modification') == 'removed':
+                removed_raw_instanes.append(node_instance)
+            else:
+                remove_related_raw_instances.append(node_instance)
+
+        return {
+            models.DeploymentUpdate.AFFECTED: removed_raw_instanes,
+            models.DeploymentUpdate.RELATED: remove_related_raw_instances
+        }
 
     def _handle_relationship_instance_removing(self, instances, *_):
         """Handles removing a relationship to a node instance
@@ -399,6 +435,9 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
             models.DeploymentUpdate.AFFECTED: modified_raw_instances,
             models.DeploymentUpdate.RELATED: modify_related_raw_instances
         }
+
+    def _handle_property_instance_removing(self, instances, *_):
+        pass
 
     def finalize_node_instances(self, deployment_update_node_instances):
         """update any removed entity from node instances
@@ -454,7 +493,8 @@ class StepValidator(UpdateHandler):
 
         validation_mapper = {
             NODE_TYPE: self._validate_node_entity_id,
-            RELATIONSHIP_TYPE: self._validate_relationship_entity_id
+            RELATIONSHIP_TYPE: self._validate_relationship_entity_id,
+            PROPERTY_TYPE: self._validate_property_entity_id
         }
 
         validator = validation_mapper[step.entity_type]
@@ -511,6 +551,10 @@ class StepValidator(UpdateHandler):
         else:
             new_nodes = dep_update.blueprint[_pluralize('node')]
             return step.entity_id in _extract_ids(new_nodes)
+
+    def _validate_property_entity_id(self, dep_update, step):
+        # TODO: validate...
+        return True
 
 
 class DeploymentUpdateManager(object):

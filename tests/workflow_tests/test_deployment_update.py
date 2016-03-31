@@ -401,6 +401,79 @@ class TestDeploymentUpdate(TestCase):
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
 
+    def test_add_property(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('dep_up_add_property')
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='property',
+                entity_id='site1.ip')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        executions = \
+            self.client.executions.list(deployment_id=deployment.id,
+                                        workflow_id='update')
+        execution = self._wait_for_execution(executions[0])
+        self.assertEquals('terminated', execution['status'],
+                          execution.error)
+
+        affected_nodes = self.client.nodes.list(deployment_id=deployment.id,
+                                                node_id='site1')
+        self.assertEqual(1, len(affected_nodes))
+
+        affected_node = affected_nodes[0]
+
+        # assert new property added
+        self.assertDictContainsSubset({'ip': '1.1.1.1'},
+                                      affected_node['properties'])
+
+        # assert previous properties exist
+        self.assertDictContainsSubset({'os_family': 'windows'},
+                                      affected_node['properties'])
+
+    def test_remove_property(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('dep_up_remove_property')
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.remove(
+                dep_update.id,
+                entity_type='property',
+                entity_id='site1.ip')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        executions = \
+            self.client.executions.list(deployment_id=deployment.id,
+                                        workflow_id='update')
+        execution = self._wait_for_execution(executions[0])
+        self.assertEquals('terminated', execution['status'],
+                          execution.error)
+
+        affected_nodes = self.client.nodes.list(deployment_id=deployment.id,
+                                                node_id='site1')
+        self.assertEqual(1, len(affected_nodes))
+
+        affected_node = affected_nodes[0]
+
+        # assert property removed
+        self.assertNotIn('ip', affected_node['properties'])
+
+        # assert previous properties exist
+        self.assertDictContainsSubset({'os_family': 'windows'},
+                                      affected_node['properties'])
+
     def test_add_node_and_relationship(self):
         """
         Base: site2 is connected_to site1
