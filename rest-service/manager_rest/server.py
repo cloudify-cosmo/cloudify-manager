@@ -381,6 +381,17 @@ def _detect_debug_environment():
 app = setup_app(load_configuration())
 
 
+@app.after_request
+def after_request(response):
+    '''Post-processes requests. Adds CORS headers'''
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers',
+                         'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods',
+                         'GET,PUT,POST,DELETE')
+    return response
+
+
 @app.errorhandler(500)
 def internal_error(e):
     # app.logger.exception(e)  # gets logged automatically
