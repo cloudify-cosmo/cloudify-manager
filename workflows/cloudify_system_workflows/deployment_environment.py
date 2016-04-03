@@ -16,10 +16,12 @@
 import glob
 import os
 import shutil
+import errno
 
 from cloudify.decorators import workflow
 from cloudify.workflows import tasks as workflow_tasks
 from cloudify.workflows import workflow_context
+from cloudify.workflows import ctx as workflow_ctx
 
 
 def generate_create_dep_tasks_graph(ctx,
@@ -132,12 +134,29 @@ def _ignore_task_on_fail_and_send_event(task, ctx):
 
 @workflow_context.task_config(send_task_events=False)
 def _create_deployment_workdir(deployment_id):
-    os.makedirs(_workdir(deployment_id))
+    deployment_workdir = _workdir(deployment_id)
+    try:
+        os.makedirs(deployment_workdir)
+    except os.error as e:
+        if e.errno == errno.EEXIST:
+            workflow_ctx.logger.error(
+                'Failed creating directory {0}. Current directory content: {1}'
+                .format(deployment_workdir, os.listdir(deployment_workdir)))
+        raise
 
 
 @workflow_context.task_config(send_task_events=False)
 def _delete_deployment_workdir(deployment_id):
-    shutil.rmtree(_workdir(deployment_id), ignore_errors=True)
+    deployment_workdir = _workdir(deployment_id)
+    if not os.path.exists(deployment_workdir):
+        return
+    try:
+        shutil.rmtree(_workdir(deployment_id))
+    except os.error:
+        workflow_ctx.logger.warning(
+            'Failed deleting directory {0}. Current directory content: {1}'
+            .format(deployment_workdir, os.listdir(deployment_workdir),
+                    exc_info=True))
 
 
 def _workdir(deployment_id):
