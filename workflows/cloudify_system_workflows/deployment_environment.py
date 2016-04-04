@@ -21,7 +21,6 @@ import errno
 from cloudify.decorators import workflow
 from cloudify.workflows import tasks as workflow_tasks
 from cloudify.workflows import workflow_context
-from cloudify.workflows import ctx as workflow_ctx
 
 
 def generate_create_dep_tasks_graph(ctx,
@@ -48,7 +47,8 @@ def generate_create_dep_tasks_graph(ctx,
     sequence.add(
         ctx.send_event('Creating deployment work directory'),
         ctx.local_task(_create_deployment_workdir,
-                       kwargs={'deployment_id': ctx.deployment.id}))
+                       kwargs={'deployment_id': ctx.deployment.id,
+                               'logger': ctx.logger}))
 
     return graph
 
@@ -87,7 +87,8 @@ def delete(ctx,
             ctx.execute_task('riemann_controller.tasks.delete'),
             ctx.send_event('Deleting deployment work directory'),
             ctx.local_task(_delete_deployment_workdir,
-                           kwargs={'deployment_id': ctx.deployment.id}))
+                           kwargs={'deployment_id': ctx.deployment.id,
+                                   'logger': ctx.logger}))
 
     for task in graph.tasks_iter():
         _ignore_task_on_fail_and_send_event(task, ctx)
@@ -133,27 +134,27 @@ def _ignore_task_on_fail_and_send_event(task, ctx):
 
 
 @workflow_context.task_config(send_task_events=False)
-def _create_deployment_workdir(deployment_id):
+def _create_deployment_workdir(deployment_id, logger):
     deployment_workdir = _workdir(deployment_id)
     try:
         os.makedirs(deployment_workdir)
     except os.error as e:
         if e.errno == errno.EEXIST:
-            workflow_ctx.logger.error(
+            logger.error(
                 'Failed creating directory {0}. Current directory content: {1}'
                 .format(deployment_workdir, os.listdir(deployment_workdir)))
         raise
 
 
 @workflow_context.task_config(send_task_events=False)
-def _delete_deployment_workdir(deployment_id):
+def _delete_deployment_workdir(deployment_id, logger):
     deployment_workdir = _workdir(deployment_id)
     if not os.path.exists(deployment_workdir):
         return
     try:
         shutil.rmtree(_workdir(deployment_id))
     except os.error:
-        workflow_ctx.logger.warning(
+        logger.warning(
             'Failed deleting directory {0}. Current directory content: {1}'
             .format(deployment_workdir, os.listdir(deployment_workdir),
                     exc_info=True))
