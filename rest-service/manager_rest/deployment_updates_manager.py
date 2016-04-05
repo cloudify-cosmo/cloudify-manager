@@ -50,25 +50,32 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def handle(self, dep_update):
         current_nodes = self.sm.get_nodes(
             filters={'deployment_id': dep_update.deployment_id}).items
-        nodes = {node.id: node for node in current_nodes}
+        nodes = {node.id: node.to_dict() for node in current_nodes}
 
-        entities_updater = {
+        entities_update_mapper = {
             'add': self._add_entity,
             'remove': self._remove_entity
         }
 
         for step in dep_update.steps:
-            entity_id, affected_node = \
-                entities_updater[step.operation](dep_update,
-                                                 step.entity_type,
-                                                 step.entity_id)
+            entity_updater = entities_update_mapper[step.operation]
+            entity_id, affected_node = entity_updater(dep_update,
+                                                      step.entity_type,
+                                                      step.entity_id)
 
             self.modified_entities[step.entity_type].append(entity_id)
 
-            if step.operation == 'remove' and step.entity_type == 'node':
-                del(nodes[affected_node.id])
+            if step.entity_type == 'node':
+                if step.operation == 'remove':
+                    del(nodes[affected_node['id']])
+                else:
+                    nodes[affected_node['id']] = affected_node
             else:
-                nodes[affected_node.id] = affected_node
+                # The changes should focus on the step.entity_type. This
+                # enables accumulating changes.
+                entity_key = _pluralize(step.entity_type)
+                nodes[affected_node['id']][entity_key] = \
+                    affected_node[entity_key]
 
         return self.modified_entities, nodes.values()
 
@@ -90,7 +97,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
         updated_node = add_entity_handler(dep_update, entity_id)
 
-        return entity_id, updated_node
+        return entity_id, updated_node.to_dict()
 
     def _add_node(self, dep_update, entity_id):
         """ handles adding a node
@@ -206,7 +213,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
         updated_node = add_entity_handler(dep_update, entity_id)
 
-        return entity_id, updated_node
+        return entity_id, updated_node.to_dict()
 
     def _remove_node(self, dep_update, entity_id):
         """Handles removing a node
@@ -242,10 +249,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
         return node
 
-    def finalize_nodes(self,
-                       dep_update,
-                       deployment_update_nodes,
-                       deployment_update_node_instances):
+    def finalize_nodes(self, dep_update):
         """update any removed entity from nodes
 
         :param dep_update: the deployment update object itself.
@@ -253,23 +257,23 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         :param deployment_update_node_instances:
         :return:
         """
+
         deleted_node_instances = \
-            deployment_update_node_instances[
+            dep_update.deployment_update_node_instances[
                 models.DeploymentUpdate.REMOVED_AND_RELATED].get(
                     models.DeploymentUpdate.AFFECTED, [])
 
         deleted_node_ids = _extract_ids(deleted_node_instances, 'node_id')
 
-        modified_nodes = [n for n in deployment_update_nodes
+        modified_nodes = [n for n in dep_update.deployment_update_nodes
                           if n['id'] not in deleted_node_ids]
 
-        for node in modified_nodes:
-            current_node = self.sm.get_node(dep_update.deployment_id,
-                                            node['id']).to_dict()
-            changes = {str(k): v for k, v in node.iteritems()
-                       if cmp(current_node[k], v) != 0}
-            self.sm.update_node(dep_update.deployment_id, node['id'],
-                                changes=changes)
+        for raw_node in modified_nodes:
+            # Since there is no good way deleting a specific value from
+            # elasticsearch, we first remove it, and than re-enter it.
+            self.sm.delete_node(dep_update.deployment_id, raw_node['id'])
+            node = models.DeploymentNode(**raw_node)
+            self.sm.put_node(node)
 
         for deleted_node_instance in deleted_node_instances:
             self.sm.delete_node(dep_update.deployment_id,
@@ -323,7 +327,7 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         :return: the added and related node instances
         """
         added_instances = []
-        added_related_instances = []
+        add_related_instances = []
 
         for raw_node_instance in raw_instances:
             if raw_node_instance.get('modification') == 'added':
@@ -334,24 +338,19 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                     'runtime_properties': {}
                 }
                 raw_node_instance.update(changes)
-                node_instance = \
-                    models.DeploymentNodeInstance(**raw_node_instance)
-
-                added_instances.append(node_instance)
+                added_instances.append(raw_node_instance)
             else:
-                node_instance = \
-                    models.DeploymentNodeInstance(**raw_node_instance)
-                added_related_instances.append(node_instance)
-                self._update_node_instance(node_instance.to_dict())
+                add_related_instances.append(raw_node_instance)
+                self._update_node_instance(raw_node_instance)
 
         get_blueprints_manager()._create_deployment_node_instances(
                 dep_update.deployment_id,
-                [instance.to_dict() for instance in added_instances]
+                added_instances
         )
 
         return {
             models.DeploymentUpdate.AFFECTED: added_instances,
-            models.DeploymentUpdate.RELATED: added_related_instances
+            models.DeploymentUpdate.RELATED: add_related_instances
         }
 
     def _handle_relationship_instance_adding(self, instances, *_):
@@ -364,14 +363,15 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         modify_related_raw_instances = []
 
         for raw_node_instance in instances:
-            node_instance = models.DeploymentNodeInstance(**raw_node_instance)
             if raw_node_instance.get('modification') == 'extended':
 
                 # adding new relationships to the current relationships
-                modified_raw_instances.append(node_instance)
+                modified_raw_instances.append(raw_node_instance)
+                node_instance = \
+                    models.DeploymentNodeInstance(**raw_node_instance)
                 self._update_node_instance(node_instance.to_dict())
             else:
-                modify_related_raw_instances.append(node_instance)
+                modify_related_raw_instances.append(raw_node_instance)
 
         return \
             {
@@ -393,11 +393,10 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         remove_related_raw_instances = []
 
         for raw_node_instance in instances:
-            node_instance = models.DeploymentNodeInstance(**raw_node_instance)
             if raw_node_instance.get('modification') == 'removed':
-                removed_raw_instanes.append(node_instance)
+                removed_raw_instanes.append(raw_node_instance)
             else:
-                remove_related_raw_instances.append(node_instance)
+                remove_related_raw_instances.append(raw_node_instance)
 
         return {
             models.DeploymentUpdate.AFFECTED: removed_raw_instanes,
@@ -416,20 +415,19 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         for raw_node_instance in instances:
             if raw_node_instance.get('modification') == 'reduced':
                 modified_node = \
-                    self.sm.get_node_instance(raw_node_instance['id'])
+                    self.sm.get_node_instance(raw_node_instance['id'])\
+                        .to_dict()
                 # changing the new state of relationships on the instance
                 # to not include the removed relationship
                 target_ids = [rel['target_id']
                               for rel in raw_node_instance['relationships']]
-                relationships = [rel for rel in modified_node.relationships
+                relationships = [rel for rel in modified_node['relationships']
                                  if rel['target_id'] not in target_ids]
-                modified_node.relationships = relationships
+                modified_node['relationships'] = relationships
 
                 modified_raw_instances.append(modified_node)
             else:
-                node_instance = \
-                    models.DeploymentNodeInstance(**raw_node_instance)
-                modify_related_raw_instances.append(node_instance)
+                modify_related_raw_instances.append(raw_node_instance)
 
         return {
             models.DeploymentUpdate.AFFECTED: modified_raw_instances,
@@ -439,19 +437,20 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
     def _handle_property_instance_removing(self, instances, *_):
         pass
 
-    def finalize_node_instances(self, deployment_update_node_instances):
+    def finalize_node_instances(self, dep_update):
         """update any removed entity from node instances
 
         :param deployment_update_node_instances: the required final for
         reduced node instances, and the removed nodes for any removed node
         :return:
         """
+
         reduced_node_instances = \
-            deployment_update_node_instances[
+            dep_update.deployment_update_node_instances[
                 models.DeploymentUpdate.REDUCED_AND_RELATED].get(
                     models.DeploymentUpdate.AFFECTED, [])
         removed_node_instances = \
-            deployment_update_node_instances[
+            dep_update.deployment_update_node_instances[
                 models.DeploymentUpdate.REMOVED_AND_RELATED].get(
                     models.DeploymentUpdate.AFFECTED, [])
 
@@ -636,6 +635,7 @@ class DeploymentUpdateManager(object):
         # (removing entities).
         dep_update.deployment_update_nodes = depup_nodes
         dep_update.deployment_update_node_instances = depup_node_instances
+        dep_update.modified_entity_ids = modified_entity_ids
         self.sm.update_deployment_update(dep_update)
 
         # Execute update workflow using added and related instances
@@ -690,7 +690,7 @@ class DeploymentUpdateManager(object):
 
         # project changes in deployment
         return tasks.modify_deployment(
-                nodes=[n.to_dict() for n in raw_nodes],
+                nodes=raw_nodes,
                 previous_node_instances=raw_node_instances,
                 modified_nodes=()
         )
@@ -767,7 +767,7 @@ class DeploymentUpdateManager(object):
                                      workflow_id='update',
                                      parameters=instance_ids)
 
-    def finalize_update(self, deployment_update_id):
+    def finalize_commit(self, deployment_update_id):
         """ finalizes the update process by removing any removed
         node/node instances and updating any reduced node
 
@@ -776,16 +776,10 @@ class DeploymentUpdateManager(object):
         """
 
         dep_update = self.sm.get_deployment_update(deployment_update_id)
-        deployment_update_nodes = dep_update.deployment_update_nodes
-        deployment_update_node_instances = \
-            dep_update.deployment_update_node_instances
 
-        self._node_instance_handler.finalize_node_instances(
-                deployment_update_node_instances)
+        self._node_instance_handler.finalize_node_instances(dep_update)
 
-        self._node_handler.finalize_nodes(dep_update,
-                                          deployment_update_nodes,
-                                          deployment_update_node_instances)
+        self._node_handler.finalize_nodes(dep_update)
 
         # mark deployment update as committed
         dep_update.state = models.DeploymentUpdate.COMMITTED
@@ -867,7 +861,10 @@ def get_deployment_updates_manager():
 
 
 def _pluralize(input):
-    return '{}s'.format(input)
+    if input[-1] == 'y':
+        return '{0}ies'.format(input[:-1])
+    else:
+        return '{}s'.format(input)
 
 
 def _extract_ids(node_instances, key='id'):

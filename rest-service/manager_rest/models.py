@@ -113,7 +113,8 @@ class DeploymentUpdateStep(SerializableObject):
 class DeploymentUpdate(SerializableObject):
 
     fields = {'id', 'deployment_id', 'steps', 'state', 'blueprint',
-              'deployment_update_nodes', 'deployment_update_node_instances'}
+              'deployment_update_nodes', 'deployment_update_node_instances',
+              'modified_entity_ids'}
 
     COMMITTED = 'committed'
     COMMITTING = 'committing'
@@ -135,7 +136,8 @@ class DeploymentUpdate(SerializableObject):
                  id=None,
                  steps=[],
                  deployment_update_nodes=[],
-                 deployment_update_node_instances=[]):
+                 deployment_update_node_instances=[],
+                 modified_entity_ids=[]):
         self.id = id or '{}-{}'.format(deployment_id, uuid.uuid4())
         self.deployment_id = deployment_id
         self.blueprint = blueprint
@@ -144,6 +146,7 @@ class DeploymentUpdate(SerializableObject):
         self.deployment_update_nodes = deployment_update_nodes
         self.deployment_update_node_instances = \
             deployment_update_node_instances
+        self.modified_entity_ids = modified_entity_ids
 
     def step(self, operation, entity, content):
         step = DeploymentUpdateStep(operation, entity, content)

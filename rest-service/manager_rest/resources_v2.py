@@ -680,7 +680,7 @@ class DeploymentUpdateFinalizeCommit(SecuredResource):
     @marshal_with(responses_v2.DeploymentUpdate)
     def post(self, update_id):
         manager = get_deployment_updates_manager()
-        return manager.finalize_update(update_id)
+        return manager.finalize_commit(update_id)
 
 
 class DeploymentModifications(resources.DeploymentModifications):
