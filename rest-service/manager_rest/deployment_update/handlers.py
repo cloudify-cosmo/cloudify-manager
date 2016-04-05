@@ -1,11 +1,14 @@
+import utils
 import manager_rest.models
 import manager_rest.manager_exceptions
 from manager_rest import storage_manager
 from manager_rest.blueprints_manager import get_blueprints_manager
-from constants import (OPERATIONS,
+from dsl_parser.interfaces.utils import no_op_operation
+from entity_context import get_entity_context
+
+from constants import (OPERATION_TYPE,
                        ENTITY_TYPES,
                        CHANGE_TYPE)
-import utils
 
 
 class StorageClient(object):
@@ -38,9 +41,9 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         nodes_dict = {node.id: node.to_dict() for node in current_nodes}
 
         entities_update_mapper = {
-            OPERATIONS.ADD: self._add_entity,
-            OPERATIONS.REMOVE: self._remove_entity,
-            OPERATIONS.MODIFY: self._modify_entity
+            OPERATION_TYPE.ADD: self._add_entity,
+            OPERATION_TYPE.REMOVE: self._remove_entity,
+            OPERATION_TYPE.MODIFY: self._modify_entity
         }
 
         # Iterate over the steps of the deployment update and handle each
@@ -50,16 +53,16 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         # accumulating changes.
         for step in dep_update.steps:
             entity_updater = entities_update_mapper[step.operation]
-            entity_id = entity_updater(dep_update,
-                                       step.entity_type,
-                                       step.entity_id,
-                                       nodes_dict)
+            entity_context = get_entity_context(dep_update,
+                                                step.entity_type,
+                                                step.entity_id)
+            entity_id = entity_updater(entity_context, nodes_dict)
 
             self.modified_entities[step.entity_type].append(entity_id)
 
         return self.modified_entities, nodes_dict.values()
 
-    def _add_entity(self, dep_update, entity_type, entity_id, current_nodes):
+    def _add_entity(self, ctx, current_nodes):
         """ handles adding an entity
 
         :param dep_update:
@@ -70,137 +73,164 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         add_entity_mapper = {
             ENTITY_TYPES.NODE: self._add_node,
             ENTITY_TYPES.RELATIONSHIP: self._add_relationship,
-            ENTITY_TYPES.PROPERTY: self._add_property
+            ENTITY_TYPES.PROPERTY: self._add_property,
+            ENTITY_TYPES.OPERATION: self._add_operation
         }
 
-        add_entity_handler = add_entity_mapper[entity_type]
+        add_entity_handler = add_entity_mapper[ctx.entity_type]
 
-        entity_id = add_entity_handler(dep_update, entity_id, current_nodes)
+        entity_id = add_entity_handler(ctx, current_nodes)
 
         return entity_id
 
-    def _add_node(self, dep_update, entity_id, current_nodes):
+    def _add_node(self, ctx, current_nodes):
         """ handles adding a node
 
         :param dep_update:
         :param entity_id:
         :return: the new node
         """
-        NODES, node_id = utils.get_entity_id_list(entity_id)
 
         get_blueprints_manager()._create_deployment_nodes(
-                deployment_id=dep_update.deployment_id,
+                deployment_id=ctx.deployment_id,
                 blueprint_id='N/A',
-                plan=dep_update.blueprint,
-                node_ids=node_id
+                plan=ctx.blueprint,
+                node_ids=ctx.raw_node_id
         )
+
+        current_nodes[ctx.raw_node_id] = \
+            ctx.storage_node.to_dict()
+        # node_handler.raw_node
 
         # Update new node relationships target nodes. Since any relationship
         # with target interface requires the target node to hold a plugin
         # which supports the operation, we should update the mapping for
         # this plugin under the target node.
-        raw_node = [n for n in dep_update.blueprint['nodes']
-                    if n['id'] == node_id][0]
+        target_ids = [r['target_id']
+                      for r in ctx.raw_node['relationships']]
 
-        target_ids = [r['target_id'] for r in raw_node['relationships']]
+        for node_id in target_ids:
+            self.sm.update_node(
+                    deployment_id=ctx.deployment_id,
+                    node_id=node_id,
+                    changes={
+                        'plugins':
+                            utils.get_raw_node(ctx.blueprint,
+                                               node_id)['plugins']
+                    })
 
-        target_raw_nodes = {n['id']: n for n in dep_update.blueprint['nodes']
-                            if n['id'] in target_ids}
+            current_nodes[node_id] = \
+                self.sm.get_node(ctx.deployment_id, node_id).to_dict()
 
-        for target_id in target_ids:
-            self.sm.update_node(deployment_id=dep_update.deployment_id,
-                                node_id=target_id,
-                                changes={
-                                    'plugins':
-                                        target_raw_nodes[target_id]['plugins']
-                                })
+        return ctx.raw_node_id
 
-        new_node = self.sm.get_node(dep_update.deployment_id, node_id)
-        current_nodes[new_node.id] = new_node.to_dict()
-
-        return node_id
-
-    def _add_relationship(self, dep_update, entity_id, current_nodes):
+    def _add_relationship(self, ctx, current_nodes):
         """Handles adding a relationship
 
         :param dep_update:
         :param entity_id:
         :return: the modified node
         """
-        source_entity_id, target_entity_id = \
-            utils.get_relationship_source_and_target(entity_id)
-        NODES, source_node_id = utils.get_entity_id_list(source_entity_id)
-        NODES, target_node_id = utils.get_entity_id_list(target_entity_id)
-        pluralized_entity_type = utils.pluralize(ENTITY_TYPES.NODE)
-        raw_nodes = dep_update.blueprint[pluralized_entity_type]
-        source_raw_node = \
-            [n for n in raw_nodes if n['id'] == source_node_id][0]
-        target_raw_node = \
-            [n for n in raw_nodes if n['id'] == target_node_id][0]
-
         # Update source relationships and plugins
-        source_plugins = \
-            self.sm.get_node(dep_update.deployment_id, source_node_id).plugins
-        source_plugins += source_raw_node['plugins']
         source_changes = {
-            'relationships': source_raw_node['relationships'],
-            'plugins': source_plugins
+            'relationships': ctx.raw_node['relationships'],
+            'plugins': ctx.raw_node['plugins']
         }
-        self.sm.update_node(deployment_id=dep_update.deployment_id,
-                            node_id=source_node_id,
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_node_id,
                             changes=source_changes)
-
-        new_source_node = \
-            self.sm.get_node(dep_update.deployment_id, source_node_id)
-        current_nodes[new_source_node.id] = new_source_node.to_dict()
+        source_node = ctx.storage_node
+        current_nodes[source_node.id] = source_node.to_dict()
 
         # Update target plugins
-        target_plugins = \
-            self.sm.get_node(dep_update.deployment_id, target_node_id).plugins
-        target_plugins += target_raw_node['plugins']
-
-        target_changes = {
-            'plugins': target_plugins
-        }
-
-        self.sm.update_node(deployment_id=dep_update.deployment_id,
-                            node_id=target_node_id,
+        target_changes = {'plugins': ctx.raw_target_node['plugins']}
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_target_node['id'],
                             changes=target_changes)
+        current_nodes[ctx.storage_target_node.id] = \
+            ctx.storage_target_node.to_dict()
 
-        new_target_node = \
-            self.sm.get_node(dep_update.deployment_id, target_node_id)
-        current_nodes[new_target_node.id] = new_target_node.to_dict()
+        return ctx.raw_node_id, ctx.raw_target_node['id']
 
-        return source_node_id, target_node_id
-
-    def _add_property(self, dep_update, entity_id, current_nodes):
-        entity_keys = utils.get_entity_id_list(entity_id)
-        NODES, node_id, PROPERTIES, property_id = entity_keys
-
-        new_node = [n for n in dep_update.blueprint[NODES]
-                    if n['id'] == node_id][0]
-
-        new_property_value = new_node[PROPERTIES][property_id]
-
+    def _add_property(self, ctx, current_nodes):
         changes = {
-            PROPERTIES: {
-                property_id: new_property_value
+            ctx.PROPERTIES: {
+                ctx.property_id: ctx.raw_entity_value
             }
         }
 
-        self.sm.update_node(deployment_id=dep_update.deployment_id,
-                            node_id=node_id,
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_node_id,
                             changes=changes)
 
-        current_nodes[node_id][PROPERTIES][property_id] = new_property_value
+        node_id = ctx.raw_node_id
+        properties = current_nodes[node_id][ctx.PROPERTIES]
 
-        return entity_id
+        properties[ctx.property_id] = ctx.raw_entity_value
 
-    def _remove_entity(self,
-                       dep_update,
-                       entity_type,
-                       entity_id,
-                       current_nodes):
+        return ctx.entity_id
+
+    @staticmethod
+    def _choose_and_execute_operation_handler(ctx,
+                                              current_nodes,
+                                              relationship_executor,
+                                              node_executor):
+
+        if ctx.entity_id.split(':')[2] == 'relationships':
+            modifier = relationship_executor
+        else:
+            # the modified_operation_type could be either relationships
+            # or operations.
+            modifier = node_executor
+
+        return modifier(ctx, current_nodes)
+
+    def _add_operation(self, ctx, current_nodes):
+        return self._choose_and_execute_operation_handler(
+                ctx,
+                current_nodes,
+                self._add_relationship_operation,
+                self._add_node_operation)
+
+    def _add_node_operation(self, ctx, current_nodes):
+
+        changes = \
+            {ctx.OPERATIONS:
+                {ctx.operation_id:
+                 ctx.raw_node[ctx.OPERATIONS][ctx.operation_id]}
+             }
+
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_node_id,
+                            changes=changes)
+
+        current_node = current_nodes[ctx.raw_node_id]
+        current_node[ctx.OPERATIONS][ctx.operation_id] = \
+            ctx.raw_node[ctx.OPERATIONS][ctx.operation_id]
+
+        return ctx.entity_id
+
+    def _add_relationship_operation(self, ctx, current_nodes):
+
+        # Each operation has double mapping - the first is
+        # interface_id.operation_id, while the second is just operation_id
+        # we update both here
+        operation_value = ctx.raw_entity_value
+
+        relationships = current_nodes[ctx.raw_node_id][ctx.RELATIONSHIPS]
+        operations = relationships[ctx.relationship_index][ctx.operations_key]
+        operations[ctx.operation_id] = operation_value
+
+        # TODO: add plugins updated
+        changes = {ctx.RELATIONSHIPS: relationships}
+
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_node_id,
+                            changes=changes)
+
+        return ctx.entity_id
+
+    def _remove_entity(self, ctx, current_nodes):
         """Handles removing an entity
 
         :param dep_update:
@@ -211,76 +241,141 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         remove_entity_mapper = {
             ENTITY_TYPES.NODE: self._remove_node,
             ENTITY_TYPES.RELATIONSHIP: self._remove_relationship,
+            ENTITY_TYPES.OPERATION: self._remove_operation,
             ENTITY_TYPES.PROPERTY: self._remove_property
         }
 
-        remove_entity_handler = remove_entity_mapper[entity_type]
-        entity_id = remove_entity_handler(dep_update, entity_id, current_nodes)
+        remove_entity_handler = remove_entity_mapper[ctx.entity_type]
+
+        entity_id = remove_entity_handler(ctx, current_nodes)
 
         return entity_id
 
     @staticmethod
-    def _remove_node(dep_update, entity_id, current_nodes):
+    def _remove_node(ctx, current_nodes):
         """Handles removing a node
 
-        :param dep_update:
         :param entity_id:
         :return: the removed node
         """
-        NODES, node_id = utils.get_entity_id_list(entity_id)
-        del(current_nodes[node_id])
-        return node_id
+        del(current_nodes[ctx.storage_node.id])
+        return ctx.storage_node.id
 
     @staticmethod
-    def _remove_relationship(dep_update, entity_id, current_nodes):
+    def _remove_relationship(ctx, current_nodes):
         """Handles removing a relationship
 
-        :param dep_update:
         :param entity_id:
         :return: the modified node
         """
-        source_entity_id, target_entity_id = \
-            utils.get_relationship_source_and_target(entity_id)
-        NODES, source_node_id = utils.get_entity_id_list(source_entity_id)
-        NODES, target_node_id = utils.get_entity_id_list(target_entity_id)
+        current_node = current_nodes[ctx.raw_node_id]
+        current_node[ctx.RELATIONSHIPS].remove(ctx.storage_entity_value)
+        return ctx.raw_node_id, ctx.raw_target_node['id']
 
-        node = current_nodes[source_node_id]
-
-        modified_relationship_id = [r for r in node['relationships']
-                                    if r['target_id'] == target_node_id][0]
-
-        node['relationships'].remove(modified_relationship_id)
-
-        return source_node_id, target_node_id
+    def _remove_operation(self, ctx, current_nodes):
+        return self._choose_and_execute_operation_handler(
+                ctx,
+                current_nodes,
+                self._remove_relationship_operation,
+                self._remove_node_operation)
 
     @staticmethod
-    def _remove_property(dep_update, entity_id, current_nodes):
-        entity_id_list = utils.get_entity_id_list(entity_id)
-        NODES, node_id, PROPERTIES, property_id = entity_id_list
+    def _remove_node_operation(ctx, current_nodes):
+        current_node = current_nodes[ctx.raw_node_id]
+        current_node[ctx.OPERATIONS][ctx.operation_id] = \
+            no_op_operation(ctx.operation_id)
 
-        del(current_nodes[node_id][PROPERTIES][property_id])
+        return ctx.entity_id
 
-        return entity_id
+    @staticmethod
+    def _remove_relationship_operation(ctx, current_nodes):
+        current_node = current_nodes[ctx.raw_node_id]
+        modified_relationship = \
+            current_node[ctx.RELATIONSHIPS][ctx.relationship_index]
+        modified_relationship[ctx.operations_key][ctx.operation_id] = \
+            no_op_operation(ctx.operation_id)
 
-    def _modify_entity(self,
-                       dep_update,
-                       entity_type,
-                       entity_id,
-                       current_nodes):
+        return ctx.entity_id
+
+    @staticmethod
+    def _remove_property(ctx, current_nodes):
+        node_id = ctx.raw_node_id
+        del(current_nodes[node_id][ctx.PROPERTIES][ctx.property_id])
+
+        return ctx.entity_id
+
+    def _modify_entity(self, ctx, current_nodes):
+        """ handles adding an entity
+
+        :param dep_update:
+        :param entity_type:
+        :param entity_id:
+        :return: the entity id and the node which contains the added entity
+        """
         modify_entity_mapper = {
+            ENTITY_TYPES.OPERATION: self._modify_operation,
             ENTITY_TYPES.PROPERTY: self._modify_property
         }
 
-        add_entity_handler = modify_entity_mapper[entity_type]
-
-        entity_id = add_entity_handler(dep_update, entity_id, current_nodes)
+        add_entity_handler = modify_entity_mapper[ctx.entity_type]
+        entity_id = add_entity_handler(ctx, current_nodes)
 
         return entity_id
 
-    def _modify_property(self, dep_update, entity_id, current_nodes):
+    def _modify_operation(self, ctx, current_nodes):
+        return self._choose_and_execute_operation_handler(
+                ctx,
+                current_nodes,
+                self._modify_relationship_operation,
+                self._modify_node_operation)
+
+    def _modify_node_operation(self, ctx, current_nodes):
+
+        changes = \
+            {ctx.OPERATIONS:
+                {ctx.operation_id:
+                    utils.create_dict(ctx.modification_id,
+                                      ctx.raw_entity_value)
+                 }
+             }
+
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_node_id,
+                            changes=changes)
+        current_node = current_nodes[ctx.raw_node_id]
+        operation_to_update = utils.traverse_object(
+            current_node[ctx.OPERATIONS][ctx.operation_id],
+            ctx.modification_id[:-1]
+        )
+
+        operation_to_update[ctx.modification_id[-1]] = ctx.raw_entity_value
+
+        return ctx.entity_id
+
+    def _modify_relationship_operation(self, ctx, current_nodes):
+
+        current_relationships = \
+            current_nodes[ctx.raw_node_id][ctx.RELATIONSHIPS]
+        current_relationship = current_relationships[ctx.relationship_index]
+        operation_to_update = utils.traverse_object(
+                current_relationship[ctx.operations_key][ctx.operation_id],
+                ctx.modification_id[:-1]
+        )
+
+        # Update the changed onto the data model and the current nodes.
+        operation_to_update[ctx.modification_id[-1]] = ctx.raw_entity_value
+
+        changes = {ctx.RELATIONSHIPS: current_relationships}
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_node_id,
+                            changes=changes)
+
+        return ctx.entity_id
+
+    def _modify_property(self, ctx, current_nodes):
         # since the add property basically sets the the value of the property
         # to the new value, it's the same as modifying the same property.
-        return self._add_property(dep_update, entity_id, current_nodes)
+        return self._add_property(ctx, current_nodes)
 
     def finalize(self, dep_update):
         """update any removed entity from nodes

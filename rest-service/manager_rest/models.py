@@ -18,7 +18,7 @@ import uuid
 
 import jsonpickle
 from deployment_update.constants import (ENTITY_TYPES,
-                                         OPERATIONS,
+                                         OPERATION_TYPE,
                                          STATE)
 
 from manager_exceptions import UnknownModificationStageError
@@ -101,7 +101,7 @@ class DeploymentUpdateStep(SerializableObject):
             raise UnknownModificationStageError(
                 'illegal modification entity type')
 
-        if operation not in OPERATIONS:
+        if operation not in OPERATION_TYPE:
             raise UnknownModificationStageError(
                 'illegal modification operation')
 

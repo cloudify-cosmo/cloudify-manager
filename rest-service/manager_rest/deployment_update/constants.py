@@ -1,4 +1,3 @@
-
 class DeploymentUpdateEnumBase(object):
 
     class __metaclass__(type):
@@ -15,6 +14,7 @@ class DeploymentUpdateEntityTypes(DeploymentUpdateEnumBase):
     NODE = 'node'
     RELATIONSHIP = 'relationship'
     PROPERTY = 'property'
+    OPERATION = 'operation'
 
 
 class DeploymentUpdateOperation(DeploymentUpdateEnumBase):
@@ -45,7 +45,7 @@ class DeploymentUpdateChangeTypes(DeploymentUpdateEnumBase):
     RELATED = 'related'
 
 ENTITY_TYPES = DeploymentUpdateEntityTypes
-OPERATIONS = DeploymentUpdateOperation
+OPERATION_TYPE = DeploymentUpdateOperation
 STATE = DeploymentUpdateState
 CHANGE_TYPE = DeploymentUpdateChangeTypes
 

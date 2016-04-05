@@ -1,14 +1,6 @@
 import copy
 
-from constants import PATH_SEPARATOR, RELATIONSHIP_SEPARATOR, ENTITY_TYPES
-
-
-def get_relationship_source_and_target(relationship_id):
-    return relationship_id.split(RELATIONSHIP_SEPARATOR)
-
-
-def get_entity_id_list(entity_id):
-    return entity_id.split(PATH_SEPARATOR)
+from constants import ENTITY_TYPES, PATH_SEPARATOR
 
 
 def pluralize(input):
@@ -57,3 +49,42 @@ class ModifiedEntitiesDict(object):
             relationships
 
         return modified_entities_to_return
+
+
+def traverse_object(obj, path):
+    """
+    Traverses an object constructed out of dicts and lists.
+    :param obj: the object to traverse
+    :param path: the path on which to traverse, while list indices surrounded
+    by [x]
+    :return: the objectr at the end of the path
+    """
+
+    if not path:
+        return obj
+    current_key = path[0]
+    if current_key in obj:
+        return traverse_object(obj[path[0]], path[1:])
+    elif current_key.startswith('[') and current_key.endswith(']'):
+        return traverse_object(obj[int(current_key[1:-1])], path[1:])
+    else:
+        return {}
+
+
+def create_dict(path, value=None):
+    if value:
+        if not path:
+            return value
+    elif len(path) == 1:
+        return path[0]
+    return {path[0]: create_dict(path[1:], value)}
+
+
+def get_entity_keys(entity_id):
+    return entity_id.split(PATH_SEPARATOR)
+
+
+def get_raw_node(blueprint, node_id):
+    nodes = [n for n in blueprint['nodes']
+             if n['id'] == node_id]
+    return nodes[0] if nodes else {}
