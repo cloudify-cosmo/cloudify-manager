@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import errno
+import os
 import uuid
 
 from nose.plugins.attrib import attr
@@ -285,6 +287,28 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 'Failed finding node with prefix {0}'.format(starts_with))
         assert_node_exists('vm')
         assert_node_exists('http_web_server')
+
+    def test_delete_deployment_folder_from_file_server(self):
+        (blueprint_id, deployment_id, blueprint_response,
+         deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
+        config = self.server_configuration
+        deployment_folder = os.path.join(config.file_server_root,
+                                         config.file_server_deployments_folder,
+                                         deployment_id)
+        try:
+            os.makedirs(deployment_folder)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(deployment_folder):
+                pass
+            else:
+                raise
+        deployment_resource_path = os.path.join(deployment_folder, 'test.txt')
+        print('Creating deployment resource: {0}'.format(
+            deployment_resource_path))
+        with open(deployment_resource_path, 'w') as f:
+            f.write('deployment resource')
+        self.client.deployments.delete(deployment_id)
+        self.assertFalse(os.path.exists(deployment_folder))
 
     def test_inputs(self):
         self.put_deployment(

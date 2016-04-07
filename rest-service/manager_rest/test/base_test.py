@@ -43,6 +43,7 @@ except ImportError:
 STORAGE_MANAGER_MODULE_NAME = 'manager_rest.file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
+FILE_SERVER_DEPLOYMENTS_FOLDER = 'deployments'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
 LATEST_API_VERSION = 2.1  # to be used by max_client_version test attribute
@@ -218,7 +219,8 @@ class BaseServerTestCase(unittest.TestCase):
         finally:
             del(os.environ['MANAGER_REST_CONFIG_PATH'])
 
-        server.reset_state(self.create_configuration())
+        self.server_configuration = self.create_configuration()
+        server.reset_state(self.server_configuration)
         utils.copy_resources(config.instance().file_server_root)
         server.setup_app()
         server.app.config['Testing'] = True
@@ -248,6 +250,8 @@ class BaseServerTestCase(unittest.TestCase):
             FILE_SERVER_PORT)
         test_config.file_server_blueprints_folder = \
             FILE_SERVER_BLUEPRINTS_FOLDER
+        test_config.file_server_deployments_folder = \
+            FILE_SERVER_DEPLOYMENTS_FOLDER
         test_config.file_server_uploaded_blueprints_folder = \
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
@@ -336,15 +340,27 @@ class BaseServerTestCase(unittest.TestCase):
         result.json = json.loads(result.data)
         return result
 
-    def check_if_resource_on_fileserver(self, blueprint_id, resource_path):
+    def _check_if_resource_on_fileserver(self,
+                                         folder,
+                                         container_id,
+                                         resource_path):
         url = 'http://localhost:{0}/{1}/{2}/{3}'.format(
-            FILE_SERVER_PORT, FILE_SERVER_BLUEPRINTS_FOLDER,
-            blueprint_id, resource_path)
+            FILE_SERVER_PORT, folder, container_id, resource_path)
         try:
             urllib2.urlopen(url)
             return True
         except urllib2.HTTPError:
             return False
+
+    def check_if_resource_on_fileserver(self, blueprint_id, resource_path):
+        return self._check_if_resource_on_fileserver(
+            FILE_SERVER_BLUEPRINTS_FOLDER, blueprint_id, resource_path)
+
+    def check_if_deployment_resource_on_fileserver(self,
+                                                   deployment_id,
+                                                   resource_path):
+        return self._check_if_resource_on_fileserver(
+            FILE_SERVER_DEPLOYMENTS_FOLDER, deployment_id, resource_path)
 
     def get_blueprint_path(self, blueprint_dir_name):
         return os.path.join(os.path.dirname(

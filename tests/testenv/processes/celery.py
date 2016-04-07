@@ -29,6 +29,7 @@ from cloudify_agent.app import app as celery_client
 from testenv.constants import FILE_SERVER_PORT
 from testenv.constants import MANAGER_REST_PORT
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
+from testenv.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 
 
 logger = setup_logger('celery_worker_process')
@@ -147,6 +148,8 @@ class CeleryWorkerProcess(object):
             MANAGEMENT_IP='localhost',
             MANAGER_FILE_SERVER_BLUEPRINTS_ROOT_URL='http://localhost:{0}/{1}'
             .format(FILE_SERVER_PORT, FILE_SERVER_BLUEPRINTS_FOLDER),
+            MANAGER_FILE_SERVER_DEPLOYMENTS_ROOT_URL='http://localhost:{0}/{1}'
+            .format(FILE_SERVER_PORT, FILE_SERVER_DEPLOYMENTS_FOLDER),
             MANAGER_FILE_SERVER_URL='http://localhost:{0}'
             .format(FILE_SERVER_PORT),
             AGENT_IP='localhost',

@@ -36,6 +36,7 @@ class ManagerRestProcess(object):
                  file_server_dir,
                  file_server_base_uri,
                  file_server_blueprints_folder,
+                 file_server_deployments_folder,
                  file_server_uploaded_blueprints_folder,
                  file_server_resources_uri,
                  rest_service_log_level,
@@ -55,6 +56,7 @@ class ManagerRestProcess(object):
         self.file_server_dir = file_server_dir
         self.file_server_base_uri = file_server_base_uri
         self.file_server_blueprints_folder = file_server_blueprints_folder
+        self.file_server_deployments_folder = file_server_deployments_folder
         self.file_server_uploaded_blueprints_folder = \
             file_server_uploaded_blueprints_folder
         self.file_server_resources_uri = file_server_resources_uri
@@ -95,6 +97,8 @@ class ManagerRestProcess(object):
             'file_server_resources_uri': self.file_server_resources_uri,
             'file_server_blueprints_folder':
             self.file_server_blueprints_folder,
+            'file_server_deployments_folder':
+            self.file_server_deployments_folder,
             'amqp_username': self.amqp_username,
             'amqp_password': self.amqp_password,
             'maintenance_folder': self.maintenance_folder
