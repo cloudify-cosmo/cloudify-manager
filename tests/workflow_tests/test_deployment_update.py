@@ -82,7 +82,7 @@ class TestDeploymentUpdate(TestCase):
 
     def test_add_relationship(self):
         deployment, modified_bp_path = \
-            self._deploy_and_get_modified_bp_path('dep_up_add_relationship')
+            self._deploy_and_get_modified_bp_path('add_relationship')
 
         base_nodes, base_node_instnaces = \
             self._get_nodes_and_node_instances_dict(
@@ -199,7 +199,7 @@ class TestDeploymentUpdate(TestCase):
 
     def test_remove_relationship(self):
         deployment, modified_bp_path = \
-            self._deploy_and_get_modified_bp_path('dep_up_remove_relationship')
+            self._deploy_and_get_modified_bp_path('remove_relationship')
 
         base_nodes, base_node_instnaces = \
             self._get_nodes_and_node_instances_dict(
@@ -287,7 +287,7 @@ class TestDeploymentUpdate(TestCase):
 
     def test_remove_node(self):
         deployment, modified_bp_path = \
-            self._deploy_and_get_modified_bp_path('dep_up_remove_node')
+            self._deploy_and_get_modified_bp_path('remove_node')
 
         base_nodes, base_node_instnaces = \
             self._get_nodes_and_node_instances_dict(
@@ -364,7 +364,7 @@ class TestDeploymentUpdate(TestCase):
         """
 
         deployment, modified_bp_path = \
-            self._deploy_and_get_modified_bp_path('dep_up_add_node')
+            self._deploy_and_get_modified_bp_path('add_node')
 
         base_nodes, base_node_instnaces = \
             self._get_nodes_and_node_instances_dict(
@@ -471,7 +471,7 @@ class TestDeploymentUpdate(TestCase):
         :return:
         """
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
-                    'dep_up_add_node_and_relationship')
+                    'add_node_and_relationship')
 
         base_nodes, base_node_instances = \
             self._get_nodes_and_node_instances_dict(deployment.id,
@@ -593,6 +593,111 @@ class TestDeploymentUpdate(TestCase):
                 {'source_ops_counter': '3'},
                 new_node_instance['runtime_properties']
         )
+
+    def test_add_property(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('add_property')
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='property',
+                entity_id='site1:ip')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        executions = \
+            self.client.executions.list(deployment_id=deployment.id,
+                                        workflow_id='update')
+        execution = self._wait_for_execution(executions[0])
+        self.assertEquals('terminated', execution['status'],
+                          execution.error)
+
+        affected_node = self.client.nodes.get(deployment_id=deployment.id,
+                                              node_id='site1')
+
+        added_property = affected_node['properties'].get('ip')
+        self.assertIsNotNone(added_property)
+        untouched_property = affected_node['properties'].get('os_family')
+        self.assertIsNotNone(untouched_property)
+
+        self.assertEqual(added_property, '1.1.1.1')
+        self.assertEqual(untouched_property, 'windows')
+
+    def test_remove_property(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('remove_property')
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.remove(
+                dep_update.id,
+                entity_type='property',
+                entity_id='site1:ip')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        executions = \
+            self.client.executions.list(deployment_id=deployment.id,
+                                        workflow_id='update')
+        execution = self._wait_for_execution(executions[0])
+        self.assertEquals('terminated', execution['status'],
+                          execution.error)
+
+        affected_node = self.client.nodes.get(deployment_id=deployment.id,
+                                              node_id='site1')
+
+        added_property = affected_node['properties'].get('ip')
+        self.assertIsNone(added_property)
+        untouched_property = affected_node['properties'].get('os_family')
+        self.assertIsNotNone(untouched_property)
+        self.assertEqual(untouched_property, 'windows')
+
+    def test_modify_property(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('modify_property')
+
+        affected_node = self.client.nodes.get(deployment_id=deployment.id,
+                                              node_id='site1')
+        added_property = affected_node['properties'].get('ip')
+        self.assertEqual(added_property, '1.1.1.1')
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.modify(
+                dep_update.id,
+                entity_type='property',
+                entity_id='site1:ip')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        executions = \
+            self.client.executions.list(deployment_id=deployment.id,
+                                        workflow_id='update')
+        execution = self._wait_for_execution(executions[0])
+        self.assertEquals('terminated', execution['status'],
+                          execution.error)
+
+        affected_node = self.client.nodes.get(deployment_id=deployment.id,
+                                              node_id='site1')
+
+        added_property = affected_node['properties'].get('ip')
+        self.assertIsNotNone(added_property)
+        untouched_property = affected_node['properties'].get('os_family')
+        self.assertIsNotNone(untouched_property)
+
+        self.assertEqual(added_property, '2.2.2.2')
+        self.assertEqual(untouched_property, 'windows')
 
     def _get_nodes_and_node_instances_dict(self, deployment_id, dct):
         nodes_dct = {k: [] for k, _ in dct.iteritems()}
