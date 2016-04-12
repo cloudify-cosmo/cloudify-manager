@@ -27,7 +27,7 @@ import pika
 from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError, HttpException
-from cloudify.manager import get_resource
+from cloudify.manager import get_resource_from_manager
 from cloudify import broker_config, utils
 
 from riemann_controller import config
@@ -213,7 +213,7 @@ def _process_source(source):
         pass
     try:
         # try downloading cloudify resource
-        return get_resource(source)
+        return get_resource_from_manager(source)
     except HttpException:
         pass
     raise NonRecoverableError('Failed processing source: {}'

@@ -29,6 +29,7 @@ class Config(object):
         self._file_server_root = None
         self._file_server_base_uri = None
         self._file_server_blueprints_folder = None
+        self._file_server_deployments_folder = None
         self._file_server_uploaded_blueprints_folder = None
         self._file_server_snapshots_folder = None
         self._file_server_resources_uri = None
@@ -99,6 +100,14 @@ class Config(object):
     @file_server_blueprints_folder.setter
     def file_server_blueprints_folder(self, value):
         self._file_server_blueprints_folder = value
+
+    @property
+    def file_server_deployments_folder(self):
+        return self._file_server_deployments_folder
+
+    @file_server_deployments_folder.setter
+    def file_server_deployments_folder(self, value):
+        self._file_server_deployments_folder = value
 
     @property
     def file_server_uploaded_blueprints_folder(self):

@@ -783,6 +783,15 @@ class DeploymentsId(SecuredResource):
 
         deployment = get_blueprints_manager().delete_deployment(
             deployment_id, ignore_live_nodes)
+
+        # Delete deployment resources from file server
+        deployment_folder = os.path.join(
+            config.instance().file_server_root,
+            config.instance().file_server_deployments_folder,
+            deployment.id)
+        if os.path.exists(deployment_folder):
+            shutil.rmtree(deployment_folder)
+
         return deployment, 200
 
 

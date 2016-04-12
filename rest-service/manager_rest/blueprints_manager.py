@@ -127,6 +127,8 @@ class BlueprintsManager(object):
                 config.instance().file_server_snapshots_folder,
             'file_server_blueprints_folder':
                 config.instance().file_server_blueprints_folder,
+            'file_server_deployments_folder':
+                config.instance().file_server_deployments_folder,
             'file_server_uploaded_blueprints_folder':
                 config.instance().file_server_uploaded_blueprints_folder,
             'db_address': config.instance().db_address,

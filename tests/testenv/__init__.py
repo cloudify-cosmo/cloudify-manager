@@ -42,6 +42,7 @@ from testenv.constants import RABBITMQ_POLLING_ENABLED
 from testenv.constants import FILE_SERVER_RESOURCES_URI
 from testenv.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
+from testenv.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 from testenv.processes.elastic import ElasticSearchProcess
 from testenv.processes.manager_rest import ManagerRestProcess
 from testenv.processes.riemann import RiemannProcess
@@ -295,6 +296,7 @@ class TestEnvironment(object):
             self.fileserver_dir,
             file_server_base_uri,
             FILE_SERVER_BLUEPRINTS_FOLDER,
+            FILE_SERVER_DEPLOYMENTS_FOLDER,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
             FILE_SERVER_RESOURCES_URI,
             self.rest_service_log_level,
