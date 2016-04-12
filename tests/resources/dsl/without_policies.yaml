@@ -1,0 +1,26 @@
+# this blueprint is like with_policies1, but without the policies
+# - so that we have two simple blueprints that only differ by the policies
+
+tosca_definitions_version: cloudify_dsl_1_2
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations.yaml
+    - plugins/mock_workflows.yaml
+    - policies/nop.yaml
+
+node_templates:
+    node:
+        type: cloudify.nodes.Root
+        interfaces:
+            test:
+                op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+
+workflows:
+    some_workflow:
+        mapping: mock_workflows.mock_workflows.workflows.test_policies_1
+        parameters:
+            key:
+                description: a key to write
+            value:
+                description: a value to write

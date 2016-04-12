@@ -474,7 +474,6 @@ class BasicWorkflowsTest(TestCase):
         undeploy_application(deployment_id=deployment.id)
 
     def test_deployment_creation_workflow(self):
-
         dsl_path = get_resource(
             'dsl/basic_with_deployment_plugin_and_workflow_plugin.yaml'
         )
@@ -485,17 +484,6 @@ class BasicWorkflowsTest(TestCase):
                 testenv_instance.test_working_dir, 'cloudify.management',
                 'work', 'deployments', deployment.id)
 
-        def _is_riemann_core_up():
-            try:
-                with open(os.path.join(
-                        self.riemann_workdir, deployment.id, 'ok')) as f:
-                    return f.read().strip() == 'ok'
-            except IOError, e:
-                if e.errno == errno.ENOENT:
-                    return False
-                raise
-
-        self.assertTrue(_is_riemann_core_up())
         self.assertTrue(os.path.isdir(deployment_dir_path))
 
         # assert plugin installer installed
@@ -522,7 +510,6 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(agent_data['local']['cloudmock'], uninstalled)
         self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
 
-        self.assertFalse(_is_riemann_core_up())
         self.assertFalse(os.path.isdir(deployment_dir_path))
 
     def test_get_attribute(self):
@@ -538,3 +525,38 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(1, len([
             i for i in invocations
             if i == context.NODE_INSTANCE]))
+
+    def _is_riemann_core_up(self, deployment_id):
+        try:
+            with open(os.path.join(self.riemann_workdir,
+                                   deployment_id,
+                                   'ok')) as f:
+                return f.read().strip() == 'ok'
+        except IOError, e:
+            if e.errno == errno.ENOENT:
+                return False
+            raise
+
+    def test_riemann_core_started_with_policies(self):
+        """A riemann core is started if the blueprint defines policies
+        """
+        dsl_path = get_resource('dsl/with_policies1.yaml')
+        deployment, _ = deploy_application(dsl_path)
+
+        self.assertTrue(self._is_riemann_core_up(deployment.id))
+
+        undeploy_application(deployment.id, is_delete_deployment=True)
+
+        self.assertFalse(self._is_riemann_core_up(deployment.id))
+
+    def test_riemann_core_not_started_without_policies(self):
+        """A riemann core isn't started if there's no policies defined
+        """
+        dsl_path = get_resource('dsl/without_policies.yaml')
+        deployment, _ = deploy_application(dsl_path)
+
+        self.assertFalse(self._is_riemann_core_up(deployment.id))
+
+        undeploy_application(deployment.id, is_delete_deployment=True)
+
+        self.assertFalse(self._is_riemann_core_up(deployment.id))
