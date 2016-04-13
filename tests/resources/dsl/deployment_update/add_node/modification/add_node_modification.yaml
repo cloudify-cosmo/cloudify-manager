@@ -1,0 +1,33 @@
+tosca_definitions_version: 'cloudify_dsl_1_2'
+
+imports:
+  - http://www.getcloudify.org/spec/cloudify/3.4m1/types.yaml
+
+description: >
+  Micro web sites hosting.
+
+
+node_templates:
+  site1:
+    type: cloudify.nodes.Compute
+
+  site2:                                                # added node
+    type: cloudify.nodes.WebServer
+    relationships:                                      # (with relationships)
+    - type: cloudify.relationships.contained_in
+      target: site1
+      source_interfaces:
+        cloudify.interfaces.relationship_lifecycle:
+          preconfigure: increment.sh
+          establish: increment.sh
+          postconfigure: increment.sh
+      target_interfaces:
+        cloudify.interfaces.relationship_lifecycle:
+          preconfigure: remote_increment.sh
+          establish: remote_increment.sh
+          postconfigure: remote_increment.sh
+    interfaces:                                         # (with interfaces)
+      cloudify.interfaces.lifecycle:
+        create: increment.sh
+        configure: increment.sh
+        start: increment.sh

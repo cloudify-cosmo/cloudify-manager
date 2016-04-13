@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 import contextlib
-from urllib2 import urlopen, URLError
+from urllib2 import URLError, urlopen
 
 import sys
 import logging
@@ -29,8 +29,7 @@ import uuid
 from flask.ext.restful import abort
 from setuptools import archive_util
 
-from manager_rest import manager_exceptions
-from manager_rest import chunked
+from manager_rest import manager_exceptions, chunked
 
 
 def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,

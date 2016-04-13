@@ -68,17 +68,23 @@ class DeploymentUpdateBase(TestCase):
         if exists:
             self.fail(error_msg.format(target, expected_type))
 
-    def _deploy_and_get_modified_bp_path(self, bp_name):
+    def _deploy_and_get_modified_bp_path(self, test_name):
 
-        base_bp = '{0}_base.yaml'.format(bp_name)
-        modified_bp = '{0}_modification.yaml'.format(bp_name)
+        base_dir = os.path.join(test_name, 'base')
+        modified_dir = os.path.join(test_name, 'modification')
+        base_bp = '{0}_base.yaml'.format(test_name)
+        modified_bp = '{0}_modification.yaml'.format(test_name)
 
         base_bp_path = \
-            resource(os.path.join(blueprints_base_path, base_bp))
+            resource(os.path.join(blueprints_base_path,
+                                  base_dir,
+                                  base_bp))
         deployment, _ = deploy(base_bp_path)
-        modified_bp_path = \
-            resource(os.path.join(blueprints_base_path, modified_bp))
 
+        modified_bp_path = \
+            resource(os.path.join(blueprints_base_path,
+                                  modified_dir,
+                                  modified_bp))
         return deployment, modified_bp_path
 
     def _wait_for_execution_to_terminate(self, deployment_id, workflow_id):
@@ -158,7 +164,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_node')
 
-        base_nodes, base_node_instnaces = \
+        base_nodes, base_node_instances = \
             self._get_nodes_and_node_instances_dict(
                     deployment.id,
                     {'intact': 'site1',
@@ -199,7 +205,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             )
 
             self._assert_equal_entity_dicts(
-                    base_node_instnaces,
+                    base_node_instances,
                     modified_node_instances,
                     keys=['intact', 'added'],
                     excluded_items=['runtime_properties']
@@ -587,7 +593,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 expected_type='new_relationship_type')
 
         dict_to_check = self._create_dict(['inputs', 'script_path',
-                                           'scripts/increment.sh'])
+                                           'increment.sh'])
 
         # check all operation have been executed
         source_operations = \
@@ -606,7 +612,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_property')
 
-        base_nodes, base_node_instnaces = \
+        base_nodes, base_node_instances = \
             self._get_nodes_and_node_instances_dict(
                     deployment.id,
                     {'affected_node': 'site1'})
@@ -843,7 +849,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_relationship')
 
-        base_nodes, base_node_instnaces = \
+        base_nodes, base_node_instances = \
             self._get_nodes_and_node_instances_dict(
                     deployment.id,
                     {'related': 'site1',
@@ -880,7 +886,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
 
         self._assert_equal_entity_dicts(
-                base_node_instnaces,
+                base_node_instances,
                 modified_node_instances,
                 keys=['related', 'target', 'source'],
                 excluded_items=['runtime_properties', 'relationships']
@@ -1046,7 +1052,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_property')
 
-        base_nodes, base_node_instnaces = \
+        base_nodes, base_node_instances = \
             self._get_nodes_and_node_instances_dict(
                     deployment.id,
                     {'affected_node': 'site1'})
@@ -1130,13 +1136,13 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self._wait_for_execution_to_terminate(deployment.id,
                                               'execute_operation')
 
-        base_nodes, base_node_instnaces = \
+        base_nodes, base_node_instances = \
             self._get_nodes_and_node_instances_dict(
                     deployment.id, {'modified': 'site1'})
 
         self.assertDictContainsSubset(
                 {'source_ops_counter': '1'},
-                base_node_instnaces['modified'][0]['runtime_properties']
+                base_node_instances['modified'][0]['runtime_properties']
         )
 
         dep_update = \
@@ -1167,7 +1173,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         )
 
         self._assert_equal_entity_dicts(
-                base_node_instnaces,
+                base_node_instances,
                 modified_node_instances,
                 keys=['modified']
         )
@@ -1202,7 +1208,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         )
 
         self._assert_equal_entity_dicts(
-                base_node_instnaces,
+                base_node_instances,
                 modified_node_instances,
                 keys=['modified'],
                 excluded_items=['runtime_properties']
@@ -1297,7 +1303,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 expected_type='new_relationship_type')
 
         dict_to_check = self._create_dict(['inputs', 'script_path',
-                                           'scripts/decrement.sh'])
+                                           'decrement.sh'])
 
         # check all operation have been executed
         source_operations = \
@@ -1541,6 +1547,96 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # establish between site2 and site3
         self.assertDictContainsSubset(
                 {'source_ops_counter': '4'},
+                added_relationship_node_instance['runtime_properties']
+        )
+
+        self.assertDictContainsSubset(
+                {'source_ops_counter': '3'},
+                new_node_instance['runtime_properties']
+        )
+
+    def test_add_and_override_resource(self):
+        """
+        In order to the resources mechanism
+         1. we first upload the local_modification resource which increases the
+         source_ops_counter each relationships operation executed between
+         site2->site1
+         2. we also upload the increment resource for future use.
+
+            after this step we check that indeed the
+            site2.source_ops_counter == 3
+
+         2. after uploading the new blueprint (with its resources), the
+         local_modification script decreases the same counter for each
+         relationships operation executed between site2->site3 (since pre
+         and post configure already ran, it should be ran only once)
+
+         3. we set the increment script to be used for each operation between
+         site3->site1
+
+            after both of these steps we check that indeed the
+            site2.source_ops_counter == 2
+            and
+            site3.source_ops_counter == 3
+        :return:
+        """
+        deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
+                'add_and_override_resource')
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='node',
+                entity_id='nodes:site3')
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='relationship',
+                entity_id='nodes:site2:relationships:[1]'
+        )
+
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'added_relationship': 'site2'}
+            )
+
+        # check all operation have been executed
+        self.assertDictContainsSubset(
+                {'source_ops_counter': '3'},
+                modified_node_instances['added_relationship'][0]
+                ['runtime_properties']
+        )
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+
+        # Get all related and affected nodes and node instances
+
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'stagnant': 'site1',
+                     'added_relationships': 'site2',
+                     'new': 'site3'}
+            )
+
+        # get the nodes and node instances
+        added_relationship_node_instance = \
+            modified_node_instances['added_relationships'][0]
+        new_node_instance = modified_node_instances['new'][0]
+
+        # check all operation have been executed.
+        # source_ops_counter was increased for each operation between site2 and
+        # site1, and another site2.source_ops_counter should have
+        # decreased once because of the resource override
+        self.assertDictContainsSubset(
+                {'source_ops_counter': '2'},
                 added_relationship_node_instance['runtime_properties']
         )
 
