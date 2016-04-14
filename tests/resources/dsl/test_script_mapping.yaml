@@ -10,6 +10,7 @@ node_templates:
             test:
                 op1: scripts/operations/op1.py
                 op2: scripts/operations/op2.sh
+                op3: scripts/operations/op3.py
 
 workflows:
     workflow: scripts/workflows/workflow.py
