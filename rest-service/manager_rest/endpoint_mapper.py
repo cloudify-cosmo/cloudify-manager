@@ -58,7 +58,9 @@ def setup_resources(api):
         'DeploymentUpdateSteps':
             'deployment-updates/<string:update_id>/step',
         'DeploymentUpdateCommit':
-            'deployment-updates/<string:update_id>/commit'
+            'deployment-updates/<string:update_id>/commit',
+        'DeploymentUpdateFinalizeCommit':
+            'deployment-updates/<string:update_id>/finalize_commit'
     }
 
     for resource, endpoint_suffix in resources_endpoints.iteritems():

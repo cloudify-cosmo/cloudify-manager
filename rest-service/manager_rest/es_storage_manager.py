@@ -428,8 +428,9 @@ class ESStorageManager(object):
     def delete_execution(self, execution_id):
         return self._delete_doc(EXECUTION_TYPE, execution_id, Execution)
 
-    def delete_node(self, node_id):
-        return self._delete_doc(NODE_TYPE, node_id, DeploymentNode)
+    def delete_node(self, deployment_id, node_id):
+        storage_node_id = self._storage_node_id(deployment_id, node_id)
+        return self._delete_doc(NODE_TYPE, storage_node_id, DeploymentNode)
 
     def delete_node_instance(self, node_instance_id):
         return self._delete_doc(NODE_INSTANCE_TYPE,
@@ -438,9 +439,12 @@ class ESStorageManager(object):
 
     def update_node(self, deployment_id, node_id,
                     number_of_instances=None,
-                    planned_number_of_instances=None):
+                    planned_number_of_instances=None,
+                    changes=None):
         storage_node_id = self._storage_node_id(deployment_id, node_id)
         update_doc_data = {}
+        if changes is not None:
+            update_doc_data.update(changes)
         if number_of_instances is not None:
             update_doc_data['number_of_instances'] = number_of_instances
         if planned_number_of_instances is not None:
@@ -453,6 +457,7 @@ class ESStorageManager(object):
                                     id=storage_node_id,
                                     body=update_doc,
                                     **MUTATE_PARAMS)
+            return update_doc_data
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))

@@ -64,7 +64,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         deployment_update_id = self._stage(deployment_id).id
         step = {'operation': 'add',
                 'entity_type': 'node',
-                'entity_id': 'non_existent_id'}
+                'entity_id': 'node_templates:non_existent_id'}
         self.assertRaisesRegexp(CloudifyClientError,
                                 "entity id {} doesn't exist"
                                 .format(step['entity_id']),
@@ -89,7 +89,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         deployment_update_id = self._stage(deployment_id).id
         step = {'operation': 'add',
                 'entity_type': 'node',
-                'entity_id': 'site_1'}
+                'entity_id': 'node_templates:site_1'}
         self.client.deployment_updates.step(deployment_update_id,
                                             **step)
         dep_update = \
@@ -102,7 +102,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         step = {
             'operation': 'remove',
             'entity_type': 'node',
-            'entity_id': 'site_1'}
+            'entity_id': 'node_templates:http_web_server'}
         self.client.deployment_updates.step(deployment_update_id,
                                             **step)
         dep_update = \

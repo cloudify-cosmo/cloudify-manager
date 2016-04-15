@@ -13,27 +13,34 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-import shutil
 import os
 import json
+import shutil
 import tarfile
 import tempfile
+from collections import OrderedDict
 from uuid import uuid4
 
 from datetime import datetime
-from collections import OrderedDict
-
-from flask_restful_swagger import swagger
 from flask import request
 from flask.ext.restful import marshal
+from flask_restful_swagger import swagger
+
 
 from dsl_parser.parser import parse_from_path
 from flask_securest.rest_security import SecuredResource
-
+from manager_rest import config
+from manager_rest import files
+from manager_rest import manager_exceptions
+from manager_rest import models
 from manager_rest import resources
+from manager_rest import responses_v2
 from manager_rest import utils
-from manager_rest.deployment_updates_manager import \
-    get_deployment_updates_manager
+from manager_rest.blueprints_manager import get_blueprints_manager
+from manager_rest.manager_elasticsearch import ManagerElasticsearch
+from manager_rest.storage_manager import ListResult
+from manager_rest.storage_manager import get_storage_manager
+from deployment_update.manager import get_deployment_updates_manager
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_and_convert_bool,
@@ -41,17 +48,6 @@ from manager_rest.resources import (marshal_with,
                                     verify_json_content_type,
                                     make_streaming_response,
                                     CONVENTION_APPLICATION_BLUEPRINT_FILE)
-from manager_rest import models
-from manager_rest import responses_v2
-from manager_rest import manager_exceptions
-from manager_rest import config
-from manager_rest import files
-from manager_rest.storage_manager import get_storage_manager
-from manager_rest.storage_manager import ListResult
-from manager_rest.blueprints_manager import get_blueprints_manager
-
-
-from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 
 def projection(func):
@@ -683,6 +679,14 @@ class DeploymentUpdateCommit(SecuredResource):
     def post(self, update_id):
         manager = get_deployment_updates_manager()
         return manager.commit_deployment_update(update_id)
+
+
+class DeploymentUpdateFinalizeCommit(SecuredResource):
+    @exceptions_handled
+    @marshal_with(responses_v2.DeploymentUpdate)
+    def post(self, update_id):
+        manager = get_deployment_updates_manager()
+        return manager.finalize_commit(update_id)
 
 
 class DeploymentModifications(resources.DeploymentModifications):
