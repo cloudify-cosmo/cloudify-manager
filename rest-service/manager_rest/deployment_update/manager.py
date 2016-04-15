@@ -24,9 +24,9 @@ import manager_rest.workflow_client as wf_client
 
 from dsl_parser import constants
 from handlers import (DeploymentUpdateNodeHandler,
-                      DeploymentUpdateNodeInstanceHandler,
-                      StepValidator,
-                      extract_ids)
+                      DeploymentUpdateNodeInstanceHandler)
+from validator import StepValidator
+from utils import extract_ids
 from constants import STATE, CHANGE_TYPE
 
 

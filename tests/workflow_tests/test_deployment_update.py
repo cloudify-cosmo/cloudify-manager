@@ -605,7 +605,7 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.add(
                 dep_update.id,
                 entity_type='property',
-                entity_id='site1:ip')
+                entity_id='node_templates:site1:properties:ip')
 
         self.client.deployment_updates.commit(dep_update.id)
 
@@ -639,7 +639,7 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.remove(
                 dep_update.id,
                 entity_type='property',
-                entity_id='site1:ip')
+                entity_id='node_templates:site1:properties:ip')
 
         self.client.deployment_updates.commit(dep_update.id)
 
@@ -676,7 +676,7 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.modify(
                 dep_update.id,
                 entity_type='property',
-                entity_id='site1:ip')
+                entity_id='node_templates:site1:properties:ip')
 
         self.client.deployment_updates.commit(dep_update.id)
 
