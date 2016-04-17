@@ -1,4 +1,5 @@
-class DeploymentUpdateEnums(object):
+
+class DeploymentUpdateEnumBase(object):
 
     class __metaclass__(type):
         def __iter__(cls):
@@ -10,17 +11,19 @@ class DeploymentUpdateEnums(object):
             pass
 
 
-class DeploymentUpdateEntityTypes(DeploymentUpdateEnums):
+class DeploymentUpdateEntityTypes(DeploymentUpdateEnumBase):
     NODE = 'node'
     RELATIONSHIP = 'relationship'
+    PROPERTY = 'property'
 
 
-class DeploymentUpdateOperation(DeploymentUpdateEnums):
+class DeploymentUpdateOperation(DeploymentUpdateEnumBase):
     ADD = 'add'
     REMOVE = 'remove'
+    MODIFY = 'modify'
 
 
-class DeploymentUpdateState(DeploymentUpdateEnums):
+class DeploymentUpdateState(DeploymentUpdateEnumBase):
     COMMITTED = 'committed'
     COMMITTING = 'committing'
     STAGED = 'staged'
@@ -32,7 +35,7 @@ class DeploymentUpdateState(DeploymentUpdateEnums):
     ROLLEDBACK = 'rolledback'
 
 
-class DeploymentUpdateChangeTypes(DeploymentUpdateEnums):
+class DeploymentUpdateChangeTypes(DeploymentUpdateEnumBase):
     ADDED_AND_RELATED = 'added_and_related'
     EXTENDED_AND_RELATED = 'extended_and_related'
     REDUCED_AND_RELATED = 'reduced_and_related'
