@@ -1,5 +1,5 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/CFY-5085-support-adding-or-modifying-interface-operations-of-a-node.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-5089-Add-support-for-adding-or-modifying-a-property-to-the-deployment.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-4929-depup.zip
 https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/CFY-4929-depup.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.3-build.zip

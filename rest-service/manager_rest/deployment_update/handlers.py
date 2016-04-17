@@ -86,7 +86,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         :param entity_id:
         :return: the new node
         """
-        _, node_id = utils.get_entity_id_list(entity_id)
+        NODES, node_id = utils.get_entity_id_list(entity_id)
 
         get_blueprints_manager()._create_deployment_nodes(
                 deployment_id=dep_update.deployment_id,
@@ -129,8 +129,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """
         source_entity_id, target_entity_id = \
             utils.get_relationship_source_and_target(entity_id)
-        _, source_node_id = utils.get_entity_id_list(source_entity_id)
-        _, target_node_id = utils.get_entity_id_list(target_entity_id)
+        NODES, source_node_id = utils.get_entity_id_list(source_entity_id)
+        NODES, target_node_id = utils.get_entity_id_list(target_entity_id)
         pluralized_entity_type = utils.pluralize(ENTITY_TYPES.NODE)
         raw_nodes = dep_update.blueprint[pluralized_entity_type]
         source_raw_node = \
@@ -174,16 +174,16 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         return source_node_id, target_node_id
 
     def _add_property(self, dep_update, entity_id, current_nodes):
-        entity_id_list = utils.get_entity_id_list(entity_id)
-        _, node_id, properties_id, property_id = entity_id_list
+        entity_keys = utils.get_entity_id_list(entity_id)
+        NODES, node_id, PROPERTIES, property_id = entity_keys
 
-        new_node = [n for n in dep_update.blueprint['nodes']
+        new_node = [n for n in dep_update.blueprint[NODES]
                     if n['id'] == node_id][0]
 
-        new_property_value = new_node[properties_id][property_id]
+        new_property_value = new_node[PROPERTIES][property_id]
 
         changes = {
-            'properties': {
+            PROPERTIES: {
                 property_id: new_property_value
             }
         }
@@ -192,7 +192,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                             node_id=node_id,
                             changes=changes)
 
-        current_nodes[node_id][properties_id][property_id] = new_property_value
+        current_nodes[node_id][PROPERTIES][property_id] = new_property_value
 
         return entity_id
 
@@ -227,7 +227,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         :param entity_id:
         :return: the removed node
         """
-        _, node_id = utils.get_entity_id_list(entity_id)
+        NODES, node_id = utils.get_entity_id_list(entity_id)
         del(current_nodes[node_id])
         return node_id
 
@@ -241,8 +241,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """
         source_entity_id, target_entity_id = \
             utils.get_relationship_source_and_target(entity_id)
-        _, source_node_id = utils.get_entity_id_list(source_entity_id)
-        _, target_node_id = utils.get_entity_id_list(target_entity_id)
+        NODES, source_node_id = utils.get_entity_id_list(source_entity_id)
+        NODES, target_node_id = utils.get_entity_id_list(target_entity_id)
 
         node = current_nodes[source_node_id]
 
@@ -256,9 +256,9 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     @staticmethod
     def _remove_property(dep_update, entity_id, current_nodes):
         entity_id_list = utils.get_entity_id_list(entity_id)
-        _, node_id, properties_id, property_id = entity_id_list
+        NODES, node_id, PROPERTIES, property_id = entity_id_list
 
-        del(current_nodes[node_id][properties_id][property_id])
+        del(current_nodes[node_id][PROPERTIES][property_id])
 
         return entity_id
 
@@ -278,6 +278,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         return entity_id
 
     def _modify_property(self, dep_update, entity_id, current_nodes):
+        # since the add property basically sets the the value of the property
+        # to the new value, it's the same as modifying the same property.
         return self._add_property(dep_update, entity_id, current_nodes)
 
     def finalize(self, dep_update):

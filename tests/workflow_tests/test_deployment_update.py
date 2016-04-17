@@ -80,6 +80,15 @@ class TestDeploymentUpdate(TestCase):
 
         return deployment, modified_bp_path
 
+    def _wait_for_execution_to_terminate(self, deployment_id):
+        # assert that 'update' workflow was executed
+        executions = \
+            self.client.executions.list(deployment_id=deployment_id,
+                                        workflow_id='update')
+        execution = self._wait_for_execution(executions[0])
+        self.assertEquals('terminated', execution['status'],
+                          execution.error)
+
     def test_add_relationship(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_relationship')
@@ -110,12 +119,7 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.commit(dep_update.id)
 
         # assert that 'update' workflow was executed
-        executions = \
-            self.client.executions.list(deployment_id=deployment.id,
-                                        workflow_id='update')
-        execution = self._wait_for_execution(executions[0])
-        self.assertEquals('terminated', execution['status'],
-                          execution.error)
+        self._wait_for_execution_to_terminate(deployment.id)
 
         modified_nodes, modified_node_instances = \
             self._get_nodes_and_node_instances_dict(
@@ -220,12 +224,7 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.commit(dep_update.id)
 
         # assert that 'update' workflow was executed
-        executions = \
-            self.client.executions.list(deployment_id=deployment.id,
-                                        workflow_id='update')
-        execution = self._wait_for_execution(executions[0])
-        self.assertEquals('terminated', execution['status'],
-                          execution.error)
+        self._wait_for_execution_to_terminate(deployment.id)
 
         # Get all related and affected nodes and node instances
         modified_nodes, modified_node_instances = \
@@ -305,12 +304,7 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.commit(dep_update.id)
 
         # assert that 'update' workflow was executed
-        executions = \
-            self.client.executions.list(deployment_id=deployment.id,
-                                        workflow_id='update')
-        execution = self._wait_for_execution(executions[0])
-        self.assertEquals('terminated', execution['status'],
-                          execution.error)
+        self._wait_for_execution_to_terminate(deployment.id)
 
         modified_nodes, modified_node_instances = \
             self._get_nodes_and_node_instances_dict(deployment.id,
@@ -391,12 +385,7 @@ class TestDeploymentUpdate(TestCase):
             self.client.deployment_updates.commit(dep_update.id)
 
             # assert that 'update' workflow was executed
-            executions = \
-                self.client.executions.list(deployment_id=deployment.id,
-                                            workflow_id='update')
-            execution = self._wait_for_execution(executions[0])
-            self.assertEquals('terminated', execution['status'],
-                              execution.error)
+            self._wait_for_execution_to_terminate(deployment.id)
 
             modified_nodes, modified_node_instances = \
                 self._get_nodes_and_node_instances_dict(deployment.id,
@@ -509,12 +498,7 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.commit(dep_update.id)
 
         # assert that 'update' workflow was executed
-        executions = \
-            self.client.executions.list(deployment_id=deployment.id,
-                                        workflow_id='update')
-        execution = self._wait_for_execution(executions[0])
-        self.assertEquals('terminated', execution['status'],
-                          execution.error)
+        self._wait_for_execution_to_terminate(deployment.id)
 
         # Get all related and affected nodes and node instances
 
@@ -598,6 +582,12 @@ class TestDeploymentUpdate(TestCase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_property')
 
+        base_nodes, base_node_instnaces = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        base_node = base_nodes['affected_node'][0]
+
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
                                                  modified_bp_path)
@@ -605,32 +595,37 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.add(
                 dep_update.id,
                 entity_type='property',
-                entity_id='node_templates:site1:properties:ip')
+                entity_id='nodes:site1:properties:ip')
 
         self.client.deployment_updates.commit(dep_update.id)
 
         # assert that 'update' workflow was executed
-        executions = \
-            self.client.executions.list(deployment_id=deployment.id,
-                                        workflow_id='update')
-        execution = self._wait_for_execution(executions[0])
-        self.assertEquals('terminated', execution['status'],
-                          execution.error)
+        self._wait_for_execution_to_terminate(deployment.id)
 
-        affected_node = self.client.nodes.get(deployment_id=deployment.id,
-                                              node_id='site1')
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        modified_node = modified_nodes['affected_node'][0]
 
-        added_property = affected_node['properties'].get('ip')
+        added_property = modified_node['properties'].get('ip')
         self.assertIsNotNone(added_property)
-        untouched_property = affected_node['properties'].get('os_family')
-        self.assertIsNotNone(untouched_property)
-
         self.assertEqual(added_property, '1.1.1.1')
-        self.assertEqual(untouched_property, 'windows')
+
+        # assert nothing else changed
+        self._assert_equal_dicts(base_node['properties'],
+                                 modified_node['properties'],
+                                 excluded_items=['ip'])
 
     def test_remove_property(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_property')
+
+        base_nodes, base_node_instnaces = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        base_node = base_nodes['affected_node'][0]
 
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
@@ -639,35 +634,38 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.remove(
                 dep_update.id,
                 entity_type='property',
-                entity_id='node_templates:site1:properties:ip')
+                entity_id='nodes:site1:properties:ip')
 
         self.client.deployment_updates.commit(dep_update.id)
 
         # assert that 'update' workflow was executed
-        executions = \
-            self.client.executions.list(deployment_id=deployment.id,
-                                        workflow_id='update')
-        execution = self._wait_for_execution(executions[0])
-        self.assertEquals('terminated', execution['status'],
-                          execution.error)
+        self._wait_for_execution_to_terminate(deployment.id)
 
-        affected_node = self.client.nodes.get(deployment_id=deployment.id,
-                                              node_id='site1')
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        modified_node = modified_nodes['affected_node'][0]
 
-        added_property = affected_node['properties'].get('ip')
-        self.assertIsNone(added_property)
-        untouched_property = affected_node['properties'].get('os_family')
-        self.assertIsNotNone(untouched_property)
-        self.assertEqual(untouched_property, 'windows')
+        removed_property = modified_node['properties'].get('ip')
+        self.assertIsNone(removed_property)
+        # assert nothing else changed
+        self._assert_equal_dicts(base_node['properties'],
+                                 modified_node['properties'],
+                                 excluded_items=['ip'])
 
     def test_modify_property(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_property')
 
-        affected_node = self.client.nodes.get(deployment_id=deployment.id,
-                                              node_id='site1')
-        added_property = affected_node['properties'].get('ip')
-        self.assertEqual(added_property, '1.1.1.1')
+        base_nodes, base_node_instnaces = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        base_node = base_nodes['affected_node'][0]
+
+        modified_property = base_node['properties'].get('ip')
+        self.assertEqual(modified_property, '1.1.1.1')
 
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
@@ -676,28 +674,27 @@ class TestDeploymentUpdate(TestCase):
         self.client.deployment_updates.modify(
                 dep_update.id,
                 entity_type='property',
-                entity_id='node_templates:site1:properties:ip')
+                entity_id='nodes:site1:properties:ip')
 
         self.client.deployment_updates.commit(dep_update.id)
 
         # assert that 'update' workflow was executed
-        executions = \
-            self.client.executions.list(deployment_id=deployment.id,
-                                        workflow_id='update')
-        execution = self._wait_for_execution(executions[0])
-        self.assertEquals('terminated', execution['status'],
-                          execution.error)
+        self._wait_for_execution_to_terminate(deployment.id)
 
-        affected_node = self.client.nodes.get(deployment_id=deployment.id,
-                                              node_id='site1')
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        modified_node = modified_nodes['affected_node'][0]
 
-        added_property = affected_node['properties'].get('ip')
-        self.assertIsNotNone(added_property)
-        untouched_property = affected_node['properties'].get('os_family')
-        self.assertIsNotNone(untouched_property)
+        modified_property = modified_node['properties'].get('ip')
+        self.assertIsNotNone(modified_property)
+        self.assertEqual(modified_property, '2.2.2.2')
 
-        self.assertEqual(added_property, '2.2.2.2')
-        self.assertEqual(untouched_property, 'windows')
+        # assert nothing else changed
+        self._assert_equal_dicts(base_node['properties'],
+                                 modified_node['properties'],
+                                 excluded_items=['ip'])
 
     def _get_nodes_and_node_instances_dict(self, deployment_id, dct):
         nodes_dct = {k: [] for k, _ in dct.iteritems()}
@@ -728,13 +725,13 @@ class TestDeploymentUpdate(TestCase):
         intersecting_ids = \
             set(old_nodes_by_id.keys()) & set(new_nodes_by_id.keys())
         for id in intersecting_ids:
-            self._assert_equal_nodes(old_nodes_by_id[id],
+            self._assert_equal_dicts(old_nodes_by_id[id],
                                      new_nodes_by_id[id],
-                                     exceptions=excluded_items)
+                                     excluded_items=excluded_items)
 
-    def _assert_equal_nodes(self, d1, d2, exceptions=()):
+    def _assert_equal_dicts(self, d1, d2, excluded_items=()):
         for k, v in d1.iteritems():
-            if k not in exceptions:
-                self.assertEquals(d2[k], v,
-                                  'The node {0} has changed on {1}. {2}!={3}'
-                                  .format(d1['id'], k, d1[k], d2[k]))
+            if k not in excluded_items:
+                self.assertEquals(d2.get(k, None), v,
+                                  '{0} has changed on {1}. {2}!={3}'
+                                  .format(d1, k, d1[k], d2[k]))
