@@ -455,6 +455,80 @@ class TestDeploymentUpdate(TestCase):
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
 
+    def test_add_node_with_multiple_instances(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('add_node_'
+                                                  'with_multiple_instances')
+
+        base_nodes, base_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'intact': 'site1',
+                     'added': 'site2'})
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='node',
+                entity_id='node_templates:site2')
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        executions = \
+            self.client.executions.list(deployment_id=deployment.id,
+                                        workflow_id='update')
+        execution = self._wait_for_execution(executions[0])
+        self.assertEquals('terminated', execution['status'],
+                          execution.error)
+
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(deployment.id,
+                                                    {'intact': 'site1',
+                                                     'added': 'site2'})
+
+        # assert all unaffected nodes and node instances remained intact
+        self._assert_equal_entity_dicts(
+                base_nodes,
+                modified_nodes,
+                keys=['intact'],
+        )
+
+        self._assert_equal_entity_dicts(
+                base_node_instances,
+                modified_node_instances,
+                keys=['intact'],
+                excluded_items=['runtime_properties']
+        )
+
+        # assert that node and node instance were added to storage
+        self.assertEquals(1, len(modified_nodes['added']))
+        self.assertEquals(3, len(modified_node_instances['added']))
+
+        # assert that node has a relationship
+        for node in modified_nodes['added']:
+            self.assertEquals(1, len(node.relationships))
+            self._assert_relationship(
+                    node.relationships,
+                    target='site1',
+                    expected_type='cloudify.relationships.contained_in')
+            self.assertEquals(node.type, 'cloudify.nodes.WebServer')
+
+        # assert that node instance has a relationship
+        for added_instance in modified_node_instances['added']:
+            self.assertEquals(1, len(added_instance.relationships))
+            self._assert_relationship(
+                    added_instance.relationships,
+                    target='site1',
+                    expected_type='cloudify.relationships.contained_in')
+
+            # assert all operations in 'update' ('install') workflow
+            # are executed by making them increment a runtime property
+            self.assertDictContainsSubset({'source_ops_counter': '6'},
+                                          added_instance['runtime_properties'])
+
     def test_add_node_and_relationship(self):
         """
         Base: site2 is connected_to site1
