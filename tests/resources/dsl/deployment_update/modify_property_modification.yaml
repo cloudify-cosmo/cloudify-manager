@@ -6,9 +6,18 @@ imports:
 description: >
   Micro web sites hosting.
 
+node_types:
+  my_custom_node:
+    derived_from: cloudify.nodes.Compute
+    properties:
+      custom_prop:
+        default:
+          inner_prop: 1
+
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: my_custom_node
     properties:
       os_family: windows
-      ip: 2.2.2.2
+      custom_prop:
+        inner_prop: 2

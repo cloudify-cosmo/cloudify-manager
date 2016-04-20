@@ -17,7 +17,7 @@ class DeploymentUpdateEntityTypes(DeploymentUpdateEnumBase):
     OPERATION = 'operation'
 
 
-class DeploymentUpdateOperation(DeploymentUpdateEnumBase):
+class DeploymentUpdateOperationType(DeploymentUpdateEnumBase):
     ADD = 'add'
     REMOVE = 'remove'
     MODIFY = 'modify'
@@ -45,7 +45,7 @@ class DeploymentUpdateChangeTypes(DeploymentUpdateEnumBase):
     RELATED = 'related'
 
 ENTITY_TYPES = DeploymentUpdateEntityTypes
-OPERATION_TYPE = DeploymentUpdateOperation
+OPERATION_TYPE = DeploymentUpdateOperationType
 STATE = DeploymentUpdateState
 CHANGE_TYPE = DeploymentUpdateChangeTypes
 

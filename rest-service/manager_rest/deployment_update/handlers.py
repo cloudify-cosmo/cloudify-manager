@@ -53,7 +53,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         # accumulating changes.
         for step in dep_update.steps:
             entity_updater = entities_update_mapper[step.operation]
-            entity_context = get_entity_context(dep_update,
+            entity_context = get_entity_context(dep_update.blueprint,
+                                                dep_update.deployment_id,
                                                 step.entity_type,
                                                 step.entity_id)
             entity_id = entity_updater(entity_context, nodes_dict)
@@ -65,9 +66,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _add_entity(self, ctx, current_nodes):
         """ handles adding an entity
 
-        :param dep_update:
-        :param entity_type:
-        :param entity_id:
+        :param ctx:
         :return: the entity id and the node which contains the added entity
         """
         add_entity_mapper = {
@@ -86,8 +85,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _add_node(self, ctx, current_nodes):
         """ handles adding a node
 
-        :param dep_update:
-        :param entity_id:
+        :param ctx:
         :return: the new node
         """
 
@@ -107,7 +105,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         # which supports the operation, we should update the mapping for
         # this plugin under the target node.
         target_ids = [r['target_id']
-                      for r in ctx.raw_node['relationships']]
+                      for r in ctx.raw_node.get('relationships', [])]
 
         for node_id in target_ids:
             self.sm.update_node(
@@ -127,8 +125,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _add_relationship(self, ctx, current_nodes):
         """Handles adding a relationship
 
-        :param dep_update:
-        :param entity_id:
+        :param ctx:
         :return: the modified node
         """
         # Update source relationships and plugins
@@ -155,7 +152,9 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _add_property(self, ctx, current_nodes):
         changes = {
             ctx.PROPERTIES: {
-                ctx.property_id: ctx.raw_entity_value
+                ctx.property_id:
+                    utils.create_dict(ctx.modification_breadcrumbs,
+                                      ctx.raw_entity_value)
             }
         }
 
@@ -163,10 +162,18 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                             node_id=ctx.raw_node_id,
                             changes=changes)
 
-        node_id = ctx.raw_node_id
-        properties = current_nodes[node_id][ctx.PROPERTIES]
+        properties = current_nodes[ctx.raw_node_id][ctx.PROPERTIES]
+        current_node = current_nodes[ctx.raw_node_id]
 
-        properties[ctx.property_id] = ctx.raw_entity_value
+        if ctx.modification_breadcrumbs:
+            property_to_update = \
+                utils.traverse_object(properties[ctx.property_id],
+                                      ctx.modification_breadcrumbs[:-1])
+            property_to_update[ctx.modification_breadcrumbs[-1]] = \
+                ctx.raw_entity_value
+        else:
+            property_to_update = current_node[ctx.PROPERTIES]
+            property_to_update[ctx.property_id] = ctx.raw_entity_value
 
         return ctx.entity_id
 
@@ -179,8 +186,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         if ctx.entity_id.split(':')[2] == 'relationships':
             modifier = relationship_executor
         else:
-            # the modified_operation_type could be either relationships
-            # or operations.
+            # the operation host could be either relationship interfaces
+            # or node interfaces.
             modifier = node_executor
 
         return modifier(ctx, current_nodes)
@@ -194,35 +201,43 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
     def _add_node_operation(self, ctx, current_nodes):
 
-        changes = \
-            {ctx.OPERATIONS:
-                {ctx.operation_id:
-                 ctx.raw_node[ctx.OPERATIONS][ctx.operation_id]}
-             }
+        new_operations = utils.create_dict(ctx.modification_breadcrumbs,
+                                           ctx.raw_entity_value)
+
+        changes = {
+            ctx.OPERATIONS: {ctx.operation_id: new_operations},
+            ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
+        }
 
         self.sm.update_node(deployment_id=ctx.deployment_id,
                             node_id=ctx.raw_node_id,
                             changes=changes)
-
         current_node = current_nodes[ctx.raw_node_id]
-        current_node[ctx.OPERATIONS][ctx.operation_id] = \
-            ctx.raw_node[ctx.OPERATIONS][ctx.operation_id]
+        if ctx.modification_breadcrumbs:
+            operation_to_update = utils.traverse_object(
+                    current_node[ctx.OPERATIONS][ctx.operation_id],
+                    ctx.modification_breadcrumbs[:-1]
+            )
+            operation_to_update[ctx.modification_breadcrumbs[-1]] = \
+                ctx.raw_entity_value
+        else:
+            operation_to_update = current_node[ctx.OPERATIONS]
+            operation_to_update[ctx.operation_id] = ctx.raw_entity_value
+
+        current_node[ctx.PLUGINS] = ctx.raw_node[ctx.PLUGINS]
 
         return ctx.entity_id
 
     def _add_relationship_operation(self, ctx, current_nodes):
 
-        # Each operation has double mapping - the first is
-        # interface_id.operation_id, while the second is just operation_id
-        # we update both here
         operation_value = ctx.raw_entity_value
 
         relationships = current_nodes[ctx.raw_node_id][ctx.RELATIONSHIPS]
         operations = relationships[ctx.relationship_index][ctx.operations_key]
         operations[ctx.operation_id] = operation_value
 
-        # TODO: add plugins updated
-        changes = {ctx.RELATIONSHIPS: relationships}
+        changes = {ctx.RELATIONSHIPS: relationships,
+                   ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]}
 
         self.sm.update_node(deployment_id=ctx.deployment_id,
                             node_id=ctx.raw_node_id,
@@ -233,9 +248,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _remove_entity(self, ctx, current_nodes):
         """Handles removing an entity
 
-        :param dep_update:
-        :param entity_type:
-        :param entity_id:
+        :param ctx:
         :return: entity id and it's modified node
         """
         remove_entity_mapper = {
@@ -255,7 +268,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _remove_node(ctx, current_nodes):
         """Handles removing a node
 
-        :param entity_id:
+        :param ctx:
         :return: the removed node
         """
         del(current_nodes[ctx.storage_node.id])
@@ -265,7 +278,6 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _remove_relationship(ctx, current_nodes):
         """Handles removing a relationship
 
-        :param entity_id:
         :return: the modified node
         """
         current_node = current_nodes[ctx.raw_node_id]
@@ -307,9 +319,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _modify_entity(self, ctx, current_nodes):
         """ handles adding an entity
 
-        :param dep_update:
-        :param entity_type:
-        :param entity_id:
+        :param ctx:
         :return: the entity id and the node which contains the added entity
         """
         modify_entity_mapper = {
@@ -330,27 +340,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                 self._modify_node_operation)
 
     def _modify_node_operation(self, ctx, current_nodes):
-
-        changes = \
-            {ctx.OPERATIONS:
-                {ctx.operation_id:
-                    utils.create_dict(ctx.modification_id,
-                                      ctx.raw_entity_value)
-                 }
-             }
-
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_node_id,
-                            changes=changes)
-        current_node = current_nodes[ctx.raw_node_id]
-        operation_to_update = utils.traverse_object(
-            current_node[ctx.OPERATIONS][ctx.operation_id],
-            ctx.modification_id[:-1]
-        )
-
-        operation_to_update[ctx.modification_id[-1]] = ctx.raw_entity_value
-
-        return ctx.entity_id
+        return self._add_node_operation(ctx, current_nodes)
 
     def _modify_relationship_operation(self, ctx, current_nodes):
 
@@ -359,11 +349,12 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         current_relationship = current_relationships[ctx.relationship_index]
         operation_to_update = utils.traverse_object(
                 current_relationship[ctx.operations_key][ctx.operation_id],
-                ctx.modification_id[:-1]
+                ctx.modification_breadcrumbs[:-1]
         )
 
         # Update the changed onto the data model and the current nodes.
-        operation_to_update[ctx.modification_id[-1]] = ctx.raw_entity_value
+        operation_to_update[ctx.modification_breadcrumbs[-1]] = \
+            ctx.raw_entity_value
 
         changes = {ctx.RELATIONSHIPS: current_relationships}
         self.sm.update_node(deployment_id=ctx.deployment_id,
@@ -381,8 +372,6 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """update any removed entity from nodes
 
         :param dep_update: the deployment update object itself.
-        :param deployment_update_nodes:
-        :param deployment_update_node_instances:
         :return:
         """
         deleted_node_instances = \

@@ -12,4 +12,4 @@ node_templates:
     type: cloudify.nodes.Compute
     interfaces:
       cloudify.interfaces.lifecycle:
-        stop: scripts/decrease.sh
+        stop: scripts/decrement.sh

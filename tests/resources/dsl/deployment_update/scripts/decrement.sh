@@ -9,7 +9,7 @@ source_ops_counter=$(ctx instance runtime_properties 'source_ops_counter')
 fi
 source_ops_counter=${source_ops_counter:-0}
 
-# increment ops count
+# decrement ops count
 source_ops_counter=$(expr $source_ops_counter - 1)
 
 # store updated count

@@ -3,7 +3,6 @@ from manager_rest import storage_manager
 import manager_rest.manager_exceptions
 from constants import (ENTITY_TYPES,
                        OPERATION_TYPE)
-from entity_context import get_entity_keys
 
 
 class StepValidator(object):
@@ -43,33 +42,33 @@ class StepValidator(object):
         :param step: deployment update step
         :return:
         """
-        entity_keys = get_entity_keys(step.entity_id)
+        entity_keys = utils.get_entity_keys(step.entity_id)
         if len(entity_keys) < 4:
             return False
         NODES, source_node_id, RELATIONSHIPS, relationship_index = entity_keys
-        relationship_index = int(relationship_index[1:-1])
 
-        current_nodes = self.sm.get_nodes().items
-        source_node = [n for n in current_nodes if n.id == source_node_id][0]
+        # assert the index is indeed readable
+        relationship_index = utils.parse_index(relationship_index)
+        if not relationship_index:
+            return
 
         if step.operation == OPERATION_TYPE.REMOVE:
-            old_relationship = source_node.relationships[relationship_index]
-            target_node_id = old_relationship['target_id']
-            conditions = \
-                [n.id for n in current_nodes if n.id == target_node_id]
+            source_node = self.sm.get_node(dep_update.deployment_id,
+                                           source_node_id).to_dict()
         else:
-            modified_nodes = dep_update.blueprint['nodes']
-            source_node = \
-                utils.get_raw_node(dep_update.blueprint, source_node_id)
-            new_relationship = source_node[RELATIONSHIPS][relationship_index]
-            target_node_id = new_relationship['target_id']
-            conditions = \
-                [n['id'] for n in modified_nodes if n['id'] == target_node_id]
+            source_node = utils.get_raw_node(dep_update.blueprint,
+                                             source_node_id)
+        if not source_node or \
+           len(source_node[RELATIONSHIPS]) < relationship_index:
+            return
 
-            conditions += filter(lambda r: r['target_id'] == target_node_id,
-                                 source_node[RELATIONSHIPS])
+        relationship = source_node[RELATIONSHIPS][relationship_index]
+        target_node_id = relationship['target_id']
 
-        return any(conditions)
+        if step.operation == OPERATION_TYPE.REMOVE:
+            return self.sm.get_node(dep_update.deployment_id, target_node_id)
+        else:
+            return utils.get_raw_node(dep_update.blueprint, target_node_id)
 
     def _validate_node(self, dep_update, step):
         """ validates node type entity id
@@ -80,28 +79,23 @@ class StepValidator(object):
         """
         NODES, node_id = utils.get_entity_keys(step.entity_id)
         if step.operation == OPERATION_TYPE.REMOVE:
-            current_node_instances = self.sm.get_node_instances(
-                    filters={'deployment_id': dep_update.deployment_id}
-            )
-            return node_id in [i.node_id for i in current_node_instances.items]
+            return self.sm.get_node(dep_update.deployment_id, node_id)
         else:
-            new_nodes = \
-                dep_update.blueprint[NODES]
-            return node_id in utils.extract_ids(new_nodes)
+            return utils.get_raw_node(dep_update.blueprint, node_id)
 
     def _validate_property(self, dep_update, step):
         property_keys = utils.get_entity_keys(step.entity_id)
 
+        if len(property_keys) < 2:
+            return
         NODES, node_id, PROPERTIES = property_keys[:3]
         property_id = property_keys[3:]
 
-        base_node = self.sm.get_node(dep_update.deployment_id, node_id)
-        is_in_old = utils.traverse_object(base_node.properties,
-                                          property_id)
+        storage_node = self.sm.get_node(dep_update.deployment_id, node_id)
+        raw_node = utils.get_raw_node(dep_update.blueprint, node_id)
 
-        modified_node = utils.get_raw_node(dep_update.blueprint, node_id)
-        is_in_new = utils.traverse_object(modified_node[PROPERTIES],
-                                          property_id)
+        is_in_old = utils.traverse_object(storage_node.properties, property_id)
+        is_in_new = utils.traverse_object(raw_node[PROPERTIES], property_id)
 
         if step.operation == OPERATION_TYPE.REMOVE:
             return is_in_old
@@ -112,6 +106,9 @@ class StepValidator(object):
 
     def _validate_operation(self, dep_update, step):
         operation_keys = utils.get_entity_keys(step.entity_id)
+        if len(operation_keys) < 2:
+            return
+
         NODES, node_id, operation_host = operation_keys[:3]
         operation_id = operation_keys[3:]
 

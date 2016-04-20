@@ -11,7 +11,7 @@ relationships:
     derived_from: cloudify.relationships.connected_to
     source_interfaces:
       cloudify.interfaces.relationship_lifecycle:
-        establish: scripts/decrease.sh
+        establish: scripts/decrement.sh
 
 node_templates:
   site1:

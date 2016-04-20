@@ -51,33 +51,41 @@ class ModifiedEntitiesDict(object):
         return modified_entities_to_return
 
 
-def traverse_object(obj, path):
+def traverse_object(obj, breadcrumb):
     """
     Traverses an object constructed out of dicts and lists.
     :param obj: the object to traverse
-    :param path: the path on which to traverse, while list indices surrounded
+    :param breadcrumb: the breadcrumb on which to traverse, while list indices
+    surrounded
     by [x]
-    :return: the objectr at the end of the path
+    :return: the object at the end of the breadcrumb
     """
 
-    if not path:
+    if not breadcrumb:
         return obj
-    current_key = path[0]
+    current_key = breadcrumb[0]
     if current_key in obj:
-        return traverse_object(obj[path[0]], path[1:])
+        return traverse_object(obj[breadcrumb[0]], breadcrumb[1:])
     elif current_key.startswith('[') and current_key.endswith(']'):
-        return traverse_object(obj[int(current_key[1:-1])], path[1:])
+        return traverse_object(obj[int(current_key[1:-1])], breadcrumb[1:])
     else:
         return {}
 
 
-def create_dict(path, value=None):
+def create_dict(breadcrumbs, value=None):
+    """
+    Created a dict out of the breadcrumbs in a recursive manner.
+    each entry in the breadcrumb should be a valid dictionary key.
+    :param breadcrumbs:
+    :param value:
+    :return:
+    """
     if value:
-        if not path:
+        if not breadcrumbs:
             return value
-    elif len(path) == 1:
-        return path[0]
-    return {path[0]: create_dict(path[1:], value)}
+    elif len(breadcrumbs) == 1:
+        return breadcrumbs[0]
+    return {breadcrumbs[0]: create_dict(breadcrumbs[1:], value)}
 
 
 def get_entity_keys(entity_id):
@@ -85,6 +93,30 @@ def get_entity_keys(entity_id):
 
 
 def get_raw_node(blueprint, node_id):
-    nodes = [n for n in blueprint['nodes']
-             if n['id'] == node_id]
+    nodes = [n for n in blueprint.get('nodes', []) if n['id'] == node_id]
     return nodes[0] if nodes else {}
+
+
+def check_is_int(s):
+    try:
+        int(s)
+    except ValueError:
+        return False
+
+    return True
+
+
+def parse_int(s):
+    if check_is_int(s):
+        return int(s)
+    else:
+        return False
+
+
+def parse_index(s):
+    return parse_int(s[1:-1])
+
+
+def index_to_str(index):
+    if check_is_int(index):
+        return '[{0}]'.format(index)
