@@ -18,14 +18,12 @@ import json
 import tempfile
 import shutil
 import zipfile
-import itertools
 import os
-import subprocess
 
 import elasticsearch
 import elasticsearch.helpers
 
-from datetime import datetime
+import db_helper
 
 from cloudify.workflows import ctx
 from cloudify.constants import COMPUTE_NODE_TYPE
@@ -39,25 +37,14 @@ from cloudify.utils import ManagerVersion
 
 
 _METADATA_FILE = 'metadata.json'
-
 # metadata fields
-_M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
 _M_VERSION = 'snapshot_version'
+_M_HAS_CLOUDIFY_EVENTS = db_helper.M_HAS_CLOUDIFY_EVENTS
 
 _AGENTS_FILE = 'agents.json'
-_ELASTICSEARCH = 'es_data'
 _CRED_DIR = 'snapshot-credentials'
 _RESTORED_CRED_DIR = os.path.join('/opt/manager', _CRED_DIR)
 _CRED_KEY_NAME = 'agent_key'
-_INFLUXDB = 'influxdb_data'
-_INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
-                      '?u=root&p=root&chunked=true" --data-urlencode'
-                      ' "q=select * from /.*/" > {0}')
-_INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
-                         '-d "[${{line}}]" "http://localhost:8086/db/cloudify/'
-                         'series?u=root&p=root" ;done')
-_STORAGE_INDEX_NAME = 'cloudify_storage'
-_EVENTS_INDEX_NAME = 'cloudify_events'
 
 
 class _DictToAttributes(object):
@@ -66,35 +53,6 @@ class _DictToAttributes(object):
 
     def __getattr__(self, name):
         return self._dict[name]
-
-
-def _get_json_objects(f):
-    def chunks(g):
-        ch = g.read(10000)
-        yield ch
-        while ch:
-            ch = g.read(10000)
-            yield ch
-
-    s = ''
-    n = 0
-    decoder = json.JSONDecoder()
-    for ch in chunks(f):
-        s += ch
-        try:
-            while s:
-                obj, idx = decoder.raw_decode(s)
-                n += 1
-                yield json.dumps(obj)
-                s = s[idx:]
-        except:
-            pass
-
-    # assert not n or not s
-    # not (not n or not s) -> n and s
-    if n and s:
-        raise NonRecoverableError('Error during converting InfluxDB dump '
-                                  'data to data appropriate for snapshot.')
 
 
 def _copy_data(archive_root, config, to_archive=True):
@@ -160,10 +118,6 @@ def _create_es_client(config):
                                                'port': int(config.db_port)}])
 
 
-def _except_types(s, *args):
-    return (e for e in s if e['_type'] not in args)
-
-
 def _get_manager_version(client=None):
     if client is None:
         client = get_rest_client()
@@ -183,32 +137,31 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
         if not os.path.exists(snapshots_dir):
             os.makedirs(snapshots_dir)
 
-        metadata = {}
-
         # files/dirs copy
         _copy_data(tempdir, config)
 
         # elasticsearch
         es = _create_es_client(config)
-        has_cloudify_events = es.indices.exists(index=_EVENTS_INDEX_NAME)
-        _dump_elasticsearch(tempdir, es, has_cloudify_events)
+        ctx.send_event('Dumping elasticsearch data')
+        db_helper.dump_elasticsearch(tempdir, es,
+                                     execution_id=ctx.execution_id)
 
-        metadata[_M_HAS_CLOUDIFY_EVENTS] = has_cloudify_events
+        # metadata
+        has_cloudify_events = \
+            es.indices.exists(index=db_helper.EVENTS_INDEX_NAME)
+        _create_metadata_file(tempfile, has_cloudify_events)
 
         # influxdb
         if include_metrics:
-            _dump_influxdb(tempdir)
+            ctx.send_event('Dumping InfluxDB data')
+            try:
+                db_helper.dump_influxdb(tempdir)
+            except RuntimeError as e:
+                raise NonRecoverableError(e.message)
 
         # credentials
         if include_credentials:
             _dump_credentials(tempdir)
-
-        # version
-        metadata[_M_VERSION] = str(_get_manager_version())
-
-        # metadata
-        with open(os.path.join(tempdir, _METADATA_FILE), 'w') as f:
-            json.dump(metadata, f)
 
         # agents
         _dump_agents(tempdir)
@@ -240,38 +193,12 @@ def create(snapshot_id, config, **kwargs):
         raise
 
 
-def _dump_elasticsearch(tempdir, es, has_cloudify_events):
-    ctx.send_event('Dumping elasticsearch data')
-    storage_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME)
-    storage_scan = _except_types(storage_scan,
-                                 'provider_context',
-                                 'snapshot')
-    storage_scan = (e for e in storage_scan if e['_id'] != ctx.execution_id)
-
-    event_scan = elasticsearch.helpers.scan(
-        es,
-        index=_EVENTS_INDEX_NAME if has_cloudify_events else 'logstash-*'
-    )
-
-    with open(os.path.join(tempdir, _ELASTICSEARCH), 'w') as f:
-        for item in itertools.chain(storage_scan, event_scan):
-            f.write(json.dumps(item) + os.linesep)
-
-
-def _dump_influxdb(tempdir):
-    ctx.send_event('Dumping InfluxDB data')
-    influxdb_file = os.path.join(tempdir, _INFLUXDB)
-    influxdb_temp_file = influxdb_file + '.temp'
-    rcode = subprocess.call(_INFLUXDB_DUMP_CMD.format(influxdb_temp_file),
-                            shell=True)
-    if rcode != 0:
-        raise NonRecoverableError('Error during dumping InfluxDB data, '
-                                  'error code: {0}'.format(rcode))
-    with open(influxdb_temp_file, 'r') as f, open(influxdb_file, 'w') as g:
-        for obj in _get_json_objects(f):
-            g.write(obj + os.linesep)
-
-    os.remove(influxdb_temp_file)
+def _create_metadata_file(dump_dir_path, has_cloudify_events):
+    metadata = {}
+    metadata[_M_HAS_CLOUDIFY_EVENTS] = has_cloudify_events
+    metadata[_M_VERSION] = str(_get_manager_version())
+    with open(os.path.join(dump_dir_path, _METADATA_FILE), 'w') as f:
+        json.dump(metadata, f)
 
 
 def _is_compute(node):
@@ -328,63 +255,6 @@ def _dump_agents(tempdir):
         out.write(json.dumps(result))
 
 
-def _add_operation(operations, op_name, inputs, implementation):
-    if op_name not in operations:
-        operations[op_name] = {
-            'inputs': inputs,
-            'has_intrinsic_functions': False,
-            'plugin': 'agent',
-            'retry_interval': None,
-            'max_retries': None,
-            'executor': 'central_deployment_agent',
-            'operation': implementation
-        }
-
-
-def _update_es_node(es_node):
-    if es_node['_type'] == 'deployment':
-        workflows = es_node['_source']['workflows']
-        if 'install_new_agents' not in workflows:
-            workflows['install_new_agents'] = {
-                'operation': 'cloudify.plugins.workflows.install_new_agents',
-                'parameters': {
-                    'install_agent_timeout': {
-                        'default': 300
-                    },
-                    'node_ids': {
-                        'default': []
-                    },
-                    'node_instance_ids': {
-                        'default': []
-                    }
-                },
-                'plugin': 'default_workflows'
-            }
-    if es_node['_type'] == 'node':
-        source = es_node['_source']
-        type_hierarchy = source.get('type_hierarchy', [])
-        if COMPUTE_NODE_TYPE in type_hierarchy:
-            operations = source['operations']
-            _add_operation(operations,
-                           'cloudify.interfaces.cloudify_agent.create_amqp',
-                           {
-                               'install_agent_timeout': 300
-                           },
-                           'cloudify_agent.operations.create_agent_amqp')
-            _add_operation(operations,
-                           'cloudify.interfaces.cloudify_agent.validate_amqp',
-                           {
-                               'validate_agent_timeout': 20
-                           },
-                           'cloudify_agent.operations.validate_agent_amqp')
-    if es_node['_type'] == 'blueprint':
-        source = es_node['_source']
-        if 'description' not in source:
-            source['description'] = ''
-        if 'main_file_name' not in source:
-            source['main_file_name'] = ''
-
-
 def _assert_clean_elasticsearch(log_warning=False):
     """
     Check if manager ElasticSearch is clean and raise error (or just
@@ -404,105 +274,6 @@ def _assert_clean_elasticsearch(log_warning=False):
         else:
             raise NonRecoverableError(
                 "Snapshot restoration on a dirty manager is not permitted.")
-
-
-def _check_conflicts(es, restored_data):
-    """
-    Check names conflicts in restored snapshot and manager.
-    If in restored snapshot there are blueprints/deployments then
-    manager cannot contain any blueprints/deployments with the same names.
-
-    :param es: ElasticSearch proxy object
-    :param restored_data: iterator to snapshots Elasticsearch data that
-        is supposed to be restored
-    """
-
-    old_data = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME,
-                                          doc_type='blueprint,deployment')
-    old_data = list(old_data)
-    # if there is no data in manager then just return
-    if not len(old_data):
-        return
-
-    blueprints_names = [e['_id'] for e in old_data
-                        if e['_type'] == 'blueprint']
-    deployments_names = [e['_id'] for e in old_data
-                         if e['_type'] == 'deployment']
-
-    exception_message = 'There are blueprints/deployments names conflicts ' \
-                        'in manager and restored data: blueprints {0}, ' \
-                        'deployments {1}'
-    blueprints_conflicts = []
-    deployments_conflicts = []
-
-    for elem in restored_data:
-        if elem['_type'] == 'blueprint':
-            if elem['_id'] in blueprints_names:
-                blueprints_conflicts.append(elem['_id'])
-        else:
-            if elem['_id'] in deployments_names:
-                deployments_conflicts.append(elem['_id'])
-
-    if blueprints_conflicts or deployments_conflicts:
-        raise NonRecoverableError(
-            exception_message.format(blueprints_conflicts,
-                                     deployments_conflicts)
-        )
-
-
-def _restore_elasticsearch(tempdir, es, metadata):
-
-    has_cloudify_events_index = es.indices.exists(index=_EVENTS_INDEX_NAME)
-    snap_has_cloudify_events_index = metadata[_M_HAS_CLOUDIFY_EVENTS]
-
-    # cloudify_events -> cloudify_events, logstash-* -> logstash-*
-    def get_data_itr():
-        for line in open(os.path.join(tempdir, _ELASTICSEARCH), 'r'):
-            elem = json.loads(line)
-            _update_es_node(elem)
-            yield elem
-
-    _check_conflicts(es, get_data_itr())
-
-    # logstash-* -> cloudify_events
-    def logstash_to_cloudify_events():
-        for elem in get_data_itr():
-            if elem['_index'].startswith('logstash-'):
-                elem['_index'] = _EVENTS_INDEX_NAME
-            yield elem
-
-    def cloudify_events_to_logstash():
-        d = datetime.now()
-        index = 'logstash-{0}'.format(d.strftime('%Y.%m.%d'))
-        for elem in get_data_itr():
-            if elem['_index'] == _EVENTS_INDEX_NAME:
-                elem['_index'] = index
-            yield elem
-
-    # choose iter
-    if (has_cloudify_events_index and snap_has_cloudify_events_index) or\
-            (not has_cloudify_events_index and
-             not snap_has_cloudify_events_index):
-        data_iter = get_data_itr()
-    elif not snap_has_cloudify_events_index and has_cloudify_events_index:
-        data_iter = logstash_to_cloudify_events()
-    else:
-        data_iter = cloudify_events_to_logstash()
-
-    ctx.send_event('Restoring ElasticSearch data')
-    elasticsearch.helpers.bulk(es, data_iter)
-    es.indices.flush()
-
-
-def _restore_influxdb_3_3(tempdir):
-    ctx.send_event('Restoring InfluxDB metrics')
-    influxdb_f = os.path.join(tempdir, _INFLUXDB)
-    if os.path.exists(influxdb_f):
-        rcode = subprocess.call(_INFLUXDB_RESTORE_CMD.format(influxdb_f),
-                                shell=True)
-        if rcode != 0:
-            raise NonRecoverableError('Error during restoring InfluxDB data, '
-                                      'error code: {0}'.format(rcode))
 
 
 def _restore_credentials_3_3(tempdir, es):
@@ -526,7 +297,7 @@ def _restore_credentials_3_3(tempdir, es):
 
             update_action = {
                 '_op_type': 'update',
-                '_index': _STORAGE_INDEX_NAME,
+                '_index': db_helper.STORAGE_INDEX_NAME,
                 '_type': 'node',
                 '_id': node_id,
                 'doc': {
@@ -593,10 +364,18 @@ def _restore_snapshot(config, tempdir, metadata):
     # elasticsearch
     es = _create_es_client(config)
 
-    _restore_elasticsearch(tempdir, es, metadata)
+    ctx.send_event('Restoring ElasticSearch data')
+    try:
+        db_helper.restore_elasticsearch(tempdir, es, metadata)
+    except RuntimeError as e:
+        raise NonRecoverableError(e.message)
 
     # influxdb
-    _restore_influxdb_3_3(tempdir)
+    ctx.send_event('Restoring InfluxDB metrics')
+    try:
+        db_helper.restore_influxdb_3_3(tempdir)
+    except RuntimeError as e:
+        raise NonRecoverableError(e.message)
 
     # credentials
     _restore_credentials_3_3(tempdir, es)
