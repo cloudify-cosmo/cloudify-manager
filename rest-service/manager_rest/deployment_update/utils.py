@@ -51,23 +51,23 @@ class ModifiedEntitiesDict(object):
         return modified_entities_to_return
 
 
-def traverse_object(obj, breadcrumb):
+def traverse_object(obj, breadcrumbs):
     """
     Traverses an object constructed out of dicts and lists.
     :param obj: the object to traverse
-    :param breadcrumb: the breadcrumb on which to traverse, while list indices
-    surrounded
+    :param breadcrumbs: the breadcrumbs on which to traverse, while list
+    indices surrounded
     by [x]
-    :return: the object at the end of the breadcrumb
+    :return: the object at the end of the breadcrumbs
     """
 
-    if not breadcrumb:
+    if not breadcrumbs:
         return obj
-    current_key = breadcrumb[0]
+    current_key = breadcrumbs[0]
     if current_key in obj:
-        return traverse_object(obj[breadcrumb[0]], breadcrumb[1:])
-    elif current_key.startswith('[') and current_key.endswith(']'):
-        return traverse_object(obj[int(current_key[1:-1])], breadcrumb[1:])
+        return traverse_object(obj[breadcrumbs[0]], breadcrumbs[1:])
+    elif parse_index(current_key) is not False:
+        return traverse_object(obj[parse_index(current_key)], breadcrumbs[1:])
     else:
         return {}
 
@@ -76,6 +76,8 @@ def create_dict(breadcrumbs, value=None):
     """
     Created a dict out of the breadcrumbs in a recursive manner.
     each entry in the breadcrumb should be a valid dictionary key.
+    If value is None, the last string within' the breadcrumbs becomes the
+    final value.
     :param breadcrumbs:
     :param value:
     :return:
