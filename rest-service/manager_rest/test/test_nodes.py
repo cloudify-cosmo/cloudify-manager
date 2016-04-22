@@ -15,12 +15,21 @@
 
 from nose.plugins.attrib import attr
 
+from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest import manager_exceptions
 from manager_rest import storage_manager
 from manager_rest.test import base_test
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class NodesTest(base_test.BaseServerTestCase):
+    """Test the HTTP interface and the behaviour of node instance endpoints.
+
+    Test cases that test the HTTP interface use shorthand methods like .patch()
+    or .get() to call the rest service endpoints with hand-crafted data.
+    Test cases that verify the behaviour use the rest client to construct
+    the requests.
+    """
 
     def test_get_nonexisting_node(self):
         response = self.get('/node-instances/1234')
@@ -42,7 +51,7 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEqual('value', response.json['runtime_properties']['key'])
 
     def test_bad_patch_node(self):
-        # just a bunch of bad calls to patch node
+        """Malformed node instance update requests return an error."""
         response = self.patch('/node-instances/1234', 'not a dictionary')
         self.assertEqual(400, response.status_code)
         response = self.patch('/node-instances/1234', {
@@ -55,81 +64,8 @@ class NodesTest(base_test.BaseServerTestCase):
             'version': 'not an int'})
         self.assertEqual(400, response.status_code)
 
-    def test_patch_node(self):
-        self.put_node_instance(
-            instance_id='1234',
-            deployment_id='111',
-            runtime_properties={
-                'key': 'value'
-            }
-        )
-        update = {
-            'runtime_properties': {'key': 'new_value', 'new_key': 'value'},
-            'version': 2}
-        response = self.patch('/node-instances/1234', update)
-        self.assertEqual(200, response.status_code)
-        self.assertEqual(2, len(response.json['runtime_properties']))
-        self.assertEqual('new_value',
-                         response.json['runtime_properties']['key'])
-        self.assertEqual('value',
-                         response.json['runtime_properties']['new_key'])
-        response = self.get('/node-instances/1234')
-
-        self.assertEqual(200, response.status_code)
-        self.assertEqual(2, len(response.json['runtime_properties']))
-        self.assertEqual('new_value',
-                         response.json['runtime_properties']['key'])
-        self.assertEqual('value',
-                         response.json['runtime_properties']['new_key'])
-
-    def test_patch_node_runtime_props_update(self):
-        self.put_node_instance(
-            instance_id='1234',
-            deployment_id='111',
-            runtime_properties={
-                'key': 'value'
-            }
-        )
-        response = self.patch('/node-instances/1234', {
-            'runtime_properties': {'aaa': 'bbb'},
-            'version': 2})
-        self.assertEqual(200, response.status_code)
-        self.assertEqual('1234', response.json['id'])
-        self.assertEqual(1, len(response.json['runtime_properties']))
-        self.assertEqual('bbb', response.json['runtime_properties']['aaa'])
-
-    def test_patch_node_runtime_props_overwrite(self):
-        self.put_node_instance(
-            instance_id='1234',
-            deployment_id='111',
-            runtime_properties={
-                'key': 'value'
-            }
-        )
-        response = self.patch('/node-instances/1234', {
-            'runtime_properties': {'key': 'value2'},
-            'version': 2})
-        self.assertEqual(200, response.status_code)
-        self.assertEqual('1234', response.json['id'])
-        self.assertEqual(1, len(response.json['runtime_properties']))
-        self.assertEqual('value2', response.json['runtime_properties']['key'])
-
-    def test_patch_node_runtime_props_cleanup(self):
-        self.put_node_instance(
-            instance_id='1234',
-            deployment_id='111',
-            runtime_properties={
-                'key': 'value'
-            }
-        )
-        response = self.patch('/node-instances/1234', {
-            'runtime_properties': {},
-            'version': 2})
-        self.assertEqual(200, response.status_code)
-        self.assertEqual('1234', response.json['id'])
-        self.assertEqual(0, len(response.json['runtime_properties']))
-
     def test_partial_patch_node(self):
+        """PATCH requests with partial data are accepted."""
         self.put_node_instance(
             instance_id='1234',
             deployment_id='111',
@@ -172,28 +108,145 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEqual('ddd', response.json['runtime_properties']['ccc'])
         self.assertEqual('b-state', response.json['state'])
 
+    def test_old_version(self):
+        """Can't update a node instance passing new version <= old version."""
+        node_instance_id = '1234'
+        self.put_node_instance(
+            instance_id=node_instance_id,
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            },
+            version=1
+        )
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.node_instances.update(
+                node_instance_id,
+                version=1,
+                runtime_properties={'key': 'new value'})
+        self.assertEqual(cm.exception.status_code, 409)
+
+    def test_patch_node(self):
+        """Getting an instance after updating it, returns the updated data."""
+        node_instance_id = '1234'
+        self.put_node_instance(
+            instance_id=node_instance_id,
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
+        response = self.client.node_instances.update(
+            node_instance_id,
+            runtime_properties={'key': 'new_value', 'new_key': 'value'},
+            version=2)
+
+        self.assertEqual(2, len(response.runtime_properties))
+        self.assertEqual('new_value', response.runtime_properties['key'])
+        self.assertEqual('value', response.runtime_properties['new_key'])
+
+        response = self.client.node_instances.get(node_instance_id)
+
+        self.assertEqual(2, len(response.runtime_properties))
+        self.assertEqual('new_value', response.runtime_properties['key'])
+        self.assertEqual('value', response.runtime_properties['new_key'])
+
+    def test_patch_node_runtime_props_update(self):
+        """Sending new runtime properties overwrites existing ones.
+
+        The new runtime properties dict is stored as is, not merged with
+        preexisting runtime properties.
+        """
+        node_instance_id = '1234'
+        self.put_node_instance(
+            instance_id=node_instance_id,
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
+
+        response = self.client.node_instances.update(
+            node_instance_id,
+            runtime_properties={'aaa': 'bbb'},
+            version=2)
+
+        self.assertEqual('1234', response.id)
+        self.assertEqual(1, len(response.runtime_properties))
+        self.assertEqual('bbb', response.runtime_properties['aaa'])
+        self.assertNotIn('key', response.runtime_properties)
+
+    def test_patch_node_runtime_props_overwrite(self):
+        """Runtime properties update with a preexisting key keeps the new value.
+
+        When the new runtime properties have a key that was already in
+        runtime properties, the new value wins.
+        """
+        node_instance_id = '1234'
+        self.put_node_instance(
+            instance_id=node_instance_id,
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
+        response = self.client.node_instances.update(
+            node_instance_id,
+            runtime_properties={'key': 'value2'},
+            version=2)
+        self.assertEqual('1234', response.id)
+        self.assertEqual(1, len(response.runtime_properties))
+        self.assertEqual('value2', response.runtime_properties['key'])
+
+    def test_patch_node_runtime_props_cleanup(self):
+        """Sending empty runtime properties, removes preexisting ones."""
+        node_instance_id = '1234'
+        self.put_node_instance(
+            instance_id=node_instance_id,
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
+        response = self.client.node_instances.update(
+            node_instance_id,
+            runtime_properties={},
+            version=2)
+        self.assertEqual('1234', response['id'])
+        self.assertEqual(0, len(response['runtime_properties']))
+
     def test_patch_node_conflict(self):
+        """A conflict inside the storage manager propagates to the client."""
+        # patch the storage manager .update_node_instance method to throw an
+        # error - remember to revert it after the test
         sm = storage_manager._get_instance()
-        from manager_rest import manager_exceptions
-        prev_update_node_func = sm.update_node_instance
-        try:
-            def conflict_update_node_func(node):
-                raise manager_exceptions.ConflictError()
-            sm.update_node_instance = \
-                conflict_update_node_func
-            self.put_node_instance(
-                instance_id='1234',
-                deployment_id='111',
-                runtime_properties={
-                    'key': 'value'
-                }
-            )
-            response = self.patch('/node-instances/1234',
-                                  {'runtime_properties': {'key': 'new_value'},
-                                   'version': 2})
-            self.assertEqual(409, response.status_code)
-        finally:
-            sm.update_node_instance = prev_update_node_func
+
+        def _revert_update_node_func(sm, func):
+            sm.update_node_instance = func
+
+        def conflict_update_node_func(node):
+            raise manager_exceptions.ConflictError()
+
+        self.addCleanup(_revert_update_node_func, sm, sm.update_node_instance)
+        sm.update_node_instance = conflict_update_node_func
+
+        node_instance_id = '1234'
+        self.put_node_instance(
+            instance_id=node_instance_id,
+            deployment_id='111',
+            runtime_properties={
+                'key': 'value'
+            }
+        )
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.node_instances.update(
+                node_instance_id,
+                runtime_properties={'key': 'new_value'},
+                version=2)
+
+        self.assertEqual(cm.exception.status_code, 409)
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -270,16 +323,21 @@ class NodesTest(base_test.BaseServerTestCase):
         assert_dep_and_node(2, '222', '4', dep2_n4_instances)
 
     def test_patch_before_put(self):
-        response = self.patch('/node-instances/1234',
-                              {'runtime_properties': {'key': 'value'},
-                               'version': 0})
-        self.assertEqual(404, response.status_code)
+        """Updating a nonexistent node instance throws an error."""
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.node_instances.update(
+                '1234',
+                runtime_properties={'key': 'value'},
+                version=0)
+
+        self.assertEqual(cm.exception.status_code, 404)
 
     def put_node_instance(self,
                           instance_id,
                           deployment_id,
                           runtime_properties=None,
-                          node_id=None):
+                          node_id=None,
+                          version=None):
         runtime_properties = runtime_properties or {}
         from manager_rest.models import DeploymentNodeInstance
         node = DeploymentNodeInstance(id=instance_id,
@@ -287,7 +345,7 @@ class NodesTest(base_test.BaseServerTestCase):
                                       deployment_id=deployment_id,
                                       runtime_properties=runtime_properties,
                                       state=None,
-                                      version=None,
+                                      version=version,
                                       relationships=None,
                                       host_id=None)
         storage_manager._get_instance().put_node_instance(node)

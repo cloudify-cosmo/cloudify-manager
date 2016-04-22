@@ -14,6 +14,7 @@
 #  * limitations under the License.
 #
 
+import collections
 import os
 import zipfile
 import urllib
@@ -1038,27 +1039,17 @@ class NodeInstancesId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.NodeInstance)
     def patch(self, node_instance_id, **kwargs):
-        """
-        Update node instance by id
-        """
+        """Update node instance by id."""
         verify_json_content_type()
-        if request.json.__class__ is not dict or \
-            'version' not in request.json or \
-                request.json['version'].__class__ is not int:
 
-            if request.json.__class__ is not dict:
-                message = 'Request body is expected to be a map containing ' \
-                          'a "version" field and optionally ' \
-                          '"runtimeProperties" and/or "state" fields'
-            elif 'version' not in request.json:
-                message = 'Request body must be a map containing a ' \
-                          '"version" field'
-            else:
-                message = \
-                    "request body's 'version' field must be an int but" \
-                    " is of type {0}".format(request.json['version']
-                                             .__class__.__name__)
-            raise manager_exceptions.BadParametersError(message)
+        if not isinstance(request.json, collections.Mapping):
+            raise manager_exceptions.BadParametersError(
+                'Request body is expected to be a map containing a "version" '
+                'field and optionally "runtimeProperties" and/or "state" '
+                'fields')
+
+        verify_parameter_in_request_body('version', request.json,
+                                         param_type=int)
 
         node = models.DeploymentNodeInstance(
             id=node_instance_id,

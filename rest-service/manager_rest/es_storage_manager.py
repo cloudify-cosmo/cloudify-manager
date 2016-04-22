@@ -468,13 +468,6 @@ class ESStorageManager(object):
         new_relationships = node.relationships
 
         current = self.get_node_instance(node.id)
-        # Validate version - this is not 100% safe since elasticsearch
-        # update doesn't accept the version field.
-        if node.version != 0 and current.version != node.version:
-            raise manager_exceptions.ConflictError(
-                'Node instance update conflict [current_version={0}, updated_'
-                'version={1}]'.format(current.version, node.version))
-
         if new_state is not None:
             current.state = new_state
 
@@ -487,11 +480,21 @@ class ESStorageManager(object):
         updated = current.to_dict()
         del updated['version']
 
-        self._connection.index(index=STORAGE_INDEX_NAME,
-                               doc_type=NODE_INSTANCE_TYPE,
-                               id=node.id,
-                               body=updated,
-                               **MUTATE_PARAMS)
+        try:
+            self._connection.index(index=STORAGE_INDEX_NAME,
+                                   doc_type=NODE_INSTANCE_TYPE,
+                                   id=node.id,
+                                   body=updated,
+                                   version=node.version,
+                                   **MUTATE_PARAMS)
+        except elasticsearch.exceptions.TransportError as e:
+            if e.status_code == 409:
+                raise manager_exceptions.ConflictError(
+                    'Node instance update conflict [current_version={0}, '
+                    'updated_version={1}]'.format(
+                        current.version, node.version))
+            else:
+                raise
 
     def put_provider_context(self, provider_context):
         doc_data = provider_context.to_dict()

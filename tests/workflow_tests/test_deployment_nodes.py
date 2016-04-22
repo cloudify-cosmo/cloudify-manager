@@ -18,6 +18,8 @@ from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 
 class TestDeploymentNodes(TestCase):
 
@@ -152,3 +154,24 @@ class TestDeploymentNodes(TestCase):
 
         # Verifying the node no longer has any runtime properties
         self.assertEquals(0, len(node_instance.runtime_properties))
+
+    def test_update_runtime_properties_old_version(self):
+        """Updating runtime properties with an old version throws an error."""
+        dsl_path = resource('dsl/set_property.yaml')
+        deployment, _ = deploy(dsl_path)
+
+        node_id = self.client.node_instances.list(
+            deployment_id=deployment.id)[0].id
+        node_instance = self.client.node_instances.get(node_id)
+
+        with self.assertRaises(CloudifyClientError) as cm:
+            # try to update with a new version older than the previous one:
+            # this is invalid and should be rejected
+            new_version = node_instance.version - 1
+
+            self.client.node_instances.update(
+                node_id,
+                version=new_version,
+                runtime_properties={'new_key': 'new_value'})
+
+        self.assertEqual(cm.exception.status_code, 409)
