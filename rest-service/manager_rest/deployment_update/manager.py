@@ -77,7 +77,6 @@ class DeploymentUpdateManager(object):
 
         :param app_blueprint:
         :param app_dir:
-        :param file_server_root_dir:
         :param deployment_id: the deployment id for the update
         :return:
         """

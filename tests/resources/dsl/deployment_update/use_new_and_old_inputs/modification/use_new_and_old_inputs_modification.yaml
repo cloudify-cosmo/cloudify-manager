@@ -1,12 +1,13 @@
 tosca_definitions_version: 'cloudify_dsl_1_2'
 
 inputs:
+  os_family_input:
+    type: string
   ip_input:
     type: string
-    default: 1.1.1.1
 
 imports:
-  - cloudify/types/types.yaml
+  - http://www.getcloudify.org/spec/cloudify/3.4m4/types.yaml
 
 description: >
   Micro web sites hosting.
@@ -15,5 +16,5 @@ node_templates:
   site1:
     type: cloudify.nodes.Compute
     properties:
-      os_family: windows
+      os_family: { get_input: os_family_input }
       ip: { get_input: ip_input }

@@ -113,8 +113,8 @@ class StepValidator(object):
         in_new = utils.traverse_object(raw_node, property_id)
 
         return {
-            ACTION_TYPES.ADD: bool(in_new and not in_old),
-            ACTION_TYPES.REMOVE: bool(in_old and not in_new),
+            ACTION_TYPES.ADD: bool(in_new),
+            ACTION_TYPES.REMOVE: bool(in_old),
             ACTION_TYPES.MODIFY: bool(in_new and in_old)
         }[step.operation]
 

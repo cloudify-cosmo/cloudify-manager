@@ -28,7 +28,8 @@ from manager_rest.files import UploadedDataManager
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_json_content_type,
-                                    CONVENTION_APPLICATION_BLUEPRINT_FILE)
+                                    CONVENTION_APPLICATION_BLUEPRINT_FILE,
+                                    verify_parameter_in_request_body)
 
 from manager_rest import models
 from manager_rest import responses_v2_1
@@ -63,14 +64,16 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         return archiving.get_archive_type(archive_path)
 
     def _prepare_and_process_doc(self, data_id, file_server_root,
-                                 archive_target_path):
+                                 archive_target_path, additional_inputs=None):
         application_dir = self._extract_file_to_file_server(
             archive_target_path,
             file_server_root
         )
-        return self._prepare_and_submit_blueprint(file_server_root,
-                                                  application_dir,
-                                                  data_id), archive_target_path
+        return self._prepare_and_submit_blueprint(
+                file_server_root,
+                application_dir,
+                data_id,
+                additional_inputs), archive_target_path
 
     def _move_archive_to_uploaded_dir(self, *args, **kwargs):
         pass
@@ -78,7 +81,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
     @classmethod
     def _prepare_and_submit_blueprint(cls, file_server_root,
                                       app_dir,
-                                      deployment_id):
+                                      deployment_id,
+                                      additional_inputs=()):
 
         app_dir, app_file_name = \
             cls._extract_application_file(file_server_root, app_dir)
@@ -90,6 +94,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                     deployment_id,
                     app_dir,
                     app_file_name,
+                    additional_inputs=additional_inputs or {}
                 )
 
             # Moving the contents of the app dir to the dest dir, while
@@ -334,8 +339,14 @@ class DeploymentUpdates(SecuredResource):
         :param kwargs:
         :return: update response
         """
+        request_json = request.args
+        verify_parameter_in_request_body('deployment_id', request_json)
+        inputs = {k[1:]: v for k, v in request.args.iteritems()
+                  if k.startswith('_')}
+
         return UploadedBlueprintsDeploymentUpdateManager().\
-            receive_uploaded_data(request.args['deployment_id'])
+            receive_uploaded_data(request_json['deployment_id'],
+                                  additional_inputs=inputs)
 
 
 class DeploymentUpdateCommit(SecuredResource):
