@@ -995,6 +995,18 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
     def test_modify_node_operation(self):
+        """
+        The test sequence is as follows:
+        The stop operation is set through the base blueprint to increment
+        source_ops runtime_property
+        1. execute the stop operation.
+        2. check whether the increment indeed occur (i.e. source_ops=1).
+        3. create a step which modified the the inputs field of the operation
+        from increment to decrement and execute deployment update commit.
+        4. execute the stop operation again.
+        5. check if the source_ops is now 0.
+        :return:
+        """
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path(
                     'modify_node_operation')
@@ -1098,6 +1110,13 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         )
 
     def test_modify_relationship_operation(self):
+        """
+        In this test the script_path of the operation is modified from
+        increment to decrement. this is tested on storage level (no operation
+        is executed since this is a relationship operation, and currently we
+        have no mechanism in place to execute relationship operation.
+        :return:
+        """
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
                 'modify_relationship_operation')
 
