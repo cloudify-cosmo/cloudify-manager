@@ -13,36 +13,36 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-import shutil
 import os
 import json
+import shutil
 import tarfile
-from uuid import uuid4
-from datetime import datetime
 from collections import OrderedDict
+from uuid import uuid4
 
-from flask_restful_swagger import swagger
+from datetime import datetime
 from flask import request
 from flask.ext.restful import marshal
+from flask_restful_swagger import swagger
 
 from flask_securest.rest_security import SecuredResource
-
+from manager_rest import config
+from manager_rest import files
+from manager_rest import manager_exceptions
+from manager_rest import models
 from manager_rest import resources
+from manager_rest import responses_v2
+from manager_rest.blueprints_manager import get_blueprints_manager
+from manager_rest.manager_elasticsearch import ManagerElasticsearch
+from manager_rest.storage_manager import ListResult
+from manager_rest.storage_manager import get_storage_manager
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_and_convert_bool,
                                     verify_parameter_in_request_body,
                                     verify_json_content_type,
                                     make_streaming_response)
-from manager_rest import models
-from manager_rest import responses_v2
-from manager_rest import manager_exceptions
-from manager_rest import config
-from manager_rest import files
-from manager_rest.storage_manager import get_storage_manager
-from manager_rest.storage_manager import ListResult
-from manager_rest.blueprints_manager import get_blueprints_manager
-from manager_rest.manager_elasticsearch import ManagerElasticsearch
+from manager_rest.utils import create_filter_params_list_description
 
 
 def projection(func):
@@ -151,18 +151,6 @@ def create_filters(fields=None):
             return f(filters=filters, *args, **kw)
         return some_func
     return create_filters_dec
-
-
-def _create_filter_params_list_description(parameters, list_type):
-    return [{'name': filter_val,
-             'description': 'List {type} matching the \'{filter}\' '
-                            'filter value'.format(type=list_type,
-                                                  filter=filter_val),
-             'required': False,
-             'allowMultiple': False,
-             'dataType': 'string',
-             'defaultValue': None,
-             'paramType': 'query'} for filter_val in parameters]
 
 
 def _get_snapshot_path(snapshot_id):
@@ -380,7 +368,7 @@ class Blueprints(resources.Blueprints):
         notes='Returns a list of submitted blueprints for the optionally '
               'provided filter parameters {0}'
         .format(models.BlueprintState.fields),
-        parameters=_create_filter_params_list_description(
+        parameters=create_filter_params_list_description(
             models.BlueprintState.fields,
             'blueprints'
         )
@@ -485,7 +473,7 @@ class Executions(resources.Executions):
         nickname="list",
         notes='Returns a list of executions for the optionally provided filter'
               ' parameters: {0}'.format(models.Execution.fields),
-        parameters=_create_filter_params_list_description(
+        parameters=create_filter_params_list_description(
             models.Execution.fields, 'executions') + [
             {'name': '_include_system_workflows',
              'description': 'Include executions of system workflows',
@@ -527,7 +515,7 @@ class Deployments(resources.Deployments):
         nickname="list",
         notes='Returns a list existing deployments for the optionally provided'
               ' filter parameters: {0}'.format(models.Deployment.fields),
-        parameters=_create_filter_params_list_description(
+        parameters=create_filter_params_list_description(
             models.Deployment.fields,
             'deployments'
         )
@@ -556,7 +544,7 @@ class DeploymentModifications(resources.DeploymentModifications):
         notes='Returns a list of deployment modifications for the optionally '
               'provided filter parameters: {0}'
         .format(models.DeploymentModification.fields),
-        parameters=_create_filter_params_list_description(
+        parameters=create_filter_params_list_description(
             models.DeploymentModification.fields,
             'deployment modifications'
         )
@@ -583,7 +571,7 @@ class Nodes(resources.Nodes):
         nickname="listNodes",
         notes='Returns a nodes list for the optionally provided filter '
               'parameters: {0}'.format(models.DeploymentNode.fields),
-        parameters=_create_filter_params_list_description(
+        parameters=create_filter_params_list_description(
             models.DeploymentNode.fields,
             'nodes'
         )
@@ -612,7 +600,7 @@ class NodeInstances(resources.NodeInstances):
         notes='Returns a node instances list for the optionally provided '
               'filter parameters: {0}'
         .format(models.DeploymentNodeInstance.fields),
-        parameters=_create_filter_params_list_description(
+        parameters=create_filter_params_list_description(
             models.DeploymentNodeInstance.fields,
             'node instances'
         )
@@ -639,7 +627,7 @@ class Plugins(SecuredResource):
         nickname="listPlugins",
         notes='Returns a plugins list for the optionally provided '
               'filter parameters: {0}'.format(models.Plugin.fields),
-        parameters=_create_filter_params_list_description(
+        parameters=create_filter_params_list_description(
             models.Plugin.fields,
             'plugins'
         )

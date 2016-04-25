@@ -14,4 +14,4 @@ pyzmq==15.1.0
 # test dependencies
 python-dateutil
 wagon
-elasticsearch
+elasticsearch==1.6.0

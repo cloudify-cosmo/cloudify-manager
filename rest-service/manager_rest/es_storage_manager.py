@@ -28,7 +28,8 @@ from manager_rest.models import (BlueprintState,
                                  DeploymentNode,
                                  DeploymentNodeInstance,
                                  ProviderContext,
-                                 Plugin)
+                                 Plugin,
+                                 DeploymentUpdate)
 from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
@@ -38,6 +39,7 @@ PLUGIN_TYPE = 'plugin'
 BLUEPRINT_TYPE = 'blueprint'
 SNAPSHOT_TYPE = 'snapshot'
 DEPLOYMENT_TYPE = 'deployment'
+DEPLOYMENT_UPDATE_TYPE = 'deployment_update'
 DEPLOYMENT_MODIFICATION_TYPE = 'deployment_modification'
 EXECUTION_TYPE = 'execution'
 PROVIDER_CONTEXT_TYPE = 'provider_context'
@@ -92,6 +94,32 @@ class ESStorageManager(object):
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 '{0} {1} not found'.format(doc_type, doc_id))
+
+    def _append_doc_list_field(self, doc_type, doc_id, field, value):
+        """
+        Appends a value to a list field in a document (or creates the list)
+        NOTE: append.groovy file has to be located in es scripts path
+        :param doc_type: document type
+        :param doc_id: document id
+        :param field: name of field which stores the list
+        :param value: value to append to list
+        """
+        self._connection.update(
+            index=STORAGE_INDEX_NAME,
+            doc_type=doc_type,
+            id=doc_id,
+            script='append',
+            body={
+                'params': {
+                    'key': field,
+                    'value': value
+                }})
+
+    def _update_doc(self, doc_type, doc_id, update_doc):
+        return self._connection.update(index=STORAGE_INDEX_NAME,
+                                       doc_type=doc_type,
+                                       id=str(doc_id),
+                                       body={'doc': update_doc.to_dict()})
 
     def _get_doc_and_deserialize(self, doc_type, doc_id, model_class,
                                  fields=None):
@@ -167,6 +195,15 @@ class ESStorageManager(object):
                          sort=None):
         return self._get_items_list(DEPLOYMENT_TYPE,
                                     Deployment,
+                                    pagination=pagination,
+                                    filters=filters,
+                                    include=include,
+                                    sort=sort)
+
+    def deployment_updates_list(self, include=None, filters=None,
+                                pagination=None, sort=None):
+        return self._get_items_list(DEPLOYMENT_UPDATE_TYPE,
+                                    DeploymentUpdate,
                                     pagination=pagination,
                                     filters=filters,
                                     include=include,
@@ -304,6 +341,27 @@ class ESStorageManager(object):
                                     doc_data)
         return 1
 
+    def get_deployment_update(self, deployment_update_id):
+        return self._get_doc_and_deserialize(DEPLOYMENT_UPDATE_TYPE,
+                                             deployment_update_id,
+                                             DeploymentUpdate)
+
+    def put_deployment_update(self, deployment_update):
+        return self._put_doc_if_not_exists(DEPLOYMENT_UPDATE_TYPE,
+                                           str(deployment_update.id),
+                                           deployment_update.to_dict())
+
+    def update_deployment_update(self, deployment_update):
+        return self._update_doc(DEPLOYMENT_UPDATE_TYPE,
+                                deployment_update.id,
+                                deployment_update)
+
+    def put_deployment_update_step(self, deployment_update_id, step):
+        self._append_doc_list_field(doc_type=DEPLOYMENT_UPDATE_TYPE,
+                                    doc_id=deployment_update_id,
+                                    field='steps',
+                                    value=step.to_dict())
+
     def delete_blueprint(self, blueprint_id):
         return self._delete_doc(BLUEPRINT_TYPE, blueprint_id,
                                 BlueprintState)
@@ -370,8 +428,9 @@ class ESStorageManager(object):
     def delete_execution(self, execution_id):
         return self._delete_doc(EXECUTION_TYPE, execution_id, Execution)
 
-    def delete_node(self, node_id):
-        return self._delete_doc(NODE_TYPE, node_id, DeploymentNode)
+    def delete_node(self, deployment_id, node_id):
+        storage_node_id = self._storage_node_id(deployment_id, node_id)
+        return self._delete_doc(NODE_TYPE, storage_node_id, DeploymentNode)
 
     def delete_node_instance(self, node_instance_id):
         return self._delete_doc(NODE_INSTANCE_TYPE,
@@ -380,9 +439,12 @@ class ESStorageManager(object):
 
     def update_node(self, deployment_id, node_id,
                     number_of_instances=None,
-                    planned_number_of_instances=None):
+                    planned_number_of_instances=None,
+                    changes=None):
         storage_node_id = self._storage_node_id(deployment_id, node_id)
         update_doc_data = {}
+        if changes is not None:
+            update_doc_data.update(changes)
         if number_of_instances is not None:
             update_doc_data['number_of_instances'] = number_of_instances
         if planned_number_of_instances is not None:
@@ -395,6 +457,7 @@ class ESStorageManager(object):
                                     id=storage_node_id,
                                     body=update_doc,
                                     **MUTATE_PARAMS)
+            return update_doc_data
         except elasticsearch.exceptions.NotFoundError:
             raise manager_exceptions.NotFoundError(
                 "Node {0} not found".format(node_id))

@@ -25,7 +25,8 @@ from manager_rest.models import (BlueprintState,
                                  DeploymentNode,
                                  DeploymentNodeInstance,
                                  ProviderContext,
-                                 Snapshot)
+                                 Snapshot,
+                                 DeploymentUpdate)
 from manager_rest import manager_exceptions
 
 STORAGE_FILE_PATH = '/tmp/manager-rest-tests-storage.json'
@@ -34,6 +35,7 @@ NODES = 'nodes'
 NODE_INSTANCES = 'node_instances'
 BLUEPRINTS = 'blueprints'
 DEPLOYMENTS = 'deployments'
+DEPLOYMENT_UPDATES = 'deployment_updates'
 DEPLOYMENT_MODIFICATIONS = 'deployment_modifications'
 EXECUTIONS = 'executions'
 PLUGINS = 'plugins'
@@ -81,23 +83,28 @@ class FileStorageManager(object):
     file based storage manager for tests.
     """
 
+    entities = {
+        NODES: DeploymentNode,
+        NODE_INSTANCES: DeploymentNodeInstance,
+        BLUEPRINTS: BlueprintState,
+        DEPLOYMENTS: Deployment,
+        DEPLOYMENT_MODIFICATIONS: DeploymentModification,
+        EXECUTIONS: Execution,
+        PLUGINS: Plugin,
+        PROVIDER_CONTEXT: ProviderContext,
+        SNAPSHOTS: Snapshot,
+        DEPLOYMENT_UPDATES: DeploymentUpdate
+    }
+
     def __init__(self, storage_path):
         self._storage_path = storage_path
         if os.path.isfile(storage_path):
             os.remove(storage_path)
 
     def _init_file(self):
-        data = {
-            NODES: {},
-            NODE_INSTANCES: {},
-            BLUEPRINTS: {},
-            DEPLOYMENTS: {},
-            DEPLOYMENT_MODIFICATIONS: {},
-            EXECUTIONS: {},
-            PLUGINS: {},
-            PROVIDER_CONTEXT: {},
-            SNAPSHOTS: {}
-        }
+        data = {}
+        for entity_name in FileStorageManager.entities.keys():
+            data[entity_name] = {}
         self._dump_data(data)
 
     def _load_data(self):
@@ -106,64 +113,19 @@ class FileStorageManager(object):
         with open(self._storage_path, 'r') as f:
             data = json.load(f)
             deserialized_data = dict()
-            deserialized_data[NODES] = \
-                {key: DeploymentNode(**val) for key, val in data[NODES]
-                    .iteritems()}
-            deserialized_data[NODE_INSTANCES] = \
-                {key: DeploymentNodeInstance(**val) for key, val in
-                 data[NODE_INSTANCES].iteritems()}
-            deserialized_data[BLUEPRINTS] = \
-                {key: BlueprintState(**val) for key, val in data[BLUEPRINTS]
-                    .iteritems()}
-            deserialized_data[DEPLOYMENTS] = \
-                {key: Deployment(**val) for key, val in data[DEPLOYMENTS]
-                    .iteritems()}
-            deserialized_data[EXECUTIONS] = \
-                {key: Execution(**val) for key, val in data[EXECUTIONS]
-                    .iteritems()}
-            deserialized_data[PLUGINS] = \
-                {key: Plugin(**val) for key, val in data[PLUGINS]
-                    .iteritems()}
-            deserialized_data[PROVIDER_CONTEXT] = \
-                {key: ProviderContext(**val)
-                 for key, val in data[PROVIDER_CONTEXT].iteritems()}
-            deserialized_data[DEPLOYMENT_MODIFICATIONS] = \
-                {key: DeploymentModification(**val) for key, val in
-                 data[DEPLOYMENT_MODIFICATIONS].iteritems()}
-            deserialized_data[SNAPSHOTS] = \
-                {key: Snapshot(**val) for key, val in
-                 data[SNAPSHOTS].iteritems()}
+            for entity_name, model in FileStorageManager.entities.iteritems():
+                deserialized_data[entity_name] = \
+                    {key: model(**val) for key, val in
+                     data[entity_name].iteritems()}
             return deserialized_data
 
     def _dump_data(self, data):
         with open(self._storage_path, 'w') as f:
             serialized_data = dict()
-            serialized_data[NODES] = {key: val.to_dict() for key, val in
-                                      data[NODES].iteritems()}
-            serialized_data[NODE_INSTANCES] = {
-                key: val.to_dict()
-                for key, val in data[NODE_INSTANCES].iteritems()}
-            serialized_data[BLUEPRINTS] =\
-                {key: val.to_dict() for key, val in data[BLUEPRINTS]
-                    .iteritems()}
-            serialized_data[DEPLOYMENTS] =\
-                {key: val.to_dict() for key, val in data[DEPLOYMENTS]
-                    .iteritems()}
-            serialized_data[EXECUTIONS] =\
-                {key: val.to_dict() for key, val in data[EXECUTIONS]
-                    .iteritems()}
-            serialized_data[PLUGINS] = \
-                {key: val.to_dict() for key, val in data[PLUGINS]
-                    .iteritems()}
-            serialized_data[PROVIDER_CONTEXT] = \
-                {key: val.to_dict() for key, val in data[PROVIDER_CONTEXT]
-                    .iteritems()}
-            serialized_data[DEPLOYMENT_MODIFICATIONS] = \
-                {key: val.to_dict() for key, val in data[
-                    DEPLOYMENT_MODIFICATIONS].iteritems()}
-            serialized_data[SNAPSHOTS] = \
-                {key: val.to_dict() for key, val in data[
-                    SNAPSHOTS].iteritems()}
+            for entity_name in FileStorageManager.entities.keys():
+                serialized_data[entity_name] = \
+                    {key: val.to_dict() for key, val in
+                     data[entity_name].iteritems()}
             json.dump(serialized_data, f)
 
     def get_node_instance(self, node_id, **_):
@@ -308,6 +270,14 @@ class FileStorageManager(object):
         return paginate_list(result,
                              pagination=pagination)
 
+    def deployment_updates_list(self, filters=None, pagination=None,
+                                sort=None, **_):
+        deployment_updates = self._load_data()[DEPLOYMENT_UPDATES].values()
+        deployment_updates = sort_list(deployment_updates, sort)
+        result = self.filter_data(deployment_updates, filters)
+        return paginate_list(result,
+                             pagination=pagination)
+
     def executions_list(self, filters=None, pagination=None,
                         sort=None, **_):
         executions = self._load_data()[EXECUTIONS].values()
@@ -355,6 +325,18 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Deployment {0} not found".format(deployment_id))
 
+    def get_deployment_update(self, deployment_update_id, include=None):
+        data = self._load_data()
+        if deployment_update_id in data[DEPLOYMENT_UPDATES]:
+            dep = data[DEPLOYMENT_UPDATES][deployment_update_id]
+            if include:
+                for field in DeploymentUpdate.fields:
+                    if field not in include:
+                        setattr(dep, field, None)
+            return dep
+        raise manager_exceptions.NotFoundError(
+            "Deployment Update {0} not found".format(deployment_update_id))
+
     def get_execution(self, execution_id, **_):
         data = self._load_data()
         if execution_id in data[EXECUTIONS]:
@@ -376,6 +358,27 @@ class FileStorageManager(object):
             raise manager_exceptions.ConflictError(
                 'Deployment {0} already exists'.format(deployment_id))
         data[DEPLOYMENTS][str(deployment_id)] = deployment
+        self._dump_data(data)
+
+    def put_deployment_update(self, deployment_update):
+        data = self._load_data()
+        if str(deployment_update.id) in data[DEPLOYMENT_UPDATES]:
+            raise manager_exceptions.ConflictError(
+                'Deployment Update {0} already exists'
+                .format(deployment_update.id))
+        data[DEPLOYMENT_UPDATES][str(deployment_update.id)] = deployment_update
+        self._dump_data(data)
+
+    def put_deployment_update_step(self, deployment_update_id, step):
+        data = self._load_data()
+        if str(deployment_update_id) not in data[DEPLOYMENT_UPDATES]:
+            raise manager_exceptions.NotFoundError(
+                "Deployment Update {0} doesn't exist"
+                .format(deployment_update_id))
+        data[DEPLOYMENT_UPDATES][str(deployment_update_id)].steps.append(
+            step
+        )
+
         self._dump_data(data)
 
     def put_execution(self, execution_id, execution):

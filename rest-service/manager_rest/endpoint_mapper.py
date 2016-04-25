@@ -56,7 +56,14 @@ def setup_resources(api):
         'PluginsId': 'plugins/<string:plugin_id>',
         'PluginsArchive': 'plugins/<string:plugin_id>/archive',
         'MaintenanceMode': 'maintenance',
-        'MaintenanceModeAction': 'maintenance/<string:maintenance_action>'
+        'MaintenanceModeAction': 'maintenance/<string:maintenance_action>',
+        'DeploymentUpdates': 'deployment-updates',
+        'DeploymentUpdateSteps':
+            'deployment-updates/<string:update_id>/step',
+        'DeploymentUpdateCommit':
+            'deployment-updates/<string:update_id>/commit',
+        'DeploymentUpdateFinalizeCommit':
+            'deployment-updates/<string:update_id>/finalize_commit'
     }
 
     for resource, endpoint_suffix in resources_endpoints.iteritems():

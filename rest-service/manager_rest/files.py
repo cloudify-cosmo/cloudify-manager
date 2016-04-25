@@ -15,15 +15,11 @@
 import os
 import shutil
 import tempfile
-import contextlib
-
-from urllib2 import urlopen, URLError
 
 from flask import request
 
-from manager_rest import manager_exceptions
-from manager_rest import chunked
 from manager_rest import config
+from manager_rest import utils
 
 
 class UploadedDataManager(object):
@@ -48,40 +44,9 @@ class UploadedDataManager(object):
                 os.remove(archive_target_path)
 
     def _save_file_locally(self, archive_target_path):
-        url_key = self._get_data_url_key()
-        if url_key in request.args:
-            if request.data or 'Transfer-Encoding' in request.headers:
-                raise manager_exceptions.BadParametersError(
-                    "Can't pass both a {0} URL via query parameters "
-                    "and {0} data via the request body at the same time"
-                    .format(self._get_kind()))
-            data_url = request.args[url_key]
-            try:
-                with contextlib.closing(urlopen(data_url)) as urlf:
-                    with open(archive_target_path, 'w') as f:
-                        f.write(urlf.read())
-            except URLError:
-                raise manager_exceptions.ParamUrlNotFoundError(
-                    "URL {0} not found - can't download {1} archive"
-                    .format(data_url, self._get_kind()))
-            except ValueError:
-                raise manager_exceptions.BadParametersError(
-                    "URL {0} is malformed - can't download {1} archive"
-                    .format(data_url, self._get_kind()))
-
-        elif 'Transfer-Encoding' in request.headers:
-            with open(archive_target_path, 'w') as f:
-                for buffered_chunked in chunked.decode(request.input_stream):
-                    f.write(buffered_chunked)
-        else:
-            if not request.data:
-                raise manager_exceptions.BadParametersError(
-                    'Missing {0} archive in request body or '
-                    '"{1}" in query parameters'.format(self._get_kind(),
-                                                       url_key))
-            uploaded_file_data = request.data
-            with open(archive_target_path, 'w') as f:
-                f.write(uploaded_file_data)
+        utils.save_request_content_to_file(request, archive_target_path,
+                                           self._get_data_url_key(),
+                                           self._get_kind())
 
     def _move_archive_to_uploaded_dir(self,
                                       data_id,
