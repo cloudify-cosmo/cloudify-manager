@@ -60,13 +60,13 @@ sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-l
 
 pip install --use-wheel --no-index --find-links=/var/wheels/%{name} virtualenv && \
 virtualenv /opt/manager/env && \
-/opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-dsl-parser --pre && \
-/opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-client --pre && \
-/opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} flask-securest --pre && \
-/opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
-/opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
-/opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
-/opt/manager/env/bin/pip install --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-service --pre
+/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-dsl-parser --pre && \
+/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-client --pre && \
+/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} flask-securest --pre && \
+/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
+/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
+/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
+/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-service --pre
 
 # sudo cp -R "/tmp/resources/rest-service/cloudify/" "/opt/manager/resources/"
 
@@ -74,7 +74,6 @@ virtualenv /opt/manager/env && \
 %preun
 %postun
 
-rm -rf /opt/manager/env
 rm -rf /opt/manager/resources
 rm -rf /var/wheels/${name}
 
