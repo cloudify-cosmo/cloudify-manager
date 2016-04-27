@@ -2,7 +2,7 @@ import utils
 from manager_rest import storage_manager
 import manager_rest.manager_exceptions
 from constants import (ENTITY_TYPES,
-                       OPERATION_TYPE)
+                       ACTION_TYPES)
 
 
 class StepValidator(object):
@@ -52,7 +52,7 @@ class StepValidator(object):
         if not relationship_index:
             return
 
-        if step.operation == OPERATION_TYPE.REMOVE:
+        if step.operation == ACTION_TYPES.REMOVE:
             source_node = self.sm.get_node(dep_update.deployment_id,
                                            source_node_id).to_dict()
         else:
@@ -65,7 +65,7 @@ class StepValidator(object):
         relationship = source_node[RELATIONSHIPS][relationship_index]
         target_node_id = relationship['target_id']
 
-        if step.operation == OPERATION_TYPE.REMOVE:
+        if step.operation == ACTION_TYPES.REMOVE:
             return self.sm.get_node(dep_update.deployment_id, target_node_id)
         else:
             return utils.get_raw_node(dep_update.blueprint, target_node_id)
@@ -78,7 +78,7 @@ class StepValidator(object):
         :return:
         """
         NODES, node_id = utils.get_entity_keys(step.entity_id)
-        if step.operation == OPERATION_TYPE.REMOVE:
+        if step.operation == ACTION_TYPES.REMOVE:
             return self.sm.get_node(dep_update.deployment_id, node_id)
         else:
             return utils.get_raw_node(dep_update.blueprint, node_id)
@@ -97,9 +97,9 @@ class StepValidator(object):
         is_in_old = utils.traverse_object(storage_node.properties, property_id)
         is_in_new = utils.traverse_object(raw_node[PROPERTIES], property_id)
 
-        if step.operation == OPERATION_TYPE.REMOVE:
+        if step.operation == ACTION_TYPES.REMOVE:
             return is_in_old
-        elif step.operation == OPERATION_TYPE.ADD:
+        elif step.operation == ACTION_TYPES.ADD:
             return is_in_new
         else:
             return is_in_old and is_in_new
@@ -120,9 +120,9 @@ class StepValidator(object):
         is_in_new = utils.traverse_object(modified_node[operation_host],
                                           operation_id)
 
-        if step.operation == OPERATION_TYPE.REMOVE:
+        if step.operation == ACTION_TYPES.REMOVE:
             return is_in_old
-        elif step.operation == OPERATION_TYPE.ADD:
+        elif step.operation == ACTION_TYPES.ADD:
             return is_in_new
         else:
             return is_in_old and is_in_new

@@ -27,7 +27,7 @@ from handlers import (DeploymentUpdateNodeHandler,
                       DeploymentUpdateNodeInstanceHandler)
 from validator import StepValidator
 from utils import extract_ids
-from constants import STATE, CHANGE_TYPE
+from constants import STATES, NODE_MOD_TYPES
 
 
 class DeploymentUpdateManager(object):
@@ -106,7 +106,7 @@ class DeploymentUpdateManager(object):
         dep_update = self.get_deployment_update(deployment_update_id)
 
         # mark deployment update as committing
-        dep_update.state = STATE.COMMITTING
+        dep_update.state = STATES.COMMITTING
         self.sm.update_deployment_update(dep_update)
 
         # Update the nodes on the storage
@@ -156,7 +156,7 @@ class DeploymentUpdateManager(object):
         active_update = \
             next(iter(
                 [u for u in existing_updates
-                 if u.state != STATE.COMMITTED]), None)
+                 if u.state != STATES.COMMITTED]), None)
 
         if active_update:
             raise manager_rest.manager_exceptions.ConflictError(
@@ -200,10 +200,11 @@ class DeploymentUpdateManager(object):
         :return:
         """
 
-        added_instances = node_instances[CHANGE_TYPE.ADDED_AND_RELATED]
-        extended_instances = node_instances[CHANGE_TYPE.EXTENDED_AND_RELATED]
-        reduced_instances = node_instances[CHANGE_TYPE.REDUCED_AND_RELATED]
-        removed_instances = node_instances[CHANGE_TYPE.REMOVED_AND_RELATED]
+        added_instances = node_instances[NODE_MOD_TYPES.ADDED_AND_RELATED]
+        extended_instances = \
+            node_instances[NODE_MOD_TYPES.EXTENDED_AND_RELATED]
+        reduced_instances = node_instances[NODE_MOD_TYPES.REDUCED_AND_RELATED]
+        removed_instances = node_instances[NODE_MOD_TYPES.REMOVED_AND_RELATED]
 
         instance_ids = {
             # needed in order to finalize the commit
@@ -211,9 +212,9 @@ class DeploymentUpdateManager(object):
 
             # For any added node instance
             'added_instance_ids':
-                extract_ids(added_instances.get(CHANGE_TYPE.AFFECTED)),
+                extract_ids(added_instances.get(NODE_MOD_TYPES.AFFECTED)),
             'added_target_instances_ids':
-                extract_ids(added_instances.get(CHANGE_TYPE.RELATED)),
+                extract_ids(added_instances.get(NODE_MOD_TYPES.RELATED)),
 
             # encapsulated all the change entity_ids (in a dictionary with
             # 'node' and 'relationship' keys.
@@ -221,21 +222,21 @@ class DeploymentUpdateManager(object):
 
             # Any nodes which were extended (positive modification)
             'extended_instance_ids':
-                extract_ids(extended_instances.get(CHANGE_TYPE.AFFECTED)),
+                extract_ids(extended_instances.get(NODE_MOD_TYPES.AFFECTED)),
             'extend_target_instance_ids':
-                extract_ids(extended_instances.get(CHANGE_TYPE.RELATED)),
+                extract_ids(extended_instances.get(NODE_MOD_TYPES.RELATED)),
 
             # Any nodes which were reduced (negative modification)
             'reduced_instance_ids':
-                extract_ids(reduced_instances.get(CHANGE_TYPE.AFFECTED)),
+                extract_ids(reduced_instances.get(NODE_MOD_TYPES.AFFECTED)),
             'reduce_target_instance_ids':
-                extract_ids(reduced_instances.get(CHANGE_TYPE.RELATED)),
+                extract_ids(reduced_instances.get(NODE_MOD_TYPES.RELATED)),
 
             # Any nodes which were removed as a whole
             'removed_instance_ids':
-                extract_ids(removed_instances.get(CHANGE_TYPE.AFFECTED)),
+                extract_ids(removed_instances.get(NODE_MOD_TYPES.AFFECTED)),
             'remove_target_instance_ids':
-                extract_ids(removed_instances.get(CHANGE_TYPE.RELATED))
+                extract_ids(removed_instances.get(NODE_MOD_TYPES.RELATED))
         }
 
         return self.execute_workflow(deployment_id=dep_update.deployment_id,
@@ -257,7 +258,7 @@ class DeploymentUpdateManager(object):
         self._node_handler.finalize(dep_update)
 
         # mark deployment update as committed
-        dep_update.state = STATE.COMMITTED
+        dep_update.state = STATES.COMMITTED
         self.sm.update_deployment_update(dep_update)
 
         return models.DeploymentUpdate(deployment_update_id,

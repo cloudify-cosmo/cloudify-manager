@@ -17,13 +17,13 @@ class DeploymentUpdateEntityTypes(DeploymentUpdateEnumBase):
     OPERATION = 'operation'
 
 
-class DeploymentUpdateOperationType(DeploymentUpdateEnumBase):
+class DeploymentUpdateActionType(DeploymentUpdateEnumBase):
     ADD = 'add'
     REMOVE = 'remove'
     MODIFY = 'modify'
 
 
-class DeploymentUpdateState(DeploymentUpdateEnumBase):
+class DeploymentUpdateStateType(DeploymentUpdateEnumBase):
     COMMITTED = 'committed'
     COMMITTING = 'committing'
     STAGED = 'staged'
@@ -35,7 +35,7 @@ class DeploymentUpdateState(DeploymentUpdateEnumBase):
     ROLLEDBACK = 'rolledback'
 
 
-class DeploymentUpdateChangeTypes(DeploymentUpdateEnumBase):
+class DeploymentUpdateNodeModificationTypes(DeploymentUpdateEnumBase):
     ADDED_AND_RELATED = 'added_and_related'
     EXTENDED_AND_RELATED = 'extended_and_related'
     REDUCED_AND_RELATED = 'reduced_and_related'
@@ -45,9 +45,8 @@ class DeploymentUpdateChangeTypes(DeploymentUpdateEnumBase):
     RELATED = 'related'
 
 ENTITY_TYPES = DeploymentUpdateEntityTypes
-OPERATION_TYPE = DeploymentUpdateOperationType
-STATE = DeploymentUpdateState
-CHANGE_TYPE = DeploymentUpdateChangeTypes
+ACTION_TYPES = DeploymentUpdateActionType
+STATES = DeploymentUpdateStateType
+NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes
 
-RELATIONSHIP_SEPARATOR = '-'
 PATH_SEPARATOR = ':'

@@ -6,9 +6,9 @@ from manager_rest.blueprints_manager import get_blueprints_manager
 from dsl_parser.interfaces.utils import no_op_operation
 from entity_context import get_entity_context
 
-from constants import (OPERATION_TYPE,
+from constants import (ACTION_TYPES,
                        ENTITY_TYPES,
-                       CHANGE_TYPE)
+                       NODE_MOD_TYPES)
 
 
 class StorageClient(object):
@@ -41,9 +41,9 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         nodes_dict = {node.id: node.to_dict() for node in current_nodes}
 
         entities_update_mapper = {
-            OPERATION_TYPE.ADD: self._add_entity,
-            OPERATION_TYPE.REMOVE: self._remove_entity,
-            OPERATION_TYPE.MODIFY: self._modify_entity
+            ACTION_TYPES.ADD: self._add_entity,
+            ACTION_TYPES.REMOVE: self._remove_entity,
+            ACTION_TYPES.MODIFY: self._modify_entity
         }
 
         # Iterate over the steps of the deployment update and handle each
@@ -374,9 +374,10 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         :param dep_update: the deployment update object itself.
         :return:
         """
+        removed_and_related = dep_update.deployment_update_node_instances[
+            NODE_MOD_TYPES.REMOVED_AND_RELATED]
         deleted_node_instances = \
-            dep_update.deployment_update_node_instances[
-                CHANGE_TYPE.REMOVED_AND_RELATED].get(CHANGE_TYPE.AFFECTED, [])
+            removed_and_related.get(NODE_MOD_TYPES.AFFECTED, [])
 
         deleted_node_ids = utils.extract_ids(deleted_node_instances, 'node_id')
 
@@ -409,13 +410,13 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         type
         """
         handlers_mapper = {
-            CHANGE_TYPE.ADDED_AND_RELATED:
+            NODE_MOD_TYPES.ADDED_AND_RELATED:
                 self._handle_adding_node_instance,
-            CHANGE_TYPE.EXTENDED_AND_RELATED:
+            NODE_MOD_TYPES.EXTENDED_AND_RELATED:
                 self._handle_adding_relationship_instance,
-            CHANGE_TYPE.REDUCED_AND_RELATED:
+            NODE_MOD_TYPES.REDUCED_AND_RELATED:
                 self._handle_removing_relationship_instance,
-            CHANGE_TYPE.REMOVED_AND_RELATED:
+            NODE_MOD_TYPES.REMOVED_AND_RELATED:
                 self._handle_removing_node_instance
         }
 
@@ -459,8 +460,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         )
 
         return {
-            CHANGE_TYPE.AFFECTED: added_instances,
-            CHANGE_TYPE.RELATED: add_related_instances
+            NODE_MOD_TYPES.AFFECTED: added_instances,
+            NODE_MOD_TYPES.RELATED: add_related_instances
         }
 
     @staticmethod
@@ -482,8 +483,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 remove_related_raw_instances.append(node_instance)
 
         return {
-            CHANGE_TYPE.AFFECTED: removed_raw_instances,
-            CHANGE_TYPE.RELATED: remove_related_raw_instances
+            NODE_MOD_TYPES.AFFECTED: removed_raw_instances,
+            NODE_MOD_TYPES.RELATED: remove_related_raw_instances
         }
 
     def _handle_adding_relationship_instance(self, instances, *_):
@@ -508,8 +509,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
 
         return \
             {
-                CHANGE_TYPE.AFFECTED: modified_raw_instances,
-                CHANGE_TYPE.RELATED: modify_related_raw_instances
+                NODE_MOD_TYPES.AFFECTED: modified_raw_instances,
+                NODE_MOD_TYPES.RELATED: modify_related_raw_instances
             }
 
     def _handle_removing_relationship_instance(self, instances, *_):
@@ -539,8 +540,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 modify_related_raw_instances.append(raw_node_instance)
 
         return {
-            CHANGE_TYPE.AFFECTED: modified_raw_instances,
-            CHANGE_TYPE.RELATED: modify_related_raw_instances
+            NODE_MOD_TYPES.AFFECTED: modified_raw_instances,
+            NODE_MOD_TYPES.RELATED: modify_related_raw_instances
         }
 
     def finalize(self, dep_update):
@@ -551,12 +552,12 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         """
         reduced_node_instances = \
             dep_update.deployment_update_node_instances[
-                CHANGE_TYPE.REDUCED_AND_RELATED].get(
-                    CHANGE_TYPE.AFFECTED, [])
+                NODE_MOD_TYPES.REDUCED_AND_RELATED].get(
+                    NODE_MOD_TYPES.AFFECTED, [])
         removed_node_instances = \
             dep_update.deployment_update_node_instances[
-                CHANGE_TYPE.REMOVED_AND_RELATED].get(
-                    CHANGE_TYPE.AFFECTED, [])
+                NODE_MOD_TYPES.REMOVED_AND_RELATED].get(
+                    NODE_MOD_TYPES.AFFECTED, [])
 
         for reduced_node_instance in reduced_node_instances:
             self._update_node_instance(reduced_node_instance,

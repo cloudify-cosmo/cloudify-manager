@@ -18,8 +18,8 @@ import uuid
 
 import jsonpickle
 from deployment_update.constants import (ENTITY_TYPES,
-                                         OPERATION_TYPE,
-                                         STATE)
+                                         ACTION_TYPES,
+                                         STATES)
 
 from manager_exceptions import UnknownModificationStageError
 
@@ -98,7 +98,7 @@ class DeploymentUpdateStep(SerializableObject):
             raise UnknownModificationStageError(
                 'illegal modification entity type')
 
-        if operation not in OPERATION_TYPE:
+        if operation not in ACTION_TYPES:
             raise UnknownModificationStageError(
                 'illegal modification operation')
 
@@ -158,23 +158,23 @@ class DeploymentUpdate(SerializableObject):
         raise NotImplementedError()
 
     def commit(self):
-        allowed_states = {STATE.STAGED, STATE.REVERTED, STATE.FAILED}
+        allowed_states = {STATES.STAGED, STATES.REVERTED, STATES.FAILED}
         if self.state not in allowed_states:
             raise RuntimeError('commit is not allowed when {0}'
                                .format(self.state))
         self._sort_steps()
         self._validate()
-        self.state = STATE.COMMITTING
+        self.state = STATES.COMMITTING
         is_updated = self._update_storage()
-        self.state = STATE.COMMITTED if is_updated else STATE.FAILED
+        self.state = STATES.COMMITTED if is_updated else STATES.FAILED
 
     def revert(self):
-        allowed_states = {STATE.COMMITTED}
+        allowed_states = {STATES.COMMITTED}
         if self.state not in allowed_states:
             raise RuntimeError('revert is not allowed when {0}'
                                .format(self.state))
         # do some rollback stuff
-        self.state = STATE.REVERTED
+        self.state = STATES.REVERTED
 
 
 class DeploymentModification(SerializableObject):
