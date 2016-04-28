@@ -123,6 +123,10 @@ def dump_elasticsearch(tempdir, es, snapshot_dump=True, execution_id=None):
                                      'snapshot')
         storage_scan = (e for e in storage_scan
                         if e['_id'] != execution_id)
+    else:
+        storage_scan = _only_types(storage_scan,
+                                   'provider_context',
+                                   'snapshot')
 
     event_scan = elasticsearch.helpers.scan(
             es,
@@ -235,6 +239,10 @@ def _check_conflicts(es, restored_data):
 
 def _except_types(s, *args):
     return (e for e in s if e['_type'] not in args)
+
+
+def _only_types(s, *args):
+    return (e for e in s if e['_type'] in args)
 
 
 def _add_operation(operations, op_name, inputs, implementation):
