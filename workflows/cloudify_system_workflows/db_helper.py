@@ -8,7 +8,7 @@ import elasticsearch
 import elasticsearch.helpers
 
 
-M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
+_M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 EVENTS_INDEX_NAME = 'cloudify_events'
@@ -22,22 +22,28 @@ _INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
                          'series?u=root&p=root" ;done')
 _ELASTICSEARCH = 'es_data'
 
+_ES_METADATA_FILE = 'es_metadata.json'
+
+
 # This variable also appears in cloudify_plugins_common.cloudify.constants
 #  and values should be aligned.
 COMPUTE_NODE_TYPE = 'cloudify.nodes.Compute'
 
 
-def local_restore_elasticsearch_data(data_dir_path, endpoint, port):
-    es = elasticsearch.Elasticsearch(hosts=[{'host': endpoint,
-                                             'port': port}])
-    metadata = {'has_cloudify_events': _snapshot_has_events(data_dir_path)}
-    restore_elasticsearch(data_dir_path, es, metadata)
-
-
-def local_dump_elasticsearch_data(dump_dir_path, endpoint, port=9200):
-    es = elasticsearch.Elasticsearch(hosts=[{'host': endpoint,
-                                             'port': port}])
+def local_dump_elasticsearch_data(dump_dir_path, endpoint, port):
+    es = create_es_client(endpoint, port)
     dump_elasticsearch(dump_dir_path, es, snapshot_dump=False)
+    es_metadata = create_es_dump_metadata(es)
+    with open(os.path.join(dump_dir_path, _ES_METADATA_FILE), 'w') as f:
+        json.dump(es_metadata, f)
+
+
+def local_restore_elasticsearch_data(data_dir_path, endpoint, port):
+    es = create_es_client(endpoint, port)
+    with open(os.path.join(data_dir_path, _ES_METADATA_FILE), 'r') as f:
+        metadata = json.load(f)
+    restore_elasticsearch(data_dir_path, es, metadata)
+    elasticsearch_flush(es)
 
 
 def local_dump_influxdb_data(data_dir_path, endpoint, port):
@@ -48,10 +54,27 @@ def local_restore_influxdb_data(data_dir_path, endpoint, port):
     restore_influxdb_3_3(data_dir_path, endpoint, port)
 
 
-def restore_elasticsearch(tempdir, es, metadata):
+def create_es_client(endpoint, port):
+    return elasticsearch.Elasticsearch(hosts=[{'host': endpoint,
+                                               'port': port}])
 
+
+def elasticsearch_flush(es):
+    es.indices.flush()
+
+
+def elasticsearch_bulk(es, update_action):
+    elasticsearch.helpers.bulk(es, update_action)
+
+
+def create_es_dump_metadata(es):
+    return {_M_HAS_CLOUDIFY_EVENTS: es.indices.exists(index=EVENTS_INDEX_NAME)}
+
+
+def restore_elasticsearch(tempdir, endpoint, port, metadata):
+    es = create_es_client(endpoint, port)
     has_cloudify_events_index = es.indices.exists(index=EVENTS_INDEX_NAME)
-    snap_has_cloudify_events_index = metadata[M_HAS_CLOUDIFY_EVENTS]
+    snap_has_cloudify_events_index = metadata[_M_HAS_CLOUDIFY_EVENTS]
 
     # cloudify_events -> cloudify_events, logstash-* -> logstash-*
     def get_data_itr():
@@ -225,16 +248,6 @@ def _add_operation(operations, op_name, inputs, implementation):
             'executor': 'central_deployment_agent',
             'operation': implementation
         }
-
-
-def _snapshot_has_events(data_dir_path):
-    with open(os.path.join(data_dir_path, _ELASTICSEARCH)) as f:
-        lines = f.readlines()
-    for line in lines:
-        index_data = json.loads(line)
-        if index_data['_index'] == EVENTS_INDEX_NAME:
-            return True
-    return False
 
 
 def _update_es_node(es_node):

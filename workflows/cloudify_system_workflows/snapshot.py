@@ -20,9 +20,6 @@ import shutil
 import zipfile
 import os
 
-import elasticsearch
-import elasticsearch.helpers
-
 import db_helper
 
 from cloudify.workflows import ctx
@@ -39,7 +36,6 @@ from cloudify.utils import ManagerVersion
 _METADATA_FILE = 'metadata.json'
 # metadata fields
 _M_VERSION = 'snapshot_version'
-_M_HAS_CLOUDIFY_EVENTS = db_helper.M_HAS_CLOUDIFY_EVENTS
 
 _AGENTS_FILE = 'agents.json'
 _CRED_DIR = 'snapshot-credentials'
@@ -113,11 +109,6 @@ def _copy_data(archive_root, config, to_archive=True):
                         shutil.copy2(s, d)
 
 
-def _create_es_client(config):
-    return elasticsearch.Elasticsearch(hosts=[{'host': config.db_address,
-                                               'port': int(config.db_port)}])
-
-
 def _get_manager_version(client=None):
     if client is None:
         client = get_rest_client()
@@ -141,15 +132,14 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
         _copy_data(tempdir, config)
 
         # elasticsearch
-        es = _create_es_client(config)
+        es = db_helper.create_es_client(config.db_address, config.db_port)
         ctx.send_event('Dumping elasticsearch data')
         db_helper.dump_elasticsearch(tempdir, es,
                                      execution_id=ctx.execution_id)
 
         # metadata
-        has_cloudify_events = \
-            es.indices.exists(index=db_helper.EVENTS_INDEX_NAME)
-        _create_metadata_file(tempfile, has_cloudify_events)
+        es_dump_metadata = db_helper.create_es_dump_metadata(es)
+        _create_metadata_file(tempfile, es_dump_metadata)
 
         # influxdb
         if include_metrics:
@@ -193,9 +183,9 @@ def create(snapshot_id, config, **kwargs):
         raise
 
 
-def _create_metadata_file(dump_dir_path, has_cloudify_events):
+def _create_metadata_file(dump_dir_path, es_metadata):
     metadata = {}
-    metadata[_M_HAS_CLOUDIFY_EVENTS] = has_cloudify_events
+    metadata.update(es_metadata)
     metadata[_M_VERSION] = str(_get_manager_version())
     with open(os.path.join(dump_dir_path, _METADATA_FILE), 'w') as f:
         json.dump(metadata, f)
@@ -311,7 +301,7 @@ def _restore_credentials_3_3(tempdir, es):
 
             update_actions.append(update_action)
 
-    elasticsearch.helpers.bulk(es, update_actions)
+    db_helper.elasticsearch_bulk(es, update_action)
 
 
 def insert_agents_data(client, agents):
@@ -362,7 +352,7 @@ def _restore_snapshot(config, tempdir, metadata):
     _copy_data(tempdir, config, to_archive=False)
 
     # elasticsearch
-    es = _create_es_client(config)
+    es = db_helper.create_es_client(config.db_address, config.db_port)
 
     ctx.send_event('Restoring ElasticSearch data')
     try:
