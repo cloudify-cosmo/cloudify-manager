@@ -16,6 +16,8 @@ deployer:
     '*':
       - '*'
   deny:
+    '/api/v2.1/maintenance/*':
+      - POST
     '*':
       - DELETE
 

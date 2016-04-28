@@ -120,6 +120,13 @@ class AuthorizationTests(SecurityTestBase):
         # cleaning up left over blueprints
         admin_token_client.blueprints.delete('token_bp_example_2')
 
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_maintenance_mode(self):
+        self._test_get_status_maintenance_mode()
+        self._test_activate_maintenance_mode()
+        self._test_deactivate_maintenance_mode()
+
     ##################
     # token methods
     ##################
@@ -502,6 +509,58 @@ class AuthorizationTests(SecurityTestBase):
         # ...but simple users should not
         self._assert_unauthorized(self.simple_user_client.node_instances.list)
         return node_instances
+
+    ###########################
+    # maintenance mode methods
+    ###########################
+    # NOTE: update roles_config.yaml for every rest version supported.
+
+    def _test_get_status_maintenance_mode(self):
+        deactivating_status = 'deactivated'
+
+        # admins, deployers and viewers should be able to get the
+        # maintenance mode status...
+        state = self.admin_client.maintenance_mode.status()
+        self.assertEqual(state.status, deactivating_status)
+        state = self.deployer_client.maintenance_mode.status()
+        self.assertEqual(state.status, deactivating_status)
+        state = self.viewer_client.maintenance_mode.status()
+        self.assertEqual(state.status, deactivating_status)
+
+        # ...but simple users should not
+        self._assert_unauthorized(
+                self.simple_user_client.maintenance_mode.status)
+
+    def _test_activate_maintenance_mode(self):
+        activating_status = 'activating'
+
+        # admins should be able to activate maintenance mode...
+        state = self.admin_client.maintenance_mode.activate()
+        self.assertEqual(state.status, activating_status)
+        self.admin_client.maintenance_mode.deactivate()
+
+        # ...but deployers, viewers and simple users should not
+        self._assert_unauthorized(
+                self.deployer_client.maintenance_mode.activate)
+        self._assert_unauthorized(self.viewer_client.maintenance_mode.activate)
+        self._assert_unauthorized(
+                self.simple_user_client.maintenance_mode.activate)
+
+    def _test_deactivate_maintenance_mode(self):
+        deactivating_status = 'deactivated'
+
+        # admins should be able to deactivate maintenance mode...
+        self.admin_client.maintenance_mode.activate()
+        state = self.admin_client.maintenance_mode.deactivate()
+        self.assertEqual(state.status, deactivating_status)
+
+        # ...but deployers, viewers and simple users should not
+        self._assert_unauthorized(
+                self.deployer_client.maintenance_mode.deactivate)
+        self._assert_unauthorized(
+                self.viewer_client.maintenance_mode.deactivate)
+        self._assert_unauthorized(
+                self.simple_user_client.maintenance_mode.deactivate)
 
     #############################
     # utility methods

@@ -20,11 +20,19 @@ from flask_restful_swagger import swagger
 @swagger.model
 class MaintenanceMode(object):
     resource_fields = {
-        'status': fields.String
+        'status': fields.String,
+        'activated_at': fields.String,
+        'activation_requested_at': fields.String,
+        'remaining_executions': fields.Raw,
+        'requested_by': fields.String
     }
 
     def __init__(self, **kwargs):
         self.status = kwargs['status']
+        self.activated_at = kwargs['activated_at']
+        self.activation_requested_at = kwargs['activation_requested_at']
+        self.remaining_executions = kwargs['remaining_executions']
+        self.requested_by = kwargs['requested_by']
 
 
 @swagger.model

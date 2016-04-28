@@ -195,11 +195,13 @@ class BaseServerTestCase(unittest.TestCase):
         return client
 
     def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.rest_service_log = tempfile.mkstemp()[1]
-        self.securest_log_file = tempfile.mkstemp()[1]
+        self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
+        fd, self.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
+        os.close(fd)
+        fd, self.securest_log_file = tempfile.mkstemp(prefix='securest-log-')
+        os.close(fd)
         self.file_server = FileServer(self.tmpdir)
-        self.maintenance_mode_dir = tempfile.mkdtemp()
+        self.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
         self.addCleanup(self.cleanup)
         self.file_server.start()
         storage_manager.storage_manager_module_name = \
@@ -209,13 +211,15 @@ class BaseServerTestCase(unittest.TestCase):
         # needed when 'server' module is imported.
         # right after the import the log path is set normally like the rest
         # of the variables (used in the reset_state)
-        tmp_conf_file = tempfile.mkstemp()[1]
-        json.dump({'rest_service_log_path': self.rest_service_log,
-                   'rest_service_log_file_size_MB': 1,
-                   'rest_service_log_files_backup_count': 1,
-                   'rest_service_log_level': 'DEBUG'},
-                  open(tmp_conf_file, 'w'))
-        os.environ['MANAGER_REST_CONFIG_PATH'] = tmp_conf_file
+        fd, self.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
+        os.close(fd)
+        with open(self.tmp_conf_file, 'w') as f:
+            json.dump({'rest_service_log_path': self.rest_service_log,
+                       'rest_service_log_file_size_MB': 1,
+                       'rest_service_log_files_backup_count': 1,
+                       'rest_service_log_level': 'DEBUG'},
+                      f)
+        os.environ['MANAGER_REST_CONFIG_PATH'] = self.tmp_conf_file
         try:
             from manager_rest import server
         finally:
@@ -236,6 +240,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.quiet_delete_directory(self.maintenance_mode_dir)
         if self.file_server:
             self.file_server.stop()
+        self.quiet_delete_directory(self.tmpdir)
 
     def initialize_provider_context(self, client=None):
         if not client:
