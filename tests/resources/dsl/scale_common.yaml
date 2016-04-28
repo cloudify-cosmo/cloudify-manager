@@ -18,6 +18,10 @@ node_types:
                 start: *mock_lifecycle
                 stop: *mock_lifecycle
                 delete: *mock_lifecycle
+    webserver:
+        derived_from: cloudify.nodes.WebServer
+        interfaces:
+            cloudify.interfaces.lifecycle: *lifecycle
     db:
         derived_from: cloudify.nodes.DBMS
         interfaces:

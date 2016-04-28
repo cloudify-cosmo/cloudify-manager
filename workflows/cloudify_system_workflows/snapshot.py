@@ -342,29 +342,32 @@ def _add_operation(operations, op_name, inputs, implementation):
 
 
 def _update_es_node(es_node):
-    if es_node['_type'] == 'deployment':
-        workflows = es_node['_source']['workflows']
-        if 'install_new_agents' not in workflows:
-            workflows['install_new_agents'] = {
-                'operation': 'cloudify.plugins.workflows.install_new_agents',
-                'parameters': {
-                    'install_agent_timeout': {
-                        'default': 300
-                    },
-                    'node_ids': {
-                        'default': []
-                    },
-                    'node_instance_ids': {
-                        'default': []
-                    }
+    node_type = es_node['_type']
+    node_data = es_node['_source']
+
+    if node_type == 'deployment':
+        workflows = node_data['workflows']
+        workflows.setdefault('install_new_agents', {
+            'operation': 'cloudify.plugins.workflows.install_new_agents',
+            'parameters': {
+                'install_agent_timeout': {
+                    'default': 300
                 },
-                'plugin': 'default_workflows'
-            }
-    if es_node['_type'] == 'node':
-        source = es_node['_source']
-        type_hierarchy = source.get('type_hierarchy', [])
+                'node_ids': {
+                    'default': []
+                },
+                'node_instance_ids': {
+                    'default': []
+                }
+            },
+            'plugin': 'default_workflows'
+        })
+        node_data.setdefault('scaling_groups', {})
+
+    if node_type == 'node':
+        type_hierarchy = node_data.get('type_hierarchy', [])
         if COMPUTE_NODE_TYPE in type_hierarchy:
-            operations = source['operations']
+            operations = node_data['operations']
             _add_operation(operations,
                            'cloudify.interfaces.cloudify_agent.create_amqp',
                            {
@@ -377,12 +380,15 @@ def _update_es_node(es_node):
                                'validate_agent_timeout': 20
                            },
                            'cloudify_agent.operations.validate_agent_amqp')
-    if es_node['_type'] == 'blueprint':
-        source = es_node['_source']
-        if 'description' not in source:
-            source['description'] = ''
-        if 'main_file_name' not in source:
-            source['main_file_name'] = ''
+        node_data.setdefault('min_number_of_instances', 0)
+        node_data.setdefault('max_number_of_instances', -1)
+
+    if node_type == 'node_instance':
+        node_data.setdefault('scaling_groups', [])
+
+    if node_type == 'blueprint':
+        node_data.setdefault('description', '')
+        node_data.setdefault('main_file_name', '')
 
 
 def _assert_clean_elasticsearch(log_warning=False):

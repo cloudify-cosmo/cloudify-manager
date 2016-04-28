@@ -94,7 +94,15 @@ class PoliciesTestsBase(TestCase):
 class TestPolicies(PoliciesTestsBase):
 
     def test_policies_flow(self):
-        self.launch_deployment('dsl/with_policies1.yaml')
+        self._test_policies_flow('dsl/with_policies1.yaml')
+
+    def test_group_with_no_policies(self):
+        # this test is identical to the previous with the addition
+        # of a groups with no policies defined on it.
+        self._test_policies_flow('dsl/group_with_no_policies.yaml')
+
+    def _test_policies_flow(self, blueprint_path):
+        self.launch_deployment(blueprint_path)
 
         metric_value = 123
 

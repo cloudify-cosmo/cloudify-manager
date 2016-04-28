@@ -152,6 +152,14 @@ class WorkflowsAPITest(TestCase):
                              self.client.executions.get(execution_id).status)
         self.do_assertions(assertion, timeout=timeout)
 
+    def test_workflow_deployment_scaling_groups(self):
+        deployment, _ = deploy(resource('dsl/store-scaling-groups.yaml'),
+                               workflow_name='workflow')
+        instance = self.client.node_instances.list(deployment.id)[0]
+        self.assertEqual(
+            ['node'],
+            instance.runtime_properties['scaling_groups']['group1']['members'])
+
 
 class WorkflowsAPITestNoGet(WorkflowsAPITest):
 

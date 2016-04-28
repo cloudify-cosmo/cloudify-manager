@@ -441,3 +441,11 @@ def fail_handler_on_not_exist_operation_workflow(ctx, **kwargs):
     operation.on_failure = _ignore_on_error_handler
 
     return graph.execute()
+
+
+@workflow
+def read_scaling_groups(ctx, **kwargs):
+    node_instance = get_instance(ctx)
+    node_instance.execute_operation(
+        'test.operation',
+        kwargs={'scaling_groups': ctx.deployment.scaling_groups})

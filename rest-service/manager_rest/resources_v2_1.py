@@ -15,18 +15,19 @@
 #
 
 import os
+import shutil
+import tempfile
 from datetime import datetime
 
-import tempfile
-
-import shutil
-
+from flask import request
 from flask.ext.restful_swagger import swagger
 
+from dsl_parser.parser import parse_from_path
 from flask_securest.rest_security import SecuredResource
 from flask_securest import rest_security
-from flask import request
 
+from manager_rest import resources
+from manager_rest import resources_v2
 from manager_rest import models
 from manager_rest import responses_v2_1
 from manager_rest import config
@@ -44,8 +45,17 @@ from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_json_content_type,
                                     CONVENTION_APPLICATION_BLUEPRINT_FILE)
-from dsl_parser.parser import parse_from_path
-from deployment_update.manager import get_deployment_updates_manager
+from manager_rest.deployment_update.manager import (
+    get_deployment_updates_manager)
+
+
+def override_marshal_with(f, model):
+    @exceptions_handled
+    @marshal_with(model)
+    def wrapper(*args, **kwargs):
+        with resources.skip_nested_marshalling():
+            return f(*args, **kwargs)
+    return wrapper
 
 
 class MaintenanceMode(SecuredResource):
@@ -246,3 +256,42 @@ class DeploymentUpdateFinalizeCommit(SecuredResource):
     def post(self, update_id):
         manager = get_deployment_updates_manager()
         return manager.finalize_commit(update_id)
+
+
+class Deployments(resources_v2.Deployments):
+
+    get = override_marshal_with(resources_v2.Deployments.get,
+                                responses_v2_1.Deployment)
+
+
+class DeploymentsId(resources.DeploymentsId):
+
+    get = override_marshal_with(resources.DeploymentsId.get,
+                                responses_v2_1.Deployment)
+
+    put = override_marshal_with(resources.DeploymentsId.put,
+                                responses_v2_1.Deployment)
+
+    delete = override_marshal_with(resources.DeploymentsId.delete,
+                                   responses_v2_1.Deployment)
+
+
+class Nodes(resources_v2.Nodes):
+
+    get = override_marshal_with(resources_v2.Nodes.get,
+                                responses_v2_1.Node)
+
+
+class NodeInstances(resources_v2.NodeInstances):
+
+    get = override_marshal_with(resources_v2.NodeInstances.get,
+                                responses_v2_1.NodeInstance)
+
+
+class NodeInstancesId(resources.NodeInstancesId):
+
+    get = override_marshal_with(resources.NodeInstancesId.get,
+                                responses_v2_1.NodeInstance)
+
+    patch = override_marshal_with(resources.NodeInstancesId.patch,
+                                  responses_v2_1.NodeInstance)

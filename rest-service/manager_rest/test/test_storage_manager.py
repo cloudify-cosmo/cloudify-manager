@@ -69,6 +69,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         policy_types={},
                                         policy_triggers={},
                                         groups={},
+                                        scaling_groups={},
                                         outputs={})
         sm.put_deployment('dep-1', deployment1)
 
@@ -83,6 +84,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         policy_types={},
                                         policy_triggers={},
                                         groups={},
+                                        scaling_groups={},
                                         outputs={})
         sm.put_deployment('dep-2', deployment2)
 
@@ -97,6 +99,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         policy_types={},
                                         policy_triggers={},
                                         groups={},
+                                        scaling_groups={},
                                         outputs={})
         sm.put_deployment('dep-3', deployment3)
 
@@ -125,10 +128,11 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 policy_types={},
                                 policy_triggers={},
                                 groups={},
+                                scaling_groups={},
                                 outputs={})
 
         serialized_dep = dep.to_dict()
-        self.assertEquals(11, len(serialized_dep))
+        self.assertEquals(12, len(serialized_dep))
         self.assertEquals(dep.id, serialized_dep['id'])
         self.assertEquals(dep.created_at, serialized_dep['created_at'])
         self.assertEquals(dep.updated_at, serialized_dep['updated_at'])

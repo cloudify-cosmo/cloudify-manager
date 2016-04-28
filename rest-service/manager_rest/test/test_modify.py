@@ -27,6 +27,9 @@ from cloudify_rest_client.deployment_modifications import (
     DeploymentModification)
 
 
+EXPECTS_SCALING_GROUPS = CLIENT_API_VERSION not in ['v1', 'v2']
+
+
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class ModifyTests(base_test.BaseServerTestCase):
 
@@ -98,8 +101,11 @@ class ModifyTests(base_test.BaseServerTestCase):
         modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes, context=mock_context)
-        self.assertEqual(modification.node_instances.before_modification,
-                         before_modification)
+        self._fix_modification(modification)
+
+        self._assert_instances_equal(
+            modification.node_instances.before_modification,
+            before_modification)
         self.assertIsNone(modification.ended_at)
 
         self.client.node_instances.update(
@@ -129,6 +135,7 @@ class ModifyTests(base_test.BaseServerTestCase):
 
         modification = self.client.deployment_modifications.get(
             modification.id)
+        self._fix_modification(modification)
         self.assertEqual(modification.id, modification_id)
         self.assertEqual(modification.status, expected_end_status)
         self.assertEqual(modification.deployment_id, deployment.id)
@@ -142,20 +149,25 @@ class ModifyTests(base_test.BaseServerTestCase):
         dep_modifications = self.list_items(
             self.client.deployment_modifications.list,
             deployment_id=deployment.id)
+        for modifications in [all_modifications, dep_modifications]:
+            for m in modifications:
+                self._fix_modification(m)
         self.assertEqual(len(dep_modifications), 1)
         self.assertEqual(dep_modifications[0], modification)
         self.assertEqual(all_modifications, dep_modifications)
         self.assertEqual([], self.list_items(
             self.client.deployment_modifications.list,
             deployment_id='i_really_should_not_exist'))
-        self.assertEqual(modification.node_instances.before_modification,
-                         before_modification)
-        self.assertEqual(modification.node_instances.before_rollback,
-                         expected_before_end_func(before_end))
+        self._assert_instances_equal(
+            modification.node_instances.before_modification,
+            before_modification)
+        self._assert_instances_equal(
+            modification.node_instances.before_rollback,
+            expected_before_end_func(before_end))
 
-        self.assertEqual(after_end,
-                         expected_after_end_func(before_modification,
-                                                 before_end))
+        self._assert_instances_equal(
+            after_end,
+            expected_after_end_func(before_modification, before_end))
 
         self.assertEqual(modification.context, mock_context)
 
@@ -170,7 +182,21 @@ class ModifyTests(base_test.BaseServerTestCase):
                 node2_instance.id).runtime_properties['test'],
             expected_after_end_runtime_property)
 
-    def list_items(self, list_func, *args, **kwargs):
+    def _assert_instances_equal(self, instances1, instances2):
+        def sort_key(instance):
+            return instance['id']
+        self.assertEqual(sorted(instances1, key=sort_key),
+                         sorted(instances2, key=sort_key))
+
+    @staticmethod
+    def _fix_modification(modification):
+        if not EXPECTS_SCALING_GROUPS:
+            for node_instances in modification.node_instances.values():
+                for node_instance in node_instances:
+                    node_instance.pop('scaling_groups', None)
+
+    @staticmethod
+    def list_items(list_func, *args, **kwargs):
         if CLIENT_API_VERSION != 'v1':
             return list_func(*args, **kwargs).items
         else:
@@ -340,3 +366,90 @@ class ModifyTests(base_test.BaseServerTestCase):
                          node.deploy_number_of_instances)
         self.assertEqual(expected_number_of_instances,
                          node.number_of_instances)
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_scaling_groups_finish(self):
+        self._test_scaling_groups(
+            end_method=self.client.deployment_modifications.finish,
+            end_expectation={'current': 2, 'planned': 2})
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_scaling_groups_rollback(self):
+        self._test_scaling_groups(
+            end_method=self.client.deployment_modifications.rollback,
+            end_expectation={'current': 1, 'planned': 1})
+
+    def _test_scaling_groups(self, end_method, end_expectation):
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='modify3-scale-groups.yaml')
+
+        def assert_deployment_instances(dep, current, planned):
+            props = dep['scaling_groups']['group']['properties']
+            self.assertEquals(current, props['current_instances'])
+            self.assertEquals(planned, props['planned_instances'])
+
+        def assert_instances(current, planned):
+            # Test get and list deployments endpoints
+            dep1 = self.client.deployments.get(deployment.id)
+            dep2 = self.client.deployments.list()[0]
+            for dep in [dep1, dep2]:
+                assert_deployment_instances(dep, current, planned)
+
+        assert_deployment_instances(deployment, current=1, planned=1)
+        assert_instances(current=1, planned=1)
+
+        modified_nodes = {'group': {'instances': 2}}
+        modification = self.client.deployment_modifications.start(
+            deployment.id, nodes=modified_nodes)
+
+        assert_instances(current=1, planned=2)
+
+        # verify node instances scaling groups are also updated for newly
+        # added nodes
+        node_instances = self.client.node_instances.list(deployment.id).items
+        self.assertEqual(2, len(node_instances))
+        for instance in node_instances:
+            node_instance_scaling_groups = instance['scaling_groups']
+            self.assertEqual(1, len(node_instance_scaling_groups))
+            self.assertEqual('group', node_instance_scaling_groups[0]['name'])
+
+        end_method(modification.id)
+
+        assert_instances(**end_expectation)
+
+        deployment = self.client.deployments.delete(deployment.id)
+        assert_deployment_instances(deployment, **end_expectation)
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_relationship_order_of_related_nodes(self):
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='modify4-relationship-order.yaml')
+        modification = self.client.deployment_modifications.start(
+            deployment_id=deployment.id,
+            nodes={'node{}'.format(index): {'instances': 2}
+                   for index in [1, 2, 4, 5]})
+        self.client.deployment_modifications.finish(modification.id)
+
+        node6 = self.list_items(self.client.node_instances.list,
+                                node_id='node6')[0]
+        expected = [
+            ('node1', 'connected_to'),
+            ('node1', 'connected_to'),
+            ('node2', 'connected_to'),
+            ('node2', 'connected_to'),
+            ('node3', 'contained_in'),
+            ('node4', 'connected_to'),
+            ('node4', 'connected_to'),
+            ('node5', 'connected_to'),
+            ('node5', 'connected_to'),
+        ]
+        relationships = node6.relationships
+        self.assertEqual(len(expected), len(relationships))
+        for (target_name, tpe), relationship in zip(expected, relationships):
+            self.assertDictContainsSubset({
+                'target_name': target_name,
+                'type': 'cloudify.relationships.{0}'.format(tpe)
+            }, relationship)

@@ -1066,6 +1066,7 @@ class NodeInstancesId(SecuredResource):
             relationships=None,
             host_id=None,
             deployment_id=None,
+            scaling_groups=None,
             runtime_properties=request.json.get('runtime_properties'),
             state=request.json.get('state'),
             version=request.json['version'])

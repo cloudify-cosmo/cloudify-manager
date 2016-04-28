@@ -1,0 +1,29 @@
+tosca_definitions_version: cloudify_dsl_1_2
+
+imports:
+- scale_common.yaml
+
+node_templates:
+  compute:
+    type: compute
+  webserver:
+    type: webserver
+    relationships:
+    - target: compute
+      type: contained_in
+  db:
+    type: db
+    relationships:
+    - target: webserver
+      type: connected_to
+
+groups:
+  group1:
+    members: [compute, db]
+
+policies:
+  policy:
+    type: cloudify.policies.scaling
+    targets: [group1]
+    properties:
+      default_instances: 1

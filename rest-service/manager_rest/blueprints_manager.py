@@ -16,6 +16,7 @@
 import uuid
 import traceback
 import os
+import itertools
 from datetime import datetime
 from StringIO import StringIO
 
@@ -500,6 +501,7 @@ class BlueprintsManager(object):
             policy_types=deployment_plan['policy_types'],
             policy_triggers=deployment_plan['policy_triggers'],
             groups=deployment_plan['groups'],
+            scaling_groups=deployment_plan['scaling_groups'],
             outputs=deployment_plan['outputs'])
 
         self.sm.put_deployment(deployment_id, new_deployment)
@@ -517,9 +519,7 @@ class BlueprintsManager(object):
                                       deployment_id,
                                       modified_nodes,
                                       context):
-        # verify deployment exists
-        self.sm.get_deployment(deployment_id, include=['id'])
-
+        deployment = self.sm.get_deployment(deployment_id)
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
         existing_modifications = self.sm.deployment_modifications_list(
@@ -542,8 +542,10 @@ class BlueprintsManager(object):
                           filters=deployment_id_filter).items]
         node_instances_modification = tasks.modify_deployment(
             nodes=nodes,
+            previous_nodes=nodes,
             previous_node_instances=node_instances,
-            modified_nodes=modified_nodes)
+            modified_nodes=modified_nodes,
+            scaling_groups=deployment.scaling_groups)
 
         node_instances_modification['before_modification'] = [
             instance.to_dict() for instance in
@@ -563,18 +565,45 @@ class BlueprintsManager(object):
         self.sm.put_deployment_modification(modification_id, modification)
 
         for node_id, modified_node in modified_nodes.items():
-            self.sm.update_node(
-                modification.deployment_id, node_id,
-                planned_number_of_instances=modified_node['instances'])
+            if node_id in deployment.scaling_groups:
+                deployment.scaling_groups[node_id]['properties'].update({
+                    'planned_instances': modified_node['instances']
+                })
+            else:
+                self.sm.update_node(
+                    modification.deployment_id, node_id,
+                    planned_number_of_instances=modified_node['instances'])
+        self.sm.update_deployment(deployment)
+
         added_and_related = node_instances_modification['added_and_related']
         added_node_instances = []
         for node_instance in added_and_related:
             if node_instance.get('modification') == 'added':
                 added_node_instances.append(node_instance)
             else:
+                node = self.sm.get_node(deployment_id=deployment_id,
+                                        node_id=node_instance['node_id'],
+                                        include=['relationships'])
+                target_names = [r['target_id'] for r in node.relationships]
                 current = self.sm.get_node_instance(node_instance['id'])
-                new_relationships = current.relationships
-                new_relationships += node_instance['relationships']
+                current_relationship_groups = {
+                    target_name: list(group)
+                    for target_name, group in itertools.groupby(
+                        current.relationships,
+                        key=lambda r: r['target_name'])
+                }
+                new_relationship_groups = {
+                    target_name: list(group)
+                    for target_name, group in itertools.groupby(
+                        node_instance['relationships'],
+                        key=lambda r: r['target_name'])
+                }
+                new_relationships = []
+                for target_name in target_names:
+                    new_relationships += current_relationship_groups.get(
+                        target_name, [])
+                    new_relationships += new_relationship_groups.get(
+                        target_name, [])
                 self.sm.update_node_instance(models.DeploymentNodeInstance(
                     id=node_instance['id'],
                     relationships=new_relationships,
@@ -583,7 +612,8 @@ class BlueprintsManager(object):
                     host_id=None,
                     deployment_id=None,
                     state=None,
-                    runtime_properties=None))
+                    runtime_properties=None,
+                    scaling_groups=None))
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
         return modification
@@ -596,11 +626,20 @@ class BlueprintsManager(object):
                 'Cannot finish deployment modification: {0}. It is already in'
                 ' {1} status.'.format(modification_id,
                                       modification.status))
+        deployment = self.sm.get_deployment(modification.deployment_id)
 
         modified_nodes = modification.modified_nodes
         for node_id, modified_node in modified_nodes.items():
-            self.sm.update_node(modification.deployment_id, node_id,
-                                number_of_instances=modified_node['instances'])
+            if node_id in deployment.scaling_groups:
+                deployment.scaling_groups[node_id]['properties'].update({
+                    'current_instances': modified_node['instances']
+                })
+            else:
+                self.sm.update_node(
+                    modification.deployment_id, node_id,
+                    number_of_instances=modified_node['instances'])
+        self.sm.update_deployment(deployment)
+
         node_instances = modification.node_instances
         for node_instance in node_instances['removed_and_related']:
             if node_instance.get('modification') == 'removed':
@@ -621,7 +660,8 @@ class BlueprintsManager(object):
                     host_id=None,
                     deployment_id=None,
                     state=None,
-                    runtime_properties=None))
+                    runtime_properties=None,
+                    scaling_groups=None))
 
         now = str(datetime.now())
         self.sm.update_deployment_modification(
@@ -653,10 +693,12 @@ class BlueprintsManager(object):
                 'Cannot rollback deployment modification: {0}. It is already '
                 'in {1} status.'.format(modification_id,
                                         modification.status))
-        deplyment_id_filter = self.create_filters_dict(
+
+        deployment = self.sm.get_deployment(modification.deployment_id)
+        deployment_id_filter = self.create_filters_dict(
             deployment_id=modification.deployment_id)
         node_instances = self.sm.get_node_instances(
-            filters=deplyment_id_filter).items
+            filters=deployment_id_filter).items
         modification.node_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
         for instance in node_instances:
@@ -665,13 +707,20 @@ class BlueprintsManager(object):
             self.sm.put_node_instance(
                 models.DeploymentNodeInstance(**instance))
         nodes_num_instances = {node.id: node for node in self.sm.get_nodes(
-            filters=deplyment_id_filter,
+            filters=deployment_id_filter,
             include=['id', 'number_of_instances']).items}
-        for node_id, modified_node in modification.modified_nodes.items():
-            self.sm.update_node(
-                modification.deployment_id, node_id,
-                planned_number_of_instances=nodes_num_instances[
-                    node_id].number_of_instances)
+
+        modified_nodes = modification.modified_nodes
+        for node_id, modified_node in modified_nodes.items():
+            if node_id in deployment.scaling_groups:
+                props = deployment.scaling_groups[node_id]['properties']
+                props['planned_instances'] = props['current_instances']
+            else:
+                self.sm.update_node(
+                    modification.deployment_id, node_id,
+                    planned_number_of_instances=nodes_num_instances[
+                        node_id].number_of_instances)
+        self.sm.update_deployment(deployment)
 
         now = str(datetime.now())
         self.sm.update_deployment_modification(
@@ -707,6 +756,7 @@ class BlueprintsManager(object):
         for node_instance in dsl_node_instances:
             instance_id = node_instance['id']
             node_id = node_instance['node_id']
+            scaling_groups = node_instance.get('scaling_groups', [])
             relationships = node_instance.get('relationships', [])
             host_id = node_instance.get('host_id')
             instance = models.DeploymentNodeInstance(
@@ -717,7 +767,8 @@ class BlueprintsManager(object):
                 deployment_id=deployment_id,
                 state='uninitialized',
                 runtime_properties={},
-                version=None)
+                version=None,
+                scaling_groups=scaling_groups)
             self.sm.put_node_instance(instance)
 
     def evaluate_deployment_outputs(self, deployment_id):
@@ -786,16 +837,18 @@ class BlueprintsManager(object):
             raw_nodes = \
                 [node for node in raw_nodes if node['id'] in node_ids]
         for raw_node in raw_nodes:
-            num_instances = raw_node['instances']['deploy']
+            scalable = raw_node['capabilities']['scalable']['properties']
             self.sm.put_node(models.DeploymentNode(
                 id=raw_node['name'],
                 deployment_id=deployment_id,
                 blueprint_id=blueprint_id,
                 type=raw_node['type'],
                 type_hierarchy=raw_node['type_hierarchy'],
-                number_of_instances=num_instances,
-                planned_number_of_instances=num_instances,
-                deploy_number_of_instances=num_instances,
+                number_of_instances=scalable['current_instances'],
+                planned_number_of_instances=scalable['current_instances'],
+                deploy_number_of_instances=scalable['default_instances'],
+                min_number_of_instances=scalable['min_instances'],
+                max_number_of_instances=scalable['max_instances'],
                 host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],

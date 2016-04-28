@@ -44,23 +44,6 @@ class TestCreatingRiemannCore(TestCase):
         }
         self.assertFalse(_should_create_policy_engine_core(config))
 
-    def test_group_with_undefined_policy_type(self):
-        "Policy engine is not needed when the only declared group doesnt exist"
-        config = {
-            'groups': {
-                'group1': {
-                    'policies': {
-                        'some_policy': {
-                            'type': 'nonexistent'
-                        }
-                    }
-                },
-            },
-            'policy_types': {'policy1': {'source': 'foo.clj'}},
-            'policy_triggers': {'trigger1': {'source': 'bar.clj'}}
-        }
-        self.assertFalse(_should_create_policy_engine_core(config))
-
     def test_group_with_no_triggers(self):
         """Create the policy engine even if no policy declares any triggers
 

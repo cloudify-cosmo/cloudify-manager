@@ -44,6 +44,14 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertIsNotNone(deployment_response['created_at'])
         self.assertIsNotNone(deployment_response['updated_at'])
 
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_put_scaling_groups(self):
+        _, _, _, deployment_response = self.put_deployment(
+            self.DEPLOYMENT_ID,
+            blueprint_file_name='modify3-scale-groups.yaml')
+        self.assertIn('group', deployment_response['scaling_groups'])
+
     def test_delete_blueprint_which_has_deployments(self):
         (blueprint_id,
          deployment_id,

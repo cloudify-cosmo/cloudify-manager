@@ -1,0 +1,45 @@
+tosca_definitions_version: cloudify_dsl_1_2
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations.yaml
+    - plugins/mock_workflows.yaml
+    - policies/nop.yaml
+
+node_templates:
+    node:
+        type: cloudify.nodes.Root
+        interfaces:
+            test:
+                op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+
+groups:
+    some_group:
+        members: [node]
+        policies:
+            some_policy:
+                type: nop
+                triggers:
+                    some_workflow_trigger:
+                        type: cloudify.policies.triggers.execute_workflow
+                        parameters:
+                            workflow: some_workflow
+                            allow_custom_parameters: true
+                            workflow_parameters:
+                                key: node_id
+                                value: { get_property: [SELF, node_id] }
+                                custom_key: metric
+                                custom_value: { get_property: [SELF, metric] }
+
+    some_group_with_no_policies:
+        members: [node]
+
+
+workflows:
+    some_workflow:
+        mapping: mock_workflows.mock_workflows.workflows.test_policies_1
+        parameters:
+            key:
+                description: a key to write
+            value:
+                description: a value to write

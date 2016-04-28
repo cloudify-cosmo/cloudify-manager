@@ -444,3 +444,8 @@ def write_to_workdir(ctx, filename, content):
     filepath = os.path.join(ctx.plugin.workdir, filename)
     with open(filepath, 'w') as f:
         f.write(content)
+
+
+@operation
+def store_scaling_groups(ctx, scaling_groups, **_):
+    ctx.instance.runtime_properties['scaling_groups'] = scaling_groups

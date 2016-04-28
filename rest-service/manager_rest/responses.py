@@ -62,8 +62,6 @@ class Workflow(object):
         self.parameters = kwargs['parameters']
 
 
-@swagger.model
-@swagger.nested(workflows=Workflow.__name__)
 class Deployment(object):
 
     resource_fields = {

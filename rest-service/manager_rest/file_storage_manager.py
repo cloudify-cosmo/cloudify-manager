@@ -513,6 +513,18 @@ class FileStorageManager(object):
                     modification.node_instances
             self._dump_data(data)
 
+    def update_deployment(self, deployment):
+        deployment_id = deployment.id
+        data = self._load_data()
+        if deployment_id not in data[DEPLOYMENTS]:
+            raise manager_exceptions.NotFoundError(
+                'Deployment {0} not found'
+                .format(deployment_id))
+        updated_deployment = data[DEPLOYMENTS][deployment_id]
+        if deployment.scaling_groups is not None:
+            updated_deployment.scaling_groups = deployment.scaling_groups
+        self._dump_data(data)
+
 
 def create():
     return FileStorageManager(STORAGE_FILE_PATH)
