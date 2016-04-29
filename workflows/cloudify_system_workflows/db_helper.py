@@ -71,8 +71,7 @@ def create_es_dump_metadata(es):
     return {_M_HAS_CLOUDIFY_EVENTS: es.indices.exists(index=EVENTS_INDEX_NAME)}
 
 
-def restore_elasticsearch(tempdir, endpoint, port, metadata):
-    es = create_es_client(endpoint, port)
+def restore_elasticsearch(tempdir, es, metadata):
     has_cloudify_events_index = es.indices.exists(index=EVENTS_INDEX_NAME)
     snap_has_cloudify_events_index = metadata[_M_HAS_CLOUDIFY_EVENTS]
 
