@@ -250,7 +250,7 @@ def init_secured_app(_app):
             config.instance().security_auth_token_generator)
 
     # init and configure flask-securest
-    secure_app = SecuREST(_app)
+    _app.extensions['securest'] = secure_app = SecuREST(_app)
     secure_app.logger = create_logger(
         logger_name='flask-securest',
         log_level=cfy_config.security_audit_log_level,

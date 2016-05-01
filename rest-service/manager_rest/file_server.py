@@ -43,15 +43,18 @@ class FileServer(object):
                 stderr=FNULL)
         else:
             self.process.start()
+            while not self.is_alive():
+                time.sleep(0.1)
 
     def stop(self):
         import logging
         logging.basicConfig(level=logging.INFO)
+        if not self.process.is_alive():
+            return
         try:
             pid = self.process.pid
             self.process.terminate()
-            while self.is_alive():
-                time.sleep(0.1)
+            self.process.join()
         except BaseException as e:
             exc_type, exc, traceback = sys.exc_info()
             logging.info('Failed to stop file_server, error: {0}'
@@ -63,10 +66,6 @@ class FileServer(object):
                 logging.info('stopped file server process, pid unknown')
 
     def start_impl(self):
-        import logging
-        logging.basicConfig(level=logging.DEBUG)
-        logging.info('Starting file server and serving files from: %s',
-                     self.root_path)
         os.chdir(self.root_path)
 
         class TCPServer(SocketServer.TCPServer):

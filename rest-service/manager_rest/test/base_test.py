@@ -202,8 +202,10 @@ class BaseServerTestCase(unittest.TestCase):
         os.close(fd)
         self.file_server = FileServer(self.tmpdir)
         self.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
+
         self.addCleanup(self.cleanup)
         self.file_server.start()
+
         storage_manager.storage_manager_module_name = \
             STORAGE_MANAGER_MODULE_NAME
 
@@ -228,7 +230,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.server_configuration = self.create_configuration()
         server.reset_state(self.server_configuration)
         utils.copy_resources(config.instance().file_server_root)
-        server.setup_app()
+        self.flask_app = server.setup_app()
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
         self.client = self.create_client()

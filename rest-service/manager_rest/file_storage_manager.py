@@ -229,6 +229,13 @@ class FileStorageManager(object):
                 "Node {0} not found".format(node_update.id))
         node = data[NODE_INSTANCES][node_update.id]
 
+        if node.version is not None and node_update.version is not None:
+            if node_update.version <= node.version:
+                raise manager_exceptions.ConflictError(
+                    'Node instance update conflict [current_version={0}, '
+                    'updated_version={1}]'.format(
+                        node.version, node_update.version))
+
         if node_update.state is not None:
             node.state = node_update.state
         if node_update.runtime_properties is not None:

@@ -44,6 +44,10 @@ class TestUserstoreReloadFile(SecurityTestBase):
         self.restore_userstore_file()
         self.restore_roles_config()
         super(TestUserstoreReloadFile, self).setUp()
+        self.addCleanup(self.stopsec)
+
+    def stopsec(self):
+        self.flask_app.extensions['securest'].userstore_driver.observer.stop()
 
     def create_configuration(self):
         test_config = super(TestUserstoreReloadFile, self).\
