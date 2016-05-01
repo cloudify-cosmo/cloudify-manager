@@ -93,7 +93,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
 
         # add to deployment update manager (will also dsl_parse it)
         try:
-            cls._process_plugins(file_server_root, deployment_id)
+            cls._process_plugins(file_server_root, app_dir, deployment_id)
             update = get_deployment_updates_manager().stage_deployment_update(
                     deployment_id,
                     app_dir,
@@ -166,10 +166,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         return application_dir, application_file_name
 
     @classmethod
-    def _process_plugins(cls, file_server_root, blueprint_id):
-        plugins_directory = \
-            os.path.join(file_server_root,
-                         "blueprints", blueprint_id, "plugins")
+    def _process_plugins(cls, file_server_root, app_dir, deployment_id):
+        plugins_directory = os.path.join(file_server_root, app_dir, 'plugins')
         if not os.path.isdir(plugins_directory):
             return
         plugins = [os.path.join(plugins_directory, directory)
@@ -179,9 +177,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
 
         for plugin_dir in plugins:
             final_zip_name = '{0}.zip'.format(os.path.basename(plugin_dir))
-            target_zip_path = os.path.join(file_server_root,
-                                           "blueprints", blueprint_id,
-                                           "plugins", final_zip_name)
+            target_zip_path = os.path.join(file_server_root, app_dir,
+                                           'plugins', final_zip_name)
             cls._zip_dir(plugin_dir, target_zip_path)
 
     @classmethod
@@ -358,7 +355,8 @@ class DeploymentUpdateCommit(SecuredResource):
     @marshal_with(responses_v2_1.DeploymentUpdate)
     def post(self, update_id):
         manager = get_deployment_updates_manager()
-        return manager.commit_deployment_update(update_id)
+        return manager.commit_deployment_update(update_id,
+                                                request.json.get('workflow'))
 
 
 class DeploymentUpdateFinalizeCommit(SecuredResource):

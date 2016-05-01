@@ -1,5 +1,5 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/CFY-4929-deployment-update-Phase-II.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-4929-deployment-update-Phase-II.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-5083-allow-overriding-of-different-workflows-to-run-on-add/remove-nodes.zip
 https://github.com/cloudify-cosmo/flask-securest/archive/0.8.zip
 
 

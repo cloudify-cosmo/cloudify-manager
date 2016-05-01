@@ -21,9 +21,9 @@ from StringIO import StringIO
 
 from flask import current_app
 
+from manager_rest import app_context
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
-from dsl_parser import utils as dsl_parser_utils
 from manager_rest import models
 from manager_rest import config
 from manager_rest import manager_exceptions
@@ -201,7 +201,7 @@ class BlueprintsManager(object):
         try:
             plan = tasks.parse_dsl(dsl_location,
                                    resources_base,
-                                   **self._get_parser_context())
+                                   **app_context.get_parser_context())
         except Exception, ex:
             raise DslParseException(str(ex))
 
@@ -1012,40 +1012,12 @@ class BlueprintsManager(object):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
 
-    @staticmethod
-    def _extract_parser_context(context):
-        context = context or {}
-        cloudify_section = context.get(constants.CLOUDIFY, {})
-        return {
-            'resolver_section': cloudify_section.get(
-                constants.IMPORT_RESOLVER_KEY),
-            'validate_definitions_version': cloudify_section.get(
-                constants.VALIDATE_DEFINITIONS_VERSION, True)
-        }
-
-    def _get_parser_context(self):
-        if not hasattr(current_app, 'parser_context'):
-            self._update_parser_context_in_app(
-                self.sm.get_provider_context().context)
-        return current_app.parser_context
-
-    def _update_parser_context_in_app(self, context):
-        raw_parser_context = self._extract_parser_context(context)
-        resolver = dsl_parser_utils.create_import_resolver(
-            raw_parser_context['resolver_section'])
-        validate_definitions_version = raw_parser_context[
-            'validate_definitions_version']
-        current_app.parser_context = {
-            'resolver': resolver,
-            'validate_version': validate_definitions_version
-        }
-
     def update_provider_context(self, update, provider_context):
         if update:
             self.sm.update_provider_context(provider_context)
         else:
             self.sm.put_provider_context(provider_context)
-        self._update_parser_context_in_app(provider_context.context)
+        app_context.update_parser_context(provider_context.context)
 
 
 # What we need to access this manager in Flask

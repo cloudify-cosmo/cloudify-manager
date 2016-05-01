@@ -1683,11 +1683,10 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 inputs={'input_prop1': 'custom_input1',
                         'input_prop2': 'custom_input2'}
         )
+        node_mapping = {'affected_node': 'site1'}
 
         base_nodes, base_node_instances = \
-            self._map_node_and_node_instances(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
 
         dep_update = \
@@ -1722,9 +1721,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._map_node_and_node_instances(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         modified_node = modified_nodes['affected_node'][0]
 
         added_property = modified_node['properties']
@@ -1759,11 +1756,10 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 'override_inputs',
                 inputs={'ip_input': '1.1.1.1'}
         )
+        node_mapping = {'affected_node': 'site1'}
 
         base_nodes, base_node_instances = \
-            self._map_node_and_node_instances(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
         base_node_instance = base_node_instances['affected_node'][0]
 
@@ -1778,12 +1774,65 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         )
 
         modified_nodes, modified_node_instances = \
-            self._map_node_and_node_instances(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         modified_node = modified_nodes['affected_node'][0]
         modified_node_instance = modified_node_instances['affected_node'][0]
 
         # assert nothing else changed
         self.assertEqual(base_node, modified_node)
         self.assertEqual(base_node_instance, modified_node_instance)
+
+    def test_execute_custom_workflow(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('execute_custom_workflow')
+
+        node_mapping = {'intact': 'site1'}
+
+        base_nodes, base_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.add(
+            dep_update.id,
+            entity_type='workflow',
+            entity_id='workflows:custom_workflow'
+        )
+
+        self.client.deployment_updates.commit(dep_update.id, 'custom_workflow')
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'custom_workflow')
+        self._wait_for_committed_state(dep_update.id)
+
+        modified_nodes, modified_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+
+        # assert all unaffected nodes and node instances remained intact
+        self._assert_equal_entity_dicts(
+                base_nodes,
+                modified_nodes,
+                keys=['intact'],
+        )
+
+        self._assert_equal_entity_dicts(
+                base_node_instances,
+                modified_node_instances,
+                keys=['intact'],
+                excluded_items=['runtime_properties']
+        )
+
+        intact_node_instance = modified_node_instances['intact'][0]
+
+        self.assertDictContainsSubset(
+                {'update_id': dep_update.id},
+                intact_node_instance.runtime_properties
+        )
+
+        workflows = [e['workflow_id']
+                     for e in self.client.executions.list(deployment.id)]
+
+        self.assertNotIn('update', workflows)
+        self.assertIn('custom_workflow', workflows)
