@@ -314,7 +314,7 @@ class NodesTest(base_test.BaseServerTestCase):
                 self.client.node_instances.get(instance.id),
                 self.client.node_instances.update(instance.id)]
             for tested_instance in tested_instances:
-                scaling_groups = tested_instance['scaling_groups']
+                scaling_groups = tested_instance.scaling_groups
                 self.assertEqual(1, len(scaling_groups))
                 self.assertDictContainsSubset({'name': 'group1'},
                                               scaling_groups[0])
