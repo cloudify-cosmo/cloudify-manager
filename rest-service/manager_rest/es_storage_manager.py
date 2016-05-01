@@ -547,6 +547,22 @@ class ESStorageManager(object):
                                     pagination=pagination,
                                     sort=sort)
 
+    def update_deployment(self, deployment):
+        deployment_id = deployment.id
+        update_doc_data = {}
+        if deployment.scaling_groups is not None:
+            update_doc_data['scaling_groups'] = deployment.scaling_groups
+        update_doc = {'doc': update_doc_data}
+        try:
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=DEPLOYMENT_TYPE,
+                                    id=deployment_id,
+                                    body=update_doc,
+                                    **MUTATE_PARAMS)
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                "Deployment {0} not found".format(deployment_id))
+
     @staticmethod
     def _storage_node_id(deployment_id, node_id):
         return '{0}_{1}'.format(deployment_id, node_id)

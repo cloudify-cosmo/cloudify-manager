@@ -189,10 +189,11 @@ class ElasticSearchProcess(object):
         """
 
         # get elasticsearch base dir and resolve script file destination
-        es_path = os.path.dirname(
-            os.path.dirname(
-                subprocess.check_output('which elasticsearch',
-                                        shell=True).rstrip('\r\n')))
+        es_bin_path = subprocess.check_output('which elasticsearch',
+                                              shell=True).rstrip('\r\n')
+        while os.path.islink(es_bin_path):
+            es_bin_path = os.readlink(es_bin_path)
+        es_path = os.path.dirname(os.path.dirname(es_bin_path))
         es_scripts_path = os.path.join(es_path, 'config/scripts')
         script_path = os.path.join(es_scripts_path, 'append.groovy')
 

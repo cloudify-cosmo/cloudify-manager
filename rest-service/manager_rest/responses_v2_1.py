@@ -16,6 +16,10 @@
 from flask.ext.restful import fields
 from flask_restful_swagger import swagger
 
+from manager_rest.responses import (Node as NodeV1,
+                                    NodeInstance as NodeInstanceV1,
+                                    Deployment as DeploymentV1)
+
 
 @swagger.model
 class MaintenanceMode(object):
@@ -65,3 +69,40 @@ class DeploymentUpdate(object):
         self.deployment_id = kwargs['deployment_id']
         self.steps = kwargs['steps']
         self.state = kwargs['state']
+
+
+class Deployment(DeploymentV1):
+
+    resource_fields = dict(DeploymentV1.resource_fields.items() + {
+        'scaling_groups': fields.Raw,
+    }.items())
+
+    def __init__(self, **kwargs):
+        super(Deployment, self).__init__(**kwargs)
+        self.scaling_groups = kwargs['scaling_groups']
+
+
+@swagger.model
+class Node(NodeV1):
+
+    resource_fields = dict(NodeV1.resource_fields.items() + {
+        'min_number_of_instances': fields.String,
+        'max_number_of_instances': fields.String,
+    }.items())
+
+    def __init__(self, **kwargs):
+        super(Node, self).__init__(**kwargs)
+        self.min_number_of_instances = kwargs['min_number_of_instances']
+        self.max_number_of_instances = kwargs['max_number_of_instances']
+
+
+@swagger.model
+class NodeInstance(NodeInstanceV1):
+
+    resource_fields = dict(NodeInstanceV1.resource_fields.items() + {
+        'scaling_groups': fields.Raw
+    }.items())
+
+    def __init__(self, **kwargs):
+        super(NodeInstance, self).__init__(**kwargs)
+        self.scaling_groups = kwargs['scaling_groups']

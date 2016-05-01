@@ -289,5 +289,32 @@ class NodesTest(base_test.BaseServerTestCase):
                                       state=None,
                                       version=None,
                                       relationships=None,
-                                      host_id=None)
+                                      host_id=None,
+                                      scaling_groups=None)
         storage_manager._get_instance().put_node_instance(node)
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_node_and_node_instance_properties(self):
+        _, _, _, deployment = self.put_deployment(
+            blueprint_file_name='deployment-creation-with-groups.yaml')
+        node = self.client.nodes.get(deployment.id, 'vm')
+        self.assertDictContainsSubset({
+            'number_of_instances': '2',
+            'min_number_of_instances': '2',
+            'max_number_of_instances': '2',
+            'planned_number_of_instances': '2',
+            'deploy_number_of_instances': '2',
+        }, node)
+        instances = self.client.node_instances.list(deployment.id).items
+        for instance in instances:
+            # test list/get/patch endpoints
+            tested_instances = [
+                instance,
+                self.client.node_instances.get(instance.id),
+                self.client.node_instances.update(instance.id)]
+            for tested_instance in tested_instances:
+                scaling_groups = tested_instance['scaling_groups']
+                self.assertEqual(1, len(scaling_groups))
+                self.assertDictContainsSubset({'name': 'group1'},
+                                              scaling_groups[0])

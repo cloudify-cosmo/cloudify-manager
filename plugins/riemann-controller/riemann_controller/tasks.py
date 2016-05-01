@@ -46,7 +46,7 @@ def create(policy_types=None,
     groups = groups or {}
     policy_triggers = policy_triggers or {}
 
-    _process_types_and_triggers(groups, policy_types, policy_triggers)
+    _process_types_triggers_and_groups(groups, policy_types, policy_triggers)
     deployment_config_dir_path = _deployment_config_dir()
     if not os.path.isdir(deployment_config_dir_path):
         os.makedirs(deployment_config_dir_path)
@@ -165,16 +165,21 @@ def _verify_core_up(deployment_config_dir_path):
                                       riemann_log_output))
 
 
-def _process_types_and_triggers(groups, policy_types, policy_triggers):
+def _process_types_triggers_and_groups(groups, policy_types, policy_triggers):
+    groups_to_remove = set()
     types_to_process = set()
     types_to_remove = set()
     triggers_to_process = set()
     triggers_to_remove = set()
-    for group in groups.values():
-        for policy in group['policies'].values():
-            types_to_process.add(policy['type'])
-            for trigger in policy['triggers'].values():
-                triggers_to_process.add(trigger['type'])
+    for group_name, group in groups.items():
+        group_policies = group.get('policies')
+        if group_policies:
+            for policy in group_policies.values():
+                types_to_process.add(policy['type'])
+                for trigger in policy['triggers'].values():
+                    triggers_to_process.add(trigger['type'])
+        else:
+            groups_to_remove.add(group_name)
     for policy_type_name, policy_type in policy_types.items():
         if policy_type_name in types_to_process:
             policy_type['source'] = _process_source(policy_type['source'])
@@ -185,6 +190,8 @@ def _process_types_and_triggers(groups, policy_types, policy_triggers):
             trigger['source'] = _process_source(trigger['source'])
         else:
             triggers_to_remove.add(policy_trigger_name)
+    for group_name in groups_to_remove:
+        del groups[group_name]
     for policy_type_name in types_to_remove:
         del policy_types[policy_type_name]
     for trigger_type_name in triggers_to_remove:

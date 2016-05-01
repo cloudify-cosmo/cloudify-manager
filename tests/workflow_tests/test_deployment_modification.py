@@ -24,6 +24,7 @@ from cloudify_rest_client.deployment_modifications import (
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
+from testenv.utils import deploy as create_deployment
 from testenv.utils import execute_workflow
 
 
@@ -291,3 +292,21 @@ class TestDeploymentModification(TestCase):
 
     def _get_instances(self, state, node_id):
         return [i for i in state.values() if i['node_id'] == node_id]
+
+    def test_group_deployment_modification(self):
+        # this test specifically tests elasticsearch's implementation
+        # of update_deployment. other features are tested elsewhere.
+        deployment = create_deployment(
+            resource('dsl/deployment_modification_groups.yaml'))
+        modification = self.client.deployment_modifications.start(
+            deployment_id=deployment.id,
+            nodes={
+                'compute_and_ip': {
+                    'instances': 2
+                }
+            })
+        self.client.deployment_modifications.finish(modification.id)
+        deployment = self.client.deployments.get(deployment.id)
+        scaling_group = deployment['scaling_groups']['compute_and_ip']
+        self.assertEqual(2, scaling_group['properties']['planned_instances'])
+        self.assertEqual(2, scaling_group['properties']['current_instances'])

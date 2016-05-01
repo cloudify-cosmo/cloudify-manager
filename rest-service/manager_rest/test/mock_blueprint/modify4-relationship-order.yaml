@@ -1,0 +1,35 @@
+tosca_definitions_version: cloudify_dsl_1_2
+
+imports:
+- cloudify/types/types.yaml
+
+node_templates:
+
+  node1:
+    type: cloudify.nodes.Root
+
+  node2:
+    type: cloudify.nodes.Root
+
+  node3:
+    type: cloudify.nodes.Compute
+
+  node4:
+    type: cloudify.nodes.Root
+
+  node5:
+    type: cloudify.nodes.Root
+
+  node6:
+    type: cloudify.nodes.Root
+    relationships:
+    - target: node1
+      type: cloudify.relationships.connected_to
+    - target: node2
+      type: cloudify.relationships.connected_to
+    - target: node3
+      type: cloudify.relationships.contained_in
+    - target: node4
+      type: cloudify.relationships.connected_to
+    - target: node5
+      type: cloudify.relationships.connected_to

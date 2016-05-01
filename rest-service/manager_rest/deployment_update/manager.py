@@ -109,13 +109,17 @@ class DeploymentUpdateManager(object):
         dep_update.state = STATE.COMMITTING
         self.sm.update_deployment_update(dep_update)
 
+        previous_nodes = [n.to_dict() for n in self.sm.get_nodes(
+            filters={'deployment_id': dep_update.deployment_id}).items]
+
         # Update the nodes on the storage
         modified_entity_ids, depup_nodes = \
             self._node_handler.handle(dep_update)
 
         # Extract changes from raw nodes
         node_instance_changes = self._extract_changes(dep_update,
-                                                      depup_nodes)
+                                                      depup_nodes,
+                                                      previous_nodes)
 
         # Create (and update for adding step type) node instances
         # according to the changes in raw_nodes
@@ -164,13 +168,13 @@ class DeploymentUpdateManager(object):
                 .format(active_update.id)
             )
 
-    def _extract_changes(self, dep_update, raw_nodes):
+    def _extract_changes(self, dep_update, raw_nodes, previous_raw_nodes):
         """Extracts the changes between the current node_instances and
         the raw_nodes specified
 
         :param dep_update:
         :param raw_nodes:
-        :return: a dictionary of modification type and node instanced modifed
+        :return: a dictionary of modification type and node instanced modified
         """
         deployment_id_filter = \
             {'deployment_id': dep_update.deployment_id}
@@ -180,11 +184,17 @@ class DeploymentUpdateManager(object):
             [instance.to_dict() for instance in
              self.sm.get_node_instances(filters=deployment_id_filter).items]
 
+        scaling_groups = self.sm.get_deployment(
+            dep_update.deployment_id,
+            include=['scaling_groups']).scaling_groups
+
         # project changes in deployment
         return tasks.modify_deployment(
                 nodes=raw_nodes,
+                previous_nodes=previous_raw_nodes,
                 previous_node_instances=raw_node_instances,
-                modified_nodes=()
+                modified_nodes=(),
+                scaling_groups=scaling_groups
         )
 
     def _execute_update_workflow(self,

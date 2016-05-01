@@ -1,0 +1,25 @@
+tosca_definitions_version: cloudify_dsl_1_2
+
+imports:
+- cloudify/types/types.yaml
+- plugins/testmockoperations.yaml
+- plugins/mock_workflows.yaml
+
+node_templates:
+  node:
+    type: cloudify.nodes.Root
+    interfaces:
+      test:
+        operation: testmockoperations.testmockoperations.tasks.store_scaling_groups
+
+groups:
+  group1:
+    members: [node]
+
+policies:
+  policy1:
+    type: cloudify.policies.scaling
+    targets: [group1]
+
+workflows:
+  workflow: mock_workflows.mock_workflows.workflows.read_scaling_groups

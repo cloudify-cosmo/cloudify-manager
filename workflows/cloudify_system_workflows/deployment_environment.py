@@ -26,18 +26,8 @@ from cloudify.workflows import workflow_context
 def _should_create_policy_engine_core(policy_configuration):
     """Examine the policy_configuration and decide to start a riemann core
     """
-    groups = policy_configuration['groups']
-    policy_types = policy_configuration['policy_types']
-
-    if not groups or not policy_types:
-        return False
-
-    for group in groups.values():
-        for policy_config in group.get('policies', {}).values():
-            if policy_config['type'] in policy_types:
-                return True
-
-    return False
+    return any(group.get('policies')
+               for group in policy_configuration['groups'].values())
 
 
 def generate_create_dep_tasks_graph(ctx,
