@@ -56,11 +56,14 @@ class ESStorageManager(object):
     def __init__(self, host, port):
         self.es_host = host
         self.es_port = port
+        self._es_connection = None
 
     @property
     def _connection(self):
-        return Elasticsearch(hosts=[{'host': self.es_host,
-                                     'port': self.es_port}])
+        if self._es_connection is None:
+            self._es_connection = Elasticsearch(
+                hosts=[{'host': self.es_host, 'port': self.es_port}])
+        return self._es_connection
 
     def _list_docs(self, doc_type, model_class, body=None, fields=None):
         include = list(fields) if fields else True
