@@ -228,6 +228,7 @@ class SnapshotsId(SecuredResource):
     def put(self, snapshot_id):
         verify_json_content_type()
         request_json = request.json
+        request_headers = request.headers
         include_metrics = verify_and_convert_bool(
             'include_metrics',
             request_json.get('include_metrics', 'false')
@@ -236,11 +237,16 @@ class SnapshotsId(SecuredResource):
             'include_credentials',
             request_json.get('include_credentials', 'true')
         )
+        bypass_maintenance = verify_and_convert_bool(
+                'X-BYPASS-MAINTENANCE',
+                request_headers.get('X-BYPASS-MAINTENANCE', 'false')
+        )
 
         execution = get_blueprints_manager().create_snapshot(
             snapshot_id,
             include_metrics,
-            include_credentials
+            include_credentials,
+            bypass_maintenance=bypass_maintenance
         )
         return execution, 201
 
@@ -346,17 +352,23 @@ class SnapshotsIdRestore(SecuredResource):
     def post(self, snapshot_id):
         verify_json_content_type()
         request_json = request.json
+        request_headers = request.headers
         verify_parameter_in_request_body('recreate_deployments_envs',
                                          request_json)
         recreate_deployments_envs = verify_and_convert_bool(
             'recreate_deployments_envs',
             request_json['recreate_deployments_envs']
         )
+        bypass_maintenance = verify_and_convert_bool(
+                'X-BYPASS-MAINTENANCE',
+                request_headers.get('X-BYPASS-MAINTENANCE', 'false')
+        )
         force = verify_and_convert_bool('force', request_json['force'])
         execution = get_blueprints_manager().restore_snapshot(
             snapshot_id,
             recreate_deployments_envs,
-            force
+            force,
+            bypass_maintenance=bypass_maintenance
         )
         return execution, 200
 

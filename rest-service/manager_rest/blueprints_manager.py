@@ -153,8 +153,8 @@ class BlueprintsManager(object):
     def update_snapshot_status(self, snapshot_id, status, error):
         return self.sm.update_snapshot_status(snapshot_id, status, error)
 
-    def create_snapshot(self, snapshot_id,
-                        include_metrics, include_credentials):
+    def create_snapshot(self, snapshot_id, include_metrics,
+                        include_credentials, bypass_maintenance=False):
         self.create_snapshot_model(snapshot_id)
         try:
             _, execution = self._execute_system_workflow(
@@ -165,7 +165,8 @@ class BlueprintsManager(object):
                     'include_metrics': include_metrics,
                     'include_credentials': include_credentials,
                     'config': self._get_conf_for_snapshots_wf()
-                }
+                },
+                bypass_maintenance=bypass_maintenance
             )
         except manager_exceptions.ExistingRunningExecutionError:
             self.delete_snapshot(snapshot_id)
@@ -173,7 +174,8 @@ class BlueprintsManager(object):
 
         return execution
 
-    def restore_snapshot(self, snapshot_id, recreate_deployments_envs, force):
+    def restore_snapshot(self, snapshot_id, recreate_deployments_envs, force,
+                         bypass_maintenance=False):
         # Throws error if no snapshot found
         snap = self.get_snapshot(snapshot_id)
         if snap.status == models.Snapshot.FAILED:
@@ -188,7 +190,8 @@ class BlueprintsManager(object):
                 'recreate_deployments_envs': recreate_deployments_envs,
                 'config': self._get_conf_for_snapshots_wf(),
                 'force': force
-            }
+            },
+            bypass_maintenance=bypass_maintenance
         )
         return execution
 
@@ -358,8 +361,8 @@ class BlueprintsManager(object):
 
     def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
-                                 created_at=None,
-                                 verify_no_executions=True):
+                                 created_at=None, verify_no_executions=True,
+                                 bypass_maintenance=False):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -403,7 +406,8 @@ class BlueprintsManager(object):
             task_id=execution_id,
             task_mapping=task_mapping,
             deployment=deployment,
-            execution_parameters=execution_parameters)
+            execution_parameters=execution_parameters,
+            bypass_maintenance=bypass_maintenance)
 
         if timeout > 0:
             try:

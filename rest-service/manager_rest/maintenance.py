@@ -36,6 +36,7 @@ FORBIDDEN_METHODS = ['POST', 'PATCH', 'PUT']
 ALLOWED_ENDPOINTS = ['maintenance',
                      'status',
                      'version']
+LOCAL_ADDRESS = '127.0.0.1'
 
 
 def get_maintenance_file_path():
@@ -150,8 +151,8 @@ def get_running_executions():
 
 def _is_internal_request():
     remote_addr = _get_remote_addr()
-    http_host = _get_host()
-    return all([remote_addr, http_host, remote_addr == http_host])
+    http_hosts = [_get_host(), LOCAL_ADDRESS]
+    return all([remote_addr, http_hosts, remote_addr in http_hosts])
 
 
 def _is_bypass_maintenance_mode():

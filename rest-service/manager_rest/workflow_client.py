@@ -56,7 +56,8 @@ class WorkflowClient(object):
 
     @staticmethod
     def execute_system_workflow(wf_id, task_id, task_mapping, deployment=None,
-                                execution_parameters=None):
+                                execution_parameters=None,
+                                bypass_maintenance=False):
         execution_parameters = execution_parameters or {}
         # task_id is not generated here since for system workflows,
         # the task id is equivalent to the execution id
@@ -68,6 +69,7 @@ class WorkflowClient(object):
             'task_target': task_queue,
             'execution_id': task_id,
             'workflow_id': wf_id,
+            'bypass_maintenance': bypass_maintenance
         }
 
         if deployment:
