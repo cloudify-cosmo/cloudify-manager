@@ -14,6 +14,6 @@ http://repository.cloudifysource.org/org/cloudify3/components/node-v0.10.35-linu
 http://repository.cloudifysource.org/org/cloudify3/3.4.0/m4-RELEASE/cloudify-rest-service-3.4.0-m4_b393.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/3.4.0/m4-RELEASE/cloudify-management-worker-3.4.0-m4_b393.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/3.4.0/m4-RELEASE/cloudify-amqp-influx-3.4.0-m4_b393.x86_64.rpm
-https://github.com/cloudify-cosmo/cloudify-manager/archive/master.tar.gz
+https://github.com/cloudify-cosmo/cloudify-manager/archive/3.4m4.tar.gz
 http://repository.cloudifysource.org/org/cloudify3/3.4.0/m4-RELEASE/cloudify-ui-3.4.0-m4-b393.tgz
 http://repository.cloudifysource.org/org/cloudify3/components/grafana-1.9.0.tgz
