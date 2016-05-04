@@ -12,9 +12,10 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-import contextlib
-from urllib2 import urlopen, URLError
 
+import contextlib
+import json
+import os
 import sys
 import logging
 import shutil
@@ -23,15 +24,18 @@ import tempfile
 import traceback
 import StringIO
 import errno
-from os import path, makedirs, listdir
+import platform
 import uuid
+from os import path, makedirs, listdir
+from urllib2 import urlopen, URLError
 
-import json
+import wagon.utils
 from flask.ext.restful import abort
 from setuptools import archive_util
 
 from manager_rest import manager_exceptions
 from manager_rest import chunked
+from manager_rest import config
 
 
 def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,
@@ -263,3 +267,20 @@ def read_json_file(file_path):
 def write_dict_to_json_file(file_path, dictionary):
     with open(file_path, 'w') as f:
         json.dump(dictionary, f)
+
+
+def get_plugin_archive_path(plugin_id, archive_name):
+    return os.path.join(config.instance().file_server_uploaded_plugins_folder,
+                        plugin_id,
+                        archive_name)
+
+
+def plugin_installable_on_current_platform(plugin):
+    dist, _, release = platform.linux_distribution(
+            full_distribution_name=False)
+    dist, release = dist.lower(), release.lower()
+    return (plugin.supported_platform == 'any' or all([
+        plugin.supported_platform == wagon.utils.get_platform(),
+        plugin.distribution == dist,
+        plugin.distribution_release == release
+    ]))

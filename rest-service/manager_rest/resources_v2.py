@@ -14,24 +14,27 @@
 #  * limitations under the License.
 #
 import os
+import sys
 import json
 import shutil
 import tarfile
 from collections import OrderedDict
+from datetime import datetime
 from uuid import uuid4
 
-from datetime import datetime
 from flask import request
 from flask.ext.restful import marshal
 from flask_restful_swagger import swagger
 
 from flask_securest.rest_security import SecuredResource
+
 from manager_rest import config
 from manager_rest import files
 from manager_rest import manager_exceptions
 from manager_rest import models
 from manager_rest import resources
 from manager_rest import responses_v2
+from manager_rest import utils
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.manager_elasticsearch import ManagerElasticsearch
 from manager_rest.storage_manager import ListResult
@@ -684,7 +687,23 @@ class Plugins(SecuredResource):
         """
         Upload a plugin
         """
-        return UploadedPluginsManager().receive_uploaded_data(str(uuid4()))
+        plugin, code = UploadedPluginsManager().receive_uploaded_data(
+            str(uuid4()))
+        try:
+            get_blueprints_manager().install_plugin(plugin)
+        except manager_exceptions.ExecutionTimeout:
+            tp, ex, tb = sys.exc_info()
+            raise manager_exceptions.PluginInstallationTimeout(
+                'Timed out during plugin installation. ({0}: {1})'
+                .format(tp.__name__, ex)), None, tb
+        except Exception:
+            get_blueprints_manager().remove_plugin(
+                plugin_id=plugin.id, force=True)
+            tp, ex, tb = sys.exc_info()
+            raise manager_exceptions.PluginInstallationError(
+                'Failed during plugin installation. ({0}: {1})'
+                .format(tp.__name__, ex)), None, tb
+        return plugin, code
 
 
 class UploadedPluginsManager(files.UploadedDataManager):
@@ -798,7 +817,7 @@ class PluginsArchive(SecuredResource):
 
         archive_name = plugin.archive_name
         # attempting to find the archive file on the file system
-        local_path = _get_plugin_archive_path(plugin_id, archive_name)
+        local_path = utils.get_plugin_archive_path(plugin_id, archive_name)
         if not os.path.isfile(local_path):
             raise RuntimeError("Could not find plugins archive; "
                                "Plugin ID: {0}".format(plugin_id))
@@ -842,13 +861,8 @@ class PluginsId(SecuredResource):
         """
         Delete plugin by ID
         """
-        # Verify plugin exists.
-        plugin = get_blueprints_manager().get_plugin(plugin_id)
-        archive_name = plugin.archive_name
-        archive_path = _get_plugin_archive_path(plugin_id, archive_name)
-        shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
-        get_storage_manager().delete_plugin(plugin_id)
-        return plugin
+        return get_blueprints_manager().remove_plugin(plugin_id=plugin_id,
+                                                      force=False)
 
 
 class Events(resources.Events):
@@ -922,9 +936,3 @@ class Events(resources.Events):
     @exceptions_handled
     def post(self):
         raise manager_exceptions.MethodNotAllowedError()
-
-
-def _get_plugin_archive_path(plugin_id, archive_name):
-    return os.path.join(config.instance().file_server_uploaded_plugins_folder,
-                        plugin_id,
-                        archive_name)

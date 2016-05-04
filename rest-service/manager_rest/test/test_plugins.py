@@ -12,12 +12,15 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
+from mock import patch
 from nose.plugins.attrib import attr
 
+from manager_rest import manager_exceptions
 from manager_rest.test import base_test
 from base_test import BaseServerTestCase
 
-from cloudify_rest_client.exceptions import CloudifyClientError
+from cloudify_rest_client import exceptions
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
@@ -45,7 +48,7 @@ class PluginsTest(BaseServerTestCase):
     def test_get_plugin_not_found(self):
         try:
             self.client.plugins.get('DUMMY_PLUGIN_ID')
-        except CloudifyClientError as e:
+        except exceptions.CloudifyClientError as e:
             self.assertEquals(404, e.status_code)
 
     def test_delete_plugin(self):
@@ -68,7 +71,7 @@ class PluginsTest(BaseServerTestCase):
     def test_delete_plugin_not_found(self):
         try:
             self.client.plugins.delete('DUMMY_PLUGIN_ID')
-        except CloudifyClientError as e:
+        except exceptions.CloudifyClientError as e:
             self.assertEquals(404, e.status_code)
 
     def test_put_same_plugin_module_twice_response_status(self):
@@ -90,3 +93,101 @@ class PluginsTest(BaseServerTestCase):
                              response_b.json.get('package_version'))
         self.assertNotEquals(response_a.json.get('archive_name'),
                              response_b.json.get('archive_name'))
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_upload_and_delete_installation_workflows(self):
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
+        executions = self.client.executions.list(
+            include_system_workflows=True).items
+        self.assertEqual(1, len(executions))
+        execution = executions[0]
+        self.assertDictContainsSubset({
+            'deployment_id': None,
+            'is_system_workflow': True,
+            'workflow_id': 'install_plugin'
+        }, execution)
+        plugin_id = self.client.plugins.list()[0].id
+        self.client.plugins.delete(plugin_id=plugin_id)
+        executions = self.client.executions.list(
+                include_system_workflows=True).items
+        self.assertEqual(2, len(executions))
+        if executions[0] != execution:
+            execution = executions[0]
+        else:
+            execution = executions[1]
+        self.assertDictContainsSubset({
+            'deployment_id': None,
+            'is_system_workflow': True,
+            'workflow_id': 'uninstall_plugin'
+        }, execution)
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_force(self):
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
+        self.put_deployment(blueprint_file_name='uses_script_plugin.yaml')
+        plugin = self.client.plugins.list().items[0]
+        with self.assertRaises(exceptions.PluginInUseError):
+            self.client.plugins.delete(plugin.id)
+        self.assertEqual(1, len(self.client.plugins.list()))
+        self.client.plugins.delete(plugin_id=plugin.id, force=True)
+        self.assertEqual(0, len(self.client.plugins.list()))
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_install_failure_rollback(self):
+        def raises(*args, **kwargs):
+            raise RuntimeError('RAISES')
+        patch_path = ('manager_rest.blueprints_manager.BlueprintsManager.'
+                      'install_plugin')
+        with patch(patch_path, raises):
+            response = self.upload_plugin(TEST_PACKAGE_NAME,
+                                          TEST_PACKAGE_VERSION)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'],
+                         'plugin_installation_error')
+        self.assertEqual(0, len(self.client.plugins.list()))
+
+    @attr(client_min_version=2,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_install_timeout(self):
+        def raises(*args, **kwargs):
+            raise manager_exceptions.ExecutionTimeout('TIMEOUT')
+        patch_path = ('manager_rest.blueprints_manager.BlueprintsManager.'
+                      'install_plugin')
+        with patch(patch_path, raises):
+            response = self.upload_plugin(TEST_PACKAGE_NAME,
+                                          TEST_PACKAGE_VERSION)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'],
+                         'plugin_installation_timeout')
+        self.assertEqual(1, len(self.client.plugins.list()))
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_uninstall_failure(self):
+        def raises(*args, **kwargs):
+            raise RuntimeError('RAISES')
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
+        plugin_id = self.client.plugins.list()[0].id
+        patch_path = ('manager_rest.blueprints_manager.BlueprintsManager.'
+                      'remove_plugin')
+        with patch(patch_path, raises):
+            with self.assertRaises(exceptions.PluginInstallationError):
+                self.client.plugins.delete(plugin_id)
+        self.assertEqual(1, len(self.client.plugins.list()))
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_uninstall_timeout(self):
+        def raises(*args, **kwargs):
+            raise manager_exceptions.ExecutionTimeout('TIMEOUT')
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
+        plugin_id = self.client.plugins.list()[0].id
+        patch_path = ('manager_rest.blueprints_manager.BlueprintsManager.'
+                      'remove_plugin')
+        with patch(patch_path, raises):
+            with self.assertRaises(exceptions.PluginInstallationTimeout):
+                self.client.plugins.delete(plugin_id)
+        self.assertEqual(1, len(self.client.plugins.list()))

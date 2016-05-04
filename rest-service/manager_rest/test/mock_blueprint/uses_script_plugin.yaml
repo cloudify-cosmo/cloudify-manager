@@ -1,0 +1,17 @@
+tosca_definitions_version: cloudify_dsl_1_2
+
+node_types:
+  type: {}
+
+node_templates:
+  node:
+    type: type
+    interfaces:
+      interface:
+        op: plugin.operation
+
+plugins:
+  plugin:
+    executor: central_deployment_agent
+    package_name: cloudify-script-plugin
+    package_version: '1.2'
