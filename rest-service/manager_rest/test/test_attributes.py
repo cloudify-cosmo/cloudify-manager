@@ -105,7 +105,7 @@ class AttributesTestCase(base_test.BaseServerTestCase):
         except FunctionsEvaluationError as e:
             self.assertIn('TARGET is missing', e.message)
 
-    def test_multi_instance(self):
+    def test_ambiguous_multi_instance(self):
         payload = {
             'node5': {'get_attribute': ['node5', 'key5']},
         }
@@ -113,4 +113,35 @@ class AttributesTestCase(base_test.BaseServerTestCase):
             self.client.evaluate.functions(self.id_, {}, payload)
             self.fail()
         except FunctionsEvaluationError as e:
-            self.assertIn('Multi instances of node', e.message)
+            self.assertIn('unambiguously', e.message)
+
+
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class MultiInstanceAttributesTestCase(base_test.BaseServerTestCase):
+
+    def test_multi_instance_attributes(self):
+        # The actual multi instance resolution logic is tested in the dsl
+        # parser unit tests. This test serves only to have an end to end path
+        # that includes actual storage DeploymentNode and
+        # DeploymentNodeInstance when using the intrinsic functions storage
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='get_attribute_multi_instance.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+        instances = self.client.node_instances.list(deployment_id=id_)
+        node3_ids = [x.id for x in instances if x.node_id == 'node3']
+        node6_ids = [x.id for x in instances if x.node_id == 'node6']
+        for node3_id in node3_ids:
+            self.client.node_instances.update(
+                node3_id, runtime_properties={'key': node3_id})
+        payload = {'node3': {'get_attribute': ['node3', 'key']}}
+        contexts = [{'self': node6_id} for node6_id in node6_ids]
+        expected_payloads = [{'node3': node3_id} for node3_id in node3_ids]
+        result_payloads = [
+            self.client.evaluate.functions(id_, contexts[i], payload).payload
+            for i in range(2)]
+        self.assertTrue((expected_payloads[0] == result_payloads[0] and
+                         expected_payloads[1] == result_payloads[1]) or
+                        (expected_payloads[0] == result_payloads[1] and
+                         expected_payloads[1] == result_payloads[0]))
