@@ -21,6 +21,7 @@ import zipfile
 import itertools
 import os
 import subprocess
+import time
 
 import elasticsearch
 import elasticsearch.helpers
@@ -58,6 +59,8 @@ _INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
                          'series?u=root&p=root" ;done')
 _STORAGE_INDEX_NAME = 'cloudify_storage'
 _EVENTS_INDEX_NAME = 'cloudify_events'
+
+_SHARDS_CHECK_TIMEOUT = 60
 
 
 class _DictToAttributes(object):
@@ -190,6 +193,20 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
 
         # elasticsearch
         es = _create_es_client(config)
+
+        # make sure that all shards are started
+        start = time.time()
+        while True:
+            all_shards_started = True
+            for shard in es.search_shards(index='*')['shards']:
+                all_shards_started = all_shards_started and \
+                                     (shard[0]['state'] == 'STARTED')
+            if all_shards_started:
+                break
+            time.sleep(1)
+            if time.time() - start > _SHARDS_CHECK_TIMEOUT:
+                raise NonRecoverableError('Elasticsearch shards check timeout')
+
         has_cloudify_events = es.indices.exists(index=_EVENTS_INDEX_NAME)
         _dump_elasticsearch(tempdir, es, has_cloudify_events)
 
