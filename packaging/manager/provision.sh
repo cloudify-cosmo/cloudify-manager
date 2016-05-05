@@ -35,7 +35,7 @@ function create_resources_tar() {
 }
 
 
-CORE_TAG_NAME='3.4m4'
+CORE_TAG_NAME="3.4m4"
 curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
 
