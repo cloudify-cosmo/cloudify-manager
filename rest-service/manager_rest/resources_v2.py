@@ -42,6 +42,7 @@ from manager_rest.resources import (marshal_with,
                                     verify_parameter_in_request_body,
                                     verify_json_content_type,
                                     make_streaming_response)
+from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.utils import create_filter_params_list_description
 
 
@@ -228,7 +229,6 @@ class SnapshotsId(SecuredResource):
     def put(self, snapshot_id):
         verify_json_content_type()
         request_json = request.json
-        request_headers = request.headers
         include_metrics = verify_and_convert_bool(
             'include_metrics',
             request_json.get('include_metrics', 'false')
@@ -237,10 +237,7 @@ class SnapshotsId(SecuredResource):
             'include_credentials',
             request_json.get('include_credentials', 'true')
         )
-        bypass_maintenance = verify_and_convert_bool(
-                'X-BYPASS-MAINTENANCE',
-                request_headers.get('X-BYPASS-MAINTENANCE', 'false')
-        )
+        bypass_maintenance = is_bypass_maintenance_mode()
 
         execution = get_blueprints_manager().create_snapshot(
             snapshot_id,
@@ -352,17 +349,13 @@ class SnapshotsIdRestore(SecuredResource):
     def post(self, snapshot_id):
         verify_json_content_type()
         request_json = request.json
-        request_headers = request.headers
         verify_parameter_in_request_body('recreate_deployments_envs',
                                          request_json)
         recreate_deployments_envs = verify_and_convert_bool(
             'recreate_deployments_envs',
             request_json['recreate_deployments_envs']
         )
-        bypass_maintenance = verify_and_convert_bool(
-                'X-BYPASS-MAINTENANCE',
-                request_headers.get('X-BYPASS-MAINTENANCE', 'false')
-        )
+        bypass_maintenance = is_bypass_maintenance_mode()
         force = verify_and_convert_bool('force', request_json['force'])
         execution = get_blueprints_manager().restore_snapshot(
             snapshot_id,

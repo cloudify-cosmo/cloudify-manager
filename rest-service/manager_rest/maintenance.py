@@ -61,7 +61,7 @@ def prepare_maintenance_dict(status,
 def maintenance_mode_handler():
 
     # enabling internal requests
-    if _is_internal_request() and _is_bypass_maintenance_mode():
+    if _is_internal_request() and is_bypass_maintenance_mode():
         return
 
     # Removing v*/ from the endpoint
@@ -155,7 +155,7 @@ def _is_internal_request():
     return all([remote_addr, http_hosts, remote_addr in http_hosts])
 
 
-def _is_bypass_maintenance_mode():
+def is_bypass_maintenance_mode():
     bypass_maintenance_header = 'X-BYPASS-MAINTENANCE'
     return request.headers.get(bypass_maintenance_header)
 
