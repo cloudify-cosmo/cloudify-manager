@@ -42,6 +42,7 @@ from manager_rest.resources import (marshal_with,
                                     verify_parameter_in_request_body,
                                     verify_json_content_type,
                                     make_streaming_response)
+from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.utils import create_filter_params_list_description
 
 
@@ -236,11 +237,13 @@ class SnapshotsId(SecuredResource):
             'include_credentials',
             request_json.get('include_credentials', 'true')
         )
+        bypass_maintenance = is_bypass_maintenance_mode()
 
         execution = get_blueprints_manager().create_snapshot(
             snapshot_id,
             include_metrics,
-            include_credentials
+            include_credentials,
+            bypass_maintenance=bypass_maintenance
         )
         return execution, 201
 
@@ -352,11 +355,13 @@ class SnapshotsIdRestore(SecuredResource):
             'recreate_deployments_envs',
             request_json['recreate_deployments_envs']
         )
+        bypass_maintenance = is_bypass_maintenance_mode()
         force = verify_and_convert_bool('force', request_json['force'])
         execution = get_blueprints_manager().restore_snapshot(
             snapshot_id,
             recreate_deployments_envs,
-            force
+            force,
+            bypass_maintenance=bypass_maintenance
         )
         return execution, 200
 
