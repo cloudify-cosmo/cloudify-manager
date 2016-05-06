@@ -605,9 +605,9 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         deployment = self.sm.get_deployment(dep_update.deployment_id).to_dict()
 
         entities_update_mapper = {
-            OPERATION_TYPE.ADD: self._add_entity,
-            OPERATION_TYPE.REMOVE: self._remove_entity,
-            OPERATION_TYPE.MODIFY: self._modify_entity
+            ACTION_TYPES.ADD: self._add_entity,
+            ACTION_TYPES.REMOVE: self._remove_entity,
+            ACTION_TYPES.MODIFY: self._modify_entity
         }
 
         for step in dep_update.steps:

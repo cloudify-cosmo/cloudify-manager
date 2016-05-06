@@ -61,7 +61,7 @@ class StepValidator(object):
             utils.get_raw_node(dep_update.blueprint, source_node_id)
 
         source_node = (storage_source_node
-                       if step.operation == OPERATION_TYPE.REMOVE else
+                       if step.operation == ACTION_TYPES.REMOVE else
                        raw_source_node)
         if (not source_node or
            len(source_node[RELATIONSHIPS]) <= relationship_index):
@@ -132,7 +132,7 @@ class StepValidator(object):
 
         raw_node = utils.get_raw_node(dep_update.blueprint, node_id)
         in_new = utils.traverse_object(raw_node, operation_id)
-                                          operation_id)
+
         return {
             ACTION_TYPES.ADD: in_new,
             ACTION_TYPES.REMOVE: in_old,
@@ -159,9 +159,9 @@ class StepValidator(object):
         in_new = utils.traverse_object(raw_workflows, entity_id)
 
         return {
-            OPERATION_TYPE.ADD: in_new and not in_old,
-            OPERATION_TYPE.REMOVE: in_old and not in_new,
-            OPERATION_TYPE.MODIFY: in_new and in_old
+            ACTION_TYPES.ADD: in_new and not in_old,
+            ACTION_TYPES.REMOVE: in_old and not in_new,
+            ACTION_TYPES.MODIFY: in_new and in_old
         }[step.operation]
 
     def _validate_output(self, dep_update, step):
@@ -183,9 +183,9 @@ class StepValidator(object):
         in_new = utils.traverse_object(raw_outputs, entity_id)
 
         return {
-            OPERATION_TYPE.ADD: in_new and not in_old,
-            OPERATION_TYPE.REMOVE: in_old and not in_new,
-            OPERATION_TYPE.MODIFY: in_new and in_old
+            ACTION_TYPES.ADD: in_new and not in_old,
+            ACTION_TYPES.REMOVE: in_old and not in_new,
+            ACTION_TYPES.MODIFY: in_new and in_old
         }[step.operation]
 
     def _get_storage_node(self, deployment_id, node_id):
