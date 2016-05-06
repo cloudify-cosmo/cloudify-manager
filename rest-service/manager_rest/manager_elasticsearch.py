@@ -14,7 +14,7 @@
 import re
 
 import elasticsearch
-from flask import g
+from flask import current_app
 
 from manager_rest import config
 
@@ -150,14 +150,14 @@ class ManagerElasticsearch:
 
     @staticmethod
     def get_connection():
-        """Return a connection to Cloudify manager's Elasticsearch
-        """
-        if 'es_connection' not in g:
+        """Return a connection to Cloudify manager's Elasticsearch."""
+        if 'es_connection' not in current_app.extensions:
             es_host = config.instance().db_address
             es_port = config.instance().db_port
-            g.es_connection = elasticsearch.Elasticsearch(
-                hosts=[{"host": es_host, "port": es_port}])
-        return g.es_connection
+            current_app.extensions['es_connection'] = \
+                elasticsearch.Elasticsearch(
+                    hosts=[{"host": es_host, "port": es_port}])
+        return current_app.extensions['es_connection']
 
     @staticmethod
     def search(index, doc_type=None, body=None, include=None, **kwargs):
