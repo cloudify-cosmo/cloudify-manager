@@ -1,9 +1,9 @@
-https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/CFY-4929-deployment-update-Phase-II.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-4929-deployment-update-Phase-II.zip
+https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/CFY-4929-deployment-update-Phase-II.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.3-build.zip
-https://github.com/cloudify-cosmo/cloudify-agent/archive/3.4m3-build.zip
+https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
 
 pyzmq==15.1.0
 
