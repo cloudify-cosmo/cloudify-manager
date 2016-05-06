@@ -25,7 +25,7 @@ from utils import get_resource as resource
 from utils import tar_blueprint
 
 
-@attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
+@attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
     def test_get_empty(self):
