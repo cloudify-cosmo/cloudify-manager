@@ -923,12 +923,14 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
 
     def test_remove_workflow(self):
+        workflow_id = 'my_custom_workflow'
+        
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_workflow')
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
                                                  modified_bp_path)
-
+        
         self.client.deployment_updates.remove(
                 dep_update.id,
                 entity_type='workflow',
@@ -940,11 +942,11 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self._wait_for_execution_to_terminate(deployment.id, 'update')
 
         self.assertRaisesRegexp(CloudifyClientError,
-                                'Workflow my_custom_workflow does not exist in'
-                                ' deployment {0}'.format(deployment.id),
+                                'Workflow {0} does not exist in deployment {1}'
+                                .format(workflow_id, deployment.id),
                                 callable_obj=self.client.executions.start,
                                 deployment_id=deployment.id,
-                                workflow_id='my_custom_workflow',
+                                workflow_id=workflow_id,
                                 parameters={'node_id': 'site1'})
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
