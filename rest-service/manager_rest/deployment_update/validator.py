@@ -77,7 +77,7 @@ class StepValidator(object):
         return {
             ACTION_TYPES.ADD: bool(in_new),
             ACTION_TYPES.REMOVE: bool(in_old),
-            ACTION_TYPES.MODIFY: bool(in_new) and bool(in_old)
+            ACTION_TYPES.MODIFY: bool(in_new and in_old)
         }[step.operation]
 
     def _validate_node(self, dep_update, step):
@@ -92,9 +92,9 @@ class StepValidator(object):
         in_old = self._get_storage_node(dep_update.deployment_id, node_id)
         in_new = utils.get_raw_node(dep_update.blueprint, node_id)
         return {
-            ACTION_TYPES.ADD: bool(in_new) and not bool(in_old),
-            ACTION_TYPES.REMOVE: bool(in_old) and not bool(in_new),
-            ACTION_TYPES.MODIFY: bool(in_new) and bool(in_old)
+            ACTION_TYPES.ADD: bool(in_new and not in_old),
+            ACTION_TYPES.REMOVE: bool(in_old and not in_new),
+            ACTION_TYPES.MODIFY: bool(in_new and in_old)
         }[step.operation]
 
     def _validate_property(self, dep_update, step):
@@ -113,9 +113,9 @@ class StepValidator(object):
         in_new = utils.traverse_object(raw_node, property_id)
 
         return {
-            ACTION_TYPES.ADD: bool(in_new) and not bool(in_old),
-            ACTION_TYPES.REMOVE: bool(in_old) and not bool(in_new),
-            ACTION_TYPES.MODIFY: bool(in_new) and bool(in_old)
+            ACTION_TYPES.ADD: bool(in_new and not in_old),
+            ACTION_TYPES.REMOVE: bool(in_old and not in_new),
+            ACTION_TYPES.MODIFY: bool(in_new and in_old)
         }[step.operation]
 
     def _validate_operation(self, dep_update, step):
@@ -136,7 +136,7 @@ class StepValidator(object):
         return {
             ACTION_TYPES.ADD: bool(in_new),
             ACTION_TYPES.REMOVE: bool(in_old),
-            ACTION_TYPES.MODIFY: bool(in_new) and bool(in_old)
+            ACTION_TYPES.MODIFY: bool(in_new and in_old)
         }[step.operation]
 
     def _validate_workflow(self, dep_update, step):
@@ -159,9 +159,9 @@ class StepValidator(object):
         in_new = utils.traverse_object(raw_workflows, entity_id)
 
         return {
-            ACTION_TYPES.ADD: bool(in_new) and not bool(in_old),
-            ACTION_TYPES.REMOVE: bool(in_old) and not bool(in_new),
-            ACTION_TYPES.MODIFY: bool(in_new) and bool(in_old)
+            ACTION_TYPES.ADD: bool(in_new and not in_old),
+            ACTION_TYPES.REMOVE: bool(in_old and not in_new),
+            ACTION_TYPES.MODIFY: bool(in_new and in_old)
         }[step.operation]
 
     def _validate_output(self, dep_update, step):
@@ -183,9 +183,9 @@ class StepValidator(object):
         in_new = utils.traverse_object(raw_outputs, entity_id)
 
         return {
-            ACTION_TYPES.ADD: bool(in_new) and not bool(in_old),
-            ACTION_TYPES.REMOVE: bool(in_old) and not bool(in_new),
-            ACTION_TYPES.MODIFY: bool(in_new) and bool(in_old)
+            ACTION_TYPES.ADD: bool(in_new and not in_old),
+            ACTION_TYPES.REMOVE: bool(in_old and not in_new),
+            ACTION_TYPES.MODIFY: bool(in_new and in_old)
         }[step.operation]
 
     def _get_storage_node(self, deployment_id, node_id):
