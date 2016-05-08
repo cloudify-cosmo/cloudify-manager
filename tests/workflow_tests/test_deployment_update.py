@@ -16,6 +16,7 @@ import shutil
 import time
 import tempfile
 
+from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.models import Execution
 from testenv import TestCase
 from testenv.utils import get_resource as resource
@@ -849,6 +850,78 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                      'target': 'site2',
                      'source': 'site3'})
 
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.remove(
+                dep_update.id,
+                entity_type='relationship',
+                entity_id='nodes:site3:relationships:[1]')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+
+        # Get all related and affected nodes and node instances
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(deployment.id,
+                                                    {'related': 'site1',
+                                                     'target': 'site2',
+                                                     'source': 'site3'})
+
+        # assert all unaffected nodes and node instances remained intact
+        self._assert_equal_entity_dicts(
+                base_nodes,
+                modified_nodes,
+                keys=['related', 'target', 'source'],
+                excluded_items=['runtime_properties', 'relationships']
+        )
+
+        self._assert_equal_entity_dicts(
+                base_node_instnaces,
+                modified_node_instances,
+                keys=['related', 'target', 'source'],
+                excluded_items=['runtime_properties', 'relationships']
+        )
+
+        # Check that there is only 1 from each
+        self.assertEquals(1, len(modified_nodes['related']))
+        self.assertEquals(1, len(modified_node_instances['related']))
+        self.assertEquals(1, len(modified_nodes['target']))
+        self.assertEquals(1, len(modified_node_instances['target']))
+        self.assertEquals(1, len(modified_nodes['source']))
+        self.assertEquals(1, len(modified_node_instances['source']))
+
+        # get the nodes and node instances
+        target_node_instance = modified_node_instances['target'][0]
+        source_node = modified_nodes['source'][0]
+        source_node_instance = modified_node_instances['source'][0]
+
+        # assert there are 2 relationships total
+        self.assertEquals(1, len(source_node.relationships))
+        self.assertEquals(1, len(source_node_instance.relationships))
+
+        # check the relationship between site3 and site1 is intact
+        self._assert_relationship(
+                source_node_instance.relationships,
+                target='site1',
+                expected_type='cloudify.relationships.connected_to')
+
+        # check the relationship between site3 and site2 was deleted
+        self._assert_relationship(
+                source_node_instance.relationships,
+                target='site2',
+                expected_type='new_relationship_type',
+                exists=False)
+
+        # check all operation have been executed
+        self.assertDictContainsSubset(
+                {'target_ops_counter': '1'},
+                target_node_instance['runtime_properties']
+        )
+
     def test_remove_workflow(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_workflow')
@@ -865,6 +938,14 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
+
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'Workflow my_custom_workflow does not exist in'
+                                ' deployment {0}'.format(deployment.id),
+                                callable_obj=self.client.executions.start,
+                                deployment_id=deployment.id,
+                                workflow_id='my_custom_workflow',
+                                parameters={'node_id': 'site1'})
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertNotIn('my_custom_workflow',
