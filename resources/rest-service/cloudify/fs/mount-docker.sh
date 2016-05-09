@@ -3,7 +3,7 @@
 fs_mount_path=$(ctx source node properties fs_mount_path)
 filesys=$(ctx source instance runtime-properties filesys)
 fs_type=$(ctx source node properties fs_type)
-ever_mounted=$(ctx source instance runtime-properties ever_mounted)
+ever_mounted=$(ctx source instance runtime-properties ever_mounted || true)
 
 ctx logger info "Checking whether docker is installed"
 set +e
