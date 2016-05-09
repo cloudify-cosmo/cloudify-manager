@@ -199,8 +199,9 @@ class BlueprintsManager(object):
         application_file = os.path.join(application_dir, application_file_name)
         dsl_location = '{0}{1}'.format(resources_base, application_file)
         try:
-            plan = tasks.parse_dsl(
-                dsl_location, resources_base)
+            plan = tasks.parse_dsl(dsl_location,
+                                   resources_base,
+                                   **self._get_parser_context())
         except Exception, ex:
             raise DslParseException(str(ex))
 
