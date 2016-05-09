@@ -66,8 +66,10 @@ def traverse_object(obj, breadcrumbs):
     current_key = breadcrumbs[0]
     if current_key in obj:
         return traverse_object(obj[breadcrumbs[0]], breadcrumbs[1:])
-    elif parse_index(current_key) is not False:
-        return traverse_object(obj[parse_index(current_key)], breadcrumbs[1:])
+
+    index = parse_index(current_key)
+    if index is not None and len(obj) >= index:
+        return traverse_object(obj[index], breadcrumbs[1:])
     else:
         return {}
 
@@ -112,7 +114,7 @@ def parse_int(s):
     if check_is_int(s):
         return int(s)
     else:
-        return False
+        return None
 
 
 def parse_index(s):

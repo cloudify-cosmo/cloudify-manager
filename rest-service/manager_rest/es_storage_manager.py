@@ -319,6 +319,19 @@ class ESStorageManager(object):
         self._put_doc_if_not_exists(DEPLOYMENT_TYPE, str(deployment_id),
                                     deployment.to_dict())
 
+    def update_deployment(self, deploymend_id, changes):
+        update_doc = {'doc': changes}
+        try:
+            self._connection.update(index=STORAGE_INDEX_NAME,
+                                    doc_type=DEPLOYMENT_TYPE,
+                                    id=deploymend_id,
+                                    body=update_doc,
+                                    **MUTATE_PARAMS)
+            return changes
+        except elasticsearch.exceptions.NotFoundError:
+            raise manager_exceptions.NotFoundError(
+                    "Deployment {0} not found".format(deploymend_id))
+
     def put_execution(self, execution_id, execution):
         self._put_doc_if_not_exists(EXECUTION_TYPE, str(execution_id),
                                     execution.to_dict())

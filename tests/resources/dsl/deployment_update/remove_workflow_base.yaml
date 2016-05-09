@@ -7,5 +7,8 @@ description: >
   Micro web sites hosting.
 
 node_templates:
-  server:
+  site1:
     type: cloudify.nodes.Compute
+
+workflows:
+  my_custom_workflow: default_workflows.cloudify.plugins.workflows.install
