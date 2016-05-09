@@ -57,13 +57,25 @@ def setup_resources(api):
         'PluginsArchive': 'plugins/<string:plugin_id>/archive',
         'MaintenanceMode': 'maintenance',
         'MaintenanceModeAction': 'maintenance/<string:maintenance_action>',
+
+        # Get single deployment update status
+        'DeploymentUpdate': 'deployment-updates/<string:update_id>',
+
+        # Get list of deployment updates (according to the query params)
         'DeploymentUpdates': 'deployment-updates',
+
+        # Some mapping to update POST: deployment-updates/deployment_id/update
+
+        # This needs to be removed
         'DeploymentUpdateSteps':
             'deployment-updates/<string:update_id>/step',
         'DeploymentUpdateCommit':
             'deployment-updates/<string:update_id>/commit',
+
+        # For finalizing the commit
         'DeploymentUpdateFinalizeCommit':
             'deployment-updates/<string:update_id>/finalize_commit'
+
     }
 
     for resource, endpoint_suffix in resources_endpoints.iteritems():

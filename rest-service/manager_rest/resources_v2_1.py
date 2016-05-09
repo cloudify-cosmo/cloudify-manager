@@ -260,6 +260,24 @@ class DeploymentUpdateSteps(SecuredResource):
         return update_step
 
 
+class DeploymentUpdate(SecuredResource):
+
+    @swagger.operation(
+        responseClass=responses_v2_1.DeploymentUpdate,
+        nickname="DeploymentUpdate",
+        notes='Return a single deployment update',
+        parameters=create_filter_params_list_description(
+            models.DeploymentUpdate.fields, 'deployment update'
+        )
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2_1.DeploymentUpdate)
+    # @create_filters(models.DeploymentUpdate.fields)
+    def get(self, update_id):
+        return \
+            get_deployment_updates_manager().get_deployment_update(update_id)
+
+
 class DeploymentUpdates(SecuredResource):
     @swagger.operation(
             responseClass='List[{0}]'.format(
