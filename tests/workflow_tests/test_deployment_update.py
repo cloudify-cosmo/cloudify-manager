@@ -924,13 +924,13 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
     def test_remove_workflow(self):
         workflow_id = 'my_custom_workflow'
-        
+
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_workflow')
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
                                                  modified_bp_path)
-        
+
         self.client.deployment_updates.remove(
                 dep_update.id,
                 entity_type='workflow',
