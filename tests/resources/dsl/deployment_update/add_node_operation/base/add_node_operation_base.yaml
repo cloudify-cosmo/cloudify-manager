@@ -6,7 +6,10 @@ imports:
 description: >
   Micro web sites hosting.
 
+node_types:
+  custom_node_type:
+    derived_from: cloudify.nodes.Compute
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
+    type: custom_node_type

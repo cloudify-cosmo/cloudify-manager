@@ -10,8 +10,8 @@ relationships:
   new_relationship_type:
     derived_from: cloudify.relationships.connected_to
     source_interfaces:
-      cloudify.interfaces.relationship_lifecycle:
-        establish: decrement.sh
+      custom_lifecycle:
+        custom_operation: decrement.sh
 
 node_templates:
   site1:

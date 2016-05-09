@@ -3,7 +3,6 @@ import manager_rest.models
 import manager_rest.manager_exceptions
 from manager_rest import storage_manager
 from manager_rest.blueprints_manager import get_blueprints_manager
-from dsl_parser.interfaces.utils import no_op_operation
 from entity_context import get_entity_context
 
 from constants import (ACTION_TYPES,
@@ -33,6 +32,30 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                                         ENTITY_TYPES.RELATIONSHIP,
                                         ENTITY_TYPES.OPERATION,
                                         ENTITY_TYPES.PROPERTY}
+        self.entities_update_mapper = {
+            ACTION_TYPES.ADD: self._add_entity,
+            ACTION_TYPES.REMOVE: self._remove_entity,
+            ACTION_TYPES.MODIFY: self._modify_entity
+        }
+
+        self._add_entity_mapper = {
+            ENTITY_TYPES.NODE: self._add_node,
+            ENTITY_TYPES.RELATIONSHIP: self._add_relationship,
+            ENTITY_TYPES.PROPERTY: self._add_property,
+            ENTITY_TYPES.OPERATION: self._add_operation
+        }
+
+        self._modify_entity_mapper = {
+            ENTITY_TYPES.OPERATION: self._modify_operation,
+            ENTITY_TYPES.PROPERTY: self._modify_property
+        }
+
+        self._remove_entity_mapper = {
+            ENTITY_TYPES.NODE: self._remove_node,
+            ENTITY_TYPES.RELATIONSHIP: self._remove_relationship,
+            ENTITY_TYPES.OPERATION: self._remove_operation,
+            ENTITY_TYPES.PROPERTY: self._remove_property
+        }
 
     def handle(self, dep_update):
         """handles updating new and extended nodes onto the storage.
@@ -45,12 +68,6 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                 filters={'deployment_id': dep_update.deployment_id}).items
         nodes_dict = {node.id: node.to_dict() for node in current_nodes}
 
-        entities_update_mapper = {
-            ACTION_TYPES.ADD: self._add_entity,
-            ACTION_TYPES.REMOVE: self._remove_entity,
-            ACTION_TYPES.MODIFY: self._modify_entity
-        }
-
         # Iterate over the steps of the deployment update and handle each
         # step according to its operation, passing the deployment update
         # object, step entity type, entity id and a dict of updated nodes.
@@ -58,7 +75,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         # accumulating changes.
         for step in dep_update.steps:
             if step.entity_type in self._supported_entity_types:
-                entity_updater = entities_update_mapper[step.operation]
+                entity_updater = self.entities_update_mapper[step.operation]
                 entity_context = get_entity_context(dep_update.blueprint,
                                                     dep_update.deployment_id,
                                                     step.entity_type,
@@ -75,14 +92,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         :param ctx:
         :return: the entity id and the node which contains the added entity
         """
-        add_entity_mapper = {
-            ENTITY_TYPES.NODE: self._add_node,
-            ENTITY_TYPES.RELATIONSHIP: self._add_relationship,
-            ENTITY_TYPES.PROPERTY: self._add_property,
-            ENTITY_TYPES.OPERATION: self._add_operation
-        }
-
-        add_entity_handler = add_entity_mapper[ctx.entity_type]
+        add_entity_handler = self._add_entity_mapper[ctx.entity_type]
 
         entity_id = add_entity_handler(ctx, current_nodes)
 
@@ -156,32 +166,9 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         return ctx.raw_node_id, ctx.raw_target_node['id']
 
     def _add_property(self, ctx, current_nodes):
-        changes = {
-            ctx.PROPERTIES: {
-                ctx.property_id:
-                    utils.create_dict(ctx.modification_breadcrumbs,
-                                      ctx.raw_entity_value)
-            }
-        }
-
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_node_id,
-                            changes=changes)
-
-        properties = current_nodes[ctx.raw_node_id][ctx.PROPERTIES]
-        current_node = current_nodes[ctx.raw_node_id]
-
-        if ctx.modification_breadcrumbs:
-            property_to_update = \
-                utils.traverse_object(properties[ctx.property_id],
-                                      ctx.modification_breadcrumbs[:-1])
-            property_to_update[ctx.modification_breadcrumbs[-1]] = \
-                ctx.raw_entity_value
-        else:
-            property_to_update = current_node[ctx.PROPERTIES]
-            property_to_update[ctx.property_id] = ctx.raw_entity_value
-
-        return ctx.entity_id
+        # since the add property basically sets the the value of the property
+        # to the new value, it's the same as modifying the same property.
+        return self._modify_property(ctx, current_nodes)
 
     @staticmethod
     def _choose_and_execute_operation_handler(ctx,
@@ -206,50 +193,16 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                 self._add_node_operation)
 
     def _add_node_operation(self, ctx, current_nodes):
-
-        new_operations = utils.create_dict(ctx.modification_breadcrumbs,
-                                           ctx.raw_entity_value)
-
-        changes = {
-            ctx.OPERATIONS: {ctx.operation_id: new_operations},
-            ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
-        }
-
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_node_id,
-                            changes=changes)
-        current_node = current_nodes[ctx.raw_node_id]
-        if ctx.modification_breadcrumbs:
-            operation_to_update = utils.traverse_object(
-                    current_node[ctx.OPERATIONS][ctx.operation_id],
-                    ctx.modification_breadcrumbs[:-1]
-            )
-            operation_to_update[ctx.modification_breadcrumbs[-1]] = \
-                ctx.raw_entity_value
-        else:
-            operation_to_update = current_node[ctx.OPERATIONS]
-            operation_to_update[ctx.operation_id] = ctx.raw_entity_value
-
-        current_node[ctx.PLUGINS] = ctx.raw_node[ctx.PLUGINS]
-
-        return ctx.entity_id
+        # since the add_node_operation basically sets the the value of the
+        # property to the new value, it's the same as modifying the same
+        # operation.
+        return self._modify_node_operation(ctx, current_nodes)
 
     def _add_relationship_operation(self, ctx, current_nodes):
-
-        operation_value = ctx.raw_entity_value
-
-        relationships = current_nodes[ctx.raw_node_id][ctx.RELATIONSHIPS]
-        operations = relationships[ctx.relationship_index][ctx.operations_key]
-        operations[ctx.operation_id] = operation_value
-
-        changes = {ctx.RELATIONSHIPS: relationships,
-                   ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]}
-
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_node_id,
-                            changes=changes)
-
-        return ctx.entity_id
+        # since the add_relationship_operation basically sets the the value of
+        # the property to the new value, it's the same as modifying the same
+        # operation.
+        return self._modify_relationship_operation(ctx, current_nodes)
 
     def _remove_entity(self, ctx, current_nodes):
         """Handles removing an entity
@@ -257,15 +210,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         :param ctx:
         :return: entity id and it's add_node.modification node
         """
-        remove_entity_mapper = {
-            ENTITY_TYPES.NODE: self._remove_node,
-            ENTITY_TYPES.RELATIONSHIP: self._remove_relationship,
-            ENTITY_TYPES.OPERATION: self._remove_operation,
-            ENTITY_TYPES.PROPERTY: self._remove_property
-        }
-
-        remove_entity_handler = remove_entity_mapper[ctx.entity_type]
-
+        remove_entity_handler = self._remove_entity_mapper[ctx.entity_type]
         entity_id = remove_entity_handler(ctx, current_nodes)
 
         return entity_id
@@ -300,8 +245,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     @staticmethod
     def _remove_node_operation(ctx, current_nodes):
         current_node = current_nodes[ctx.raw_node_id]
-        current_node[ctx.OPERATIONS][ctx.operation_id] = \
-            no_op_operation(ctx.operation_id)
+        del(current_node[ctx.OPERATIONS][ctx.operation_id])
 
         return ctx.entity_id
 
@@ -310,8 +254,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         current_node = current_nodes[ctx.raw_node_id]
         modified_relationship = \
             current_node[ctx.RELATIONSHIPS][ctx.relationship_index]
-        modified_relationship[ctx.operations_key][ctx.operation_id] = \
-            no_op_operation(ctx.operation_id)
+        del(modified_relationship[ctx.operations_key][ctx.operation_id])
 
         return ctx.entity_id
 
@@ -328,12 +271,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         :param ctx:
         :return: the entity id and the node which contains the added entity
         """
-        modify_entity_mapper = {
-            ENTITY_TYPES.OPERATION: self._modify_operation,
-            ENTITY_TYPES.PROPERTY: self._modify_property
-        }
-
-        add_entity_handler = modify_entity_mapper[ctx.entity_type]
+        add_entity_handler = self._modify_entity_mapper[ctx.entity_type]
         entity_id = add_entity_handler(ctx, current_nodes)
 
         return entity_id
@@ -346,23 +284,51 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                 self._modify_node_operation)
 
     def _modify_node_operation(self, ctx, current_nodes):
-        return self._add_node_operation(ctx, current_nodes)
+        new_operation = utils.create_dict(ctx.modification_breadcrumbs,
+                                          ctx.raw_entity_value)
+
+        changes = {
+            ctx.OPERATIONS: {ctx.operation_id: new_operation},
+            ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
+        }
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_node_id,
+                            changes=changes)
+        current_node = current_nodes[ctx.raw_node_id]
+        if ctx.modification_breadcrumbs:
+            operation_to_update = utils.traverse_object(
+                    current_node[ctx.OPERATIONS][ctx.operation_id],
+                    ctx.modification_breadcrumbs[:-1]
+            )
+            operation_to_update[ctx.modification_breadcrumbs[-1]] = \
+                ctx.raw_entity_value
+        else:
+            operation_to_update = current_node[ctx.OPERATIONS]
+            operation_to_update[ctx.operation_id] = ctx.raw_entity_value
+
+        current_node[ctx.PLUGINS] = ctx.raw_node[ctx.PLUGINS]
+
+        return ctx.entity_id
 
     def _modify_relationship_operation(self, ctx, current_nodes):
+        current_node = current_nodes[ctx.raw_node_id]
+        relationships = current_node[ctx.RELATIONSHIPS]
+        operations = relationships[ctx.relationship_index][ctx.operations_key]
 
-        current_relationships = \
-            current_nodes[ctx.raw_node_id][ctx.RELATIONSHIPS]
-        current_relationship = current_relationships[ctx.relationship_index]
-        operation_to_update = utils.traverse_object(
-                current_relationship[ctx.operations_key][ctx.operation_id],
-                ctx.modification_breadcrumbs[:-1]
-        )
+        if ctx.modification_breadcrumbs:
+            operation_to_update = \
+                utils.traverse_object(operations[ctx.operation_id],
+                                      ctx.modification_breadcrumbs[:-1])
+            operation_to_update[ctx.modification_breadcrumbs[-1]] = \
+                ctx.raw_entity_value
+        else:
+            operations[ctx.operation_id] = ctx.raw_entity_value
 
-        # Update the changed onto the data model and the current nodes.
-        operation_to_update[ctx.modification_breadcrumbs[-1]] = \
-            ctx.raw_entity_value
+        changes = {
+            ctx.RELATIONSHIPS: relationships,
+            ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
+        }
 
-        changes = {ctx.RELATIONSHIPS: current_relationships}
         self.sm.update_node(deployment_id=ctx.deployment_id,
                             node_id=ctx.raw_node_id,
                             changes=changes)
@@ -370,9 +336,30 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         return ctx.entity_id
 
     def _modify_property(self, ctx, current_nodes):
-        # since the add property basically sets the the value of the property
-        # to the new value, it's the same as modifying the same property.
-        return self._add_property(ctx, current_nodes)
+        changes = {
+            ctx.PROPERTIES: {
+                ctx.property_id:
+                    utils.create_dict(ctx.modification_breadcrumbs,
+                                      ctx.raw_entity_value)
+            }
+        }
+
+        self.sm.update_node(deployment_id=ctx.deployment_id,
+                            node_id=ctx.raw_node_id,
+                            changes=changes)
+
+        properties = current_nodes[ctx.raw_node_id][ctx.PROPERTIES]
+
+        if ctx.modification_breadcrumbs:
+            property_to_update = \
+                utils.traverse_object(properties[ctx.property_id],
+                                      ctx.modification_breadcrumbs[:-1])
+            property_to_update[ctx.modification_breadcrumbs[-1]] = \
+                ctx.raw_entity_value
+        else:
+            properties[ctx.property_id] = ctx.raw_entity_value
+
+        return ctx.entity_id
 
     def finalize(self, dep_update):
         """update any removed entity from nodes
@@ -410,16 +397,7 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
 
     def __init__(self):
         super(DeploymentUpdateNodeInstanceHandler, self).__init__()
-
-    def handle(self, dep_update, updated_instances):
-        """Handles updating node instances according to the updated_instances
-
-        :param dep_update:
-        :param updated_instances:
-        :return: dictionary of add_node.modification node instances with key as
-        modification type
-        """
-        handlers_mapper = {
+        self._handlers_mapper = {
             NODE_MOD_TYPES.ADDED_AND_RELATED:
                 self._handle_adding_node_instance,
             NODE_MOD_TYPES.EXTENDED_AND_RELATED:
@@ -430,10 +408,18 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 self._handle_removing_node_instance
         }
 
-        instances = \
-            {k: {} for k, _ in handlers_mapper.iteritems()}
+    def handle(self, dep_update, updated_instances):
+        """Handles updating node instances according to the updated_instances
 
-        for change_type, handler in handlers_mapper.iteritems():
+        :param dep_update:
+        :param updated_instances:
+        :return: dictionary of add_node.modification node instances with key as
+        modification type
+        """
+        instances = \
+            {k: {} for k, _ in self._handlers_mapper.iteritems()}
+
+        for change_type, handler in self._handlers_mapper.iteritems():
             if updated_instances[change_type]:
                 instances[change_type] = \
                     handler(updated_instances[change_type], dep_update)
@@ -605,19 +591,33 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         self._supported_entity_types = {ENTITY_TYPES.WORKFLOW,
                                         ENTITY_TYPES.OUTPUT}
 
-    def handle(self, dep_update):
-
-        deployment = self.sm.get_deployment(dep_update.deployment_id).to_dict()
-
-        entities_update_mapper = {
+        self._entities_update_mapper = {
             ACTION_TYPES.ADD: self._add_entity,
             ACTION_TYPES.REMOVE: self._remove_entity,
             ACTION_TYPES.MODIFY: self._modify_entity
         }
 
+        self._add_entity_mapper = {
+            ENTITY_TYPES.WORKFLOW: self._add_workflow,
+            ENTITY_TYPES.OUTPUT: self._add_output
+        }
+
+        self._modify_update_mapper = {
+            ENTITY_TYPES.WORKFLOW: self._modify_workflow,
+            ENTITY_TYPES.OUTPUT: self._modify_output
+        }
+
+        self._remove_remove_mapper = {
+            ENTITY_TYPES.WORKFLOW: self._remove_workflow,
+            ENTITY_TYPES.OUTPUT: self._remove_output
+        }
+
+    def handle(self, dep_update):
+
+        deployment = self.sm.get_deployment(dep_update.deployment_id).to_dict()
         for step in dep_update.steps:
             if step.entity_type in self._supported_entity_types:
-                entity_updater = entities_update_mapper[step.operation]
+                entity_updater = self._entities_update_mapper[step.operation]
                 entity_context = get_entity_context(dep_update.blueprint,
                                                     dep_update.deployment_id,
                                                     step.entity_type,
@@ -629,14 +629,8 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         return self.modified_entities, deployment
 
     def _add_entity(self, ctx, deployment):
-        add_entity_mapper = {
-            ENTITY_TYPES.WORKFLOW: self._add_workflow,
-            ENTITY_TYPES.OUTPUT: self._add_output
-        }
-        add_entity_handler = add_entity_mapper[ctx.entity_type]
-
+        add_entity_handler = self._add_entity_mapper[ctx.entity_type]
         entity_id = add_entity_handler(ctx, deployment)
-
         return entity_id
 
     def _add_workflow(self, ctx, deployment):
@@ -663,11 +657,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
     def _remove_entity(self, ctx, deployment):
 
-        entities_remove_mapper = {
-            ENTITY_TYPES.WORKFLOW: self._remove_workflow,
-            ENTITY_TYPES.OUTPUT: self._remove_output
-        }
-        remove_entity_handler = entities_remove_mapper[ctx.entity_type]
+        remove_entity_handler = self._remove_remove_mapper[ctx.entity_type]
 
         updated_entity = remove_entity_handler(ctx, deployment)
 
@@ -686,11 +676,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         return ctx.entity_id
 
     def _modify_entity(self, ctx, deployment):
-        entities_update_mapper = {
-            ENTITY_TYPES.WORKFLOW: self._modify_workflow,
-            ENTITY_TYPES.OUTPUT: self._modify_output
-        }
-        modify_entity_handler = entities_update_mapper[ctx.entity_type]
+        modify_entity_handler = self._modify_update_mapper[ctx.entity_type]
 
         entity_id = modify_entity_handler(ctx, deployment)
 

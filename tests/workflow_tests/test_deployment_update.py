@@ -21,12 +21,15 @@ from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import tar_blueprint
 
-from dsl_parser.interfaces.utils import no_op_operation
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.deployment_update.constants import STATES
 from manager_rest.models import Execution
 
 blueprints_base_path = 'dsl/deployment_update'
+
+
+class TimeoutException(Exception):
+    pass
 
 
 class DeploymentUpdateBase(TestCase):
@@ -42,7 +45,7 @@ class DeploymentUpdateBase(TestCase):
         deadline = time.time() + timeout
         while True:
             if time.time() > deadline:
-                raise Exception(msg)
+                raise TimeoutException(msg)
             value = callable_obj(callable_obj_key)
             if test_condition(getattr(value, value_attr), test_value):
                 return value
@@ -57,7 +60,7 @@ class DeploymentUpdateBase(TestCase):
                               lambda x, y: x == y,
                               error_msg)
 
-    def _wait_for_execution(self, execution):
+    def _wait_for_execution(self, execution, timeout=900):
         # Poll for execution status until execution ends
         error_msg = 'execution of operation {0} for deployment {1} timed out'\
             .format(execution.workflow_id, execution.deployment_id)
@@ -66,7 +69,8 @@ class DeploymentUpdateBase(TestCase):
                               'status',
                               Execution.END_STATES,
                               lambda x, y: x in y,
-                              error_msg)
+                              error_msg,
+                              timeout)
 
     def _assert_relationship(self, relationships, target,
                              expected_type=None, exists=True):
@@ -123,7 +127,7 @@ class DeploymentUpdateBase(TestCase):
             self.assertEquals('terminated', execution_status['status'],
                               execution_status.error)
 
-    def _get_nodes_and_node_instances_dict(self, deployment_id, dct):
+    def _map_node_and_node_instances(self, deployment_id, dct):
         nodes_dct = {k: [] for k, _ in dct.iteritems()}
         node_instances_dct = {k: [] for k, _ in dct.iteritems()}
 
@@ -190,11 +194,13 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_node')
 
+        node_mapping = {
+            'intact': 'site1',
+            'added': 'site2'
+        }
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'intact': 'site1',
-                     'added': 'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         tempdir = tempfile.mkdtemp()
         try:
@@ -219,9 +225,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._wait_for_committed_state(dep_update.id)
 
             modified_nodes, modified_node_instances = \
-                self._get_nodes_and_node_instances_dict(deployment.id,
-                                                        {'intact': 'site1',
-                                                         'added': 'site2'})
+                self._map_node_and_node_instances(deployment.id, node_mapping)
 
             # assert all unaffected nodes and node instances remained intact
             self._assert_equal_entity_dicts(
@@ -279,9 +283,12 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_node_operation')
 
+        node_mapping = {'modified': 'site1'}
+
+        operation_id = 'custom_lifecycle.custom_operation'
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id, {'modified': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         dep_update = self.client.deployment_updates.stage(deployment.id,
                                                           modified_bp_path)
@@ -289,8 +296,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self.client.deployment_updates.add(
                 dep_update.id,
                 entity_type='operation',
-                entity_id='nodes:site1:operations:'
-                          'cloudify.interfaces.lifecycle.create')
+                entity_id='nodes:site1:operations:{0}'.format(operation_id))
 
         self.client.deployment_updates.commit(dep_update.id)
 
@@ -300,8 +306,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id, {'modified': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self._assert_equal_entity_dicts(
                 base_nodes,
@@ -320,9 +325,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self.client.executions.start(
                 deployment.id,
                 'execute_operation',
-                parameters={
-                    'operation': 'cloudify.interfaces.lifecycle.create'
-                }
+                parameters={'operation': operation_id}
         )
         self._wait_for_execution_to_terminate(deployment.id,
                                               'execute_operation')
@@ -330,8 +333,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         # Check again for the nodes and node instances and check
         # their runtime properties
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id, {'modified': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.assertEqual(len(modified_nodes['modified']), 1)
         added_node = modified_nodes['modified'][0]
@@ -352,8 +354,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 excluded_items=['runtime_properties']
         )
 
-        affected_lifecycle_operation = added_node['operations'].get(
-                'cloudify.interfaces.lifecycle.create')
+        affected_lifecycle_operation = \
+            added_node['operations'].get(operation_id)
         self.assertIsNotNone(affected_lifecycle_operation)
 
         self.assertDictContainsSubset(
@@ -366,11 +368,13 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('add_node_'
                                                   'with_multiple_instances')
 
+        node_mapping = {
+            'intact': 'site1',
+            'added': 'site2'
+        }
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'intact': 'site1',
-                     'added': 'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
@@ -387,9 +391,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(deployment.id,
-                                                    {'intact': 'site1',
-                                                     'added': 'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
@@ -435,12 +437,14 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_relationship')
 
+        node_mapping = {
+            'related': 'site1',
+            'target': 'site2',
+            'source': 'site3'
+        }
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'related': 'site1',
-                     'target': 'site2',
-                     'source': 'site3'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # check that the relationship operation between site3 and site 1
         # ran only once (at bp)
@@ -465,11 +469,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'related': 'site1',
-                     'target': 'site2',
-                     'source': 'site3'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
@@ -548,8 +548,10 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_relationship_operation')
 
+        operation_id = 'custom_lifecycle.custom_operation'
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
+            self._map_node_and_node_instances(
                     deployment.id,
                     {'target': 'site1',
                      'source': 'site2'})
@@ -561,15 +563,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self.client.deployment_updates.add(
                 dep_update.id,
                 entity_type='operation',
-                entity_id='nodes:site2:relationships:[0]:source_operations:'
-                          'cloudify.interfaces.relationship_lifecycle.'
-                          'establish'
-        )
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='operation',
-                entity_id='nodes:site2:relationships:[0]:source_operations:'
-                          'establish'
+                entity_id='nodes:site2:relationships:[0]:source_operations:{0}'
+                .format(operation_id)
         )
 
         self.client.deployment_updates.commit(dep_update.id)
@@ -579,7 +574,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
+            self._map_node_and_node_instances(
                     deployment.id,
                     {'target': 'site1',
                      'source': 'site2'})
@@ -589,7 +584,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_nodes,
                 modified_nodes,
                 keys=['target', 'source'],
-                excluded_items=['relationships']
+                excluded_items=['relationships', 'plugins']
         )
 
         self._assert_equal_entity_dicts(
@@ -629,24 +624,23 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         # check all operation have been executed
         source_operations = \
             source_node['relationships'][0]['source_operations']
+        self.assertDictContainsSubset(dict_to_check,
+                                      source_operations[operation_id])
         self.assertDictContainsSubset(
                 dict_to_check,
-                source_operations
-                ['cloudify.interfaces.relationship_lifecycle.establish']
-        )
-        self.assertDictContainsSubset(
-                dict_to_check,
-                source_operations['establish']
+                source_operations[operation_id]
         )
 
     def test_add_property(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_property')
 
+        node_mapping = {
+            'affected_node': 'site1'
+        }
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
 
         dep_update = \
@@ -656,7 +650,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self.client.deployment_updates.add(
                 dep_update.id,
                 entity_type='property',
-                entity_id='nodes:site1:properties:ip')
+                entity_id='nodes:site1:properties:prop2')
 
         self.client.deployment_updates.commit(dep_update.id)
 
@@ -665,19 +659,21 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         modified_node = modified_nodes['affected_node'][0]
 
-        added_property = modified_node['properties'].get('ip')
+        added_property = modified_node['properties'].get('prop2')
         self.assertIsNotNone(added_property)
-        self.assertEqual(added_property, '1.1.1.1')
+        self.assertEqual(added_property, 'value2')
 
         # assert nothing else changed
         self._assert_equal_dicts(base_node['properties'],
                                  modified_node['properties'],
-                                 excluded_items=['ip'])
+                                 excluded_items=['prop2'])
+        self._assert_equal_entity_dicts(base_nodes,
+                                        modified_node,
+                                        'affected_node',
+                                        excluded_items=['properties'])
 
     def test_add_workflow(self):
         deployment, modified_bp_path = \
@@ -744,10 +740,13 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_node')
 
+        node_mapping = {
+            'remove_related': 'site1',
+            'removed': 'site2'
+        }
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'remove_related': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
@@ -764,9 +763,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(deployment.id,
-                                                    {'remove_related': 'site1',
-                                                     'removed': 'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
@@ -804,20 +801,23 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path(
                     'remove_node_operation')
 
+        node_mapping = {'modified': 'site1'}
+
+        operation_id = 'custom_lifecycle.custom_operation'
+
         # Execute the newly modified operation
         self.client.executions.start(
                 deployment.id,
                 'execute_operation',
                 parameters={
-                    'operation': 'cloudify.interfaces.lifecycle.stop'
+                    'operation': operation_id
                 }
         )
         self._wait_for_execution_to_terminate(deployment.id,
                                               'execute_operation')
 
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id, {'modified': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.assertDictContainsSubset(
                 {'source_ops_counter': '1'},
@@ -831,8 +831,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self.client.deployment_updates.remove(
                 dep_update.id,
                 entity_type='operation',
-                entity_id='nodes:site1:operations:'
-                          'cloudify.interfaces.lifecycle.stop')
+                entity_id='nodes:site1:operations:{0}'.format(operation_id)
+        )
 
         self.client.deployment_updates.commit(dep_update.id)
 
@@ -840,21 +840,9 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self._wait_for_execution_to_terminate(deployment.id, 'update')
         self._wait_for_committed_state(dep_update.id)
 
-        # Execute the newly modified operation
-        self.client.executions.start(
-                deployment.id,
-                'execute_operation',
-                parameters={
-                    'operation': 'cloudify.interfaces.lifecycle.stop'
-                }
-        )
-        self._wait_for_execution_to_terminate(deployment.id,
-                                              'execute_operation')
-
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id, {'modified': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self._assert_equal_entity_dicts(
                 base_nodes,
@@ -870,26 +858,38 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         )
 
         modified_node = modified_nodes['modified'][0]
+        modified_node_instance = modified_node_instances['modified'][0]
 
         affected_lifecycle_operation = \
-            modified_node['operations']['cloudify.interfaces.lifecycle.stop']
+            modified_node['operations'].get(operation_id)
 
-        operation_template = \
-            no_op_operation('cloudify.interfaces.lifecycle.stop')
+        self.assertIsNone(affected_lifecycle_operation)
 
-        self.assertDictContainsSubset(operation_template,
-                                      affected_lifecycle_operation)
+        # Execute the newly modified operation
+        execution = self.client.executions.start(
+                deployment_id=deployment.id,
+                workflow_id='execute_operation',
+                parameters={'operation': operation_id}
+        )
+
+        execution_state = self._wait_for_execution(execution)
+
+        self.assertIn('{0} operation of node instance {1} does not exist'
+                      .format(operation_id, modified_node_instance.id),
+                      execution_state.error)
 
     def test_remove_relationship(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_relationship')
 
+        node_mapping = {
+            'related': 'site1',
+            'target': 'site2',
+            'source': 'site3'
+        }
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'related': 'site1',
-                     'target': 'site2',
-                     'source': 'site3'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
@@ -908,10 +908,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # Get all related and affected nodes and node instances
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(deployment.id,
-                                                    {'related': 'site1',
-                                                     'target': 'site2',
-                                                     'source': 'site3'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
@@ -998,13 +995,18 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
     def test_remove_relationship_operation(self):
         deployment, modified_bp_path = \
-            self._deploy_and_get_modified_bp_path('add_relationship_operation')
+            self._deploy_and_get_modified_bp_path(
+                    'remove_relationship_operation')
+
+        node_mapping = {
+            'target': 'site1',
+            'source': 'site2'
+        }
+
+        operation_id = 'custom_lifecycle.custom_operation'
 
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'target': 'site1',
-                     'source': 'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
@@ -1013,15 +1015,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self.client.deployment_updates.remove(
                 dep_update.id,
                 entity_type='operation',
-                entity_id='nodes:site2:relationships:[0]:source_operations:'
-                          'cloudify.interfaces.relationship_lifecycle.'
-                          'establish'
-        )
-        self.client.deployment_updates.remove(
-                dep_update.id,
-                entity_type='operation',
-                entity_id='nodes:site2:relationships:[0]:source_operations:'
-                          'establish'
+                entity_id='nodes:site2:relationships:[0]:source_operations:{0}'
+                .format(operation_id)
         )
 
         self.client.deployment_updates.commit(dep_update.id)
@@ -1031,10 +1026,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'target': 'site1',
-                     'source': 'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
@@ -1078,22 +1070,16 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         # check all operation have been executed
         source_operations = \
             source_node['relationships'][0]['source_operations']
-        operation_template = \
-            no_op_operation('cloudify.interfaces.'
-                            'relationship_lifecycle.establish')
-        self.assertDictEqual(
-                operation_template,
-                source_operations['cloudify.interfaces.'
-                                  'relationship_lifecycle.establish'])
+        self.assertNotIn(operation_id, source_operations)
 
     def test_remove_property(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_property')
 
+        node_mapping = {'affected_node': 'site1'}
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
 
         dep_update = \
@@ -1103,7 +1089,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self.client.deployment_updates.remove(
                 dep_update.id,
                 entity_type='property',
-                entity_id='nodes:site1:properties:ip')
+                entity_id='nodes:site1:properties:prop2')
 
         self.client.deployment_updates.commit(dep_update.id)
 
@@ -1112,17 +1098,20 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         modified_node = modified_nodes['affected_node'][0]
 
-        removed_property = modified_node['properties'].get('ip')
+        removed_property = modified_node['properties'].get('prop2')
         self.assertIsNone(removed_property)
         # assert nothing else changed
         self._assert_equal_dicts(base_node['properties'],
                                  modified_node['properties'],
-                                 excluded_items=['ip'])
+                                 excluded_items=['prop2'])
+
+        self._assert_equal_entity_dicts(base_nodes,
+                                        modified_node,
+                                        'affected_node',
+                                        excluded_items=['properties'])
 
     def test_remove_output(self):
         deployment, modified_bp_path = \
@@ -1165,6 +1154,10 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path(
                     'modify_node_operation')
 
+        node_mapping = {
+            'modified': 'site1'
+        }
+
         # Execute the newly modified operation
         self.client.executions.start(
                 deployment.id,
@@ -1177,8 +1170,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                                               'execute_operation')
 
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id, {'modified': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.assertDictContainsSubset(
                 {'source_ops_counter': '1'},
@@ -1203,8 +1195,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id, {'modified': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self._assert_equal_entity_dicts(
                 base_nodes,
@@ -1233,8 +1224,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         # Check again for the nodes and node instances and check
         # their runtime properties
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id, {'modified': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         self.assertEqual(len(modified_nodes['modified']), 1)
         modified_node = modified_nodes['modified'][0]
@@ -1275,11 +1265,14 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
                 'modify_relationship_operation')
 
+        node_mapping = {
+            'target': 'site1',
+            'source': 'site2'
+        }
+        operation_id = 'custom_lifecycle.custom_operation'
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'target': 'site1',
-                     'source': 'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
@@ -1289,8 +1282,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 dep_update.id,
                 entity_type='operation',
                 entity_id='nodes:site2:relationships:[0]:source_operations:'
-                          'cloudify.interfaces.relationship_lifecycle.'
-                          'establish:inputs:script_path'
+                          '{0}:inputs:script_path'.format(operation_id)
         )
 
         self.client.deployment_updates.commit(dep_update.id)
@@ -1300,10 +1292,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'target': 'site1',
-                     'source': 'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
@@ -1350,20 +1339,17 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         # check all operation have been executed
         source_operations = \
             source_node['relationships'][0]['source_operations']
-        self.assertDictContainsSubset(
-                dict_to_check,
-                source_operations
-                ['cloudify.interfaces.relationship_lifecycle.establish']
-        )
+        self.assertDictContainsSubset(dict_to_check,
+                                      source_operations[operation_id])
 
     def test_modify_property(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_property')
 
+        node_mapping = {'affected_node': 'site1'}
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
 
         base_properties = base_node['properties']
@@ -1387,9 +1373,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'affected_node': 'site1'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
         modified_node = modified_nodes['affected_node'][0]
         modified_properties = modified_node['properties']
         modified_property = \
@@ -1483,11 +1467,14 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
                 'add_node_and_relationship')
 
+        node_mapping = {
+            'stagnant': 'site1',
+            'added_relationship': 'site2',
+            'new': 'site3'
+        }
+
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(deployment.id,
-                                                    {'stagnant': 'site1',
-                                                     'added_relationships':
-                                                         'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
@@ -1505,9 +1492,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         )
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(deployment.id,
-                                                    {'added_relationship':
-                                                     'site2'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # check all operation have been executed
         self.assertDictContainsSubset(
@@ -1525,17 +1510,13 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # Get all related and affected nodes and node instances
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(deployment.id,
-                                                    {'stagnant': 'site1',
-                                                     'added_relationships':
-                                                         'site2',
-                                                     'new': 'site3'})
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
                 base_nodes,
                 modified_nodes,
-                keys=['stagnant', 'added_relationships', 'new'],
+                keys=['stagnant', 'added_relationship', 'new'],
                 excluded_items=['runtime_properties',
                                 'plugins',
                                 'relationships']
@@ -1544,22 +1525,22 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         self._assert_equal_entity_dicts(
                 base_node_instances,
                 modified_node_instances,
-                keys=['stagnant', 'added_relationships', 'new'],
+                keys=['stagnant', 'added_relationship', 'new'],
                 excluded_items=['runtime_properties', 'relationships']
         )
 
         # Check that there is only 1 from each
         self.assertEquals(1, len(modified_nodes['stagnant']))
         self.assertEquals(1, len(modified_node_instances['stagnant']))
-        self.assertEquals(1, len(modified_nodes['added_relationships']))
+        self.assertEquals(1, len(modified_nodes['added_relationship']))
         self.assertEquals(1,
-                          len(modified_node_instances['added_relationships']))
+                          len(modified_node_instances['added_relationship']))
         self.assertEquals(1, len(modified_nodes['new']))
         self.assertEquals(1, len(modified_node_instances['new']))
 
         # get the nodes and node instances
         added_relationship_node_instance = \
-            modified_node_instances['added_relationships'][0]
+            modified_node_instances['added_relationship'][0]
         new_node = modified_nodes['new'][0]
         new_node_instance = modified_node_instances['new'][0]
 
@@ -1628,6 +1609,12 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
                 'add_and_override_resource')
 
+        node_mapping = {
+            'stagnant': 'site1',
+            'added_relationship': 'site2',
+            'new': 'site3'
+        }
+
         dep_update = \
             self.client.deployment_updates.stage(deployment.id,
                                                  modified_bp_path)
@@ -1644,10 +1631,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         )
 
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'added_relationship': 'site2'}
-            )
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # check all operation have been executed
         self.assertDictContainsSubset(
@@ -1665,16 +1649,11 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # Get all related and affected nodes and node instances
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
-                    deployment.id,
-                    {'stagnant': 'site1',
-                     'added_relationships': 'site2',
-                     'new': 'site3'}
-            )
+            self._map_node_and_node_instances(deployment.id, node_mapping)
 
         # get the nodes and node instances
         added_relationship_node_instance = \
-            modified_node_instances['added_relationships'][0]
+            modified_node_instances['added_relationship'][0]
         new_node_instance = modified_node_instances['new'][0]
 
         # check all operation have been executed.
@@ -1706,7 +1685,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         )
 
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
+            self._map_node_and_node_instances(
                     deployment.id,
                     {'affected_node': 'site1'})
         base_node = base_nodes['affected_node'][0]
@@ -1717,21 +1696,6 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                     modified_bp_path,
                     inputs={'input_prop3': 'custom_input3'}
             )
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='property',
-                entity_id='nodes:site1:properties:prop1')
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='property',
-                entity_id='nodes:site1:properties:prop2')
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='property',
-                entity_id='nodes:site1:properties:prop3')
 
         self.client.deployment_updates.add(
             dep_update.id,
@@ -1758,7 +1722,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
+            self._map_node_and_node_instances(
                     deployment.id,
                     {'affected_node': 'site1'})
         modified_node = modified_nodes['affected_node'][0]
@@ -1797,7 +1761,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         )
 
         base_nodes, base_node_instances = \
-            self._get_nodes_and_node_instances_dict(
+            self._map_node_and_node_instances(
                     deployment.id,
                     {'affected_node': 'site1'})
         base_node = base_nodes['affected_node'][0]
@@ -1814,7 +1778,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         )
 
         modified_nodes, modified_node_instances = \
-            self._get_nodes_and_node_instances_dict(
+            self._map_node_and_node_instances(
                     deployment.id,
                     {'affected_node': 'site1'})
         modified_node = modified_nodes['affected_node'][0]
