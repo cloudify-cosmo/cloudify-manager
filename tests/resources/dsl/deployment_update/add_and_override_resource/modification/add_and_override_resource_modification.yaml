@@ -17,16 +17,16 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: local_modification.sh
-          postconfigure: local_modification.sh
-          establish: local_modification.sh
+          preconfigure: morphing_resource.sh
+          postconfigure: morphing_resource.sh
+          establish: morphing_resource.sh
     - type: cloudify.relationships.connected_to
       target: site3
       source_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: local_modification.sh
-          postconfigure: local_modification.sh
-          establish: local_modification.sh
+          preconfigure: morphing_resource.sh
+          postconfigure: morphing_resource.sh
+          establish: morphing_resource.sh
 
   site3:
     type: cloudify.nodes.Compute
@@ -35,6 +35,6 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: increment.sh
-          postconfigure: increment.sh
-          establish: increment.sh
+          preconfigure: stegnant_resource.sh
+          postconfigure: stegnant_resource.sh
+          establish: stegnant_resource.sh

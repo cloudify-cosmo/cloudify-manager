@@ -1602,9 +1602,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
     def test_add_and_override_resource(self):
         """
-        In order to the resources mechanism
-         1. we first upload the local_modification resource which increases the
-         source_ops_counter each relationships operation executed between
+        In order to test the resources mechanism
+         1. we first upload the local_modification resource which increments
+         the source_ops_counter each relationships operation executed between
          site2->site1
          2. we also upload the increment resource for future use.
 
@@ -1612,8 +1612,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             site2.source_ops_counter == 3
 
          2. after uploading the new blueprint (with its resources), the
-         local_modification script decreases the same counter for each
-         relationships operation executed between site2->site3 (since pre
+         local_modification script decrements the same counter for each
+         relationship operation executed between site2->site3 (since pre
          and post configure already ran, it should be ran only once)
 
          3. we set the increment script to be used for each operation between
@@ -1643,7 +1643,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 entity_id='nodes:site2:relationships:[1]'
         )
 
-        modified_nodes, modified_node_instances = \
+        base_nodes, base_node_instances = \
             self._get_nodes_and_node_instances_dict(
                     deployment.id,
                     {'added_relationship': 'site2'}
@@ -1652,7 +1652,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # check all operation have been executed
         self.assertDictContainsSubset(
                 {'source_ops_counter': '3'},
-                modified_node_instances['added_relationship'][0]
+                base_node_instances['added_relationship'][0]
                 ['runtime_properties']
         )
 

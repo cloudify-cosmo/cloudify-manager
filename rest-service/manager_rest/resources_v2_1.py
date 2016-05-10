@@ -65,21 +65,15 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
     def _prepare_and_process_doc(self, data_id, file_server_root,
                                  archive_target_path):
         application_dir = self._extract_file_to_file_server(
-                file_server_root,
-                archive_target_path)
+            archive_target_path,
+            file_server_root
+        )
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
                                                   data_id), archive_target_path
 
     def _move_archive_to_uploaded_dir(self, *args, **kwargs):
         pass
-
-    @classmethod
-    def _extract_file_to_file_server(cls, file_server_root,
-                                     archive_target_path):
-        # extract application to file server
-        return utils.extract_blueprint_archive_to_mgr(archive_target_path,
-                                                      file_server_root)
 
     @classmethod
     def _prepare_and_submit_blueprint(cls, file_server_root,
@@ -272,7 +266,6 @@ class DeploymentUpdate(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses_v2_1.DeploymentUpdate)
-    # @create_filters(models.DeploymentUpdate.fields)
     def get(self, update_id):
         return \
             get_deployment_updates_manager().get_deployment_update(update_id)

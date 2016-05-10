@@ -227,8 +227,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
     def _prepare_and_process_doc(self, data_id, file_server_root,
                                  archive_target_path):
         application_dir = self._extract_file_to_file_server(
-            file_server_root,
-            archive_target_path)
+                archive_target_path,
+                file_server_root
+            )
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
                                                   data_id), None
@@ -262,12 +263,6 @@ class UploadedBlueprintsManager(UploadedDataManager):
                     zipf.write(fn, fn[rootlen:])
         finally:
             zipf.close()
-
-    @classmethod
-    def _extract_file_to_file_server(cls, file_server_root,
-                                     archive_target_path):
-        return utils.extract_blueprint_archive_to_mgr(archive_target_path,
-                                                      file_server_root)
 
     @classmethod
     def _prepare_and_submit_blueprint(cls, file_server_root,
