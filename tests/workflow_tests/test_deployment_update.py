@@ -1727,6 +1727,12 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 entity_type='property',
                 entity_id='nodes:site1:properties:ip')
 
+        self.client.deployment_updates.add(
+            dep_update.id,
+            entity_type='output',
+            entity_id='outputs:ip_output'
+        )
+
         self.client.deployment_updates.commit(dep_update.id)
 
         # wait for 'update' workflow to finish
@@ -1744,6 +1750,11 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         self.assertIsNotNone(added_property.get('os_family'))
         self.assertEqual(added_property['ip'], '1.1.1.1')
         self.assertEqual(added_property['os_family'], 'windows')
+
+        # Checking that get_property works correctly
+        output_property = self.client.deployments.get(deployment.id).outputs
+        self.assertDictContainsSubset({'ip_output': {'value': '1.1.1.1'}},
+                                      output_property)
 
         # assert nothing else changed
         self._assert_equal_dicts(base_node['properties'],

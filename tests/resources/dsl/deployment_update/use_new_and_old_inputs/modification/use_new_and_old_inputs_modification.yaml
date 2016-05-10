@@ -18,3 +18,8 @@ node_templates:
     properties:
       os_family: { get_input: os_family_input }
       ip: { get_input: ip_input }
+
+outputs:
+  ip_output:
+    value: { get_property: [site1, ip] }
+
