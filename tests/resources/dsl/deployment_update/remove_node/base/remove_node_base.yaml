@@ -1,0 +1,20 @@
+tosca_definitions_version: 'cloudify_dsl_1_2'
+
+imports:
+  - cloudify/types/types.yaml
+
+description: >
+  Micro web sites hosting.
+
+node_templates:
+  site1:
+    type: cloudify.nodes.Compute
+
+  site2:                                                # This node should be removed
+    type: cloudify.nodes.WebServer
+    relationships:                                      # (with relationships)
+    - type: cloudify.relationships.contained_in
+      target: site1
+      target_interfaces:
+        cloudify.interfaces.relationship_lifecycle:
+          unlink: remote_increment.sh

@@ -38,7 +38,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """handles updating new and extended nodes onto the storage.
 
         :param dep_update:
-        :return: a list of all of the nodes (including the non modified nodes)
+        :return: a list of all of the nodes
+        (including the non add_node.modification nodes)
         """
         current_nodes = self.sm.get_nodes(
                 filters={'deployment_id': dep_update.deployment_id}).items
@@ -131,7 +132,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """Handles adding a relationship
 
         :param ctx:
-        :return: the modified node
+        :return: the add_node.modification node
         """
         # Update source relationships and plugins
         source_changes = {
@@ -254,7 +255,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """Handles removing an entity
 
         :param ctx:
-        :return: entity id and it's modified node
+        :return: entity id and it's add_node.modification node
         """
         remove_entity_mapper = {
             ENTITY_TYPES.NODE: self._remove_node,
@@ -283,7 +284,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
     def _remove_relationship(ctx, current_nodes):
         """Handles removing a relationship
 
-        :return: the modified node
+        :return: the add_node.modification node
         """
         current_node = current_nodes[ctx.raw_node_id]
         current_node[ctx.RELATIONSHIPS].remove(ctx.storage_entity_value)
@@ -381,24 +382,28 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """
         removed_and_related = dep_update.deployment_update_node_instances[
             NODE_MOD_TYPES.REMOVED_AND_RELATED]
-        deleted_node_instances = \
+        removed_node_instances = \
             removed_and_related.get(NODE_MOD_TYPES.AFFECTED, [])
 
-        deleted_node_ids = utils.extract_ids(deleted_node_instances, 'node_id')
+        removed_node_ids = utils.extract_ids(removed_node_instances, 'node_id')
 
+        # Since not all changes are caught on the node instances (actually only
+        # the removing/adding of relationships and nodes) we need to apply all
+        # of the changes, thus screening all of the nodes except the ones
+        # deleted is a valid solution.
         modified_nodes = [n for n in dep_update.deployment_update_nodes
-                          if n['id'] not in deleted_node_ids]
+                          if n['id'] not in removed_node_ids]
 
-        for raw_node in modified_nodes:
+        for modified_node in modified_nodes:
             # Since there is no good way deleting a specific value from
             # elasticsearch, we first remove it, and than re-enter it.
-            self.sm.delete_node(dep_update.deployment_id, raw_node['id'])
-            node = manager_rest.models.DeploymentNode(**raw_node)
+            self.sm.delete_node(dep_update.deployment_id, modified_node['id'])
+            node = manager_rest.models.DeploymentNode(**modified_node)
             self.sm.put_node(node)
 
-        for deleted_node_instance in deleted_node_instances:
+        for removed_node_instance in removed_node_instances:
             self.sm.delete_node(dep_update.deployment_id,
-                                deleted_node_instance['node_id'])
+                                removed_node_instance['node_id'])
 
 
 class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
@@ -411,8 +416,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
 
         :param dep_update:
         :param updated_instances:
-        :return: dictionary of modified node instances with key as modification
-        type
+        :return: dictionary of add_node.modification node instances with key as
+        modification type
         """
         handlers_mapper = {
             NODE_MOD_TYPES.ADDED_AND_RELATED:

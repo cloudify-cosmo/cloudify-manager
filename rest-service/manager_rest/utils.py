@@ -12,25 +12,18 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-import contextlib
-from urllib2 import urlopen, URLError
+
 
 import sys
 import logging
 import shutil
 import importlib
-import tempfile
 import traceback
 import StringIO
 import errno
-from os import path, makedirs, listdir
-import uuid
+from os import path, makedirs
 
 from flask.ext.restful import abort
-from setuptools import archive_util
-
-from manager_rest import manager_exceptions
-from manager_rest import chunked
 
 
 def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,
@@ -150,96 +143,6 @@ def mkdirs(folder_path):
             pass
         else:
             raise
-
-
-def extract_blueprint_archive_to_mgr(archive_path, destination_root):
-    """
-    Extracting a package.
-
-    :param destination_root: the root destination for the unzipped archive
-    :param archive_path: the archive path
-    :return: the full path for the extracted archive
-    """
-    # Importing this archives in the global scope causes import loop
-    from manager_rest.resources import SUPPORTED_ARCHIVE_TYPES
-    # extract application to file server
-    tempdir = tempfile.mkdtemp('-blueprint-submit')
-    try:
-        try:
-            archive_util.unpack_archive(archive_path, tempdir)
-        except archive_util.UnrecognizedFormat:
-            raise manager_exceptions.BadParametersError(
-                    'Blueprint archive is of an unrecognized format. '
-                    'Supported formats are: {0}'.format(
-                            SUPPORTED_ARCHIVE_TYPES))
-        archive_file_list = listdir(tempdir)
-        if len(archive_file_list) != 1 or not path.isdir(
-                path.join(tempdir, archive_file_list[0])):
-            raise manager_exceptions.BadParametersError(
-                    'archive must contain exactly 1 directory')
-        application_dir_base_name = archive_file_list[0]
-        # generating temporary unique name for app dir, to allow multiple
-        # uploads of apps with the same name (as it appears in the file
-        # system, not the app name field inside the blueprint.
-        # the latter is guaranteed to be unique).
-        generated_app_dir_name = '{0}-{1}'.format(
-                application_dir_base_name, uuid.uuid4())
-        temp_application_dir = path.join(tempdir,
-                                         application_dir_base_name)
-        temp_application_target_dir = path.join(tempdir,
-                                                generated_app_dir_name)
-        shutil.move(temp_application_dir, temp_application_target_dir)
-        shutil.move(temp_application_target_dir, destination_root)
-        return generated_app_dir_name
-    finally:
-        shutil.rmtree(tempdir)
-
-
-def save_request_content_to_file(request, archive_target_path, url_key,
-                                 data_type='unknown'):
-    """
-    Retrieves the file specified by the request to the local machine.
-
-    :param request: the request received by the rest client
-    :param archive_target_path: the target of the archive
-    :param data_type: the kind of the data (e.g. 'blueprint')
-    :param url_key: if the data is passed as a url to an online resource, the
-    url_key specifies what header points to the requested url.
-    :return: None
-    """
-    if url_key in request.args:
-        if request.data or 'Transfer-Encoding' in request.headers:
-            raise manager_exceptions.BadParametersError(
-                    "Can't pass both a {0} URL via query parameters "
-                    "and {0} data via the request body at the same time"
-                    .format(data_type))
-        data_url = request.args[url_key]
-        try:
-            with contextlib.closing(urlopen(data_url)) as urlf:
-                with open(archive_target_path, 'w') as f:
-                    f.write(urlf.read())
-        except URLError:
-            raise manager_exceptions.ParamUrlNotFoundError(
-                    "URL {0} not found - can't download {1} archive"
-                    .format(data_url, data_type))
-        except ValueError:
-            raise manager_exceptions.BadParametersError(
-                    "URL {0} is malformed - can't download {1} archive"
-                    .format(data_url, data_type))
-
-    elif 'Transfer-Encoding' in request.headers:
-        with open(archive_target_path, 'w') as f:
-            for buffered_chunked in chunked.decode(request.input_stream):
-                f.write(buffered_chunked)
-    else:
-        if not request.data:
-            raise manager_exceptions.BadParametersError(
-                    'Missing {0} archive in request body or '
-                    '"{1}" in query parameters'.format(data_type,
-                                                       url_key))
-        uploaded_file_data = request.data
-        with open(archive_target_path, 'w') as f:
-            f.write(uploaded_file_data)
 
 
 def create_filter_params_list_description(parameters, list_type):

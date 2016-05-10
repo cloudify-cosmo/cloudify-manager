@@ -1,54 +1,61 @@
-class DeploymentUpdateEnumBase(object):
-
-    class __metaclass__(type):
-        def __iter__(cls):
-            for attr, value in cls.__dict__.iteritems():
-                if not (callable(value) or attr.startswith('__')):
-                    yield value
-
-        def __setattr__(cls, key, value):
-            pass
+from collections import namedtuple
 
 
-class DeploymentUpdateEntityTypes(DeploymentUpdateEnumBase):
-    NODE = 'node'
-    RELATIONSHIP = 'relationship'
-    PROPERTY = 'property'
-    OPERATION = 'operation'
-    WORKFLOW = 'workflow'
-    OUTPUT = 'output'
+DeploymentUpdateEntityTypes = namedtuple('DeploymentUpdateEntityTypes',
+                                         ['NODE',
+                                          'RELATIONSHIP',
+                                          'PROPERTY',
+                                          'OPERATION',
+                                          'WORKFLOW',
+                                          'OUTPUT'])
+
+DeploymentUpdateActionTypes = namedtuple('DeploymentUpdateActionTypes',
+                                         ['ADD', 'REMOVE', 'MODIFY'])
+
+DeploymentUpdateStates = namedtuple('DeploymentUpdateStates',
+                                    ['COMMITTED',
+                                     'COMMITTING',
+                                     'STAGED',
+                                     'REVERTED',
+                                     'FAILED',
+                                     'STARTED',
+                                     'FINISHED',
+                                     'ROLLEDBACK'])
+
+DeploymentUpdateNodeModificationTypes = \
+    namedtuple('DeploymentUpdateNodeModificationTypes',
+               ['ADDED_AND_RELATED',
+                'EXTENDED_AND_RELATED',
+                'REDUCED_AND_RELATED',
+                'REMOVED_AND_RELATED',
+                'AFFECTED',
+                'RELATED'])
 
 
-class DeploymentUpdateActionType(DeploymentUpdateEnumBase):
-    ADD = 'add'
-    REMOVE = 'remove'
-    MODIFY = 'modify'
+ENTITY_TYPES = DeploymentUpdateEntityTypes(NODE='node',
+                                           RELATIONSHIP='relationship',
+                                           PROPERTY='property',
+                                           OPERATION='operation',
+                                           WORKFLOW='workflow',
+                                           OUTPUT='output')
 
-
-class DeploymentUpdateStateType(DeploymentUpdateEnumBase):
-    COMMITTED = 'committed'
-    COMMITTING = 'committing'
-    STAGED = 'staged'
-    REVERTED = 'reverted'
-    FAILED = 'failed'
-
-    STARTED = 'started'
-    FINISHED = 'finished'
-    ROLLEDBACK = 'rolledback'
-
-
-class DeploymentUpdateNodeModificationTypes(DeploymentUpdateEnumBase):
-    ADDED_AND_RELATED = 'added_and_related'
-    EXTENDED_AND_RELATED = 'extended_and_related'
-    REDUCED_AND_RELATED = 'reduced_and_related'
-    REMOVED_AND_RELATED = 'removed_and_related'
-
-    AFFECTED = 'affected'
-    RELATED = 'related'
-
-ENTITY_TYPES = DeploymentUpdateEntityTypes
-ACTION_TYPES = DeploymentUpdateActionType
-STATES = DeploymentUpdateStateType
-NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes
+ACTION_TYPES = DeploymentUpdateActionTypes(ADD='add',
+                                           REMOVE='remove',
+                                           MODIFY='modify')
+STATES = DeploymentUpdateStates(COMMITTED='committed',
+                                COMMITTING='committing',
+                                STAGED='staged',
+                                REVERTED='reverted',
+                                FAILED='failed',
+                                STARTED='started',
+                                FINISHED='finished',
+                                ROLLEDBACK='rolledback')
+NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes(
+        ADDED_AND_RELATED='added_and_related',
+        EXTENDED_AND_RELATED='extended_and_related',
+        REDUCED_AND_RELATED='reduced_and_related',
+        REMOVED_AND_RELATED='removed_and_related',
+        AFFECTED='affected',
+        RELATED='related')
 
 PATH_SEPARATOR = ':'

@@ -15,8 +15,10 @@
 import uuid
 
 from datetime import datetime
+from os import path
 from flask import current_app
 
+from dsl_parser.parser import parse_from_path
 from manager_rest import models, storage_manager
 from manager_rest.blueprints_manager import tasks, BlueprintsManager
 import manager_rest.manager_exceptions
@@ -65,18 +67,43 @@ class DeploymentUpdateManager(object):
                                                pagination=pagination,
                                                sort=sort)
 
-    def stage_deployment_update(self, deployment_id, staged_blueprint):
+    def stage_deployment_update(self,
+                                deployment_id,
+                                file_server_root_dir,
+                                app_dir,
+                                app_blueprint):
         """Stage a deployment update
 
+        :param app_blueprint:
+        :param app_dir:
+        :param file_server_root_dir:
         :param deployment_id: the deployment id for the update
-        :param staged_blueprint: the modified blueprint
         :return:
         """
 
         self._validate_no_active_updates_per_deployment(deployment_id)
 
+        # enables reverting to original blueprint resources
+        blueprint_id = self.sm.get_deployment(deployment_id).blueprint_id
+        blueprint_resource_dir = path.join(
+                'file:{0}'.format(file_server_root_dir),
+                'blueprints',
+                blueprint_id
+        )
+
+        app_path = path.join(file_server_root_dir, app_dir, app_blueprint)
+
+        # parsing the blueprint from here
+        blueprint = parse_from_path(
+                app_path,
+                additional_resource_sources=[blueprint_resource_dir]
+        )
+
+        # applying intrinsic functions
+        blueprint = tasks.prepare_deployment_plan(blueprint)
+
         deployment_update = models.DeploymentUpdate(deployment_id,
-                                                    staged_blueprint)
+                                                    blueprint)
         self.sm.put_deployment_update(deployment_update)
         return deployment_update
 
@@ -202,8 +229,9 @@ class DeploymentUpdateManager(object):
 
         :param dep_update:
         :param node_instances: a dictionary of modification type and
-        modified instances
-        :param modified_entity_ids: the entire modified entities list (by id)
+        add_node.modification instances
+        :param modified_entity_ids: the entire add_node.modification entities
+        list (by id)
         :return:
         """
 
