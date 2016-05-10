@@ -8,7 +8,7 @@ partition_number=1
 # device name is injected by using get_attribute on the target node.
 device_name=${device_name}
 
-partitioned=$(ctx source instance runtime-properties partitioned)
+partitioned=$(ctx source instance runtime-properties partitioned || true)
 
 
 if [[ -z "${use_external_resource}" && -z "${partitioned}" ]]; then
