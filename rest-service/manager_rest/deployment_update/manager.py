@@ -72,7 +72,8 @@ class DeploymentUpdateManager(object):
     def stage_deployment_update(self,
                                 deployment_id,
                                 app_dir,
-                                app_blueprint):
+                                app_blueprint,
+                                additional_inputs):
         """Stage a deployment update
 
         :param app_blueprint:
@@ -82,6 +83,19 @@ class DeploymentUpdateManager(object):
         """
 
         self._validate_no_active_updates_per_deployment(deployment_id)
+
+        # enables reverting to original blueprint resources
+        deployment = self.sm.get_deployment(deployment_id)
+        blueprint_id = deployment.blueprint_id
+
+        conflicted_inputs = [i for i in additional_inputs
+                             if i in deployment.base_inputs]
+
+        if any(conflicted_inputs):
+            raise manager_rest.manager_exceptions.ConflictError(
+                    'You have tried to override the following existing '
+                    'blueprints: {0}'.format(conflicted_inputs)
+            )
 
         # enables reverting to original blueprint resources
         blueprint_id = self.sm.get_deployment(deployment_id).blueprint_id
@@ -100,9 +114,13 @@ class DeploymentUpdateManager(object):
                                resources_base_url=file_server_base_url,
                                additional_resources=[blueprint_resource_dir],
                                **current_app.parser_context)
+        # Updating the new inputs with the deployment inputs # (overriding old
+        # values and adding new ones)
+        additional_inputs.update(deployment.base_inputs)
 
         # applying intrinsic functions
-        prepared_plan = tasks.prepare_deployment_plan(plan)
+        prepared_plan = tasks.prepare_deployment_plan(plan,
+                                                      inputs=addition_inputs)
 
         deployment_update = models.DeploymentUpdate(deployment_id,
                                                     prepared_plan)

@@ -224,8 +224,11 @@ class UploadedBlueprintsManager(UploadedDataManager):
     def _get_archive_type(self, archive_path):
         return archiving.get_archive_type(archive_path)
 
-    def _prepare_and_process_doc(self, data_id, file_server_root,
-                                 archive_target_path, additional_inputs=None):
+    def _prepare_and_process_doc(self,
+                                 data_id,
+                                 file_server_root,
+                                 archive_target_path,
+                                 **kwargs):
         application_dir = self._extract_file_to_file_server(
                 archive_target_path,
                 file_server_root

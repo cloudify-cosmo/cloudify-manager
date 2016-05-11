@@ -39,7 +39,7 @@ class UploadedDataManager(object):
                 data_id,
                 file_server_root,
                 archive_target_path,
-                additional_inputs)
+                additional_inputs=additional_inputs)
             self._move_archive_to_uploaded_dir(doc.id,
                                                file_server_root,
                                                archive_target_path,
@@ -93,14 +93,13 @@ class UploadedDataManager(object):
         finally:
             shutil.rmtree(tempdir)
 
-    def _save_file_locally(self,
-                           archive_target_path,
+    @staticmethod
+    def _save_file_locally(archive_target_path,
                            url_key,
                            data_type='unknown'):
         """
         Retrieves the file specified by the request to the local machine.
 
-        :param request: the request received by the rest client
         :param archive_target_path: the target of the archive
         :param data_type: the kind of the data (e.g. 'blueprint')
         :param url_key: if the data is passed as a url to an online resource,

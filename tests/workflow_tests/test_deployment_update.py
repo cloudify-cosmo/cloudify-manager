@@ -1696,12 +1696,13 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         We first provide the os_family_input at the initial deployment
         creation. Then we add the ip_input. we use both only in the final
         blueprint. Note that it's not possible to overwrite inputs (and it
-        wasn't tested.
+        wasn't tested).
         :return:
         """
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
                 'use_new_and_old_inputs',
-                inputs={'os_family_input': 'windows'}
+                inputs={'input_prop1': '1',
+                        'input_prop2': '2'}
         )
 
         base_nodes, base_node_instances = \
@@ -1714,23 +1715,40 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             self.client.deployment_updates.stage(
                     deployment.id,
                     modified_bp_path,
-                    inputs={'ip_input': '1.1.1.1'}
+                    inputs={'input_prop3': '3'}
             )
 
         self.client.deployment_updates.add(
                 dep_update.id,
                 entity_type='property',
-                entity_id='nodes:site1:properties:os_family')
+                entity_id='nodes:site1:properties:prop1')
 
         self.client.deployment_updates.add(
                 dep_update.id,
                 entity_type='property',
-                entity_id='nodes:site1:properties:ip')
+                entity_id='nodes:site1:properties:prop2')
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='property',
+                entity_id='nodes:site1:properties:prop3')
 
         self.client.deployment_updates.add(
             dep_update.id,
             entity_type='output',
-            entity_id='outputs:ip_output'
+            entity_id='outputs:output_prop1'
+        )
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='output',
+                entity_id='outputs:output_prop2'
+        )
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='output',
+                entity_id='outputs:output_prop3'
         )
 
         self.client.deployment_updates.commit(dep_update.id)
@@ -1748,15 +1766,60 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         added_property = modified_node['properties']
         self.assertIsNotNone(added_property.get('ip'))
         self.assertIsNotNone(added_property.get('os_family'))
-        self.assertEqual(added_property['ip'], '1.1.1.1')
-        self.assertEqual(added_property['os_family'], 'windows')
 
         # Checking that get_property works correctly
-        output_property = self.client.deployments.get(deployment.id).outputs
-        self.assertDictContainsSubset({'ip_output': {'value': '1.1.1.1'}},
-                                      output_property)
+        outputs_to_check = {
+            'output_prop1': {
+                'value': '1'
+            },
+            'output_prop2': {
+                'value': '2'
+            },
+            'output_prop3': {
+                'value': '3'
+            }
+        }
+        outputs = self.client.deployments.get(deployment.id).outputs
+        self.assertEqual(outputs_to_check, outputs)
 
         # assert nothing else changed
+        self._assert_equal_dicts(base_node,
+                                 modified_node,
+                                 excluded_items=['properties'])
         self._assert_equal_dicts(base_node['properties'],
                                  modified_node['properties'],
-                                 excluded_items=['ip', 'os_family'])
+                                 excluded_items=['prop1', 'prop2', 'prop3'])
+
+    def test_overriding_existing_inputs(self):
+        deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
+                'override_inputs',
+                inputs={'ip_input': '1.1.1.1'}
+        )
+
+        base_nodes, base_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        base_node = base_nodes['affected_node'][0]
+        base_node_instance = base_node_instances['affected_node'][0]
+
+        self.assertRaisesRegexp(
+                CloudifyClientError,
+                '409: You have tried to override the following existing '
+                'blueprints',
+                callable_obj=self.client.deployment_updates.stage,
+                deployment_id=deployment.id,
+                blueprint_path=modified_bp_path,
+                inputs={'ip_input': '2.2.2.2'}
+        )
+
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        modified_node = modified_nodes['affected_node'][0]
+        modified_node_instance = modified_node_instances['affected_node'][0]
+
+        # assert nothing else changed
+        self.assertEqual(base_node, modified_node)
+        self.assertEqual(base_node_instance, modified_node_instance)
