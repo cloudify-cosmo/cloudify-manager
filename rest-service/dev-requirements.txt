@@ -1,4 +1,4 @@
-https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/CFY-5261-1-3-dsl-spec.zip
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
 https://github.com/cloudify-cosmo/flask-securest/archive/0.8.zip
 
