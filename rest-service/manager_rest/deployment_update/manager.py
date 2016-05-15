@@ -16,21 +16,23 @@ import uuid
 
 from datetime import datetime
 from os import path
+
 from flask import current_app
 
-from dsl_parser.parser import parse_from_path
-from manager_rest import models, storage_manager
-from manager_rest.blueprints_manager import tasks, BlueprintsManager
+from dsl_parser import constants
 import manager_rest.manager_exceptions
 import manager_rest.workflow_client as wf_client
-
-from dsl_parser import constants
-from handlers import (DeploymentUpdateNodeHandler,
-                      DeploymentUpdateNodeInstanceHandler,
-                      DeploymentUpdateDeploymentHandler)
-from validator import StepValidator
-from utils import extract_ids
-from constants import STATES, NODE_MOD_TYPES
+from manager_rest import config
+from manager_rest import models, storage_manager
+from manager_rest.deployment_update.utils import extract_ids
+from manager_rest.deployment_update.validator import StepValidator
+from manager_rest.blueprints_manager import tasks, BlueprintsManager
+from manager_rest.deployment_update.constants import STATES, NODE_MOD_TYPES
+from manager_rest.deployment_update.handlers import (
+    DeploymentUpdateNodeHandler,
+    DeploymentUpdateNodeInstanceHandler,
+    DeploymentUpdateDeploymentHandler
+)
 
 
 class DeploymentUpdateManager(object):
@@ -69,7 +71,6 @@ class DeploymentUpdateManager(object):
 
     def stage_deployment_update(self,
                                 deployment_id,
-                                file_server_root_dir,
                                 app_dir,
                                 app_blueprint):
         """Stage a deployment update
@@ -85,22 +86,24 @@ class DeploymentUpdateManager(object):
 
         # enables reverting to original blueprint resources
         blueprint_id = self.sm.get_deployment(deployment_id).blueprint_id
-        blueprint_resource_dir = path.join(
-                'file:{0}'.format(file_server_root_dir),
-                'blueprints',
-                blueprint_id
-        )
 
-        app_path = path.join(file_server_root_dir, app_dir, app_blueprint)
+        file_server_base_url = \
+            '{0}/'.format(config.instance().file_server_base_uri)
+
+        blueprint_resource_dir = path.join(file_server_base_url,
+                                           'blueprints',
+                                           blueprint_id)
+
+        app_path = path.join(file_server_base_url, app_dir, app_blueprint)
 
         # parsing the blueprint from here
-        blueprint = parse_from_path(
-                app_path,
-                additional_resource_sources=[blueprint_resource_dir]
-        )
+        plan = tasks.parse_dsl(app_path,
+                               resources_base_url=file_server_base_url,
+                               additional_resources=[blueprint_resource_dir],
+                               **current_app.parser_context)
 
         # applying intrinsic functions
-        blueprint = tasks.prepare_deployment_plan(blueprint)
+        blueprint = tasks.prepare_deployment_plan(plan)
 
         deployment_update = models.DeploymentUpdate(deployment_id,
                                                     blueprint)
