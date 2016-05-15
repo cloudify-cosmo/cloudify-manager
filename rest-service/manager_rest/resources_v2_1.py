@@ -22,7 +22,7 @@ from datetime import datetime
 from flask import request
 from flask.ext.restful_swagger import swagger
 
-from dsl_parser.parser import parse_from_path
+from dsl_parser import tasks
 from flask_securest.rest_security import SecuredResource
 from flask_securest import rest_security
 
@@ -232,7 +232,13 @@ class DeploymentUpdates(SecuredResource):
             # retrieving and parsing the blueprint
             temp_app_path = os.path.join(temp_dir, relative_app_dir,
                                          blueprint_filename)
-            blueprint = parse_from_path(temp_app_path)
+
+            # TODO: pass resolver and validate_version
+            resources_base = '{0}/'.format(
+                config.instance().file_server_base_uri)
+            blueprint = tasks.parse_dsl(
+                'file://{0}'.format(temp_app_path),
+                resources_base_url=resources_base)
 
             # create a staging object
             update = get_deployment_updates_manager(). \
