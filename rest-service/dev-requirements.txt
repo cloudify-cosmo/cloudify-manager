@@ -1,4 +1,4 @@
-https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/CFY-5299-deployment-update-import-doesnt-work-on-local-resources.zip
+https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/CFY-4929-deployment-update-Phase-II.zip
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-4929-deployment-update-Phase-II.zip
 https://github.com/cloudify-cosmo/flask-securest/archive/0.8.zip
 

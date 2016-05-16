@@ -103,10 +103,10 @@ class DeploymentUpdateManager(object):
                                **current_app.parser_context)
 
         # applying intrinsic functions
-        blueprint = tasks.prepare_deployment_plan(plan)
+        prepared_plan = tasks.prepare_deployment_plan(plan)
 
         deployment_update = models.DeploymentUpdate(deployment_id,
-                                                    blueprint)
+                                                    prepared_plan)
         self.sm.put_deployment_update(deployment_update)
         return deployment_update
 
