@@ -88,7 +88,6 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
             cls._process_plugins(file_server_root, deployment_id)
             update = get_deployment_updates_manager().stage_deployment_update(
                     deployment_id,
-                    file_server_root,
                     app_dir,
                     app_file_name,
                 )
