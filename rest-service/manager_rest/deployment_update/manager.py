@@ -92,17 +92,12 @@ class DeploymentUpdateManager(object):
                              if i in deployment.base_inputs]
 
         if conflicted_inputs:
-            'version {0} does not match '
-            'current version of '
-            'node instance {1} which is {2}'
             raise manager_rest.manager_exceptions.ConflictError(
                 'The following deployment update inputs conflict with '
                 'original deployment inputs: {0}'.format(conflicted_inputs)
             )
 
         # enables reverting to original blueprint resources
-        blueprint_id = self.sm.get_deployment(deployment_id).blueprint_id
-
         file_server_base_url = \
             '{0}/'.format(config.instance().file_server_base_uri)
 
@@ -123,7 +118,7 @@ class DeploymentUpdateManager(object):
 
         # applying intrinsic functions
         prepared_plan = tasks.prepare_deployment_plan(plan,
-                                                      inputs=addition_inputs)
+                                                      inputs=additional_inputs)
 
         deployment_update = models.DeploymentUpdate(deployment_id,
                                                     prepared_plan)
