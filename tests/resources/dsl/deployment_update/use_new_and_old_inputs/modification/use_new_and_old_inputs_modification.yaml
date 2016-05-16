@@ -22,13 +22,13 @@ node_types:
     derived_from: cloudify.nodes.Compute
     properties:
       prop1:
-        default: 1
+        default: 'default_value1'
         type: string
       prop2:
-        default: 2
+        default: 'default_value2'
         type: string
       prop3:
-        default: 3
+        default: 'default_value3'
         type: string
 
 node_templates:

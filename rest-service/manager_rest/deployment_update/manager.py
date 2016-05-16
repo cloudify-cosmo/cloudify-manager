@@ -91,10 +91,13 @@ class DeploymentUpdateManager(object):
         conflicted_inputs = [i for i in additional_inputs
                              if i in deployment.base_inputs]
 
-        if any(conflicted_inputs):
+        if conflicted_inputs:
+            'version {0} does not match '
+            'current version of '
+            'node instance {1} which is {2}'
             raise manager_rest.manager_exceptions.ConflictError(
-                    'You have tried to override the following existing '
-                    'blueprints: {0}'.format(conflicted_inputs)
+                'The following deployment update inputs conflict with '
+                'original deployment inputs: {0}'.format(conflicted_inputs)
             )
 
         # enables reverting to original blueprint resources

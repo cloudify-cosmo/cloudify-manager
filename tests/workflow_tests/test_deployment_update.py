@@ -1701,8 +1701,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         """
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
                 'use_new_and_old_inputs',
-                inputs={'input_prop1': '1',
-                        'input_prop2': '2'}
+                inputs={'input_prop1': 'custom_input1',
+                        'input_prop2': 'custom_input2'}
         )
 
         base_nodes, base_node_instances = \
@@ -1715,7 +1715,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             self.client.deployment_updates.stage(
                     deployment.id,
                     modified_bp_path,
-                    inputs={'input_prop3': '3'}
+                    inputs={'input_prop3': 'custom_input3'}
             )
 
         self.client.deployment_updates.add(
@@ -1770,13 +1770,13 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # Checking that get_property works correctly
         outputs_to_check = {
             'output_prop1': {
-                'value': '1'
+                'value': 'custom_input1'
             },
             'output_prop2': {
-                'value': '2'
+                'value': 'custom_input2'
             },
             'output_prop3': {
-                'value': '3'
+                'value': 'custom_input3'
             }
         }
         outputs = self.client.deployments.get(deployment.id).outputs

@@ -20,15 +20,15 @@ node_types:
     properties:
       # passed as input to the deployment creation to be saved
       prop1:
-        default: ''
+        default: 'default_value1'
         type: string
       # passed as input to the deployment creation for future use
       prop2:
-        default: ''
+        default: 'default_value2'
         type: string
       # passed only in the deployment update process
       prop3:
-        default: ''
+        default: 'default_value3'
         type: string
 
 node_templates:
