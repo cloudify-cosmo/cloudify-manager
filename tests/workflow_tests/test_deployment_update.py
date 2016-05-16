@@ -1805,8 +1805,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         self.assertRaisesRegexp(
                 CloudifyClientError,
-                '409: You have tried to override the following existing '
-                'blueprints',
+                "409: The following deployment update inputs conflict with "
+                "original deployment inputs: \['ip_input'\]",
                 callable_obj=self.client.deployment_updates.stage,
                 deployment_id=deployment.id,
                 blueprint_path=modified_bp_path,
