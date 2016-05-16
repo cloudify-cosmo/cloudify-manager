@@ -27,7 +27,8 @@ class TestScaleWorkflow(TestCase):
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute'})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute'})
         expectations['compute']['new']['install'] = 1
         expectations['compute']['existing']['install'] = 1
         self.deployment_assertions(expectations)
@@ -37,8 +38,9 @@ class TestScaleWorkflow(TestCase):
         expectations['compute']['new']['install'] = 3
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute',
-                                              'delta': -1})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'delta': -1})
         expectations['compute']['existing']['install'] = 2
         expectations['compute']['removed']['install'] = 1
         expectations['compute']['removed']['uninstall'] = 1
@@ -49,12 +51,14 @@ class TestScaleWorkflow(TestCase):
         expectations['compute']['new']['install'] = 0
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute'})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute'})
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute',
-                                              'delta': -1})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'delta': -1})
         expectations['compute']['new']['install'] = 0
         expectations['compute']['existing']['install'] = 0
         expectations['compute']['removed']['install'] = 1
@@ -66,8 +70,9 @@ class TestScaleWorkflow(TestCase):
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute',
-                                              'delta': 2})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'delta': 2})
         expectations['compute']['new']['install'] = 2
         expectations['compute']['existing']['install'] = 1
         self.deployment_assertions(expectations)
@@ -77,8 +82,9 @@ class TestScaleWorkflow(TestCase):
         expectations['compute']['new']['install'] = 3
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute',
-                                              'delta': -2})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'delta': -2})
         expectations['compute']['existing']['install'] = 1
         expectations['compute']['removed']['install'] = 2
         expectations['compute']['removed']['uninstall'] = 2
@@ -91,7 +97,8 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute'})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute'})
         expectations['compute']['new']['install'] = 1
         expectations['compute']['existing']['install'] = 1
         expectations['db']['new']['install'] = 1
@@ -107,8 +114,9 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 8
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute',
-                                              'delta': -1})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'delta': -1})
         expectations['compute']['existing']['install'] = 1
         expectations['compute']['removed']['install'] = 1
         expectations['compute']['removed']['uninstall'] = 1
@@ -127,7 +135,9 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'db'})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'db',
+            'scale_compute': True})
         expectations['compute']['new']['install'] = 1
         expectations['compute']['existing']['install'] = 1
         expectations['db']['new']['install'] = 1
@@ -143,8 +153,10 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 8
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'db',
-                                              'delta': -1})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'db',
+            'delta': -1,
+            'scale_compute': True})
         expectations['compute']['existing']['install'] = 1
         expectations['compute']['removed']['install'] = 1
         expectations['compute']['removed']['uninstall'] = 1
@@ -164,7 +176,8 @@ class TestScaleWorkflow(TestCase):
         self.deployment_assertions(expectations)
 
         expectations = self.scale(parameters={
-            'node_id': 'db', 'scale_compute': False})
+            'scalable_entity_name': 'db',
+            'scale_compute': False})
         expectations['compute']['existing']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -179,9 +192,10 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 8
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'db',
-                                              'delta': -1,
-                                              'scale_compute': False})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'db',
+            'delta': -1,
+            'scale_compute': False})
         expectations['compute']['existing']['install'] = 2
         expectations['db']['existing']['install'] = 2
         expectations['db']['existing']['rel_install'] = 4
@@ -198,7 +212,8 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute'})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute'})
         expectations['compute']['new']['install'] = 1
         expectations['compute']['existing']['install'] = 1
         expectations['db']['existing']['install'] = 1
@@ -213,8 +228,9 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 8
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute',
-                                              'delta': -1})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'delta': -1})
         expectations['compute']['existing']['install'] = 1
         expectations['compute']['removed']['install'] = 1
         expectations['compute']['removed']['uninstall'] = 1
@@ -230,8 +246,9 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 0
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute',
-                                              'delta': 1})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'delta': 1})
         expectations['compute']['new']['install'] = 1
         expectations['compute']['existing']['install'] = 0
         expectations['db']['existing']['install'] = 1
@@ -239,8 +256,9 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['existing']['scale_rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'compute',
-                                              'delta': -1})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'delta': -1})
         expectations['compute']['new']['install'] = 0
         expectations['compute']['existing']['install'] = 0
         expectations['compute']['removed']['install'] = 1
@@ -257,7 +275,8 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 2
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'db'})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'db'})
         expectations['compute']['existing']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -272,8 +291,9 @@ class TestScaleWorkflow(TestCase):
         expectations['db']['new']['rel_install'] = 8
         self.deployment_assertions(expectations)
 
-        expectations = self.scale(parameters={'node_id': 'db',
-                                              'delta': -1})
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'db',
+            'delta': -1})
         expectations['compute']['existing']['install'] = 2
         expectations['db']['existing']['install'] = 1
         expectations['db']['existing']['rel_install'] = 4
@@ -295,7 +315,7 @@ class TestScaleWorkflow(TestCase):
         self.deployment_assertions(expectations)
 
         with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'node_id': 'compute'})
+            self.scale(parameters={'scalable_entity_name': 'compute'})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
@@ -317,7 +337,7 @@ class TestScaleWorkflow(TestCase):
         self.deployment_assertions(expectations)
 
         with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'node_id': 'compute'})
+            self.scale(parameters={'scalable_entity_name': 'compute'})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
@@ -351,7 +371,7 @@ class TestScaleWorkflow(TestCase):
         self.deployment_assertions(expectations)
 
         with self.assertRaises(RuntimeError) as e:
-            self.scale(parameters={'node_id': 'compute'})
+            self.scale(parameters={'scalable_entity_name': 'compute'})
         self.assertIn('TEST_EXPECTED_FAIL', str(e.exception))
         expectations = self.expectations()
         expectations['compute']['new']['install'] = 1
@@ -421,10 +441,10 @@ class TestScaleWorkflow(TestCase):
         self.deploy('scale_groups')
         test_assertions(expected_node_count=1, assert_type='install')
 
-        self.scale(parameters={'node_id': 'group1', 'delta': 1})
+        self.scale(parameters={'scalable_entity_name': 'group1', 'delta': 1})
         test_assertions(expected_node_count=2, assert_type='scale_out')
 
-        self.scale(parameters={'node_id': 'group1', 'delta': -1})
+        self.scale(parameters={'scalable_entity_name': 'group1', 'delta': -1})
         test_assertions(expected_node_count=1, assert_type='scale_in')
 
     def setUp(self):

@@ -447,22 +447,25 @@ workflows:
         default: Not provided
 
   scale:
-    mapping: default_workflows.cloudify.plugins.workflows.scale
+    mapping: default_workflows.cloudify.plugins.workflows.scale_entity
     parameters:
-      node_id:
-        description: Which node (not node instance) to scale
+      scalable_entity_name:
+        description: >
+          Which node/group to scale. Note that the parameter specified
+          should denote the node/group name and NOT the node/group instance id.
       delta:
         description: >
-            How many nodes should be added/removed.
+            How many node/group instances should be added/removed.
             A positive number denotes increase of instances.
             A negative number denotes decrease of instances.
         default: 1
       scale_compute:
         description: >
-            If node is contained (transitively) within a compute node
-            and this property is 'true', operate on compute node instead
-            of 'node_id'
-        default: true
+            If a node name is passed as the `scalable_entity_name` parameter
+            and that node is contained (transitively) within a compute node
+            and this property is 'true', operate on the compute node instead
+            of the specified node.
+        default: false
 
   install_new_agents:
     mapping: default_workflows.cloudify.plugins.workflows.install_new_agents
