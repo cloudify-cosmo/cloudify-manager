@@ -28,7 +28,7 @@ from manager_rest import config, chunked, manager_exceptions
 
 class UploadedDataManager(object):
 
-    def receive_uploaded_data(self, data_id):
+    def receive_uploaded_data(self, data_id, additional_inputs=None):
         file_server_root = config.instance().file_server_root
         archive_target_path = tempfile.mktemp(dir=file_server_root)
         try:
@@ -38,7 +38,8 @@ class UploadedDataManager(object):
             doc, dest_file_name = self._prepare_and_process_doc(
                 data_id,
                 file_server_root,
-                archive_target_path)
+                archive_target_path,
+                additional_inputs=additional_inputs)
             self._move_archive_to_uploaded_dir(doc.id,
                                                file_server_root,
                                                archive_target_path,
@@ -92,14 +93,13 @@ class UploadedDataManager(object):
         finally:
             shutil.rmtree(tempdir)
 
-    def _save_file_locally(self,
-                           archive_target_path,
+    @staticmethod
+    def _save_file_locally(archive_target_path,
                            url_key,
                            data_type='unknown'):
         """
         Retrieves the file specified by the request to the local machine.
 
-        :param request: the request received by the rest client
         :param archive_target_path: the target of the archive
         :param data_type: the kind of the data (e.g. 'blueprint')
         :param url_key: if the data is passed as a url to an online resource,
@@ -175,5 +175,5 @@ class UploadedDataManager(object):
         raise NotImplementedError('Subclass responsibility')
 
     def _prepare_and_process_doc(self, data_id, file_server_root,
-                                 archive_target_path):
+                                 archive_target_path, additional_inputs):
         raise NotImplementedError('Subclass responsibility')

@@ -496,7 +496,7 @@ class BlueprintsManager(object):
             id=deployment_id,
             blueprint_id=blueprint_id, created_at=now, updated_at=now,
             workflows=deployment_plan['workflows'],
-            raw_inputs=inputs,
+            base_inputs=inputs,
             inputs=deployment_plan['inputs'],
             policy_types=deployment_plan['policy_types'],
             policy_triggers=deployment_plan['policy_triggers'],

@@ -94,7 +94,7 @@ class DeploymentUpdateBase(TestCase):
         if exists:
             self.fail(error_msg.format(target, expected_type))
 
-    def _deploy_and_get_modified_bp_path(self, test_name):
+    def _deploy_and_get_modified_bp_path(self, test_name, inputs=None):
 
         base_dir = os.path.join(test_name, 'base')
         modified_dir = os.path.join(test_name, 'modification')
@@ -105,7 +105,7 @@ class DeploymentUpdateBase(TestCase):
             resource(os.path.join(blueprints_base_path,
                                   base_dir,
                                   base_bp))
-        deployment, _ = deploy(base_bp_path)
+        deployment, _ = deploy(base_bp_path, inputs=inputs)
 
         modified_bp_path = \
             resource(os.path.join(blueprints_base_path,
@@ -1690,3 +1690,136 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 {'source_ops_counter': '3'},
                 new_node_instance['runtime_properties']
         )
+
+    def test_use_new_and_old_inputs(self):
+        """
+        We first provide the os_family_input at the initial deployment
+        creation. Then we add the ip_input. we use both only in the final
+        blueprint. Note that it's not possible to overwrite inputs (and it
+        wasn't tested).
+        :return:
+        """
+        deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
+                'use_new_and_old_inputs',
+                inputs={'input_prop1': 'custom_input1',
+                        'input_prop2': 'custom_input2'}
+        )
+
+        base_nodes, base_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        base_node = base_nodes['affected_node'][0]
+
+        dep_update = \
+            self.client.deployment_updates.stage(
+                    deployment.id,
+                    modified_bp_path,
+                    inputs={'input_prop3': 'custom_input3'}
+            )
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='property',
+                entity_id='nodes:site1:properties:prop1')
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='property',
+                entity_id='nodes:site1:properties:prop2')
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='property',
+                entity_id='nodes:site1:properties:prop3')
+
+        self.client.deployment_updates.add(
+            dep_update.id,
+            entity_type='output',
+            entity_id='outputs:output_prop1'
+        )
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='output',
+                entity_id='outputs:output_prop2'
+        )
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='output',
+                entity_id='outputs:output_prop3'
+        )
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_committed_state(dep_update.id)
+
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        modified_node = modified_nodes['affected_node'][0]
+
+        added_property = modified_node['properties']
+        self.assertIsNotNone(added_property.get('ip'))
+        self.assertIsNotNone(added_property.get('os_family'))
+
+        # Checking that get_property works correctly
+        outputs_to_check = {
+            'output_prop1': {
+                'value': 'custom_input1'
+            },
+            'output_prop2': {
+                'value': 'custom_input2'
+            },
+            'output_prop3': {
+                'value': 'custom_input3'
+            }
+        }
+        outputs = self.client.deployments.get(deployment.id).outputs
+        self.assertEqual(outputs_to_check, outputs)
+
+        # assert nothing else changed
+        self._assert_equal_dicts(base_node,
+                                 modified_node,
+                                 excluded_items=['properties'])
+        self._assert_equal_dicts(base_node['properties'],
+                                 modified_node['properties'],
+                                 excluded_items=['prop1', 'prop2', 'prop3'])
+
+    def test_overriding_existing_inputs(self):
+        deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
+                'override_inputs',
+                inputs={'ip_input': '1.1.1.1'}
+        )
+
+        base_nodes, base_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        base_node = base_nodes['affected_node'][0]
+        base_node_instance = base_node_instances['affected_node'][0]
+
+        self.assertRaisesRegexp(
+                CloudifyClientError,
+                "409: The following deployment update inputs conflict with "
+                "original deployment inputs: \['ip_input'\]",
+                callable_obj=self.client.deployment_updates.stage,
+                deployment_id=deployment.id,
+                blueprint_path=modified_bp_path,
+                inputs={'ip_input': '2.2.2.2'}
+        )
+
+        modified_nodes, modified_node_instances = \
+            self._get_nodes_and_node_instances_dict(
+                    deployment.id,
+                    {'affected_node': 'site1'})
+        modified_node = modified_nodes['affected_node'][0]
+        modified_node_instance = modified_node_instances['affected_node'][0]
+
+        # assert nothing else changed
+        self.assertEqual(base_node, modified_node)
+        self.assertEqual(base_node_instance, modified_node_instance)
