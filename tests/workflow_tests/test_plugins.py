@@ -67,3 +67,16 @@ class TestPlugins(TestCase):
         except CloudifyClientError as e:
             self.assertEquals('plugin DUMMY_PLUGIN_ID not found', e.message)
             self.assertEquals(404, e.status_code)
+
+    def test_install_uninstall_workflows_execution(self):
+        self.clear_plugin_data('agent')
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
+        plugins = self.get_plugin_data('agent',
+                                       deployment_id='system')['local']
+        self.assertEqual(plugins[TEST_PACKAGE_NAME], ['installed'])
+        plugin = self.client.plugins.list()[0]
+        self.client.plugins.delete(plugin.id)
+        plugins = self.get_plugin_data('agent',
+                                       deployment_id='system')['local']
+        self.assertEqual(plugins[TEST_PACKAGE_NAME], ['installed',
+                                                      'uninstalled'])

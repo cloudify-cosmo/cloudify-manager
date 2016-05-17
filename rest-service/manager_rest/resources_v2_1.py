@@ -14,6 +14,7 @@
 #  * limitations under the License.
 #
 
+import sys
 import os
 import shutil
 import tempfile
@@ -32,6 +33,7 @@ from manager_rest import models
 from manager_rest import responses_v2_1
 from manager_rest import config
 from manager_rest import utils
+from manager_rest import manager_exceptions
 from manager_rest.utils import create_filter_params_list_description
 from manager_rest.resources_v2 import create_filters, paginate, sortable
 from manager_rest.maintenance import (get_maintenance_file_path,
@@ -44,6 +46,8 @@ from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_json_content_type,
+                                    verify_and_convert_bool,
+                                    get_blueprints_manager,
                                     CONVENTION_APPLICATION_BLUEPRINT_FILE)
 from manager_rest.deployment_update.manager import (
     get_deployment_updates_manager)
@@ -301,3 +305,37 @@ class NodeInstancesId(resources.NodeInstancesId):
 
     patch = override_marshal_with(resources.NodeInstancesId.patch,
                                   responses_v2_1.NodeInstance)
+
+
+class PluginsId(resources_v2.PluginsId):
+
+    @swagger.operation(
+        responseClass=responses_v2_1.Plugin,
+        nickname="deleteById",
+        notes="deletes a plugin according to its ID."
+    )
+    @exceptions_handled
+    @marshal_with(responses_v2_1.Plugin)
+    def delete(self, plugin_id, **kwargs):
+        """
+        Delete plugin by ID
+        """
+        verify_json_content_type()
+        request_json = request.json
+        force = verify_and_convert_bool('force', request_json.get('force',
+                                                                  False))
+        try:
+            return get_blueprints_manager().remove_plugin(plugin_id=plugin_id,
+                                                          force=force)
+        except manager_exceptions.ManagerException:
+            raise
+        except manager_exceptions.ExecutionTimeout:
+            tp, ex, tb = sys.exc_info()
+            raise manager_exceptions.PluginInstallationTimeout(
+                'Timed out during plugin un-installation. ({0}: {1})'
+                .format(tp.__name__, ex)), None, tb
+        except Exception:
+            tp, ex, tb = sys.exc_info()
+            raise manager_exceptions.PluginInstallationError(
+                'Failed during plugin un-installation. ({0}: {1})'
+                .format(tp.__name__, ex)), None, tb

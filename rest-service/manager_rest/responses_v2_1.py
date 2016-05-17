@@ -19,6 +19,7 @@ from flask_restful_swagger import swagger
 from manager_rest.responses import (Node as NodeV1,
                                     NodeInstance as NodeInstanceV1,
                                     Deployment as DeploymentV1)
+from manager_rest.responses_v2 import Plugin  # noqa
 
 
 @swagger.model

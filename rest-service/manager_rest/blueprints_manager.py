@@ -17,16 +17,20 @@ import uuid
 import traceback
 import os
 import itertools
+import shutil
 from datetime import datetime
 from StringIO import StringIO
 
+import celery.exceptions
 from flask import current_app
 
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
 from dsl_parser import utils as dsl_parser_utils
+
 from manager_rest import models
 from manager_rest import config
+from manager_rest import utils
 from manager_rest import manager_exceptions
 from manager_rest import storage_manager
 from manager_rest import workflow_client as wf_client
@@ -198,6 +202,68 @@ class BlueprintsManager(object):
             bypass_maintenance=bypass_maintenance
         )
         return execution
+
+    def install_plugin(self, plugin):
+        if utils.plugin_installable_on_current_platform(plugin):
+            self._execute_system_workflow(
+                wf_id='install_plugin',
+                task_mapping='cloudify_system_workflows.plugins.install',
+                execution_parameters={
+                    'plugin': {
+                        'name': plugin.package_name,
+                        'package_name': plugin.package_name,
+                        'package_version': plugin.package_version
+                    }
+                },
+                verify_no_executions=False,
+                timeout=300)
+
+    def remove_plugin(self, plugin_id, force):
+        # Verify plugin exists.
+        plugin = self.sm.get_plugin(plugin_id)
+
+        # Uninstall (if applicable)
+        if utils.plugin_installable_on_current_platform(plugin):
+            if not force:
+                used_blueprints = list(set(
+                    d.blueprint_id for d in
+                    self.deployments_list(include=['blueprint_id']).items))
+                plugins = [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
+                           b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
+                           for b in
+                           self.blueprints_list(include=['plan'],
+                                                filters={
+                                                    'id': used_blueprints
+                                                }).items]
+                plugins = set((p.get('package_name'), p.get('package_version'))
+                              for sublist in plugins for p in sublist)
+                if (plugin.package_name, plugin.package_version) in plugins:
+                    raise manager_exceptions.PluginInUseError(
+                        'Plugin {} is currently in use. You can "force" '
+                        'plugin removal.'.format(plugin.id))
+            self._execute_system_workflow(
+                wf_id='uninstall_plugin',
+                task_mapping='cloudify_system_workflows.plugins.uninstall',
+                execution_parameters={
+                    'plugin': {
+                        'name': plugin.package_name,
+                        'package_name': plugin.package_name,
+                        'package_version': plugin.package_version,
+                        'wagon': True
+                    }
+                },
+                verify_no_executions=False,
+                timeout=300)
+
+        # Remove from storage
+        self.sm.delete_plugin(plugin.id)
+
+        # Remove from file system
+        archive_path = utils.get_plugin_archive_path(plugin_id,
+                                                     plugin.archive_name)
+        shutil.rmtree(os.path.dirname(archive_path), ignore_errors=True)
+
+        return plugin
 
     def publish_blueprint(self,
                           application_dir,
@@ -419,6 +485,10 @@ class BlueprintsManager(object):
             try:
                 # wait for the workflow execution to complete
                 async_task.get(timeout=timeout, propagate=True)
+            except celery.exceptions.TimeoutError:
+                raise manager_exceptions.ExecutionTimeout(
+                    'Execution of system workflow {0} timed out ({1} seconds}'
+                    .format(wf_id, timeout))
             except Exception as e:
                 # error message for the user
                 if deployment:
@@ -426,7 +496,7 @@ class BlueprintsManager(object):
                 else:
                     add_info = ''
                 error_msg = 'Error occurred while executing the {0} ' \
-                            'system workflow{1}: {2} - {3}'.format(
+                            'system workflow {1}: {2} - {3}'.format(
                                 wf_id, add_info, type(e).__name__, e)
                 # adding traceback to the log error message
                 tb = StringIO()
@@ -434,15 +504,14 @@ class BlueprintsManager(object):
                 log_error_msg = '{0}; traceback: {1}'.format(
                     error_msg, tb.getvalue())
                 current_app.logger.error(log_error_msg)
-                raise RuntimeError(error_msg)
+                raise manager_exceptions.ExecutionFailure(error_msg)
 
             # verify the execution completed successfully
-            execution = self.sm.get_execution(async_task.id)
+            execution = self.sm.get_execution(execution_id)
             if execution.status != models.Execution.TERMINATED:
-                raise RuntimeError(
+                raise manager_exceptions.ExecutionFailure(
                     'Failed executing the {0} system workflow: '
-                    'Execution did not complete successfully before '
-                    'timeout ({1} seconds)'.format(wf_id, timeout))
+                    'Execution did not complete successfully.'.format(wf_id))
 
         return async_task, execution
 

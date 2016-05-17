@@ -341,7 +341,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                 deployment_id=self.DEPLOYMENT_ID,
                 inputs={'some_input': '1234'})
         except CloudifyClientError, e:
-            self.assertTrue('were not specified' in str(e))
+            self.assertIn('were not specified', str(e))
         try:
             self.put_deployment(
                 blueprint_id='7788',

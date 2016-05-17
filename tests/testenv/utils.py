@@ -347,10 +347,9 @@ def update_storage(ctx):
     :param ctx: task invocation context
     """
 
-    deployment_id = ctx.deployment.id
+    deployment_id = ctx.deployment.id or 'system'
     plugin_name = ctx.plugin.name
     if not plugin_name:
-
         # hack for tasks that are executed locally.
         if ctx.task_name.startswith('cloudify_agent'):
             plugin_name = 'agent'

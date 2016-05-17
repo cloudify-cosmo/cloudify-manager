@@ -42,6 +42,7 @@ setup(
         'celery==3.1.17',
         'flask-securest==0.8',
         'psutil==3.3.0',
-        'jsonpickle==0.9.2'
+        'jsonpickle==0.9.2',
+        'wagon==0.3.0'
     ]
 )

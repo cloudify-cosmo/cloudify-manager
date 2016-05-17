@@ -86,9 +86,9 @@ run_flake8()
 
 case $1 in
     test-rest-service-v2_1-client ) test_rest_service_v2_1;;
-    test-rest-service-v2-client ) test_rest_service_v2;;
-    test-rest-service-v1-client ) test_rest_service_v1;;
-    run-integration-tests       ) run_intergration_tests;;
-    flake8                      ) run_flake8;;
-    test-system-workflows       ) test_system_workflows;;
+    test-rest-service-v2-client   ) test_rest_service_v2;;
+    test-rest-service-v1-client   ) test_rest_service_v1;;
+    run-integration-tests         ) run_intergration_tests;;
+    flake8                        ) run_flake8;;
+    test-system-workflows         ) test_system_workflows;;
 esac
