@@ -123,9 +123,7 @@ class DeploymentUpdateBase(TestCase):
             self.client.executions.list(deployment_id=deployment_id,
                                         workflow_id=workflow_id)
         for execution in executions:
-            execution_status = self._wait_for_execution(execution)
-            self.assertEquals('terminated', execution_status['status'],
-                              execution_status.error)
+            self._wait_for_execution(execution)
 
     def _map_node_and_node_instances(self, deployment_id, dct):
         nodes_dct = {k: [] for k, _ in dct.iteritems()}
@@ -572,6 +570,10 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self._wait_for_execution_to_terminate(deployment.id, 'update')
         self._wait_for_committed_state(dep_update.id)
 
+        self.client.executions.start(deployment.id, 'custom_workflow',
+                                     parameters={'node_id': 'site2'})
+        self._wait_for_execution_to_terminate(deployment.id, 'custom_workflow')
+
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(
                     deployment.id,
@@ -590,7 +592,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['target', 'source'],
-                excluded_items=['relationships']
+                excluded_items=['relationships', 'runtime_properties']
         )
 
         # Check that there is only 1 from each
@@ -603,7 +605,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         source_node = modified_nodes['source'][0]
         source_node_instance = modified_node_instances['source'][0]
 
-        # assert there are 0 relationships
+        # assert there are 1 relationships
         self.assertEquals(1, len(source_node.relationships))
         self.assertEquals(1, len(source_node_instance.relationships))
 
@@ -628,6 +630,11 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self.assertDictContainsSubset(
                 dict_to_check,
                 source_operations[operation_id]
+        )
+
+        self.assertDictContainsSubset(
+                {'source_ops_counter': '1'},
+                modified_node_instances['source'][0]['runtime_properties']
         )
 
     def test_add_property(self):
@@ -1024,6 +1031,19 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         self._wait_for_execution_to_terminate(deployment.id, 'update')
         self._wait_for_committed_state(dep_update.id)
 
+        execution = self.client.executions.start(
+                deployment.id,
+                'custom_workflow',
+                parameters={'node_id': 'site2'}
+        )
+        self._wait_for_execution_to_terminate(deployment.id, 'custom_workflow')
+        execution = self.client.executions.get(execution.id)
+        self.assertEqual(execution.status, 'failed')
+        self.assertIn('{0} operation of node instance {1} does not exist'
+                      .format(operation_id,
+                              base_node_instances['source'][0]['id']),
+                      execution.error)
+
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
@@ -1032,7 +1052,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 base_nodes,
                 modified_nodes,
                 keys=['target', 'source'],
-                excluded_items=['relationships']
+                excluded_items=['relationships', 'plugins']
         )
 
         self._assert_equal_entity_dicts(
@@ -1290,6 +1310,10 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self._wait_for_execution_to_terminate(deployment.id, 'update')
         self._wait_for_committed_state(dep_update.id)
 
+        self.client.executions.start(deployment.id, 'custom_workflow',
+                                     parameters={'node_id': 'site2'})
+        self._wait_for_execution_to_terminate(deployment.id, 'custom_workflow')
+
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
@@ -1305,7 +1329,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['target', 'source'],
-                excluded_items=['relationships']
+                excluded_items=['relationships', 'runtime_properties']
         )
 
         # Check that there is only 1 from each
@@ -1318,7 +1342,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         source_node = modified_nodes['source'][0]
         source_node_instance = modified_node_instances['source'][0]
 
-        # assert there are 0 relationships
+        # assert there are 1 relationships
         self.assertEquals(1, len(source_node.relationships))
         self.assertEquals(1, len(source_node_instance.relationships))
 
@@ -1334,6 +1358,11 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         dict_to_check = self._create_dict(['inputs', 'script_path',
                                            'decrement.sh'])
+
+        self.assertDictContainsSubset(
+                {'source_ops_counter': '-1'},
+                source_node_instance['runtime_properties']
+        )
 
         # check all operation have been executed
         source_operations = \

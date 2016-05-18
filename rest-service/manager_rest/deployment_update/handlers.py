@@ -324,6 +324,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         else:
             operations[ctx.operation_id] = ctx.raw_entity_value
 
+        current_node[ctx.PLUGINS] = ctx.raw_node[ctx.PLUGINS]
+
         changes = {
             ctx.RELATIONSHIPS: relationships,
             ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
