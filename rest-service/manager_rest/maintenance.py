@@ -160,8 +160,7 @@ def _is_internal_request():
 
 
 def is_bypass_maintenance_mode():
-    bypass_maintenance_header = 'X-BYPASS-MAINTENANCE'
-    return request.headers.get(bypass_maintenance_header)
+    return utils.is_bypass_maintenance_mode(request)
 
 
 def _get_remote_addr():
