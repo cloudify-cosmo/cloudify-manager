@@ -6,10 +6,13 @@ imports:
 description: >
   Micro web sites hosting.
 
+node_types:
+  custom_node_type:
+    derived_from: cloudify.nodes.Compute
+    interfaces:
+      custom_lifecycle:
+        custom_operation: increment.sh
 
 node_templates:
   site1:
-    type: cloudify.nodes.Compute
-    interfaces:
-      cloudify.interfaces.lifecycle:
-        create: increment.sh
+    type: custom_node_type

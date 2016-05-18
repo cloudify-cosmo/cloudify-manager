@@ -64,14 +64,16 @@ def traverse_object(obj, breadcrumbs):
     if not breadcrumbs:
         return obj
     current_key = breadcrumbs[0]
-    if current_key in obj:
-        return traverse_object(obj[breadcrumbs[0]], breadcrumbs[1:])
 
-    index = parse_index(current_key)
-    if index is not None and len(obj) >= index:
-        return traverse_object(obj[index], breadcrumbs[1:])
+    if isinstance(obj, dict):
+        if current_key in obj:
+            return traverse_object(obj[breadcrumbs[0]], breadcrumbs[1:])
+    elif isinstance(obj, list):
+        index = parse_index(current_key)
+        if index is not None and len(obj) >= index:
+            return traverse_object(obj[index], breadcrumbs[1:])
     else:
-        return {}
+        return None
 
 
 def create_dict(breadcrumbs, value=None):
@@ -84,11 +86,11 @@ def create_dict(breadcrumbs, value=None):
     :param value:
     :return:
     """
-    if value:
+    if value is not None:
         if not breadcrumbs:
             return value
     elif len(breadcrumbs) == 1:
-        return breadcrumbs[0]
+            return breadcrumbs[0]
     return {breadcrumbs[0]: create_dict(breadcrumbs[1:], value)}
 
 

@@ -132,10 +132,10 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                 self.assertEqual(e.status_code, 400)
                 self.assertEqual(e.error_code,
                                  'unknown_modification_stage_error')
-                self.assertEqual(
-                        e.message,
-                        "entity type {0} with entity id {1} doesn't "
-                        "exist".format(step['entity_type'], step['entity_id']))
+                self.assertIn(
+                        "Entity type {0} with entity id {1}:"
+                        .format(step['entity_type'], step['entity_id']),
+                        e.message)
                 break
             self.fail("entity id {0} of entity type {1} shouldn't be valid"
                       .format(step['entity_id'], step['entity_type']))
