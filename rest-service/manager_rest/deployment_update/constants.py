@@ -59,3 +59,4 @@ NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes(
         RELATED='related')
 
 PATH_SEPARATOR = ':'
+DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW = 'update'
