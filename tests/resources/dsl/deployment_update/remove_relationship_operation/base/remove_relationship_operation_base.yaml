@@ -22,3 +22,10 @@ node_templates:
     relationships:
       - type: new_relationship_type
         target: site1
+
+workflows:
+  custom_workflow:
+    mapping: custom_workflow.py
+    parameters:
+      node_id:
+        default: ''
