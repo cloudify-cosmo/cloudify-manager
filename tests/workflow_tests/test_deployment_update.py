@@ -132,11 +132,10 @@ class DeploymentUpdateBase(TestCase):
         node_instances_dct = {k: [] for k, _ in dct.iteritems()}
 
         for k, v in dct.iteritems():
-            nodes = [n for n in self.client.nodes.list(deployment_id,
-                                                       node_id=dct[k])]
+            nodes = list(self.client.nodes.list(deployment_id, node_id=dct[k]))
             node_instances = \
-                [n for n in self.client.node_instances.list(deployment_id,
-                                                            node_id=dct[k])]
+                list(self.client.node_instances.list(deployment_id,
+                                                     node_id=dct[k]))
             nodes_dct[k].extend(nodes)
             node_instances_dct[k].extend(node_instances)
 
@@ -1831,8 +1830,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 intact_node_instance.runtime_properties
         )
 
-        workflows = [e['workflow_id']
-                     for e in self.client.executions.list(deployment.id)]
+        workflows = [e['workflow_id'] for e in
+                     self.client.executions.list(deployment.id,
+                                                 _include=['workflow_id'])]
 
         self.assertNotIn('update', workflows)
         self.assertIn('custom_workflow', workflows)

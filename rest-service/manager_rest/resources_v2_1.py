@@ -354,9 +354,9 @@ class DeploymentUpdateCommit(SecuredResource):
     @exceptions_handled
     @marshal_with(responses_v2_1.DeploymentUpdate)
     def post(self, update_id):
+        workflow_id = request.json.get('workflow_id')
         manager = get_deployment_updates_manager()
-        return manager.commit_deployment_update(update_id,
-                                                request.json.get('workflow'))
+        return manager.commit_deployment_update(update_id, workflow_id)
 
 
 class DeploymentUpdateFinalizeCommit(SecuredResource):

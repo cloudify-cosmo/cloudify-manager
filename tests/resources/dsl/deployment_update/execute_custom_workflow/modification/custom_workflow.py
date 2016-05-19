@@ -1,7 +1,7 @@
 from cloudify.workflows import ctx, parameters
 from cloudify.manager import get_rest_client
 
-instance = [n for n in ctx.node_instances][0]
+instance = next(ctx.node_instances)
 instance.execute_operation('custom_lifecycle.custom_operation',
                            kwargs={'update_id': parameters.update_id})
 

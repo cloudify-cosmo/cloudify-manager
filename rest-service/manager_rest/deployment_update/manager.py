@@ -151,11 +151,11 @@ class DeploymentUpdateManager(object):
         self.sm.put_deployment_update_step(deployment_update_id, step)
         return step
 
-    def commit_deployment_update(self, deployment_update_id, workflow=None):
+    def commit_deployment_update(self, deployment_update_id, workflow_id=None):
         """commit the deployment update steps
 
         :param deployment_update_id:
-        :param workflow:
+        :param workflow_id:
         :return:
         """
         dep_update = self.get_deployment_update(deployment_update_id)
@@ -190,15 +190,16 @@ class DeploymentUpdateManager(object):
         dep_update.modified_entity_ids = modified_entity_ids.to_dict()
         self.sm.update_deployment_update(dep_update)
 
-        # Execute update workflow using added and related instances
-        # This workflow will call a finalize_update, since removing entities
-        # should be done after the executions.
+        # Execute the default 'update' workflow or a custom workflow using
+        # added and related instances. Any workflow executed should call
+        # finalize_update, since removing entities should be done after the
+        # executions.
         # The raw_node_instances are being used only for their ids, Thus
         # They should really hold the finished version for the node instance.
         self._execute_update_workflow(dep_update,
                                       depup_node_instances,
                                       modified_entity_ids.to_dict(),
-                                      workflow)
+                                      workflow_id)
 
         return self.get_deployment_update(dep_update.id)
 
@@ -251,8 +252,8 @@ class DeploymentUpdateManager(object):
                                  dep_update,
                                  node_instances,
                                  modified_entity_ids,
-                                 workflow=None):
-        """Executed the update workflow
+                                 workflow_id=None):
+        """Executed the update workflow or a custom workflow
 
         :param dep_update:
         :param node_instances: a dictionary of modification type and
@@ -302,7 +303,7 @@ class DeploymentUpdateManager(object):
 
         return self.execute_workflow(
                 deployment_update=dep_update,
-                workflow_id=workflow or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
+                workflow_id=workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
                 parameters=parameters)
 
     def finalize_commit(self, deployment_update_id):
@@ -349,8 +350,8 @@ class DeploymentUpdateManager(object):
 
         if workflow_id not in deployment.workflows:
             raise manager_rest.manager_exceptions.NonexistentWorkflowError(
-                'Workflow {0} does not exist in deployment {1}'.format(
-                    workflow_id, deployment_update.deployment_id))
+                'Workflow {0} does not exist in deployment {1}'
+                .format(workflow_id, deployment_id))
         workflow = deployment.workflows[workflow_id]
 
         execution_parameters = \
