@@ -1,2 +1,2 @@
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-4929-deployment-update-Phase-II.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/CFY-4929-deployment-update-Phase-II.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-5344-Support-skipping-install/uninstall-in-update.zip
+https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/CFY-5344-Support-skipping-install/uninstall-in-update.zip

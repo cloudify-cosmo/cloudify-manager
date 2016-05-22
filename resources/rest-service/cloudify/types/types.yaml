@@ -399,6 +399,10 @@ workflows:
     parameters:
       update_id:
         default: ''
+      skip_install:
+        default: false
+      skip_uninstall:
+        default: false
       added_instance_ids:
         default: []
       added_target_instances_ids:

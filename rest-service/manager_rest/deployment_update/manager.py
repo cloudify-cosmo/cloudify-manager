@@ -151,9 +151,15 @@ class DeploymentUpdateManager(object):
         self.sm.put_deployment_update_step(deployment_update_id, step)
         return step
 
-    def commit_deployment_update(self, deployment_update_id, workflow_id=None):
+    def commit_deployment_update(self,
+                                 deployment_update_id,
+                                 skip_install=False,
+                                 skip_uninstall=False,
+                                 workflow_id=None):
         """commit the deployment update steps
 
+        :param skip_install:
+        :param skip_uninstall:
         :param deployment_update_id:
         :param workflow_id:
         :return:
@@ -199,7 +205,9 @@ class DeploymentUpdateManager(object):
         self._execute_update_workflow(dep_update,
                                       depup_node_instances,
                                       modified_entity_ids.to_dict(),
-                                      workflow_id)
+                                      skip_install=skip_install,
+                                      skip_uninstall=skip_uninstall,
+                                      workflow_id=workflow_id)
 
         return self.get_deployment_update(dep_update.id)
 
@@ -252,6 +260,8 @@ class DeploymentUpdateManager(object):
                                  dep_update,
                                  node_instances,
                                  modified_entity_ids,
+                                 skip_install=False,
+                                 skip_uninstall=False,
                                  workflow_id=None):
         """Executed the update workflow or a custom workflow
 
@@ -300,6 +310,11 @@ class DeploymentUpdateManager(object):
             'remove_target_instance_ids':
                 extract_ids(removed_instances.get(NODE_MOD_TYPES.RELATED))
         }
+
+        if not workflow_id:
+            # Whether execute or not install and uninstall
+            parameters['skip_install'] = skip_install
+            parameters['skip_uninstall'] = skip_uninstall
 
         return self.execute_workflow(
                 deployment_update=dep_update,
