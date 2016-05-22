@@ -11,12 +11,10 @@ node_templates:
     type: cloudify.nodes.Compute
 
   site2:
-    type: cloudify.nodes.Compute
-    relationships:
-    - type: cloudify.relationships.connected_to
+    type: cloudify.nodes.WebServer
+    relationships:                                      # (with relationships)
+    - type: cloudify.relationships.contained_in
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: scripts/increment.sh
-          postconfigure: scripts/increment.sh
-          establish: scripts/increment.sh
+          unlink: remote_uninstall_inc.sh

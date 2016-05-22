@@ -6,18 +6,18 @@ imports:
 description: >
   Micro web sites hosting.
 
+
 node_templates:
-  site1:
-    type: cloudify.nodes.Compute
 
   site2:
     type: cloudify.nodes.Compute
 
+
   site3:
     type: cloudify.nodes.Compute
-    relationships:
+    relationships:                                      # (with relationships)
     - type: cloudify.relationships.connected_to
-      target: site1
-      source_interfaces:
+      target: site2
+      target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          establish: scripts/remote_increment.sh
+          preconfigure: target_install_inc.sh

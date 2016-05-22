@@ -140,6 +140,41 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
             self.fail("entity id {0} of entity type {1} shouldn't be valid"
                       .format(step['entity_id'], step['entity_type']))
 
+    def test_workflow_and_skip_conflict(self):
+        deployment_id = 'dep'
+        deployment_update_id = self._stage(deployment_id).id
+
+        msg = ('skip_install has been set to {skip_install}, skip uninstall '
+               'has been set to {skip_uninstall}, and a custom workflow {'
+               'workflow_id} has been set to replace "update". However, '
+               'skip_install and skip_uninstall are mutually exclusive '
+               'with a custom workflow')
+
+        conflicting_params_list = [
+            {
+                'skip_install': True,
+                'skip_uninstall': True,
+                'workflow_id': 'custom_workflow'
+            },
+            {
+                'skip_install': True,
+                'skip_uninstall': False,
+                'workflow_id': 'custom_workflow'
+            },
+            {
+                'skip_install': False,
+                'skip_uninstall': True,
+                'workflow_id': 'custom_workflow'
+            },
+        ]
+
+        for conflicting_params in conflicting_params_list:
+            self.assertRaisesRegexp(CloudifyClientError,
+                                    msg.format(**conflicting_params),
+                                    self.client.deployment_updates._commit,
+                                    update_id=deployment_update_id,
+                                    **conflicting_params)
+
     def test_step_non_existent_entity_type(self):
         deployment_id = 'dep'
         deployment_update_id = self._stage(deployment_id).id

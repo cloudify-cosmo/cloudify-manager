@@ -10,11 +10,11 @@ node_templates:
   site1:
     type: cloudify.nodes.Compute
 
-  site2:                                                # This node should be removed
+  site3:
     type: cloudify.nodes.WebServer
     relationships:                                      # (with relationships)
     - type: cloudify.relationships.contained_in
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          unlink: scripts/remote_increment.sh
+          establish: remote_install_inc.sh
