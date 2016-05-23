@@ -203,19 +203,15 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         try:
             if archive_mode:
                 tar_path = tar_blueprint(modified_bp_path, tempdir)
-                dep_update = self.client.deployment_updates. \
-                    stage_archive(deployment.id, tar_path,
-                                  os.path.basename(modified_bp_path))
+                dep_update = self.client.deployment_updates.update(
+                    deployment.id,
+                    tar_path,
+                    application_file_name=os.path.basename(modified_bp_path))
             else:
-                dep_update = \
-                    self.client.deployment_updates.stage(deployment.id,
-                                                         modified_bp_path)
 
-            self.client.deployment_updates.add(
-                    dep_update.id,
-                    entity_type='node',
-                    entity_id='nodes:site2')
-            self.client.deployment_updates.commit(dep_update.id)
+                dep_update = self.client.deployment_updates.update(
+                    deployment.id,
+                    modified_bp_path)
 
             # wait for 'update' workflow to finish
             self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -287,15 +283,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        dep_update = self.client.deployment_updates.stage(deployment.id,
-                                                          modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='operation',
-                entity_id='nodes:site1:operations:{0}'.format(operation_id))
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -373,15 +362,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='node',
-                entity_id='nodes:site2')
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -450,16 +432,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_node_instances['related'][0]['runtime_properties']
         )
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='relationship',
-                entity_id='nodes:site3:relationships:[1]')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -546,25 +520,16 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._deploy_and_get_modified_bp_path('add_relationship_operation')
 
         operation_id = 'custom_lifecycle.custom_operation'
-
+        node_mapping = {
+            'target': 'site1',
+            'source': 'site2'
+        }
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(
-                    deployment.id,
-                    {'target': 'site1',
-                     'source': 'site2'})
+                    deployment.id, node_mapping)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='operation',
-                entity_id='nodes:site2:relationships:[0]:source_operations:{0}'
-                .format(operation_id)
-        )
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -576,9 +541,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(
-                    deployment.id,
-                    {'target': 'site1',
-                     'source': 'site2'})
+                    deployment.id, node_mapping)
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
@@ -649,16 +612,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='property',
-                entity_id='nodes:site1:properties:prop2')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -684,16 +639,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
     def test_add_workflow(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_workflow')
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='workflow',
-                entity_id='workflows:my_custom_workflow')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id,
@@ -720,16 +667,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
     def test_add_output(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_output')
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='output',
-                entity_id='outputs:custom_output')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -754,15 +693,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-        self.client.deployment_updates.remove(
-                dep_update.id,
-                entity_type='node',
-                entity_id='nodes:site2')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -830,17 +762,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 base_node_instances['modified'][0]['runtime_properties']
         )
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.remove(
-                dep_update.id,
-                entity_type='operation',
-                entity_id='nodes:site1:operations:{0}'.format(operation_id)
-        )
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -897,16 +820,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.remove(
-                dep_update.id,
-                entity_type='relationship',
-                entity_id='nodes:site3:relationships:[1]')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -973,15 +888,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_workflow')
         dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.remove(
-                dep_update.id,
-                entity_type='workflow',
-                entity_id='workflows:my_custom_workflow')
-
-        self.client.deployment_updates.commit(dep_update.id)
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1014,18 +922,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.remove(
-                dep_update.id,
-                entity_type='operation',
-                entity_id='nodes:site2:relationships:[0]:source_operations:{0}'
-                .format(operation_id)
-        )
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1052,7 +950,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 base_nodes,
                 modified_nodes,
                 keys=['target', 'source'],
-                excluded_items=['relationships', 'plugins']
+                excluded_items=['relationships']
         )
 
         self._assert_equal_entity_dicts(
@@ -1101,16 +999,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.remove(
-                dep_update.id,
-                entity_type='property',
-                entity_id='nodes:site1:properties:prop2')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1136,15 +1026,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_output')
         dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.remove(
-                dep_update.id,
-                entity_type='output',
-                entity_id='outputs:custom_output')
-
-        self.client.deployment_updates.commit(dep_update.id)
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1196,17 +1079,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 base_node_instances['modified'][0]['runtime_properties']
         )
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.modify(
-                dep_update.id,
-                entity_type='operation',
-                entity_id='nodes:site1:operations:'
-                          'cloudify.interfaces.lifecycle.stop:inputs')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1293,18 +1167,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.modify(
-                dep_update.id,
-                entity_type='operation',
-                entity_id='nodes:site2:relationships:[0]:source_operations:'
-                          '{0}:inputs:script_path'.format(operation_id)
-        )
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1385,16 +1249,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             base_properties.get('custom_prop', {}).get('inner_prop')
         self.assertEqual(modified_property, 1)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.modify(
-                dep_update.id,
-                entity_type='property',
-                entity_id='nodes:site1:properties:custom_prop:inner_prop')
-
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1418,15 +1274,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_workflow')
         dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.modify(
-                dep_update.id,
-                entity_type='workflow',
-                entity_id='workflows:my_custom_workflow')
-
-        self.client.deployment_updates.commit(dep_update.id)
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id,
@@ -1456,15 +1305,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                                       deployment.outputs)
 
         dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.modify(
-                dep_update.id,
-                entity_type='output',
-                entity_id='outputs:custom_output')
-
-        self.client.deployment_updates.commit(dep_update.id)
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1504,21 +1346,6 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='node',
-                entity_id='nodes:site3')
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='relationship',
-                entity_id='nodes:site2:relationships:[1]'
-        )
-
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
@@ -1529,7 +1356,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 ['runtime_properties']
         )
 
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1643,21 +1471,6 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             'new': 'site3'
         }
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='node',
-                entity_id='nodes:site3')
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='relationship',
-                entity_id='nodes:site2:relationships:[1]'
-        )
-
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
@@ -1668,7 +1481,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 ['runtime_properties']
         )
 
-        self.client.deployment_updates.commit(dep_update.id)
+        dep_update = \
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1716,33 +1531,11 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
-
-        dep_update = \
-            self.client.deployment_updates.stage(
-                    deployment.id,
-                    modified_bp_path,
-                    inputs={'input_prop3': 'custom_input3'}
+        dep_update = self.client.deployment_updates.update(
+            deployment.id,
+            modified_bp_path,
+            inputs={'input_prop3': 'custom_input3'}
             )
-
-        self.client.deployment_updates.add(
-            dep_update.id,
-            entity_type='output',
-            entity_id='outputs:output_prop1'
-        )
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='output',
-                entity_id='outputs:output_prop2'
-        )
-
-        self.client.deployment_updates.add(
-                dep_update.id,
-                entity_type='output',
-                entity_id='outputs:output_prop3'
-        )
-
-        self.client.deployment_updates.commit(dep_update.id)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1795,7 +1588,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 CloudifyClientError,
                 "409: The following deployment update inputs conflict with "
                 "original deployment inputs: \['ip_input'\]",
-                callable_obj=self.client.deployment_updates.stage,
+                callable_obj=self.client.deployment_updates.update,
                 deployment_id=deployment.id,
                 blueprint_path=modified_bp_path,
                 inputs={'ip_input': '2.2.2.2'}
@@ -1819,17 +1612,10 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        dep_update = \
-            self.client.deployment_updates.stage(deployment.id,
-                                                 modified_bp_path)
-
-        self.client.deployment_updates.add(
-            dep_update.id,
-            entity_type='workflow',
-            entity_id='workflows:custom_workflow'
-        )
-
-        self.client.deployment_updates.commit(dep_update.id, 'custom_workflow')
+        dep_update = self.client.deployment_updates.update(
+                deployment.id,
+                modified_bp_path,
+                workflow_id='custom_workflow')
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'custom_workflow')

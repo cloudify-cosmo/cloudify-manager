@@ -64,7 +64,9 @@ def setup_resources(api):
         # Get list of deployment updates (according to the query params)
         'DeploymentUpdates': 'deployment-updates',
 
-        # Some mapping to update POST: deployment-updates/deployment_id/update
+        # Update a deployment (create a deployment update):
+        'DeploymentUpdatesSteps':
+            'deployment-updates/<string:update_id>/update',
 
         # This needs to be removed
         'DeploymentUpdateSteps':

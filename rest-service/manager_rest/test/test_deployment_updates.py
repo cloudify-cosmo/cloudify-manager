@@ -201,7 +201,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
             return \
                 self.client.deployment_updates.\
-                stage_archive(deployment_id,
+                _stage_archive(deployment_id,
                               archive_url,
                               'dep_up_add_node.yaml')
         finally:

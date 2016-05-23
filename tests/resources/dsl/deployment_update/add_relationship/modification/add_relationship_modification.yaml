@@ -32,5 +32,8 @@ node_templates:
     relationships:
       - type: cloudify.relationships.connected_to
         target: site1
+        source_interfaces:
+          cloudify.interfaces.relationship_lifecycle:
+            establish: scripts/remote_increment.sh
       - type: new_relationship_type       # New relationship instance
         target: site2

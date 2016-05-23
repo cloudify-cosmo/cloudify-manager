@@ -20,6 +20,8 @@ from os import path
 from flask import current_app
 
 from dsl_parser import constants
+from dsl_parser.parser import parse_from_path
+from manager_rest.deployment_update import step_extractor
 import manager_rest.manager_exceptions
 import manager_rest.workflow_client as wf_client
 
@@ -150,6 +152,15 @@ class DeploymentUpdateManager(object):
 
         self.sm.put_deployment_update_step(deployment_update_id, step)
         return step
+
+    def extract_steps_from_deployment_update(self, deployment_update_id):
+
+        deployment_update = self.get_deployment_update(deployment_update_id)
+
+        step_extractor.extract_steps(deployment_update)
+
+        # return the deployment update with its new steps from the storage
+        return self.get_deployment_update(deployment_update_id)
 
     def commit_deployment_update(self, deployment_update_id, workflow_id=None):
         """commit the deployment update steps

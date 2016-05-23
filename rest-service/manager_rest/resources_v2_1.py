@@ -276,6 +276,17 @@ class DeploymentUpdate(SecuredResource):
             get_deployment_updates_manager().get_deployment_update(update_id)
 
 
+class DeploymentUpdatesSteps(SecuredResource):
+    @exceptions_handled
+    @marshal_with(responses_v2_1.DeploymentUpdate)
+    def post(self, update_id):
+        manager = get_deployment_updates_manager()
+        deployment_update = \
+            manager.extract_steps_from_deployment_update(update_id)
+
+        return deployment_update
+
+
 class DeploymentUpdates(SecuredResource):
     @swagger.operation(
             responseClass='List[{0}]'.format(
