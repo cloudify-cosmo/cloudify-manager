@@ -342,12 +342,9 @@ class DeploymentUpdates(SecuredResource):
         """
         request_json = request.args
         verify_parameter_in_request_body('deployment_id', request_json)
-        inputs = {k[1:]: v for k, v in request.args.iteritems()
-                  if k.startswith('_')}
 
         return UploadedBlueprintsDeploymentUpdateManager().\
-            receive_uploaded_data(request_json['deployment_id'],
-                                  additional_inputs=inputs)
+            receive_uploaded_data(request_json['deployment_id'])
 
 
 class DeploymentUpdateCommit(SecuredResource):

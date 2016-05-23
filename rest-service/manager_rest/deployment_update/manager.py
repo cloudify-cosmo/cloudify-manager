@@ -94,7 +94,7 @@ class DeploymentUpdateManager(object):
         deployment = self.sm.get_deployment(deployment_id)
         blueprint_id = deployment.blueprint_id
 
-        conflicted_inputs = [i for i in additional_inputs
+        conflicted_inputs = [str(i) for i in additional_inputs
                              if i in deployment.base_inputs]
 
         if conflicted_inputs:
