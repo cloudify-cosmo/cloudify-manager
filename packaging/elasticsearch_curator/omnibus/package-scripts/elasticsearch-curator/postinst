@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "Thank you for installing elasticsearch curator!"

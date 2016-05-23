@@ -20,6 +20,8 @@ AWS_ACCESS_KEY_ID = ENV['AWS_ACCESS_KEY_ID']
 AWS_ACCESS_KEY = ENV['AWS_ACCESS_KEY']
 AWS_ACCESS_KEY_ID_UPLOAD_TEMP = ENV['AWS_ACCESS_KEY_ID_UPLOAD_TEMP']
 AWS_ACCESS_KEY_UPLOAD_TEMP = ENV['AWS_ACCESS_KEY_UPLOAD_TEMP']
+MANAGER_BRANCH = ENV['tag']
+PACKAGER_BRANCH = ENV['PACKAGER_BRANCH']
 
 CENTOS7_OFFICIAL_BOX_URL = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7.box'
 
@@ -31,19 +33,19 @@ Vagrant.configure('2') do |config|
     curator.vm.provider :aws do |aws, override|
       aws.access_key_id = AWS_ACCESS_KEY_ID
       aws.secret_access_key = AWS_ACCESS_KEY
-      aws.ami = "ami-fd69068a"
+      aws.ami = "ami-0726a974"
       aws.region = "eu-west-1"
-      aws.instance_type = "m3.medium"
+      aws.instance_type = "m3.large"
       aws.keypair_name = "vagrant_build"
       override.ssh.username = "ec2-user"
       override.ssh.private_key_path = "~/.ssh/aws/vagrant_build.pem"
       override.nfs.functional = false
-      aws.tags = { "Name" => "vagrant curator build" }
+      aws.tags = { "Name" => "vagrant omnibus curator build" }
       aws.security_groups = "vagrant_linux_build"
     end
     curator.vm.provision "shell" do |s|
       s.path = "elasticsearch_curator/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
+      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{MANAGER_BRANCH} #{PACKAGER_BRANCH}"
       s.privileged = false
     end
   end
