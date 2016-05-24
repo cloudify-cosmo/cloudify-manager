@@ -60,6 +60,10 @@ def prepare_maintenance_dict(status,
 
 def maintenance_mode_handler():
 
+    # failed to route the request - this is a 404. Abort early.
+    if not request.endpoint:
+        return
+
     # enabling internal requests
     if _is_internal_request() and is_bypass_maintenance_mode():
         return
