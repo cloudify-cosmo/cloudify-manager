@@ -46,7 +46,7 @@ class EntityContextBase(object):
         self._plan = plan
 
     @property
-    def plan(self):
+    def deployment_plan(self):
         return self._plan
 
     @property
@@ -78,7 +78,7 @@ class NodeContextBase(EntityContextBase):
                                               entity_type,
                                               top_level_entity_id)
         self._raw_super_entity = \
-            utils.get_raw_node(self.plan, self._top_level_entity_id)
+            utils.get_raw_node(self.deployment_plan, self._top_level_entity_id)
 
     @property
     def entity_id(self):
@@ -162,7 +162,7 @@ class RelationshipContext(NodeContextBase):
 
         self._relationship_index = utils.parse_index(relationship_index)
         self._modification_breadcrumbs = modification_breadcrumbs
-        self._raw_target_node = utils.get_raw_node(self.plan,
+        self._raw_target_node = utils.get_raw_node(self.deployment_plan,
                                                    self.target_id)
         entity_keys = [nodes_key, top_level_entity_id, relationships_key,
                        relationship_index]
@@ -447,7 +447,7 @@ class WorkflowContext(DeploymentContextBase):
 
     @property
     def raw_entity(self):
-        return self._get_entity(self.plan[self.WORKFLOWS])
+        return self._get_entity(self.deployment_plan[self.WORKFLOWS])
 
     @property
     def entity_id(self):
@@ -492,7 +492,7 @@ class DescriptionContext(DeploymentContextBase):
 
     @property
     def raw_entity(self):
-        return self._get_entity(self.plan)
+        return self._get_entity(self.deployment_plan)
 
     @property
     def raw_entity_value(self):
@@ -527,7 +527,7 @@ class OutputContext(DeploymentContextBase):
 
     @property
     def raw_entity(self):
-        return self._get_entity(self.plan[self.OUTPUTS])
+        return self._get_entity(self.deployment_plan[self.OUTPUTS])
 
     @property
     def entity_id(self):

@@ -85,7 +85,7 @@ class Deployment(SerializableObject):
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
         self.outputs = kwargs['outputs']
-        self.description = kwargs.get('description', '')
+        self.description = kwargs.get('description')
         self.permalink = None  # TODO: implement
 
 
