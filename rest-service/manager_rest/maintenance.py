@@ -171,27 +171,24 @@ def _get_host():
     return request.host
 
 
-def _maintenance_mode_error():
+def _create_maintenance_error(error_code):
     # app.logger.exception(e)  # gets logged automatically
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
+    error_message = 'Your request was rejected since Cloudify Manager ' \
+                    'is currently under maintenance'
 
     response = jsonify(
-            {"message": "Request rejected since maintenance mode is active",
-             "error_code": MAINTENANCE_MODE_ACTIVE_ERROR_CODE,
+            {"message": error_message,
+             "error_code": error_code,
              "server_traceback": s_traceback.getvalue()})
     response.status_code = 503
     return response
+
+
+def _maintenance_mode_error():
+    return _create_maintenance_error(MAINTENANCE_MODE_ACTIVE_ERROR_CODE)
 
 
 def _activating_maintenance_mode_error():
-    # app.logger.exception(e)  # gets logged automatically
-    s_traceback = StringIO.StringIO()
-    traceback.print_exc(file=s_traceback)
-
-    response = jsonify(
-            {"message": "Request rejected while activating maintenance mode",
-             "error_code": MAINTENANCE_MODE_ACTIVATING_ERROR_CODE,
-             "server_traceback": s_traceback.getvalue()})
-    response.status_code = 503
-    return response
+    return _create_maintenance_error(MAINTENANCE_MODE_ACTIVATING_ERROR_CODE)
