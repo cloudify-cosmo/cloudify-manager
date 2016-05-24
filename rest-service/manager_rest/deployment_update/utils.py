@@ -34,19 +34,39 @@ class ModifiedEntitiesDict(object):
     def __iter__(self):
         return iter(self.modified_entity_ids)
 
-    def to_dict(self):
+    def to_dict(self, include_rel_order=False):
+        """
+        Relationship entity ids support both order manipulation and
+        adding/removing relationships. Thus, t_id could be both target id
+        (for add/remove relationships), and (source_index, target_index)
+        for order manipulation.  In order to get the order you should pass
+        the include_rel_order flag,  and the dict returned will hold these
+        changes under rel_order_key.
+
+        :param include_rel_order: whether to extract the changes.
+        :return: dict of modified entity ids.
+        """
 
         relationships = {}
-        for s_id, t_id in \
-                self.modified_entity_ids[ENTITY_TYPES.RELATIONSHIP]:
-            if s_id in relationships:
-                relationships[s_id].append(t_id)
+        rel_order = {}
+        for s_id, t_id in self.modified_entity_ids[ENTITY_TYPES.RELATIONSHIP]:
+            if isinstance(t_id, tuple):
+                if include_rel_order:
+                    if s_id in rel_order:
+                        rel_order[s_id].append(t_id)
+                    else:
+                        rel_order[s_id] = [t_id]
             else:
-                relationships[s_id] = [t_id]
+                if s_id in relationships:
+                    relationships[s_id].append(t_id)
+                else:
+                    relationships[s_id] = [t_id]
 
         modified_entities_to_return = copy.deepcopy(self.modified_entity_ids)
         modified_entities_to_return[ENTITY_TYPES.RELATIONSHIP] = \
             relationships
+        if include_rel_order:
+            modified_entities_to_return['rel_order'] = rel_order
 
         return modified_entities_to_return
 

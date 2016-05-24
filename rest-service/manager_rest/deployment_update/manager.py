@@ -188,11 +188,17 @@ class DeploymentUpdateManager(object):
         modified_entity_ids, depup_nodes = \
             self._node_handler.handle(dep_update)
 
+        # extract all the None relationships from the depup nodes in order
+        # to use in the extract changes
+        no_none_relationships_nodes = copy.deepcopy(depup_nodes)
+        for node in no_none_relationships_nodes:
+            node['relationships'] = [r for r in node['relationships'] if r]
+
         # Extract changes from raw nodes
         node_instance_changes = self._extract_changes(
             dep_update,
-            depup_nodes,
-            previous_nodes=previous_nodes)
+            no_none_relationships_nodes,
+            previous_nodes)
 
         # Create (and update for adding step type) node instances
         # according to the changes in raw_nodes
@@ -205,7 +211,8 @@ class DeploymentUpdateManager(object):
         dep_update.deployment_update_deployment = raw_updated_deployment
         dep_update.deployment_update_nodes = depup_nodes
         dep_update.deployment_update_node_instances = depup_node_instances
-        dep_update.modified_entity_ids = modified_entity_ids.to_dict()
+        dep_update.modified_entity_ids = \
+            modified_entity_ids.to_dict(include_rel_order=True)
         self.sm.update_deployment_update(dep_update)
 
         # Execute the default 'update' workflow or a custom workflow using
@@ -275,7 +282,10 @@ class DeploymentUpdateManager(object):
                     dep_update.state = STATES.FAILED
                     self.sm.update_deployment_update(dep_update)
 
-    def _extract_changes(self, dep_update, raw_nodes, previous_nodes):
+    def _extract_changes(self,
+                         dep_update,
+                         raw_nodes,
+                         previous_nodes):
         """Extracts the changes between the current node_instances and
         the raw_nodes specified
 
@@ -283,8 +293,9 @@ class DeploymentUpdateManager(object):
         :param raw_nodes:
         :return: a dictionary of modification type and node instanced modifed
         """
-        deployment_id_filter = \
-            {'deployment_id': dep_update.deployment_id}
+        deployment = self.sm.get_deployment(dep_update.deployment_id)
+
+        deployment_id_filter = {'deployment_id': deployment.id}
 
         # By this point the node_instances aren't updated yet
         previous_node_instances = \
@@ -294,13 +305,10 @@ class DeploymentUpdateManager(object):
         # project changes in deployment
         return tasks.modify_deployment(
                 nodes=raw_nodes,
-                # TODO: fix it
                 previous_nodes=previous_nodes,
-
                 previous_node_instances=previous_node_instances,
-                modified_nodes=(),
-                # TODO: fix it
-                scaling_groups={}
+                scaling_groups=deployment.scaling_groups,
+                modified_nodes=()
         )
 
     def _execute_update_workflow(self,
