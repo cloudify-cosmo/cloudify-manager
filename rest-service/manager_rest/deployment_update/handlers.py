@@ -108,7 +108,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         get_blueprints_manager()._create_deployment_nodes(
                 deployment_id=ctx.deployment_id,
                 blueprint_id='N/A',
-                plan=ctx.blueprint,
+                plan=ctx.plan,
                 node_ids=ctx.raw_node_id
         )
 
@@ -129,7 +129,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                     node_id=node_id,
                     changes={
                         'plugins':
-                            utils.get_raw_node(ctx.blueprint,
+                            utils.get_raw_node(ctx.plan,
                                                node_id)['plugins']
                     })
 
