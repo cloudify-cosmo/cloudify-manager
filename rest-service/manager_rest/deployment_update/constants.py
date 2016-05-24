@@ -7,7 +7,8 @@ DeploymentUpdateEntityTypes = namedtuple('DeploymentUpdateEntityTypes',
                                           'PROPERTY',
                                           'OPERATION',
                                           'WORKFLOW',
-                                          'OUTPUT'])
+                                          'OUTPUT',
+                                          'DESCRIPTION'])
 
 DeploymentUpdateActionTypes = namedtuple('DeploymentUpdateActionTypes',
                                          ['ADD', 'REMOVE', 'MODIFY'])
@@ -37,7 +38,8 @@ ENTITY_TYPES = DeploymentUpdateEntityTypes(NODE='node',
                                            PROPERTY='property',
                                            OPERATION='operation',
                                            WORKFLOW='workflow',
-                                           OUTPUT='output')
+                                           OUTPUT='output',
+                                           DESCRIPTION='description')
 
 ACTION_TYPES = DeploymentUpdateActionTypes(ADD='add',
                                            REMOVE='remove',

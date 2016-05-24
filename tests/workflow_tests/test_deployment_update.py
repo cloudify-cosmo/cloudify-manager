@@ -739,6 +739,27 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         self.assertDictContainsSubset({'custom_output': {'value': 0}},
                                       deployment.outputs)
 
+    def test_add_description(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('add_description')
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.add(
+                dep_update.id,
+                entity_type='description',
+                entity_id='description')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_committed_state(dep_update.id)
+
+        deployment = self.client.deployments.get(dep_update.deployment_id)
+        self.assertRegexpMatches(deployment['description'], 'new description')
+
 
 class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
@@ -1153,6 +1174,27 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertNotIn('custom_output', deployment.outputs)
 
+    def test_remove_description(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('remove_description')
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.remove(
+                dep_update.id,
+                entity_type='description',
+                entity_id='description')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_committed_state(dep_update.id)
+
+        deployment = self.client.deployments.get(dep_update.deployment_id)
+        self.assertFalse(deployment.get('description'))
+
 
 class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
@@ -1473,6 +1515,30 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertDictContainsSubset({'custom_output': {'value': 1}},
                                       deployment.outputs)
+
+    def test_modify_description(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('modify_description')
+
+        self.assertRegexpMatches(deployment['description'], 'old description')
+
+        dep_update = \
+            self.client.deployment_updates.stage(deployment.id,
+                                                 modified_bp_path)
+
+        self.client.deployment_updates.modify(
+                dep_update.id,
+                entity_type='description',
+                entity_id='description')
+
+        self.client.deployment_updates.commit(dep_update.id)
+
+        # assert that 'update' workflow was executed
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_committed_state(dep_update.id)
+
+        deployment = self.client.deployments.get(dep_update.deployment_id)
+        self.assertRegexpMatches(deployment['description'], 'new description')
 
 
 class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):

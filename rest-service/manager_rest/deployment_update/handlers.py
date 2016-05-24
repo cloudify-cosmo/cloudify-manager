@@ -364,6 +364,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         return ctx.entity_id
 
     def finalize(self, dep_update):
+
         """update any removed entity from nodes
 
         :param dep_update: the deployment update object itself.
@@ -588,10 +589,12 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         super(DeploymentUpdateDeploymentHandler, self).__init__()
         self.modified_entities = {
             ENTITY_TYPES.WORKFLOW: [],
-            ENTITY_TYPES.OUTPUT: []
+            ENTITY_TYPES.OUTPUT: [],
+            ENTITY_TYPES.DESCRIPTION: []
         }
         self._supported_entity_types = {ENTITY_TYPES.WORKFLOW,
-                                        ENTITY_TYPES.OUTPUT}
+                                        ENTITY_TYPES.OUTPUT,
+                                        ENTITY_TYPES.DESCRIPTION}
 
         self._entities_update_mapper = {
             ACTION_TYPES.ADD: self._add_entity,
@@ -601,17 +604,21 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
         self._add_entity_mapper = {
             ENTITY_TYPES.WORKFLOW: self._add_workflow,
-            ENTITY_TYPES.OUTPUT: self._add_output
+            ENTITY_TYPES.OUTPUT: self._add_output,
+            ENTITY_TYPES.DESCRIPTION: self._add_description
         }
 
         self._modify_update_mapper = {
             ENTITY_TYPES.WORKFLOW: self._modify_workflow,
-            ENTITY_TYPES.OUTPUT: self._modify_output
+            ENTITY_TYPES.OUTPUT: self._modify_output,
+            ENTITY_TYPES.DESCRIPTION: self._modify_description
+
         }
 
         self._remove_remove_mapper = {
             ENTITY_TYPES.WORKFLOW: self._remove_workflow,
-            ENTITY_TYPES.OUTPUT: self._remove_output
+            ENTITY_TYPES.OUTPUT: self._remove_output,
+            ENTITY_TYPES.DESCRIPTION: self._remove_description
         }
 
     def handle(self, dep_update):
@@ -657,6 +664,16 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
         return ctx.entity_id
 
+    def _add_description(self, ctx, deployment):
+
+        new_description = ctx.raw_entity_value
+        changes = {ctx.DESCRIPTION: new_description}
+        self.sm.update_deployment(ctx.deployment_id, changes)
+
+        deployment[ctx.DESCRIPTION] = new_description
+
+        return ctx.entity_id
+
     def _remove_entity(self, ctx, deployment):
 
         remove_entity_handler = self._remove_remove_mapper[ctx.entity_type]
@@ -677,6 +694,12 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
         return ctx.entity_id
 
+    @staticmethod
+    def _remove_description(ctx, deployment):
+        del(deployment[ctx.DESCRIPTION])
+
+        return ctx.entity_id
+
     def _modify_entity(self, ctx, deployment):
         modify_entity_handler = self._modify_update_mapper[ctx.entity_type]
 
@@ -690,17 +713,23 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
     def _modify_output(self, ctx, deployment):
         return self._add_output(ctx, deployment)
 
+    def _modify_description(self, ctx, deployment):
+        return self._add_description(ctx, deployment)
+
     def finalize(self, dep_update):
 
         # Clean slate for the update
         self.sm.update_deployment(dep_update.deployment_id,
                                   {'workflows': [],
-                                   'outputs': []})
+                                   'outputs': [],
+                                   'description': []})
 
         # updating the changed items
         changes = {
             'workflows': dep_update.deployment_update_deployment['workflows'],
-            'outputs': dep_update.deployment_update_deployment['outputs']
+            'outputs': dep_update.deployment_update_deployment.get('outputs'),
+            'description':
+                dep_update.deployment_update_deployment.get('description')
         }
 
         self.sm.update_deployment(dep_update.deployment_id, changes)

@@ -10,7 +10,8 @@ def get_entity_context(plan, deployment_id, entity_type, entity_id):
         ENTITY_TYPES.PROPERTY: PropertyContext,
         ENTITY_TYPES.OPERATION: _operation_context,
         ENTITY_TYPES.WORKFLOW: WorkflowContext,
-        ENTITY_TYPES.OUTPUT: OutputContext
+        ENTITY_TYPES.OUTPUT: OutputContext,
+        ENTITY_TYPES.DESCRIPTION: DescriptionContext
     }
 
     context = entity_context_by_type[entity_type]
@@ -34,6 +35,7 @@ class EntityContextBase(object):
     PROPERTIES = utils.pluralize(ENTITY_TYPES.PROPERTY)
     WORKFLOWS = utils.pluralize(ENTITY_TYPES.WORKFLOW)
     OUTPUTS = utils.pluralize(ENTITY_TYPES.OUTPUT)
+    DESCRIPTION = 'description'
     PLUGINS = 'plugins'
 
     def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
@@ -44,7 +46,7 @@ class EntityContextBase(object):
         self._plan = plan
 
     @property
-    def blueprint(self):
+    def plan(self):
         return self._plan
 
     @property
@@ -76,14 +78,17 @@ class NodeContextBase(EntityContextBase):
                                               entity_type,
                                               top_level_entity_id)
         self._raw_super_entity = \
-            utils.get_raw_node(self.blueprint, self._top_level_entity_id)
+            utils.get_raw_node(self.plan, self._top_level_entity_id)
 
+    @property
     def entity_id(self):
         raise NotImplementedError
 
+    @property
     def storage_entity_value(self):
         raise NotImplementedError
 
+    @property
     def raw_entity_value(self):
         raise NotImplementedError
 
@@ -157,7 +162,7 @@ class RelationshipContext(NodeContextBase):
 
         self._relationship_index = utils.parse_index(relationship_index)
         self._modification_breadcrumbs = modification_breadcrumbs
-        self._raw_target_node = utils.get_raw_node(self.blueprint,
+        self._raw_target_node = utils.get_raw_node(self.plan,
                                                    self.target_id)
         entity_keys = [nodes_key, top_level_entity_id, relationships_key,
                        relationship_index]
@@ -442,7 +447,7 @@ class WorkflowContext(DeploymentContextBase):
 
     @property
     def raw_entity(self):
-        return self._get_entity(self.blueprint[self.WORKFLOWS])
+        return self._get_entity(self.plan[self.WORKFLOWS])
 
     @property
     def entity_id(self):
@@ -463,6 +468,39 @@ class WorkflowContext(DeploymentContextBase):
     @property
     def modification_breadcrumbs(self):
         return self._modification_breadcrumbs
+
+
+class DescriptionContext(DeploymentContextBase):
+
+    def __init__(self,
+                 plan,
+                 deployment_id,
+                 description_key):
+        super(DescriptionContext, self).__init__(plan,
+                                                 deployment_id,
+                                                 ENTITY_TYPES.DESCRIPTION,
+                                                 description_key)
+
+    @property
+    def entity_id(self):
+        return self._top_level_entity_id
+
+    @property
+    def storage_entity(self):
+        deployment = self.sm.get_deployment(deployment_id=self.deployment_id)
+        return self._get_entity(deployment.to_dict())
+
+    @property
+    def raw_entity(self):
+        return self._get_entity(self.plan)
+
+    @property
+    def raw_entity_value(self):
+        return self.raw_entity
+
+    @property
+    def storage_entity_value(self):
+        return self.storage_entity
 
 
 class OutputContext(DeploymentContextBase):
@@ -489,7 +527,7 @@ class OutputContext(DeploymentContextBase):
 
     @property
     def raw_entity(self):
-        return self._get_entity(self.blueprint[self.OUTPUTS])
+        return self._get_entity(self.plan[self.OUTPUTS])
 
     @property
     def entity_id(self):

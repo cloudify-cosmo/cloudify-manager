@@ -260,6 +260,28 @@ class OutputValidator(EntityValidatorBase):
         return utils.traverse_object(storage_outputs, output_id) is not None
 
 
+class DescriptionValidator(EntityValidatorBase):
+    def _validate_entity(self, dep_update, step):
+        description_key = step.entity_id
+
+        validate = self._validation_mapper[step.operation]
+        return validate(step.entity_id,
+                        step.entity_type,
+                        dep_update=dep_update,
+                        description_key=description_key)
+
+    def _in_new(self, dep_update, description_key):
+        raw_description = dep_update.blueprint[description_key]
+        return bool(raw_description)
+
+    def _in_old(self, dep_update, description_key):
+        deployment_id = dep_update.deployment_id
+        storage_description = getattr(self.sm.get_deployment(deployment_id),
+                                      description_key,
+                                      {})
+        return bool(storage_description)
+
+
 class StepValidator(object):
 
     def __init__(self):
@@ -269,7 +291,8 @@ class StepValidator(object):
             ENTITY_TYPES.PROPERTY: PropertyValidator(),
             ENTITY_TYPES.OPERATION: OperationValidator(),
             ENTITY_TYPES.WORKFLOW: WorkflowValidator(),
-            ENTITY_TYPES.OUTPUT: OutputValidator()
+            ENTITY_TYPES.OUTPUT: OutputValidator(),
+            ENTITY_TYPES.DESCRIPTION: DescriptionValidator()
         }
 
     def validate(self, dep_update, step):

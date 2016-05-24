@@ -69,7 +69,7 @@ class Snapshot(SerializableObject):
 
 
 class Deployment(SerializableObject):
-    fields = {'id', 'created_at', 'updated_at', 'blueprint_id',
+    fields = {'id', 'description', 'created_at', 'updated_at', 'blueprint_id',
               'workflows', 'permalink', 'base_inputs', 'inputs',
               'policy_types', 'policy_triggers', 'groups', 'outputs'}
 
@@ -85,6 +85,7 @@ class Deployment(SerializableObject):
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
         self.outputs = kwargs['outputs']
+        self.description = kwargs.get('description', '')
         self.permalink = None  # TODO: implement
 
 
