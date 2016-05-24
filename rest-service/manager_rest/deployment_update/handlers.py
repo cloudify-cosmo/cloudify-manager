@@ -360,6 +360,24 @@ class OutputHandler(ModifiableEntityHandlerBase):
         return self.add(ctx, current_entities)
 
 
+class DescriptionHandler(ModifiableEntityHandlerBase):
+
+    def remove(self, ctx, current_entities):
+        del(current_entities[ctx.DESCRIPTION])
+        return ctx.entity_id
+
+    def modify(self, ctx, current_entities):
+        return self.add(ctx, current_entities)
+
+    def add(self, ctx, current_entities):
+        new_description = ctx.raw_entity_value
+        changes = {ctx.DESCRIPTION: new_description}
+        self.sm.update_deployment(_data_template(Deployment,
+                                                 current_entities['id'],
+                                                 'id',
+                                                 **changes))
+
+
 class DeploymentUpdateNodeHandler(UpdateHandler):
 
     def __init__(self):
@@ -661,7 +679,8 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         }
         self._entity_handlers = {
             ENTITY_TYPES.WORKFLOW: WorkflowHandler(),
-            ENTITY_TYPES.OUTPUT: OutputHandler()
+            ENTITY_TYPES.OUTPUT: OutputHandler(),
+            ENTITY_TYPES.DESCRIPTION: DescriptionHandler()
         }
         self._supported_entity_types = {ENTITY_TYPES.WORKFLOW,
                                         ENTITY_TYPES.OUTPUT,

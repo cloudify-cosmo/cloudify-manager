@@ -574,6 +574,7 @@ class BlueprintsManager(object):
             blueprint_id=blueprint_id,
             created_at=now,
             updated_at=now,
+            description=deployment_plan['description'],
             workflows=deployment_plan['workflows'],
             inputs=deployment_plan['inputs'],
             policy_types=deployment_plan['policy_types'],

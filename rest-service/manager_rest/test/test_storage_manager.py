@@ -64,6 +64,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         blueprint_id='blueprint-id',
                                         plan={'name': 'my-bp'},
                                         permalink=None,
+                                        description=None,
                                         workflows={},
                                         inputs={},
                                         policy_types={},
@@ -79,6 +80,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         blueprint_id='blueprint-id',
                                         plan={'name': 'my-bp'},
                                         permalink=None,
+                                        description=None,
                                         workflows={},
                                         inputs={},
                                         policy_types={},
@@ -93,6 +95,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         updated_at=now,
                                         blueprint_id='another-blueprint-id',
                                         plan={'name': 'my-bp'},
+                                        description=None,
                                         permalink=None,
                                         workflows={},
                                         inputs={},
@@ -122,6 +125,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 blueprint_id='bp-id',
                                 plan={'field': 'value'},
                                 permalink=None,
+                                description=None,
                                 workflows={},
                                 inputs={},
                                 policy_types={},
@@ -131,12 +135,13 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 outputs={})
 
         serialized_dep = dep.to_dict()
-        self.assertEquals(12, len(serialized_dep))
+        self.assertEquals(13, len(serialized_dep))
         self.assertEquals(dep.id, serialized_dep['id'])
         self.assertEquals(dep.created_at, serialized_dep['created_at'])
         self.assertEquals(dep.updated_at, serialized_dep['updated_at'])
         self.assertEquals(dep.blueprint_id, serialized_dep['blueprint_id'])
         self.assertEquals(dep.permalink, serialized_dep['permalink'])
+        self.assertEquals(dep.description, None)
 
         deserialized_dep = models.Deployment(**serialized_dep)
         self.assertEquals(dep.id, deserialized_dep.id)
@@ -144,6 +149,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals(dep.updated_at, deserialized_dep.updated_at)
         self.assertEquals(dep.blueprint_id, deserialized_dep.blueprint_id)
         self.assertEquals(dep.permalink, deserialized_dep.permalink)
+        self.assertEquals(dep.description, deserialized_dep.description)
 
     def test_fields_query(self):
         now = str(datetime.now())
