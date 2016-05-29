@@ -21,8 +21,8 @@ import shutil
 from datetime import datetime
 from StringIO import StringIO
 
-import celery.exceptions
 from flask import current_app
+import celery.exceptions
 
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
@@ -308,7 +308,10 @@ class BlueprintsManager(object):
     def delete_snapshot(self, snapshot_id):
         return self.sm.delete_snapshot(snapshot_id)
 
-    def delete_deployment(self, deployment_id, ignore_live_nodes=False):
+    def delete_deployment(self,
+                          deployment_id,
+                          bypass_maintenance=None,
+                          ignore_live_nodes=False):
         # Verify deployment exists.
         self.sm.get_deployment(deployment_id)
 
@@ -345,13 +348,14 @@ class BlueprintsManager(object):
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
 
-        self._delete_deployment_environment(deployment_id)
-        self._delete_deployment_logs(deployment_id)
+        self._delete_deployment_environment(deployment_id, bypass_maintenance)
+        self._delete_deployment_logs(deployment_id, bypass_maintenance)
         return self.sm.delete_deployment(deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
-                         allow_custom_parameters=False, force=False):
+                         allow_custom_parameters=False,
+                         force=False, bypass_maintenance=None):
         deployment = self.get_deployment(deployment_id)
         blueprint = self.get_blueprint(deployment.blueprint_id)
 
@@ -396,7 +400,8 @@ class BlueprintsManager(object):
             blueprint_id=deployment.blueprint_id,
             deployment_id=deployment_id,
             execution_id=execution_id,
-            execution_parameters=execution_parameters)
+            execution_parameters=execution_parameters,
+            bypass_maintenance=bypass_maintenance)
 
         return new_execution
 
@@ -560,7 +565,11 @@ class BlueprintsManager(object):
             execution_id, new_status, '')
         return self.get_execution(execution_id)
 
-    def create_deployment(self, blueprint_id, deployment_id, inputs=None):
+    def create_deployment(self,
+                          blueprint_id,
+                          deployment_id,
+                          inputs=None,
+                          bypass_maintenance=None):
         blueprint = self.get_blueprint(blueprint_id)
         plan = blueprint.plan
         try:
@@ -591,7 +600,9 @@ class BlueprintsManager(object):
         node_instances = deployment_plan['node_instances']
         self._create_deployment_node_instances(deployment_id,
                                                node_instances)
-        self._create_deployment_environment(new_deployment, deployment_plan)
+        self._create_deployment_environment(new_deployment,
+                                            deployment_plan,
+                                            bypass_maintenance)
         return new_deployment
 
     def start_deployment_modification(self,
@@ -1060,7 +1071,10 @@ class BlueprintsManager(object):
                 filters[key] = val
         return filters or None
 
-    def _create_deployment_environment(self, deployment, deployment_plan):
+    def _create_deployment_environment(self,
+                                       deployment,
+                                       deployment_plan,
+                                       bypass_maintenance):
         wf_id = 'create_deployment_environment'
         deployment_env_creation_task_name = \
             'cloudify_system_workflows.deployment_environment.create'
@@ -1069,6 +1083,7 @@ class BlueprintsManager(object):
             wf_id=wf_id,
             task_mapping=deployment_env_creation_task_name,
             deployment=deployment,
+            bypass_maintenance=bypass_maintenance,
             execution_parameters={
                 'deployment_plugins_to_install': deployment_plan[
                     constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
@@ -1083,7 +1098,9 @@ class BlueprintsManager(object):
             }
         )
 
-    def _delete_deployment_environment(self, deployment_id):
+    def _delete_deployment_environment(self,
+                                       deployment_id,
+                                       bypass_maintenance):
         deployment = self.sm.get_deployment(deployment_id)
         blueprint = self.sm.get_blueprint(deployment.blueprint_id)
         wf_id = 'delete_deployment_environment'
@@ -1095,6 +1112,7 @@ class BlueprintsManager(object):
             task_mapping=deployment_env_deletion_task_name,
             deployment=deployment,
             timeout=300,
+            bypass_maintenance=bypass_maintenance,
             execution_parameters={
                 'deployment_plugins_to_uninstall': blueprint.plan[
                     constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
@@ -1102,7 +1120,7 @@ class BlueprintsManager(object):
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
             })
 
-    def _delete_deployment_logs(self, deployment_id):
+    def _delete_deployment_logs(self, deployment_id, bypass_maintenance):
         self._execute_system_workflow(
             wf_id='delete_deployment_logs',
             task_mapping='cloudify_system_workflows.deployment_environment'
@@ -1112,6 +1130,7 @@ class BlueprintsManager(object):
             },
             verify_no_executions=False,
             timeout=300,
+            bypass_maintenance=bypass_maintenance
         )
 
     def _check_for_active_executions(self, deployment_id, force):

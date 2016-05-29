@@ -269,6 +269,11 @@ def write_dict_to_json_file(file_path, dictionary):
         json.dump(dictionary, f)
 
 
+def is_bypass_maintenance_mode(request):
+    bypass_maintenance_header = 'X-BYPASS-MAINTENANCE'
+    return request.headers.get(bypass_maintenance_header)
+
+
 def get_plugin_archive_path(plugin_id, archive_name):
     return os.path.join(config.instance().file_server_uploaded_plugins_folder,
                         plugin_id,

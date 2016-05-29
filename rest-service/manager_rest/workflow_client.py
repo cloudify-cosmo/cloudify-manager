@@ -28,7 +28,8 @@ class WorkflowClient(object):
                          blueprint_id,
                          deployment_id,
                          execution_id,
-                         execution_parameters=None):
+                         execution_parameters=None,
+                         bypass_maintenance=None):
         execution_parameters = execution_parameters or {}
         task_name = workflow['operation']
         task_queue = 'cloudify.management'
@@ -44,6 +45,7 @@ class WorkflowClient(object):
             'blueprint_id': blueprint_id,
             'deployment_id': deployment_id,
             'execution_id': execution_id,
+            'bypass_maintenance': bypass_maintenance,
             'plugin': {
                 'name': plugin_name,
                 'package_name': plugin.get('package_name'),

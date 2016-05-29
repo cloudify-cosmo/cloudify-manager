@@ -49,6 +49,7 @@ from manager_rest.blueprints_manager import (DslParseException,
                                              BlueprintsManager)
 from manager_rest import get_version_data
 from manager_rest.manager_elasticsearch import ManagerElasticsearch
+from manager_rest.maintenance import is_bypass_maintenance_mode
 
 
 CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
@@ -551,9 +552,11 @@ class Executions(SecuredResource):
                 "request body's 'parameters' field must be a dict but"
                 " is of type {0}".format(parameters.__class__.__name__))
 
+        bypass_maintenance = is_bypass_maintenance_mode()
         execution = get_blueprints_manager().execute_workflow(
             deployment_id, workflow_id, parameters=parameters,
-            allow_custom_parameters=allow_custom_parameters, force=force)
+            allow_custom_parameters=allow_custom_parameters, force=force,
+            bypass_maintenance=bypass_maintenance)
         return execution, 201
 
 
@@ -719,8 +722,12 @@ class DeploymentsId(SecuredResource):
                                          param_type=dict,
                                          optional=True)
         blueprint_id = request.json['blueprint_id']
+        bypass_maintenance = is_bypass_maintenance_mode()
         deployment = get_blueprints_manager().create_deployment(
-            blueprint_id, deployment_id, inputs=request_json.get('inputs', {}))
+            blueprint_id,
+            deployment_id,
+            inputs=request_json.get('inputs', {}),
+            bypass_maintenance=bypass_maintenance)
         return deployment, 201
 
     @swagger.operation(
@@ -748,8 +755,10 @@ class DeploymentsId(SecuredResource):
         ignore_live_nodes = verify_and_convert_bool(
             'ignore_live_nodes', args['ignore_live_nodes'])
 
+        bypass_maintenance = is_bypass_maintenance_mode()
+
         deployment = get_blueprints_manager().delete_deployment(
-            deployment_id, ignore_live_nodes)
+            deployment_id, bypass_maintenance, ignore_live_nodes)
 
         # Delete deployment resources from file server
         deployment_folder = os.path.join(
