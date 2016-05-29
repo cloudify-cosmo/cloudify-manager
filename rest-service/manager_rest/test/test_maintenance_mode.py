@@ -117,7 +117,7 @@ class MaintenanceModeTest(BaseServerTestCase):
                       'since maintenance mode is already started.')
         except exceptions.NotModifiedError as e:
             self.assertEqual(304, e.status_code)
-        self.assertIn('already activated', e.message)
+        self.assertIn('already active', e.message)
 
     def test_transition_to_active(self):
         execution = self._start_maintenance_transition_mode()
