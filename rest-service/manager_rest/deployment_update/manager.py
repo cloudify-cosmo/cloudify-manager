@@ -179,13 +179,20 @@ class DeploymentUpdateManager(object):
         modified_deployment_entities, updated_deployment = \
             self._deployment_handler.handle(dep_update)
 
+        # Retrieve previous_nodes
+        previous_nodes = \
+            [node.to_dict() for node in self.sm.get_nodes(
+                filters={'deployment_id': dep_update.deployment_id}).items]
+
         # Update the nodes on the storage
         modified_entity_ids, depup_nodes = \
             self._node_handler.handle(dep_update)
 
         # Extract changes from raw nodes
-        node_instance_changes = self._extract_changes(dep_update,
-                                                      depup_nodes)
+        node_instance_changes = self._extract_changes(
+            dep_update,
+            depup_nodes,
+            previous_nodes=previous_nodes)
 
         # Create (and update for adding step type) node instances
         # according to the changes in raw_nodes
@@ -236,7 +243,7 @@ class DeploymentUpdateManager(object):
                 .format(active_update.id)
             )
 
-    def _extract_changes(self, dep_update, raw_nodes):
+    def _extract_changes(self, dep_update, raw_nodes, previous_nodes):
         """Extracts the changes between the current node_instances and
         the raw_nodes specified
 
@@ -252,11 +259,18 @@ class DeploymentUpdateManager(object):
             [instance.to_dict() for instance in
              self.sm.get_node_instances(filters=deployment_id_filter).items]
 
+        #
+
         # project changes in deployment
+
         return tasks.modify_deployment(
                 nodes=raw_nodes,
+                # TODO: fix it
+                previous_nodes=previous_nodes,
                 previous_node_instances=raw_node_instances,
-                modified_nodes=()
+                modified_nodes=(),
+                #TODO: fix it
+                scaling_groups={}
         )
 
     def _execute_update_workflow(self,
