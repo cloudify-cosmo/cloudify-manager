@@ -443,11 +443,20 @@ class ESStorageManager(object):
     def update_node(self, deployment_id, node_id,
                     number_of_instances=None,
                     planned_number_of_instances=None,
-                    changes=None):
+                    relationships=None,
+                    operations=None,
+                    plugins=None,
+                    properties=None):
         storage_node_id = self._storage_node_id(deployment_id, node_id)
         update_doc_data = {}
-        if changes is not None:
-            update_doc_data.update(changes)
+        if relationships:
+            update_doc_data['relationships'] = relationships
+        if operations:
+            update_doc_data['operations'] = operations
+        if plugins:
+            update_doc_data['plugins'] = plugins
+        if properties:
+            update_doc_data['properties'] = properties
         if number_of_instances is not None:
             update_doc_data['number_of_instances'] = number_of_instances
         if planned_number_of_instances is not None:
@@ -555,10 +564,9 @@ class ESStorageManager(object):
 
     def update_deployment(self, deployment):
         deployment_id = deployment.id
-        update_doc_data = {}
-        if deployment.scaling_groups is not None:
-            update_doc_data['scaling_groups'] = deployment.scaling_groups
-        update_doc = {'doc': update_doc_data}
+        update_doc = \
+            {'doc': {k: v for k, v in deployment.to_dict().iteritems()
+                     if v is not None}}
         try:
             self._connection.update(index=STORAGE_INDEX_NAME,
                                     doc_type=DEPLOYMENT_TYPE,

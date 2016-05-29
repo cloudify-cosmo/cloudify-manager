@@ -44,14 +44,14 @@ class MaintenanceMode(object):
 class DeploymentUpdateStep(object):
     resource_fields = {
         'id': fields.String,
-        'operation': fields.String,
+        'action': fields.String,
         'entity_type': fields.String,
         'entity_id': fields.String
     }
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
-        self.operation = kwargs['operation']
+        self.action = kwargs['action']
         self.entity_type = kwargs['entity_type']
         self.entity_id = kwargs['entity_id']
 

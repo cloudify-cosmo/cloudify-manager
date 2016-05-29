@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
+
 import os
 import sys
 import json
@@ -25,7 +26,6 @@ from uuid import uuid4
 from flask import request
 from flask.ext.restful import marshal
 from flask_restful_swagger import swagger
-
 from flask_securest.rest_security import SecuredResource
 
 from manager_rest import config
@@ -179,8 +179,11 @@ class UploadedSnapshotsManager(files.UploadedDataManager):
     def _get_archive_type(self, archive_path):
         return 'zip'
 
-    def _prepare_and_process_doc(self, data_id, file_server_root,
-                                 archive_target_path):
+    def _prepare_and_process_doc(self,
+                                 data_id,
+                                 file_server_root,
+                                 archive_target_path,
+                                 **kwargs):
         return get_blueprints_manager().create_snapshot_model(
             data_id,
             status=models.Snapshot.UPLOADED
@@ -720,8 +723,11 @@ class UploadedPluginsManager(files.UploadedDataManager):
     def _get_archive_type(self, archive_path):
         return 'tar.gz'
 
-    def _prepare_and_process_doc(self, data_id, file_server_root,
-                                 archive_target_path):
+    def _prepare_and_process_doc(self,
+                                 data_id,
+                                 file_server_root,
+                                 archive_target_path,
+                                 **kwargs):
         new_plugin = self._create_plugin_from_archive(data_id,
                                                       archive_target_path)
 
