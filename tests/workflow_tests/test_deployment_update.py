@@ -1639,7 +1639,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 "original deployment inputs: \['ip_input'\]",
                 callable_obj=self.client.deployment_updates.update,
                 deployment_id=deployment.id,
-                blueprint_path=modified_bp_path,
+                blueprint_or_archive_path=modified_bp_path,
                 inputs={'ip_input': '2.2.2.2'}
         )
 
