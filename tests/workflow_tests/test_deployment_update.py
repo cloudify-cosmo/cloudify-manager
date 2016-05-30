@@ -1667,7 +1667,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 workflow_id='custom_workflow')
 
         # wait for 'update' workflow to finish
-        self._wait_for_execution_to_terminate(deployment.id, 'custom_workflow')
+        self._wait_for_execution_to_terminate(deployment.id,
+                                              workflow_id='custom_workflow')
         self._wait_for_committed_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
@@ -1700,3 +1701,155 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         self.assertNotIn('update', workflows)
         self.assertIn('custom_workflow', workflows)
+
+    def _test_skip_install(self, skip):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('skip_install')
+
+        node_mapping = {
+            'intact': 'site1',
+            'removed': 'site2',
+            'added': 'site3'
+        }
+
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path,
+                                                           skip_install=skip)
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_committed_state(dep_update.id)
+
+        modified_nodes, modified_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+
+        # assert that node and node instance were added to storage
+        self.assertEquals(1, len(modified_nodes['added']))
+        self.assertEquals(1, len(modified_node_instances['added']))
+
+        # assert that node has a relationship
+        node = modified_nodes['added'][0]
+        self.assertEquals(1, len(node.relationships))
+        self._assert_relationship(
+                node.relationships,
+                target='site1',
+                expected_type='cloudify.relationships.contained_in')
+        self.assertEquals(node.type, 'cloudify.nodes.WebServer')
+
+        # assert that node instance has a relationship
+        added_instance = modified_node_instances['added'][0]
+        self.assertEquals(1, len(added_instance.relationships))
+        self._assert_relationship(
+                added_instance.relationships,
+                target='site1',
+                expected_type='cloudify.relationships.contained_in')
+
+        # assert all operations in 'update' ('install') haven't ran
+        self.assertNotIn('source_ops_counter',
+                         added_instance['runtime_properties'])
+
+        # assert not operation has affected target node
+        add_related_instance = modified_node_instances['intact'][0]
+
+        self.assertDictContainsSubset(
+                {'uninstall_op_counter': '1'},
+                add_related_instance['runtime_properties']
+        )
+
+        return add_related_instance
+
+    def test_skip_install_true(self):
+        instance_to_check = self._test_skip_install(skip=True)
+        self.assertNotIn('install_op_counter',
+                         instance_to_check['runtime_properties'])
+
+    def test_skip_install_false(self):
+        instance_to_check = self._test_skip_install(skip=False)
+        self.assertDictContainsSubset(
+                {'install_op_counter': '3'},
+                instance_to_check['runtime_properties']
+        )
+
+    def _test_skip_uninstall(self, skip):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('skip_uninstall')
+
+        node_mapping = {
+            'remove_related': 'site1',
+            'removed': 'site2',
+            'added': 'site3'
+        }
+
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path,
+                                                           skip_uninstall=skip)
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_committed_state(dep_update.id)
+
+        modified_nodes, modified_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+
+        # assert all operations in 'update' ('install') workflow
+        # are executed by making them increment a runtime property
+        related_instance = modified_node_instances['remove_related'][0]
+        self.assertDictContainsSubset({'install_op_counter': '1'},
+                                      related_instance['runtime_properties'])
+        return related_instance
+
+    def test_skip_uninstall_true(self):
+        instance_to_check = self._test_skip_uninstall(skip=True)
+        self.assertNotIn('uninstall_op_counter',
+                         instance_to_check['runtime_properties'])
+
+    def test_skip_uninstall_false(self):
+        instance_to_check = self._test_skip_uninstall(skip=False)
+        self.assertDictContainsSubset(
+                {'uninstall_op_counter': '1'},
+                instance_to_check['runtime_properties']
+        )
+
+    def _test_skip_install_and_uninstall(self, skip):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('skip_install_and_uninstall')
+
+        node_mapping = {
+            'removed': 'site1',
+            'modified': 'site2',
+            'added': 'site3'
+        }
+
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path,
+                                                           skip_install=skip,
+                                                           skip_uninstall=skip)
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_committed_state(dep_update.id)
+
+        modified_nodes, modified_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+
+        # assert not operation has affected target node
+        return modified_node_instances['modified'][0]
+
+    def test_skip_install_and_uninstall_true(self):
+
+        modified_instance = self._test_skip_install_and_uninstall(skip=True)
+        self.assertNotIn('install_op_counter',
+                         modified_instance['runtime_properties'])
+        self.assertNotIn('uninstall_op_counter',
+                         modified_instance['runtime_properties'])
+
+    def test_skip_install_and_uninstall_false(self):
+        modified_instance = self._test_skip_install_and_uninstall(skip=False)
+        self.assertDictContainsSubset(
+                {'install_op_counter': '1'},
+                modified_instance['runtime_properties']
+        )
+        self.assertDictContainsSubset(
+                {'uninstall_op_counter': '1'},
+                modified_instance['runtime_properties']
+        )

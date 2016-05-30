@@ -30,9 +30,10 @@ from manager_rest.files import UploadedDataManager
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_json_content_type,
+                                    CONVENTION_APPLICATION_BLUEPRINT_FILE,
                                     verify_parameter_in_request_body,
-                                    verify_and_convert_bool,
-                                    CONVENTION_APPLICATION_BLUEPRINT_FILE)
+                                    verify_and_convert_bool)
+
 from manager_rest import models
 from manager_rest import resources
 from manager_rest import resources_v2
@@ -395,9 +396,30 @@ class DeploymentUpdateCommit(SecuredResource):
     @exceptions_handled
     @marshal_with(responses_v2_1.DeploymentUpdate)
     def post(self, update_id):
-        workflow_id = request.json.get('workflow_id')
+        request_json = request.json
+        skip_install = verify_and_convert_bool(
+                'skip_install',
+                request_json.get('skip_install', 'false')
+        )
+        skip_uninstall = verify_and_convert_bool(
+                'skip_uninstall',
+                request_json.get('skip_uninstall', 'false')
+        )
+        workflow_id = request_json.get('workflow_id', None)
+
+        if (skip_install or skip_uninstall) and workflow_id:
+            raise manager_exceptions.BadParametersError(
+                'skip_install has been set to {0}, skip uninstall has been'
+                ' set to {1}, and a custom workflow {2} has been set to '
+                'replace "update". However, skip_install and skip_uninstall'
+                ' are mutually exclusive with a custom workflow'
+                .format(skip_install, skip_uninstall, workflow_id)
+            )
         manager = get_deployment_updates_manager()
-        return manager.commit_deployment_update(update_id, workflow_id)
+        return manager.commit_deployment_update(update_id,
+                                                workflow_id=workflow_id,
+                                                skip_install=skip_install,
+                                                skip_uninstall=skip_uninstall)
 
 
 class DeploymentUpdateFinalizeCommit(SecuredResource):
