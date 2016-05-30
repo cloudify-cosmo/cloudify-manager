@@ -32,6 +32,8 @@ DeploymentUpdateNodeModificationTypes = \
                 'AFFECTED',
                 'RELATED'])
 
+DeploymentUpdatePhases = namedtuple('DeploymentUpdatePhases',
+                                    ['INITIAL', 'FINAL'])
 
 ENTITY_TYPES = DeploymentUpdateEntityTypes(NODE='node',
                                            RELATIONSHIP='relationship',
@@ -40,7 +42,6 @@ ENTITY_TYPES = DeploymentUpdateEntityTypes(NODE='node',
                                            WORKFLOW='workflow',
                                            OUTPUT='output',
                                            DESCRIPTION='description')
-
 ACTION_TYPES = DeploymentUpdateActionTypes(ADD='add',
                                            REMOVE='remove',
                                            MODIFY='modify')
@@ -59,6 +60,8 @@ NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes(
         REMOVED_AND_RELATED='removed_and_related',
         AFFECTED='affected',
         RELATED='related')
+
+PHASES = DeploymentUpdatePhases(INITIAL='initiate', FINAL='finalize')
 
 PATH_SEPARATOR = ':'
 DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW = 'update'

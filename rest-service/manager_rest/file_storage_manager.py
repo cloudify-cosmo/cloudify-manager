@@ -520,6 +520,23 @@ class FileStorageManager(object):
                     modification.node_instances
             self._dump_data(data)
 
+    def update_deployment_update(self, depup_modification):
+        deployment_update_id = depup_modification.id
+        data = self._load_data()
+        if str(deployment_update_id) not in data[DEPLOYMENT_UPDATES]:
+            raise manager_exceptions.ConflictError(
+                'Deployment Update {0} does not exists'
+                .format(depup_modification.id))
+
+        deployment_update = data[DEPLOYMENT_UPDATES][deployment_update_id]
+
+        for att in DeploymentUpdate.fields - {'deployment_id'}:
+            if getattr(depup_modification, att) is not None:
+                new_value = getattr(depup_modification, att)
+                setattr(deployment_update, att, new_value)
+
+        self._dump_data(data)
+
     def update_deployment(self, deployment):
         deployment_id = deployment.id
         data = self._load_data()

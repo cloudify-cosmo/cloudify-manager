@@ -31,26 +31,26 @@ class UploadedDataManager(object):
 
     def receive_uploaded_data(self, data_id):
         file_server_root = config.instance().file_server_root
-        archive_target_path = tempfile.mktemp(dir=file_server_root)
+        resource_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             additional_inputs = self._save_file_locally_and_extract_inputs(
-                    archive_target_path,
+                    resource_target_path,
                     self._get_data_url_key(),
                     self._get_kind())
             doc, dest_file_name = self._prepare_and_process_doc(
                 data_id,
                 file_server_root,
-                archive_target_path,
+                resource_target_path,
                 additional_inputs=additional_inputs)
             self._move_archive_to_uploaded_dir(doc.id,
                                                file_server_root,
-                                               archive_target_path,
+                                               resource_target_path,
                                                dest_file_name=dest_file_name)
 
             return doc, 201
         finally:
-            if os.path.exists(archive_target_path):
-                os.remove(archive_target_path)
+            if os.path.exists(resource_target_path):
+                os.remove(resource_target_path)
 
     @classmethod
     def _extract_file_to_file_server(cls, archive_path, destination_root):
@@ -96,14 +96,13 @@ class UploadedDataManager(object):
             shutil.rmtree(tempdir)
 
     @staticmethod
-    def _save_file_from_url(archive_target_path, url_key, data_type):
+    def _save_file_from_url(archive_target_path, data_url, data_type):
         if any([request.data,
                 'Transfer-Encoding' in request.headers,
-                'blueprint_archive' in request.files]):
+                'update_archive' in request.files]):
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via query parameters, request body"
                 ", multi-form and chunked.".format(data_type))
-        data_url = request.args[url_key]
         try:
             with contextlib.closing(urlopen(data_url)) as urlf:
                 with open(archive_target_path, 'w') as f:
@@ -120,7 +119,7 @@ class UploadedDataManager(object):
     @staticmethod
     def _save_file_from_chunks(archive_target_path, data_type):
         if any([request.data,
-                'blueprint_archive' in request.files]):
+                'update_archive' in request.files]):
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via request body , multi-form "
                 "and chunked.".format(data_type))
@@ -130,7 +129,7 @@ class UploadedDataManager(object):
 
     @staticmethod
     def _save_file_content(archive_target_path, data_type, url_key):
-        if 'blueprint_archive' in request.files:
+        if 'update_archive' in request.files:
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via request body , multi-form"
                 .format(data_type))
@@ -139,7 +138,7 @@ class UploadedDataManager(object):
             f.write(uploaded_file_data)
 
     @staticmethod
-    def _save_files_multipart(archive_target_path, data_type, url_key):
+    def _save_files_multipart(archive_target_path):
         inputs = {}
         for file_name in request.files:
             if file_name == 'inputs':
@@ -163,11 +162,13 @@ class UploadedDataManager(object):
         the url_key specifies what header points to the requested url.
         :return: None
         """
-
         inputs = {}
+
         # Handling importing blueprint through url
         if url_key in request.args:
-            self._save_file_from_url(archive_target_path, url_key, data_type)
+            self._save_file_from_url(archive_target_path,
+                                     request.args[url_key],
+                                     data_type)
         # handle receiving chunked blueprint
         elif 'Transfer-Encoding' in request.headers:
             self._save_file_from_chunks(archive_target_path, data_type)
@@ -178,9 +179,7 @@ class UploadedDataManager(object):
         # handle inputs from form-data (for both the blueprint and inputs
         # in body in form-data format)
         if request.files:
-            inputs = self._save_files_multipart(archive_target_path,
-                                                url_key,
-                                                data_type)
+            inputs = self._save_files_multipart(archive_target_path)
 
         return inputs
 
