@@ -12,6 +12,7 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+import copy
 import uuid
 
 from datetime import datetime
@@ -95,15 +96,6 @@ class DeploymentUpdateManager(object):
         deployment = self.sm.get_deployment(deployment_id)
         blueprint_id = deployment.blueprint_id
 
-        conflicted_inputs = [str(i) for i in additional_inputs
-                             if i in deployment.base_inputs]
-
-        if conflicted_inputs:
-            raise manager_rest.manager_exceptions.ConflictError(
-                'The following deployment update inputs conflict with '
-                'original deployment inputs: {0}'.format(conflicted_inputs)
-            )
-
         # enables reverting to original blueprint resources
         file_server_base_url = \
             '{0}/'.format(config.instance().file_server_base_uri)
@@ -121,11 +113,11 @@ class DeploymentUpdateManager(object):
                                **app_context.get_parser_context())
         # Updating the new inputs with the deployment inputs # (overriding old
         # values and adding new ones)
-        additional_inputs.update(deployment.base_inputs)
+        inputs = copy.deepcopy(deployment.inputs)
+        inputs.update(additional_inputs)
 
         # applying intrinsic functions
-        prepared_plan = tasks.prepare_deployment_plan(plan,
-                                                      inputs=additional_inputs)
+        prepared_plan = tasks.prepare_deployment_plan(plan, inputs=inputs)
 
         deployment_update = models.DeploymentUpdate(deployment_id,
                                                     prepared_plan)

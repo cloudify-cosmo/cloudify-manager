@@ -65,7 +65,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         plan={'name': 'my-bp'},
                                         permalink=None,
                                         workflows={},
-                                        base_inputs={},
                                         inputs={},
                                         policy_types={},
                                         policy_triggers={},
@@ -81,7 +80,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         plan={'name': 'my-bp'},
                                         permalink=None,
                                         workflows={},
-                                        base_inputs={},
                                         inputs={},
                                         policy_types={},
                                         policy_triggers={},
@@ -97,7 +95,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         plan={'name': 'my-bp'},
                                         permalink=None,
                                         workflows={},
-                                        base_inputs={},
                                         inputs={},
                                         policy_types={},
                                         policy_triggers={},
@@ -106,9 +103,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         outputs={})
         sm.put_deployment('dep-3', deployment3)
 
-        blueprint_deployments = sm.get_blueprint_deployments('blueprint-id')
-        blueprint_deployments = sm.get_blueprint_deployments(
-            'blueprint-id').items
+        blueprint_deployments = \
+            sm.get_blueprint_deployments('blueprint-id').items
 
         self.assertEquals(2, len(blueprint_deployments))
         if blueprint_deployments[0].id != deployment1.id:
@@ -127,7 +123,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 plan={'field': 'value'},
                                 permalink=None,
                                 workflows={},
-                                base_inputs={},
                                 inputs={},
                                 policy_types={},
                                 policy_triggers={},
@@ -136,7 +131,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 outputs={})
 
         serialized_dep = dep.to_dict()
-        self.assertEquals(14, len(serialized_dep))
+        self.assertEquals(12, len(serialized_dep))
         self.assertEquals(dep.id, serialized_dep['id'])
         self.assertEquals(dep.created_at, serialized_dep['created_at'])
         self.assertEquals(dep.updated_at, serialized_dep['updated_at'])
