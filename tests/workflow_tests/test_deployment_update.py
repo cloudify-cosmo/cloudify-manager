@@ -17,11 +17,11 @@ import time
 import tempfile
 
 from nose.tools import nottest
+
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import tar_blueprint
-
 from manager_rest.models import Execution
 from manager_rest.deployment_update.constants import STATES
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -1071,7 +1071,6 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
 class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
-    @nottest
     def test_modify_relationships(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_relationship')
@@ -1407,7 +1406,6 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self.assertDictContainsSubset({'custom_output': {'value': 1}},
                                       deployment.outputs)
 
-    @nottest
     def test_modify_description(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_description')

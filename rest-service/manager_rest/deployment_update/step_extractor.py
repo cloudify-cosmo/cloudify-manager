@@ -19,12 +19,16 @@ import manager_rest.blueprints_manager
 
 
 RELEVANT_DEPLOYMENT_FIELDS = ['blueprint_id', 'id', 'inputs', 'nodes',
-                              'outputs', 'workflows']
+                              'outputs', 'workflows', 'groups', 'policy_types',
+                              'policy_triggers', 'description',
+                              'deployment_plugins_to_install',
+                              'workflow_plugins_to_install']
 NODE = 'node'
 NODES = 'nodes'
 OUTPUT = 'output'
 OUTPUTS = 'outputs'
 TYPE = 'type'
+HOST_ID = 'host_id'
 OPERATION = 'operation'
 OPERATIONS = 'operations'
 RELATIONSHIP = 'relationship'
@@ -36,8 +40,20 @@ PROPERTY = 'property'
 PROPERTIES = 'properties'
 WORKFLOW = 'workflow'
 WORKFLOWS = 'workflows'
-INTERFACES = 'interfaces'
+GROUP = 'group'
+GROUPS = 'groups'
+POLICY_TYPE = 'policy_type'
+POLICY_TYPES = 'policy_types'
+POLICY_TRIGGER = 'policy_trigger'
+POLICY_TRIGGERS = 'policy_triggers'
+DEPLOYMENT_PLUGINS_TO_INSTALL = 'deployment_plugins_to_install'
+CENTRAL_DEPLOYMENT_AGENT_PLUGINS = 'central_deployment_agent_plugins'
+HOST_AGENT_PLUGINS = 'host_agent_plugins'
+PLUGIN = 'plugin'
+PLUGINS_TO_INSTALL = 'plugins_to_install'
+DESCRIPTION = 'description'
 
+# flake8: noqa
 
 class EntityIdBuilder(list):
 
@@ -53,6 +69,17 @@ class EntityIdBuilder(list):
         yield
         self.remove_last()
 
+    @contextmanager
+    def prepend_id_last_element(self, key):
+        last_elem = self[-1]
+        self.remove_last()
+        self.append(key)
+        self.append(last_elem)
+        yield
+        self.remove_last()
+        self.remove_last()
+        self.append(last_elem)
+
     def remove_last(self):
         del self[-1]
 
@@ -62,7 +89,11 @@ class EntityIdBuilder(list):
 
 class DeploymentPlan(dict):
 
-    def __init__(self, deployment, nodes):
+    def __init__(self,
+                 deployment,
+                 nodes,
+                 deployment_plugins_to_install,
+                 workflow_plugins_to_install):
         """ Instantiate a deployment plan object
 
         This constructor gets a deployment and nodes in a format as if these
@@ -76,6 +107,21 @@ class DeploymentPlan(dict):
                                for k, v in deployment.to_dict().iteritems()
                                if k in RELEVANT_DEPLOYMENT_FIELDS}
         self.update(filtered_deployment)
+
+        # update the plan with deployment_plugins_to_install and with
+        # workflow_plugins_to_install
+        deployment_plugins_to_install_by_name = \
+            self._transform_plugins(deployment_plugins_to_install)
+        self.update({
+            'deployment_plugins_to_install':
+                deployment_plugins_to_install_by_name})
+        workflow_plugins_to_install_by_name = \
+            self._transform_plugins(workflow_plugins_to_install)
+        self.update({
+            'workflow_plugins_to_install':
+                workflow_plugins_to_install_by_name})
+
+        # update the plan with the nodes
         nodes = self._transform_nodes(nodes)
         self['nodes'] = nodes
 
@@ -83,11 +129,25 @@ class DeploymentPlan(dict):
     def from_storage(cls, deployment_id):
         """ Create a DeploymentPlan from a stored deployment"""
         sm = manager_rest.storage_manager.get_storage_manager()
+        # get deployment from storage
         deployment = sm.get_deployment(deployment_id)
+
+        # get deployment_plugins_to_install ans workflow_plugins_to_install
+        # from the deployment's blueprint plan
+        blueprint = sm.get_blueprint(deployment.blueprint_id)
+        blueprint_plan = blueprint.plan
+
+        deployment_plugins_to_install = \
+            blueprint_plan['deployment_plugins_to_install']
+        workflow_plugins_to_install = \
+            blueprint_plan['workflow_plugins_to_install']
+
+        # get the nodes from the storage
         nodes = sm.get_nodes(
             filters={'deployment_id': [deployment_id]}).items
 
-        return cls(deployment, nodes)
+        return cls(deployment, nodes, deployment_plugins_to_install,
+                   workflow_plugins_to_install)
 
     @classmethod
     def from_deployment_update(cls, deployment_update):
@@ -113,12 +173,20 @@ class DeploymentPlan(dict):
             deployment_id,
             deployment_plan)
 
+        # get deployment_plugins_to_install ans workflow_plugins_to_install
+        # from the deployment's blueprint plan
+        deployment_plugins_to_install = \
+            deployment_plan['deployment_plugins_to_install']
+        workflow_plugins_to_install = \
+            deployment_plan['workflow_plugins_to_install']
+
         nodes = blueprints_manager.prepare_deployment_nodes_for_storage(
             blueprint_id,
             deployment_id,
             deployment_plan
         )
-        return cls(deployment, nodes)
+        return cls(deployment, nodes, deployment_plugins_to_install,
+                   workflow_plugins_to_install)
 
     @staticmethod
     def _transform_nodes(nodes):
@@ -133,13 +201,21 @@ class DeploymentPlan(dict):
         nodes_by_id = {node.id: node.to_dict() for node in nodes}
         return nodes_by_id
 
+    @staticmethod
+    def _transform_plugins(plugins):
+        plugins_by_name = {plugin['name']: plugin for plugin in plugins}
+        return plugins_by_name
+
 
 class DeploymentUpdateStepsExtractor(object):
 
     entity_id_segment_to_entity_type = {
         PROPERTIES: PROPERTY,
         OUTPUTS: OUTPUT,
-        WORKFLOWS: WORKFLOW
+        WORKFLOWS: WORKFLOW,
+        GROUPS: GROUP,
+        POLICY_TYPES: POLICY_TYPE,
+        POLICY_TRIGGERS: POLICY_TRIGGER
     }
 
     def __init__(self, deployment_update):
@@ -177,24 +253,107 @@ class DeploymentUpdateStepsExtractor(object):
         old = self.old_deployment_plan
         new = self.new_deployment_plan
 
+        self._extract_steps_from_description(old[DESCRIPTION],
+                                             new[DESCRIPTION])
+
+        self._extract_host_agent_plugins_steps(
+            old[NODES],
+            new[NODES]
+        )
+
+        self._extract_central_deployment_agent_plugins_steps(
+            old[DEPLOYMENT_PLUGINS_TO_INSTALL],
+            new[DEPLOYMENT_PLUGINS_TO_INSTALL])
+
         self._extract_steps(new, old)
         self._inverted_diff_perspective = True
         self._extract_steps(old, new)
 
-        return self.steps
+        supported_steps = [step for step in self.steps if step.supported]
+        supported_steps.sort()
+
+        unsupported_steps = [step for step in self.steps if not step.supported]
+
+        return supported_steps, unsupported_steps
+
+    def _extract_steps_from_description(self,
+                                        old_description,
+                                        new_description):
+        with self.entity_id_builder.extend_id(DESCRIPTION):
+            if old_description is None:
+                if new_description is not None:
+                    self._create_step(DESCRIPTION)
+            else:
+                if new_description is None:
+                    self._inverted_diff_perspective = True
+                    self._create_step(DESCRIPTION)
+                    self._inverted_diff_perspective = False
+                else:
+                    if old_description != new_description:
+                        self._create_step(DESCRIPTION, modify=True)
+
+    def _extract_host_agent_plugins_steps(self, old_nodes, new_nodes):
+        with self.entity_id_builder.extend_id(HOST_AGENT_PLUGINS):
+            for new_node_name in new_nodes:
+                new_node = new_nodes[new_node_name]
+                new_plugins_to_install = new_node[PLUGINS_TO_INSTALL]
+                if new_plugins_to_install:
+                    if new_node_name in old_nodes:
+                        with self.entity_id_builder.extend_id(new_node_name):
+                            old_node = old_nodes[new_node_name]
+                            if old_node != new_node:
+                                old_plugins_to_install = old_node[
+                                    PLUGINS_TO_INSTALL]
+                                for new_plugin_to_install in \
+                                        new_plugins_to_install:
+                                    if new_plugin_to_install['install']:
+                                        new_plug_name = new_plugin_to_install['name']
+                                        old_plugins_to_install = next((p for p in old_plugins_to_install if p['name'] == new_plug_name), None)
+                                        if not old_plugins_to_install:
+                                            self._create_step(PLUGIN,
+                                                              supported=False)
+                                        else:
+                                            if new_plugin_to_install != old_plugins_to_install:
+                                                self._create_step(
+                                                    PLUGIN,
+                                                    supported=False,
+                                                    modify=True)
+
+    def _extract_central_deployment_agent_plugins_steps(
+            self,
+            old_deployment_plugins_to_install,
+            new_deployment_plugins_to_install):
+        with self.entity_id_builder.extend_id(
+                CENTRAL_DEPLOYMENT_AGENT_PLUGINS):
+            for new_cda_plugin in new_deployment_plugins_to_install:
+                if new_deployment_plugins_to_install[new_cda_plugin] \
+                        ['install']:
+                    with self.entity_id_builder.extend_id(new_cda_plugin):
+                        if new_cda_plugin not in \
+                                old_deployment_plugins_to_install:
+                            self._create_step(PLUGIN,
+                                              supported=False)
+                        else:
+                            if new_deployment_plugins_to_install[
+                                new_cda_plugin] != \
+                                    old_deployment_plugins_to_install[
+                                        new_cda_plugin]:
+                                self._create_step(PLUGIN,
+                                                  supported=False,
+                                                  modify=True)
 
     def _get_matching_relationship(self, relationship, relationships):
 
         r_type = relationship[TYPE]
         target_id = relationship[TARGET_ID]
 
-        for other_relationship in relationships:
+        for rel_index, other_relationship in enumerate(relationships):
             other_r_type = other_relationship[TYPE]
             other_target_id = other_relationship[TARGET_ID]
 
             if r_type == other_r_type and other_target_id == target_id:
-                return other_relationship
-        return None
+                return other_relationship, rel_index
+        return None, None
 
     def _extract_steps_from_relationships(self,
                                           relationships,
@@ -206,10 +365,19 @@ class DeploymentUpdateStepsExtractor(object):
                 with self.entity_id_builder.extend_id(
                         '[{0}]'.format(relationship_index)):
 
-                    matching_relationship = self._get_matching_relationship(
-                        relationship, old_relationships)
+                    matching_relationship, old_rel_index = \
+                        self._get_matching_relationship(
+                            relationship, old_relationships)
 
                     if matching_relationship:
+                        # relationship has been reordered to a different index
+                        if old_rel_index != relationship_index:
+                            with self.entity_id_builder.\
+                                    prepend_id_last_element(
+                                    '[{0}]'.format(old_rel_index)):
+                                self._create_step(RELATIONSHIP,
+                                                  modify=True)
+
                         for field_name in relationship:
                             if field_name in [SOURCE_OPERATIONS,
                                               TARGET_OPERATIONS]:
@@ -220,12 +388,14 @@ class DeploymentUpdateStepsExtractor(object):
                                         field_name])
 
                             elif field_name == PROPERTIES:
-                                if (relationship[PROPERTIES] !=
-                                        matching_relationship[PROPERTIES]):
-                                    # alert the user that changing the
-                                    # relationship is currently not supported
-                                    # during deployment updates.
-                                    pass
+                                # modifying relationship properties is not
+                                # supported yet
+                                self._extract_steps_from_entities(
+                                    entities_name=PROPERTIES,
+                                    new_entities=relationship[PROPERTIES],
+                                    old_entities=matching_relationship[
+                                        PROPERTIES],
+                                    supported=False)
                     else:
                         self._create_step(RELATIONSHIP)
 
@@ -245,6 +415,47 @@ class DeploymentUpdateStepsExtractor(object):
                     else:
                         self._create_step(OPERATION)
 
+    def _extract_step_from_workflows(self,
+                                     new_workflows,
+                                     old_workflows,
+                                     old_workflow_plugins_to_install,
+                                     new_workflow_plugins_to_install):
+
+        with self.entity_id_builder.extend_id(WORKFLOWS):
+
+            for workflow_name in new_workflows:
+                with self.entity_id_builder.extend_id(workflow_name):
+                    new_workflow = new_workflows[workflow_name]
+                    if workflow_name in old_workflows:
+                        old_workflow = old_workflows[workflow_name]
+                        if old_workflow != new_workflow:
+                            if new_workflow['plugin'] not in \
+                                    old_workflow_plugins_to_install:
+                                # the plugin of the workflow was modified
+                                if new_workflow_plugins_to_install[new_workflow['plugin']]['install']:
+                                    self._create_step(WORKFLOW,
+                                                      supported=False,
+                                                      modify=True)
+                            else:
+                                self._create_step(WORKFLOW,
+                                                  modify=True)
+                    else:
+                        if new_workflow['plugin'] not in \
+                            old_workflow_plugins_to_install and \
+                            new_workflow_plugins_to_install[
+                                new_workflow['plugin']]['install']:
+                            if not self._inverted_diff_perspective:
+                                # the added workflow's plugin does not exist
+                                # in the old workflows_plugins_to_install
+                                self._create_step(WORKFLOW,
+                                                  supported=False)
+                            else:
+                                # if we are in an inversed perspective, then
+                                # remove the workflow as usual
+                                self._create_step(WORKFLOW)
+                        else:
+                            self._create_step(WORKFLOW)
+
     def _extract_steps_from_nodes(self,
                                   new_nodes,
                                   old_nodes):
@@ -254,12 +465,14 @@ class DeploymentUpdateStepsExtractor(object):
                     if node_name in old_nodes:
                         old_node = old_nodes[node_name]
 
-                        if node[TYPE] != old_node[TYPE]:
-                            # a node that changed its type counts as a
-                            # different node
+                        if node[TYPE] != old_node[TYPE] or \
+                                node[HOST_ID] != old_node[HOST_ID]:
+                            # a node that changed its type or its host_id
+                            # counts as a different node
                             self._create_step(NODE)
-                            # Since the node changed its type, there is no
-                            # need to compare its other fields.
+                            # Since the node was classified as added or
+                            # removed, there is no need to compare its other
+                            # fields.
                             continue
 
                         self._extract_steps_from_operations(
@@ -283,7 +496,8 @@ class DeploymentUpdateStepsExtractor(object):
     def _extract_steps_from_entities(self,
                                      entities_name,
                                      new_entities,
-                                     old_entities):
+                                     old_entities,
+                                     supported=True):
 
         with self.entity_id_builder.extend_id(entities_name):
 
@@ -295,11 +509,13 @@ class DeploymentUpdateStepsExtractor(object):
                             self._create_step(
                                 self.entity_id_segment_to_entity_type[
                                     entities_name],
+                                supported,
                                 modify=True)
                     else:
                         self._create_step(
                             self.entity_id_segment_to_entity_type[
-                                entities_name])
+                                entities_name],
+                            supported)
 
     def _extract_steps(self, new, old):
 
@@ -315,8 +531,29 @@ class DeploymentUpdateStepsExtractor(object):
                     OUTPUTS, new_entities, old_entities)
 
             elif entities_name == WORKFLOWS:
+                self._extract_step_from_workflows(
+                    new_workflows=new_entities,
+                    old_workflows=old_entities,
+                    old_workflow_plugins_to_install=self.old_deployment_plan[
+                        'workflow_plugins_to_install'],
+                    new_workflow_plugins_to_install=self.new_deployment_plan[
+                        'workflow_plugins_to_install'])
+
+
+            elif entities_name == POLICY_TYPES:
                 self._extract_steps_from_entities(
-                    WORKFLOWS, new_entities, old_entities)
+                    POLICY_TYPES, new_entities, old_entities,
+                    supported=False)
+
+            elif entities_name == POLICY_TRIGGERS:
+                self._extract_steps_from_entities(
+                    POLICY_TRIGGERS, new_entities, old_entities,
+                    supported=False)
+
+            elif entities_name == GROUPS:
+                self._extract_steps_from_entities(
+                    GROUPS, new_entities, old_entities,
+                    supported=False)
 
     def _determine_step_action(self, modify):
         """ Determine if the step will be of type 'add', 'remove', 'modify' or
@@ -338,7 +575,7 @@ class DeploymentUpdateStepsExtractor(object):
         else:
             return 'add'
 
-    def _create_step(self, entity_type, modify=False):
+    def _create_step(self, entity_type, supported=True, modify=False):
 
         action = self._determine_step_action(modify)
         entity_id = self.entity_id_builder.entity_id
@@ -347,7 +584,8 @@ class DeploymentUpdateStepsExtractor(object):
             step = DeploymentUpdateStep(action,
                                         entity_type,
                                         entity_id,
-                                        self.deployment_update_id)
+                                        self.deployment_update_id,
+                                        supported)
             self.steps.append(step)
 
 
@@ -362,9 +600,6 @@ def extract_steps(deployment_update):
         DeploymentPlan.from_deployment_update(deployment_update)
 
     # create the steps
-    steps = steps_extractor.extract_steps()
+    supported_steps, unsupported_steps = steps_extractor.extract_steps()
 
-    # sort the steps
-    steps.sort()
-
-    return steps
+    return supported_steps, unsupported_steps

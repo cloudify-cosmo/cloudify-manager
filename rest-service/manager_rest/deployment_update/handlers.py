@@ -363,7 +363,7 @@ class OutputHandler(ModifiableEntityHandlerBase):
 class DescriptionHandler(ModifiableEntityHandlerBase):
 
     def remove(self, ctx, current_entities):
-        del(current_entities[ctx.DESCRIPTION])
+        current_entities[ctx.DESCRIPTION] = None
         return ctx.entity_id
 
     def modify(self, ctx, current_entities):
@@ -376,6 +376,8 @@ class DescriptionHandler(ModifiableEntityHandlerBase):
                                                  current_entities['id'],
                                                  'id',
                                                  **changes))
+        current_entities[ctx.DESCRIPTION] = new_description
+        return ctx.entity_id
 
 
 class DeploymentUpdateNodeHandler(UpdateHandler):

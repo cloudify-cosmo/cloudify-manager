@@ -8,7 +8,12 @@ DeploymentUpdateEntityTypes = namedtuple('DeploymentUpdateEntityTypes',
                                           'OPERATION',
                                           'WORKFLOW',
                                           'OUTPUT',
-                                          'DESCRIPTION'])
+                                          'DESCRIPTION',
+                                          'GROUP',
+                                          'POLICY_TYPE',
+                                          'POLICY_TRIGGER',
+                                          'PLUGIN'
+                                          ])
 
 DeploymentUpdateActionTypes = namedtuple('DeploymentUpdateActionTypes',
                                          ['ADD', 'REMOVE', 'MODIFY'])
@@ -33,13 +38,19 @@ DeploymentUpdateNodeModificationTypes = \
 DeploymentUpdatePhases = namedtuple('DeploymentUpdatePhases',
                                     ['INITIAL', 'FINAL'])
 
-ENTITY_TYPES = DeploymentUpdateEntityTypes(NODE='node',
-                                           RELATIONSHIP='relationship',
-                                           PROPERTY='property',
-                                           OPERATION='operation',
-                                           WORKFLOW='workflow',
-                                           OUTPUT='output',
-                                           DESCRIPTION='description')
+ENTITY_TYPES = DeploymentUpdateEntityTypes(
+    NODE='node',
+    RELATIONSHIP='relationship',
+    PROPERTY='property',
+    OPERATION='operation',
+    WORKFLOW='workflow',
+    OUTPUT='output',
+    DESCRIPTION='description',
+    GROUP='group',
+    POLICY_TYPE='policy_type',
+    POLICY_TRIGGER='policy_trigger',
+    PLUGIN='plugin')
+
 ACTION_TYPES = DeploymentUpdateActionTypes(ADD='add',
                                            REMOVE='remove',
                                            MODIFY='modify')

@@ -70,7 +70,8 @@ class Snapshot(SerializableObject):
 class Deployment(SerializableObject):
     fields = {'id', 'description', 'created_at', 'updated_at', 'blueprint_id',
               'workflows', 'permalink', 'inputs', 'policy_types',
-              'policy_triggers', 'groups', 'outputs', 'scaling_groups'}
+              'policy_triggers', 'groups', 'outputs', 'description',
+              'scaling_groups'}
 
     def __init__(self, **kwargs):
         self.id = kwargs['id']
@@ -83,6 +84,7 @@ class Deployment(SerializableObject):
         self.policy_triggers = kwargs['policy_triggers']
         self.groups = kwargs['groups']
         self.scaling_groups = kwargs['scaling_groups']
+        self.description = kwargs['description']
         self.outputs = kwargs['outputs']
         self.description = kwargs['description']
         self.permalink = None  # TODO: implement
@@ -90,10 +92,10 @@ class Deployment(SerializableObject):
 
 class DeploymentUpdateStep(SerializableObject):
 
-    fields = {'id', 'action', 'entity_type', 'entity_id'}
+    fields = {'id', 'action', 'entity_type', 'entity_id', 'supported'}
 
     def __init__(self, action, entity_type, entity_id,
-                 id=str(uuid.uuid4())):
+                 id=str(uuid.uuid4()), supported=True):
 
         if entity_type not in ENTITY_TYPES:
             raise UnknownModificationStageError(
@@ -107,9 +109,16 @@ class DeploymentUpdateStep(SerializableObject):
         self.action = action
         self.entity_type = entity_type
         self.entity_id = entity_id
+        self.supported = supported
 
     def __hash__(self):
         return hash((self.id, self.entity_id))
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        else:
+            return False
 
     def __str__(self):
         return str(self.__dict__)
