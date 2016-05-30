@@ -145,20 +145,20 @@ class DeploymentUpdate(SerializableObject):
 
     fields = {'id', 'deployment_id', 'steps', 'state', 'blueprint',
               'deployment_update_nodes', 'deployment_update_node_instances',
-              'deployment_update_deployment', 'modified_entity_ids'}
-
-    # states = {'staged', 'committed', 'reverted', 'committing', 'failed'}
+              'deployment_update_deployment', 'modified_entity_ids',
+              'execution_id'}
 
     def __init__(self,
                  deployment_id,
                  blueprint,
                  state='staged',
                  id=None,
-                 steps=[],
-                 deployment_update_nodes=[],
-                 deployment_update_node_instances=[],
-                 deployment_update_deployment=[],
-                 modified_entity_ids=[]):
+                 steps=(),
+                 deployment_update_nodes=None,
+                 deployment_update_node_instances=None,
+                 deployment_update_deployment=None,
+                 modified_entity_ids=None,
+                 execution_id=None):
         self.id = id or '{0}-{1}'.format(deployment_id, uuid.uuid4())
         self.deployment_id = deployment_id
         self.blueprint = blueprint
@@ -169,6 +169,7 @@ class DeploymentUpdate(SerializableObject):
             deployment_update_node_instances
         self.deployment_update_deployment = deployment_update_deployment
         self.modified_entity_ids = modified_entity_ids
+        self.execution_id = execution_id
 
     def step(self, operation, entity, content):
         step = DeploymentUpdateStep(operation, entity, content)

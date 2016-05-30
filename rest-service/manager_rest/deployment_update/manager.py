@@ -215,10 +215,14 @@ class DeploymentUpdateManager(object):
         # executions.
         # The raw_node_instances are being used only for their ids, Thus
         # They should really hold the finished version for the node instance.
-        self._execute_update_workflow(dep_update,
-                                      depup_node_instances,
-                                      modified_entity_ids.to_dict(),
-                                      workflow_id)
+        execution = self._execute_update_workflow(
+            dep_update,
+            depup_node_instances,
+            modified_entity_ids.to_dict(),
+            workflow_id)
+
+        dep_update.execution_id = execution.id
+        self.sm.update_deployment_update(dep_update)
 
         return self.get_deployment_update(dep_update.id)
 
