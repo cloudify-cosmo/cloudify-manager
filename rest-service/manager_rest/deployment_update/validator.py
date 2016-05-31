@@ -77,7 +77,7 @@ class NodeValidator(EntityValidatorBase):
         return bool(storage_node)
 
     def _in_new(self, dep_update, node_id):
-        raw_node = utils.get_raw_node(dep_update.blueprint, node_id)
+        raw_node = utils.get_raw_node(dep_update.deployment_plan, node_id)
         return bool(raw_node)
 
 
@@ -107,7 +107,7 @@ class RelationshipValidator(EntityValidatorBase):
                 source_node_id,
                 relationships,
                 relationship_index):
-        source_node = utils.get_raw_node(dep_update.blueprint,
+        source_node = utils.get_raw_node(dep_update.deployment_plan,
                                          source_node_id)
         if not (source_node and
                 len(source_node[relationships]) > relationship_index):
@@ -116,7 +116,7 @@ class RelationshipValidator(EntityValidatorBase):
         target_node_id = \
             source_node[relationships][relationship_index]['target_id']
 
-        raw_target_node = utils.get_raw_node(dep_update.blueprint,
+        raw_target_node = utils.get_raw_node(dep_update.deployment_plan,
                                              target_node_id)
         return raw_target_node
 
@@ -157,7 +157,7 @@ class PropertyValidator(EntityValidatorBase):
 
     @staticmethod
     def _in_new(dep_update, node_id, property_id):
-        raw_node = utils.get_raw_node(dep_update.blueprint, node_id)
+        raw_node = utils.get_raw_node(dep_update.deployment_plan, node_id)
         return utils.traverse_object(raw_node, property_id) is not None
 
     def _in_old(self, dep_update, node_id, property_id):
@@ -185,7 +185,7 @@ class OperationValidator(EntityValidatorBase):
                         operation_id=operation_id)
 
     def _in_new(self, dep_update, node_id, operation_id):
-        raw_node = utils.get_raw_node(dep_update.blueprint, node_id)
+        raw_node = utils.get_raw_node(dep_update.deployment_plan, node_id)
         return utils.traverse_object(raw_node, operation_id) is not None
 
     def _in_old(self, dep_update, node_id, operation_id):
@@ -215,7 +215,7 @@ class WorkflowValidator(EntityValidatorBase):
 
     @staticmethod
     def _in_new(dep_update, workflow_id, workflows):
-        raw_workflows = dep_update.blueprint[workflows]
+        raw_workflows = dep_update.deployment_plan[workflows]
         return utils.traverse_object(raw_workflows, workflow_id) is not None
 
     def _in_old(self, dep_update, workflow_id, workflows):
@@ -249,7 +249,7 @@ class OutputValidator(EntityValidatorBase):
     @staticmethod
     def _in_new(dep_update, output_id, outputs):
 
-        raw_outputs = dep_update.blueprint[outputs]
+        raw_outputs = dep_update.deployment_plan[outputs]
         return utils.traverse_object(raw_outputs, output_id) is not None
 
     def _in_old(self, dep_update, output_id, outputs):
@@ -271,7 +271,7 @@ class DescriptionValidator(EntityValidatorBase):
                         description_key=description_key)
 
     def _in_new(self, dep_update, description_key):
-        raw_description = dep_update.blueprint[description_key]
+        raw_description = dep_update.deployment_plan[description_key]
         return bool(raw_description)
 
     def _in_old(self, dep_update, description_key):

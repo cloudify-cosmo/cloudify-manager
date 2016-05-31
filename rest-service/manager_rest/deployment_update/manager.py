@@ -413,7 +413,8 @@ class DeploymentUpdateManager(object):
 
         # executing the user workflow
         workflow_plugins = \
-            deployment_update.blueprint[constants.WORKFLOW_PLUGINS_TO_INSTALL]
+            deployment_update.deployment_plan[
+                constants.WORKFLOW_PLUGINS_TO_INSTALL]
         self.workflow_client.execute_workflow(
             workflow_id,
             workflow,

@@ -140,14 +140,14 @@ class DeploymentUpdateStep(SerializableObject):
 
 class DeploymentUpdate(SerializableObject):
 
-    fields = {'id', 'deployment_id', 'steps', 'state', 'blueprint',
+    fields = {'id', 'deployment_id', 'steps', 'state', 'deployment_plan',
               'deployment_update_nodes', 'deployment_update_node_instances',
               'deployment_update_deployment', 'modified_entity_ids',
               'execution_id'}
 
     def __init__(self,
                  deployment_id,
-                 blueprint,
+                 deployment_plan,
                  state='staged',
                  id=None,
                  steps=(),
@@ -158,7 +158,7 @@ class DeploymentUpdate(SerializableObject):
                  execution_id=None):
         self.id = id or '{0}-{1}'.format(deployment_id, uuid.uuid4())
         self.deployment_id = deployment_id
-        self.blueprint = blueprint
+        self.deployment_plan = deployment_plan
         self.state = state
         self.steps = [DeploymentUpdateStep(**step) for step in steps]
         self.deployment_update_nodes = deployment_update_nodes
