@@ -47,7 +47,7 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
 
         stub_deployment_update = models.DeploymentUpdate(
             deployment_id='deployment_id',
-            blueprint=None,
+            deployment_plan=None,
             id=ANY)
 
         self.step_extractor = DeploymentUpdateStepsExtractor(

@@ -42,6 +42,25 @@ DEPLOYMENT_SCHEMA = {
     }
 }
 
+DEPLOYMENT_UPDATE_SCHEMA = {
+    'deployment_update': {
+        'properties': {
+            'deployment_update_nodes': {
+                'enabled': False
+            },
+            'deployment_update_node_instances': {
+                'enabled': False
+            },
+            'deployment_update_deploymentcontext': {
+                'enabled': False
+            },
+            'deployment_plan': {
+                'enabled': False
+            }
+        }
+    }
+}
+
 NODE_SCHEMA = {
     'node': {
         '_id': {

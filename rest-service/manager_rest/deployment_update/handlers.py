@@ -79,7 +79,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         for step in dep_update.steps:
             if step.entity_type in self._supported_entity_types:
                 entity_updater = self.entities_update_mapper[step.action]
-                entity_context = get_entity_context(dep_update.blueprint,
+                entity_context = get_entity_context(dep_update.deployment_plan,
                                                     dep_update.deployment_id,
                                                     step.entity_type,
                                                     step.entity_id)
@@ -627,7 +627,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         for step in dep_update.steps:
             if step.entity_type in self._supported_entity_types:
                 entity_updater = self._entities_update_mapper[step.action]
-                entity_context = get_entity_context(dep_update.blueprint,
+                entity_context = get_entity_context(dep_update.deployment_plan,
                                                     dep_update.deployment_id,
                                                     step.entity_type,
                                                     step.entity_id)

@@ -102,7 +102,7 @@ class DeploymentPlan(dict):
         blueprints_manager = \
             manager_rest.blueprints_manager.get_blueprints_manager()
 
-        deployment_plan = deployment_update.blueprint
+        deployment_plan = deployment_update.deployment_plan
         deployment_id = deployment_update.deployment_id
 
         sm = blueprints_manager.sm
