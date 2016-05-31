@@ -14,7 +14,7 @@ http://repository.cloudifysource.org/org/cloudify3/components/node-v0.10.35-linu
 http://repository.cloudifysource.org/org/cloudify3/3.4.0/m5-RELEASE/cloudify-rest-service-3.4.0-m5_b394.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/3.4.0/m5-RELEASE/cloudify-management-worker-3.4.0-m5_b394.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/3.4.0/m5-RELEASE/cloudify-amqp-influx-3.4.0-m5_b394.x86_64.rpm
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/m5-RELEASE/manager-resources-3.4m5.tar.gz
+http://repository.cloudifysource.org/org/cloudify3/3.4.0/m5-RELEASE/cloudify-manager-3.4.tar.gz
 http://repository.cloudifysource.org/org/cloudify3/3.4.0/m5-RELEASE/cloudify-ui-3.4.0-m5-b394.tgz
 http://repository.cloudifysource.org/org/cloudify3/components/grafana-1.9.0.tgz
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/m5-RELEASE/hello-world-3.4m5.tar.gz
+http://repository.cloudifysource.org/org/cloudify3/3.4.0/m5-RELEASE/cloudify-hello-world-example-3.4.tar.gz
