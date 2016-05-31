@@ -42,6 +42,7 @@ source common-provision.sh
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 
+install_common_prereqs &&
 create_resources_tar $VERSION $PRERELEASE $BUILD &&
 cd /tmp && create_md5 "tar.gz" &&
 [ -z ${AWS_ACCESS_KEY} ] || upload_to_s3 "tar.gz" && upload_to_s3 "md5"

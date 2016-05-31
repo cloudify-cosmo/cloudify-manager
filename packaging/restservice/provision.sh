@@ -27,6 +27,7 @@ source common-provision.sh
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 
+install_common_prereqs &&
 build_rpm &&
 cd /tmp/x86_64 && create_md5 "rpm" &&
 [ -z ${AWS_ACCESS_KEY} ] || upload_to_s3 "rpm" && upload_to_s3 "md5"
