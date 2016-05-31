@@ -1621,37 +1621,6 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                                  modified_node['properties'],
                                  excluded_items=['prop1', 'prop2', 'prop3'])
 
-    def test_overriding_existing_inputs(self):
-        deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
-                'override_inputs',
-                inputs={'ip_input': '1.1.1.1'}
-        )
-        node_mapping = {'affected_node': 'site1'}
-
-        base_nodes, base_node_instances = \
-            self._map_node_and_node_instances(deployment.id, node_mapping)
-        base_node = base_nodes['affected_node'][0]
-        base_node_instance = base_node_instances['affected_node'][0]
-
-        self.assertRaisesRegexp(
-                CloudifyClientError,
-                "409: The following deployment update inputs conflict with "
-                "original deployment inputs: \['ip_input'\]",
-                callable_obj=self.client.deployment_updates.update,
-                deployment_id=deployment.id,
-                blueprint_or_archive_path=modified_bp_path,
-                inputs={'ip_input': '2.2.2.2'}
-        )
-
-        modified_nodes, modified_node_instances = \
-            self._map_node_and_node_instances(deployment.id, node_mapping)
-        modified_node = modified_nodes['affected_node'][0]
-        modified_node_instance = modified_node_instances['affected_node'][0]
-
-        # assert nothing else changed
-        self.assertEqual(base_node, modified_node)
-        self.assertEqual(base_node_instance, modified_node_instance)
-
     def test_execute_custom_workflow(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('execute_custom_workflow')
