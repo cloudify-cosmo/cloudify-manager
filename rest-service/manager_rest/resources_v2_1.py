@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
-
 import os
 import zipfile
 import urllib
@@ -133,7 +132,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                 dest_dir = os.path.abspath(
                         os.path.join(file_server_deployment_root,
                                      dest_rel_dir))
-                os.makedirs(dest_dir)
+                utils.mkdir_p(dest_dir)
 
                 # Calculate source dir
                 source_dir = os.path.join(file_server_root, app_dir, root)

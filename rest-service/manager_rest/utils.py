@@ -193,3 +193,12 @@ def plugin_installable_on_current_platform(plugin):
         plugin.distribution == dist,
         plugin.distribution_release == release
     ]))
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as e:
+        if e.errno == errno.EEXIST and os.path.isdir(path):
+            return
+        raise
