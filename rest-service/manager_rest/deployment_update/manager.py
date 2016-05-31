@@ -364,8 +364,7 @@ class DeploymentUpdateManager(object):
         dep_update.state = STATES.COMMITTED
         self.sm.update_deployment_update(dep_update)
 
-        return models.DeploymentUpdate(deployment_update_id,
-                                       dep_update.blueprint)
+        return self.get_deployment_update(deployment_update_id)
 
     def execute_workflow(self,
                          deployment_update,

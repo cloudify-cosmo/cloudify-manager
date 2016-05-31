@@ -58,25 +58,15 @@ def setup_resources(api):
         'MaintenanceMode': 'maintenance',
         'MaintenanceModeAction': 'maintenance/<string:maintenance_action>',
 
+        # Update the deployment
+        'DeploymentUpdate':
+            'deployment-updates/<string:id>/update/<string:phase>',
+
         # Get single deployment update status
-        'DeploymentUpdate': 'deployment-updates/<string:update_id>',
+        'DeploymentUpdateId': 'deployment-updates/<string:update_id>',
 
         # Get list of deployment updates (according to the query params)
         'DeploymentUpdates': 'deployment-updates',
-
-        # Update a deployment (create a deployment update):
-        'DeploymentUpdatesSteps':
-            'deployment-updates/<string:update_id>/update',
-
-        # This needs to be removed
-        'DeploymentUpdateSteps':
-            'deployment-updates/<string:update_id>/step',
-        'DeploymentUpdateCommit':
-            'deployment-updates/<string:update_id>/commit',
-
-        # For finalizing the commit
-        'DeploymentUpdateFinalizeCommit':
-            'deployment-updates/<string:update_id>/finalize_commit'
 
     }
 

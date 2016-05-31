@@ -413,10 +413,12 @@ class BaseServerTestCase(unittest.TestCase):
                        deployment_id='deployment',
                        blueprint_file_name=None,
                        blueprint_id='blueprint',
-                       inputs=None):
+                       inputs=None,
+                       blueprint_dir='mock_blueprint'):
         blueprint_response = self.put_file(
             *self.put_blueprint_args(blueprint_file_name,
-                                     blueprint_id)).json
+                                     blueprint_id,
+                                     blueprint_dir=blueprint_dir)).json
 
         if 'error_code' in blueprint_response:
             raise RuntimeError(
