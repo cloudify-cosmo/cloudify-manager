@@ -53,12 +53,12 @@ class DeploymentUpdateBase(TestCase):
                         return value
                     time.sleep(3)
 
-    def _wait_for_committed_state(self, depup_id):
+    def _wait_for_successful_state(self, depup_id):
         error_msg = 'deployment update {0} failed to commit'.format(depup_id)
         return self._wait_for(self.client.deployment_updates.get,
                               depup_id,
                               'state',
-                              STATES.COMMITTED,
+                              STATES.SUCCESSFUL,
                               lambda x, y: x == y,
                               error_msg)
 
@@ -217,7 +217,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
             # wait for 'update' workflow to finish
             self._wait_for_execution_to_terminate(deployment.id, 'update')
-            self._wait_for_committed_state(dep_update.id)
+            self._wait_for_successful_state(dep_update.id)
 
             modified_nodes, modified_node_instances = \
                 self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -290,7 +290,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
@@ -369,7 +369,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -439,7 +439,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -535,7 +535,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         self.client.executions.start(deployment.id, 'custom_workflow',
                                      parameters={'node_id': 'site2'})
@@ -619,7 +619,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -674,7 +674,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertDictContainsSubset({'custom_output': {'value': 0}},
@@ -690,7 +690,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertRegexpMatches(deployment['description'], 'new description')
@@ -715,7 +715,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -784,7 +784,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
@@ -842,7 +842,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         # Get all related and affected nodes and node instances
         modified_nodes, modified_node_instances = \
@@ -910,7 +910,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         self.assertRaisesRegexp(CloudifyClientError,
                                 'Workflow {0} does not exist in deployment {1}'
@@ -944,7 +944,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         execution = self.client.executions.start(
                 deployment.id,
@@ -1021,7 +1021,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -1048,7 +1048,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertNotIn('custom_output', deployment.outputs)
@@ -1063,7 +1063,7 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertFalse(deployment.get('description'))
@@ -1116,7 +1116,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         # assert nothing changed except for plugins and operations
         modified_nodes, modified_node_instances = \
@@ -1204,7 +1204,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         self.client.executions.start(deployment.id, 'custom_workflow',
                                      parameters={'node_id': 'site2'})
@@ -1286,7 +1286,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -1342,7 +1342,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertDictContainsSubset({'custom_output': {'value': 1}},
@@ -1360,7 +1360,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertRegexpMatches(deployment['description'], 'new description')
@@ -1410,7 +1410,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         # Get all related and affected nodes and node instances
 
@@ -1536,7 +1536,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         # Get all related and affected nodes and node instances
 
@@ -1588,7 +1588,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -1638,7 +1638,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id,
                                               workflow_id='custom_workflow')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -1687,7 +1687,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -1755,7 +1755,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
@@ -1796,7 +1796,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)

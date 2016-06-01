@@ -174,7 +174,7 @@ class DeploymentUpdateManager(object):
         dep_update = self.get_deployment_update(deployment_update_id)
 
         # mark deployment update as committing
-        dep_update.state = STATES.COMMITTING
+        dep_update.state = STATES.UPDATING
         self.sm.update_deployment_update(dep_update)
 
         # Handle any deployment related changes. i.e. workflows and deployments
@@ -216,6 +216,7 @@ class DeploymentUpdateManager(object):
         # executions.
         # The raw_node_instances are being used only for their ids, Thus
         # They should really hold the finished version for the node instance.
+
         execution = self._execute_update_workflow(
             dep_update,
             depup_node_instances,
@@ -225,6 +226,7 @@ class DeploymentUpdateManager(object):
             workflow_id=workflow_id)
 
         dep_update.execution_id = execution.id
+        dep_update.state = STATES.EXECUTING_WORKFLOW
         self.sm.update_deployment_update(dep_update)
 
         return self.get_deployment_update(dep_update.id)
@@ -243,13 +245,12 @@ class DeploymentUpdateManager(object):
         active_update = \
             next(iter(
                 [u for u in existing_updates
-                 if u.state != STATES.COMMITTED]), None)
+                 if u.state not in (STATES.SUCCESSFUL, STATES.FAILED)]), None)
 
         if active_update:
             raise manager_rest.manager_exceptions.ConflictError(
                 'deployment update {0} is not committed yet'
-                .format(active_update.id)
-            )
+                .format(active_update.id))
 
     def _extract_changes(self, dep_update, raw_nodes, previous_nodes):
         """Extracts the changes between the current node_instances and
@@ -354,14 +355,18 @@ class DeploymentUpdateManager(object):
 
         dep_update = self.get_deployment_update(deployment_update_id)
 
+        # mark deployment update as finalizing
+        dep_update.state = STATES.FINALIZING
+        self.sm.update_deployment_update(dep_update)
+
         # The order of these matter
         for finalize in [self._deployment_handler.finalize,
                          self._node_instance_handler.finalize,
                          self._node_handler.finalize]:
             finalize(dep_update)
 
-        # mark deployment update as committed
-        dep_update.state = STATES.COMMITTED
+        # mark deployment update as successful
+        dep_update.state = STATES.SUCCESSFUL
         self.sm.update_deployment_update(dep_update)
 
         return self.get_deployment_update(deployment_update_id)
