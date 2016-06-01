@@ -384,8 +384,8 @@ class DeploymentUpdates(SecuredResource):
         """
         deployment_updates = \
             get_deployment_updates_manager().deployment_updates_list(
-                    include=None, filters=None, pagination=None,
-                    sort=None, **kwargs)
+                    include=_include, filters=filters, pagination=pagination,
+                    sort=sort, **kwargs)
         return deployment_updates
 
 
