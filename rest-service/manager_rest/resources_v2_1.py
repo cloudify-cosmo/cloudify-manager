@@ -132,7 +132,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                 dest_dir = os.path.abspath(
                         os.path.join(file_server_deployment_root,
                                      dest_rel_dir))
-                utils.mkdir_p(dest_dir)
+                utils.mkdirs(dest_dir)
 
                 # Calculate source dir
                 source_dir = os.path.join(file_server_root, app_dir, root)
