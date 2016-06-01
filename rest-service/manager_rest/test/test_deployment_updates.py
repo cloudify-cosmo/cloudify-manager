@@ -19,7 +19,8 @@ import re
 from nose.plugins.attrib import attr
 from nose.tools import nottest
 
-from manager_rest import archiving
+from manager_rest import archiving, models, storage_manager
+from manager_rest.deployment_update.constants import STATES
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
 from utils import get_resource as resource
@@ -71,17 +72,6 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
         self.assertEqual(1, len(dep_update.steps))
         self.assertDictContainsSubset(step, dep_update.steps[0])
 
-    def test_one_active_update_per_deployment(self):
-        deployment_id = 'dep'
-        self._deploy_base(deployment_id, 'no_output.yaml')
-        self._update(deployment_id, 'one_output.yaml')
-        response = self._update(deployment_id,
-                                blueprint_name='one_output.yaml')
-        self.assertEquals(response.json['error_code'], 'conflict_error')
-        self.assertIn('is not committed yet', response.json['message'])
-
-        print response
-
     def test_workflow_and_skip_conflict(self):
         deployment_id = 'dep'
         self._deploy_base(deployment_id, 'no_output.yaml')
@@ -116,6 +106,60 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                                     **conflicting_params)
             self.assertEquals(response.json['message'],
                               msg.format(**conflicting_params))
+
+    def test_one_active_update_per_deployment(self):
+        deployment_id = 'dep'
+        self._deploy_base(deployment_id, 'no_output.yaml')
+        self._update(deployment_id, 'one_output.yaml')
+        response = self._update(deployment_id,
+                                blueprint_name='one_output.yaml')
+        self.assertEquals(response.json['error_code'], 'conflict_error')
+        self.assertIn('there are deployment updates still active',
+                      response.json['message'])
+
+    def test_one_active_update_per_deployment_force_flag(self):
+        deployment_id = 'dep'
+        self._deploy_base(deployment_id, 'no_output.yaml')
+        response = self._update(deployment_id, 'one_output.yaml')
+        first_update_id = response.json['id']
+        response = self._update(deployment_id,
+                                blueprint_name='one_output.yaml',
+                                force=True)
+        # the second update should be running because the force flag was used
+        self.assertEquals(STATES.EXECUTING_WORKFLOW, response.json['state'])
+        # the first update should be with failed state
+        # because the execution had terminated but the deployment update
+        # object wasn't in an end state
+        first_update = self.client.deployment_updates.get(first_update_id)
+        self.assertEquals(STATES.FAILED, first_update.state)
+
+    def test_one_active_update_per_dep_force_flag_real_active_executions(self):
+        deployment_id = 'dep'
+        self._deploy_base(deployment_id, 'no_output.yaml')
+        response = self._update(deployment_id, 'one_output.yaml')
+        first_update_id = response.json['id']
+        first_execution_id = response.json['execution_id']
+
+        # updating the execution's status to started to make the first update
+        # really be active
+        storage_manager._get_instance().update_execution_status(
+            first_execution_id, models.Execution.STARTED, error='')
+        self.client.executions.get(execution_id=first_execution_id)
+
+        response = self._update(deployment_id,
+                                blueprint_name='one_output.yaml',
+                                force=True)
+        # force flag is expected not to work because the first update is
+        # still really running
+        self.assertEquals(response.json['error_code'], 'conflict_error')
+        self.assertIn('there are deployment updates still active',
+                      response.json['message'])
+        self.assertIn('the "force" flag was used',
+                      response.json['message'])
+        # verifying the first update wasn't set with a failed state by the
+        # force flag call
+        first_update = self.client.deployment_updates.get(first_update_id)
+        self.assertEquals(STATES.EXECUTING_WORKFLOW, first_update.state)
 
     def _deploy_base(self,
                      deployment_id,

@@ -58,14 +58,9 @@ def setup_resources(api):
         'MaintenanceMode': 'maintenance',
         'MaintenanceModeAction': 'maintenance/<string:maintenance_action>',
 
-        # Update the deployment
         'DeploymentUpdate':
             'deployment-updates/<string:id>/update/<string:phase>',
-
-        # Get single deployment update status
         'DeploymentUpdateId': 'deployment-updates/<string:update_id>',
-
-        # Get list of deployment updates (according to the query params)
         'DeploymentUpdates': 'deployment-updates',
 
     }

@@ -90,8 +90,6 @@ class DeploymentUpdateManager(object):
         :return:
         """
 
-        self._validate_no_active_updates_per_deployment(deployment_id)
-
         # enables reverting to original blueprint resources
         deployment = self.sm.get_deployment(deployment_id)
         blueprint_id = deployment.blueprint_id
@@ -231,26 +229,51 @@ class DeploymentUpdateManager(object):
 
         return self.get_deployment_update(dep_update.id)
 
-    def _validate_no_active_updates_per_deployment(self, deployment_id):
+    def validate_no_active_updates_per_deployment(self,
+                                                  deployment_id,
+                                                  force=False):
         """
-        Validate there are no uncommitted updates for provided deployment.
-        raises conflict error if there are.
+        Validate there are no active updates for provided deployment.
+        raises conflict error if there are any.
         :param deployment_id: deployment id
+        :param force: force
         """
         existing_updates = \
             self.deployment_updates_list(filters={
                 'deployment_id': deployment_id
             }).items
 
-        active_update = \
-            next(iter(
-                [u for u in existing_updates
-                 if u.state not in (STATES.SUCCESSFUL, STATES.FAILED)]), None)
+        active_updates = [u for u in existing_updates if u.state
+                          not in (STATES.SUCCESSFUL, STATES.FAILED)]
 
-        if active_update:
-            raise manager_rest.manager_exceptions.ConflictError(
-                'deployment update {0} is not committed yet'
-                .format(active_update.id))
+        if active_updates:
+            if not force:
+                raise manager_rest.manager_exceptions.ConflictError(
+                    'there are deployment updates still active; '
+                    'update IDs: {0}'.format(
+                        ', '.join([u.id for u in active_updates])))
+
+            # real active updates are those with
+            # an execution in a running status
+            real_active_updates = \
+                [u for u in active_updates if u.execution_id is not None and
+                 self.sm.get_execution(u.execution_id).status not in
+                 models.Execution.END_STATES]
+
+            if real_active_updates:
+                raise manager_rest.manager_exceptions.ConflictError(
+                    'there are deployment updates still active; the "force" '
+                    'flag was used yet these updates have actual executions '
+                    'running update IDs: {0}'.format(
+                        ', '.join([u.id for u in real_active_updates])))
+            else:
+                # the active updates aren't really active - either their
+                # executions were failed/cancelled, or the update failed at
+                # the finalizing stage.
+                # updating their states to failed and continuing.
+                for dep_update in active_updates:
+                    dep_update.state = STATES.FAILED
+                    self.sm.update_deployment_update(dep_update)
 
     def _extract_changes(self, dep_update, raw_nodes, previous_nodes):
         """Extracts the changes between the current node_instances and
