@@ -22,9 +22,9 @@ from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
 from testenv.utils import tar_blueprint
 
-from cloudify_rest_client.exceptions import CloudifyClientError
-from manager_rest.deployment_update.constants import STATES
 from manager_rest.models import Execution
+from manager_rest.deployment_update.constants import STATES
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 blueprints_base_path = 'dsl/deployment_update'
 
@@ -1070,6 +1070,65 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
 
 class TestDeploymentUpdateModification(DeploymentUpdateBase):
+
+    @nottest
+    def test_modify_relationships(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('modify_relationship')
+
+        node_mapping = {
+            'target': 'site1',
+            'frozen': 'site2',
+            'modified': 'site3'
+        }
+
+        base_nodes, base_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+        base_source_node = base_nodes['modified'][0]
+        base_source_node_instance = base_node_instances['modified'][0]
+
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_committed_state(dep_update.id)
+
+        modified_nodes, modified_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+
+        # assert all unaffected nodes and node instances remained intact
+        self._assert_equal_entity_dicts(
+                base_nodes,
+                modified_nodes,
+                keys=['target', 'frozen', 'modified'],
+                excluded_items=['relationships']
+        )
+
+        self._assert_equal_entity_dicts(
+                base_node_instances,
+                modified_node_instances,
+                keys=['target', 'frozen', 'modified'],
+                excluded_items=['relationships']
+        )
+
+        # get the nodes and node instances
+        modified_source_node = modified_nodes['modified'][0]
+        modified_source_node_instance = modified_node_instances['modified'][0]
+
+        # assert there are 2 relationships total
+        self.assertEquals(2, len(modified_source_node.relationships))
+        self.assertEquals(2, len(modified_source_node_instance.relationships))
+
+        self.assertEqual(modified_source_node.relationships[0],
+                         base_source_node.relationships[1])
+        self.assertEqual(modified_source_node.relationships[1],
+                         base_source_node.relationships[0])
+
+        self.assertEqual(modified_source_node_instance.relationships[0],
+                         base_source_node_instance.relationships[1])
+        self.assertEqual(modified_source_node_instance.relationships[1],
+                         base_source_node_instance.relationships[0])
 
     def test_modify_node_operation(self):
         """

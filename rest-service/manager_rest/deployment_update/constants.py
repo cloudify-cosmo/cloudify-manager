@@ -26,6 +26,7 @@ DeploymentUpdateNodeModificationTypes = \
                 'EXTENDED_AND_RELATED',
                 'REDUCED_AND_RELATED',
                 'REMOVED_AND_RELATED',
+                'REORDERED_RELATIONSHIPS',
                 'AFFECTED',
                 'RELATED'])
 
@@ -52,6 +53,7 @@ NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes(
         EXTENDED_AND_RELATED='extended_and_related',
         REDUCED_AND_RELATED='reduced_and_related',
         REMOVED_AND_RELATED='removed_and_related',
+        REORDERED_RELATIONSHIPS='reordered_relationships',
         AFFECTED='affected',
         RELATED='related')
 

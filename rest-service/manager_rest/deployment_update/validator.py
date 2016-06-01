@@ -3,6 +3,13 @@ from manager_rest.deployment_update import utils
 from manager_rest.manager_exceptions import UnknownModificationStageError
 from manager_rest.deployment_update.constants import ENTITY_TYPES, ACTION_TYPES
 
+OUTPUT_ENTITY_LEN = 2
+WORKFLOW_ENTITY_LEN = 2
+OPERATION_ENTITY_LEN = 2
+PROPERTY_ENTITY_LEN = 2
+RELATIONSHIP_ENTITY_LEN = 4
+NODE_ENTITY_LEN = 2
+
 
 class EntityValidatorBase(object):
     def __init__(self):
@@ -61,7 +68,7 @@ class NodeValidator(EntityValidatorBase):
 
     def _validate_entity(self, dep_update, step):
         entity_keys = utils.get_entity_keys(step.entity_id)
-        if len(entity_keys) != 2:
+        if len(entity_keys) != NODE_ENTITY_LEN:
             return
         _, node_id = entity_keys
 
@@ -85,13 +92,22 @@ class RelationshipValidator(EntityValidatorBase):
 
     def _validate_entity(self, dep_update, step):
         entity_keys = utils.get_entity_keys(step.entity_id)
-        if len(entity_keys) < 4:
+        if len(entity_keys) < RELATIONSHIP_ENTITY_LEN:
             return
-        _, source_node_id, relationships, relationship_index = entity_keys
+
+        _, source_node_id, relationships, source_relationship_index = \
+            entity_keys[:RELATIONSHIP_ENTITY_LEN]
+
+        target_relationship_index = entity_keys[RELATIONSHIP_ENTITY_LEN] \
+            if len(entity_keys) > RELATIONSHIP_ENTITY_LEN else None
 
         # assert the index is indeed readable
-        relationship_index = utils.parse_index(relationship_index)
-        if not relationship_index:
+        source_relationship_index = \
+            utils.parse_index(source_relationship_index)
+        target_relationship_index = \
+            utils.parse_index(target_relationship_index)
+
+        if not (source_relationship_index or target_relationship_index):
             return
 
         validate = self._validation_mapper[step.action]
@@ -100,21 +116,23 @@ class RelationshipValidator(EntityValidatorBase):
                         dep_update=dep_update,
                         source_node_id=source_node_id,
                         relationships=relationships,
-                        relationship_index=relationship_index)
+                        source_relationship_index=source_relationship_index,
+                        target_relationship_index=target_relationship_index)
 
     def _in_new(self,
                 dep_update,
                 source_node_id,
                 relationships,
-                relationship_index):
+                source_relationship_index,
+                target_relationship_index):
         source_node = utils.get_raw_node(dep_update.deployment_plan,
                                          source_node_id)
         if not (source_node and
-                len(source_node[relationships]) > relationship_index):
+                len(source_node[relationships]) > source_relationship_index):
             return
 
         target_node_id = \
-            source_node[relationships][relationship_index]['target_id']
+            source_node[relationships][source_relationship_index]['target_id']
 
         raw_target_node = utils.get_raw_node(dep_update.deployment_plan,
                                              target_node_id)
@@ -124,15 +142,16 @@ class RelationshipValidator(EntityValidatorBase):
                 dep_update,
                 source_node_id,
                 relationships,
-                relationship_index):
+                source_relationship_index,
+                target_relationship_index):
         source_node = self._get_storage_node(dep_update.deployment_id,
                                              source_node_id)
         if not (source_node and
-                len(source_node[relationships]) > relationship_index):
+                len(source_node[relationships]) > target_relationship_index):
             return
 
         target_node_id = \
-            source_node[relationships][relationship_index]['target_id']
+            source_node[relationships][target_relationship_index]['target_id']
         storage_target_node = self._get_storage_node(dep_update.deployment_id,
                                                      target_node_id)
         return storage_target_node
@@ -143,10 +162,10 @@ class PropertyValidator(EntityValidatorBase):
     def _validate_entity(self, dep_update, step):
         property_keys = utils.get_entity_keys(step.entity_id)
 
-        if len(property_keys) < 2:
+        if len(property_keys) < PROPERTY_ENTITY_LEN:
             return
-        _, node_id = property_keys[:2]
-        property_id = property_keys[2:]
+        _, node_id = property_keys[:PROPERTY_ENTITY_LEN]
+        property_id = property_keys[PROPERTY_ENTITY_LEN:]
 
         validate = self._validation_mapper[step.action]
         return validate(step.entity_id,
@@ -171,11 +190,11 @@ class OperationValidator(EntityValidatorBase):
 
     def _validate_entity(self, dep_update, step):
         operation_keys = utils.get_entity_keys(step.entity_id)
-        if len(operation_keys) < 2:
+        if len(operation_keys) < OPERATION_ENTITY_LEN:
             return
 
-        _, node_id = operation_keys[:2]
-        operation_id = operation_keys[2:]
+        _, node_id = operation_keys[:OPERATION_ENTITY_LEN]
+        operation_id = operation_keys[OPERATION_ENTITY_LEN:]
 
         validate = self._validation_mapper[step.action]
         return validate(step.entity_id,
@@ -199,7 +218,7 @@ class WorkflowValidator(EntityValidatorBase):
     def _validate_entity(self, dep_update, step):
         workflow_keys = utils.get_entity_keys(step.entity_id)
 
-        if len(workflow_keys) < 2:
+        if len(workflow_keys) < WORKFLOW_ENTITY_LEN:
             return
 
         workflows = workflow_keys[0]
@@ -233,7 +252,7 @@ class OutputValidator(EntityValidatorBase):
     def _validate_entity(self, dep_update, step):
         output_keys = utils.get_entity_keys(step.entity_id)
 
-        if len(output_keys) < 2:
+        if len(output_keys) < OUTPUT_ENTITY_LEN:
             return
 
         outputs = output_keys[0]
