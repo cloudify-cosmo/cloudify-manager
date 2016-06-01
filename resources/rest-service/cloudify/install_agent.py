@@ -173,8 +173,8 @@ def _set_package_url(agent):
 def prepare_cloudify_agent():
     agent = get_cloudify_agent()
     agent['windows'] = os.name == 'nt'
-    if 'package_url' not in agent:
-        _set_package_url(agent)
+    # TODO: support custom agent packages
+    _set_package_url(agent)
     return agent
 
 
