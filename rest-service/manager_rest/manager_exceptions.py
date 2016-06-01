@@ -164,6 +164,16 @@ class InvalidExecutionUpdateStatus(ManagerException):
             *args, **kwargs)
 
 
+class UnsupportedChangeInDeploymentUpdate(ManagerException):
+    UNSUPPORTED_CHANGE_IN_DEPLOYMENT_UPDATE = \
+        'unsupported_change_in_deployment_update'
+
+    def __init__(self, *args, **kwargs):
+        super(UnsupportedChangeInDeploymentUpdate, self).__init__(
+            400, UnsupportedChangeInDeploymentUpdate
+            .UNSUPPORTED_CHANGE_IN_DEPLOYMENT_UPDATE, *args, **kwargs)
+
+
 class ExistingStartedDeploymentModificationError(ManagerException):
     EXISTING_STARTED_DEPLOYMENT_MODIFICATION_ERROR = \
         'existing_started_deployment_modification_error'

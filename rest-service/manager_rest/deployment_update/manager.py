@@ -149,11 +149,29 @@ class DeploymentUpdateManager(object):
 
         deployment_update = self.get_deployment_update(deployment_update_id)
 
-        steps = step_extractor.extract_steps(deployment_update)
-        deployment_update.steps = steps
-        self.sm.update_deployment_update(deployment_update)
+        supported_steps, unsupported_steps = \
+            step_extractor.extract_steps(deployment_update)
 
-        # return the deployment update with its new steps from the storage
+        if not unsupported_steps:
+            deployment_update.steps = supported_steps
+            self.sm.update_deployment_update(deployment_update)
+
+        # if there are unsupported steps, raise an exception telling the user
+        # about these unsupported steps
+        else:
+            deployment_update.state = STATES.FAILED
+            self.sm.update_deployment_update(deployment_update)
+            unsupported_entity_ids = [step.entity_id
+                                      for step in unsupported_steps]
+            raise \
+                manager_rest.manager_exceptions.\
+                UnsupportedChangeInDeploymentUpdate(
+                    'The blueprint you provided for the deployment update '
+                    'contains changes currently unsupported by the deployment '
+                    'update mechanism.\n'
+                    'Unsupported changes: {0}'
+                    .format('\n'.join(unsupported_entity_ids)))
+
         return self.get_deployment_update(deployment_update_id)
 
     def commit_deployment_update(self,
