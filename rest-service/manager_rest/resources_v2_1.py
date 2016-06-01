@@ -149,7 +149,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         except DslParseException, ex:
             shutil.rmtree(os.path.join(file_server_root, app_dir))
             raise manager_exceptions.InvalidBlueprintError(
-                    'Invalid deployment update - {0}'.format(ex.message))
+                'Invalid deployment update - {0}'.format(ex.message))
 
     @classmethod
     def _extract_application_file(cls, file_server_root, application_dir):
@@ -309,38 +309,40 @@ class DeploymentUpdate(SecuredResource):
         request_json = request.args
         skip_install = verify_and_convert_bool(
                 'skip_install',
-                request_json.get('skip_install', 'false')
-        )
+                request_json.get('skip_install', 'false'))
         skip_uninstall = verify_and_convert_bool(
                 'skip_uninstall',
-                request_json.get('skip_uninstall', 'false')
-        )
+                request_json.get('skip_uninstall', 'false'))
+        force = verify_and_convert_bool(
+            'force',
+            request_json.get('force', 'false'))
         workflow_id = request_json.get('workflow_id', None)
 
         if (skip_install or skip_uninstall) and workflow_id:
             raise manager_exceptions.BadParametersError(
-                    'skip_install has been set to {0}, skip uninstall has been'
-                    ' set to {1}, and a custom workflow {2} has been set to '
-                    'replace "update". However, skip_install and '
-                    'skip_uninstall are mutually exclusive with a custom '
-                    'workflow'.format(skip_install,
-                                      skip_uninstall,
-                                      workflow_id)
-            )
+                'skip_install has been set to {0}, skip uninstall has been'
+                ' set to {1}, and a custom workflow {2} has been set to '
+                'replace "update". However, skip_install and '
+                'skip_uninstall are mutually exclusive with a custom '
+                'workflow'.format(skip_install,
+                                  skip_uninstall,
+                                  workflow_id))
+
+        manager.validate_no_active_updates_per_deployment(
+            deployment_id=deployment_id, force=force)
 
         deployment_update, _ = \
             UploadedBlueprintsDeploymentUpdateManager(). \
             receive_uploaded_data(deployment_id)
 
         manager.extract_steps_from_deployment_update(
-                deployment_update.id)
+            deployment_update.id)
 
         return manager.commit_deployment_update(
-                deployment_update.id,
-                skip_install=skip_install,
-                skip_uninstall=skip_uninstall,
-                workflow_id=workflow_id
-        )
+            deployment_update.id,
+            skip_install=skip_install,
+            skip_uninstall=skip_uninstall,
+            workflow_id=workflow_id)
 
 
 class DeploymentUpdateId(SecuredResource):
