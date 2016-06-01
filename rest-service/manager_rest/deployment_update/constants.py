@@ -14,14 +14,11 @@ DeploymentUpdateActionTypes = namedtuple('DeploymentUpdateActionTypes',
                                          ['ADD', 'REMOVE', 'MODIFY'])
 
 DeploymentUpdateStates = namedtuple('DeploymentUpdateStates',
-                                    ['COMMITTED',
-                                     'COMMITTING',
-                                     'STAGED',
-                                     'REVERTED',
-                                     'FAILED',
-                                     'STARTED',
-                                     'FINISHED',
-                                     'ROLLEDBACK'])
+                                    ['UPDATING',
+                                     'EXECUTING_WORKFLOW',
+                                     'FINALIZING',
+                                     'SUCCESSFUL',
+                                     'FAILED'])
 
 DeploymentUpdateNodeModificationTypes = \
     namedtuple('DeploymentUpdateNodeModificationTypes',
@@ -45,14 +42,11 @@ ENTITY_TYPES = DeploymentUpdateEntityTypes(NODE='node',
 ACTION_TYPES = DeploymentUpdateActionTypes(ADD='add',
                                            REMOVE='remove',
                                            MODIFY='modify')
-STATES = DeploymentUpdateStates(COMMITTED='committed',
-                                COMMITTING='committing',
-                                STAGED='staged',
-                                REVERTED='reverted',
-                                FAILED='failed',
-                                STARTED='started',
-                                FINISHED='finished',
-                                ROLLEDBACK='rolledback')
+STATES = DeploymentUpdateStates(SUCCESSFUL='successful',
+                                UPDATING='updating',
+                                FINALIZING='finalizing',
+                                EXECUTING_WORKFLOW='executing_workflow',
+                                FAILED='failed')
 NODE_MOD_TYPES = DeploymentUpdateNodeModificationTypes(
         ADDED_AND_RELATED='added_and_related',
         EXTENDED_AND_RELATED='extended_and_related',

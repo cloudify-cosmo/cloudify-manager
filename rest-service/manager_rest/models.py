@@ -18,8 +18,7 @@ import uuid
 
 import jsonpickle
 from deployment_update.constants import (ENTITY_TYPES,
-                                         ACTION_TYPES,
-                                         STATES)
+                                         ACTION_TYPES)
 
 from manager_exceptions import UnknownModificationStageError
 
@@ -167,47 +166,6 @@ class DeploymentUpdate(SerializableObject):
         self.deployment_update_deployment = deployment_update_deployment
         self.modified_entity_ids = modified_entity_ids
         self.execution_id = execution_id
-
-    def step(self, operation, entity, content):
-        step = DeploymentUpdateStep(operation, entity, content)
-        self.steps.append(step)
-
-    def add(self, entity, content):
-        self.step(operation='add', entity=entity, content=content)
-
-    def remove(self, entity, content):
-        self.step(operation='remove', entity=entity, content=content)
-
-    def _sort_steps(self):
-        # TODO: sort order of steps to execute modification properly
-        raise NotImplementedError()
-
-    def _validate(self):
-        # TODO: validate modification
-        raise NotImplementedError()
-
-    def _update_storage(self):
-        # TODO: update the data storage with this modification based on steps
-        raise NotImplementedError()
-
-    def commit(self):
-        allowed_states = {STATES.STAGED, STATES.REVERTED, STATES.FAILED}
-        if self.state not in allowed_states:
-            raise RuntimeError('commit is not allowed when {0}'
-                               .format(self.state))
-        self._sort_steps()
-        self._validate()
-        self.state = STATES.COMMITTING
-        is_updated = self._update_storage()
-        self.state = STATES.COMMITTED if is_updated else STATES.FAILED
-
-    def revert(self):
-        allowed_states = {STATES.COMMITTED}
-        if self.state not in allowed_states:
-            raise RuntimeError('revert is not allowed when {0}'
-                               .format(self.state))
-        # do some rollback stuff
-        self.state = STATES.REVERTED
 
 
 class DeploymentModification(SerializableObject):
