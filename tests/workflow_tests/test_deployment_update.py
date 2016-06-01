@@ -1092,7 +1092,7 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
-        self._wait_for_committed_state(dep_update.id)
+        self._wait_for_successful_state(dep_update.id)
 
         modified_nodes, modified_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)

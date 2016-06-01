@@ -363,6 +363,7 @@ def _update_es_node(es_node):
             'plugin': 'default_workflows'
         })
         node_data.setdefault('scaling_groups', {})
+        node_data.setdefault('description', None)
 
     if node_type == 'node':
         type_hierarchy = node_data.get('type_hierarchy', [])
