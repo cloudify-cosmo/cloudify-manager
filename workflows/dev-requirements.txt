@@ -1,2 +1,2 @@
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/3.4m5.zip
+https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/3.4m5.zip
