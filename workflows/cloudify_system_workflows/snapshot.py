@@ -15,17 +15,18 @@
 
 
 import json
+import platform
 import tempfile
 import shutil
 import zipfile
 import itertools
 import os
 import subprocess
+from datetime import datetime
 
 import elasticsearch
 import elasticsearch.helpers
-
-from datetime import datetime
+from wagon import wagon
 
 from cloudify.workflows import ctx
 from cloudify.constants import COMPUTE_NODE_TYPE
@@ -35,6 +36,7 @@ from cloudify.exceptions import NonRecoverableError
 from cloudify.manager import get_rest_client
 from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
+from cloudify_system_workflows import plugins
 from cloudify.utils import ManagerVersion
 
 
@@ -214,7 +216,7 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
         _dump_agents(tempdir)
 
         # zip
-        ctx.send_event('Creating snapshot archive')
+        ctx.logger.info('Creating snapshot archive')
         snapshot_dir = os.path.join(snapshots_dir, snapshot_id)
         os.makedirs(snapshot_dir)
 
@@ -241,7 +243,7 @@ def create(snapshot_id, config, **kwargs):
 
 
 def _dump_elasticsearch(tempdir, es, has_cloudify_events):
-    ctx.send_event('Dumping elasticsearch data')
+    ctx.logger.info('Dumping elasticsearch data')
     storage_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME)
     storage_scan = _except_types(storage_scan,
                                  'provider_context',
@@ -259,7 +261,7 @@ def _dump_elasticsearch(tempdir, es, has_cloudify_events):
 
 
 def _dump_influxdb(tempdir):
-    ctx.send_event('Dumping InfluxDB data')
+    ctx.logger.info('Dumping InfluxDB data')
     influxdb_file = os.path.join(tempdir, _INFLUXDB)
     influxdb_temp_file = influxdb_file + '.temp'
     rcode = subprocess.call(_INFLUXDB_DUMP_CMD.format(influxdb_temp_file),
@@ -279,7 +281,7 @@ def _is_compute(node):
 
 
 def _dump_credentials(tempdir):
-    ctx.send_event('Dumping credentials data')
+    ctx.logger.info('Dumping credentials data')
     archive_cred_path = os.path.join(tempdir, _CRED_DIR)
     os.makedirs(archive_cred_path)
 
@@ -300,7 +302,7 @@ def _dump_credentials(tempdir):
 
 
 def _dump_agents(tempdir):
-    ctx.send_event('Preparing agents data')
+    ctx.logger.info('Preparing agents data')
     client = get_rest_client()
     broker_config = BootstrapContext(ctx.bootstrap_context).broker_config()
     defaults = {
@@ -368,6 +370,15 @@ def _update_es_node(es_node):
     if node_type == 'node':
         type_hierarchy = node_data.get('type_hierarchy', [])
         if COMPUTE_NODE_TYPE in type_hierarchy:
+            plugins = node_data.setdefault('plugins', [])
+            if not any(p['name'] == 'agent' for p in plugins):
+                plugins.append({
+                    'source': None,
+                    'executor': 'central_deployment_agent',
+                    'name': 'agent',
+                    'install': False,
+                    'install_arguments': None
+                })
             operations = node_data['operations']
             _add_operation(operations,
                            'cloudify.interfaces.cloudify_agent.create_amqp',
@@ -390,6 +401,19 @@ def _update_es_node(es_node):
     if node_type == 'blueprint':
         node_data.setdefault('description', '')
         node_data.setdefault('main_file_name', '')
+
+
+def _include_es_node(es_node, existing_plugins, new_plugins):
+    node_type = es_node['_type']
+    node_data = es_node['_source']
+
+    if node_type == 'plugin':
+        new_plugin = node_data['archive_name'] not in existing_plugins
+        if new_plugin:
+            new_plugins.append(node_data)
+        return new_plugin
+
+    return True
 
 
 def _assert_clean_elasticsearch(log_warning=False):
@@ -462,12 +486,17 @@ def _restore_elasticsearch(tempdir, es, metadata):
     has_cloudify_events_index = es.indices.exists(index=_EVENTS_INDEX_NAME)
     snap_has_cloudify_events_index = metadata[_M_HAS_CLOUDIFY_EVENTS]
 
+    existing_plugins = set(p.archive_name for p in
+                           get_rest_client().plugins.list().items)
+    new_plugins = []
+
     # cloudify_events -> cloudify_events, logstash-* -> logstash-*
     def get_data_itr():
         for line in open(os.path.join(tempdir, _ELASTICSEARCH), 'r'):
             elem = json.loads(line)
-            _update_es_node(elem)
-            yield elem
+            if _include_es_node(elem, existing_plugins, new_plugins):
+                _update_es_node(elem)
+                yield elem
 
     _check_conflicts(es, get_data_itr())
 
@@ -496,13 +525,15 @@ def _restore_elasticsearch(tempdir, es, metadata):
     else:
         data_iter = cloudify_events_to_logstash()
 
-    ctx.send_event('Restoring ElasticSearch data')
+    ctx.logger.info('Restoring ElasticSearch data')
     elasticsearch.helpers.bulk(es, data_iter)
     es.indices.flush()
 
+    return new_plugins
+
 
 def _restore_influxdb_3_3(tempdir):
-    ctx.send_event('Restoring InfluxDB metrics')
+    ctx.logger.info('Restoring InfluxDB metrics')
     influxdb_f = os.path.join(tempdir, _INFLUXDB)
     if os.path.exists(influxdb_f):
         rcode = subprocess.call(_INFLUXDB_RESTORE_CMD.format(influxdb_f),
@@ -513,7 +544,7 @@ def _restore_influxdb_3_3(tempdir):
 
 
 def _restore_credentials_3_3(tempdir, es):
-    ctx.send_event('Restoring credentials')
+    ctx.logger.info('Restoring credentials')
     archive_cred_path = os.path.join(tempdir, _CRED_DIR)
 
     # in case when this is not the first restore action
@@ -586,7 +617,7 @@ def insert_agents_data(client, agents):
 
 
 def _restore_agents_data(tempdir):
-    ctx.send_event('Updating cloudify agent data')
+    ctx.logger.info('Updating cloudify agent data')
     client = get_rest_client()
     with open(os.path.join(tempdir, _AGENTS_FILE)) as agents_file:
         agents = json.load(agents_file)
@@ -600,7 +631,7 @@ def _restore_snapshot(config, tempdir, metadata):
     # elasticsearch
     es = _create_es_client(config)
 
-    _restore_elasticsearch(tempdir, es, metadata)
+    new_plugins = _restore_elasticsearch(tempdir, es, metadata)
 
     # influxdb
     _restore_influxdb_3_3(tempdir)
@@ -612,7 +643,30 @@ def _restore_snapshot(config, tempdir, metadata):
 
     # agents
     _restore_agents_data(tempdir)
-    # end
+
+    return new_plugins
+
+
+def _plugin_installable_on_current_platform(plugin):
+    dist, _, release = platform.linux_distribution(
+        full_distribution_name=False)
+    dist, release = dist.lower(), release.lower()
+    return (plugin['supported_platform'] == 'any' or all([
+        plugin['supported_platform'] == wagon.utils.get_platform(),
+        plugin['distribution'] == dist,
+        plugin['distribution_release'] == release
+    ]))
+
+
+def install_plugins(new_plugins):
+    plugins_to_install = [p for p in new_plugins if
+                          _plugin_installable_on_current_platform(p)]
+    for plugin in plugins_to_install:
+        plugins.install(ctx=ctx, plugin={
+            'name': plugin['package_name'],
+            'package_name': plugin['package_name'],
+            'package_version': plugin['package_version']
+        })
 
 
 def recreate_deployments_environments(deployments_to_skip):
@@ -637,8 +691,8 @@ def recreate_deployments_environments(deployments_to_skip):
                 }
             )
             tasks_graph.execute()
-            ctx.send_event('Successfully created deployment environment '
-                           'for deployment {0}'.format(dep_id))
+            ctx.logger.info('Successfully created deployment environment '
+                            'for deployment {0}'.format(dep_id))
 
 
 @workflow(system_wide=True)
@@ -682,15 +736,17 @@ def restore(snapshot_id, recreate_deployments_envs, config, force, **kwargs):
                 '[{0} > {1}]'.format(str(from_version), str(manager_version)))
 
         existing_deployments_ids = [d.id for d in client.deployments.list()]
-        ctx.send_event('Starting restoring snapshot of manager {0}'
-                       .format(from_version))
+        ctx.logger.info('Starting restoring snapshot of manager {0}'
+                        .format(from_version))
 
-        _restore_snapshot(config, tempdir, metadata)
+        new_plugins = _restore_snapshot(config, tempdir, metadata)
+
+        install_plugins(new_plugins)
 
         if recreate_deployments_envs:
             recreate_deployments_environments(existing_deployments_ids)
 
-        ctx.send_event('Successfully restored snapshot of manager {0}'
-                       .format(from_version))
+        ctx.logger.info('Successfully restored snapshot of manager {0}'
+                        .format(from_version))
     finally:
         shutil.rmtree(tempdir)
