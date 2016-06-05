@@ -95,7 +95,7 @@ class RelationshipHandler(ModifiableEntityHandlerBase):
         """
         current_node = current_entities[ctx.raw_node_id]
         current_node[ctx.RELATIONSHIPS][ctx.relationship_index] = None
-        return ctx.raw_node_id, ctx.raw_target_node['id']
+        return ctx.raw_node_id, ctx.target_id
 
     def add(self, ctx, current_entities):
         """Handles adding a relationship
@@ -384,7 +384,6 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
     def __init__(self):
         super(DeploymentUpdateNodeHandler, self).__init__()
-        self.modified_entities = utils.ModifiedEntitiesDict()
         self._supported_entity_types = {ENTITY_TYPES.NODE,
                                         ENTITY_TYPES.RELATIONSHIP,
                                         ENTITY_TYPES.OPERATION,
@@ -406,6 +405,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         current_nodes = self.sm.get_nodes(
                 filters={'deployment_id': dep_update.deployment_id}).items
         nodes_dict = {node.id: node.to_dict() for node in current_nodes}
+        modified_entities = utils.ModifiedEntitiesDict()
 
         # Iterate over the steps of the deployment update and handle each
         # step according to its operation, passing the deployment update
@@ -423,9 +423,9 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
 
                 entity_id = entity_updater(entity_context, nodes_dict)
 
-                self.modified_entities[step.entity_type].append(entity_id)
+                modified_entities[step.entity_type].append(entity_id)
 
-        return self.modified_entities, nodes_dict.values()
+        return modified_entities, nodes_dict.values()
 
     def finalize(self, dep_update):
         """update any removed entity from nodes
@@ -651,9 +651,7 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
             old_relationships = copy.deepcopy(relationships)
 
             for old_index, new_index in indices_list:
-                tmp_rel = old_relationships[old_index]
-                relationships[old_index] = old_relationships[new_index]
-                relationships[new_index] = tmp_rel
+                relationships[new_index] = old_relationships[old_index]
 
             relationships = [r for r in relationships if r]
             node_instance_update = self._node_instance_template(
@@ -674,11 +672,6 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
     def __init__(self):
         super(DeploymentUpdateDeploymentHandler, self).__init__()
-        self.modified_entities = {
-            ENTITY_TYPES.WORKFLOW: [],
-            ENTITY_TYPES.OUTPUT: [],
-            ENTITY_TYPES.DESCRIPTION: []
-        }
         self._entity_handlers = {
             ENTITY_TYPES.WORKFLOW: WorkflowHandler(),
             ENTITY_TYPES.OUTPUT: OutputHandler(),
@@ -691,6 +684,11 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
     def handle(self, dep_update):
 
         deployment = self.sm.get_deployment(dep_update.deployment_id).to_dict()
+        modified_entities = {
+            ENTITY_TYPES.WORKFLOW: [],
+            ENTITY_TYPES.OUTPUT: [],
+            ENTITY_TYPES.DESCRIPTION: []
+        }
         for step in dep_update.steps:
             if step.entity_type in self._supported_entity_types:
                 entity_handler = self._entity_handlers[step.entity_type]
@@ -701,9 +699,9 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
                                                     step.entity_id)
                 entity_id = entity_updater(entity_context, deployment)
 
-                self.modified_entities[step.entity_type].append(entity_id)
+                modified_entities[step.entity_type].append(entity_id)
 
-        return self.modified_entities, deployment
+        return modified_entities, deployment
 
     def finalize(self, dep_update):
 
