@@ -126,10 +126,10 @@ class DeploymentUpdateStep(SerializableObject):
     def __cmp__(self, other):
         if self.action != other.action:
             # the order is 'add' < 'modify' < 'remove'
-            if self.action == 'add' and other.action != 'add':
+            if self.action == 'remove' and other.action != 'remove':
                 return -1
-            elif self.action == 'modify':
-                return -1 if other.action == 'remove' else 1
+            elif self.action == 'add':
+                return -1 if other.action == 'modify' else 1
             else:
                 return 1
         else:

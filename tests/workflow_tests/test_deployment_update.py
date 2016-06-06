@@ -1543,6 +1543,61 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 new_node_instance['runtime_properties']
         )
 
+    def test_add_remove_and_modify_relationship(self):
+        """
+        site0 relationships:
+        i   |    base   |   modification    |   comment
+        -------------------------------------------------
+        0.  |   site1   |       site6       |   new site   (and removed site1)
+        1.  |   site2   |       site4       |   moved site (and removed site2)
+        2.  |   site3   |       site2B      |   new site
+        3.  |   site4   |       site3       |   moved site
+        4.  |   site5   |         -         |   remove site5
+
+        :return:
+        """
+        deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
+                'add_remove_and_modify_relationship')
+
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_successful_state(dep_update.id)
+
+        node_mapping = {'source': 'site0'}
+        modified_nodes, modified_node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+        modified_node = modified_nodes['source'][0]
+        modified_node_instance = modified_node_instances['source'][0]
+
+        # Assert relationship order
+        rel_targets = ['site6', 'site4', 'site2B', 'site3']
+        for index, rel_target in enumerate(rel_targets):
+            self.assertEquals(
+                    modified_node['relationships'][index]['target_id'],
+                    rel_targets[index])
+
+        for index, rel_target in enumerate(rel_targets):
+            self.assertEquals(
+                modified_node_instance['relationships'][index]['target_name'],
+                rel_targets[index]
+            )
+
+        # Assert all operation were executed
+        # Pre update:
+        # 1. establish site0->site3: source_ops_counter=1
+        # 2. establish site0->site4: source_ops_counter=2
+        # 3. establish site0->site5: source_ops_counter=3
+        # Post update:
+        # 5. unlink site0->site1: source_ops_counter=4
+        # 6. unlink site0->site2: source_ops_counter=5
+        # 7. establish site0->site6: source_ops_counter=6
+        # 8. establish site0->site2B: source_ops_counter=7
+        self.assertDictContainsSubset(
+                {'source_ops_counter': '7'},
+                modified_node_instance['runtime_properties']
+        )
+
     def test_add_and_override_resource(self):
         """
         In order to test the resources mechanism
