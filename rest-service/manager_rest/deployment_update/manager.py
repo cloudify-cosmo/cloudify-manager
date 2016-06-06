@@ -206,17 +206,10 @@ class DeploymentUpdateManager(object):
         modified_entity_ids, depup_nodes = \
             self._node_handler.handle(dep_update)
 
-        # extract all the None relationships from the depup nodes in order
-        # to use in the extract changes
-        no_none_relationships_nodes = copy.deepcopy(depup_nodes)
-        for node in no_none_relationships_nodes:
-            node['relationships'] = [r for r in node['relationships'] if r]
-
         # Extract changes from raw nodes
-        node_instance_changes = self._extract_changes(
-            dep_update,
-            no_none_relationships_nodes,
-            previous_nodes)
+        node_instance_changes = self._extract_changes(dep_update,
+                                                      depup_nodes,
+                                                      previous_nodes)
 
         # Create (and update for adding step type) node instances
         # according to the changes in raw_nodes
@@ -320,14 +313,39 @@ class DeploymentUpdateManager(object):
             [instance.to_dict() for instance in
              self.sm.get_node_instances(filters=deployment_id_filter).items]
 
+        # extract all the None relationships from the depup nodes in order
+        # to use in the extract changes
+        no_none_relationships_nodes = copy.deepcopy(raw_nodes)
+        for node in no_none_relationships_nodes:
+            node['relationships'] = [r for r in node['relationships'] if r]
+
         # project changes in deployment
-        return tasks.modify_deployment(
-                nodes=raw_nodes,
+        changes = tasks.modify_deployment(
+                nodes=no_none_relationships_nodes,
                 previous_nodes=previous_nodes,
                 previous_node_instances=previous_node_instances,
                 scaling_groups=deployment.scaling_groups,
                 modified_nodes=()
         )
+
+        self._patch_changes_with_relationship_index(
+                changes[NODE_MOD_TYPES.EXTENDED_AND_RELATED],
+                raw_nodes)
+        return changes
+
+    @staticmethod
+    def _patch_changes_with_relationship_index(raw_node_instances, raw_nodes):
+        for raw_node_instance in (i for i in raw_node_instances
+                                  if 'modification' in i):
+            raw_node = next(n for n in raw_nodes
+                            if n['id'] == raw_node_instance['node_id'])
+            for relationship in raw_node_instance['relationships']:
+                target_node_id = relationship['target_name']
+                rel_index = \
+                    next(i for i, d in enumerate(raw_node['relationships'])
+                         if d['target_id'] == target_node_id)
+
+                relationship['rel_index'] = rel_index
 
     def _execute_update_workflow(self,
                                  dep_update,

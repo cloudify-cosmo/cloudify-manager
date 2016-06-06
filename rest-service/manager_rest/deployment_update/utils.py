@@ -66,7 +66,7 @@ class ModifiedEntitiesDict(object):
         modified_entities_to_return[ENTITY_TYPES.RELATIONSHIP] = \
             relationships
         if include_rel_order:
-            modified_entities_to_return['rel_order'] = rel_order
+            modified_entities_to_return['rel_mappings'] = rel_order
 
         return modified_entities_to_return
 

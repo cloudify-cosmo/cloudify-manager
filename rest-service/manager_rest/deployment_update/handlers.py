@@ -93,6 +93,9 @@ class RelationshipHandler(ModifiableEntityHandlerBase):
 
         :return: the add_node.modification node
         """
+
+        # Set the relationship to None only in the current entities.
+        # The data model should be affected only after the lifecycle ran.
         current_node = current_entities[ctx.raw_node_id]
         current_node[ctx.RELATIONSHIPS][ctx.relationship_index] = None
         return ctx.raw_node_id, ctx.target_id
@@ -104,15 +107,22 @@ class RelationshipHandler(ModifiableEntityHandlerBase):
         :return: the add_node.modification node
         """
         # Update source relationships and plugins
-        relationships = ctx.storage_node.relationships
+
+        # Extract the new relationship from the deployment update plan
         new_relationship = \
             ctx.raw_node[ctx.RELATIONSHIPS][ctx.relationship_index]
 
-        self._resize_relationships(relationships, ctx.relationship_index)
-        relationships[ctx.relationship_index] = new_relationship
+        # Extract the current relationships and manipulate the relationships
+        # size to support new relationships
+        raw_relationships = \
+            current_entities[ctx.raw_node_id][ctx.RELATIONSHIPS]
+        self._resize_relationships(raw_relationships, ctx.relationship_index)
+        raw_relationships[ctx.relationship_index] = new_relationship
 
+        storage_relationships = ctx.storage_node.relationships
+        storage_relationships.append(new_relationship)
         source_changes = {
-            ctx.RELATIONSHIPS: relationships,
+            ctx.RELATIONSHIPS: storage_relationships,
             ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
         }
         self.sm.update_node(deployment_id=ctx.deployment_id,
@@ -120,18 +130,17 @@ class RelationshipHandler(ModifiableEntityHandlerBase):
                             **source_changes)
         source_node = ctx.storage_node
         raw_source_node = current_entities[source_node.id]
-        raw_source_node[ctx.RELATIONSHIPS] = source_node.relationships
         raw_source_node[ctx.PLUGINS] = source_node.plugins
 
         # Update target plugins
         target_changes = {ctx.PLUGINS: ctx.raw_target_node[ctx.PLUGINS]}
         self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_target_node['id'],
+                            node_id=ctx.target_id,
                             **target_changes)
         current_entities[ctx.storage_target_node.id] = \
             ctx.storage_target_node.to_dict()
 
-        return ctx.raw_node_id, ctx.raw_target_node['id']
+        return ctx.raw_node_id, ctx.target_id
 
     def modify(self, ctx, current_entities):
 
@@ -498,7 +507,8 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
 
         return modified_instances
 
-    def _handle_adding_node_instance(self, instances, dep_update):
+    @staticmethod
+    def _handle_adding_node_instance(instances, dep_update):
         """Handles adding a node instance
 
         :param instances:
@@ -554,23 +564,27 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
     def _handle_adding_relationship_instance(self, instances, *_):
         """Handles adding a relationship to a node instance
 
-        :param raw_instances:
+        :param instances:
         :return: the extended and related node instances
         """
         modified_raw_instances = []
 
         for node_instance in (i for i in instances if 'modification' in i):
             # adding new relationships to the current relationships
-            modified_raw_instances.append(node_instance)
-            node_instance = DeploymentNodeInstance(**node_instance)
-            version = _handle_version(node_instance.version)
             relationships = \
-                self.sm.get_node_instance(node_instance.id).relationships
-            relationships.extend(node_instance.relationships)
+                self.sm.get_node_instance(node_instance['id']).relationships
+
+            node_instance['relationships'] = \
+                sorted(node_instance['relationships'],
+                       key=lambda r: r.get('rel_index', 0))
+
+            modified_raw_instances.append(node_instance)
+
+            relationships.extend(node_instance['relationships'])
             self.sm.update_node_instance(self._node_instance_template(
-                node_instance,
+                DeploymentNodeInstance(**node_instance),
                 relationships=relationships,
-                version=version
+                version=_handle_version(node_instance['version'])
             ))
         modify_related_raw_instances = \
             [n for n in instances if n not in modified_raw_instances]
@@ -617,6 +631,10 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         :param dep_update: the deployment update object
         :return:
         """
+        extended_node_instances = \
+            dep_update.deployment_update_node_instances[
+                NODE_MOD_TYPES.EXTENDED_AND_RELATED].get(
+                    NODE_MOD_TYPES.AFFECTED, [])
         reduced_node_instances = \
             dep_update.deployment_update_node_instances[
                 NODE_MOD_TYPES.REDUCED_AND_RELATED].get(
@@ -626,32 +644,76 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 NODE_MOD_TYPES.REMOVED_AND_RELATED].get(
                     NODE_MOD_TYPES.AFFECTED, [])
 
-        for reduced_node_instance in reduced_node_instances:
-            self.sm.update_node_instance(self._node_instance_template(
-                DeploymentNodeInstance(**reduced_node_instance),
-                relationships=reduced_node_instance['relationships'],
-                version=reduced_node_instance['version']
-            ))
-
         self._reorder_relationships(
                 dep_update.deployment_id,
-                dep_update.modified_entity_ids['rel_order'])
+                dep_update.modified_entity_ids['rel_mappings'])
+
+        self._reduce_node_instances(reduced_node_instances,
+                                    extended_node_instances)
 
         for removed_node_instance in removed_node_instances:
             self.sm.delete_node_instance(removed_node_instance['id'])
+
+    def _reduce_node_instances(self,
+                               reduced_node_instances,
+                               extended_node_instances):
+        for reduced_node_instance in reduced_node_instances:
+            storage_relationships = self.sm.get_node_instance(
+                    reduced_node_instance['id']).relationships
+            self._clean_relationship_index_field(storage_relationships)
+            # Get all the remaining relationships
+            remaining_relationships = reduced_node_instance['relationships']
+            # Get the extended node instances
+            extended_node_instances = \
+                [i for i in extended_node_instances
+                 if (i['id'] == reduced_node_instance['id'] and
+                     'modification' in i)]
+
+            # If this node was indeed extended, append the new relationships
+            # to the remaining relationships (from the reduced node instance)
+            if extended_node_instances:
+                relationships = extended_node_instances[0]['relationships']
+                self._clean_relationship_index_field(relationships)
+                remaining_relationships.extend(relationships)
+
+            remaining_relationships = \
+                filter(lambda r: r in remaining_relationships,
+                       storage_relationships)
+
+            self.sm.update_node_instance(self._node_instance_template(
+                    DeploymentNodeInstance(**reduced_node_instance),
+                    relationships=remaining_relationships,
+                    version=reduced_node_instance['version']
+            ))
+
+    @staticmethod
+    def _clean_relationship_index_field(relationships):
+        for relationship in relationships:
+            if 'rel_index' in relationship:
+                del(relationship['rel_index'])
+        return relationships
 
     def _reorder_relationships(self, deployment_id, rel_order_instances):
 
         for node_id, indices_list in rel_order_instances.iteritems():
             node_instance = self.sm.get_node_instances(
-                    filters={'deployment_id': deployment_id,
-                             'node_id': node_id}
+                filters={'deployment_id': deployment_id,
+                         'node_id': node_id}
             ).items[0]
             relationships = node_instance.relationships
             old_relationships = copy.deepcopy(relationships)
 
+            # Move the order of any 'modified' relationships
             for old_index, new_index in indices_list:
                 relationships[new_index] = old_relationships[old_index]
+
+            # Set any new relationships to their final index
+            enum_old_relationships = enumerate(old_relationships)
+            for index, relationship in \
+                    ((i, r) for i, r in enum_old_relationships
+                     if 'rel_index' in r):
+                relationships[index] = None
+                relationships[relationship['rel_index']] = relationship
 
             relationships = [r for r in relationships if r]
             node_instance_update = self._node_instance_template(
