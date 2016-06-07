@@ -100,7 +100,10 @@ class DeploymentUpdateBase(TestCase):
         if exists:
             self.fail(error_msg.format(target, expected_type))
 
-    def _deploy_and_get_modified_bp_path(self, test_name, inputs=None):
+    def _deploy_and_get_modified_bp_path(self,
+                                         test_name,
+                                         inputs=None,
+                                         deployment_id=None):
 
         base_dir = os.path.join(test_name, 'base')
         modified_dir = os.path.join(test_name, 'modification')
@@ -111,7 +114,9 @@ class DeploymentUpdateBase(TestCase):
             resource(os.path.join(blueprints_base_path,
                                   base_dir,
                                   base_bp))
-        deployment, _ = deploy(base_bp_path, inputs=inputs)
+        deployment, _ = deploy(base_bp_path,
+                               inputs=inputs,
+                               deployment_id=deployment_id)
 
         modified_bp_path = \
             resource(os.path.join(blueprints_base_path,
@@ -1934,3 +1939,85 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 {'uninstall_op_counter': '1'},
                 modified_instance['runtime_properties']
         )
+
+    def test_remove_deployment(self):
+        """
+        Tests whether deployment updates are deleted together with the
+        deployment.
+        :return:
+        """
+        del_deployment, mod_del_dep_bp1 = \
+            self._deploy_and_get_modified_bp_path('remove_deployment',
+                                                  deployment_id='del_dep')
+
+        undel_deployment, mod_undel_dep_bp1 = \
+            self._deploy_and_get_modified_bp_path('remove_deployment',
+                                                  deployment_id='undel_dep')
+
+        del_depups_ids = \
+            [self.client.deployment_updates.update(del_deployment.id,
+                                                   mod_del_dep_bp1).id]
+        undel_depups_ids = \
+            [self.client.deployment_updates.update(undel_deployment.id,
+                                                   mod_undel_dep_bp1).id]
+
+        mod_del_dep_bp2 = \
+            resource(os.path.join(blueprints_base_path,
+                                  'remove_deployment',
+                                  'modification2',
+                                  'remove_deployment_modification2.yaml'))
+
+        self._wait_for_execution_to_terminate(del_deployment.id, 'update')
+        self._wait_for_successful_state(del_depups_ids[0])
+        del_depups_ids.append(
+                self.client.deployment_updates.update(del_deployment.id,
+                                                      mod_del_dep_bp2).id)
+        self._wait_for_execution_to_terminate(del_deployment.id, 'update')
+        self._wait_for_successful_state(del_depups_ids[0])
+
+        deployment_update_list = self.client.deployment_updates.list(
+            deployment_id=del_deployment.id,
+            _include=['id']
+        )
+
+        # Assert there are 2 deployment updates for del_deployment
+        self.assertEquals(len(deployment_update_list.items),
+                          len(del_depups_ids))
+        for i in deployment_update_list.items:
+            self.assertIn(i['id'], del_depups_ids)
+
+        # Delete deployment and assert deployment updates were removed
+        self.client.executions.start(del_deployment.id, 'uninstall')
+        self._wait_for_execution_to_terminate(del_deployment.id, 'uninstall')
+        self.client.deployments.delete(del_deployment.id)
+        deployment_update_list = self.client.deployment_updates.list(
+                deployment_id=del_deployment.id,
+                _include=['id']
+        )
+        self.assertEquals(len(deployment_update_list.items), 0)
+
+        # Assert no other deployment updates were deleted
+        deployment_update_list = self.client.deployment_updates.list(
+                deployment_id=undel_deployment.id,
+                _include=['id']
+        )
+        self.assertEquals(len(deployment_update_list), len(undel_depups_ids))
+        for i in deployment_update_list.items:
+            self.assertIn(i['id'], undel_depups_ids)
+
+
+# class TestTmp(DeploymentUpdateBase):
+#
+#     def test(self):
+#         deployment, _ = \
+#             self._deploy_and_get_modified_bp_path('add_node_operation')
+#
+#         archive_url = \
+#             'https://github.com/cloudify-cosmo/' \
+#             'cloudify-hello-world-example/archive/master.zip'
+#
+#         self.client.deployment_updates.update(
+#                 deployment.id,
+#                 blueprint_or_archive_path=archive_url,
+#                 application_file_name='blueprint.yaml',
+#                 inputs={'my_name_is': 'slim_shady'})

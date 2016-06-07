@@ -14,6 +14,8 @@
 #  * limitations under the License.
 import json
 import uuid
+
+import yaml
 from setuptools import archive_util
 
 import contextlib
@@ -99,7 +101,7 @@ class UploadedDataManager(object):
     def _save_file_from_url(archive_target_path, data_url, data_type):
         if any([request.data,
                 'Transfer-Encoding' in request.headers,
-                'update_archive' in request.files]):
+                'blueprint_archive' in request.files]):
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via query parameters, request body"
                 ", multi-form and chunked.".format(data_type))
@@ -119,7 +121,7 @@ class UploadedDataManager(object):
     @staticmethod
     def _save_file_from_chunks(archive_target_path, data_type):
         if any([request.data,
-                'update_archive' in request.files]):
+                'blueprint_archive' in request.files]):
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via request body , multi-form "
                 "and chunked.".format(data_type))
@@ -129,7 +131,7 @@ class UploadedDataManager(object):
 
     @staticmethod
     def _save_file_content(archive_target_path, data_type, url_key):
-        if 'update_archive' in request.files:
+        if 'blueprint_archive' in request.files:
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via request body , multi-form"
                 .format(data_type))
@@ -137,17 +139,43 @@ class UploadedDataManager(object):
         with open(archive_target_path, 'w') as f:
             f.write(uploaded_file_data)
 
-    @staticmethod
-    def _save_files_multipart(archive_target_path):
+    def _save_files_multipart(self, archive_target_path):
         inputs = {}
-        for file_name in request.files:
-            if file_name == 'inputs':
-                inputs = json.load(request.files[file_name])
-            else:
-                # This file should be only the archive itself
-                with open(archive_target_path, 'wb') as f:
-                    f.write(request.files[file_name].read())
+        for file_key in request.files:
+            if file_key == 'inputs':
+                content = request.files[file_key]
+                # The file is a binary
+                if 'application' in content.content_type:
+                    content_payload = self._save_bytes(content)
+                    # Handling yaml
+                    if content.content_type == 'application/octet-stream':
+                        inputs = yaml.load(content_payload)
+                    # Handling json
+                    elif content.content_type == 'application/json':
+                        inputs = json.load(content_payload)
+                # The file is raw json
+                elif 'text' in content.content_type:
+                    inputs = json.load(content)
+            elif file_key == 'blueprint_archive':
+                self._save_bytes(request.files[file_key],
+                                 archive_target_path)
         return inputs
+
+    @staticmethod
+    def _save_bytes(content, target_path=None):
+        """
+        content should support read() function if target isn't supplied,
+        string rep is returned
+
+        :param content:
+        :param target_path:
+        :return:
+        """
+        if not target_path:
+            return content.getvalue().decode("utf-8")
+        else:
+            with open(target_path, 'wb') as f:
+                f.write(content.read())
 
     def _save_file_locally_and_extract_inputs(self,
                                               archive_target_path,
