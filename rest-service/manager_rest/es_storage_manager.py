@@ -426,6 +426,7 @@ class ESStorageManager(object):
         self._delete_doc_by_query(NODE_INSTANCE_TYPE, query)
         self._delete_doc_by_query(NODE_TYPE, query)
         self._delete_doc_by_query(DEPLOYMENT_MODIFICATION_TYPE, query)
+        self._delete_doc_by_query(DEPLOYMENT_UPDATE_TYPE, query)
         return self._delete_doc(DEPLOYMENT_TYPE, deployment_id, Deployment)
 
     def delete_execution(self, execution_id):

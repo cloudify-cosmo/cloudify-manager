@@ -169,7 +169,7 @@ class DeploymentUpdate(SerializableObject):
         self.deployment_id = deployment_id
         self.deployment_plan = deployment_plan
         self.state = state
-        self.steps = [DeploymentUpdateStep(**step) for step in steps]
+        self.steps = [DeploymentUpdateStep(**step) for step in (steps or [])]
         self.deployment_update_nodes = deployment_update_nodes
         self.deployment_update_node_instances = \
             deployment_update_node_instances
