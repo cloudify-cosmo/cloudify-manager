@@ -478,12 +478,12 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
 
         expected_steps = [
             models.DeploymentUpdateStep(
-                action='add',
+                action='remove',
                 entity_type=NODE,
                 entity_id='nodes:node1',
                 id=ANY),
             models.DeploymentUpdateStep(
-                action='remove',
+                action='add',
                 entity_type=NODE,
                 entity_id='nodes:node1',
                 id=ANY)
@@ -509,12 +509,12 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
 
         expected_steps = [
             models.DeploymentUpdateStep(
-                action='add',
+                action='remove',
                 entity_type=NODE,
                 entity_id='nodes:node1',
                 id=ANY),
             models.DeploymentUpdateStep(
-                action='remove',
+                action='add',
                 entity_type=NODE,
                 entity_id='nodes:node1',
                 id=ANY)
@@ -538,12 +538,12 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
 
         expected_steps = [
             models.DeploymentUpdateStep(
-                action='add',
+                action='remove',
                 entity_type=NODE,
                 entity_id='nodes:node1',
                 id=ANY),
             models.DeploymentUpdateStep(
-                action='remove',
+                action='add',
                 entity_type=NODE,
                 entity_id='nodes:node1',
                 id=ANY)
@@ -825,12 +825,12 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
 
         expected_steps = [
             models.DeploymentUpdateStep(
-                action='add',
+                action='remove',
                 entity_type=RELATIONSHIP,
                 entity_id='nodes:node1:relationships:[0]',
                 id=ANY),
             models.DeploymentUpdateStep(
-                action='remove',
+                action='add',
                 entity_type=RELATIONSHIP,
                 entity_id='nodes:node1:relationships:[0]',
                 id=ANY)
@@ -860,12 +860,12 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
 
         expected_steps = [
             models.DeploymentUpdateStep(
-                action='add',
+                action='remove',
                 entity_type=RELATIONSHIP,
                 entity_id='nodes:node1:relationships:[0]',
                 id=ANY),
             models.DeploymentUpdateStep(
-                action='remove',
+                action='add',
                 entity_type=RELATIONSHIP,
                 entity_id='nodes:node1:relationships:[0]',
                 id=ANY)
@@ -895,12 +895,12 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
 
         expected_steps = [
             models.DeploymentUpdateStep(
-                action='add',
+                action='remove',
                 entity_type=RELATIONSHIP,
                 entity_id='nodes:node1:relationships:[0]',
                 id=ANY),
             models.DeploymentUpdateStep(
-                action='remove',
+                action='add',
                 entity_type=RELATIONSHIP,
                 entity_id='nodes:node1:relationships:[0]',
                 id=ANY)
@@ -1293,6 +1293,14 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
 
         sorted_steps = [
             models.DeploymentUpdateStep(
+                action='remove',
+                entity_type='relationship',
+                entity_id=''),
+            models.DeploymentUpdateStep(
+                action='remove',
+                entity_type='node',
+                entity_id=''),
+            models.DeploymentUpdateStep(
                 action='add',
                 entity_type='node',
                 entity_id=''),
@@ -1307,14 +1315,6 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
             models.DeploymentUpdateStep(
                 action='modify',
                 entity_type='property',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='remove',
-                entity_type='relationship',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='remove',
-                entity_type='node',
                 entity_id='')
         ]
 
