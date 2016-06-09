@@ -407,7 +407,7 @@ class DeploymentUpdateManager(object):
             parameters['skip_install'] = skip_install
             parameters['skip_uninstall'] = skip_uninstall
 
-        return self.execute_workflow(
+        return self._execute_workflow(
                 deployment_update=dep_update,
                 workflow_id=workflow_id or DEFAULT_DEPLOYMENT_UPDATE_WORKFLOW,
                 parameters=parameters)
@@ -438,12 +438,12 @@ class DeploymentUpdateManager(object):
 
         return self.get_deployment_update(deployment_update_id)
 
-    def execute_workflow(self,
-                         deployment_update,
-                         workflow_id,
-                         parameters=None,
-                         allow_custom_parameters=False,
-                         force=False):
+    def _execute_workflow(self,
+                          deployment_update,
+                          workflow_id,
+                          parameters=None,
+                          allow_custom_parameters=False,
+                          force=False):
         """Executes the specified workflow
 
         :param deployment_update:
