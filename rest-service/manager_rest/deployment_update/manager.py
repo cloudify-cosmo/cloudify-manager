@@ -20,7 +20,7 @@ from os import path
 
 from flask import current_app
 
-from dsl_parser import constants
+from dsl_parser import constants as dsl_constants
 from manager_rest.deployment_update import step_extractor
 import manager_rest.manager_exceptions
 import manager_rest.workflow_client as wf_client
@@ -54,6 +54,18 @@ class DeploymentUpdateManager(object):
 
         self._step_validator = StepValidator()
 
+    @staticmethod
+    def is_active(deployment_update):
+        state = deployment_update.state
+
+        return state in [STATES.UPDATING,
+                         STATES.EXECUTING_WORKFLOW,
+                         STATES.FINALIZING]
+
+    @staticmethod
+    def set_failed(deployment_update):
+        deployment_update.state = STATES.FAILED
+
     def get_deployment_update(self, deployment_update_id):
         """Return the deployment update object
 
@@ -76,6 +88,10 @@ class DeploymentUpdateManager(object):
                                                filters=filters,
                                                pagination=pagination,
                                                sort=sort)
+
+    def update_deployment_update(self, deployment_update):
+        """ Update the deployment update in the storage"""
+        return self.sm.update_deployment_update(deployment_update)
 
     def stage_deployment_update(self,
                                 deployment_id,
@@ -488,7 +504,7 @@ class DeploymentUpdateManager(object):
         # executing the user workflow
         workflow_plugins = \
             deployment_update.deployment_plan[
-                constants.WORKFLOW_PLUGINS_TO_INSTALL]
+                dsl_constants.WORKFLOW_PLUGINS_TO_INSTALL]
         self.workflow_client.execute_workflow(
             workflow_id,
             workflow,
