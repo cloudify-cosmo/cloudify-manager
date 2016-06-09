@@ -13,24 +13,21 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 import copy
+import os
 import uuid
-
 from datetime import datetime
-from os import path
 
 from flask import current_app
 
-from dsl_parser import constants
-from manager_rest.deployment_update import step_extractor
-import manager_rest.manager_exceptions
+from dsl_parser import constants, tasks
+from dsl_parser import exceptions as parser_exceptions
+from manager_rest import (app_context, config, models, storage_manager,
+                          manager_exceptions)
 import manager_rest.workflow_client as wf_client
-
-from manager_rest import app_context
-from manager_rest import config
-from manager_rest import models, storage_manager
+from manager_rest.blueprints_manager import BlueprintsManager
+from manager_rest.deployment_update import step_extractor
 from manager_rest.deployment_update.utils import extract_ids
 from manager_rest.deployment_update.validator import StepValidator
-from manager_rest.blueprints_manager import tasks, BlueprintsManager
 from manager_rest.deployment_update.constants import (
     STATES,
     NODE_MOD_TYPES,
@@ -98,24 +95,37 @@ class DeploymentUpdateManager(object):
         file_server_base_url = \
             '{0}/'.format(config.instance().file_server_base_uri)
 
-        blueprint_resource_dir = path.join(file_server_base_url,
-                                           'blueprints',
-                                           blueprint_id)
+        blueprint_resource_dir = os.path.join(file_server_base_url,
+                                              'blueprints',
+                                              blueprint_id)
 
-        app_path = path.join(file_server_base_url, app_dir, app_blueprint)
+        app_path = os.path.join(file_server_base_url, app_dir, app_blueprint)
 
         # parsing the blueprint from here
-        plan = tasks.parse_dsl(app_path,
-                               resources_base_url=file_server_base_url,
-                               additional_resources=[blueprint_resource_dir],
-                               **app_context.get_parser_context())
-        # Updating the new inputs with the deployment inputs # (overriding old
-        # values and adding new ones)
+        try:
+            plan = tasks.parse_dsl(
+                app_path,
+                resources_base_url=file_server_base_url,
+                additional_resources=[blueprint_resource_dir],
+                **app_context.get_parser_context())
+
+        except parser_exceptions.DSLParsingException as ex:
+            raise manager_exceptions.InvalidBlueprintError(
+                'Invalid blueprint - {0}'.format(ex))
+
+        # Updating the new inputs with the deployment inputs
+        # (overriding old values and adding new ones)
         inputs = copy.deepcopy(deployment.inputs)
         inputs.update(additional_inputs)
 
         # applying intrinsic functions
-        prepared_plan = tasks.prepare_deployment_plan(plan, inputs=inputs)
+        try:
+            prepared_plan = tasks.prepare_deployment_plan(plan, inputs=inputs)
+        except parser_exceptions.MissingRequiredInputError, e:
+            raise manager_exceptions.MissingRequiredDeploymentInputError(
+                str(e))
+        except parser_exceptions.UnknownInputError, e:
+            raise manager_exceptions.UnknownDeploymentInputError(str(e))
 
         deployment_update = \
             models.DeploymentUpdate(deployment_id,
@@ -166,8 +176,7 @@ class DeploymentUpdateManager(object):
             unsupported_entity_ids = [step.entity_id
                                       for step in unsupported_steps]
             raise \
-                manager_rest.manager_exceptions.\
-                UnsupportedChangeInDeploymentUpdate(
+                manager_exceptions.UnsupportedChangeInDeploymentUpdate(
                     'The blueprint you provided for the deployment update '
                     'contains changes currently unsupported by the deployment '
                     'update mechanism.\n'
@@ -268,7 +277,7 @@ class DeploymentUpdateManager(object):
 
         if active_updates:
             if not force:
-                raise manager_rest.manager_exceptions.ConflictError(
+                raise manager_exceptions.ConflictError(
                     'there are deployment updates still active; '
                     'update IDs: {0}'.format(
                         ', '.join([u.id for u in active_updates])))
@@ -281,7 +290,7 @@ class DeploymentUpdateManager(object):
                  models.Execution.END_STATES]
 
             if real_active_updates:
-                raise manager_rest.manager_exceptions.ConflictError(
+                raise manager_exceptions.ConflictError(
                     'there are deployment updates still active; the "force" '
                     'flag was used yet these updates have actual executions '
                     'running update IDs: {0}'.format(
@@ -460,7 +469,7 @@ class DeploymentUpdateManager(object):
         blueprint_id = deployment.blueprint_id
 
         if workflow_id not in deployment.workflows:
-            raise manager_rest.manager_exceptions.NonexistentWorkflowError(
+            raise manager_exceptions.NonexistentWorkflowError(
                 'Workflow {0} does not exist in deployment {1}'
                 .format(workflow_id, deployment_id))
         workflow = deployment.workflows[workflow_id]
