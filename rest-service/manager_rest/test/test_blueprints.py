@@ -240,6 +240,27 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprint = self.client.blueprints.list()[0]
         self.assertEqual(blueprint_file, blueprint.main_file_name)
 
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_sort_list(self):
+        blueprint_file = 'blueprint_with_inputs.yaml'
+        blueprint_path = os.path.join(
+            self.get_blueprint_path('mock_blueprint'),
+            blueprint_file)
+        self.client.blueprints.upload(blueprint_path, '0')
+        self.client.blueprints.upload(blueprint_path, '1')
+
+        blueprints = self.client.blueprints.list(sort='created_at')
+        self.assertEqual(2, len(blueprints))
+        self.assertEqual('0', blueprints[0].id)
+        self.assertEqual('1', blueprints[1].id)
+
+        blueprints = self.client.blueprints.list(
+            sort='created_at', is_descending=True)
+        self.assertEqual(2, len(blueprints))
+        self.assertEqual('1', blueprints[0].id)
+        self.assertEqual('0', blueprints[1].id)
+
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_blueprint_default_main_file_name(self):
