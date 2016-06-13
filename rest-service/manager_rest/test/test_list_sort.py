@@ -54,6 +54,22 @@ class ResourceListTestCase(BaseListTest):
         self._put_n_snapshots(3)
         self._resource_list_sorted_test('snapshots', 'id')
 
+    @attr(client_min_version=2.1,
+          client_max_version=LATEST_API_VERSION)
+    def test_sort_snapshots_list(self):
+        self._put_n_snapshots(2)
+
+        snapshots = self.client.snapshots.list(sort='created_at')
+        self.assertEqual(2, len(snapshots))
+        self.assertEqual('oh-snap0', snapshots[0].id)
+        self.assertEqual('oh-snap1', snapshots[1].id)
+
+        snapshots = self.client.snapshots.list(
+            sort='created_at', is_descending=True)
+        self.assertEqual(2, len(snapshots))
+        self.assertEqual('oh-snap1', snapshots[0].id)
+        self.assertEqual('oh-snap0', snapshots[1].id)
+
     def _resource_list_sorted_test(self, resource, sort):
         resource_api = getattr(self.client, resource)
         actual_list = resource_api.list(_sort=sort)

@@ -1,2 +1,2 @@
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-5296-add-sorting-to-resources-list.zip
 https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
