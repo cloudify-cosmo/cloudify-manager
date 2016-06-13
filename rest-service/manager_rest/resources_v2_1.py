@@ -310,7 +310,7 @@ class DeploymentUpdate(SecuredResource):
             # If we encountered an exception, we want to mark the
             # deployment update as failed.
             if phase == PHASES.INITIAL:
-                # Since we are in the initial phase, the deployment update
+                # If we are in the initial phase, the deployment update
                 # might have not been created yet. We want to check that.
                 # First, we list all the deployment updates for the given
                 # deployment id.
@@ -319,27 +319,27 @@ class DeploymentUpdate(SecuredResource):
                         filters={'deployment_id': [id]})
 
                 # We know that if the deployment update was created,
-                # its status is one of the 'active' states.
+                # its state is one of the 'active' states.
                 # Relying on the fact that there is at most one active
                 # deployment update at any time, we filter all the non-active
-                # deployment update from the list we got.
+                # deployment updates from the list we got.
                 active_deployment_update = next(
                     (dep_up for dep_up in deployment_updates
                      if manager.is_active(dep_up)),
                     None)
-            else:  # phase == PHASES.FINAL:
-                # In the final phase, we can be sure that the deployment
-                # update # was created. So we just need to get the active
-                # deployment update from the storage
+            else:
+                # If we are in the final phase, we can be sure that the
+                # deployment update was created.
+                # So we just need to get the active deployment update from the
+                # storage
                 active_deployment_update = \
                     manager.get_deployment_update(id)
 
-            # If an active deployment update exists, set its status to
+            # If an active deployment update indeed exists, set its status to
             # 'failed', and update the storage with it
             if active_deployment_update:
                 manager.set_failed(active_deployment_update)
                 manager.update_deployment_update(active_deployment_update)
-
             raise
 
     @staticmethod
