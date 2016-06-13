@@ -97,6 +97,45 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         return deployment_id, system_wf_id
 
+    @attr(client_min_version=2.1,
+          client_max_version=LATEST_API_VERSION)
+    def test_sort_list(self):
+        execution1 = models.Execution(
+            id='0',
+            status=models.Execution.TERMINATED,
+            deployment_id='',
+            workflow_id='',
+            blueprint_id='',
+            created_at=str(datetime.now()),
+            error='',
+            parameters=dict(),
+            is_system_workflow=False
+        )
+        execution2 = models.Execution(
+            id='1',
+            status=models.Execution.TERMINATED,
+            deployment_id='',
+            workflow_id='',
+            blueprint_id='',
+            created_at=str(datetime.now()),
+            error='',
+            parameters=dict(),
+            is_system_workflow=False
+        )
+        storage_manager._get_instance().put_execution('0', execution1)
+        storage_manager._get_instance().put_execution('1', execution2)
+
+        executions = self.client.executions.list(sort='created_at')
+        self.assertEqual(2, len(executions))
+        self.assertEqual('0', executions[0].id)
+        self.assertEqual('1', executions[1].id)
+
+        executions = self.client.executions.list(
+            sort='created_at', is_descending=True)
+        self.assertEqual(2, len(executions))
+        self.assertEqual('1', executions[0].id)
+        self.assertEqual('0', executions[1].id)
+
     @attr(client_min_version=2,
           client_max_version=LATEST_API_VERSION)
     def test_list_system_executions_with_filters(self):

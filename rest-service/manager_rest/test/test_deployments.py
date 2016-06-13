@@ -46,6 +46,23 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=2.1,
           client_max_version=base_test.LATEST_API_VERSION)
+    def test_sort_list(self):
+        self.put_deployment(deployment_id='0', blueprint_id='0')
+        self.put_deployment(deployment_id='1', blueprint_id='1')
+
+        deployments = self.client.deployments.list(sort='created_at')
+        self.assertEqual(2, len(deployments))
+        self.assertEqual('0', deployments[0].id)
+        self.assertEqual('1', deployments[1].id)
+
+        deployments = self.client.deployments.list(
+            sort='created_at', is_descending=True)
+        self.assertEqual(2, len(deployments))
+        self.assertEqual('1', deployments[0].id)
+        self.assertEqual('0', deployments[1].id)
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_put_scaling_groups(self):
         _, _, _, deployment_response = self.put_deployment(
             self.DEPLOYMENT_ID,

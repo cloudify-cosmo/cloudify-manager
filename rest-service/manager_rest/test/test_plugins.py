@@ -68,6 +68,23 @@ class PluginsTest(BaseServerTestCase):
                          'expecting 0 plugin result, '
                          'got {0}'.format(len(plugins_list)))
 
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_sort_list_plugins(self):
+        self.upload_plugin(TEST_PACKAGE_NAME, OLD_TEST_PACKAGE_VERSION)
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
+
+        plugins = self.client.plugins.list(sort='uploaded_at')
+        self.assertEqual(2, len(plugins))
+        self.assertEqual(OLD_TEST_PACKAGE_VERSION, plugins[0].package_version)
+        self.assertEqual(TEST_PACKAGE_VERSION, plugins[1].package_version)
+
+        plugins = self.client.plugins.list(
+            sort='uploaded_at', is_descending=True)
+        self.assertEqual(2, len(plugins))
+        self.assertEqual(TEST_PACKAGE_VERSION, plugins[0].package_version)
+        self.assertEqual(OLD_TEST_PACKAGE_VERSION, plugins[1].package_version)
+
     def test_delete_plugin_not_found(self):
         try:
             self.client.plugins.delete('DUMMY_PLUGIN_ID')
