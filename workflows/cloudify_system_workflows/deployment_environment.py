@@ -30,6 +30,22 @@ def _should_create_policy_engine_core(policy_configuration):
                for group in policy_configuration['groups'].values())
 
 
+def _merge_deployment_and_workflow_plugins(deployment_plugins,
+                                           workflow_plugins):
+    added_plugins = set()
+    result = []
+
+    def add_plugins(plugins):
+        for plugin in plugins:
+            if plugin['name'] in added_plugins:
+                continue
+            added_plugins.add(plugin['name'])
+            result.append(plugin)
+    for plugins in (deployment_plugins, workflow_plugins):
+        add_plugins(plugins)
+    return result
+
+
 def generate_create_dep_tasks_graph(ctx,
                                     deployment_plugins_to_install,
                                     workflow_plugins_to_install,
@@ -39,7 +55,8 @@ def generate_create_dep_tasks_graph(ctx,
 
     dep_plugins = [p for p in deployment_plugins_to_install if p['install']]
     wf_plugins = [p for p in workflow_plugins_to_install if p['install']]
-    plugins_to_install = dep_plugins + wf_plugins
+    plugins_to_install = _merge_deployment_and_workflow_plugins(dep_plugins,
+                                                                wf_plugins)
     if plugins_to_install:
         sequence.add(
             ctx.send_event('Installing deployment plugins'),
