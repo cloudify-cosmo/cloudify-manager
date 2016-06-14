@@ -2004,20 +2004,3 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         self.assertEquals(len(deployment_update_list), len(undel_depups_ids))
         for i in deployment_update_list.items:
             self.assertIn(i['id'], undel_depups_ids)
-
-
-# class TestTmp(DeploymentUpdateBase):
-#
-#     def test(self):
-#         deployment, _ = \
-#             self._deploy_and_get_modified_bp_path('add_node_operation')
-#
-#         archive_url = \
-#             'https://github.com/cloudify-cosmo/' \
-#             'cloudify-hello-world-example/archive/master.zip'
-#
-#         self.client.deployment_updates.update(
-#                 deployment.id,
-#                 blueprint_or_archive_path=archive_url,
-#                 application_file_name='blueprint.yaml',
-#                 inputs={'my_name_is': 'slim_shady'})

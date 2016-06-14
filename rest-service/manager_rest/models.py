@@ -152,7 +152,7 @@ class DeploymentUpdate(SerializableObject):
     fields = {'id', 'deployment_id', 'steps', 'state', 'deployment_plan',
               'deployment_update_nodes', 'deployment_update_node_instances',
               'deployment_update_deployment', 'modified_entity_ids',
-              'execution_id'}
+              'execution_id', 'created_at'}
 
     def __init__(self,
                  deployment_id,
@@ -164,7 +164,8 @@ class DeploymentUpdate(SerializableObject):
                  deployment_update_node_instances=None,
                  deployment_update_deployment=None,
                  modified_entity_ids=None,
-                 execution_id=None):
+                 execution_id=None,
+                 created_at=None):
         self.id = id or '{0}-{1}'.format(deployment_id, uuid.uuid4())
         self.deployment_id = deployment_id
         self.deployment_plan = deployment_plan
@@ -176,6 +177,7 @@ class DeploymentUpdate(SerializableObject):
         self.deployment_update_deployment = deployment_update_deployment
         self.modified_entity_ids = modified_entity_ids
         self.execution_id = execution_id
+        self.created_at = created_at
 
 
 class DeploymentModification(SerializableObject):
