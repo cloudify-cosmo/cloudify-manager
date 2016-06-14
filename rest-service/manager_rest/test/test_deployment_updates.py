@@ -13,8 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 import os
-
 import re
+from datetime import datetime
 
 from nose.plugins.attrib import attr
 from nose.tools import nottest
@@ -189,6 +189,30 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                               .format(deployment_id),
                               archive_path,
                               query_params=kwargs)
+
+    def test_storage_serialization_and_response(self):
+        now = str(datetime.now())
+        sm = storage_manager._get_instance()
+        deployment_update = models.DeploymentUpdate(
+                deployment_id='deployment-id',
+                deployment_plan={'name': 'my-bp'},
+                state='staged',
+                id='depup-id',
+                steps=(),
+                deployment_update_nodes=None,
+                deployment_update_node_instances=None,
+                deployment_update_deployment=None,
+                modified_entity_ids=None,
+                execution_id='execution-id',
+                created_at=now)
+        sm.put_deployment_update(deployment_update)
+
+        depup_from_client = self.client.deployment_updates.get('depup-id')
+        depup_response_attributes = {'id', 'state', 'deployment_id', 'steps',
+                                     'execution_id', 'created_at'}
+        for att in depup_response_attributes:
+            self.assertEqual(getattr(depup_from_client, att),
+                             getattr(deployment_update, att))
 
 
 @nottest

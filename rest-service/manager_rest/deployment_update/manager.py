@@ -117,8 +117,10 @@ class DeploymentUpdateManager(object):
         # applying intrinsic functions
         prepared_plan = tasks.prepare_deployment_plan(plan, inputs=inputs)
 
-        deployment_update = models.DeploymentUpdate(deployment_id,
-                                                    prepared_plan)
+        deployment_update = \
+            models.DeploymentUpdate(deployment_id,
+                                    prepared_plan,
+                                    created_at=str(datetime.now()))
         self.sm.put_deployment_update(deployment_update)
         return deployment_update
 

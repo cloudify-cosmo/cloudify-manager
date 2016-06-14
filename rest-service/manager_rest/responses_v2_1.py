@@ -63,7 +63,8 @@ class DeploymentUpdate(object):
         'deployment_id': fields.String,
         'state': fields.String,
         'steps': fields.Raw,
-        'execution_id': fields.String
+        'execution_id': fields.String,
+        'created_at': fields.String
     }
 
     def __init__(self, **kwargs):
@@ -72,6 +73,7 @@ class DeploymentUpdate(object):
         self.steps = kwargs['steps']
         self.state = kwargs['state']
         self.execution_id = kwargs['execution_id']
+        self.created_at = kwargs['created_at']
 
 
 class Deployment(DeploymentV1):
