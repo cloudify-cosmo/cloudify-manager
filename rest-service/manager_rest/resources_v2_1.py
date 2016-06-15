@@ -40,8 +40,7 @@ from manager_rest import config
 from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
-from manager_rest.blueprints_manager import (get_blueprints_manager,
-                                             DslParseException)
+from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_DEACTIVATED)
@@ -146,10 +145,9 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                     shutil.copy(source_file, dest_file)
 
             return update
-        except DslParseException, ex:
+        except Exception:
             shutil.rmtree(os.path.join(file_server_root, app_dir))
-            raise manager_exceptions.InvalidBlueprintError(
-                'Invalid deployment update - {0}'.format(ex.message))
+            raise
 
     @classmethod
     def _extract_application_file(cls, file_server_root, application_dir):

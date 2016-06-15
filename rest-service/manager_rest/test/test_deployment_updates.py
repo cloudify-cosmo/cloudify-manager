@@ -16,8 +16,11 @@ import os
 import re
 from datetime import datetime
 
+from mock import patch
 from nose.plugins.attrib import attr
 from nose.tools import nottest
+
+from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest import archiving, models, storage_manager
 from manager_rest.deployment_update.constants import STATES
@@ -32,6 +35,50 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
     def test_get_empty(self):
         result = self.client.deployment_updates.list()
         self.assertEquals(0, len(result))
+
+    def test_invalid_blueprint_raises_invalid_blueprint_exception(self):
+        deployment_id = 'dep'
+        self._deploy_base(deployment_id, 'no_output.yaml')
+
+        with patch('dsl_parser.tasks.parse_dsl') as parse_dsl_mock:
+            parse_dsl_mock.side_effect = \
+                parser_exceptions.DSLParsingException('')
+            # # It doesn't matter that we are updating the deployment with the
+            # same blueprint, since we mocked the blueprint parsing process.
+            response = self._update(deployment_id, 'no_output.yaml')
+            self.assertEquals(400, response.status_code)
+            self.assertEquals('invalid_blueprint_error',
+                              response.json['error_code'])
+
+    def test_missing_required_input_raises_missing_required_input_error(self):
+        deployment_id = 'dep'
+        self._deploy_base(deployment_id, 'no_output.yaml')
+
+        with patch('dsl_parser.tasks.prepare_deployment_plan') \
+                as prepare_deployment_mock:
+
+            prepare_deployment_mock.side_effect = \
+                parser_exceptions.MissingRequiredInputError()
+
+            response = self._update(deployment_id, 'no_output.yaml')
+            self.assertEquals(400, response.status_code)
+            self.assertEquals('missing_required_deployment_input_error',
+                              response.json['error_code'])
+
+    def test_unknown_input_raises_unknown_input_error(self):
+        deployment_id = 'dep'
+        self._deploy_base(deployment_id, 'no_output.yaml')
+
+        with patch('dsl_parser.tasks.prepare_deployment_plan') \
+                as prepare_deployment_mock:
+
+            prepare_deployment_mock.side_effect = \
+                parser_exceptions.UnknownInputError()
+
+            response = self._update(deployment_id, 'no_output.yaml')
+            self.assertEquals(400, response.status_code)
+            self.assertEquals('unknown_deployment_input_error',
+                              response.json['error_code'])
 
     def test_step_add(self):
         deployment_id = 'dep'
