@@ -42,7 +42,7 @@ setup(
         'cloudify-rest-client==3.4rc1',
         'cloudify-plugins-common==3.4rc1',
         'cloudify-diamond-plugin==1.3.3',
-        'cloudify-script-plugin==1.4',
+        'cloudify-script-plugin==1.4.1',
         'pika==0.9.14',
         'elasticsearch==1.6.0',
         'celery==3.1.17',
