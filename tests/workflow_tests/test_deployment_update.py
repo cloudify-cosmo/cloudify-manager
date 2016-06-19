@@ -104,25 +104,35 @@ class DeploymentUpdateBase(TestCase):
                                          test_name,
                                          inputs=None,
                                          deployment_id=None):
+        base_bp_path, modified_bp_path = \
+            self._get_base_and_modified_bp_path(test_name)
 
+        deployment, _ = self._deploy(base_bp_path,
+                                     inputs=inputs,
+                                     deployment_id=deployment_id)
+
+        return deployment, modified_bp_path
+
+    def _deploy(self, bp_path, inputs=None, deployment_id=None):
+        return deploy(bp_path,
+                      inputs=inputs,
+                      deployment_id=deployment_id)
+
+    def _get_base_and_modified_bp_path(self, test_name):
         base_dir = os.path.join(test_name, 'base')
         modified_dir = os.path.join(test_name, 'modification')
         base_bp = '{0}_base.yaml'.format(test_name)
         modified_bp = '{0}_modification.yaml'.format(test_name)
 
-        base_bp_path = \
-            resource(os.path.join(blueprints_base_path,
-                                  base_dir,
-                                  base_bp))
-        deployment, _ = deploy(base_bp_path,
-                               inputs=inputs,
-                               deployment_id=deployment_id)
+        base_bp_path = self._get_blueprint_path(base_dir, base_bp)
+        modified_bp_path = self._get_blueprint_path(modified_dir, modified_bp)
+        return base_bp_path, modified_bp_path
 
-        modified_bp_path = \
-            resource(os.path.join(blueprints_base_path,
-                                  modified_dir,
-                                  modified_bp))
-        return deployment, modified_bp_path
+    def _get_blueprint_path(self, blueprint_folder, blueprint_file):
+        return resource(
+            os.path.join(blueprints_base_path,
+                         blueprint_folder,
+                         blueprint_file))
 
     def _wait_for_execution_to_terminate(self, deployment_id, workflow_id):
         # wait for 'update' workflow to finish
@@ -1603,33 +1613,134 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 modified_node_instance['runtime_properties']
         )
 
-    def test_add_and_override_resource(self):
-        """
-        In order to test the resources mechanism
-         1. we first upload the local_modification resource which increments
-         the source_ops_counter each relationships operation executed between
-         site2->site1
-         2. we also upload the increment resource for future use.
 
-            after this step we check that indeed the
-            site2.source_ops_counter == 3
+class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
-         2. after uploading the new blueprint (with its resources), the
-         local_modification script decrements the same counter for each
-         relationship operation executed between site2->site3 (since pre
-         and post configure already ran, it should be ran only once)
+    def test_deployment_updated_twice(self):
+        base_bp_path = self._get_blueprint_path(
+            'update_deployment_twice',
+            'deployment_updated_twice_base.yaml')
+        modification_bp_path = self._get_blueprint_path(
+            'update_deployment_twice',
+            'deployment_updated_twice_modification.yaml')
+        remodification_bp_path = self._get_blueprint_path(
+            'update_deployment_twice',
+            'deployment_updated_twice_remodification.yaml')
 
-         3. we set the increment script to be used for each operation between
-         site3->site1
+        deployment, _ = self._deploy(base_bp_path)
+        # assert initial deployment state
+        deployment = self.client.deployments.get(deployment.id)
+        self.assertDictContainsSubset({'custom_output': {'value': 0}},
+                                      deployment.outputs)
+        self.assertNotIn('modified description', deployment.description)
 
-            after both of these steps we check that indeed the
-            site2.source_ops_counter == 2
-            and
-            site3.source_ops_counter == 3
-        :return:
-        """
+        def update_deployment_wait_and_assert(dep,
+                                              bp_path,
+                                              expected_output_value,
+                                              is_description_modified):
+            dep_update = \
+                self.client.deployment_updates.update(dep.id,
+                                                      bp_path)
+
+            # assert that 'update' workflow was executed
+            self._wait_for_execution_to_terminate(dep.id, 'update')
+            self._wait_for_successful_state(dep_update.id)
+
+            # verify deployment output
+            dep = self.client.deployments.get(dep_update.deployment_id)
+            self.assertDictContainsSubset(
+                {'custom_output': {'value': expected_output_value}},
+                dep.outputs)
+            # verify deployment description
+            self.assertEquals('modified description' in dep.description,
+                              is_description_modified)
+
+        # modify output and verify
+        update_deployment_wait_and_assert(
+            deployment, modification_bp_path, 1, False)
+        # modify output again and modify description
+        update_deployment_wait_and_assert(
+            deployment, remodification_bp_path, 2, True)
+
+    def test_modify_deployment_update_schema(self):
+        # this test verifies that storage (elasticsearch) can deal with
+        # deployment update objects with varying schema
+        base_bp_path = self._get_blueprint_path(
+            'modify_deployment_update_schema',
+            'modify_deployment_update_schema_base.yaml')
+        modification_bp_path = self._get_blueprint_path(
+            'modify_deployment_update_schema',
+            'modify_deployment_update_schema_modification.yaml')
+        remodification_bp_path = self._get_blueprint_path(
+            'modify_deployment_update_schema',
+            'modify_deployment_update_schema_remodification.yaml')
+
+        deployment, _ = self._deploy(base_bp_path)
+        # assert initial deployment state
+        deployment = self.client.deployments.get(deployment.id)
+        self.assertDictContainsSubset({'custom_output': {'value': '0.0.0.0'}},
+                                      deployment.outputs)
+
+        def update_deployment_wait_and_assert(dep, bp_path,
+                                              expected_output_definition,
+                                              expected_output_value):
+            dep_update = \
+                self.client.deployment_updates.update(dep.id,
+                                                      bp_path)
+
+            # assert that 'update' workflow was executed
+            self._wait_for_execution_to_terminate(dep.id, 'update')
+            self._wait_for_successful_state(dep_update.id)
+
+            # verify deployment output value
+            outputs = self.client.deployments.outputs.get(
+                dep_update.deployment_id).outputs
+            self.assertDictEqual(
+                {'custom_output': expected_output_value},
+                outputs)
+            # verify deployment output definition
+            dep = self.client.deployments.get(dep_update.deployment_id)
+            self.assertDictEqual(
+                {'custom_output': {'value': expected_output_definition}},
+                dep.outputs)
+
+        # modify once to create a DeploymentUpdate object with one
+        # outputs schema
+        update_deployment_wait_and_assert(
+            deployment, modification_bp_path, '1.1.1.1', '1.1.1.1')
+        # modify again to create a DeploymentUpdate object with a different
+        # outputs schema
+        update_deployment_wait_and_assert(
+            deployment, remodification_bp_path,
+            {'get_attribute': ['site1', 'ip']}, '2.2.2.2')
+
+        def test_add_and_override_resource(self):
+            """
+            In order to test the resources mechanism
+             1. we first upload the local_modification resource which
+             increments the source_ops_counter each relationships operation
+             executed between site2->site1
+             2. we also upload the increment resource for future use.
+
+                after this step we check that indeed the
+                site2.source_ops_counter == 3
+
+             2. after uploading the new blueprint (with its resources), the
+             local_modification script decrements the same counter for each
+             relationship operation executed between site2->site3 (since pre
+             and post configure already ran, it should be ran only once)
+
+             3. we set the increment script to be used for each operation
+             between site3->site1
+
+                after both of these steps we check that indeed the
+                site2.source_ops_counter == 2
+                and
+                site3.source_ops_counter == 3
+            :return:
+            """
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
-                'add_and_override_resource')
+            'add_and_override_resource')
 
         node_mapping = {
             'stagnant': 'site1',
@@ -1642,9 +1753,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # check all operation have been executed
         self.assertDictContainsSubset(
-                {'source_ops_counter': '3'},
-                base_node_instances['added_relationship'][0]
-                ['runtime_properties']
+            {'source_ops_counter': '3'},
+            base_node_instances['added_relationship'][0]
+            ['runtime_properties']
         )
 
         dep_update = \
@@ -1670,13 +1781,13 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         # site1, and another site2.source_ops_counter should have
         # decreased once because of the resource override
         self.assertDictContainsSubset(
-                {'source_ops_counter': '2'},
-                added_relationship_node_instance['runtime_properties']
+            {'source_ops_counter': '2'},
+            added_relationship_node_instance['runtime_properties']
         )
 
         self.assertDictContainsSubset(
-                {'source_ops_counter': '3'},
-                new_node_instance['runtime_properties']
+            {'source_ops_counter': '3'},
+            new_node_instance['runtime_properties']
         )
 
     def test_use_new_and_old_inputs(self):
@@ -1688,9 +1799,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         :return:
         """
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
-                'use_new_and_old_inputs',
-                inputs={'input_prop1': 'custom_input1',
-                        'input_prop2': 'custom_input2'}
+            'use_new_and_old_inputs',
+            inputs={'input_prop1': 'custom_input1',
+                    'input_prop2': 'custom_input2'}
         )
         node_mapping = {'affected_node': 'site1'}
 
@@ -1701,7 +1812,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             deployment.id,
             modified_bp_path,
             inputs={'input_prop3': 'custom_input3'}
-            )
+        )
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -1748,9 +1859,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
         dep_update = self.client.deployment_updates.update(
-                deployment.id,
-                modified_bp_path,
-                workflow_id='custom_workflow')
+            deployment.id,
+            modified_bp_path,
+            workflow_id='custom_workflow')
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id,
@@ -1762,23 +1873,23 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
 
         # assert all unaffected nodes and node instances remained intact
         self._assert_equal_entity_dicts(
-                base_nodes,
-                modified_nodes,
-                keys=['intact'],
+            base_nodes,
+            modified_nodes,
+            keys=['intact'],
         )
 
         self._assert_equal_entity_dicts(
-                base_node_instances,
-                modified_node_instances,
-                keys=['intact'],
-                excluded_items=['runtime_properties']
+            base_node_instances,
+            modified_node_instances,
+            keys=['intact'],
+            excluded_items=['runtime_properties']
         )
 
         intact_node_instance = modified_node_instances['intact'][0]
 
         self.assertDictContainsSubset(
-                {'update_id': dep_update.id},
-                intact_node_instance.runtime_properties
+            {'update_id': dep_update.id},
+            intact_node_instance.runtime_properties
         )
 
         workflows = [e['workflow_id'] for e in
@@ -1817,18 +1928,18 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         node = modified_nodes['added'][0]
         self.assertEquals(1, len(node.relationships))
         self._assert_relationship(
-                node.relationships,
-                target='site1',
-                expected_type='cloudify.relationships.contained_in')
+            node.relationships,
+            target='site1',
+            expected_type='cloudify.relationships.contained_in')
         self.assertEquals(node.type, 'cloudify.nodes.WebServer')
 
         # assert that node instance has a relationship
         added_instance = modified_node_instances['added'][0]
         self.assertEquals(1, len(added_instance.relationships))
         self._assert_relationship(
-                added_instance.relationships,
-                target='site1',
-                expected_type='cloudify.relationships.contained_in')
+            added_instance.relationships,
+            target='site1',
+            expected_type='cloudify.relationships.contained_in')
 
         # assert all operations in 'update' ('install') haven't ran
         self.assertNotIn('source_ops_counter',
@@ -1838,8 +1949,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         add_related_instance = modified_node_instances['intact'][0]
 
         self.assertDictContainsSubset(
-                {'uninstall_op_counter': '1'},
-                add_related_instance['runtime_properties']
+            {'uninstall_op_counter': '1'},
+            add_related_instance['runtime_properties']
         )
 
         return add_related_instance
@@ -1852,8 +1963,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
     def test_skip_install_false(self):
         instance_to_check = self._test_skip_install(skip=False)
         self.assertDictContainsSubset(
-                {'install_op_counter': '3'},
-                instance_to_check['runtime_properties']
+            {'install_op_counter': '3'},
+            instance_to_check['runtime_properties']
         )
 
     def _test_skip_uninstall(self, skip):
@@ -1892,8 +2003,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
     def test_skip_uninstall_false(self):
         instance_to_check = self._test_skip_uninstall(skip=False)
         self.assertDictContainsSubset(
-                {'uninstall_op_counter': '1'},
-                instance_to_check['runtime_properties']
+            {'uninstall_op_counter': '1'},
+            instance_to_check['runtime_properties']
         )
 
     def _test_skip_install_and_uninstall(self, skip):
@@ -1932,12 +2043,12 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
     def test_skip_install_and_uninstall_false(self):
         modified_instance = self._test_skip_install_and_uninstall(skip=False)
         self.assertDictContainsSubset(
-                {'install_op_counter': '1'},
-                modified_instance['runtime_properties']
+            {'install_op_counter': '1'},
+            modified_instance['runtime_properties']
         )
         self.assertDictContainsSubset(
-                {'uninstall_op_counter': '1'},
-                modified_instance['runtime_properties']
+            {'uninstall_op_counter': '1'},
+            modified_instance['runtime_properties']
         )
 
     def test_remove_deployment(self):
@@ -1961,17 +2072,15 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
             [self.client.deployment_updates.update(undel_deployment.id,
                                                    mod_undel_dep_bp1).id]
 
-        mod_del_dep_bp2 = \
-            resource(os.path.join(blueprints_base_path,
-                                  'remove_deployment',
-                                  'modification2',
-                                  'remove_deployment_modification2.yaml'))
+        mod_del_dep_bp2 = self._get_blueprint_path(
+            os.path.join('remove_deployment', 'modification2'),
+            'remove_deployment_modification2.yaml')
 
         self._wait_for_execution_to_terminate(del_deployment.id, 'update')
         self._wait_for_successful_state(del_depups_ids[0])
         del_depups_ids.append(
-                self.client.deployment_updates.update(del_deployment.id,
-                                                      mod_del_dep_bp2).id)
+            self.client.deployment_updates.update(del_deployment.id,
+                                                  mod_del_dep_bp2).id)
         self._wait_for_execution_to_terminate(del_deployment.id, 'update')
         self._wait_for_successful_state(del_depups_ids[0])
 
@@ -1991,15 +2100,15 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         self._wait_for_execution_to_terminate(del_deployment.id, 'uninstall')
         self.client.deployments.delete(del_deployment.id)
         deployment_update_list = self.client.deployment_updates.list(
-                deployment_id=del_deployment.id,
-                _include=['id']
+            deployment_id=del_deployment.id,
+            _include=['id']
         )
         self.assertEquals(len(deployment_update_list.items), 0)
 
         # Assert no other deployment updates were deleted
         deployment_update_list = self.client.deployment_updates.list(
-                deployment_id=undel_deployment.id,
-                _include=['id']
+            deployment_id=undel_deployment.id,
+            _include=['id']
         )
         self.assertEquals(len(deployment_update_list), len(undel_depups_ids))
         for i in deployment_update_list.items:

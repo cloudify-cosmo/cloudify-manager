@@ -32,10 +32,22 @@ BLUEPRINT_SCHEMA = {
 DEPLOYMENT_SCHEMA = {
     'deployment': {
         'properties': {
-            'plan': {
+            'workflows': {
                 'enabled': False
             },
-            'workflows': {
+            'inputs': {
+                'enabled': False
+            },
+            'policy_type': {
+                'enabled': False
+            },
+            'policy_triggers': {
+                'enabled': False
+            },
+            'groups': {
+                'enabled': False
+            },
+            'outputs': {
                 'enabled': False
             }
         }
@@ -44,6 +56,7 @@ DEPLOYMENT_SCHEMA = {
 
 DEPLOYMENT_UPDATE_SCHEMA = {
     'deployment_update': {
+        "_id": {"path": "id"},
         'properties': {
             'deployment_update_nodes': {
                 'enabled': False
@@ -51,7 +64,7 @@ DEPLOYMENT_UPDATE_SCHEMA = {
             'deployment_update_node_instances': {
                 'enabled': False
             },
-            'deployment_update_deploymentcontext': {
+            'deployment_update_deployment': {
                 'enabled': False
             },
             'deployment_plan': {
@@ -129,6 +142,10 @@ def create_schema(storage_index_url):
             response.raise_for_status()
             response = requests.put("{0}/deployment/_mapping".format(
                 storage_index_url), json.dumps(DEPLOYMENT_SCHEMA))
+            response.raise_for_status()
+
+            response = requests.put("{0}/deployment_update/_mapping".format(
+                storage_index_url), json.dumps(DEPLOYMENT_UPDATE_SCHEMA))
             response.raise_for_status()
 
             response = requests.put("{0}/node/_mapping".format(
