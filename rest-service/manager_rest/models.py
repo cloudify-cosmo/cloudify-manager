@@ -37,7 +37,7 @@ class SerializableObject(object):
 
 class BlueprintState(SerializableObject):
     fields = {
-        'plan', 'id', 'description', 'created_at', 'updated_at',
+        'id', 'plan', 'description', 'created_at', 'updated_at',
         'main_file_name'
     }
 
@@ -92,10 +92,9 @@ class Deployment(SerializableObject):
 
 class DeploymentUpdateStep(SerializableObject):
 
-    fields = {'id', 'action', 'entity_type', 'entity_id', 'supported'}
+    fields = {'id', 'action', 'entity_type', 'entity_id'}
 
-    def __init__(self, action, entity_type, entity_id,
-                 id=str(uuid.uuid4()), supported=True):
+    def __init__(self, action, entity_type, entity_id, id=str(uuid.uuid4())):
 
         if entity_type not in ENTITY_TYPES:
             raise UnknownModificationStageError(
@@ -105,46 +104,10 @@ class DeploymentUpdateStep(SerializableObject):
             raise UnknownModificationStageError(
                 'illegal modification operation')
 
-        self.id = str(id)
         self.action = action
         self.entity_type = entity_type
         self.entity_id = entity_id
-        self.supported = supported
-
-    def __hash__(self):
-        return hash((self.id, self.entity_id))
-
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.__dict__ == other.__dict__
-        else:
-            return False
-
-    def __str__(self):
-        return str(self.__dict__)
-
-    def __cmp__(self, other):
-        if self.action != other.action:
-            # the order is 'add' < 'modify' < 'remove'
-            if self.action == 'remove' and other.action != 'remove':
-                return -1
-            elif self.action == 'add':
-                return -1 if other.action == 'modify' else 1
-            else:
-                return 1
-        else:
-            if self.action == 'add':
-                if (self.entity_type == 'node' and
-                        other.entity_type == 'relationship'):
-                    # add node before adding relationships
-                    return -1
-            elif self.action == 'remove':
-                if (self.entity_type == 'relationship' and
-                        other.entity_type == 'node'):
-                    # remove relationships before removing nodes
-                    return -1
-        # other comparisons don't matter
-        return 0
+        self.id = id
 
 
 class DeploymentUpdate(SerializableObject):

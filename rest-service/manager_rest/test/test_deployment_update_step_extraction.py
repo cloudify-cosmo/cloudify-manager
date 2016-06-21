@@ -1,26 +1,29 @@
 import copy
 import json
 
-from mock import patch, ANY
+from mock import patch
 from nose.plugins.attrib import attr
+import networkx as nx
 
 from manager_rest import models
 from manager_rest.test import base_test
+from manager_rest.deployment_update.step_extractor import (
+    PROPERTY, PROPERTIES, OUTPUT, OUTPUTS, WORKFLOW, WORKFLOWS, NODE,
+    NODES, OPERATION, OPERATIONS, RELATIONSHIP, RELATIONSHIPS,
+    SOURCE_OPERATIONS, TARGET_OPERATIONS, TYPE, GROUP, GROUPS, POLICY_TYPE,
+    POLICY_TYPES, POLICY_TRIGGER, POLICY_TRIGGERS, HOST_ID, PLUGIN,
+    DEPLOYMENT_PLUGINS_TO_INSTALL, PLUGINS_TO_INSTALL, DESCRIPTION)
 from manager_rest.deployment_update.step_extractor \
-    import PROPERTY, PROPERTIES, OUTPUT, OUTPUTS, WORKFLOW, WORKFLOWS, NODE, \
-    NODES, OPERATION, OPERATIONS, RELATIONSHIP, RELATIONSHIPS, \
-    SOURCE_OPERATIONS, TARGET_OPERATIONS, TYPE, GROUP, GROUPS, POLICY_TYPE, \
-    POLICY_TYPES, POLICY_TRIGGER, POLICY_TRIGGERS, HOST_ID, PLUGIN, \
-    DEPLOYMENT_PLUGINS_TO_INSTALL, PLUGINS_TO_INSTALL, DESCRIPTION
-from manager_rest.deployment_update.step_extractor \
-    import EntityIdBuilder, DeploymentUpdateStepsExtractor
+    import EntityIdBuilder, StepExtractor, \
+    DeploymentUpdateStep
 from utils import get_resource
 
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
-class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
+class StepExtractorTestCase(base_test.BaseServerTestCase):
 
-    def _get_node_scheme(self):
+    @staticmethod
+    def _get_node_scheme():
         return {
             OPERATIONS: {},
             PROPERTIES: {},
@@ -28,10 +31,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
             TYPE: '',
             HOST_ID: '',
             PLUGINS_TO_INSTALL: []
-
         }
 
-    def _get_relationship_scheme(self):
+    @staticmethod
+    def _get_relationship_scheme():
         return {
             SOURCE_OPERATIONS: {},
             "target_id": "",
@@ -41,7 +44,7 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         }
 
     def setUp(self):
-        super(DeploymentUpdatesStepExtractorTestCase, self).setUp()
+        super(StepExtractorTestCase, self).setUp()
         names_to_mock = [
             'manager_rest.deployment_update.step_extractor.'
             'manager_rest.deployment_update.manager'
@@ -54,9 +57,9 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         stub_deployment_update = models.DeploymentUpdate(
             deployment_id='deployment_id',
             deployment_plan=None,
-            id=ANY)
+            id='deployment_update_id')
 
-        self.step_extractor = DeploymentUpdateStepsExtractor(
+        self.step_extractor = StepExtractor(
             deployment_update=stub_deployment_update)
 
         self.deployment_update_manager = \
@@ -103,6 +106,118 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
             self.assertEquals(NODE, entity_id_builder.entity_id)
         self.assertEquals('', entity_id_builder.entity_id)
 
+    def test_entity_name(self):
+        step = DeploymentUpdateStep(action='add',
+                                    entity_type=NODE,
+                                    entity_id='nodes:node1')
+        self.assertEquals('node1', step.entity_name)
+
+    def test_update_topology_order_of_add_node_steps(self):
+
+        add_node_a_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='nodes:node_a')
+        add_node_b_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='nodes:node_b')
+        add_node_c_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='nodes:node_c')
+        add_node_d_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='nodes:node_d')
+        add_node_e_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='nodes:node_e')
+        add_node_f_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='nodes:node_f')
+        steps = [add_node_a_step, add_node_b_step, add_node_c_step,
+                 add_node_d_step, add_node_e_step, add_node_f_step]
+
+        # Imagine the following relationships between the added nodes:
+        #
+        #       e
+        #       ^^
+        #       | \
+        #       c  d
+        #      ^ ^
+        #     /   \
+        #    a     b     f
+
+        topologically_sorted_added_nodes = ['node_f', 'node_a', 'node_b',
+                                            'node_c', 'node_d', 'node_e']
+        self.step_extractor._update_topology_order_of_add_node_steps(
+            steps, topologically_sorted_added_nodes)
+
+        self.assertEquals(5, add_node_e_step.topology_order)
+        self.assertEquals(4, add_node_d_step.topology_order)
+        self.assertEquals(3, add_node_c_step.topology_order)
+        self.assertEquals(2, add_node_b_step.topology_order)
+        self.assertEquals(1, add_node_a_step.topology_order)
+        self.assertEquals(0, add_node_f_step.topology_order)
+
+    def test_create_added_nodes_graph(self):
+
+        # Create a plan from which _create_added_nodes_graph will create the
+        # added nodes graph
+        new_deployment_plan = {
+            "nodes": {
+                "node_a": {
+                    "relationships": [
+                        {"target_id": 'node_c'}
+                    ]
+                },
+                "node_b": {
+                    "relationships": [
+                        {"target_id": 'node_c'}
+                    ]
+                },
+                "node_c": {
+                    "relationships": [
+                        {"target_id": 'node_e'}
+                    ]
+                },
+                "node_d": {
+                    "relationships": [
+                        {"target_id": 'node_e'}
+                    ]
+                },
+                "node_e": {
+                    "relationships": []
+                },
+                "node_f": {
+                    "relationships": []
+                }
+            }
+        }
+        self.step_extractor.new_deployment_plan = new_deployment_plan
+
+        # mock the _extract_added_nodes_names call
+        node_names = ['node_a', 'node_b', 'node_c',
+                      'node_d', 'node_e', 'node_f']
+        with patch.object(self.step_extractor, '_extract_added_nodes_names',
+                          return_value=node_names):
+            # create the added nodes graph
+            graph = self.step_extractor._create_added_nodes_graph('stub')
+
+        # create the graph we expected to get from _create_added_nodes_graph
+        expected_graph = nx.DiGraph()
+        expected_graph.add_edge('node_a', 'node_c')
+        expected_graph.add_edge('node_b', 'node_c')
+        expected_graph.add_edge('node_c', 'node_e')
+        expected_graph.add_edge('node_d', 'node_e')
+        expected_graph.add_node('node_f')
+
+        # no built-in comparison of graphs in networkx
+        self.assertEquals(expected_graph.__dict__, graph.__dict__)
+
     def test_description_no_change(self):
 
         description_old = {DESCRIPTION: 'description'}
@@ -125,11 +240,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=DESCRIPTION,
-                entity_id='description',
-                id=ANY)
+                entity_id='description')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -145,11 +259,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=DESCRIPTION,
-                entity_id='description',
-                id=ANY)
+                entity_id='description'
+                )
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -165,11 +279,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=DESCRIPTION,
-                entity_id='description',
-                id=ANY)
+                entity_id='description')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -194,11 +307,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=OUTPUT,
-                entity_id='outputs:output1',
-                id=ANY)
+                entity_id='outputs:output1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -212,11 +324,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=OUTPUT,
-                entity_id='outputs:output1',
-                id=ANY)
+                entity_id='outputs:output1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -232,11 +343,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=OUTPUT,
-                entity_id='outputs:output1',
-                id=ANY)
+                entity_id='outputs:output1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -295,11 +405,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=WORKFLOW,
-                entity_id='workflows:added_workflow',
-                id=ANY)
+                entity_id='workflows:added_workflow')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -329,11 +438,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=WORKFLOW,
-                entity_id='workflows:removed_workflow',
-                id=ANY)
+                entity_id='workflows:removed_workflow')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -370,11 +478,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=WORKFLOW,
-                entity_id='workflows:added_workflow',
-                id=ANY)
+                entity_id='workflows:added_workflow')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -435,11 +542,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=NODE,
-                entity_id='nodes:node1',
-                id=ANY)
+                entity_id='nodes:node1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -453,11 +559,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=NODE,
-                entity_id='nodes:node1',
-                id=ANY)
+                entity_id='nodes:node1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -477,16 +582,14 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=NODE,
-                entity_id='nodes:node1',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1'),
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=NODE,
-                entity_id='nodes:node1',
-                id=ANY)
+                entity_id='nodes:node1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -508,16 +611,14 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=NODE,
-                entity_id='nodes:node1',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1'),
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=NODE,
-                entity_id='nodes:node1',
-                id=ANY)
+                entity_id='nodes:node1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -537,16 +638,14 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=NODE,
-                entity_id='nodes:node1',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1'),
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=NODE,
-                entity_id='nodes:node1',
-                id=ANY)
+                entity_id='nodes:node1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -580,11 +679,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:properties:property1',
-                id=ANY)
+                entity_id='nodes:node1:properties:property1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -603,11 +701,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:properties:property1',
-                id=ANY)
+                entity_id='nodes:node1:properties:property1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -632,11 +729,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=PROPERTY,
-                entity_id='nodes:node1:properties:property1',
-                id=ANY)
+                entity_id='nodes:node1:properties:property1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -672,11 +768,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:operations:full.operation1.name',
-                id=ANY)
+                entity_id='nodes:node1:operations:full.operation1.name')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -696,11 +791,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:operations:full.operation1.name',
-                id=ANY)
+                entity_id='nodes:node1:operations:full.operation1.name')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -723,11 +817,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=OPERATION,
-                entity_id='nodes:node1:operations:full.operation1.name',
-                id=ANY)
+                entity_id='nodes:node1:operations:full.operation1.name')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -767,11 +860,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY)
+                entity_id='nodes:node1:relationships:[0]')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -793,11 +885,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY)
+                entity_id='nodes:node1:relationships:[0]')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -824,16 +915,14 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1:relationships:[0]'),
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY)
+                entity_id='nodes:node1:relationships:[0]')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -859,16 +948,14 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1:relationships:[0]'),
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY)
+                entity_id='nodes:node1:relationships:[0]')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -894,16 +981,14 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1:relationships:[0]'),
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY)
+                entity_id='nodes:node1:relationships:[0]')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -941,21 +1026,18 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]:[3]',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1:relationships:[0]:[3]'),
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[1]:[0]',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1:relationships:[1]:[0]'),
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[3]:[1]',
-                id=ANY)
+                entity_id='nodes:node1:relationships:[3]:[1]')
         ]
         # we don't care for the order the steps were created in
         self.assertSetEqual(set(expected_steps), set(steps))
@@ -991,26 +1073,22 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]:[3]',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1:relationships:[0]:[3]'),
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[2]',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1:relationships:[2]'),
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[2]',
-                id=ANY),
-            models.DeploymentUpdateStep(
+                entity_id='nodes:node1:relationships:[2]'),
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=RELATIONSHIP,
-                entity_id='nodes:node1:relationships:[0]',
-                id=ANY)
+                entity_id='nodes:node1:relationships:[0]')
         ]
         # we don't care for the order the steps were created in
         self.assertSetEqual(set(expected_steps), set(steps))
@@ -1039,12 +1117,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=OPERATION,
                 entity_id='nodes:node1:relationships:[0]:'
-                          'source_operations:full.operation1',
-                id=ANY)
+                          'source_operations:full.operation1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1073,12 +1150,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=OPERATION,
                 entity_id='nodes:node1:relationships:[0]:'
-                          'source_operations:full.operation1',
-                id=ANY)
+                          'source_operations:full.operation1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1115,12 +1191,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=OPERATION,
                 entity_id='nodes:node1:relationships:[0]:'
-                          'source_operations:full.operation1',
-                id=ANY)
+                          'source_operations:full.operation1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1149,12 +1224,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=OPERATION,
                 entity_id='nodes:node1:relationships:[0]:'
-                          'target_operations:full.operation1',
-                id=ANY)
+                          'target_operations:full.operation1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1183,12 +1257,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=OPERATION,
                 entity_id='nodes:node1:relationships:[0]:'
-                          'target_operations:full.operation1',
-                id=ANY)
+                          'target_operations:full.operation1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1225,12 +1298,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         steps, _ = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=OPERATION,
                 entity_id='nodes:node1:relationships:[0]:'
-                          'target_operations:full.operation1',
-                id=ANY)
+                          'target_operations:full.operation1')
         ]
 
         self.assertEquals(expected_steps, steps)
@@ -1262,64 +1334,128 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         self.assertEquals((None, None), _get_matching_relationship(
             relationship, relationships_with_no_match))
 
-    def test_sort_steps(self):
+    def test_sort_steps_compare_action(self):
 
-        steps = [
-            models.DeploymentUpdateStep(
-                action='modify',
-                entity_type='operation',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='remove',
-                entity_type='relationship',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='add',
-                entity_type='relationship',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='remove',
-                entity_type='node',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='modify',
-                entity_type='property',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='add',
-                entity_type='node',
-                entity_id='')
-        ]
+        add_step = DeploymentUpdateStep(
+            action='add',
+            entity_type='',
+            entity_id='')
+        remove_step = DeploymentUpdateStep(
+            action='remove',
+            entity_type='',
+            entity_id='')
+        modify_step = DeploymentUpdateStep(
+            action='modify',
+            entity_type='',
+            entity_id='')
+        steps = [add_step, remove_step, modify_step]
+        expected_step_order = [remove_step, add_step, modify_step]
+        steps.sort(),
+        self.assertEquals(expected_step_order, steps)
 
-        sorted_steps = [
-            models.DeploymentUpdateStep(
-                action='remove',
-                entity_type='relationship',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='remove',
-                entity_type='node',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='add',
-                entity_type='node',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='add',
-                entity_type='relationship',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='modify',
-                entity_type='operation',
-                entity_id=''),
-            models.DeploymentUpdateStep(
-                action='modify',
-                entity_type='property',
-                entity_id='')
-        ]
+    def test_sort_steps_add_node_before_add_relationship(self):
 
+        add_node_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='')
+        add_relationship_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=RELATIONSHIP,
+            entity_id='')
+        steps = [add_relationship_step, add_node_step]
+        expected_step_order = [add_node_step, add_relationship_step]
         steps.sort()
-        self.assertEquals(steps, sorted_steps)
+        self.assertEquals(expected_step_order, steps)
+
+    def test_sort_steps_remove_relationship_before_remove_node(self):
+
+        remove_relationship_step = DeploymentUpdateStep(
+            action='remove',
+            entity_type=RELATIONSHIP,
+            entity_id='')
+        remove_node_step = DeploymentUpdateStep(
+            action='remove',
+            entity_type=NODE,
+            entity_id='')
+        steps = [remove_node_step, remove_relationship_step]
+        expected_step_order = [remove_relationship_step, remove_node_step]
+        steps.sort()
+        self.assertEquals(expected_step_order, steps)
+
+    def test_sort_steps_higher_topology_before_lower_topology(self):
+
+        default_topology_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='')
+        topology_order_1_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='',
+            topology_order=1)
+        topology_order_2_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='',
+            topology_order=2)
+        steps = [topology_order_1_step,
+                 default_topology_step,
+                 topology_order_2_step]
+        expected_step_order = [
+            topology_order_2_step,
+            topology_order_1_step,
+            default_topology_step]
+        steps.sort()
+        self.assertEquals(expected_step_order, steps)
+
+    def test_sort_steps_all_comparison_considerations(self):
+
+        add_node_step_default_topology = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='')
+        add_node_step_topology_order_1 = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='',
+            topology_order=1)
+        add_node_step_topology_order_2 = DeploymentUpdateStep(
+            action='add',
+            entity_type=NODE,
+            entity_id='',
+            topology_order=2)
+        remove_relationship_step = DeploymentUpdateStep(
+            action='remove',
+            entity_type=RELATIONSHIP,
+            entity_id='')
+        remove_node_step = DeploymentUpdateStep(
+            action='remove',
+            entity_type=NODE,
+            entity_id='')
+        add_relationship_step = DeploymentUpdateStep(
+            action='add',
+            entity_type=RELATIONSHIP,
+            entity_id='')
+        modify_property_step = DeploymentUpdateStep(
+            action='modify',
+            entity_type=PROPERTY,
+            entity_id='')
+
+        steps = [add_node_step_topology_order_1, remove_node_step,
+                 modify_property_step, add_relationship_step,
+                 add_node_step_default_topology, remove_relationship_step,
+                 add_node_step_topology_order_2]
+        expected_step_order = [
+            remove_relationship_step,
+            remove_node_step,
+            add_node_step_topology_order_2,
+            add_node_step_topology_order_1,
+            add_node_step_default_topology,
+            add_relationship_step,
+            modify_property_step]
+        steps.sort()
+        self.assertEquals(expected_step_order, steps)
 
     # from here, tests involving unsupported steps
 
@@ -1367,12 +1503,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=PROPERTY,
                 entity_id='nodes:node1:relationships:[0]:'
                           'properties:property1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1402,12 +1537,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=PROPERTY,
                 entity_id='nodes:node1:relationships:[0]:'
                           'properties:property1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1439,12 +1573,11 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=PROPERTY,
                 entity_id='nodes:node1:relationships:[0]:'
                           'properties:property1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1472,11 +1605,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=POLICY_TYPE,
                 entity_id='policy_types:policy_type1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1492,11 +1624,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=POLICY_TYPE,
                 entity_id='policy_types:policy_type1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1515,11 +1646,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=POLICY_TYPE,
                 entity_id='policy_types:policy_type1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1547,11 +1677,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=POLICY_TRIGGER,
                 entity_id='policy_triggers:policy_trigger1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1567,11 +1696,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=POLICY_TRIGGER,
                 entity_id='policy_triggers:policy_trigger1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1592,11 +1720,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=POLICY_TRIGGER,
                 entity_id='policy_triggers:policy_trigger1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1631,11 +1758,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=WORKFLOW,
                 entity_id='workflows:added_workflow',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1676,11 +1802,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=WORKFLOW,
                 entity_id='workflows:added_workflow',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1706,11 +1831,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=GROUP,
                 entity_id='groups:group1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1725,11 +1849,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='remove',
                 entity_type=GROUP,
                 entity_id='groups:group1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1746,11 +1869,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=GROUP,
                 entity_id='groups:group1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1779,11 +1901,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=PLUGIN,
                 entity_id='central_deployment_agent_plugins:cda_plugin1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1808,11 +1929,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=PLUGIN,
                 entity_id='central_deployment_agent_plugins:cda_plugin1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1859,11 +1979,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='add',
                 entity_type=PLUGIN,
                 entity_id='host_agent_plugins:node1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1891,11 +2010,10 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
         _, steps = self.step_extractor.extract_steps()
 
         expected_steps = [
-            models.DeploymentUpdateStep(
+            DeploymentUpdateStep(
                 action='modify',
                 entity_type=PLUGIN,
                 entity_id='host_agent_plugins:node1',
-                id=ANY,
                 supported=False)
         ]
 
@@ -1914,429 +2032,368 @@ class DeploymentUpdatesStepExtractorTestCase(base_test.BaseServerTestCase):
             self.step_extractor.new_deployment_plan = json.load(fp_after)
 
         expected_steps = {
-            'modify_description': models.DeploymentUpdateStep(
+            'modify_description': DeploymentUpdateStep(
                 'modify',
                 DESCRIPTION,
-                'description',
-                ANY),
+                'description'),
 
-            'remove_node': models.DeploymentUpdateStep(
+            'remove_node': DeploymentUpdateStep(
                 'remove',
                 NODE,
-                'nodes:node1',
-                ANY),
+                'nodes:node1'),
 
-            'add_node': models.DeploymentUpdateStep(
+            'add_node': DeploymentUpdateStep(
                 'add',
                 NODE,
                 'nodes:node2',
-                ANY),
+                topology_order=2),
 
-            'add_node_changed_type': models.DeploymentUpdateStep(
+            'add_node_changed_type': DeploymentUpdateStep(
                 'add',
                 NODE,
                 'nodes:node3',
-                ANY),
+                topology_order=3),
 
-            'remove_node_changed_type': models.DeploymentUpdateStep(
+            'remove_node_changed_type': DeploymentUpdateStep(
                 'remove',
                 NODE,
-                'nodes:node3',
-                ANY),
+                'nodes:node3'),
 
-            'add_node_changed_host_id': models.DeploymentUpdateStep(
+            'add_node_changed_host_id': DeploymentUpdateStep(
                 'add',
                 NODE,
-                'nodes:node14',
-                ANY),
+                'nodes:node14'),
 
-            'remove_node_changed_host_id': models.DeploymentUpdateStep(
+            'remove_node_changed_host_id': DeploymentUpdateStep(
                 'remove',
                 NODE,
-                'nodes:node14',
-                ANY),
+                'nodes:node14'),
 
-            'add_node_changed_type_and_host_id': models.DeploymentUpdateStep(
+            'add_node_changed_type_and_host_id': DeploymentUpdateStep(
                 'add',
                 NODE,
                 'nodes:node15',
-                ANY),
+                topology_order=1),
 
-            'remove_node_type_and_host_id': models.DeploymentUpdateStep(
+            'remove_node_type_and_host_id': DeploymentUpdateStep(
                 'remove',
                 NODE,
-                'nodes:node15',
-                ANY),
+                'nodes:node15'),
 
-            'add_property': models.DeploymentUpdateStep(
+            'add_property': DeploymentUpdateStep(
                 'add',
                 PROPERTY,
-                'nodes:node4:properties:added_prop',
-                ANY),
+                'nodes:node4:properties:added_prop'),
 
-            'remove_property': models.DeploymentUpdateStep(
+            'remove_property': DeploymentUpdateStep(
                 'remove',
                 PROPERTY,
-                'nodes:node4:properties:removed_prop',
-                ANY),
+                'nodes:node4:properties:removed_prop'),
 
-            'modify_property': models.DeploymentUpdateStep(
+            'modify_property': DeploymentUpdateStep(
                 'modify',
                 PROPERTY,
-                'nodes:node4:properties:modified_prop',
-                ANY),
+                'nodes:node4:properties:modified_prop'),
 
-            'remove_relationship': models.DeploymentUpdateStep(
+            'remove_relationship': DeploymentUpdateStep(
                 'remove',
                 RELATIONSHIP,
-                'nodes:node6:relationships:[0]',
-                ANY),
+                'nodes:node6:relationships:[0]'),
 
-            'add_relationship': models.DeploymentUpdateStep(
+            'add_relationship': DeploymentUpdateStep(
                 'add',
                 RELATIONSHIP,
-                'nodes:node7:relationships:[0]',
-                ANY),
+                'nodes:node7:relationships:[0]'),
 
-            'remove_relationship_changed_type': models.DeploymentUpdateStep(
+            'remove_relationship_changed_type': DeploymentUpdateStep(
                 'remove',
                 RELATIONSHIP,
-                'nodes:node8:relationships:[0]',
-                ANY),
+                'nodes:node8:relationships:[0]'),
 
-            'add_relationship_changed_type': models.DeploymentUpdateStep(
+            'add_relationship_changed_type': DeploymentUpdateStep(
                 'add',
                 RELATIONSHIP,
-                'nodes:node8:relationships:[0]',
-                ANY),
+                'nodes:node8:relationships:[0]'),
 
-            'remove_relationship_changed_target': models.DeploymentUpdateStep(
+            'remove_relationship_changed_target': DeploymentUpdateStep(
                 'remove',
                 RELATIONSHIP,
-                'nodes:node9:relationships:[0]',
-                ANY),
+                'nodes:node9:relationships:[0]'),
 
-            'add_relationship_changed_target': models.DeploymentUpdateStep(
+            'add_relationship_changed_target': DeploymentUpdateStep(
                 'add',
                 RELATIONSHIP,
-                'nodes:node9:relationships:[0]',
-                ANY),
+                'nodes:node9:relationships:[0]'),
 
             'remove_relationship_changed_type_and_target':
-                models.DeploymentUpdateStep(
+                DeploymentUpdateStep(
                     'remove',
                     RELATIONSHIP,
-                    'nodes:node10:relationships:[0]',
-                    ANY),
+                    'nodes:node10:relationships:[0]'),
 
             'add_relationship_changed_type_and_target':
-                models.DeploymentUpdateStep(
+                DeploymentUpdateStep(
                     'add',
                     RELATIONSHIP,
-                    'nodes:node10:relationships:[0]',
-                    ANY),
+                    'nodes:node10:relationships:[0]'),
 
-            'add_operation': models.DeploymentUpdateStep(
+            'add_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
-                'nodes:node11:operations:interface1.added_operation',
-                ANY),
+                'nodes:node11:operations:interface1.added_operation'),
 
-            'add_operation_shortened': models.DeploymentUpdateStep(
+            'add_operation_shortened': DeploymentUpdateStep(
                 'add',
                 OPERATION,
-                'nodes:node11:operations:added_operation',
-                ANY),
+                'nodes:node11:operations:added_operation'),
 
-            'remove_operation': models.DeploymentUpdateStep(
+            'remove_operation': DeploymentUpdateStep(
                 'remove',
                 OPERATION,
-                'nodes:node11:operations:interface1.removed_operation',
-                ANY),
+                'nodes:node11:operations:interface1.removed_operation'),
 
-            'remove_operation_shortened': models.DeploymentUpdateStep(
+            'remove_operation_shortened': DeploymentUpdateStep(
                 'remove',
                 OPERATION,
-                'nodes:node11:operations:removed_operation',
-                ANY),
+                'nodes:node11:operations:removed_operation'),
 
-            'modify_operation': models.DeploymentUpdateStep(
+            'modify_operation': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
-                'nodes:node11:operations:interface1.modified_operation',
-                ANY),
+                'nodes:node11:operations:interface1.modified_operation'),
 
-            'modify_operation_shortened': models.DeploymentUpdateStep(
+            'modify_operation_shortened': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
-                'nodes:node11:operations:modified_operation',
-                ANY),
+                'nodes:node11:operations:modified_operation'),
 
-            'add_relationship_operation': models.DeploymentUpdateStep(
+            'add_relationship_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
                 'nodes:node12:relationships:[0]:target_operations:'
-                'interface_for_modified_and_added.added_operation',
-                ANY),
+                'interface_for_modified_and_added.added_operation'),
 
             'add_relationship_operation_shortened':
-                models.DeploymentUpdateStep(
+                DeploymentUpdateStep(
                     'add',
                     OPERATION,
                     'nodes:node12:relationships:[0]:target_operations:'
-                    'added_operation',
-                    ANY),
+                    'added_operation'),
 
 
-            'remove_relationship_operation': models.DeploymentUpdateStep(
+            'remove_relationship_operation': DeploymentUpdateStep(
                 'remove',
                 OPERATION,
                 'nodes:node12:relationships:[0]:source_operations:'
-                'interface_for_intact_and_removed.removed_operation',
-                ANY),
+                'interface_for_intact_and_removed.removed_operation'),
 
             'remove_relationship_operation_shortened':
-                models.DeploymentUpdateStep(
+                DeploymentUpdateStep(
                     'remove',
                     OPERATION,
                     'nodes:node12:relationships:[0]:source_operations:'
-                    'removed_operation',
-                    ANY),
+                    'removed_operation'),
 
-            'modify_relationship_operation': models.DeploymentUpdateStep(
+            'modify_relationship_operation': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
                 'nodes:node12:relationships:[0]:target_operations:'
-                'interface_for_modified_and_added.modified_operation',
-                ANY),
+                'interface_for_modified_and_added.modified_operation'),
 
             'modify_relationship_operation_shortened':
-                models.DeploymentUpdateStep(
+                DeploymentUpdateStep(
                     'modify',
                     OPERATION,
                     'nodes:node12:relationships:[0]:target_operations:'
-                    'modified_operation',
-                    ANY),
+                    'modified_operation'),
 
-            'add_output': models.DeploymentUpdateStep(
+            'add_output': DeploymentUpdateStep(
                 'add',
                 OUTPUT,
-                'outputs:added_output',
-                ANY),
+                'outputs:added_output'),
 
-            'remove_output': models.DeploymentUpdateStep(
+            'remove_output': DeploymentUpdateStep(
                 'remove',
                 OUTPUT,
-                'outputs:removed_output',
-                ANY),
+                'outputs:removed_output'),
 
-            'modify_output': models.DeploymentUpdateStep(
+            'modify_output': DeploymentUpdateStep(
                 'modify',
                 OUTPUT,
-                'outputs:modified_output',
-                ANY),
+                'outputs:modified_output'),
 
-            'add_workflow_same_plugin': models.DeploymentUpdateStep(
+            'add_workflow_same_plugin': DeploymentUpdateStep(
                 'add',
                 WORKFLOW,
-                'workflows:added_workflow_same_plugin',
-                ANY),
+                'workflows:added_workflow_same_plugin'),
 
-            'add_workflow_new_plugin': models.DeploymentUpdateStep(
+            'add_workflow_new_plugin': DeploymentUpdateStep(
                 'add',
                 WORKFLOW,
                 'workflows:added_workflow_new_plugin',
-                ANY,
                 supported=False),
 
-            'remove_workflow': models.DeploymentUpdateStep(
+            'remove_workflow': DeploymentUpdateStep(
                 'remove',
                 WORKFLOW,
-                'workflows:removed_workflow',
-                ANY),
+                'workflows:removed_workflow'),
 
-            'modify_workflow_same_plugin': models.DeploymentUpdateStep(
+            'modify_workflow_same_plugin': DeploymentUpdateStep(
                 'modify',
                 WORKFLOW,
-                'workflows:modified_workflow_same_plugin',
-                ANY),
+                'workflows:modified_workflow_same_plugin'),
 
-            'modify_workflow_new_plugin': models.DeploymentUpdateStep(
+            'modify_workflow_new_plugin': DeploymentUpdateStep(
                 'modify',
                 WORKFLOW,
                 'workflows:modified_workflow_new_plugin',
-                ANY,
                 supported=False),
 
-            'add_policy_type': models.DeploymentUpdateStep(
+            'add_policy_type': DeploymentUpdateStep(
                 'add',
                 POLICY_TYPE,
                 'policy_types:added_policy_type',
-                ANY,
                 supported=False),
 
-            'remove_policy_type': models.DeploymentUpdateStep(
+            'remove_policy_type': DeploymentUpdateStep(
                 'remove',
                 POLICY_TYPE,
                 'policy_types:removed_policy_type',
-                ANY,
                 supported=False),
 
-            'modify_policy_type': models.DeploymentUpdateStep(
+            'modify_policy_type': DeploymentUpdateStep(
                 'modify',
                 POLICY_TYPE,
                 'policy_types:modified_policy_type',
-                ANY,
                 supported=False),
 
-            'add_policy_trigger': models.DeploymentUpdateStep(
+            'add_policy_trigger': DeploymentUpdateStep(
                 'add',
                 POLICY_TRIGGER,
                 'policy_triggers:added_policy_trigger',
-                ANY,
                 supported=False),
 
-            'remove_policy_trigger': models.DeploymentUpdateStep(
+            'remove_policy_trigger': DeploymentUpdateStep(
                 'remove',
                 POLICY_TRIGGER,
                 'policy_triggers:removed_policy_trigger',
-                ANY,
                 supported=False),
 
-            'modify_policy_trigger': models.DeploymentUpdateStep(
+            'modify_policy_trigger': DeploymentUpdateStep(
                 'modify',
                 POLICY_TRIGGER,
                 'policy_triggers:modified_policy_trigger',
-                ANY,
                 supported=False),
 
-            'add_group': models.DeploymentUpdateStep(
+            'add_group': DeploymentUpdateStep(
                 'add',
                 GROUP,
                 'groups:added_group',
-                ANY,
                 supported=False),
 
-            'remove_group': models.DeploymentUpdateStep(
+            'remove_group': DeploymentUpdateStep(
                 'remove',
                 GROUP,
                 'groups:removed_group',
-                ANY,
                 supported=False),
 
-            'modify_group': models.DeploymentUpdateStep(
+            'modify_group': DeploymentUpdateStep(
                 'modify',
                 GROUP,
                 'groups:modified_group',
-                ANY,
                 supported=False),
 
-            'add_relationship_property': models.DeploymentUpdateStep(
+            'add_relationship_property': DeploymentUpdateStep(
                 'add',
                 PROPERTY,
                 'nodes:node13:relationships:[0]:'
                 'properties:added_relationship_prop',
-                ANY,
                 supported=False),
 
-            'remove_relationship_property': models.DeploymentUpdateStep(
+            'remove_relationship_property': DeploymentUpdateStep(
                 'remove',
                 PROPERTY,
                 'nodes:node13:relationships:[0]:'
                 'properties:removed_relationship_prop',
-                ANY,
                 supported=False),
 
-            'modify_relationship_property': models.DeploymentUpdateStep(
+            'modify_relationship_property': DeploymentUpdateStep(
                 'modify',
                 PROPERTY,
                 'nodes:node13:relationships:[0]:'
                 'properties:modified_relationship_prop',
-                ANY,
                 supported=False),
 
-            'add_cda_plugin': models.DeploymentUpdateStep(
+            'add_cda_plugin': DeploymentUpdateStep(
                 'add',
                 PLUGIN,
                 'central_deployment_agent_plugins:cda_plugin_for_operations2',
-                ANY,
                 supported=False),
 
-            'add_ha_plugin': models.DeploymentUpdateStep(
+            'add_ha_plugin': DeploymentUpdateStep(
                 'add',
                 PLUGIN,
                 'host_agent_plugins:node18',
-                ANY,
                 supported=False),
 
             # the steps below are intended just to make the test pass.
             # ideally, they should be removed since they are incorrect
 
-            'add_cda_operation': models.DeploymentUpdateStep(
+            'add_cda_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
                 'nodes:node16:operations:'
                 'interface_for_plugin_based_operations.'
                 'added_operation_new_cda_plugin',
-                ANY,
                 supported=True),
 
-            'add_cda_operation_shortened': models.DeploymentUpdateStep(
+            'add_cda_operation_shortened': DeploymentUpdateStep(
                 'add',
                 OPERATION,
                 'nodes:node16:operations:added_operation_new_cda_plugin',
-                ANY,
                 supported=True),
 
-            'add_ha_operation': models.DeploymentUpdateStep(
+            'add_ha_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
                 'nodes:node17:operations:'
                 'interface_for_plugin_based_operations.'
                 'ha_operation_after',
-                ANY,
                 supported=True),
 
-            'add_ha_operation_shortened': models.DeploymentUpdateStep(
+            'add_ha_operation_shortened': DeploymentUpdateStep(
                 'add',
                 OPERATION,
                 'nodes:node17:operations:ha_operation_after',
-                ANY,
                 supported=True),
 
-            'remove_ha_operation': models.DeploymentUpdateStep(
+            'remove_ha_operation': DeploymentUpdateStep(
                 'remove',
                 OPERATION,
                 'nodes:node17:operations:'
                 'interface_for_plugin_based_operations.'
                 'ha_operation_before',
-                ANY,
                 supported=True),
 
-            'remove_ha_operation_shortened': models.DeploymentUpdateStep(
+            'remove_ha_operation_shortened': DeploymentUpdateStep(
                 'remove',
                 OPERATION,
                 'nodes:node17:operations:ha_operation_before',
-                ANY,
                 supported=True),
 
-            'modify_ha_operation': models.DeploymentUpdateStep(
+            'modify_ha_operation': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
                 'nodes:node18:operations:'
                 'interface_for_plugin_based_operations.'
                 'ha_operation_before',
-                ANY,
                 supported=True),
 
-            'modify_ha_operation_shortened': models.DeploymentUpdateStep(
+            'modify_ha_operation_shortened': DeploymentUpdateStep(
                 'modify',
                 OPERATION,
                 'nodes:node18:operations:ha_operation_before',
-                ANY,
-                supported=True),
-
-
+                supported=True)
         }
         steps, unsupported_steps = self.step_extractor.extract_steps()
         steps.extend(unsupported_steps)

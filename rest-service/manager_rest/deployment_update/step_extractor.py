@@ -14,8 +14,10 @@
 #  * limitations under the License.
 from contextlib import contextmanager
 
-from manager_rest.models import DeploymentUpdateStep
+import networkx as nx
+
 import manager_rest.blueprints_manager
+import manager_rest.models
 
 
 RELEVANT_DEPLOYMENT_FIELDS = ['blueprint_id', 'id', 'inputs', 'nodes',
@@ -23,6 +25,8 @@ RELEVANT_DEPLOYMENT_FIELDS = ['blueprint_id', 'id', 'inputs', 'nodes',
                               'policy_triggers', 'description',
                               'deployment_plugins_to_install',
                               'workflow_plugins_to_install']
+
+DEFAULT_TOPOLOGY_LEVEL = 0
 NODE = 'node'
 NODES = 'nodes'
 OUTPUT = 'output'
@@ -54,6 +58,7 @@ PLUGINS_TO_INSTALL = 'plugins_to_install'
 DESCRIPTION = 'description'
 
 # flake8: noqa
+
 
 class EntityIdBuilder(list):
 
@@ -132,7 +137,7 @@ class DeploymentPlan(dict):
         # get deployment from storage
         deployment = sm.get_deployment(deployment_id)
 
-        # get deployment_plugins_to_install ans workflow_plugins_to_install
+        # get deployment_plugins_to_install and workflow_plugins_to_install
         # from the deployment's blueprint plan
         blueprint = sm.get_blueprint(deployment.blueprint_id)
         blueprint_plan = blueprint.plan
@@ -207,7 +212,66 @@ class DeploymentPlan(dict):
         return plugins_by_name
 
 
-class DeploymentUpdateStepsExtractor(object):
+class DeploymentUpdateStep(object):
+
+    def __init__(self, action, entity_type, entity_id,
+                 supported=True, topology_order=DEFAULT_TOPOLOGY_LEVEL):
+
+        self.action = action
+        self.entity_type = entity_type
+        self.entity_id = entity_id
+        self.supported = supported
+        self.topology_order = topology_order
+
+    @property
+    def entity_name(self):
+        return self.entity_id.split(':')[-1]
+
+    def __hash__(self):
+        return hash(self.entity_id)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        else:
+            return False
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __cmp__(self, other):
+
+        if self.action != other.action:
+            # the order is 'remove' < 'add' < 'modify'
+            if self.action == 'remove' and other.action != 'remove':
+                return -1
+            elif self.action == 'add':
+                return -1 if other.action == 'modify' else 1
+            else:
+                return 1
+        else:
+            if self.action == 'add':
+                if self.entity_type == NODE:
+                    if other.entity_type == RELATIONSHIP:
+                        # add node before adding relationships
+                        return -1
+                    if other.entity_type == NODE:
+                        # higher topology order before lower topology order
+                        if self.topology_order > other.topology_order:
+                            return -1
+                        else:
+                            return 1
+
+            elif self.action == 'remove':
+                if (self.entity_type == RELATIONSHIP and
+                        other.entity_type == NODE):
+                    # remove relationships before removing nodes
+                    return -1
+        # other comparisons don't matter
+        return 0
+
+
+class StepExtractor(object):
 
     entity_id_segment_to_entity_type = {
         PROPERTIES: PROPERTY,
@@ -270,11 +334,64 @@ class DeploymentUpdateStepsExtractor(object):
         self._extract_steps(old, new)
 
         supported_steps = [step for step in self.steps if step.supported]
-        supported_steps.sort()
+        self._sort_supported_steps(supported_steps)
 
         unsupported_steps = [step for step in self.steps if not step.supported]
 
         return supported_steps, unsupported_steps
+
+    @staticmethod
+    def _extract_added_nodes_names(supported_steps):
+
+        add_node_steps = [step for step in supported_steps
+                          if step.action == 'add' and step.entity_type == NODE]
+        added_nodes_names = [step.entity_name for step in add_node_steps]
+        return added_nodes_names
+
+    def _create_added_nodes_graph(self, supported_steps):
+        """ create a graph representing the added nodes and relationships
+        involving them in the deployment update blueprint
+
+        :rtype: nx.Digraph
+        """
+        added_nodes_names = self._extract_added_nodes_names(supported_steps)
+
+        added_nodes_graph = nx.DiGraph()
+        added_nodes_graph.add_nodes_from(added_nodes_names)
+
+        nodes = self.new_deployment_plan[NODES]
+        for node_name, node in nodes.iteritems():
+            if node_name in added_nodes_names:
+                for relationship in node[RELATIONSHIPS]:
+                    if relationship[TARGET_ID] in added_nodes_names:
+                        added_nodes_graph.add_edge(node_name,
+                                                   relationship[TARGET_ID])
+        return added_nodes_graph
+
+    def _update_topology_order_of_add_node_steps(
+            self,
+            supported_steps,
+            topologically_sorted_added_nodes):
+
+        for i, node_name in enumerate(topologically_sorted_added_nodes):
+            # Get the corresponding 'add node' step for this node name,
+            # and assign it its topology_order order
+            for step in supported_steps:
+                if step.action == 'add' and step.entity_type == NODE \
+                        and step.entity_name == node_name:
+                    step.topology_order = i
+
+    def _sort_supported_steps(self, supported_steps):
+
+        added_nodes_graph = self._create_added_nodes_graph(supported_steps)
+
+        topologically_sorted_added_nodes = \
+            nx.topological_sort(added_nodes_graph)
+
+        self._update_topology_order_of_add_node_steps(
+            supported_steps, topologically_sorted_added_nodes)
+
+        supported_steps.sort()
 
     def _extract_steps_from_description(self,
                                         old_description,
@@ -539,7 +656,6 @@ class DeploymentUpdateStepsExtractor(object):
                     new_workflow_plugins_to_install=self.new_deployment_plan[
                         'workflow_plugins_to_install'])
 
-
             elif entities_name == POLICY_TYPES:
                 self._extract_steps_from_entities(
                     POLICY_TYPES, new_entities, old_entities,
@@ -584,14 +700,13 @@ class DeploymentUpdateStepsExtractor(object):
             step = DeploymentUpdateStep(action,
                                         entity_type,
                                         entity_id,
-                                        self.deployment_update_id,
                                         supported)
             self.steps.append(step)
 
 
 def extract_steps(deployment_update):
     steps_extractor = \
-        DeploymentUpdateStepsExtractor(deployment_update)
+        StepExtractor(deployment_update)
 
     # update the steps extractor with the old and the new deployment plans
     steps_extractor.old_deployment_plan = \
