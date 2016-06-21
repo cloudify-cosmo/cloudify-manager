@@ -60,13 +60,13 @@ sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-l
 
 pip install --use-wheel --no-index --find-links=/var/wheels/%{name} virtualenv && \
 if [ ! -d "/opt/manager/env" ]; then virtualenv /opt/manager/env; fi && \
-/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-dsl-parser --pre && \
-/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-client --pre && \
-/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} flask-securest --pre && \
-/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
-/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
-/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
-/opt/manager/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-service --pre
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-dsl-parser --pre && \
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-client --pre && \
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} flask-securest --pre && \
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-service --pre
 
 # sudo cp -R "/tmp/resources/rest-service/cloudify/" "/opt/manager/resources/"
 

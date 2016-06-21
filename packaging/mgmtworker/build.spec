@@ -56,13 +56,13 @@ sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-l
 
 pip install --use-wheel --no-index --find-links=/var/wheels/%{name} virtualenv && \
 if [ ! -d "/opt/mgmtworker/env" ]; then virtualenv /opt/mgmtworker/env; fi && \
-/opt/mgmtworker/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-client --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-riemann-controller-plugin --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-workflows --pre
+/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-client --pre && \
+/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
+/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
+/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
+/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
+/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-riemann-controller-plugin --pre && \
+/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-workflows --pre
 
 
 
