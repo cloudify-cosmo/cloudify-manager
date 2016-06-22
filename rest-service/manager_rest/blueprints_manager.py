@@ -720,7 +720,8 @@ class BlueprintsManager(object):
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
         existing_modifications = self.sm.deployment_modifications_list(
-            include=['id', 'status']).items
+            include=['id', 'status'],
+            filters=deployment_id_filter).items
         active_modifications = [
             m.id for m in existing_modifications
             if m.status == models.DeploymentModification.STARTED]

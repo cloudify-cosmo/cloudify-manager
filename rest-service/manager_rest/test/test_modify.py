@@ -203,17 +203,25 @@ class ModifyTests(base_test.BaseServerTestCase):
             return list_func(*args, **kwargs)
 
     def test_no_concurrent_modifications(self):
-        _, _, _, deployment = self.put_deployment(
+        blueprint_id, _, _, deployment = self.put_deployment(
             deployment_id=str(uuid.uuid4()),
             blueprint_file_name='modify1.yaml')
+        deployment2 = self.client.deployments.create(
+            blueprint_id=blueprint_id,
+            deployment_id=str(uuid.uuid4()))
 
         modification = self.client.deployment_modifications.start(
             deployment.id, nodes={})
-        # should not allow another deployment modification to start
+        # should not allow another deployment modification of the same
+        # deployment to start
         with self.assertRaises(
                 exceptions.ExistingStartedDeploymentModificationError) as e:
             self.client.deployment_modifications.start(deployment.id, nodes={})
         self.assertIn(modification.id, str(e.exception))
+
+        # should allow another deployment modification of a different
+        # deployment to start
+        self.client.deployment_modifications.start(deployment2.id, nodes={})
 
         self.client.deployment_modifications.finish(modification.id)
         # should allow deployment modification to start after previous one
