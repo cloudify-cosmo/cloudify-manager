@@ -86,7 +86,6 @@ class Deployment(SerializableObject):
         self.scaling_groups = kwargs['scaling_groups']
         self.description = kwargs['description']
         self.outputs = kwargs['outputs']
-        self.description = kwargs['description']
         self.permalink = None  # TODO: implement
 
 

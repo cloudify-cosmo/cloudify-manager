@@ -1,5 +1,5 @@
 {
-  "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+  "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
   "deployment_plugins_to_install": {
     "agent": {
       "distribution": null, 
@@ -27,8 +27,8 @@
       "source": "cda_plugin_for_operations1", 
       "supported_platform": null
     }
-  },
-  "description": "description_before",
+  }, 
+  "description": "description_before", 
   "groups": {
     "intact_group": {
       "members": [
@@ -82,13 +82,13 @@
       }
     }
   }, 
-  "id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+  "id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
   "inputs": {}, 
   "nodes": {
     "node0": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node0", 
       "id": "node0", 
       "max_number_of_instances": -1, 
@@ -516,9 +516,9 @@
       ]
     }, 
     "node1": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node1", 
       "id": "node1", 
       "max_number_of_instances": -1, 
@@ -920,9 +920,9 @@
       ]
     }, 
     "node10": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node10", 
       "id": "node10", 
       "max_number_of_instances": -1, 
@@ -1483,9 +1483,9 @@
       ]
     }, 
     "node11": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node11", 
       "id": "node11", 
       "max_number_of_instances": -1, 
@@ -1980,9 +1980,9 @@
       ]
     }, 
     "node12": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node12", 
       "id": "node12", 
       "max_number_of_instances": -1, 
@@ -2637,9 +2637,9 @@
       ]
     }, 
     "node13": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node13", 
       "id": "node13", 
       "max_number_of_instances": -1, 
@@ -3204,624 +3204,10 @@
         "cloudify.nodes.Compute"
       ]
     }, 
-    "node14": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
-      "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
-      "host_id": "node0", 
-      "id": "node14", 
-      "max_number_of_instances": -1, 
-      "min_number_of_instances": 0, 
-      "number_of_instances": 1, 
-      "operations": {
-        "cloudify.interfaces.lifecycle.configure": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.lifecycle.create": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.lifecycle.delete": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.lifecycle.start": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.lifecycle.stop": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.monitoring.start": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.monitoring.stop": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.validation.creation": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.validation.deletion": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "configure": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "create": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "creation": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "delete": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "deletion": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }
-      }, 
-      "planned_number_of_instances": 1, 
-      "plugins": [], 
-      "plugins_to_install": null, 
-      "properties": {}, 
-      "relationships": [
-        {
-          "properties": {
-            "connection_type": "all_to_all"
-          }, 
-          "source_operations": {
-            "cloudify.interfaces.relationship_lifecycle.establish": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.unlink": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "establish": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "postconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "preconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "unlink": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }
-          }, 
-          "target_id": "node0", 
-          "target_operations": {
-            "cloudify.interfaces.relationship_lifecycle.establish": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.unlink": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "establish": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "postconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "preconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "unlink": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }
-          }, 
-          "type": "cloudify.relationships.contained_in", 
-          "type_hierarchy": [
-            "cloudify.relationships.depends_on", 
-            "cloudify.relationships.contained_in"
-          ]
-        }
-      ], 
-      "type": "cloudify.nodes.Root", 
-      "type_hierarchy": [
-        "cloudify.nodes.Root"
-      ]
-    }, 
-    "node15": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
-      "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
-      "host_id": "node0", 
-      "id": "node15", 
-      "max_number_of_instances": -1, 
-      "min_number_of_instances": 0, 
-      "number_of_instances": 1, 
-      "operations": {
-        "cloudify.interfaces.lifecycle.configure": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.lifecycle.create": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.lifecycle.delete": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.lifecycle.start": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.lifecycle.stop": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.monitoring.start": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.monitoring.stop": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.validation.creation": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "cloudify.interfaces.validation.deletion": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "configure": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "create": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "creation": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "delete": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }, 
-        "deletion": {
-          "executor": null, 
-          "has_intrinsic_functions": false, 
-          "inputs": {}, 
-          "max_retries": null, 
-          "operation": "", 
-          "plugin": "", 
-          "retry_interval": null
-        }
-      }, 
-      "planned_number_of_instances": 1, 
-      "plugins": [], 
-      "plugins_to_install": null, 
-      "properties": {}, 
-      "relationships": [
-        {
-          "properties": {
-            "connection_type": "all_to_all"
-          }, 
-          "source_operations": {
-            "cloudify.interfaces.relationship_lifecycle.establish": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.unlink": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "establish": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "postconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "preconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "unlink": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }
-          }, 
-          "target_id": "node0", 
-          "target_operations": {
-            "cloudify.interfaces.relationship_lifecycle.establish": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.postconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.preconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "cloudify.interfaces.relationship_lifecycle.unlink": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "establish": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "postconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "preconfigure": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }, 
-            "unlink": {
-              "executor": null, 
-              "has_intrinsic_functions": false, 
-              "inputs": {}, 
-              "max_retries": null, 
-              "operation": "", 
-              "plugin": "", 
-              "retry_interval": null
-            }
-          }, 
-          "type": "cloudify.relationships.contained_in", 
-          "type_hierarchy": [
-            "cloudify.relationships.depends_on", 
-            "cloudify.relationships.contained_in"
-          ]
-        }
-      ], 
-      "type": "cloudify.nodes.Root", 
-      "type_hierarchy": [
-        "cloudify.nodes.Root"
-      ]
-    }, 
     "node16": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node16", 
       "id": "node16", 
       "max_number_of_instances": -1, 
@@ -4254,9 +3640,9 @@
       ]
     }, 
     "node17": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node17", 
       "id": "node17", 
       "max_number_of_instances": -1, 
@@ -4702,9 +4088,9 @@
       ]
     }, 
     "node18": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node18", 
       "id": "node18", 
       "max_number_of_instances": -1, 
@@ -5150,9 +4536,9 @@
       ]
     }, 
     "node3": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node3", 
       "id": "node3", 
       "max_number_of_instances": -1, 
@@ -5554,9 +4940,9 @@
       ]
     }, 
     "node4": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": null, 
       "id": "node4", 
       "max_number_of_instances": -1, 
@@ -5706,9 +5092,9 @@
       ]
     }, 
     "node5": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node5", 
       "id": "node5", 
       "max_number_of_instances": -1, 
@@ -6270,9 +5656,9 @@
       ]
     }, 
     "node6": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node6", 
       "id": "node6", 
       "max_number_of_instances": -1, 
@@ -6820,10 +6206,10 @@
               "retry_interval": null
             }
           }, 
-          "type": "cloudify.relationships.contained_in", 
+          "type": "cloudify.relationships.connected_to", 
           "type_hierarchy": [
             "cloudify.relationships.depends_on", 
-            "cloudify.relationships.contained_in"
+            "cloudify.relationships.connected_to"
           ]
         }
       ], 
@@ -6834,9 +6220,9 @@
       ]
     }, 
     "node7": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node7", 
       "id": "node7", 
       "max_number_of_instances": -1, 
@@ -7238,9 +6624,9 @@
       ]
     }, 
     "node8": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node8", 
       "id": "node8", 
       "max_number_of_instances": -1, 
@@ -7802,9 +7188,9 @@
       ]
     }, 
     "node9": {
-      "blueprint_id": "affc182a-f517-4ea5-b71e-f4fd058f2f99", 
+      "blueprint_id": "dc91dc2b-af12-4d45-8bf7-bdab2f18a664", 
       "deploy_number_of_instances": 1, 
-      "deployment_id": "fbb80134-f2eb-4492-af45-fe0f7a4625d5", 
+      "deployment_id": "5560c895-de2a-4b57-a6f7-7bad763aa2d2", 
       "host_id": "node9", 
       "id": "node9", 
       "max_number_of_instances": -1, 
@@ -8352,10 +7738,10 @@
               "retry_interval": null
             }
           }, 
-          "type": "cloudify.relationships.contained_in", 
+          "type": "cloudify.relationships.connected_to", 
           "type_hierarchy": [
             "cloudify.relationships.depends_on", 
-            "cloudify.relationships.contained_in"
+            "cloudify.relationships.connected_to"
           ]
         }
       ], 
@@ -8688,6 +8074,12 @@
         }, 
         "removed_instance_ids": {
           "default": []
+        }, 
+        "skip_install": {
+          "default": false
+        }, 
+        "skip_uninstall": {
+          "default": false
         }, 
         "update_id": {
           "default": ""

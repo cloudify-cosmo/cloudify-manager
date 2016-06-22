@@ -56,7 +56,8 @@ HOST_AGENT_PLUGINS = 'host_agent_plugins'
 PLUGIN = 'plugin'
 PLUGINS_TO_INSTALL = 'plugins_to_install'
 DESCRIPTION = 'description'
-
+CONTAINED_IN_RELATIONSHIP_TYPE = 'cloudify.relationships.contained_in'
+TYPE_HIERARCHY = 'type_hierarchy'
 # flake8: noqa
 
 
@@ -459,7 +460,8 @@ class StepExtractor(object):
                                                   supported=False,
                                                   modify=True)
 
-    def _get_matching_relationship(self, relationship, relationships):
+    @staticmethod
+    def _get_matching_relationship(relationship, relationships):
 
         r_type = relationship[TYPE]
         target_id = relationship[TARGET_ID]
@@ -583,10 +585,12 @@ class StepExtractor(object):
                         old_node = old_nodes[node_name]
 
                         if node[TYPE] != old_node[TYPE] or \
-                                node[HOST_ID] != old_node[HOST_ID]:
+                            _is_contained_in_changed(node, old_node):
                             # a node that changed its type or its host_id
                             # counts as a different node
-                            self._create_step(NODE)
+                            self._create_step(NODE,
+                                              supported=False,
+                                              modify=True)
                             # Since the node was classified as added or
                             # removed, there is no need to compare its other
                             # fields.
@@ -718,3 +722,14 @@ def extract_steps(deployment_update):
     supported_steps, unsupported_steps = steps_extractor.extract_steps()
 
     return supported_steps, unsupported_steps
+
+
+def _is_contained_in_changed(node, other_node):
+    node_container = \
+        next((r['target_id'] for r in node['relationships']
+              if CONTAINED_IN_RELATIONSHIP_TYPE in r[TYPE_HIERARCHY]), None)
+    other_node_container = \
+        next((r['target_id'] for r in other_node['relationships']
+              if CONTAINED_IN_RELATIONSHIP_TYPE in r[TYPE_HIERARCHY]), None)
+
+    return node_container != other_node_container

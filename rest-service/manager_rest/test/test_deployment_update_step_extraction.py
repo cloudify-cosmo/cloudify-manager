@@ -579,49 +579,19 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         self.step_extractor.old_deployment_plan[NODES].update(nodes_old)
         self.step_extractor.new_deployment_plan[NODES].update(nodes_new)
 
-        steps, _ = self.step_extractor.extract_steps()
+        supported_steps, unsupported_steps = \
+            self.step_extractor.extract_steps()
+
+        self.assertEqual(0, len(supported_steps))
 
         expected_steps = [
             DeploymentUpdateStep(
-                action='remove',
+                action='modify',
                 entity_type=NODE,
-                entity_id='nodes:node1'),
-            DeploymentUpdateStep(
-                action='add',
-                entity_type=NODE,
-                entity_id='nodes:node1')
+                entity_id='nodes:node1',
+                supported=False),
         ]
-
-        self.assertEquals(expected_steps, steps)
-
-    def test_nodes_add_and_remove_node_changed_host_id(self):
-        node_old = self._get_node_scheme()
-        node_old.update({TYPE: 'type',
-                         HOST_ID: 'old_host_id'})
-        nodes_old = {'node1': node_old}
-
-        node_new = self._get_node_scheme()
-        node_new.update({TYPE: 'type',
-                         HOST_ID: 'new_host_id'})
-        nodes_new = {'node1': node_new}
-
-        self.step_extractor.old_deployment_plan[NODES].update(nodes_old)
-        self.step_extractor.new_deployment_plan[NODES].update(nodes_new)
-
-        steps, _ = self.step_extractor.extract_steps()
-
-        expected_steps = [
-            DeploymentUpdateStep(
-                action='remove',
-                entity_type=NODE,
-                entity_id='nodes:node1'),
-            DeploymentUpdateStep(
-                action='add',
-                entity_type=NODE,
-                entity_id='nodes:node1')
-        ]
-
-        self.assertEquals(expected_steps, steps)
+        self.assertEquals(expected_steps, unsupported_steps)
 
     def test_nodes_add_and_remove_node_changed_type_and_host_id(self):
         node_old = self._get_node_scheme()
@@ -635,20 +605,18 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         self.step_extractor.old_deployment_plan[NODES].update(nodes_old)
         self.step_extractor.new_deployment_plan[NODES].update(nodes_new)
 
-        steps, _ = self.step_extractor.extract_steps()
+        supported_steps, unsupported_steps = \
+            self.step_extractor.extract_steps()
 
         expected_steps = [
             DeploymentUpdateStep(
-                action='remove',
+                action='modify',
                 entity_type=NODE,
-                entity_id='nodes:node1'),
-            DeploymentUpdateStep(
-                action='add',
-                entity_type=NODE,
-                entity_id='nodes:node1')
+                entity_id='nodes:node1',
+                supported=False),
         ]
 
-        self.assertEquals(expected_steps, steps)
+        self.assertEquals(expected_steps, unsupported_steps)
 
     def test_node_properties_no_change(self):
 
@@ -830,6 +798,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target'}
         ]})
         nodes_old = {'node1': node_old}
@@ -850,6 +819,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target'}
         ]})
         nodes_new = {'node1': node_new}
@@ -873,6 +843,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target'}
         ]})
         nodes_old = {'node1': node_old}
@@ -898,6 +869,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target'}
         ]})
         nodes_old = {'node1': node_old}
@@ -905,6 +877,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'different_relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target'}
         ]})
         nodes_new = {'node1': node_new}
@@ -927,18 +900,20 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
 
         self.assertEquals(expected_steps, steps)
 
-    def test_relationships_change_target(self):
+    def test_relationships_change_target_non_contained_in(self):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
-             'target_id': 'relationship_target'}
+             'target_id': 'relationship_target',
+             'type_hierarchy': ['rel_hierarchy']}
         ]})
         nodes_old = {'node1': node_old}
 
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
-             'target_id': 'different_relationship_target'}
+             'target_id': 'different_relationship_target',
+             'type_hierarchy': ['rel_hierarchy']}
         ]})
         nodes_new = {'node1': node_new}
 
@@ -959,11 +934,47 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         ]
 
         self.assertEquals(expected_steps, steps)
+
+    def test_relationships_change_target_contained_in(self):
+        node_old = self._get_node_scheme()
+        node_old.update({RELATIONSHIPS: [
+            {'type': 'relationship_type',
+             'target_id': 'relationship_target',
+             'type_hierarchy': ['rel_hierarchy',
+                                'cloudify.relationships.contained_in']}
+        ]})
+        nodes_old = {'node1': node_old}
+
+        node_new = self._get_node_scheme()
+        node_new.update({RELATIONSHIPS: [
+            {'type': 'relationship_type',
+             'target_id': 'different_relationship_target',
+             'type_hierarchy': ['rel_hierarchy',
+                                'cloudify.relationships.contained_in']}
+        ]})
+        nodes_new = {'node1': node_new}
+
+        self.step_extractor.old_deployment_plan[NODES].update(nodes_old)
+        self.step_extractor.new_deployment_plan[NODES].update(nodes_new)
+
+        steps, unsupported_steps = self.step_extractor.extract_steps()
+
+        expected_steps = [
+            DeploymentUpdateStep(
+                action='modify',
+                entity_type=NODE,
+                entity_id='nodes:node1',
+                supported=False),
+        ]
+        for index, step in enumerate(expected_steps):
+            self.assertEquals(step, unsupported_steps[
+                index])
 
     def test_relationships_change_type_and_target(self):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target'}
         ]})
         nodes_old = {'node1': node_old}
@@ -971,6 +982,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'different_relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'different_relationship_target'}
         ]})
         nodes_new = {'node1': node_new}
@@ -997,12 +1009,16 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_1'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_2'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_3'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_4'}
         ]})
         nodes_old = {'node1': node_old}
@@ -1010,12 +1026,16 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_2'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_4'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_3'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_1'}
         ]})
         nodes_new = {'node1': node_new}
@@ -1046,23 +1066,31 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_1'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_2'},
             {'type': 'relationship_type',
-             'target_id': 'relationship_target_3'}
+             'type_hierarchy': ['rel_hierarchy'],
+             'target_id': 'relationship_target_3'},
+
         ]})
         nodes_old = {'node1': node_old}
 
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_5'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_2'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_4'},
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target_1'}
         ]})
         nodes_new = {'node1': node_new}
@@ -1098,6 +1126,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              SOURCE_OPERATIONS: {}
              }]})
@@ -1106,6 +1135,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              SOURCE_OPERATIONS: {'full.operation1': {}}
              }]})
@@ -1131,6 +1161,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              SOURCE_OPERATIONS: {'full.operation1': {}}
              }]})
@@ -1139,6 +1170,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              SOURCE_OPERATIONS: {}
              }]})
@@ -1164,6 +1196,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              SOURCE_OPERATIONS: {
                  'full.operation1': {
@@ -1176,6 +1209,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              SOURCE_OPERATIONS: {
                  'full.operation1': {
@@ -1205,6 +1239,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              TARGET_OPERATIONS: {}
              }]})
@@ -1213,6 +1248,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              TARGET_OPERATIONS: {'full.operation1': {}}
              }]})
@@ -1238,6 +1274,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              TARGET_OPERATIONS: {'full.operation1': {}}
              }]})
@@ -1246,6 +1283,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              TARGET_OPERATIONS: {}
              }]})
@@ -1271,6 +1309,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              TARGET_OPERATIONS: {
                  'full.operation1': {
@@ -1283,6 +1322,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              TARGET_OPERATIONS: {
                  'full.operation1': {
@@ -1309,7 +1349,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
 
     def test_get_matching_relationship(self):
         relationships_with_match = [
-            {'type': 'typeA', 'target_id': 'id_1', 'field1': 'value1'},
+            {'type': 'typeA', 'target_id': 'id_1', 'field2': 'value2'},
             {'type': 'typeB', 'target_id': 'id_1'},
             {'type': 'typeB', 'target_id': 'id_2'},
             {'type': 'typeA', 'target_id': 'id_2'}
@@ -1321,14 +1361,16 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
             ]
 
         relationship = {
-            'type': 'typeA', 'target_id': 'id_1', 'field2': 'value2'
+            'type': 'typeA',
+            'target_id': 'id_1',
+            'field2': 'value2'
         }
 
         _get_matching_relationship = \
             self.step_extractor._get_matching_relationship
 
         self.assertEquals(
-            ({'type': 'typeA', 'target_id': 'id_1', 'field1': 'value1'}, 0),
+            ({'type': 'typeA', 'target_id': 'id_1', 'field2': 'value2'}, 0),
             _get_matching_relationship(relationship, relationships_with_match))
 
         self.assertEquals((None, None), _get_matching_relationship(
@@ -1464,6 +1506,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              PROPERTIES: {
                  'property1': 'property1_value'
@@ -1484,6 +1527,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              'properties': {}}]})
         nodes_old = {'node1': node_old}
@@ -1491,6 +1535,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              PROPERTIES: {
                  'property1': 'property1_different_value'
@@ -1518,6 +1563,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              PROPERTIES: {
                  'property1': 'property1_different_value'
@@ -1527,6 +1573,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              'properties': {}}]})
         nodes_new = {'node1': node_new}
@@ -1552,6 +1599,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_old = self._get_node_scheme()
         node_old.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              PROPERTIES: {
                  'property1': 'property1_value'
@@ -1561,6 +1609,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         node_new = self._get_node_scheme()
         node_new.update({RELATIONSHIPS: [
             {'type': 'relationship_type',
+             'type_hierarchy': ['rel_hierarchy'],
              'target_id': 'relationship_target',
              PROPERTIES: {
                  'property1': 'property1_different_value'
@@ -2046,39 +2095,13 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
                 'add',
                 NODE,
                 'nodes:node2',
-                topology_order=2),
+                topology_order=0),
 
-            'add_node_changed_type': DeploymentUpdateStep(
-                'add',
+            'modify_node_changed_type': DeploymentUpdateStep(
+                'modify',
                 NODE,
                 'nodes:node3',
-                topology_order=3),
-
-            'remove_node_changed_type': DeploymentUpdateStep(
-                'remove',
-                NODE,
-                'nodes:node3'),
-
-            'add_node_changed_host_id': DeploymentUpdateStep(
-                'add',
-                NODE,
-                'nodes:node14'),
-
-            'remove_node_changed_host_id': DeploymentUpdateStep(
-                'remove',
-                NODE,
-                'nodes:node14'),
-
-            'add_node_changed_type_and_host_id': DeploymentUpdateStep(
-                'add',
-                NODE,
-                'nodes:node15',
-                topology_order=1),
-
-            'remove_node_type_and_host_id': DeploymentUpdateStep(
-                'remove',
-                NODE,
-                'nodes:node15'),
+                supported=False),
 
             'add_property': DeploymentUpdateStep(
                 'add',
@@ -2104,16 +2127,6 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
                 'add',
                 RELATIONSHIP,
                 'nodes:node7:relationships:[0]'),
-
-            'remove_relationship_changed_type': DeploymentUpdateStep(
-                'remove',
-                RELATIONSHIP,
-                'nodes:node8:relationships:[0]'),
-
-            'add_relationship_changed_type': DeploymentUpdateStep(
-                'add',
-                RELATIONSHIP,
-                'nodes:node8:relationships:[0]'),
 
             'remove_relationship_changed_target': DeploymentUpdateStep(
                 'remove',
@@ -2339,6 +2352,13 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
             # the steps below are intended just to make the test pass.
             # ideally, they should be removed since they are incorrect
 
+            'modify_node_add_contained_in_relationship':
+                DeploymentUpdateStep(
+                    'modify',
+                    NODE,
+                    'nodes:node8',
+                    supported=False),
+
             'add_cda_operation': DeploymentUpdateStep(
                 'add',
                 OPERATION,
@@ -2397,5 +2417,12 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         }
         steps, unsupported_steps = self.step_extractor.extract_steps()
         steps.extend(unsupported_steps)
+
+        for step in steps:
+            if step not in expected_steps.values():
+                print 'in actual: {}'.format(step)
+        for step in expected_steps.values():
+            if step not in steps:
+                print 'in expected: {}'.format(step)
 
         self.assertEquals(set(expected_steps.values()), set(steps))
