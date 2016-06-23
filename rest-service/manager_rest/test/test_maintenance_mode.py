@@ -117,7 +117,7 @@ class MaintenanceModeTest(BaseServerTestCase):
                       'since maintenance mode is already started.')
         except exceptions.NotModifiedError as e:
             self.assertEqual(304, e.status_code)
-        self.assertIn('already active', e.message)
+        self.assertIn('already on', e.message)
 
     def test_transition_to_active(self):
         execution = self._start_maintenance_transition_mode()
@@ -243,7 +243,7 @@ class MaintenanceModeTest(BaseServerTestCase):
                       'since maintenance mode is not active.')
         except exceptions.NotModifiedError as e:
             self.assertEqual(304, e.status_code)
-        self.assertTrue('already deactivated' in e.message)
+        self.assertTrue('already off' in e.message)
 
     def test_maintenance_mode_activated_error_raised(self):
         self._activate_maintenance_mode()
