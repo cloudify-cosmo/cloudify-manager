@@ -107,16 +107,11 @@ class DeploymentUpdateBase(TestCase):
         base_bp_path, modified_bp_path = \
             self._get_base_and_modified_bp_path(test_name)
 
-        deployment, _ = self._deploy(base_bp_path,
-                                     inputs=inputs,
-                                     deployment_id=deployment_id)
+        deployment, _ = deploy(base_bp_path,
+                               inputs=inputs,
+                               deployment_id=deployment_id)
 
         return deployment, modified_bp_path
-
-    def _deploy(self, bp_path, inputs=None, deployment_id=None):
-        return deploy(bp_path,
-                      inputs=inputs,
-                      deployment_id=deployment_id)
 
     def _get_base_and_modified_bp_path(self, test_name):
         base_dir = os.path.join(test_name, 'base')
@@ -1467,13 +1462,10 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        modified_nodes, modified_node_instances = \
-            self._map_node_and_node_instances(deployment.id, node_mapping)
-
         # check all operation have been executed
         self.assertDictContainsSubset(
                 {'source_ops_counter': '3'},
-                modified_node_instances['added_relationship'][0]
+                base_node_instances['added_relationship'][0]
                 ['runtime_properties']
         )
 
@@ -1613,6 +1605,77 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 modified_node_instance['runtime_properties']
         )
 
+    def test_add_relationships_between_added_nodes(self):
+        """
+        Tests a creatiom of deployment from scratch.
+
+        The original deployment contains only one node that will be removed.
+        The following diagrams depicts the new deployment:
+                            e
+                           / \
+                          c  d
+                         / \
+                        a   b       f
+        All of the relationships are of contained in type and the direction
+        is upward. i.e. a contained in c and d contained in e. f is the only
+        node which has no relationships from it or to it.
+        :return:
+        """
+        deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
+                'add_relationships_between_added_nodes')
+
+        node_mapping = {
+            'a': 'site_a',
+            'b': 'site_b',
+            'c': 'site_c',
+            'd': 'site_d',
+            'e': 'site_e',
+            'f': 'site_f'
+        }
+        node_ids = set(node_mapping.keys())
+        root_node_ids = {'e', 'f'}
+
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
+
+        # wait for 'update' workflow to finish
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+        self._wait_for_successful_state(dep_update.id)
+
+        nodes, node_instances = \
+            self._map_node_and_node_instances(deployment.id, node_mapping)
+
+        node_instances = {k: v[0] for k, v in node_instances.iteritems()}
+
+        # Assert that f isn't connected to any node, and all of the install
+        # operation ran
+        for node in root_node_ids:
+            self.assertEquals(0, len(node_instances[node]['relationships']))
+
+        # Assert that each node instance had only 1 relationship
+        for node in node_ids - root_node_ids:
+            self.assertEquals(1, len(node_instances[node]['relationships']))
+
+        # Assert that node a, b, c and d have started correctly
+        for node in node_ids - root_node_ids:
+            self.assertDictContainsSubset(
+                    {'{0}_ops_counter'.format(node): str(3)},
+                    node_instances[node]['runtime_properties'])
+
+        # Assert that b and d established relationships successfully
+        # through source runtime properties
+        for node in {'b', 'd'}:
+            self.assertDictContainsSubset(
+                    {'source_ops_counter_{0}'.format(node):  str(1)},
+                    node_instances[node]['runtime_properties'])
+
+        # Assert that a and c  established relationships successfully
+        # through target runtime properties of node e and c (respectively)
+        for node in {'e', 'c'}:
+            self.assertDictContainsSubset(
+                    {'target_ops_counter': str(1)},
+                    node_instances[node]['runtime_properties'])
+
 
 class TestDeploymentUpdateMisc(DeploymentUpdateBase):
 
@@ -1627,7 +1690,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             'update_deployment_twice',
             'deployment_updated_twice_remodification.yaml')
 
-        deployment, _ = self._deploy(base_bp_path)
+        deployment, _ = deploy(base_bp_path)
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
         self.assertDictContainsSubset({'custom_output': {'value': 0}},
@@ -1675,7 +1738,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             'modify_deployment_update_schema',
             'modify_deployment_update_schema_remodification.yaml')
 
-        deployment, _ = self._deploy(base_bp_path)
+        deployment, _ = deploy(base_bp_path)
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
         self.assertDictContainsSubset({'custom_output': {'value': '0.0.0.0'}},
@@ -1714,31 +1777,31 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             deployment, remodification_bp_path,
             {'get_attribute': ['site1', 'ip']}, '2.2.2.2')
 
-        def test_add_and_override_resource(self):
-            """
-            In order to test the resources mechanism
-             1. we first upload the local_modification resource which
-             increments the source_ops_counter each relationships operation
-             executed between site2->site1
-             2. we also upload the increment resource for future use.
+    def test_add_and_override_resource(self):
+        """
+        In order to test the resources mechanism
+         1. we first upload the local_modification resource which
+         increments the source_ops_counter each relationships operation
+         executed between site2->site1
+         2. we also upload the increment resource for future use.
 
-                after this step we check that indeed the
-                site2.source_ops_counter == 3
+            after this step we check that indeed the
+            site2.source_ops_counter == 3
 
-             2. after uploading the new blueprint (with its resources), the
-             local_modification script decrements the same counter for each
-             relationship operation executed between site2->site3 (since pre
-             and post configure already ran, it should be ran only once)
+         2. after uploading the new blueprint (with its resources), the
+         local_modification script decrements the same counter for each
+         relationship operation executed between site2->site3 (since pre
+         and post configure already ran, it should be ran only once)
 
-             3. we set the increment script to be used for each operation
-             between site3->site1
+         3. we set the increment script to be used for each operation
+         between site3->site1
 
-                after both of these steps we check that indeed the
-                site2.source_ops_counter == 2
-                and
-                site3.source_ops_counter == 3
-            :return:
-            """
+            after both of these steps we check that indeed the
+            site2.source_ops_counter == 2
+            and
+            site3.source_ops_counter == 3
+        :return:
+        """
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
             'add_and_override_resource')
 
