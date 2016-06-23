@@ -35,9 +35,12 @@ function create_resources_tar() {
 }
 
 
-CORE_TAG_NAME="3.4rc1"
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
-source common-provision.sh
+export VERSION="3.4.0"
+export PRERELEASE="ga"
+export BUILD="400"
+export CORE_TAG_NAME="3.4rc1"
+export AWS_S3_BUCKET="gigaspaces-repository-eu"
+export AWS_S3_PATH="org/cloudify3/${VERSION}/${PRERELEASE}"
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
