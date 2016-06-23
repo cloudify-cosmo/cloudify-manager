@@ -175,8 +175,8 @@ def _create_maintenance_error(error_code):
     # app.logger.exception(e)  # gets logged automatically
     s_traceback = StringIO.StringIO()
     traceback.print_exc(file=s_traceback)
-    error_message = 'Your request was rejected since Cloudify Manager ' \
-                    'is currently under maintenance'
+    error_message = 'Your request was rejected since Cloudify ' \
+                    'manager is currently in maintenance mode'
 
     response = jsonify(
             {"message": error_message,
