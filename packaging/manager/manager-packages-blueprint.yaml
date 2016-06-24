@@ -11,10 +11,10 @@ http://repository.cloudifysource.org/org/cloudify3/components/riemann-0.2.6-1.no
 http://repository.cloudifysource.org/org/cloudify3/components/langohr.jar
 http://repository.cloudifysource.org/org/cloudify3/components/daemonize-1.7.3-7.el7.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/components/node-v0.10.35-linux-x64.tar.gz
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/rc1-RELEASE/cloudify-rest-service-3.4.0-rc1_b395.x86_64.rpm
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/rc1-RELEASE/cloudify-management-worker-3.4.0-rc1_b395.x86_64.rpm
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/rc1-RELEASE/cloudify-amqp-influx-3.4.0-rc1_b395.x86_64.rpm
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/rc1-RELEASE/cloudify-manager-3.4rc1.tar.gz
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/rc1-RELEASE/cloudify-ui-3.4.0-rc1-b395.tgz
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/ga-RELEASE/cloudify-rest-service-3.4.0-ga_b400.x86_64.rpm
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/ga-RELEASE/cloudify-management-worker-3.4.0-ga_b400.x86_64.rpm
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/ga-RELEASE/cloudify-amqp-influx-3.4.0-ga_b400.x86_64.rpm
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/ga-RELEASE/cloudify-manager-3.4.tar.gz
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/ga-RELEASE/cloudify-ui-3.4.0-ga-b400.tgz
 http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/components/grafana-1.9.0.tgz
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/rc1-RELEASE/cloudify-hello-world-example-3.4rc1.tar.gz
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.4.0/ga-RELEASE/cloudify-hello-world-example-3.4.tar.gz
