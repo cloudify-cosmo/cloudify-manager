@@ -413,6 +413,47 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
 
         self.assertEquals(expected_steps, steps)
 
+    def test_workflows_add_workflow_script(self):
+
+        old_workflow_plugins_to_install = {
+            'workflow_plugins_to_install': {
+                'default_workflows': {
+                    'install': False,
+                }},
+        }
+        self.step_extractor.old_deployment_plan.update(
+            old_workflow_plugins_to_install)
+
+        new_workflow_plugins_to_install = {
+            'workflow_plugins_to_install': {
+                'default_workflows': {
+                    'install': False,
+                },
+                'script': {
+                    'install': False,
+                }}
+        }
+        self.step_extractor.new_deployment_plan.update(
+            new_workflow_plugins_to_install)
+
+        workflows_new = {WORKFLOWS: {
+            'new_workflow': {
+                'plugin': 'script',
+            }}}
+
+        self.step_extractor.new_deployment_plan.update(workflows_new)
+
+        steps, _ = self.step_extractor.extract_steps()
+
+        expected_steps = [
+            DeploymentUpdateStep(
+                action='add',
+                entity_type=WORKFLOW,
+                entity_id='workflows:new_workflow')
+        ]
+
+        self.assertEquals(expected_steps, steps)
+
     def test_workflows_remove_workflow(self):
 
         workflows_old = {WORKFLOWS: {
