@@ -199,6 +199,7 @@ class Snapshots(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses_v2.Snapshot)
+    @create_filters(models.Snapshot.fields)
     @paginate
     @sortable
     def get(self, _include=None, filters=None, pagination=None,
