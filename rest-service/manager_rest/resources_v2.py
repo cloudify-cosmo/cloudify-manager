@@ -630,6 +630,10 @@ class NodeInstances(resources.NodeInstances):
         """
         List node instances
         """
+        deployment_id = filters.get('deployment_id')
+        if deployment_id:
+            get_blueprints_manager().get_deployment(deployment_id,
+                                                    include=['id'])
         node_instances = get_storage_manager().list_node_instances(
             include=_include, filters=filters,
             pagination=pagination, sort=sort)

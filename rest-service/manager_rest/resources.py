@@ -978,6 +978,9 @@ class NodeInstances(SecuredResource):
         """
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
+        if deployment_id:
+            get_blueprints_manager().get_deployment(deployment_id,
+                                                    include=['id'])
         node_id = args.get('node_name')
         params_filter = BlueprintsManager.create_filters_dict(
             deployment_id=deployment_id, node_id=node_id)

@@ -33,6 +33,11 @@ class NodesTest(base_test.BaseServerTestCase):
     the requests.
     """
 
+    def test_list_missing_deployment(self):
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.node_instances.list(deployment_id='nonexistent')
+        self.assertEqual(cm.exception.status_code, 404)
+
     def test_get_nonexisting_node(self):
         response = self.get('/node-instances/1234')
         self.assertEqual(404, response.status_code)
@@ -270,6 +275,15 @@ class NodesTest(base_test.BaseServerTestCase):
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_list_node_instances_multiple_value_filter(self):
+        self.put_deployment(
+            blueprint_id='blueprint1',
+            deployment_id='111',
+            blueprint_file_name='empty.yaml')
+        self.put_deployment(
+            blueprint_id='blueprint2',
+            deployment_id='222',
+            blueprint_file_name='empty.yaml')
+
         self.put_node_instance(node_id='1', instance_id='11',
                                deployment_id='111')
         self.put_node_instance(node_id='1', instance_id='12',
@@ -295,6 +309,15 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEquals(4, len(dep1_node_instances))
 
     def test_list_node_instances(self):
+        self.put_deployment(
+            blueprint_id='blueprint1',
+            deployment_id='111',
+            blueprint_file_name='empty.yaml')
+        self.put_deployment(
+            blueprint_id='blueprint2',
+            deployment_id='222',
+            blueprint_file_name='empty.yaml')
+
         self.put_node_instance(node_id='1', instance_id='11',
                                deployment_id='111')
         self.put_node_instance(node_id='1', instance_id='12',
