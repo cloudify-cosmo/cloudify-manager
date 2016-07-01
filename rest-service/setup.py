@@ -43,7 +43,6 @@ setup(
         'flask-securest==0.8',
         'psutil==3.3.0',
         'jsonpickle==0.9.2',
-        'wagon==0.3.2',
-        'pyyaml==0.29.0'
+        'wagon==0.3.2'
     ]
 )
