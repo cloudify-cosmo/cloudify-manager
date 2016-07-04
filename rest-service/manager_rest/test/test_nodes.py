@@ -50,6 +50,23 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEqual(1, len(response.json['runtime_properties']))
         self.assertEqual('value', response.json['runtime_properties']['key'])
 
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_sort_nodes_list(self):
+        self.put_deployment(deployment_id='0', blueprint_id='0')
+        self.put_deployment(deployment_id='1', blueprint_id='1')
+
+        nodes = self.client.nodes.list(sort='deployment_id')
+        for i in range(len(nodes) - 1):
+            self.assertTrue(
+                nodes[i].deployment_id <= nodes[i + 1].deployment_id)
+
+        nodes = self.client.nodes.list(
+            sort='deployment_id', is_descending=True)
+        for i in range(len(nodes) - 1):
+            self.assertTrue(
+                nodes[i].deployment_id >= nodes[i + 1].deployment_id)
+
     def test_bad_patch_node(self):
         """Malformed node instance update requests return an error."""
         response = self.patch('/node-instances/1234', 'not a dictionary')
@@ -321,6 +338,25 @@ class NodesTest(base_test.BaseServerTestCase):
         assert_dep_and_node(2, '111', '2', dep1_n2_instances)
         assert_dep_and_node(2, '222', '3', dep2_n3_instances)
         assert_dep_and_node(2, '222', '4', dep2_n4_instances)
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_sort_node_instances_list(self):
+        self.put_node_instance(
+            node_id='0', instance_id='00', deployment_id='000')
+        self.put_node_instance(
+            node_id='1', instance_id='11', deployment_id='111')
+
+        instances = self.client.node_instances.list(sort='node_id')
+        self.assertEqual(2, len(instances))
+        self.assertEqual('00', instances[0].id)
+        self.assertEqual('11', instances[1].id)
+
+        instances = self.client.node_instances.list(
+            sort='node_id', is_descending=True)
+        self.assertEqual(2, len(instances))
+        self.assertEqual('11', instances[0].id)
+        self.assertEqual('00', instances[1].id)
 
     def test_patch_before_put(self):
         """Updating a nonexistent node instance throws an error."""
