@@ -21,6 +21,7 @@ git tag -d $CORE_TAG_NAME
 NEW_TAG_NAME="${VERSION}.${PRERELEASE}"
 git tag $NEW_TAG_NAME
 omnibus build cloudify-mgmt-worker && result="success"
+while [ $? -ne 0 ]; do !!; done
 cd pkg
 cat *.json || exit 1
 rm -f version-manifest.json
