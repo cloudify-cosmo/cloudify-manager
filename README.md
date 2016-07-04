@@ -1,7 +1,7 @@
 # Cloudify Manager
 
-* Master [![Circle CI](https://circleci.com/gh/cloudify-cosmo/cloudify-manager/tree/master.svg?style=shield)](https://circleci.com/gh/cloudify-cosmo/cloudify-manager/tree/master)
-* Master Branch [![Build Status](https://travis-ci.org/cloudify-cosmo/cloudify-manager.svg?branch=master)](https://travis-ci.org/cloudify-cosmo/cloudify-manager)
+[![Circle CI](https://circleci.com/gh/cloudify-cosmo/cloudify-manager/tree/master.svg?style=shield)](https://circleci.com/gh/cloudify-cosmo/cloudify-manager/tree/master)
+[![Build Status](https://travis-ci.org/cloudify-cosmo/cloudify-manager.svg?branch=master)](https://travis-ci.org/cloudify-cosmo/cloudify-manager)
 
 This repository contains the following Cloudify components:
 
