@@ -285,15 +285,12 @@ class UploadedBlueprintsManager(UploadedDataManager):
         app_dir, app_file_name = cls._extract_application_file(
             file_server_root, app_dir)
 
-        file_server_base_url = '{0}/'.format(
-            config.instance().file_server_base_uri)
-
         # add to blueprints manager (will also dsl_parse it)
         try:
             blueprint = get_blueprints_manager().publish_blueprint(
                 app_dir,
                 app_file_name,
-                file_server_base_url,
+                'file://{0}/'.format(file_server_root),
                 blueprint_id)
 
             # moving the app directory in the file server to be under a
