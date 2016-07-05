@@ -14,7 +14,6 @@
 #  * limitations under the License.
 import os
 import re
-from datetime import datetime
 
 from mock import patch
 from nose.plugins.attrib import attr
@@ -22,7 +21,7 @@ from nose.tools import nottest
 
 from dsl_parser import exceptions as parser_exceptions
 
-from manager_rest import archiving, models, storage_manager
+from manager_rest import archiving, models, storage_manager, utils
 from manager_rest.deployment_update.constants import STATES
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -238,7 +237,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                               query_params=kwargs)
 
     def test_storage_serialization_and_response(self):
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         sm = storage_manager._get_instance()
         deployment_update = models.DeploymentUpdate(
                 deployment_id='deployment-id',

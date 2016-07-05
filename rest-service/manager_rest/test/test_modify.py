@@ -16,11 +16,12 @@
 import copy
 import uuid
 import dateutil.parser
-from datetime import datetime, timedelta
+from datetime import timedelta
 from nose.plugins.attrib import attr
 
 from base_test import CLIENT_API_VERSION
 
+from manager_rest import utils
 from manager_rest.test import base_test
 from cloudify_rest_client import exceptions
 from cloudify_rest_client.deployment_modifications import (
@@ -142,8 +143,11 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.assertEqual(modification.modified_nodes, modified_nodes)
         created_at = dateutil.parser.parse(modification.created_at)
         ended_at = dateutil.parser.parse(modification.ended_at)
-        self.assertTrue(datetime.now() - timedelta(seconds=5) <=
-                        created_at <= ended_at <= datetime.now())
+        self.assertTrue(
+                dateutil.parser.parse(utils.get_formatted_timestamp()) -
+                timedelta(seconds=5) <=
+                created_at <= ended_at <=
+                dateutil.parser.parse(utils.get_formatted_timestamp()))
         all_modifications = self.list_items(
             self.client.deployment_modifications.list)
         dep_modifications = self.list_items(

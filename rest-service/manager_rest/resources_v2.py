@@ -20,7 +20,6 @@ import json
 import shutil
 import tarfile
 from collections import OrderedDict
-from datetime import datetime
 from uuid import uuid4
 
 from flask import request
@@ -752,7 +751,7 @@ class UploadedPluginsManager(files.UploadedDataManager):
     def _create_plugin_from_archive(self, plugin_id, archive_path):
         plugin = self._load_plugin_package_json(archive_path)
         build_props = plugin.get('build_server_os_properties')
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         return models.Plugin(
             id=plugin_id,
             package_name=plugin.get('package_name'),

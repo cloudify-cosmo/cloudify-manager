@@ -26,6 +26,7 @@ from cloudify_rest_client import exceptions
 from manager_rest import manager_exceptions
 from manager_rest import models
 from manager_rest import storage_manager
+from manager_rest import utils
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
@@ -69,7 +70,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             deployment_id=deployment_id,
             workflow_id=system_wf_id,
             blueprint_id=blueprint_id,
-            created_at=str(datetime.now()),
+            created_at=utils.get_formatted_timestamp(),
             error='',
             parameters=dict(),
             is_system_workflow=True)
@@ -106,7 +107,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             deployment_id='',
             workflow_id='',
             blueprint_id='',
-            created_at=str(datetime.now()),
+            created_at=datetime.now().isoformat(),
             error='',
             parameters=dict(),
             is_system_workflow=False
@@ -117,7 +118,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             deployment_id='',
             workflow_id='',
             blueprint_id='',
-            created_at=str(datetime.now()),
+            created_at=datetime.now().isoformat(),
             error='',
             parameters=dict(),
             is_system_workflow=False

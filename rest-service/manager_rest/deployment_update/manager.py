@@ -15,7 +15,6 @@
 import copy
 import os
 import uuid
-from datetime import datetime
 
 from flask import current_app
 
@@ -24,6 +23,7 @@ from dsl_parser import exceptions as parser_exceptions
 from manager_rest import (app_context, config, models, storage_manager,
                           manager_exceptions)
 import manager_rest.workflow_client as wf_client
+from manager_rest import utils
 from manager_rest.blueprints_manager import BlueprintsManager
 from manager_rest.deployment_update import step_extractor
 from manager_rest.deployment_update.utils import extract_ids
@@ -129,7 +129,7 @@ class DeploymentUpdateManager(object):
         deployment_update = \
             models.DeploymentUpdate(deployment_id,
                                     prepared_plan,
-                                    created_at=str(datetime.now()))
+                                    created_at=utils.get_formatted_timestamp())
         self.sm.put_deployment_update(deployment_update)
         return deployment_update
 
@@ -493,7 +493,7 @@ class DeploymentUpdateManager(object):
         new_execution = models.Execution(
             id=execution_id,
             status=models.Execution.PENDING,
-            created_at=str(datetime.now()),
+            created_at=utils.get_formatted_timestamp(),
             blueprint_id=blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id,

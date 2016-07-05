@@ -24,6 +24,7 @@ import traceback
 import StringIO
 import errno
 import platform
+from datetime import datetime
 from os import path, makedirs
 
 import wagon.utils
@@ -193,3 +194,8 @@ def plugin_installable_on_current_platform(plugin):
         plugin.distribution == dist,
         plugin.distribution_release == release
     ]))
+
+
+def get_formatted_timestamp():
+    # Adding 'Z' to match ISO format
+    return '{0}Z'.format(datetime.now().isoformat()[:-3])
