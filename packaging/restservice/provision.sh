@@ -20,6 +20,7 @@ cd cloudify-manager
 git checkout ${MANAGER_BRANCH-$CORE_TAG_NAME}
 cd packaging/restservice/omnibus
 rm -rf pkg
+rm -rf /tmp/pkg
 git tag -d $CORE_TAG_NAME
 NEW_TAG_NAME="${VERSION}.${PRERELEASE}"
 git tag $NEW_TAG_NAME
