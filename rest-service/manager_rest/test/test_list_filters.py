@@ -36,6 +36,9 @@ class ResourceListFiltersTestCase(BaseListTest):
         self.first_deployment_id = 'test0_deployment'
         self.sec_blueprint_id = 'test1_blueprint'
         self.sec_deployment_id = 'test1_deployment'
+        self._put_n_snapshots(number_of_snapshots=2)
+        self.first_snapshot_id = 'oh-snap0'
+        self.sec_snapshot_id = 'oh-snap1'
 
     def test_deployments_list_with_filters(self):
         filter_fields = {'id': self.first_deployment_id,
@@ -354,3 +357,34 @@ class ResourceListFiltersTestCase(BaseListTest):
                               'expecting filtered results containing '
                               '{0}={1}, got {2}'
                               .format(field, value, retrieved_values))
+
+    def test_snapshots_list_no_filters(self):
+        response = self.client.snapshots.list()
+        self.assertEqual(2, len(response), 'expecting 2 snapshot results,'
+                                           ' got {0}'.format(len(response)))
+        for snapshot in response:
+            self.assertIn(snapshot['id'],
+                          (self.first_snapshot_id, self.sec_snapshot_id))
+            self.assertEquals(snapshot['status'], 'creating')
+
+    def test_snapshots_list_with_filters(self):
+        filter_params = {'id': self.first_snapshot_id}
+        response = self.client.snapshots.list(**filter_params)
+        self.assertEqual(1, len(response), 'expecting 1 snapshot in results,'
+                                           ' got {0}'.format(len(response)))
+        for snapshot in response:
+            self.assertEqual(snapshot['id'], self.first_snapshot_id)
+            self.assertEquals(snapshot['status'], 'creating')
+
+    def test_snapshots_list_with_filters_multiple_values(self):
+        filter_fields = {'id': [self.first_snapshot_id, self.sec_snapshot_id]}
+        self._test_multiple_values_filter('snapshots', filter_fields, 2)
+
+    def test_snapshots_list_non_existent_filters(self):
+        filter_fields = {'non_existing_field': 'just_some_value'}
+        try:
+            self.client.snapshots.list(**filter_fields)
+            self.fail('Expecting \'CloudifyClientError\' to be raised')
+        except CloudifyClientError as e:
+            self.assert_bad_parameter_error(
+                    models.Snapshot.fields, e)
