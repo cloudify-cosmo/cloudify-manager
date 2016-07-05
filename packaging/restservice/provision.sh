@@ -13,6 +13,7 @@ PACKAGER_BRANCH=$4
 
 install_common_prereqs &&
 
+sudo yum install -y sudo yum install -y dbus-python-devel dbus-glib-devel
 rm -rf cloudify-manager
 git clone https://github.com/cloudify-cosmo/cloudify-manager.git
 cd cloudify-manager
