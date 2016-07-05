@@ -314,9 +314,6 @@ node_types:
         description: >
           Configuration for Cloudify Manager
         default:
-          transient_deployment_workers_mode:
-            enabled: true
-            global_parallel_executions_limit: 50  # -1 means no limit
           resources_prefix: ''
           cloudify_agent:
             min_workers: 2
