@@ -19,6 +19,7 @@ git clone https://github.com/cloudify-cosmo/cloudify-manager.git
 cd cloudify-manager
 git checkout ${MANAGER_BRANCH-$CORE_TAG_NAME}
 cd packaging/restservice/omnibus
+rm -rf pkg
 git tag -d $CORE_TAG_NAME
 NEW_TAG_NAME="${VERSION}.${PRERELEASE}"
 git tag $NEW_TAG_NAME
