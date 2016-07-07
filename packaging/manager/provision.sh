@@ -6,7 +6,7 @@ function download_resources() {
 
     while read file; do
       echo "Downloading ${file}..."
-      curl --retry 10 --fail --silent --show-error --location -O $file &&
+      curl --retry 10 --fail --silent --show-error --location -O $file
     done < $resources_file
 }
 
