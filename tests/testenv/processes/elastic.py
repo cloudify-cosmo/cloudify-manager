@@ -75,7 +75,7 @@ class ElasticSearchProcess(object):
             raise RuntimeError("Failed to start elasticsearch service within "
                                "a {0} seconds timeout".format(timeout))
 
-    def _verify_service_ended(self, timeout=10):
+    def _verify_service_ended(self, timeout=20):
         pid = self._pid
         deadline = time.time() + timeout
         while time.time() < deadline:
@@ -93,7 +93,7 @@ class ElasticSearchProcess(object):
         pattern = "\w*\s*(\d*).*"
         try:
             output = subprocess.check_output(
-                "ps -ef | grep elasticsearch | grep -v grep", shell=True)
+                "ps aux | grep elasticsearch | grep -v grep", shell=True)
             match = re.match(pattern, output)
             if match:
                 return int(match.group(1))
