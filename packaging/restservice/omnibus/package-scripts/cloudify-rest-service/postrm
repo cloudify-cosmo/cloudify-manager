@@ -1,0 +1,3 @@
+#!/bin/bash
+
+echo "cloudify-rest-service has been uninstalled!"

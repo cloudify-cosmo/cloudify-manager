@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+
+INSTALLER_DIR="/opt/mgmtworker/"
+
+ln -sf $INSTALLER_DIR/embedded $INSTALLER_DIR/env || error_exit "Cannot link $INSTALLER_DIR/env"
+
+echo "Thank you for installing cloudify-mgmt-worker!"
