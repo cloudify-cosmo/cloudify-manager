@@ -3,6 +3,7 @@ http://repository.cloudifysource.org/org/cloudify3/components/jre1.8.0_45-1.8.0_
 http://repository.cloudifysource.org/org/cloudify3/components/erlang-17.4-1.el6.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/components/rabbitmq-server-3.5.3-1.noarch.rpm
 http://repository.cloudifysource.org/org/cloudify3/components/elasticsearch-1.6.0.noarch.rpm
+http://repository.cloudifysource.org/org/cloudify3/components/elasticsearch-curator-3.2.3-2.el7.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/components/logstash-1.5.0-1.noarch.rpm
 http://repository.cloudifysource.org/org/cloudify3/components/nginx-1.8.0-1.el7.ngx.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/components/influxdb-0.8.8-1.x86_64.rpm
@@ -10,9 +11,9 @@ http://repository.cloudifysource.org/org/cloudify3/components/riemann-0.2.6-1.no
 http://repository.cloudifysource.org/org/cloudify3/components/langohr.jar
 http://repository.cloudifysource.org/org/cloudify3/components/daemonize-1.7.3-7.el7.x86_64.rpm
 http://repository.cloudifysource.org/org/cloudify3/components/node-v0.10.35-linux-x64.tar.gz
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.5.0/m1-RELEASE/cloudify-rest-service-3.5.0-m1_b460.x86_64.rpm
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.5.0/m1-RELEASE/cloudify-management-worker-3.5.0-m1_b460.x86_64.rpm
-http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.5.0/m1-RELEASE/cloudify-amqp-influx-3.5.0-m1_b460.x86_64.rpm
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.5.0/m1-RELEASE/cloudify-rest-service-3.5.0~m1-460.el7.x86_64.rpm
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.5.0/m1-RELEASE/cloudify-mgmt-worker-3.5.0~m1-460.el6.x86_64.rpm
+http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.5.0/m1-RELEASE/cloudify-amqp-influxdb-3.5.0~m1-460.el7.x86_64.rpm
 http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.5.0/m1-RELEASE/cloudify-manager-3.5m1.tar.gz
 http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/3.5.0/m1-RELEASE/cloudify-ui-3.5.0-m1-b460.tgz
 http://gigaspaces-repository-eu.s3.amazonaws.com/org/cloudify3/components/grafana-1.9.0.tgz
