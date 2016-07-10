@@ -41,8 +41,6 @@ class Config(object):
         self._test_mode = False
         self._security_enabled = False
         self._security_ssl = {'enabled': False}
-        self._security_admin_username = None
-        self._security_admin_password = None
         self._security_auth_token_generator = None
         self._security_audit_log_level = None
         self._security_audit_log_file = None
@@ -196,22 +194,6 @@ class Config(object):
     @security_ssl.setter
     def security_ssl(self, value):
         self._security_ssl = value
-
-    @property
-    def security_admin_username(self):
-        return self._security_admin_username
-
-    @security_admin_username.setter
-    def security_admin_username(self, value):
-        self._security_admin_username = value
-
-    @property
-    def security_admin_password(self):
-        return self._security_admin_password
-
-    @security_admin_password.setter
-    def security_admin_password(self, value):
-        self._security_admin_password = value
 
     @property
     def security_authentication_providers(self):
