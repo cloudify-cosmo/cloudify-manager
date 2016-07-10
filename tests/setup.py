@@ -41,7 +41,7 @@ setup(
         'cloudify-dsl-parser==3.5a1',
         'cloudify-rest-client==3.5a1',
         'cloudify-plugins-common==3.5a1',
-        'cloudify-diamond-plugin==1.3.3',
+        'cloudify-diamond-plugin==1.3.4',
         'cloudify-script-plugin==1.4',
         'pika==0.9.14',
         'elasticsearch==1.6.0',
