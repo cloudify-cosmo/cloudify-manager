@@ -1015,7 +1015,20 @@ class BlueprintsManager(object):
 
         missing_mandatory_parameters = set()
 
+        allowed_types = {
+            'integer': int,
+            'float': float,
+            'string': basestring,
+            'boolean': bool
+        }
+        wrong_types = {}
+
         for param_name, param in workflow_parameters.iteritems():
+            if 'type' in param and param_name in execution_parameters:
+                if not isinstance(execution_parameters[param_name],
+                                  allowed_types.get(param['type'], object)):
+                    wrong_types[param_name] = param['type']
+
             if 'default' not in param:
                 # parameter without a default value - ensure one was
                 # provided via execution parameters
@@ -1036,6 +1049,14 @@ class BlueprintsManager(object):
                     'Workflow "{0}" must be provided with the following '
                     'parameters to execute: {1}'.format(
                         workflow_name, ','.join(missing_mandatory_parameters)))
+
+        if wrong_types:
+            error_message = StringIO()
+            for param_name, param_type in wrong_types.iteritems():
+                error_message.write('Parameter "{0}" must be of type {1}\n'.
+                                    format(param_name, param_type))
+            raise manager_exceptions.IllegalExecutionParametersError(
+                error_message.getvalue())
 
         custom_parameters = {k: v for k, v in execution_parameters.iteritems()
                              if k not in workflow_parameters}

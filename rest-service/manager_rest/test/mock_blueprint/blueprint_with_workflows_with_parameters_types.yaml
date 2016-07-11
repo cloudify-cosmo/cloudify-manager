@@ -1,0 +1,59 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+
+node_templates:
+    vm:
+        type: cloudify.nodes.Compute
+
+workflows:
+    mock_workflow:
+        mapping: default_workflows.workflows.default.install
+        parameters:
+            optional1:
+                default: 7
+            optional2:
+                default: bla
+            optional_int1:
+                default: 1
+                type: integer
+            optional_int2:
+                default: 2
+                type: integer
+            optional_float1:
+                default: 1.5
+                type: float
+            optional_float2:
+                default: 2
+                type: float
+            optional_str1:
+                default: bla
+                type: string
+            optional_str2:
+                default: blabla
+                type: string
+            optional_bool1:
+                default: False
+                type: boolean
+            optional_bool2:
+                default: True
+                type: boolean
+            mandatory1: {}
+            mandatory2: {}
+            mandatory_int1:
+                type: integer
+            mandatory_int2:
+                type: integer
+            mandatory_float1:
+                type: float
+            mandatory_float2:
+                type: float
+            mandatory_str1:
+                type: string
+            mandatory_str2:
+                type: string
+            mandatory_bool1:
+                type: boolean
+            mandatory_bool2:
+                type: boolean
