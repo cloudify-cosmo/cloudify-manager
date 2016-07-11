@@ -181,7 +181,8 @@ class BlueprintsManager(object):
     def restore_snapshot(self, snapshot_id,
                          recreate_deployments_envs,
                          force,
-                         bypass_maintenance):
+                         bypass_maintenance,
+                         timeout):
         # Throws error if no snapshot found
         snap = self.get_snapshot(snapshot_id)
         if snap.status == models.Snapshot.FAILED:
@@ -195,7 +196,8 @@ class BlueprintsManager(object):
                 'snapshot_id': snapshot_id,
                 'recreate_deployments_envs': recreate_deployments_envs,
                 'config': self._get_conf_for_snapshots_wf(),
-                'force': force
+                'force': force,
+                'timeout': timeout
             },
             bypass_maintenance=bypass_maintenance
         )
