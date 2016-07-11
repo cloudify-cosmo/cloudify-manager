@@ -364,11 +364,13 @@ class SnapshotsIdRestore(SecuredResource):
         )
         bypass_maintenance = is_bypass_maintenance_mode()
         force = verify_and_convert_bool('force', request_json['force'])
+        timeout = int(request_json['timeout'])
         execution = get_blueprints_manager().restore_snapshot(
             snapshot_id,
             recreate_deployments_envs,
             force,
-            bypass_maintenance
+            bypass_maintenance,
+            timeout
         )
         return execution, 200
 
