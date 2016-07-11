@@ -44,6 +44,7 @@ from manager_rest.resources import (marshal_with,
                                     verify_and_convert_bool,
                                     verify_parameter_in_request_body,
                                     verify_json_content_type,
+                                    convert_to_int,
                                     make_streaming_response)
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.utils import create_filter_params_list_description
@@ -363,11 +364,15 @@ class SnapshotsIdRestore(SecuredResource):
         )
         bypass_maintenance = is_bypass_maintenance_mode()
         force = verify_and_convert_bool('force', request_json['force'])
+        default_timeout_sec = 300
+        request_timeout = request_json.get('timeout', default_timeout_sec)
+        timeout = convert_to_int(request_timeout)
         execution = get_blueprints_manager().restore_snapshot(
             snapshot_id,
             recreate_deployments_envs,
             force,
-            bypass_maintenance
+            bypass_maintenance,
+            timeout
         )
         return execution, 200
 

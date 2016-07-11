@@ -199,6 +199,14 @@ def verify_and_convert_bool(attribute_name, str_bool):
         '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
 
 
+def convert_to_int(value):
+    try:
+        return int(value)
+    except:
+        raise manager_exceptions.BadParametersError(
+            'invalid parameter, should be int, got: {0}'.format(value))
+
+
 def make_streaming_response(res_id, res_path, content_length, archive_type):
     response = make_response()
     response.headers['Content-Description'] = 'File Transfer'
