@@ -21,6 +21,7 @@ class Config(object):
     def __init__(self):
         self._db_address = 'localhost'
         self._db_port = 9200
+        self._db_read_timeout = 60
         self._amqp_address = 'localhost'
         self.amqp_username = 'guest'
         self.amqp_password = 'guest'
@@ -66,6 +67,14 @@ class Config(object):
     @db_port.setter
     def db_port(self, value):
         self._db_port = value
+
+    @property
+    def db_read_timeout(self):
+        return self._db_read_timeout
+
+    @db_read_timeout.setter
+    def db_read_timeout(self, value):
+        self._db_read_timeout = value
 
     @property
     def amqp_address(self):
