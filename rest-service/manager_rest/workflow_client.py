@@ -15,14 +15,29 @@
 
 
 from flask import current_app
-
+from flask_securest.rest_security import SECURED_MODE
 from manager_rest import celery_client
+from manager_rest import config
 
 
 class WorkflowClient(object):
-
     @staticmethod
-    def execute_workflow(name,
+    def _get_rest_credentials():
+        if not current_app.config.get(SECURED_MODE):
+            return {}
+
+        if hasattr(current_app, 'auth_token_generator'):
+            return {'rest_token':
+                    current_app.auth_token_generator.generate_auth_token()}
+
+        return {
+            'rest_username': config.instance().security_rest_username,
+            'rest_password': config.instance().security_rest_password
+        }
+
+    @classmethod
+    def execute_workflow(cls,
+                         name,
                          workflow,
                          workflow_plugins,
                          blueprint_id,
@@ -36,6 +51,7 @@ class WorkflowClient(object):
 
         plugin_name = workflow['plugin']
         plugin = [p for p in workflow_plugins if p['name'] == plugin_name][0]
+
         execution_parameters['__cloudify_context'] = {
             'type': 'workflow',
             'task_name': task_name,
@@ -52,13 +68,21 @@ class WorkflowClient(object):
                 'package_version': plugin.get('package_version')
             }
         }
+
+        execution_parameters['__cloudify_context'].update(
+            cls._get_rest_credentials())
+
         return execute_task(task_queue=task_queue,
                             execution_id=execution_id,
                             execution_parameters=execution_parameters)
 
-    @staticmethod
-    def execute_system_workflow(wf_id, task_id, task_mapping,
-                                deployment=None, execution_parameters=None,
+    @classmethod
+    def execute_system_workflow(cls,
+                                wf_id,
+                                task_id,
+                                task_mapping,
+                                deployment=None,
+                                execution_parameters=None,
                                 bypass_maintenance=None):
         execution_parameters = execution_parameters or {}
         # task_id is not generated here since for system workflows,
@@ -79,6 +103,8 @@ class WorkflowClient(object):
             context['deployment_id'] = deployment.id
 
         execution_parameters['__cloudify_context'] = context
+        execution_parameters['__cloudify_context'].update(
+            cls._get_rest_credentials())
 
         return execute_task(task_queue=task_queue,
                             execution_id=context['task_id'],
