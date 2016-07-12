@@ -997,8 +997,23 @@ class BlueprintsManager(object):
             raise manager_exceptions.FunctionsEvaluationError(str(e))
 
     @staticmethod
+    def _try_convert_from_str(string, target_type):
+        if target_type == basestring:
+            return string
+        if target_type == bool:
+            if string.lower() == 'true':
+                return True
+            if string.lower() == 'false':
+                return False
+            return string
+        try:
+            return target_type(string)
+        except ValueError:
+            return string
+
+    @classmethod
     def _merge_and_validate_execution_parameters(
-            workflow, workflow_name, execution_parameters=None,
+            cls, workflow, workflow_name, execution_parameters=None,
             allow_custom_parameters=False):
         """
         merge parameters - parameters passed directly to execution request
@@ -1024,7 +1039,18 @@ class BlueprintsManager(object):
         wrong_types = {}
 
         for param_name, param in workflow_parameters.iteritems():
+
             if 'type' in param and param_name in execution_parameters:
+
+                # check if need to convert from string
+                if isinstance(execution_parameters[param_name], basestring) \
+                        and param['type'] in allowed_types:
+                    execution_parameters[param_name] = \
+                        cls._try_convert_from_str(
+                            execution_parameters[param_name],
+                            allowed_types[param['type']])
+
+                # validate type
                 if not isinstance(execution_parameters[param_name],
                                   allowed_types.get(param['type'], object)):
                     wrong_types[param_name] = param['type']

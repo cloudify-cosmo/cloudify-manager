@@ -203,7 +203,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             'mandatory_str1': 'bla',
             'mandatory_str2': 7,
             'mandatory_bool1': False,
-            'mandatory_bool2': 'bla'
+            'mandatory_bool2': 'string_that_is_not_a_boolean'
         }
         try:
             self.client.executions.start(deployment_id,
@@ -233,13 +233,13 @@ class ExecutionsTestCase(BaseServerTestCase):
         parameters = {
             'mandatory1': False,
             'mandatory2': [],
-            'mandatory_int1': -7,
+            'mandatory_int1': '-7',
             'mandatory_int2': 3.5,
-            'mandatory_float1': 5.0,
+            'mandatory_float1': '5.0',
             'mandatory_float2': [],
             'mandatory_str1': u'bla',
             'mandatory_str2': ['bla'],
-            'mandatory_bool1': True,
+            'mandatory_bool1': 'tRUe',
             'mandatory_bool2': 0,
             'optional1': 'bla',
             'optional2': 6,
@@ -296,7 +296,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             'mandatory_float2': 0.0,
             'mandatory_str1': u'bla',
             'mandatory_str2': 'bla',
-            'mandatory_bool1': True,
+            'mandatory_bool1': 'falSE',
             'mandatory_bool2': False,
             'optional1': 'bla',
             'optional2': 6,
