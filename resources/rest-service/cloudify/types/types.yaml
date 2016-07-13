@@ -460,6 +460,7 @@ workflows:
             A positive number denotes increase of instances.
             A negative number denotes decrease of instances.
         default: 1
+        type: integer
       scale_compute:
         description: >
             If a node name is passed as the `scalable_entity_name` parameter
