@@ -581,39 +581,48 @@ def _restore_credentials_3_3(tempdir, es):
     elasticsearch.helpers.bulk(es, update_actions)
 
 
-def insert_agents_data(client, agents):
-    for nodes in agents.itervalues():
-        for node_instances in nodes.itervalues():
-            for node_instance_id, agent in node_instances.iteritems():
-                # We need to retrieve broker_config:
-                # 3.3.1 and later
-                if 'broker_config' in agent:
-                    broker_config = agent['broker_config']
-                # 3.3 and earlier
+def create_agent(client, nodes):
+    for node_instances in nodes.itervalues():
+        for node_instance_id, agent in node_instances.iteritems():
+            # We need to retrieve broker_config:
+            # 3.3.1 and later
+            if 'broker_config' in agent:
+                broker_config = agent['broker_config']
+            # 3.3 and earlier
+            else:
+                broker_config = {}
+                for k in ['broker_user', 'broker_pass', 'broker_ip',
+                          'broker_ssl_enabled', 'broker_ssl_cert']:
+                    broker_config[k] = agent.pop(k)
+                if broker_config['broker_ssl_enabled']:
+                    broker_config['broker_port'] = '5671'
                 else:
-                    broker_config = {}
-                    for k in ['broker_user', 'broker_pass', 'broker_ip',
-                              'broker_ssl_enabled', 'broker_ssl_cert']:
-                        broker_config[k] = agent.pop(k)
-                    if broker_config['broker_ssl_enabled']:
-                        broker_config['broker_port'] = '5671'
-                    else:
-                        broker_config['broker_port'] = '5672'
-                node_instance = client.node_instances.get(node_instance_id)
-                runtime_properties = node_instance.runtime_properties
-                old_agent = runtime_properties.get('cloudify_agent', {})
-                if not broker_config.get('broker_ip'):
-                    broker_config['broker_ip'] = \
-                        old_agent.get('manager_ip', '')
-                agent['broker_config'] = broker_config
-                old_agent.update(agent)
-                runtime_properties['cloudify_agent'] = old_agent
-                # Results of agent validation on old manager.
-                # Might be incorrect for new manager.
-                runtime_properties.pop('agent_status', None)
-                client.node_instances.update(
-                    node_instance_id=node_instance_id,
-                    runtime_properties=runtime_properties)
+                    broker_config['broker_port'] = '5672'
+            node_instance = client.node_instances.get(node_instance_id)
+            runtime_properties = node_instance.runtime_properties
+            old_agent = runtime_properties.get('cloudify_agent', {})
+            if not broker_config.get('broker_ip'):
+                broker_config['broker_ip'] = \
+                    old_agent.get('manager_ip', '')
+            agent['broker_config'] = broker_config
+            old_agent.update(agent)
+            runtime_properties['cloudify_agent'] = old_agent
+            # Results of agent validation on old manager.
+            # Might be incorrect for new manager.
+            runtime_properties.pop('agent_status', None)
+            client.node_instances.update(
+                node_instance_id=node_instance_id,
+                runtime_properties=runtime_properties)
+
+
+def insert_agents_data(client, agents):
+    for deployment_id, nodes in agents.iteritems():
+        try:
+            create_agent(client, nodes)
+        except:
+            ctx.logger.warning('Failed restoring agents for '
+                               'deployment {0}'.format(deployment_id),
+                               exc_info=True)
 
 
 def _restore_agents_data(tempdir):
