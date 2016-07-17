@@ -199,6 +199,13 @@ def verify_and_convert_bool(attribute_name, str_bool):
         '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
 
 
+def verify_and_convert_int(value, default):
+    try:
+        return int(value)
+    except:
+        return default
+
+
 def make_streaming_response(res_id, res_path, content_length, archive_type):
     response = make_response()
     response.headers['Content-Description'] = 'File Transfer'

@@ -42,6 +42,7 @@ from manager_rest.storage_manager import get_storage_manager
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_and_convert_bool,
+                                    verify_and_convert_int,
                                     verify_parameter_in_request_body,
                                     verify_json_content_type,
                                     make_streaming_response)
@@ -363,11 +364,13 @@ class SnapshotsIdRestore(SecuredResource):
         )
         bypass_maintenance = is_bypass_maintenance_mode()
         force = verify_and_convert_bool('force', request_json['force'])
+        timeout = verify_and_convert_int(request_json.get('timeout', 0), 0)
         execution = get_blueprints_manager().restore_snapshot(
             snapshot_id,
             recreate_deployments_envs,
             force,
-            bypass_maintenance
+            bypass_maintenance,
+            timeout
         )
         return execution, 200
 
