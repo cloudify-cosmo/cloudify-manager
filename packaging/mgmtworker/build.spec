@@ -37,7 +37,7 @@ sudo /tmp/env/bin/pip install wheel==0.24.0 && \
 %install
 
 destination="/tmp/${RANDOM}.file"
-curl --retry 10 --fail --silent --show-error --location https://github.com/cloudify-cosmo/cloudify-manager/archive/3.4pach1.tar.gz --create-dirs --output $destination && \
+curl --retry 10 --fail --silent --show-error --location https://github.com/cloudify-cosmo/cloudify-manager/archive/3.4patch1.tar.gz --create-dirs --output $destination && \
 tar -xzf $destination --strip-components=1 -C "/tmp" && \
 
 sudo /tmp/env/bin/pip wheel virtualenv --wheel-dir %{buildroot}/var/wheels/%{name} && \
