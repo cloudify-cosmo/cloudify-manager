@@ -137,7 +137,6 @@ class BlueprintsManager(object):
                 config.instance().file_server_uploaded_blueprints_folder,
             'db_address': config.instance().db_address,
             'db_port': config.instance().db_port,
-            'db_read_timeout': config.instance().db_read_timeout,
             'created_status': models.Snapshot.CREATED,
             'failed_status': models.Snapshot.FAILED,
             'file_server_uploaded_plugins_folder':

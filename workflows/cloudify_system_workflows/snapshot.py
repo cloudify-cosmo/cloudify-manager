@@ -526,7 +526,7 @@ def _restore_elasticsearch(tempdir, es, metadata, bulk_read_timeout):
         data_iter = cloudify_events_to_logstash()
 
     ctx.logger.info('Restoring ElasticSearch data '
-                    'with timeout {0} sec'.format(bulk_read_timeout))
+                    '[timeout={0} sec]'.format(bulk_read_timeout))
     elasticsearch.helpers.bulk(es,
                                data_iter,
                                request_timeout=bulk_read_timeout)
@@ -634,7 +634,8 @@ def _restore_snapshot(config, tempdir, metadata, elasticsearch_read_timeout):
     # elasticsearch
     es = _create_es_client(config)
 
-    new_plugins = _restore_elasticsearch(tempdir, es, metadata, elasticsearch_read_timeout)
+    new_plugins = _restore_elasticsearch(tempdir, es, metadata,
+                                         elasticsearch_read_timeout)
 
     # influxdb
     _restore_influxdb_3_3(tempdir)
@@ -699,7 +700,8 @@ def recreate_deployments_environments(deployments_to_skip):
 
 
 @workflow(system_wide=True)
-def restore(snapshot_id, recreate_deployments_envs, config, force, timeout=60, **kwargs):
+def restore(snapshot_id, recreate_deployments_envs, config, force, timeout,
+            **kwargs):
 
     ctx.logger.info('Restoring snapshot {0}'.format(snapshot_id))
 
