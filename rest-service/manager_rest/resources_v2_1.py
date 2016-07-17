@@ -18,7 +18,6 @@ import zipfile
 import urllib
 import shutil
 import sys
-from datetime import datetime
 
 from flask.ext.restful_swagger import swagger
 from flask_securest.rest_security import SecuredResource
@@ -240,7 +239,7 @@ class MaintenanceModeAction(SecuredResource):
                 state = utils.read_json_file(maintenance_file_path)
                 return state, 304
 
-            now = str(datetime.now())
+            now = utils.get_formatted_timestamp()
 
             try:
                 user = rest_security.get_username()

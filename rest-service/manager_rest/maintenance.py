@@ -17,7 +17,6 @@
 import os
 import StringIO
 import traceback
-from datetime import datetime
 
 from flask import jsonify, request
 
@@ -80,7 +79,7 @@ def maintenance_mode_handler():
         if state['status'] == MAINTENANCE_MODE_ACTIVATING:
             running_executions = get_running_executions()
             if not running_executions:
-                now = str(datetime.now())
+                now = utils.get_formatted_timestamp()
                 state = prepare_maintenance_dict(
                         MAINTENANCE_MODE_ACTIVATED,
                         activated_at=now,

@@ -18,7 +18,6 @@ import traceback
 import os
 import itertools
 import shutil
-from datetime import datetime
 from StringIO import StringIO
 
 from flask import current_app
@@ -145,7 +144,7 @@ class BlueprintsManager(object):
 
     def create_snapshot_model(self, snapshot_id,
                               status=models.Snapshot.CREATING):
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
                                        status=status,
@@ -278,7 +277,7 @@ class BlueprintsManager(object):
         except Exception, ex:
             raise DslParseException(str(ex))
 
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
 
         new_blueprint = models.BlueprintState(
             plan=plan,
@@ -378,7 +377,7 @@ class BlueprintsManager(object):
         new_execution = models.Execution(
             id=execution_id,
             status=models.Execution.PENDING,
-            created_at=str(datetime.now()),
+            created_at=utils.get_formatted_timestamp(),
             blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
             deployment_id=deployment_id,
@@ -466,7 +465,7 @@ class BlueprintsManager(object):
         execution = models.Execution(
             id=execution_id,
             status=models.Execution.PENDING,
-            created_at=created_at or str(datetime.now()),
+            created_at=created_at or utils.get_formatted_timestamp(),
             blueprint_id=deployment.blueprint_id if deployment else None,
             workflow_id=wf_id,
             deployment_id=deployment.id if deployment else None,
@@ -568,7 +567,7 @@ class BlueprintsManager(object):
     def prepare_deployment_for_storage(blueprint_id, deployment_id,
                                        deployment_plan, inputs=None):
 
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         new_deployment = models.Deployment(
             id=deployment_id,
             blueprint_id=blueprint_id,
@@ -749,7 +748,7 @@ class BlueprintsManager(object):
             instance.to_dict() for instance in
             self.sm.get_node_instances(filters=deployment_id_filter).items]
 
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         modification_id = str(uuid.uuid4())
         modification = models.DeploymentModification(
             id=modification_id,
@@ -861,7 +860,7 @@ class BlueprintsManager(object):
                     runtime_properties=None,
                     scaling_groups=None))
 
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         self.sm.update_deployment_modification(
             models.DeploymentModification(
                 id=modification_id,
@@ -920,7 +919,7 @@ class BlueprintsManager(object):
                         node_id].number_of_instances)
         self.sm.update_deployment(deployment)
 
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         self.sm.update_deployment_modification(
             models.DeploymentModification(
                 id=modification_id,

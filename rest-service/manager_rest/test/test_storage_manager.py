@@ -13,11 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from datetime import datetime
-
 from nose.plugins.attrib import attr
 
-from manager_rest import storage_manager, models
+from manager_rest import storage_manager, models, utils
 from manager_rest.test import base_test
 
 
@@ -25,7 +23,7 @@ from manager_rest.test import base_test
 class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_store_load_delete_blueprint(self):
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         sm = storage_manager._get_instance()
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
@@ -47,7 +45,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals(0, len(blueprints_list))
 
     def test_get_blueprint_deployments(self):
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         sm = storage_manager._get_instance()
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
@@ -152,7 +150,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertEquals(dep.description, deserialized_dep.description)
 
     def test_fields_query(self):
-        now = str(datetime.now())
+        now = utils.get_formatted_timestamp()
         blueprint = models.BlueprintState(id='blueprint-id',
                                           created_at=now,
                                           updated_at=now,
