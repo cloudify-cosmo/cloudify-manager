@@ -481,7 +481,7 @@ def _check_conflicts(es, restored_data):
         )
 
 
-def _restore_elasticsearch(tempdir, es, metadata):
+def _restore_elasticsearch(tempdir, es, metadata, bulk_read_timeout):
 
     has_cloudify_events_index = es.indices.exists(index=_EVENTS_INDEX_NAME)
     snap_has_cloudify_events_index = metadata[_M_HAS_CLOUDIFY_EVENTS]
@@ -525,8 +525,11 @@ def _restore_elasticsearch(tempdir, es, metadata):
     else:
         data_iter = cloudify_events_to_logstash()
 
-    ctx.logger.info('Restoring ElasticSearch data')
-    elasticsearch.helpers.bulk(es, data_iter)
+    ctx.logger.info('Restoring ElasticSearch data '
+                    '[timeout={0} sec]'.format(bulk_read_timeout))
+    elasticsearch.helpers.bulk(es,
+                               data_iter,
+                               request_timeout=bulk_read_timeout)
     es.indices.flush()
 
     return new_plugins
@@ -633,14 +636,15 @@ def _restore_agents_data(tempdir):
     insert_agents_data(client, agents)
 
 
-def _restore_snapshot(config, tempdir, metadata):
+def _restore_snapshot(config, tempdir, metadata, elasticsearch_read_timeout):
     # files/dirs copy
     _copy_data(tempdir, config, to_archive=False)
 
     # elasticsearch
     es = _create_es_client(config)
 
-    new_plugins = _restore_elasticsearch(tempdir, es, metadata)
+    new_plugins = _restore_elasticsearch(tempdir, es, metadata,
+                                         elasticsearch_read_timeout)
 
     # influxdb
     _restore_influxdb_3_3(tempdir)
@@ -705,7 +709,8 @@ def recreate_deployments_environments(deployments_to_skip):
 
 
 @workflow(system_wide=True)
-def restore(snapshot_id, recreate_deployments_envs, config, force, **kwargs):
+def restore(snapshot_id, recreate_deployments_envs, config, force, timeout,
+            **kwargs):
 
     ctx.logger.info('Restoring snapshot {0}'.format(snapshot_id))
 
@@ -748,7 +753,7 @@ def restore(snapshot_id, recreate_deployments_envs, config, force, **kwargs):
         ctx.logger.info('Starting restoring snapshot of manager {0}'
                         .format(from_version))
 
-        new_plugins = _restore_snapshot(config, tempdir, metadata)
+        new_plugins = _restore_snapshot(config, tempdir, metadata, timeout)
 
         install_plugins(new_plugins)
 
