@@ -102,31 +102,32 @@ class EventsTest(base_test.BaseServerTestCase):
         return result
 
     def _mock_es_search_delete(self, *args, **kwargs):
+        expected_must_list = [
+            {
+                'terms': {
+                    'type': [
+                        u'cloudify_event',
+                        u'cloudify_log'
+                    ]
+                }
+            },
+            {
+                'query': {
+                    'match': {
+                        'context.deployment_id': {
+                            'operator': 'and',
+                            'query': u'dep_id'
+                        }
+                    }
+                }
+            }
+        ]
         expected_body = {
             'query': {
                 'filtered': {
                     'filter': {
                         'bool': {
-                            'must': [
-                                {
-                                    'terms': {
-                                        'type': [
-                                            u'cloudify_event',
-                                            u'cloudify_log'
-                                        ]
-                                    }
-                                },
-                                {
-                                    'query': {
-                                        'match': {
-                                            'context.deployment_id': {
-                                                'operator': 'and',
-                                                'query': u'dep_id'
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            'must': expected_must_list
                         }
                     }
                 }
@@ -135,6 +136,13 @@ class EventsTest(base_test.BaseServerTestCase):
         }
 
         self.assertIn('body', kwargs)
+        try:
+            actual_must_list = \
+                kwargs['body']['query']['filtered']['filter']['bool']['must']
+        except KeyError as e:
+            self.fail('unexpected body structure: {0}'.format(str(e)))
+        actual_must_list.sort()
+        expected_must_list.sort()
         self.assertDictEqual(kwargs['body'], expected_body)
 
         return {
