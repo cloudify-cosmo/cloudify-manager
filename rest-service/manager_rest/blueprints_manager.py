@@ -136,6 +136,7 @@ class BlueprintsManager(object):
                 config.instance().file_server_uploaded_blueprints_folder,
             'db_address': config.instance().db_address,
             'db_port': config.instance().db_port,
+            'db_read_timeout': config.instance().db_read_timeout,
             'created_status': models.Snapshot.CREATED,
             'failed_status': models.Snapshot.FAILED,
             'file_server_uploaded_plugins_folder':
@@ -181,7 +182,8 @@ class BlueprintsManager(object):
     def restore_snapshot(self, snapshot_id,
                          recreate_deployments_envs,
                          force,
-                         bypass_maintenance):
+                         bypass_maintenance,
+                         timeout):
         # Throws error if no snapshot found
         snap = self.get_snapshot(snapshot_id)
         if snap.status == models.Snapshot.FAILED:
@@ -195,7 +197,8 @@ class BlueprintsManager(object):
                 'snapshot_id': snapshot_id,
                 'recreate_deployments_envs': recreate_deployments_envs,
                 'config': self._get_conf_for_snapshots_wf(),
-                'force': force
+                'force': force,
+                'timeout': timeout
             },
             bypass_maintenance=bypass_maintenance
         )
