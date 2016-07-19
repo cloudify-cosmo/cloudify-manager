@@ -277,3 +277,18 @@ class Plugin(SerializableObject):
         self.excluded_wheels = kwargs['excluded_wheels']
         self.supported_py_versions = kwargs['supported_py_versions']
         self.uploaded_at = kwargs['uploaded_at']
+
+
+class Event(SerializableObject):
+    """Represents an event/log
+    """
+    fields = {'id', 'timestamp', 'message_code', 'message', 'event_type',
+              'context'}
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.timestamp = kwargs['timestamp']
+        self.message_code = kwargs['message_code']
+        self.message = kwargs['message']
+        self.event_type = kwargs['event_type']
+        self.context = kwargs['context']

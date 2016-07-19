@@ -308,6 +308,9 @@ class BlueprintsManager(object):
     def delete_snapshot(self, snapshot_id):
         return self.sm.delete_snapshot(snapshot_id)
 
+    def delete_events(self, events_list):
+        return self.sm.delete_events(events_list)
+
     def delete_deployment(self,
                           deployment_id,
                           bypass_maintenance=None,

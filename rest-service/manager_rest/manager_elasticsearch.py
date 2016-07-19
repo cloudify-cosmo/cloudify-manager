@@ -195,6 +195,19 @@ class ManagerElasticsearch:
         return [item['_source'] for item in search_result['hits']['hits']]
 
     @staticmethod
+    def extract_info_for_deletion(search_result):
+        """Returns a list of items, with information relevant to their deletion
+
+        :param search_result: Valid ES search results
+        :return: A list of dicts, each containing an ID, an ES index and
+        an ES doc type
+        """
+        return [{'id': item['_id'],
+                 'index': item['_index'],
+                 'doc_type': item['_source']['type']}
+                for item in search_result['hits']['hits']]
+
+    @staticmethod
     def build_list_result_metadata(query, search_result):
 
         pagination = {'total': search_result['hits']['total'],

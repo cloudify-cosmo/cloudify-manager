@@ -29,7 +29,8 @@ from manager_rest.models import (BlueprintState,
                                  DeploymentNodeInstance,
                                  ProviderContext,
                                  Plugin,
-                                 DeploymentUpdate)
+                                 DeploymentUpdate,
+                                 Event)
 from manager_rest.manager_elasticsearch import ManagerElasticsearch
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
@@ -149,9 +150,14 @@ class ESStorageManager(object):
             raise manager_exceptions.ConflictError(
                 '{0} {1} already exists'.format(doc_type, doc_id))
 
-    def _delete_doc(self, doc_type, doc_id, model_class, id_field='id'):
+    def _delete_doc(self,
+                    doc_type,
+                    doc_id,
+                    model_class,
+                    id_field='id',
+                    index=STORAGE_INDEX_NAME):
         try:
-            res = self._connection.delete(STORAGE_INDEX_NAME, doc_type,
+            res = self._connection.delete(index, doc_type,
                                           doc_id,
                                           **MUTATE_PARAMS)
         except elasticsearch.exceptions.NotFoundError:
@@ -375,6 +381,13 @@ class ESStorageManager(object):
     def delete_snapshot(self, snapshot_id):
         return self._delete_doc(SNAPSHOT_TYPE, snapshot_id,
                                 Snapshot)
+
+    def delete_events(self, events_list):
+        for event in events_list:
+            self._delete_doc(event['doc_type'],
+                             event['id'],
+                             Event,
+                             index=event['index'])
 
     def update_snapshot_status(self, snapshot_id, status, error):
         update_doc_data = {'status': status,
