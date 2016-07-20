@@ -46,6 +46,12 @@ class CommandRunner(object):
     def run(self, command, execution_env=None):
         self.logger.debug('run: {0}'.format(command))
         command_env = os.environ.copy()
+
+        # we're running on the old agent - don't pass our celery config to the
+        # new one
+        command_env.pop('CELERY_CONFIG_MODULE')
+        command_env.pop('CELERY_WORK_DIR')
+
         command_env.update(execution_env or {})
         p = subprocess.Popen(_shlex_split(command),
                              stdout=subprocess.PIPE,
