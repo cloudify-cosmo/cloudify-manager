@@ -21,10 +21,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import urllib
+
+import requests
 
 from cloudify import ctx
 from cloudify.state import ctx_parameters
+from cloudify.exceptions import CommandExecutionException
 
 
 def get_cloudify_agent():
@@ -68,14 +70,27 @@ class CommandRunner(object):
             self.logger.error(out)
             self.logger.error('Stderr:')
             self.logger.error(err)
-            raise Exception()
+            raise CommandExecutionException(command, err, out, p.returncode)
 
-    def download(self, url, destination=None):
+    def download(self, url, destination=None, verify_certificate=True,
+                 certificate_file=None):
         self.logger.debug('Retrieving file from {0}'.format(url))
-        if destination is None:
-            fh_num, destination = tempfile.mkstemp()
-            os.close(fh_num)
-        urllib.urlretrieve(url, destination)
+
+        verify = False
+        if verify_certificate:
+            verify = certificate_file or True
+        response = requests.get(url, stream=True, verify=verify)
+
+        if destination:
+            destination_file = open(destination)
+        else:
+            destination_file = tempfile.NamedTemporaryFile(delete=False)
+            destination = destination_file.name
+
+        with destination_file as f:
+            for chunk in response.bytes_stream(8192):
+                f.write(chunk)
+
         return destination
 
     def rm_dir(self, directory):
@@ -140,7 +155,10 @@ class Installer(object):
             package_path = os.path.join(path, self.runner.archive_name())
             self.runner.download(
                 url=self.cloudify_agent['package_url'],
-                destination=package_path)
+                destination=package_path,
+                verify_certificate=self.cloudify_agent.get(
+                    'verify_rest_certificate'),
+                certificate_file=self._get_certificate_file(path))
             self.runner.extract(package_path, path)
             agent_config_path = os.path.join(path, 'agent.json')
             agent_output_path = os.path.join(path, 'output.json')
@@ -158,6 +176,19 @@ class Installer(object):
                 return json.load(agent_file)
         finally:
             self.runner.rm_dir(path)
+
+    def _get_certificate_file(self, path=None):
+        if not self.cloudify_agent.get('verify_rest_certificate'):
+            return None
+
+        if not self.cloudify_agent.get('rest_cert_content', '').strip():
+            # we were told to verify the cert, but didn't get the cert to
+            # verify against - in that case, verify against the system CA store
+            return None
+
+        with tempfile.NamedTemporaryFile(delete=False, dir=path) as f:
+            f.write(self.cloudify_agent['rest_cert_content'])
+        return f.name
 
 
 def _set_package_url(agent):
