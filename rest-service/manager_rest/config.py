@@ -50,6 +50,8 @@ class Config(object):
         self._security_authentication_providers = []
         self._security_authorization_provider = None
         self._insecure_endpoints_disabled = False
+        self._security_rest_username = None
+        self._security_rest_password = None
 
     @property
     def db_address(self):
@@ -273,6 +275,21 @@ class Config(object):
     def insecure_endpoints_disabled(self, value):
         self._insecure_endpoints_disabled = value
 
+    @property
+    def security_rest_username(self):
+        return self._security_rest_username
+
+    @security_rest_username.setter
+    def security_rest_username(self, value):
+        self._security_rest_username = value
+
+    @property
+    def security_rest_password(self):
+        return self._security_rest_password
+
+    @security_rest_password.setter
+    def security_rest_password(self, value):
+        self._security_rest_password = value
 
 _instance = Config()
 
