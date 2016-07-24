@@ -43,6 +43,7 @@ except ImportError:
 STORAGE_MANAGER_MODULE_NAME = 'manager_rest.file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
+FILE_SERVER_SNAPSHOTS_FOLDER = 'snapshots'
 FILE_SERVER_DEPLOYMENTS_FOLDER = 'deployments'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
@@ -90,10 +91,11 @@ def inject_test_config(f):
 
 class MockHTTPClient(HTTPClient):
 
-    def __init__(self, app, headers=None):
+    def __init__(self, app, headers=None, file_server=None):
         super(MockHTTPClient, self).__init__(host='localhost',
                                              headers=headers)
         self.app = app
+        self._file_server = file_server
 
     def do_request(self,
                    requests_method,
@@ -135,6 +137,8 @@ class MockHTTPClient(HTTPClient):
                                     data=body,
                                     query_string=build_query_string(params))
         elif 'post' in requests_method.__name__:
+            if isinstance(body, types.GeneratorType):
+                body = ''.join(body)
             response = self.app.post(request_url,
                                      headers=headers,
                                      data=body,
@@ -157,6 +161,8 @@ class MockHTTPClient(HTTPClient):
             response.json = lambda: json.loads(response.data)
             self._raise_client_error(response, request_url)
 
+        if stream:
+            return MockStreamedResponse(response, self._file_server)
         return json.loads(response.data)
 
 
@@ -170,7 +176,8 @@ class BaseServerTestCase(unittest.TestCase):
         client = CloudifyClient(host='localhost',
                                 headers=headers)
         mock_http_client = MockHTTPClient(self.app,
-                                          headers=headers)
+                                          headers=headers,
+                                          file_server=self.file_server)
         client._client = mock_http_client
         client.blueprints.api = mock_http_client
         client.deployments.api = mock_http_client
@@ -264,6 +271,8 @@ class BaseServerTestCase(unittest.TestCase):
             FILE_SERVER_DEPLOYMENTS_FOLDER
         test_config.file_server_uploaded_blueprints_folder = \
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
+        test_config.file_server_snapshots_folder = \
+            FILE_SERVER_SNAPSHOTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
         test_config.rest_service_log_level = 'DEBUG'
         test_config.rest_service_log_path = self.rest_service_log
@@ -492,3 +501,35 @@ class BaseServerTestCase(unittest.TestCase):
             if execution.status in Execution.END_STATES:
                 break
             time.sleep(3)
+
+
+class MockStreamedResponse(object):
+
+    def __init__(self, response, file_server):
+        self._response = response
+        self._root = file_server.root_path
+
+    @property
+    def headers(self):
+        return self._response.headers
+
+    def bytes_stream(self, chunk_size=8192):
+        # Calculate where the file resides *locally*
+        local_path = self._response.headers['X-Accel-Redirect'].replace(
+            '/resources',
+            self._root
+        )
+        return self._generate_stream(local_path, chunk_size)
+
+    @staticmethod
+    def _generate_stream(local_path, chunk_size):
+        with open(local_path, 'rb') as local_file:
+            while True:
+                chunk = local_file.read(chunk_size)
+                if chunk:
+                    yield chunk
+                else:
+                    break
+
+    def close(self):
+        self._response.close()

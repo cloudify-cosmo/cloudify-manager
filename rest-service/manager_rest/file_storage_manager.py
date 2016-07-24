@@ -320,6 +320,18 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Plugin {0} not found".format(plugin_id))
 
+    def get_snapshot(self, snapshot_id, include=None):
+        data = self._load_data()
+        if snapshot_id in data[SNAPSHOTS]:
+            snapshot = data[SNAPSHOTS][snapshot_id]
+            if include:
+                for field in Snapshot.fields:
+                    if field not in include:
+                        setattr(snapshot, field, None)
+            return snapshot
+        raise manager_exceptions.NotFoundError(
+            "Plugin {0} not found".format(snapshot_id))
+
     def get_deployment(self, deployment_id, include=None):
         data = self._load_data()
         if deployment_id in data[DEPLOYMENTS]:

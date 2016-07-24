@@ -15,6 +15,7 @@
 
 import os
 import tempfile
+import shutil
 
 from nose.plugins.attrib import attr
 
@@ -22,6 +23,7 @@ from manager_rest import archiving
 from manager_rest.file_server import FileServer
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
+from .test_utils import generate_progress_func
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -260,6 +262,68 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         self.assertEqual(2, len(blueprints))
         self.assertEqual('1', blueprints[0].id)
         self.assertEqual('0', blueprints[1].id)
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_upload_progress(self):
+        tmp_dir = '/tmp/tmp_upload_blueprint'
+        blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
+                                                    tmp_dir)
+        progress_func = generate_progress_func(
+            total_size=32917,  # Calculated by trial and error
+            assert_equal=self.assertEqual,
+            assert_almost_equal=self.assertAlmostEqual)
+
+        try:
+            self.client.blueprints.upload(blueprint_path, '0', progress_func)
+        finally:
+            self.quiet_delete_directory(tmp_dir)
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_blueprint_download_progress(self):
+        tmp_dir = '/tmp/tmp_upload_blueprint'
+        tmp_local_path = '/tmp/blueprint.bl'
+
+        blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
+                                                    tmp_dir)
+        try:
+            self.client.blueprints.upload(blueprint_path, '0')
+            progress_func = generate_progress_func(
+                total_size=32917,  # Calculated by trial and error
+                assert_equal=self.assertEqual,
+                assert_almost_equal=self.assertAlmostEqual)
+
+            self.client.blueprints.download('0', tmp_local_path, progress_func)
+        finally:
+            self.quiet_delete_directory(tmp_dir)
+            self.quiet_delete(tmp_local_path)
+
+    def _create_big_blueprint(self, blueprint, tmp_dir):
+        """
+        Create a large file, and put it in a folder with some blueprint.
+        This is used in order to create a sizable blueprint archive, for
+        checking upload/download
+        :param blueprint: The name of the mock_blueprint file
+        :param tmp_dir: The folder that will be used to store the blueprint
+        and the new file
+        :return: The local path of the mock blueprint
+        """
+        self.quiet_delete_directory(tmp_dir)
+        os.mkdir(tmp_dir)
+
+        blueprint_file = blueprint
+        blueprint_path = os.path.join(
+            self.get_blueprint_path('mock_blueprint'),
+            blueprint_file)
+        shutil.copy(blueprint_path, tmp_dir)
+        blueprint_path = os.path.join(tmp_dir, blueprint_file)
+
+        tmpfile_path = os.path.join(tmp_dir, 'tmp_file')
+        with open(tmpfile_path, 'wb') as big_file:
+            big_file.seek(32 * 1024 * 1024 - 1)
+            big_file.write('\0')
+        return blueprint_path
 
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)

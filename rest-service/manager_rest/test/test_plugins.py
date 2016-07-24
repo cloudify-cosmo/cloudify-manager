@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import os
 from mock import patch
 from nose.plugins.attrib import attr
 
@@ -21,6 +22,7 @@ from manager_rest.test import base_test
 from base_test import BaseServerTestCase
 
 from cloudify_rest_client import exceptions
+from .test_utils import generate_progress_func
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
@@ -208,3 +210,42 @@ class PluginsTest(BaseServerTestCase):
             with self.assertRaises(exceptions.PluginInstallationTimeout):
                 self.client.plugins.delete(plugin_id)
         self.assertEqual(1, len(self.client.plugins.list()))
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_progress(self):
+        tmp_file_path = self.create_wheel('wagon', '0.3.2')
+        total_size = os.path.getsize(tmp_file_path)
+
+        progress_func = generate_progress_func(
+            total_size=total_size,
+            assert_equal=self.assertEqual,
+            assert_almost_equal=self.assertAlmostEqual)
+
+        try:
+            self.client.plugins.upload(tmp_file_path,
+                                       progress_callback=progress_func)
+        finally:
+            self.quiet_delete(tmp_file_path)
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_download_progress(self):
+        tmp_file_path = self.create_wheel('wagon', '0.3.2')
+        tmp_local_path = '/tmp/plugin.whl'
+
+        try:
+            response = self.client.plugins.upload(tmp_file_path)
+            total_size = os.path.getsize(tmp_file_path)
+
+            progress_func = generate_progress_func(
+                total_size=total_size,
+                assert_equal=self.assertEqual,
+                assert_almost_equal=self.assertAlmostEqual)
+
+            self.client.plugins.download(response.id,
+                                         tmp_local_path,
+                                         progress_callback=progress_func)
+        finally:
+            self.quiet_delete(tmp_file_path)
+            self.quiet_delete(tmp_local_path)
