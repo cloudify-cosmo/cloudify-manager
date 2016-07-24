@@ -13,6 +13,7 @@
 #  * limitations under the License.
 
 from nose.plugins.attrib import attr
+from mock import patch
 
 from manager_rest.test import base_test
 from manager_rest.resources_v2 import Events
@@ -37,6 +38,22 @@ class EventsTest(base_test.BaseServerTestCase):
         hits = self._mock_es_search()['hits']['hits']
         self.assertEquals(total, response.metadata.pagination.total)
         self.assertEquals(len(hits), len(response.items))
+
+    @attr(client_min_version=2.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_delete_events(self):
+        def delete_events(bpm_self, events_list):
+            for index, event in enumerate(events_list):
+                self.assertEqual(event['doc_type'], 'cloudify_log')
+                self.assertEqual(event['id'], 'id_{0}'.format(index + 1))
+                self.assertEqual(event['index'], 'logstash-1')
+
+        ManagerElasticsearch.search_events = self._mock_es_search_delete
+        patch_path = ('manager_rest.blueprints_manager.BlueprintsManager.'
+                      'delete_events')
+        with patch(patch_path, delete_events):
+            response = self.client.events.delete('dep_id', include_logs=True)
+            self.assertEqual(response.items, [5])
 
     def test_build_query(self):
         self.maxDiff = None
@@ -83,6 +100,103 @@ class EventsTest(base_test.BaseServerTestCase):
             }
         }
         return result
+
+    def _mock_es_search_delete(self, *args, **kwargs):
+        expected_body = {
+            'query': {
+                'filtered': {
+                    'filter': {
+                        'bool': {
+                            'must': [
+                                {
+                                    'terms': {
+                                        'type': [
+                                            u'cloudify_event',
+                                            u'cloudify_log'
+                                        ]
+                                    }
+                                },
+                                {
+                                    'query': {
+                                        'match': {
+                                            'context.deployment_id': {
+                                                'operator': 'and',
+                                                'query': u'dep_id'
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            'size': 10000
+        }
+
+        self.assertIn('body', kwargs)
+        self.assertDictEqual(kwargs['body'], expected_body)
+
+        return {
+            'hits': {
+                'hits': [
+                    {
+                        '_id': 'id_1',
+                        '_index': 'logstash-1',
+                        '_source': {
+                            'context': {
+                                'deployment_id': 'dep_id'
+                            },
+                            'type': 'cloudify_log'
+                        },
+                        '_type': 'cloudify_log'
+                    },
+                    {
+                        '_id': 'id_2',
+                        '_index': 'logstash-1',
+                        '_source': {
+                            'context': {
+                                'deployment_id': 'dep_id'
+                            },
+                            'type': 'cloudify_log'
+                        },
+                        '_type': 'cloudify_log'
+                    },
+                    {
+                        '_id': 'id_3',
+                        '_index': 'logstash-1',
+                        '_source': {
+                            'context': {
+                                'deployment_id': 'dep_id'
+                            },
+                            'type': 'cloudify_log'
+                        },
+                        '_type': 'cloudify_log'
+                    },
+                    {
+                        '_id': 'id_4',
+                        '_index': 'logstash-1',
+                        '_source': {
+                            'context': {
+                                'deployment_id': 'dep_id'
+                            },
+                            'type': 'cloudify_log'
+                        },
+                        '_type': 'cloudify_log'
+                    },
+                    {
+                        '_id': 'id_5',
+                        '_index': 'logstash-1',
+                        '_source': {
+                            'context': {
+                                'deployment_id': 'dep_id'
+                            },
+                            'type': 'cloudify_log'
+                        },
+                        '_type': 'cloudify_log'
+                                 ''}
+                ],
+                'total': 5}}
 
     def _sort_query_conditions_list(self, query):
         conditions = query['query']['filtered']['filter']['bool']['must']

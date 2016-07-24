@@ -947,3 +947,35 @@ class Events(resources.Events):
     @exceptions_handled
     def post(self):
         raise manager_exceptions.MethodNotAllowedError()
+
+    @swagger.operation(
+        responseclass='List[Event]',
+        nickname="delete events",
+        notes='Deletes events according to a passed Deployment ID'
+    )
+    @exceptions_handled
+    @marshal_events
+    @create_filters()
+    @paginate
+    @rangeable
+    @projection
+    @sortable
+    def delete(self, filters=None, pagination=None, sort=None,
+               range_filters=None, **kwargs):
+        """Delete events/logs connected to a certain Deployment ID
+        """
+        query = self._build_query(filters=filters,
+                                  pagination=pagination,
+                                  sort=sort,
+                                  range_filters=range_filters)
+        events = ManagerElasticsearch.search_events(body=query)
+        metadata = ManagerElasticsearch.build_list_result_metadata(query,
+                                                                   events)
+        events = ManagerElasticsearch.extract_info_for_deletion(events)
+        get_blueprints_manager().delete_events(events)
+
+        # We don't really want to return all of the deleted events, so it's a
+        # bit of a hack to only return the number of events to delete - if any
+        # of the events weren't deleted, we'd have gotten an error from the
+        # method above
+        return ListResult([len(events)], metadata)
