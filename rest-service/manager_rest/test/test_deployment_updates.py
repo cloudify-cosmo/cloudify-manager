@@ -14,6 +14,7 @@
 #  * limitations under the License.
 import os
 import re
+import datetime
 
 from mock import patch
 from nose.plugins.attrib import attr
@@ -78,6 +79,27 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
             self.assertEquals(400, response.status_code)
             self.assertEquals('unknown_deployment_input_error',
                               response.json['error_code'])
+
+    @patch('manager_rest.deployment_update.handlers.'
+           'DeploymentUpdateNodeHandler.finalize')
+    @patch('manager_rest.deployment_update.handlers.'
+           'DeploymentUpdateNodeInstanceHandler.finalize')
+    def test_set_update_at_field(self, *_):
+        deployment_id = 'dep'
+        self._deploy_base(deployment_id, 'no_output.yaml')
+        deployment = self.client.deployments.get(deployment_id=deployment_id)
+        timestamp_before_update = \
+            datetime.datetime.strptime(deployment['updated_at'],
+                                       "%Y-%m-%dT%H:%M:%S.%fZ")
+        self._update(deployment_id, 'one_output.yaml')
+        deployment_update = self.client.deployment_updates.list(
+            deployment_id=deployment_id)[0]
+        self.client.deployment_updates.finalize_commit(deployment_update.id)
+        deployment = self.client.deployments.get(deployment_id=deployment_id)
+        timestamp_after_update = \
+            datetime.datetime.strptime(deployment['updated_at'],
+                                       "%Y-%m-%dT%H:%M:%S.%fZ")
+        self.assertGreater(timestamp_after_update, timestamp_before_update)
 
     def test_step_add(self):
         deployment_id = 'dep'

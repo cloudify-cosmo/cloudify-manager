@@ -1,6 +1,7 @@
 import copy
 
-import utils
+import utils as deployment_update_utils
+import manager_rest.utils
 import manager_rest.models
 import manager_rest.manager_exceptions
 from manager_rest import storage_manager
@@ -57,8 +58,8 @@ class NodeHandler(FrozenEntitiesHandlerBase):
             self.sm.update_node(
                     deployment_id=ctx.deployment_id,
                     node_id=node_id,
-                    plugins=utils.get_raw_node(ctx.deployment_plan,
-                                               node_id)['plugins'])
+                    plugins=deployment_update_utils.get_raw_node(
+                        ctx.deployment_plan, node_id)['plugins'])
             current_entities[node_id] = \
                 self.sm.get_node(ctx.deployment_id, node_id).to_dict()
 
@@ -145,7 +146,8 @@ class RelationshipHandler(ModifiableEntityHandlerBase):
     def modify(self, ctx, current_entities):
 
         source_index = ctx.relationship_index
-        target_index = utils.parse_index(ctx.modification_breadcrumbs[0])
+        target_index = deployment_update_utils.parse_index(
+            ctx.modification_breadcrumbs[0])
 
         relationships = current_entities[ctx.raw_node_id][ctx.RELATIONSHIPS]
         self._resize_relationships(relationships, target_index)
@@ -187,8 +189,8 @@ class OperationHandler(ModifiableEntityHandlerBase):
                 self._modify_node_operation)
 
     def _modify_node_operation(self, ctx, current_entities):
-        new_operation = utils.create_dict(ctx.modification_breadcrumbs,
-                                          ctx.raw_entity_value)
+        new_operation = deployment_update_utils.create_dict(
+            ctx.modification_breadcrumbs, ctx.raw_entity_value)
 
         changes = {
             ctx.OPERATIONS: {ctx.operation_id: new_operation},
@@ -199,7 +201,7 @@ class OperationHandler(ModifiableEntityHandlerBase):
                             **changes)
         current_node = current_entities[ctx.raw_node_id]
         if ctx.modification_breadcrumbs:
-            operation_to_update = utils.traverse_object(
+            operation_to_update = deployment_update_utils.traverse_object(
                     current_node[ctx.OPERATIONS][ctx.operation_id],
                     ctx.modification_breadcrumbs[:-1]
             )
@@ -220,8 +222,9 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
         if ctx.modification_breadcrumbs:
             operation_to_update = \
-                utils.traverse_object(operations[ctx.operation_id],
-                                      ctx.modification_breadcrumbs[:-1])
+                deployment_update_utils.traverse_object(
+                    operations[ctx.operation_id],
+                    ctx.modification_breadcrumbs[:-1])
             operation_to_update[ctx.modification_breadcrumbs[-1]] = \
                 ctx.raw_entity_value
         else:
@@ -288,8 +291,8 @@ class PropertyHandler(ModifiableEntityHandlerBase):
         changes = {
             ctx.PROPERTIES: {
                 ctx.property_id:
-                    utils.create_dict(ctx.modification_breadcrumbs,
-                                      ctx.raw_entity_value)
+                    deployment_update_utils.create_dict(
+                        ctx.modification_breadcrumbs, ctx.raw_entity_value)
             }
         }
 
@@ -301,8 +304,9 @@ class PropertyHandler(ModifiableEntityHandlerBase):
 
         if ctx.modification_breadcrumbs:
             property_to_update = \
-                utils.traverse_object(properties[ctx.property_id],
-                                      ctx.modification_breadcrumbs[:-1])
+                deployment_update_utils.traverse_object(
+                    properties[ctx.property_id],
+                    ctx.modification_breadcrumbs[:-1])
             property_to_update[ctx.modification_breadcrumbs[-1]] = \
                 ctx.raw_entity_value
         else:
@@ -325,8 +329,8 @@ class PropertyHandler(ModifiableEntityHandlerBase):
 class WorkflowHandler(ModifiableEntityHandlerBase):
 
     def add(self, ctx, current_entities):
-        new_workflow = utils.create_dict(ctx.modification_breadcrumbs,
-                                         ctx.raw_entity_value)
+        new_workflow = deployment_update_utils.create_dict(
+            ctx.modification_breadcrumbs, ctx.raw_entity_value)
         changes = {ctx.WORKFLOWS: {ctx.workflow_id: new_workflow}}
 
         self.sm.update_deployment(_data_template(Deployment,
@@ -348,8 +352,8 @@ class OutputHandler(ModifiableEntityHandlerBase):
 
     def add(self, ctx, current_entities):
 
-        new_output = utils.create_dict(ctx.modification_breadcrumbs,
-                                       ctx.raw_entity_value)
+        new_output = deployment_update_utils.create_dict(
+            ctx.modification_breadcrumbs, ctx.raw_entity_value)
 
         changes = {ctx.OUTPUTS: {ctx.output_id: new_output}}
 
@@ -414,7 +418,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         current_nodes = self.sm.get_nodes(
                 filters={'deployment_id': dep_update.deployment_id}).items
         nodes_dict = {node.id: node.to_dict() for node in current_nodes}
-        modified_entities = utils.ModifiedEntitiesDict()
+        modified_entities = deployment_update_utils.ModifiedEntitiesDict()
 
         # Iterate over the steps of the deployment update and handle each
         # step according to its operation, passing the deployment update
@@ -447,7 +451,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         removed_node_instances = \
             removed_and_related.get(NODE_MOD_TYPES.AFFECTED, [])
 
-        removed_node_ids = utils.extract_ids(removed_node_instances, 'node_id')
+        removed_node_ids = deployment_update_utils.extract_ids(
+            removed_node_instances, 'node_id')
 
         # Since not all changes are caught on the node instances (actually only
         # the removing/adding of relationships and nodes) we need to apply all
@@ -769,11 +774,16 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
         self.sm.update_deployment(self._deployment_template(dep_update))
 
+        # set the `updated_at` field of the deployment related to the
+        # deployment update
+        deployment = dep_update.deployment_update_deployment
+        deployment['updated_at'] = manager_rest.utils.get_formatted_timestamp()
+
         updated_deployment = \
             _data_template(Deployment,
                            dep_update.deployment_id,
                            'id',
-                           **dep_update.deployment_update_deployment)
+                           **deployment)
         self.sm.update_deployment(updated_deployment)
 
     @staticmethod

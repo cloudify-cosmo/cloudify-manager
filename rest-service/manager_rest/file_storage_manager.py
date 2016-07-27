@@ -169,19 +169,21 @@ class FileStorageManager(object):
 
     def get_node(self, deployment_id, node_id, **_):
         data = self._load_data()
-        node_id = '{}_{}'.format(deployment_id, node_id)
-        if node_id in data[NODES]:
-            return data[NODES][node_id]
+        storage_node_id = self._storage_node_id(deployment_id,
+                                                node_id)
+        if storage_node_id in data[NODES]:
+            return data[NODES][storage_node_id]
         raise manager_exceptions.NotFoundError(
             "Deployment {0} not found".format(deployment_id))
 
     def put_node(self, node):
         data = self._load_data()
-        node_id = '{0}_{1}'.format(node.deployment_id, node.id)
-        if str(node_id) in data[NODES]:
+        storage_node_id = self._storage_node_id(node.deployment_id,
+                                                node.id)
+        if str(storage_node_id) in data[NODES]:
             raise manager_exceptions.ConflictError(
-                'Node {0} already exists'.format(node_id))
-        data[NODES][str(node_id)] = node
+                'Node {0} already exists'.format(storage_node_id))
+        data[NODES][str(storage_node_id)] = node
         self._dump_data(data)
         return 1
 
@@ -211,7 +213,7 @@ class FileStorageManager(object):
                     number_of_instances=None,
                     planned_number_of_instances=None):
         data = self._load_data()
-        storage_node_id = '{0}_{1}'.format(deployment_id, node_id)
+        storage_node_id = self._storage_node_id(deployment_id, node_id)
         if storage_node_id not in data[NODES]:
             raise manager_exceptions.NotFoundError(
                 'Node {0} not found'.format(node_id))
@@ -437,8 +439,8 @@ class FileStorageManager(object):
                 del data[NODE_INSTANCES][instance.id]
         for node in data[NODES].values():
             if node.deployment_id == deployment_id:
-                node_id = '{0}_{1}'.format(deployment_id, node.id)
-                del data[NODES][node_id]
+                storage_node_id = self._storage_node_id(deployment_id, node.id)
+                del data[NODES][storage_node_id]
         for execution in data[EXECUTIONS].values():
             if execution.deployment_id == deployment_id:
                 del data[EXECUTIONS][execution.id]
@@ -451,8 +453,9 @@ class FileStorageManager(object):
     def delete_execution(self, execution_id):
         return self._delete_object(execution_id, EXECUTIONS, 'Execution')
 
-    def delete_node(self, node_id):
-        return self._delete_object(node_id, NODES, 'Node')
+    def delete_node(self, deployment_id, node_id):
+        storage_node_id = self._storage_node_id(deployment_id, node_id)
+        return self._delete_object(storage_node_id, NODES, 'Node')
 
     def delete_node_instance(self, node_instance_id):
         return self._delete_object(node_instance_id, NODE_INSTANCES, 'Node')
@@ -559,7 +562,13 @@ class FileStorageManager(object):
         updated_deployment = data[DEPLOYMENTS][deployment_id]
         if deployment.scaling_groups is not None:
             updated_deployment.scaling_groups = deployment.scaling_groups
+        if deployment.updated_at is not None:
+            updated_deployment.updated_at = deployment.updated_at
         self._dump_data(data)
+
+    @staticmethod
+    def _storage_node_id(deployment_id, node_id):
+        return '{0}_{1}'.format(deployment_id, node_id)
 
 
 def create():
