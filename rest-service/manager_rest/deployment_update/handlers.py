@@ -1,4 +1,5 @@
 import copy
+import datetime
 
 import utils
 import manager_rest.models
@@ -769,11 +770,16 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
         self.sm.update_deployment(self._deployment_template(dep_update))
 
+        # set the `updated_at` field of the deployment related to the
+        # deployment update
+        deployment = dep_update.deployment_update_deployment
+        deployment['updated_at'] = datetime.datetime.now()
+
         updated_deployment = \
             _data_template(Deployment,
                            dep_update.deployment_id,
                            'id',
-                           **dep_update.deployment_update_deployment)
+                           **deployment)
         self.sm.update_deployment(updated_deployment)
 
     @staticmethod
