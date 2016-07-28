@@ -547,6 +547,8 @@ class FileStorageManager(object):
         updated_deployment = data[DEPLOYMENTS][deployment_id]
         if deployment.scaling_groups is not None:
             updated_deployment.scaling_groups = deployment.scaling_groups
+        if deployment.updated_at is not None:
+            updated_deployment.updated_at = deployment.updated_at
         self._dump_data(data)
 
 
