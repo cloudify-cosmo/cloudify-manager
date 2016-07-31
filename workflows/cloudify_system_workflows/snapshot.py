@@ -343,9 +343,26 @@ def _add_operation(operations, op_name, inputs, implementation):
         }
 
 
+def _update_plugin(plugin):
+    for field in ('package_name',
+                  'package_version',
+                  'supported_platform',
+                  'distribution',
+                  'distribution_version',
+                  'distribution_release',):
+        plugin.setdefault(field, None)
+
+
 def _update_es_node(es_node):
     node_type = es_node['_type']
     node_data = es_node['_source']
+
+    if node_type == 'blueprint':
+        plan = node_data.get('plan', {})
+        for plugin in plan.get('deployment_plugins_to_install') or []:
+            _update_plugin(plugin)
+        for plugin in plan.get('workflow_plugins_to_install') or []:
+            _update_plugin(plugin)
 
     if node_type == 'deployment':
         workflows = node_data['workflows']
@@ -394,6 +411,10 @@ def _update_es_node(es_node):
                            'cloudify_agent.operations.validate_agent_amqp')
         node_data.setdefault('min_number_of_instances', 0)
         node_data.setdefault('max_number_of_instances', -1)
+        for plugin in node_data.get('plugins') or []:
+            _update_plugin(plugin)
+        for plugin in node_data.get('plugins_to_install') or []:
+            _update_plugin(plugin)
 
     if node_type == 'node_instance':
         node_data.setdefault('scaling_groups', [])
