@@ -82,13 +82,13 @@ class CommandRunner(object):
         response = requests.get(url, stream=True, verify=verify)
 
         if destination:
-            destination_file = open(destination)
+            destination_file = open(destination, 'w')
         else:
             destination_file = tempfile.NamedTemporaryFile(delete=False)
             destination = destination_file.name
 
         with destination_file as f:
-            for chunk in response.bytes_stream(8192):
+            for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
 
         return destination
