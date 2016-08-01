@@ -82,7 +82,7 @@ class CommandRunner(object):
         response = requests.get(url, stream=True, verify=verify)
 
         if destination:
-            destination_file = open(destination, 'w')
+            destination_file = open(destination, 'wb')
         else:
             destination_file = tempfile.NamedTemporaryFile(delete=False)
             destination = destination_file.name
