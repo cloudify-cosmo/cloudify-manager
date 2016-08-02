@@ -120,7 +120,7 @@ class TestUninstallDeployment(TestCase):
         dsl_path = resource('dsl/basic_stop_error.yaml')
         deployment, _ = deploy(dsl_path)
         deployment_id = deployment.id
-        undeploy(deployment_id)
+        undeploy(deployment_id, parameters={'ignore_failure': True})
 
         machines = self.get_plugin_data(
             plugin_name='cloudmock',

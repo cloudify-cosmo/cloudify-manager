@@ -174,14 +174,16 @@ def verify_deployment_environment_creation_complete(deployment_id):
 
 def undeploy_application(deployment_id,
                          timeout_seconds=240,
-                         is_delete_deployment=False):
+                         is_delete_deployment=False,
+                         parameters=None):
     """
     A blocking method which undeploys an application from the provided dsl
     path.
     """
     client = create_rest_client()
     execution = client.executions.start(deployment_id,
-                                        'uninstall')
+                                        'uninstall',
+                                        parameters=parameters)
     wait_for_execution_to_end(execution, timeout_seconds=timeout_seconds)
 
     if execution.error and execution.error != 'None':

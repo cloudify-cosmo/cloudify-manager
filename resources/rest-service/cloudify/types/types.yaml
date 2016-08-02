@@ -418,8 +418,16 @@ workflows:
         default: []
       reduce_target_instance_ids:
         default: []
+      ignore_failure:
+        default: false
+        type: boolean
 
-  uninstall: default_workflows.cloudify.plugins.workflows.uninstall
+  uninstall:
+    mapping: default_workflows.cloudify.plugins.workflows.uninstall
+    parameters:
+      ignore_failure:
+        default: false
+        type: boolean
 
   execute_operation:
     mapping: default_workflows.cloudify.plugins.workflows.execute_operation
@@ -446,6 +454,9 @@ workflows:
       diagnose_value:
         description: Diagnosed reason of failure
         default: Not provided
+      ignore_failure:
+        default: true
+        type: boolean
 
   scale:
     mapping: default_workflows.cloudify.plugins.workflows.scale_entity
@@ -468,6 +479,9 @@ workflows:
             and this property is 'true', operate on the compute node instead
             of the specified node.
         default: false
+      ignore_failure:
+        default: false
+        type: boolean
 
   install_new_agents:
     mapping: default_workflows.cloudify.plugins.workflows.install_new_agents
