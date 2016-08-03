@@ -73,6 +73,25 @@ class ExecutionsTest(TestCase):
         )
         self.assertEqual(data, {})
 
+    def test_sort_executions(self):
+        dsl_path = resource("dsl/basic.yaml")
+        deployment, execution_id = deploy(dsl_path)
+        wait_for_execution_to_end(self.client.executions.get(execution_id))
+        deployment, execution_id = deploy(dsl_path)
+        wait_for_execution_to_end(self.client.executions.get(execution_id))
+        deployments_executions = self.client.executions.list(sort='created_at')
+        for i in range(len(deployments_executions)-1):
+            self.assertTrue(deployments_executions[i]['created_at'] <
+                            deployments_executions[i+1]['created_at'],
+                            'execution list not sorted correctly')
+        deployments_executions = self.client.executions.list(
+                sort='created_at',
+                is_descending=True)
+        for i in range(len(deployments_executions)-1):
+            self.assertTrue(deployments_executions[i]['created_at'] >
+                            deployments_executions[i+1]['created_at'],
+                            'execution list not sorted correctly')
+
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")
         deployment, execution_id = deploy(dsl_path)
