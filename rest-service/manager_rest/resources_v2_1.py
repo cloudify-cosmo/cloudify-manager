@@ -247,12 +247,16 @@ class MaintenanceModeAction(SecuredResource):
                 user = ''
 
             remaining_executions = get_running_executions()
+            status = MAINTENANCE_MODE_ACTIVATING \
+                if remaining_executions else MAINTENANCE_MODE_ACTIVATED
+            activated_at = '' if remaining_executions else now
             utils.mkdirs(config.instance().maintenance_folder)
             new_state = prepare_maintenance_dict(
-                    status=MAINTENANCE_MODE_ACTIVATING,
-                    activation_requested_at=now,
-                    remaining_executions=remaining_executions,
-                    requested_by=user)
+                status=status,
+                activation_requested_at=now,
+                activated_at=activated_at,
+                remaining_executions=remaining_executions,
+                requested_by=user)
             utils.write_dict_to_json_file(maintenance_file_path, new_state)
 
             return new_state

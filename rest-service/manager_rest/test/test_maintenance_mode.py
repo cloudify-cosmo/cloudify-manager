@@ -41,30 +41,33 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_maintenance_activation(self):
         response = self.client.maintenance_mode.activate()
-        self.assertEqual(MAINTENANCE_MODE_ACTIVATING, response.status)
-        response = self.client.maintenance_mode.status()
         self.assertEqual(MAINTENANCE_MODE_ACTIVATED, response.status)
 
-        # Second invocation of status goes through a different route.
+        # invocation of status goes through a different route.
         response = self.client.maintenance_mode.status()
         self.assertEqual(MAINTENANCE_MODE_ACTIVATED, response.status)
 
     def test_any_cmd_activates_maintenance_mode(self):
-        response = self.client.maintenance_mode.activate()
-        self.assertEqual(MAINTENANCE_MODE_ACTIVATING, response.status)
+        execution = self._start_maintenance_transition_mode(
+            bp_id='bp1',
+            dep_id='dep1')
+        self._terminate_execution(execution.id)
         self.assertRaises(exceptions.MaintenanceModeActiveError,
                           self.client.blueprints.upload,
                           blueprint_path=self.get_mock_blueprint_path(),
                           blueprint_id='b1')
-
         self.client.maintenance_mode.deactivate()
-
-        response = self.client.maintenance_mode.activate()
-        self.assertEqual(MAINTENANCE_MODE_ACTIVATING, response.status)
-        self.client.manager.get_version()
 
         maintenance_file = os.path.join(self.maintenance_mode_dir,
                                         MAINTENANCE_MODE_STATUS_FILE)
+
+        execution = self._start_maintenance_transition_mode(
+            bp_id='bp2',
+            dep_id='dep2')
+        self._terminate_execution(execution.id)
+        state = utils.read_json_file(maintenance_file)
+        self.assertEqual(state['status'], MAINTENANCE_MODE_ACTIVATING)
+        self.client.manager.get_version()
         state = utils.read_json_file(maintenance_file)
         self.assertEqual(state['status'], MAINTENANCE_MODE_ACTIVATED)
 
@@ -181,12 +184,12 @@ class MaintenanceModeTest(BaseServerTestCase):
     def test_execution_amount_maintenance_activated(self):
         self._activate_maintenance_mode()
         response = self.client.maintenance_mode.status()
-        self.assertIsNone(response.remaining_executions)
+        self.assertFalse(response.remaining_executions)
 
     def test_execution_amount_maintenance_deactivated(self):
         self._activate_and_deactivate_maintenance_mode()
         response = self.client.maintenance_mode.status()
-        self.assertIsNone(response.remaining_executions)
+        self.assertFalse(response.remaining_executions)
 
     def test_execution_amount_maintenance_activating(self):
         execution = self._start_maintenance_transition_mode()
@@ -285,9 +288,13 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def _start_maintenance_transition_mode(
             self,
+            bp_id='transition_blueprint',
+            dep_id='transition_deployment',
             execution_status=models.Execution.STARTED):
         (blueprint_id, deployment_id, blueprint_response,
-         deployment_response) = self.put_deployment('transition')
+         deployment_response) = self.put_deployment(
+                blueprint_id=bp_id,
+                deployment_id=dep_id)
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
         self.assertEquals('terminated', execution.status)

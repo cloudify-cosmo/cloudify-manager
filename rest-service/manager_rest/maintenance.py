@@ -49,6 +49,7 @@ def prepare_maintenance_dict(status,
                              remaining_executions=None,
                              requested_by='',
                              activation_requested_at=''):
+    remaining_executions = remaining_executions or []
     state = {'status': status,
              'activated_at': activated_at,
              'remaining_executions': remaining_executions,
@@ -83,7 +84,7 @@ def maintenance_mode_handler():
                 state = prepare_maintenance_dict(
                         MAINTENANCE_MODE_ACTIVATED,
                         activated_at=now,
-                        remaining_executions=None,
+                        remaining_executions=[],
                         requested_by=state['requested_by'],
                         activation_requested_at=state[
                             'activation_requested_at'])
