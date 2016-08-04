@@ -532,11 +532,11 @@ class AuthorizationTests(SecurityTestBase):
                 self.simple_user_client.maintenance_mode.status)
 
     def _test_activate_maintenance_mode(self):
-        activating_status = 'activating'
+        activated_status = 'activated'
 
         # admins should be able to activate maintenance mode...
         state = self.admin_client.maintenance_mode.activate()
-        self.assertEqual(state.status, activating_status)
+        self.assertEqual(state.status, activated_status)
         self.admin_client.maintenance_mode.deactivate()
 
         # ...but deployers, viewers and simple users should not
