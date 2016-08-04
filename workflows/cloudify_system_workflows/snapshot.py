@@ -357,71 +357,126 @@ def _update_es_node(es_node):
     node_type = es_node['_type']
     node_data = es_node['_source']
 
-    if node_type == 'blueprint':
-        plan = node_data.get('plan', {})
-        for plugin in plan.get('deployment_plugins_to_install') or []:
-            _update_plugin(plugin)
-        for plugin in plan.get('workflow_plugins_to_install') or []:
-            _update_plugin(plugin)
-
     if node_type == 'deployment':
-        workflows = node_data['workflows']
-        workflows.setdefault('install_new_agents', {
-            'operation': 'cloudify.plugins.workflows.install_new_agents',
-            'parameters': {
-                'install_agent_timeout': {
-                    'default': 300
-                },
-                'node_ids': {
-                    'default': []
-                },
-                'node_instance_ids': {
-                    'default': []
-                }
-            },
-            'plugin': 'default_workflows'
-        })
-        node_data.setdefault('scaling_groups', {})
-        node_data.setdefault('description', None)
+        _update_deployment_node_type(node_data)
 
     if node_type == 'node':
-        type_hierarchy = node_data.get('type_hierarchy', [])
-        if COMPUTE_NODE_TYPE in type_hierarchy:
-            plugins = node_data.setdefault('plugins', [])
-            if not any(p['name'] == 'agent' for p in plugins):
-                plugins.append({
-                    'source': None,
-                    'executor': 'central_deployment_agent',
-                    'name': 'agent',
-                    'install': False,
-                    'install_arguments': None
-                })
-            operations = node_data['operations']
-            _add_operation(operations,
-                           'cloudify.interfaces.cloudify_agent.create_amqp',
-                           {
-                               'install_agent_timeout': 300
-                           },
-                           'cloudify_agent.operations.create_agent_amqp')
-            _add_operation(operations,
-                           'cloudify.interfaces.cloudify_agent.validate_amqp',
-                           {
-                               'validate_agent_timeout': 20
-                           },
-                           'cloudify_agent.operations.validate_agent_amqp')
-        node_data.setdefault('min_number_of_instances', 0)
-        node_data.setdefault('max_number_of_instances', -1)
-        for plugin in node_data.get('plugins') or []:
-            _update_plugin(plugin)
-        for plugin in node_data.get('plugins_to_install') or []:
-            _update_plugin(plugin)
+        _update_node_node_type(node_data)
 
     if node_type == 'node_instance':
         node_data.setdefault('scaling_groups', [])
 
     if node_type == 'blueprint':
-        node_data.setdefault('description', '')
-        node_data.setdefault('main_file_name', '')
+        _update_blueprint_node_type(node_data)
+
+    if node_type == 'snapshot' and node_data['created_at']:
+        node_data['created_at'] = _convert_timestamp(node_data['created_at'])
+
+    if node_type == 'execution' and node_data['created_at']:
+        node_data['created_at'] = _convert_timestamp(node_data['created_at'])
+
+    if node_type == 'deployment_modification':
+        if node_data['created_at']:
+            node_data['created_at'] = \
+                _convert_timestamp(node_data['created_at'])
+        if node_data['ended_at']:
+            node_data['ended_at'] = _convert_timestamp(node_data['ended_at'])
+
+    if node_type == 'deployment_update' and node_data['created_at']:
+        node_data['created_at'] = _convert_timestamp(node_data['created_at'])
+
+    if node_type == 'plugin' and node_data['uploaded_at']:
+        node_data['uploaded_at'] = _convert_timestamp(node_data['uploaded_at'])
+
+    if 'timestamp' in node_data:
+        node_data['timestamp'] = \
+            _convert_timestamp(node_data['timestamp'][:-5])
+
+
+def _update_blueprint_node_type(node_data):
+    node_data.setdefault('description', '')
+    node_data.setdefault('main_file_name', '')
+    plan = node_data.get('plan', {})
+    for plugin in plan.get('deployment_plugins_to_install') or []:
+        _update_plugin(plugin)
+    for plugin in plan.get('workflow_plugins_to_install') or []:
+        _update_plugin(plugin)
+
+    if node_data['created_at']:
+        node_data['created_at'] = \
+            _convert_timestamp(node_data['created_at'])
+    if node_data['updated_at']:
+        node_data['updated_at'] = \
+            _convert_timestamp(node_data['updated_at'])
+
+
+def _update_node_node_type(node_data):
+    type_hierarchy = node_data.get('type_hierarchy', [])
+    if COMPUTE_NODE_TYPE in type_hierarchy:
+        plugins = node_data.setdefault('plugins', [])
+        if not any(p['name'] == 'agent' for p in plugins):
+            plugins.append({
+                'source': None,
+                'executor': 'central_deployment_agent',
+                'name': 'agent',
+                'install': False,
+                'install_arguments': None
+            })
+        operations = node_data['operations']
+        _add_operation(operations,
+                       'cloudify.interfaces.cloudify_agent.create_amqp',
+                       {
+                           'install_agent_timeout': 300
+                       },
+                       'cloudify_agent.operations.create_agent_amqp')
+        _add_operation(operations,
+                       'cloudify.interfaces.cloudify_agent.validate_amqp',
+                       {
+                           'validate_agent_timeout': 20
+                       },
+                       'cloudify_agent.operations.validate_agent_amqp')
+    node_data.setdefault('min_number_of_instances', 0)
+    node_data.setdefault('max_number_of_instances', -1)
+    for plugin in node_data.get('plugins') or []:
+        _update_plugin(plugin)
+    for plugin in node_data.get('plugins_to_install') or []:
+        _update_plugin(plugin)
+
+
+def _update_deployment_node_type(node_data):
+    workflows = node_data['workflows']
+    workflows.setdefault('install_new_agents', {
+        'operation': 'cloudify.plugins.workflows.install_new_agents',
+        'parameters': {
+            'install_agent_timeout': {
+                'default': 300
+            },
+            'node_ids': {
+                'default': []
+            },
+            'node_instance_ids': {
+                'default': []
+            }
+        },
+        'plugin': 'default_workflows'
+    })
+    node_data.setdefault('scaling_groups', {})
+    node_data.setdefault('description', None)
+    if node_data['created_at']:
+        node_data['created_at'] = \
+            _convert_timestamp(node_data['created_at'])
+    if node_data['updated_at']:
+        node_data['updated_at'] = \
+            _convert_timestamp(node_data['updated_at'])
+
+
+def _convert_timestamp(timestamp):
+    try:
+        timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
+    except ValueError:
+        return timestamp
+    # Adding 'Z' to match ISO format
+    return '{0}Z'.format(timestamp.isoformat()[:-3])
 
 
 def _include_es_node(es_node, existing_plugins, new_plugins):
