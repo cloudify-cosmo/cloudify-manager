@@ -1214,7 +1214,8 @@ class Status(SecuredResource):
                             'cloudify-webui.service': 'Cloudify UI',
                             'elasticsearch.service': 'Elasticsearch',
                             'logstash.service': 'Logstash',
-                            'nginx.service': 'Webserver'
+                            'nginx.service': 'Webserver',
+                            'postgresql-9.5.service': 'PostgreSQL'
                             }
                 jobs = get_services(job_list)
         except ImportError:
