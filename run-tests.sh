@@ -27,7 +27,6 @@ test_rest_service_v1()
 run_intergration_tests()
 {
     echo "### creating postgresql databasr and user..."
-#    PHOME=~postgres
     cp tests/postgresql_configuration.sh /tmp/postgresql_configuration.sh
     chmod +x /tmp/postgresql_configuration.sh
     sudo su - postgres -c "/tmp/postgresql_configuration.sh"
