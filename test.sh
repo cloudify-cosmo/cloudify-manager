@@ -1,0 +1,1 @@
+sudo su - postgres -c "\\df"

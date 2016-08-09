@@ -27,11 +27,7 @@ test_rest_service_v1()
 run_intergration_tests()
 {
     echo "### creating postgresql databasr and user..."
-    sudo -u postgres psql
-    CREATE USER admin WITH PASSWORD 'apassword';
-    CREATE DATABASE testdb;
-    GRANT ALL PRIVILEGES ON DATABASE testdb to admin;
-    \q
+    sudo su - postgres -c "tests/postgresql_configuration.sh"
 
     echo "### Running integration tests..."
     sudo apt-get update && sudo apt-get install -qy python-dbus
