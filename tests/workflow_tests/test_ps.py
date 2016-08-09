@@ -23,7 +23,14 @@ class TestPS(TestCase):
     def test_ps_exist(self):
         try:
             self.logger.info('aaaaaaaaaaaaaaaaaaaaa ')
-            import psycopg2
+            from flask import Flask
+            from flask import request
+            from flask import json
+            from flask import request, redirect, url_for, render_template
+            from flask_sqlalchemy import SQLAlchemy
+            from sqlalchemy import exists
+            from flask_script import Manager
+            from flask_migrate import Migrate, MigrateCommand
             self.logger.info('bbbbbbbbbbbbbbbbbbbbbbb ')
         except Exception as e:
             self.logger.info('bbbbbbbbbbbbbbbbbbbbbbb - failed to import psycopg2')
