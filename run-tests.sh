@@ -58,20 +58,22 @@ run_intergration_tests()
     local config_path=$(mktemp)
     # flags that relate to test collection should follow this command
     # e.g.: -e, -i, etc...
-    nosetests \
-        tests/workflow_tests \
-        --with-suitesplitter \
-        --suite-total=${NUMBER_OF_SUITES} \
-        --suite-number=${SUITE_NUMBER} \
-        --suite-config-path=${config_path}
-    # flags that affect test execution should follow this command
-    # the generated ${config_path} contains tests that were collected
-    # in the previous command
-    # e.g. --nocapture, --cov, etc..
-    nosetests \
-        --nologcapture \
-        --nocapture \
-        -v -c ${config_path}
+#    nosetests \
+#        tests/workflow_tests \
+#        --with-suitesplitter \
+#        --suite-total=${NUMBER_OF_SUITES} \
+#        --suite-number=${SUITE_NUMBER} \
+#        --suite-config-path=${config_path}
+#    # flags that affect test execution should follow this command
+#    # the generated ${config_path} contains tests that were collected
+#    # in the previous command
+#    # e.g. --nocapture, --cov, etc..
+#    nosetests \
+#        --nologcapture \
+#        --nocapture \
+#        -v -c ${config_path}
+
+    nosetests -s tests/workflow_tests/test_ps.py:TestPS.test_ps_exist
 }
 
 run_flake8()
