@@ -482,6 +482,8 @@ workflows:
         default: True
       install:
         default: True
+      install_script:
+        default: ''
 
 ##################################################################################
 # Base data type definitions
