@@ -187,7 +187,8 @@ class Installer(object):
             return None
 
         with tempfile.NamedTemporaryFile(delete=False, dir=path) as f:
-            f.write(self.cloudify_agent['rest_cert_content'])
+            f.write(self.cloudify_agent['rest_cert_content']
+                    .decode('string-escape'))
         return f.name
 
 
