@@ -53,6 +53,7 @@ class CommandRunner(object):
         # new one
         command_env.pop('CELERY_CONFIG_MODULE')
         command_env.pop('CELERY_WORK_DIR')
+        command_env.pop('CELERY_BROKER_URL')
 
         command_env.update(execution_env or {})
         p = subprocess.Popen(_shlex_split(command),
