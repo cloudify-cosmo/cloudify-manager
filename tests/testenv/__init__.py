@@ -45,6 +45,7 @@ from testenv.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 from testenv.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 from testenv.processes.elastic import ElasticSearchProcess
+from testenv.processes.postgresql import Postgresql
 from testenv.processes.manager_rest import ManagerRestProcess
 from testenv.processes.riemann import RiemannProcess
 from testenv.processes.celery import CeleryWorkerProcess
@@ -247,6 +248,7 @@ class TestEnvironment(object):
             self.start_riemann()
             self.start_fileserver()
             self.start_manager_rest()
+            self.validate_postgresql_running()
             self.create_management_worker()
 
         except BaseException as error:
@@ -318,6 +320,11 @@ class TestEnvironment(object):
         # elasticsearch
         self.elasticsearch_process = ElasticSearchProcess()
         self.elasticsearch_process.start()
+
+    def validate_postgresql_running(self):
+        self.postgresql = Postgresql()
+        if not self.postgresql.is_running():
+            logger.warning('Postgresql is not running!!!')
 
     def start_fileserver(self):
 

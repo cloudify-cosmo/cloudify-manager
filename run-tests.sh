@@ -26,6 +26,12 @@ test_rest_service_v1()
 
 run_intergration_tests()
 {
+    echo "### creating postgresql database and default user..."
+    cp tests/ci_postgresql_configuration.sh /tmp/ci_postgresql_configuration.sh
+    chmod +x /tmp/ci_postgresql_configuration.sh
+    sudo su - postgres -c "/tmp/ci_postgresql_configuration.sh"
+
+
     echo "### Running integration tests..."
     sudo apt-get update && sudo apt-get install -qy python-dbus
     dpkg -L python-dbus
