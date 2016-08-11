@@ -45,6 +45,7 @@ from testenv.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
 from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
 from testenv.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 from testenv.processes.elastic import ElasticSearchProcess
+from testenv.processes.postgresql import PostgresqlProcess
 from testenv.processes.manager_rest import ManagerRestProcess
 from testenv.processes.riemann import RiemannProcess
 from testenv.processes.celery import CeleryWorkerProcess
@@ -244,6 +245,7 @@ class TestEnvironment(object):
                 logs_handler_retriever=self._logs_handler_retriever)
 
             self.start_elasticsearch()
+            self.start_postgresql()
             self.start_riemann()
             self.start_fileserver()
             self.start_manager_rest()
@@ -318,6 +320,11 @@ class TestEnvironment(object):
         # elasticsearch
         self.elasticsearch_process = ElasticSearchProcess()
         self.elasticsearch_process.start()
+
+    def start_postgresql(self):
+        self.postgresql_process = PostgresqlProcess()
+        self.postgresql_process.start()
+        self.postgresql_process.configure()
 
     def start_fileserver(self):
 
