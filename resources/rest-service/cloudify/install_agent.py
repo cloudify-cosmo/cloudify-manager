@@ -29,6 +29,10 @@ from cloudify.state import ctx_parameters
 from cloudify.exceptions import CommandExecutionException
 
 
+CELERY_CONFIG_ENV_VARS = ['CELERY_CONFIG_MODULE', 'CELERY_WORK_DIR',
+                          'CELERY_BROKER_URL']
+
+
 def get_cloudify_agent():
     return ctx_parameters['cloudify_agent']
 
@@ -51,9 +55,8 @@ class CommandRunner(object):
 
         # we're running on the old agent - don't pass our celery config to the
         # new one
-        command_env.pop('CELERY_CONFIG_MODULE')
-        command_env.pop('CELERY_WORK_DIR')
-        command_env.pop('CELERY_BROKER_URL')
+        for env_var in CELERY_CONFIG_ENV_VARS:
+            command_env.pop(env_var, None)
 
         command_env.update(execution_env or {})
         p = subprocess.Popen(_shlex_split(command),
