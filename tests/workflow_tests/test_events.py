@@ -84,7 +84,8 @@ class EventsTest(TestCase):
                           skip_assertion=True)
 
     def test_search_event_message_with_reserved_characters(self):
-        from manager_rest.manager_elasticsearch import RESERVED_CHARS_REGEX
+        from manager_rest.storage.manager_elasticsearch import \
+            RESERVED_CHARS_REGEX
 
         # expecting to find a message containing 'dummy workflow'
         message = 'dum-my *low: ++**'

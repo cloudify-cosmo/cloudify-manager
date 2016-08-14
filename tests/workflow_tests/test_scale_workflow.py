@@ -421,8 +421,10 @@ class TestScaleWorkflow(TestCase):
             for node_id in node_ids:
                 self.assertEqual(
                     expected_node_count,
-                    len(self.client.node_instances.list(self.deployment_id,
-                                                        node_id=node_id)))
+                    len(self.client.node_instances.list(
+                        self.deployment_id,
+                        node_id=node_id).items)
+                )
             plugin_name = 'testmockoperations'
             invocations = self.get_plugin_data(
                 plugin_name,

@@ -19,7 +19,7 @@ import mock
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
-from manager_rest.storage_manager import ListResult
+from manager_rest.storage.storage_manager import ListResult
 from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 
 
@@ -52,7 +52,7 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         # fields at the end of the request, but also propagates to the Model
         # section, for more efficient storage queries
         with mock.patch('manager_rest.blueprints_manager.BlueprintsManager'
-                        '.blueprints_list') as bpm_bp_list:
+                        '.list_blueprints') as bpm_bp_list:
             mock_meta = {'pagination': {'total': 0,
                                         'size': 0,
                                         'offset': 0}}

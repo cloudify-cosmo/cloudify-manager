@@ -27,8 +27,9 @@ from nose.tools import nottest
 from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
 
-from manager_rest import utils, config, storage_manager, archiving
-from manager_rest.file_server import FileServer
+from manager_rest import utils, config, archiving
+from manager_rest.storage import storage_manager
+from manager_rest.storage.file_server import FileServer
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
@@ -40,7 +41,7 @@ except ImportError:
     CLIENT_API_VERSION = 'v1'
 
 
-STORAGE_MANAGER_MODULE_NAME = 'manager_rest.file_storage_manager'
+STORAGE_MANAGER_MODULE_NAME = 'manager_rest.storage.file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_SNAPSHOTS_FOLDER = 'snapshots'

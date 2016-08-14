@@ -17,7 +17,7 @@ import importlib
 from flask import current_app
 
 # storage_manager_module_name = 'file_storage_manager'
-storage_manager_module_name = 'manager_rest.es_storage_manager'
+storage_manager_module_name = 'manager_rest.storage.sql_storage_manager'
 
 _instance = None
 

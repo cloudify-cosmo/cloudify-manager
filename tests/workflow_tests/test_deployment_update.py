@@ -172,9 +172,19 @@ class DeploymentUpdateBase(TestCase):
     def _assert_equal_dicts(self, d1, d2, excluded_items=()):
         for k, v in d1.iteritems():
             if k not in excluded_items:
-                self.assertEquals(d2.get(k, None), v,
-                                  '{0} has changed on {1}. {2}!={3}'
-                                  .format(d1, k, d1[k], d2[k]))
+                # Assuming here that only node instances have a version
+                # in their dict, and so `version_changed` is only applicable
+                # in the cases where we're comparing node instances
+                if k == 'version':
+                    self.assertGreaterEqual(d2.get(k, None), v,
+                                            'New version should be greater '
+                                            ' or equal to the old version. '
+                                            'Old: {0}, new: {1}'
+                                            .format(d1[k], d2[k]))
+                else:
+                    self.assertEquals(d2.get(k, None), v,
+                                      '{0} has changed on {1}. {2}!={3}'
+                                      .format(d1, k, d1[k], d2[k]))
 
     def _create_dict(self, path):
         if len(path) == 1:

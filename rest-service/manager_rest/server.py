@@ -28,12 +28,12 @@ from flask import (
     current_app
 )
 from flask_restful import Api
-
 from flask_securest.rest_security import SecuREST
 
 from manager_rest import endpoint_mapper
 from manager_rest import config
-from manager_rest import storage_manager
+from manager_rest.storage import storage_manager
+from manager_rest.storage.sql_models import db
 from manager_rest import manager_exceptions
 from manager_rest import utils
 from manager_rest.maintenance import maintenance_mode_handler
@@ -105,6 +105,18 @@ def setup_app(warnings=None):
         flask_restful_handle_user_exception)
 
     endpoint_mapper.setup_resources(api)
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = \
+        'postgresql://{0}:{1}@{2}/{3}'.format(
+            cfy_config.postgresql_username,
+            cfy_config.postgresql_password,
+            cfy_config.postgresql_host,
+            cfy_config.postgresql_db_name
+        )
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    db.init_app(app)            # Set the app to use the SQLAlchemy DB
+    app.app_context().push()    # This makes sure db.app == app
     return app
 
 

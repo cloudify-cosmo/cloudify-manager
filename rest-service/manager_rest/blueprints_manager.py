@@ -18,6 +18,7 @@ import traceback
 import os
 import itertools
 import shutil
+from copy import deepcopy
 from StringIO import StringIO
 
 from flask import current_app
@@ -30,7 +31,7 @@ from manager_rest import models
 from manager_rest import config
 from manager_rest import utils
 from manager_rest import manager_exceptions
-from manager_rest import storage_manager
+from manager_rest.storage import storage_manager
 from manager_rest import workflow_client as wf_client
 
 
@@ -50,22 +51,22 @@ class BlueprintsManager(object):
         self.sm = storage_manager.get_storage_manager()
         self.workflow_client = wf_client.get_workflow_client()
 
-    def blueprints_list(self, include=None, filters=None,
+    def list_blueprints(self, include=None, filters=None,
                         pagination=None, sort=None):
-        return self.sm.blueprints_list(include=include, filters=filters,
+        return self.sm.list_blueprints(include=include, filters=filters,
                                        pagination=pagination, sort=sort)
 
-    def deployments_list(self, include=None, filters=None, pagination=None,
+    def list_deployments(self, include=None, filters=None, pagination=None,
                          sort=None):
-        return self.sm.deployments_list(include=include, filters=filters,
+        return self.sm.list_deployments(include=include, filters=filters,
                                         pagination=pagination, sort=sort)
 
-    def snapshots_list(self, include=None, filters=None, pagination=None,
+    def list_snapshots(self, include=None, filters=None, pagination=None,
                        sort=None):
-        return self.sm.snapshots_list(include=include, filters=filters,
+        return self.sm.list_snapshots(include=include, filters=filters,
                                       pagination=pagination, sort=sort)
 
-    def executions_list(self, include=None, is_include_system_workflows=False,
+    def list_executions(self, include=None, is_include_system_workflows=False,
                         filters=None, pagination=None, sort=None):
         filters = filters or {}
         is_system_workflow = filters.get('is_system_workflow')
@@ -76,7 +77,7 @@ class BlueprintsManager(object):
                 filters['is_system_workflow'].append(value)
         elif not is_include_system_workflows:
             filters['is_system_workflow'] = [False]
-        return self.sm.executions_list(include=include, filters=filters,
+        return self.sm.list_executions(include=include, filters=filters,
                                        pagination=pagination, sort=sort)
 
     def get_blueprint(self, blueprint_id, include=None):
@@ -227,11 +228,11 @@ class BlueprintsManager(object):
             if not force:
                 used_blueprints = list(set(
                     d.blueprint_id for d in
-                    self.deployments_list(include=['blueprint_id']).items))
+                    self.list_deployments(include=['blueprint_id']).items))
                 plugins = [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
                            b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
                            for b in
-                           self.blueprints_list(include=['plan'],
+                           self.list_blueprints(include=['plan'],
                                                 filters={
                                                     'id': used_blueprints
                                                 }).items]
@@ -292,7 +293,7 @@ class BlueprintsManager(object):
         return new_blueprint
 
     def delete_blueprint(self, blueprint_id):
-        blueprint_deployments = self.sm.get_blueprint_deployments(
+        blueprint_deployments = self.sm.list_blueprint_deployments(
             blueprint_id).items
 
         if len(blueprint_deployments) > 0:
@@ -321,7 +322,7 @@ class BlueprintsManager(object):
         # validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
-        executions = self.sm.executions_list(
+        executions = self.sm.list_executions(
             filters=deplyment_id_filter).items
         if any(execution.status not in models.Execution.END_STATES for
            execution in executions):
@@ -337,7 +338,7 @@ class BlueprintsManager(object):
         if not ignore_live_nodes:
             deplyment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
-            node_instances = self.sm.get_node_instances(
+            node_instances = self.sm.list_node_instances(
                 filters=deplyment_id_filter).items
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
@@ -414,7 +415,7 @@ class BlueprintsManager(object):
         }
         executions = [
             e.id
-            for e in self.executions_list(is_include_system_workflows=True,
+            for e in self.list_executions(is_include_system_workflows=True,
                                           filters=filters).items
         ]
 
@@ -429,7 +430,7 @@ class BlueprintsManager(object):
         filters = {
             'status': models.Execution.ACTIVE_STATES
         }
-        for e in self.executions_list(is_include_system_workflows=True,
+        for e in self.list_executions(is_include_system_workflows=True,
                                       filters=filters).items:
             if e.deployment_id is None:
                 raise manager_exceptions.ExistingRunningExecutionError(
@@ -495,7 +496,7 @@ class BlueprintsManager(object):
                 async_task.get(timeout=timeout, propagate=True)
             except celery.exceptions.TimeoutError:
                 raise manager_exceptions.ExecutionTimeout(
-                    'Execution of system workflow {0} timed out ({1} seconds}'
+                    'Execution of system workflow {0} timed out ({1} seconds)'
                     .format(wf_id, timeout))
             except Exception as e:
                 # error message for the user
@@ -680,9 +681,6 @@ class BlueprintsManager(object):
 
         self._store_deployment_node_instances(node_instances)
 
-    def _store_deployment(self, deployment_id, deployment):
-        self.sm.put_deployment(deployment_id, deployment)
-
     def create_deployment(self, blueprint_id, deployment_id, inputs=None,
                           bypass_maintenance=None):
 
@@ -701,7 +699,7 @@ class BlueprintsManager(object):
             deployment_id,
             deployment_plan,
             inputs=inputs)
-        self._store_deployment(deployment_id, new_deployment)
+        self.sm.put_deployment(deployment_id, new_deployment)
 
         self._create_deployment_nodes(blueprint_id,
                                       deployment_id,
@@ -723,7 +721,7 @@ class BlueprintsManager(object):
         deployment = self.sm.get_deployment(deployment_id)
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
-        existing_modifications = self.sm.deployment_modifications_list(
+        existing_modifications = self.sm.list_deployment_modifications(
             include=['id', 'status'],
             filters=deployment_id_filter).items
         active_modifications = [
@@ -737,10 +735,10 @@ class BlueprintsManager(object):
                     'started deployment modifications: {0}'
                     .format(active_modifications))
 
-        nodes = [node.to_dict() for node in self.sm.get_nodes(
+        nodes = [node.to_dict() for node in self.sm.list_nodes(
             filters=deployment_id_filter).items]
         node_instances = [instance.to_dict() for instance
-                          in self.sm.get_node_instances(
+                          in self.sm.list_node_instances(
                           filters=deployment_id_filter).items]
         node_instances_modification = tasks.modify_deployment(
             nodes=nodes,
@@ -751,7 +749,7 @@ class BlueprintsManager(object):
 
         node_instances_modification['before_modification'] = [
             instance.to_dict() for instance in
-            self.sm.get_node_instances(filters=deployment_id_filter).items]
+            self.sm.list_node_instances(filters=deployment_id_filter).items]
 
         now = utils.get_formatted_timestamp()
         modification_id = str(uuid.uuid4())
@@ -766,11 +764,13 @@ class BlueprintsManager(object):
             context=context)
         self.sm.put_deployment_modification(modification_id, modification)
 
+        scaling_groups = deepcopy(deployment.scaling_groups)
         for node_id, modified_node in modified_nodes.items():
             if node_id in deployment.scaling_groups:
-                deployment.scaling_groups[node_id]['properties'].update({
+                scaling_groups[node_id]['properties'].update({
                     'planned_instances': modified_node['instances']
                 })
+                deployment.scaling_groups = scaling_groups
             else:
                 self.sm.update_node(
                     modification.deployment_id, node_id,
@@ -831,11 +831,13 @@ class BlueprintsManager(object):
         deployment = self.sm.get_deployment(modification.deployment_id)
 
         modified_nodes = modification.modified_nodes
+        scaling_groups = deepcopy(deployment.scaling_groups)
         for node_id, modified_node in modified_nodes.items():
             if node_id in deployment.scaling_groups:
-                deployment.scaling_groups[node_id]['properties'].update({
+                scaling_groups[node_id]['properties'].update({
                     'current_instances': modified_node['instances']
                 })
+                deployment.scaling_groups = scaling_groups
             else:
                 self.sm.update_node(
                     modification.deployment_id, node_id,
@@ -899,7 +901,7 @@ class BlueprintsManager(object):
         deployment = self.sm.get_deployment(modification.deployment_id)
         deployment_id_filter = self.create_filters_dict(
             deployment_id=modification.deployment_id)
-        node_instances = self.sm.get_node_instances(
+        node_instances = self.sm.list_node_instances(
             filters=deployment_id_filter).items
         modification.node_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
@@ -908,15 +910,17 @@ class BlueprintsManager(object):
         for instance in modification.node_instances['before_modification']:
             self.sm.put_node_instance(
                 models.DeploymentNodeInstance(**instance))
-        nodes_num_instances = {node.id: node for node in self.sm.get_nodes(
+        nodes_num_instances = {node.id: node for node in self.sm.list_nodes(
             filters=deployment_id_filter,
             include=['id', 'number_of_instances']).items}
 
         modified_nodes = modification.modified_nodes
+        scaling_groups = deepcopy(deployment.scaling_groups)
         for node_id, modified_node in modified_nodes.items():
             if node_id in deployment.scaling_groups:
-                props = deployment.scaling_groups[node_id]['properties']
+                props = scaling_groups[node_id]['properties']
                 props['planned_instances'] = props['current_instances']
+                deployment.scaling_groups = scaling_groups
             else:
                 self.sm.update_node(
                     modification.deployment_id, node_id,
@@ -946,12 +950,6 @@ class BlueprintsManager(object):
             node_instances=None,
             context=None)
 
-    def _get_node_instance_ids(self, deployment_id):
-        deplyment_id_filter = self.create_filters_dict(
-            deployment_id=deployment_id)
-        return self.sm.get_node_instances(filters=deplyment_id_filter,
-                                          include=['id'])
-
     def evaluate_deployment_outputs(self, deployment_id):
         deployment = self.get_deployment(
             deployment_id, include=['outputs'])
@@ -959,7 +957,7 @@ class BlueprintsManager(object):
         def get_node_instances(node_id=None):
             filters = self.create_filters_dict(deployment_id=deployment_id,
                                                node_id=node_id)
-            return self.sm.get_node_instances(filters=filters).items
+            return self.sm.list_node_instances(filters=filters).items
 
         def get_node_instance(node_instance_id):
             return self.sm.get_node_instance(node_instance_id)
@@ -982,7 +980,7 @@ class BlueprintsManager(object):
         def get_node_instances(node_id=None):
             filters = self.create_filters_dict(deployment_id=deployment_id,
                                                node_id=node_id)
-            return self.sm.get_node_instances(filters=filters).items
+            return self.sm.list_node_instances(filters=filters).items
 
         def get_node_instance(node_instance_id):
             return self.sm.get_node_instance(node_instance_id)
@@ -1125,7 +1123,7 @@ class BlueprintsManager(object):
             deployment_id=deployment_id)
         env_creation = next(
             (execution for execution in
-             self.sm.executions_list(filters=deployment_id_filter).items
+             self.sm.list_executions(filters=deployment_id_filter).items
              if execution.workflow_id == 'create_deployment_environment'),
             None)
 
@@ -1238,7 +1236,7 @@ class BlueprintsManager(object):
         def _get_running_executions(deployment_id=None, include_system=True):
             deployment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
-            executions = self.executions_list(
+            executions = self.list_executions(
                 filters=deployment_id_filter,
                 is_include_system_workflows=include_system).items
             running = [

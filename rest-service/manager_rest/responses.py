@@ -28,10 +28,10 @@ class BlueprintState(object):
     }
 
     def __init__(self, **kwargs):
-        self.plan = kwargs['plan']
-        self.id = kwargs['id']
-        self.created_at = kwargs['created_at']
-        self.updated_at = kwargs['updated_at']
+        self.plan = kwargs.get('plan')
+        self.id = kwargs.get('id')
+        self.created_at = kwargs.get('created_at')
+        self.updated_at = kwargs.get('updated_at')
 
 
 @swagger.model
@@ -43,8 +43,8 @@ class BlueprintValidationStatus(object):
     }
 
     def __init__(self, **kwargs):
-        self.blueprint_id = kwargs['blueprint_id']
-        self.status = kwargs['status']
+        self.blueprint_id = kwargs.get('blueprint_id')
+        self.status = kwargs.get('status')
 
 
 @swagger.model
@@ -57,9 +57,9 @@ class Workflow(object):
     }
 
     def __init__(self, **kwargs):
-        self.name = kwargs['name']
-        self.created_at = kwargs['created_at']
-        self.parameters = kwargs['parameters']
+        self.name = kwargs.get('name')
+        self.created_at = kwargs.get('created_at')
+        self.parameters = kwargs.get('parameters')
 
 
 class Deployment(object):
@@ -79,17 +79,19 @@ class Deployment(object):
     }
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.permalink = kwargs['permalink']
-        self.created_at = kwargs['created_at']
-        self.updated_at = kwargs['updated_at']
-        self.blueprint_id = kwargs['blueprint_id']
-        self.workflows = self._responsify_workflows_field(kwargs['workflows'])
-        self.inputs = kwargs['inputs']
-        self.policy_types = kwargs['policy_types']
-        self.policy_triggers = kwargs['policy_triggers']
-        self.groups = kwargs['groups']
-        self.outputs = kwargs['outputs']
+        self.id = kwargs.get('id')
+        self.permalink = kwargs.get('permalink')
+        self.created_at = kwargs.get('created_at')
+        self.updated_at = kwargs.get('updated_at')
+        self.blueprint_id = kwargs.get('blueprint_id')
+        self.workflows = self._responsify_workflows_field(
+            kwargs.get('workflows')
+        )
+        self.inputs = kwargs.get('inputs')
+        self.policy_types = kwargs.get('policy_types')
+        self.policy_triggers = kwargs.get('policy_triggers')
+        self.groups = kwargs.get('groups')
+        self.outputs = kwargs.get('outputs')
         self.description = kwargs.get('description')
 
     @staticmethod
@@ -112,8 +114,8 @@ class DeploymentOutputs(object):
     }
 
     def __init__(self, **kwargs):
-        self.deployment_id = kwargs['deployment_id']
-        self.outputs = kwargs['outputs']
+        self.deployment_id = kwargs.get('deployment_id')
+        self.outputs = kwargs.get('outputs')
 
 
 @swagger.model
@@ -131,14 +133,14 @@ class DeploymentModification(object):
     }
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.status = kwargs['status']
-        self.deployment_id = kwargs['deployment_id']
-        self.node_instances = kwargs['node_instances']
-        self.created_at = kwargs['created_at']
-        self.ended_at = kwargs['ended_at']
-        self.modified_nodes = kwargs['modified_nodes']
-        self.context = kwargs['context']
+        self.id = kwargs.get('id')
+        self.status = kwargs.get('status')
+        self.deployment_id = kwargs.get('deployment_id')
+        self.node_instances = kwargs.get('node_instances')
+        self.created_at = kwargs.get('created_at')
+        self.ended_at = kwargs.get('ended_at')
+        self.modified_nodes = kwargs.get('modified_nodes')
+        self.context = kwargs.get('context')
 
 
 @swagger.model
@@ -157,15 +159,15 @@ class Execution(object):
     }
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.status = kwargs['status']
-        self.deployment_id = kwargs['deployment_id']
-        self.workflow_id = kwargs['workflow_id']
-        self.blueprint_id = kwargs['blueprint_id']
-        self.created_at = kwargs['created_at']
-        self.error = kwargs['error']
-        self.parameters = kwargs['parameters']
-        self.is_system_workflow = kwargs['is_system_workflow']
+        self.id = kwargs.get('id')
+        self.status = kwargs.get('status')
+        self.deployment_id = kwargs.get('deployment_id')
+        self.workflow_id = kwargs.get('workflow_id')
+        self.blueprint_id = kwargs.get('blueprint_id')
+        self.created_at = kwargs.get('created_at')
+        self.error = kwargs.get('error')
+        self.parameters = kwargs.get('parameters')
+        self.is_system_workflow = kwargs.get('is_system_workflow')
 
 
 @swagger.model
@@ -189,21 +191,24 @@ class Node(object):
     }
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.deployment_id = kwargs['deployment_id']
-        self.blueprint_id = kwargs['blueprint_id']
-        self.type = kwargs['type']
-        self.type_hierarchy = kwargs['type_hierarchy']
-        self.number_of_instances = kwargs['number_of_instances']
-        self.planned_number_of_instances = kwargs[
-            'planned_number_of_instances']
-        self.deploy_number_of_instances = kwargs['deploy_number_of_instances']
-        self.host_id = kwargs['host_id']
-        self.properties = kwargs['properties']
-        self.operations = kwargs['operations']
-        self.plugins = kwargs['plugins']
-        self.plugins_to_install = kwargs['plugins_to_install']
-        self.relationships = kwargs['relationships']
+        self.id = kwargs.get('id')
+        self.deployment_id = kwargs.get('deployment_id')
+        self.blueprint_id = kwargs.get('blueprint_id')
+        self.type = kwargs.get('type')
+        self.type_hierarchy = kwargs.get('type_hierarchy')
+        self.number_of_instances = kwargs.get('number_of_instances')
+        self.planned_number_of_instances = kwargs.get(
+            'planned_number_of_instances'
+        )
+        self.deploy_number_of_instances = kwargs.get(
+            'deploy_number_of_instances'
+        )
+        self.host_id = kwargs.get('host_id')
+        self.properties = kwargs.get('properties')
+        self.operations = kwargs.get('operations')
+        self.plugins = kwargs.get('plugins')
+        self.plugins_to_install = kwargs.get('plugins_to_install')
+        self.relationships = kwargs.get('relationships')
 
 
 @swagger.model
@@ -221,14 +226,14 @@ class NodeInstance(object):
     }
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.deployment_id = kwargs['deployment_id']
-        self.runtime_properties = kwargs['runtime_properties']
-        self.version = kwargs['version']
-        self.state = kwargs['state']
-        self.node_id = kwargs['node_id']
-        self.relationships = kwargs['relationships']
-        self.host_id = kwargs['host_id']
+        self.id = kwargs.get('id')
+        self.deployment_id = kwargs.get('deployment_id')
+        self.runtime_properties = kwargs.get('runtime_properties')
+        self.version = kwargs.get('version')
+        self.state = kwargs.get('state')
+        self.node_id = kwargs.get('node_id')
+        self.relationships = kwargs.get('relationships')
+        self.host_id = kwargs.get('host_id')
 
 
 @swagger.model
@@ -240,8 +245,8 @@ class Status(object):
     }
 
     def __init__(self, **kwargs):
-        self.status = kwargs['status']
-        self.services = kwargs['services']
+        self.status = kwargs.get('status')
+        self.services = kwargs.get('services')
 
 
 @swagger.model
@@ -252,7 +257,7 @@ class ProviderContextPostStatus(object):
     }
 
     def __init__(self, **kwargs):
-        self.status = kwargs['status']
+        self.status = kwargs.get('status')
 
 
 @swagger.model
@@ -264,8 +269,8 @@ class ProviderContext(object):
     }
 
     def __init__(self, **kwargs):
-        self.context = kwargs['context']
-        self.name = kwargs['name']
+        self.context = kwargs.get('context')
+        self.name = kwargs.get('name')
 
 
 @swagger.model
@@ -279,10 +284,10 @@ class Version(object):
     }
 
     def __init__(self, **kwargs):
-        self.version = kwargs['version']
-        self.build = kwargs['build']
-        self.date = kwargs['date']
-        self.commit = kwargs['commit']
+        self.version = kwargs.get('version')
+        self.build = kwargs.get('build')
+        self.date = kwargs.get('date')
+        self.commit = kwargs.get('commit')
 
 
 @swagger.model
@@ -294,8 +299,8 @@ class EvaluatedFunctions(object):
     }
 
     def __init__(self, **kwargs):
-        self.deployment_id = kwargs['deployment_id']
-        self.payload = kwargs['payload']
+        self.deployment_id = kwargs.get('deployment_id')
+        self.payload = kwargs.get('payload')
 
 
 @swagger.model
@@ -306,4 +311,4 @@ class Tokens(object):
     }
 
     def __init__(self, **kwargs):
-        self.value = kwargs['value']
+        self.value = kwargs.get('value')

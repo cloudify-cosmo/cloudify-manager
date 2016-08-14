@@ -25,7 +25,7 @@ from manager_rest.test.base_test import LATEST_API_VERSION
 from cloudify_rest_client import exceptions
 from manager_rest import manager_exceptions
 from manager_rest import models
-from manager_rest import storage_manager
+from manager_rest.storage import storage_manager
 from manager_rest import utils
 
 

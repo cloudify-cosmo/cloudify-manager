@@ -18,6 +18,7 @@ import uuid
 import tarfile
 import tempfile
 from contextlib import contextmanager
+from unittest import skip
 
 import sh
 
@@ -152,6 +153,7 @@ class BasicWorkflowsTest(TestCase):
         self.assertEquals(invocation['custom_filepath'],
                           invocation['res2_path'])
 
+    @skip('Deprecated after moving to PostgreSQL')
     def test_search(self):
         dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = 'my_new_blueprint'

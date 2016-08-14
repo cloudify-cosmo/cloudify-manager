@@ -41,7 +41,10 @@ class TestPlugins(TestCase):
         try:
             self.client.plugins.get('DUMMY_PLUGIN_ID')
         except CloudifyClientError as e:
-            self.assertEquals('plugin DUMMY_PLUGIN_ID not found', e.message)
+            self.assertEquals(
+                u'Requested Plugin with ID `DUMMY_PLUGIN_ID` was not found',
+                e.message
+            )
             self.assertEquals(404, e.status_code)
 
     def test_delete_plugin(self):
@@ -65,7 +68,10 @@ class TestPlugins(TestCase):
         try:
             self.client.plugins.delete('DUMMY_PLUGIN_ID')
         except CloudifyClientError as e:
-            self.assertEquals('plugin DUMMY_PLUGIN_ID not found', e.message)
+            self.assertEquals(
+                u'Requested Plugin with ID `DUMMY_PLUGIN_ID` was not found',
+                e.message
+            )
             self.assertEquals(404, e.status_code)
 
     def test_install_uninstall_workflows_execution(self):

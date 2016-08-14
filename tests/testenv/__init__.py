@@ -33,10 +33,15 @@ from cloudify_cli.colorful_event import ColorfulEvent
 
 from testenv import utils
 from testenv import docl
-from testenv.services import elastic
+from testenv.services import elastic, postgresql
 
 logger = cloudify.utils.setup_logger('TESTENV')
 cloudify.utils.setup_logger('cloudify.rest_client', logging.INFO)
+
+# Silencing 3rd party logs
+for logger_name in ('sh', 'pika', 'requests.packages.urllib3.connectionpool'):
+    cloudify.utils.setup_logger(logger_name, logging.WARNING)
+
 testenv_instance = None
 
 
@@ -55,7 +60,6 @@ class BaseTestCase(unittest.TestCase):
         self.logger = cloudify.utils.setup_logger(self._testMethodName,
                                                   logging.INFO)
         self.client = utils.create_rest_client()
-        self.es_db_client = utils.create_es_db_client()
 
     def tearDown(self):
         self.env.stop_dispatch_processes()
@@ -156,7 +160,7 @@ class TestCase(BaseTestCase):
         utils.restore_provider_context()
 
     def tearDown(self):
-        elastic.reset_data()
+        postgresql.reset_data()
         super(TestCase, self).tearDown()
 
 

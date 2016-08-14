@@ -17,7 +17,7 @@ from mock import patch
 
 from manager_rest.test import base_test
 from manager_rest.resources_v2 import Events
-from manager_rest.manager_elasticsearch import ManagerElasticsearch
+from manager_rest.storage.manager_elasticsearch import ManagerElasticsearch
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)

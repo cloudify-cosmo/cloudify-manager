@@ -35,9 +35,9 @@ from manager_rest import resources
 from manager_rest import responses_v2
 from manager_rest import utils
 from manager_rest.blueprints_manager import get_blueprints_manager
-from manager_rest.manager_elasticsearch import ManagerElasticsearch
-from manager_rest.storage_manager import ListResult
-from manager_rest.storage_manager import get_storage_manager
+from manager_rest.storage.manager_elasticsearch import ManagerElasticsearch
+from manager_rest.storage.storage_manager import ListResult
+from manager_rest.storage.storage_manager import get_storage_manager
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_and_convert_bool,
@@ -204,7 +204,7 @@ class Snapshots(SecuredResource):
     @sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
-        return get_blueprints_manager().snapshots_list(include=_include,
+        return get_blueprints_manager().list_snapshots(include=_include,
                                                        filters=filters,
                                                        pagination=pagination,
                                                        sort=sort)
@@ -399,7 +399,7 @@ class Blueprints(resources.Blueprints):
         """
         List uploaded blueprints
         """
-        return get_blueprints_manager().blueprints_list(
+        return get_blueprints_manager().list_blueprints(
             include=_include, filters=filters,
             pagination=pagination, sort=sort)
 
@@ -518,7 +518,7 @@ class Executions(resources.Executions):
             '_include_system_workflows',
             request.args.get('_include_system_workflows', 'false'))
 
-        executions = get_blueprints_manager().executions_list(
+        executions = get_blueprints_manager().list_executions(
             filters=filters, pagination=pagination, sort=sort,
             is_include_system_workflows=is_include_system_workflows,
             include=_include)
@@ -546,7 +546,7 @@ class Deployments(resources.Deployments):
         """
         List deployments
         """
-        deployments = get_blueprints_manager().deployments_list(
+        deployments = get_blueprints_manager().list_deployments(
             include=_include, filters=filters, pagination=pagination,
             sort=sort)
         return deployments
@@ -575,7 +575,7 @@ class DeploymentModifications(resources.DeploymentModifications):
         """
         List deployment modifications
         """
-        modifications = get_storage_manager().deployment_modifications_list(
+        modifications = get_storage_manager().list_deployment_modifications(
             include=_include, filters=filters, pagination=pagination,
             sort=sort)
         return modifications
@@ -602,10 +602,10 @@ class Nodes(resources.Nodes):
         """
         List nodes
         """
-        nodes = get_storage_manager().get_nodes(include=_include,
-                                                pagination=pagination,
-                                                filters=filters,
-                                                sort=sort)
+        nodes = get_storage_manager().list_nodes(include=_include,
+                                                 pagination=pagination,
+                                                 filters=filters,
+                                                 sort=sort)
         return nodes
 
 
@@ -631,7 +631,7 @@ class NodeInstances(resources.NodeInstances):
         """
         List node instances
         """
-        node_instances = get_storage_manager().get_node_instances(
+        node_instances = get_storage_manager().list_node_instances(
             include=_include, filters=filters,
             pagination=pagination, sort=sort)
         return node_instances
@@ -658,10 +658,10 @@ class Plugins(SecuredResource):
         """
         List uploaded plugins
         """
-        plugins = get_storage_manager().get_plugins(include=_include,
-                                                    filters=filters,
-                                                    pagination=pagination,
-                                                    sort=sort)
+        plugins = get_storage_manager().list_plugins(include=_include,
+                                                     filters=filters,
+                                                     pagination=pagination,
+                                                     sort=sort)
         return plugins
 
     @swagger.operation(
@@ -737,7 +737,7 @@ class UploadedPluginsManager(files.UploadedDataManager):
                                                       archive_target_path)
 
         filter_by_name = {'package_name': new_plugin.package_name}
-        plugins = get_storage_manager().get_plugins(
+        plugins = get_storage_manager().list_plugins(
             filters=filter_by_name).items
 
         for plugin in plugins:

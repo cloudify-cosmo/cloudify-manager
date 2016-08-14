@@ -22,7 +22,8 @@ from nose.tools import nottest
 
 from dsl_parser import exceptions as parser_exceptions
 
-from manager_rest import archiving, models, storage_manager, utils
+from manager_rest import archiving, models, utils
+from manager_rest.storage import storage_manager
 from manager_rest.deployment_update.constants import STATES
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
