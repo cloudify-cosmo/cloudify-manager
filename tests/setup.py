@@ -17,7 +17,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-integration-tests',
-    version='3.5a1',
+    version='4.0a1',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=[
@@ -38,9 +38,9 @@ setup(
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
-        'cloudify-dsl-parser==3.5a1',
-        'cloudify-rest-client==3.5a1',
-        'cloudify-plugins-common==3.5a1',
+        'cloudify-dsl-parser==4.0a1',
+        'cloudify-rest-client==4.0a1',
+        'cloudify-plugins-common==4.0a1',
         'cloudify-diamond-plugin==1.3.4',
         'cloudify-script-plugin==1.4',
         'pika==0.9.14',
