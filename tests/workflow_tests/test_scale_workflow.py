@@ -46,6 +46,38 @@ class TestScaleWorkflow(TestCase):
         expectations['compute']['removed']['uninstall'] = 1
         self.deployment_assertions(expectations)
 
+    def test_compute_scale_in_compute_ignore_failure_true(self):
+        expectations = self.deploy('scale_ignore_failure')
+        expectations['compute']['new']['install'] = 3
+        self.deployment_assertions(expectations)
+
+        expectations = self.scale(parameters={
+            'scalable_entity_name': 'compute',
+            'ignore_failure': True,
+            'delta': -1})
+        expectations['compute']['existing']['install'] = 2
+        expectations['compute']['removed']['install'] = 1
+        expectations['compute']['removed']['uninstall'] = 1
+        self.deployment_assertions(expectations)
+
+    def test_compute_scale_in_compute_ignore_failure_false(self):
+        expectations = self.deploy('scale_ignore_failure')
+        expectations['compute']['new']['install'] = 3
+        self.deployment_assertions(expectations)
+
+        try:
+            self.scale(parameters={
+                'scalable_entity_name': 'compute',
+                'ignore_failure': False,
+                'delta': -1})
+        except RuntimeError as e:
+            self.assertIn(
+                "RuntimeError: Workflow failed: Task failed "
+                "'testmockoperations.tasks.mock_stop_failure'",
+                str(e))
+        else:
+            self.fail()
+
     def test_compute_scale_out_and_in_compute_from_0(self):
         expectations = self.deploy('scale10')
         expectations['compute']['new']['install'] = 0

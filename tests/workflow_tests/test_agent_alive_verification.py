@@ -27,7 +27,10 @@ class TestAgentAliveVerification(TestCase):
 
     def test_uninstall(self):
         deployment = deploy(resource("dsl/basic_stop_not_exists.yaml"))
-        undeploy_application(deployment.id)
+        undeploy_application(deployment.id,
+                             parameters={
+                                 'ignore_failure': True
+                             })
 
     def test_install(self):
         with self.assertRaisesRegexp(RuntimeError, self.AGENT_ALIVE_FAIL):

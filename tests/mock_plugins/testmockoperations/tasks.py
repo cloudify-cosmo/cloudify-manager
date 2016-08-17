@@ -179,6 +179,13 @@ def mock_lifecycle(ctx, **kwargs):
 
 
 @operation
+def mock_stop_failure(ctx, **kwargs):
+    saving_non_rel_operation_info(ctx, ctx.operation.name.split('.')[-1],
+                                  **kwargs)
+    raise NonRecoverableError('')
+
+
+@operation
 def mock_rel_lifecycle(ctx, **kwargs):
     saving_rel_operation_info(ctx, ctx.operation.name.split('.')[-1], **kwargs)
 
