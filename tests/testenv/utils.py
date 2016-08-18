@@ -19,6 +19,9 @@ import uuid
 import pika
 import requests
 import time
+import glob
+import shlex
+import subprocess
 from os import path
 from contextlib import contextmanager
 from functools import wraps
@@ -415,3 +418,80 @@ class TimeoutException(Exception):
 
     def __str__(self):
         return self.message
+
+
+def sudo(command, retries=0, globx=False, ignore_failures=False):
+    if isinstance(command, str):
+        command = shlex.split(command)
+    command.insert(0, 'sudo')
+    return run(command=command, globx=globx, retries=retries,
+               ignore_failures=ignore_failures)
+
+
+def run(command, retries=0, ignore_failures=False, globx=False):
+    if isinstance(command, str):
+        command = shlex.split(command)
+    stderr = subprocess.PIPE
+    stdout = subprocess.PIPE
+    if globx:
+        glob_command = []
+        for arg in command:
+            glob_command.append(glob.glob(arg))
+        command = glob_command
+    logger.debug('Running: {0}'.format(command))
+    proc = subprocess.Popen(command, stdout=stdout, stderr=stderr)
+    proc.aggr_stdout, proc.aggr_stderr = proc.communicate()
+    if proc.returncode != 0:
+        command_str = ' '.join(command)
+        if retries:
+            logger.warning('Failed running command: {0}. Retrying. '
+                            '({1} left)'.format(command_str, retries))
+            proc = run(command, retries - 1)
+        elif not ignore_failures:
+            msg = 'Failed running command: {0} ({1}).'.format(
+                command_str, proc.aggr_stderr)
+            raise RuntimeError(msg)
+    logger.info('Running output: {0}'.format(proc.aggr_stdout))
+    return proc
+
+
+def copy(source, destination):
+    sudo(['cp', '-rp', source, destination])
+
+
+class SystemD(object):
+
+    def systemctl(self, action, service='', retries=0, ignore_failure=False):
+        systemctl_cmd = ['systemctl', action]
+        if service:
+            systemctl_cmd.append(service)
+        return sudo(systemctl_cmd, retries=retries,
+                    ignore_failures=ignore_failure)
+
+    def enable(self, service_name, retries=0):
+        logger.info('Enabling systemd service {0}...'
+                    .format(service_name))
+        self.systemctl('enable', service_name, retries)
+
+    def start(self, service_name, retries=0):
+        logger.info('Starting systemd service {0}...'
+                    .format(service_name))
+        self.systemctl('start', service_name, retries)
+
+    def stop(self, service_name, retries=0,
+             ignore_failure=False):
+        logger.info('Stopping systemd service {0}...'
+                    .format(service_name))
+        self.systemctl('stop', service_name, retries,
+                       ignore_failure=ignore_failure)
+
+    def restart(self, service_name, retries=0, ignore_failure=False):
+        self.systemctl('restart', service_name, retries,
+                       ignore_failure=ignore_failure)
+
+    def is_alive(self, service_name):
+        result = self.systemctl('status', service_name, ignore_failure=True)
+        return result.returncode == 0
+
+
+systemd = SystemD()

@@ -58,7 +58,35 @@ We want to disable this. To do so, open the `~/dev/tools/elasticsearch-1.4.2/con
 #discovery.zen.ping.multicast.enabled: false
 ```
 
-## Step 3: Installing Riemann
+## Step 3: Install PostgreSQL
+
+PostgreSQL is our DB.
+
+You can install it using installer specific for you os. Installers can be found at [PostgreSQL Installers page] (http://www.bigsql.org/postgresql/installers.jsp)
+
+Alternatively, you can install it manually.
+* for CentOS:
+```bash
+~/dev/tools$ curl -L -O ftp://rpmfind.net/linux/centos/7.2.1511/os/x86_64/Packages/libxslt-1.1.28-5.el7.x86_64.rpm
+~/dev/tools$ curl -L -O http://yum.postgresql.org/9.5/redhat/rhel-7-x86_64/postgresql95-9.5.3-2PGDG.rhel7.x86_64.rpm
+~/dev/tools$ curl -L -O http://yum.postgresql.org/9.5/redhat/rhel-7-x86_64/postgresql95-contrib-9.5.3-2PGDG.rhel7.x86_64.rpm
+~/dev/tools$ curl -L -O http://yum.postgresql.org/9.5/redhat/rhel-7-x86_64/postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm
+~/dev/tools$ curl -L -O http://yum.postgresql.org/9.5/redhat/rhel-7-x86_64/postgresql95-server-9.5.3-2PGDG.rhel7.x86_64.rpm
+~/dev/tools$ curl -L -O http://yum.postgresql.org/9.5/redhat/rhel-7-x86_64/postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm
+~/dev/tools$ sudo rpm -Uvh libxslt-1.1.28-5.el7.x86_64.rpm
+~/dev/tools$ sudo rpm -Uvh postgresql9-*.rpm
+~/dev/tools$ sudo /usr/pgsql-9.5/bin/postgresql95-setup initdb
+```
+
+* for Ubuntu:
+```bash
+~/dev/tools$ sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
+~/dev/tools$ wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -
+~/dev/tools$ sudo apt-get update
+~/dev/tools$ sudo apt-get install postgresql postgresql-contrib
+```
+
+## Step 4: Installing Riemann
 
 Riemann is a policy and event processing engine. We use it to create monitoring policies.
 
@@ -73,7 +101,7 @@ Add the `~/dev/tools/riemann-0.2.6/bin` directory to your path. Verify this by s
 ~/dev/tools$ which riemann
 ```
 
-## Step 4: Installing riemann controller
+## Step 5: Installing riemann controller
 
 The *riemann-controller* is a Cloudify plugin that configures riemann for our usage.
 `cd` into the root directory of this repo (*cloudify-manager*) and run:
@@ -82,7 +110,7 @@ The *riemann-controller* is a Cloudify plugin that configures riemann for our us
 pip install -e plugins/riemann-controller/
 ```
 
-## Step 5: Installing Workflows
+## Step 6: Installing Workflows
 
 The *workflows* project contains Cloudify system workflows, i.e, workflows that we use for managerial configuration.
 Specifically, it contains workflows that create/delete deployments.
@@ -92,7 +120,7 @@ Specifically, it contains workflows that create/delete deployments.
 pip install -e workflows/
 ```
 
-## Step 6: Installing REST service
+## Step 7: Installing REST service
 
 The *rest-service* project is the REST gateway all clients connect to.
 We will be running it as part of the tests, so we need install its dependencies.
@@ -102,7 +130,7 @@ We will be running it as part of the tests, so we need install its dependencies.
 pip install -r rest-service/dev-requirements.txt -e rest-service/
 ```
 
-## Step 7: Installing tests framework
+## Step 8: Installing tests framework
 
 The tests in this project fork celery processes and we want these processes to have access to code written in the project (utility methods and such),
 that's why we need to install it as well.
@@ -112,7 +140,7 @@ that's why we need to install it as well.
 pip install -r tests/dev-requirements.txt -e tests/
 ```
 
-## Step 8: Verify installation.
+## Step 9: Verify installation.
 
 Lets verify everything works by running a test. First we need to start our RabbitMQ Server:
 
