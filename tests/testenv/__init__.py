@@ -13,79 +13,77 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import StringIO
-import shutil
+import json
 import logging
 import os
+import shutil
 import sys
-import threading
 import time
-import traceback
-import unittest
-import json
-import pika
-import yaml
-from os.path import dirname
-from os import path
 import tempfile
-from datetime import datetime
+import threading
+import unittest
 
-from cloudify.utils import setup_logger
-from cloudify.logs import create_event_message_prefix
-from wagon.wagon import Wagon
-from elasticsearch import Elasticsearch
+import pika.exceptions
+import sh
 
-import mock_plugins
+import cloudify.utils
+import cloudify.logs
+import cloudify.event
+from cloudify_cli.colorful_event import ColorfulEvent
 
-from testenv.constants import REST_PORT
-from testenv.constants import RABBITMQ_VERBOSE_MESSAGES_ENABLED
-from testenv.constants import RABBITMQ_POLLING_ENABLED
-from testenv.constants import FILE_SERVER_RESOURCES_URI
-from testenv.constants import FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
-from testenv.constants import FILE_SERVER_BLUEPRINTS_FOLDER
-from testenv.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
-from testenv.processes.elastic import ElasticSearchProcess
-from testenv.processes.postgresql import Postgresql
-from testenv.processes.manager_rest import ManagerRestProcess
-from testenv.processes.riemann import RiemannProcess
-from testenv.processes.celery import CeleryWorkerProcess
 from testenv import utils
+from testenv import docl
+from testenv.services import elastic
 
-logger = setup_logger('TESTENV')
-setup_logger('cloudify.rest_client', logging.INFO)
+logger = cloudify.utils.setup_logger('TESTENV')
+cloudify.utils.setup_logger('cloudify.rest_client', logging.INFO)
 testenv_instance = None
 
 
-class TestCase(unittest.TestCase):
-
+class BaseTestCase(unittest.TestCase):
     """
     A test case for cloudify integration tests.
     """
 
     def setUp(self):
-        self.logger = setup_logger(self._testMethodName, logging.INFO)
+        self.env = testenv_instance
+        self.workdir = tempfile.mkdtemp(
+            dir=self.env.test_working_dir,
+            prefix='{0}-'.format(self._testMethodName))
+        self.cfy = utils.get_cfy()
+        self.addCleanup(shutil.rmtree, self.workdir, ignore_errors=True)
+        self.logger = cloudify.utils.setup_logger(self._testMethodName,
+                                                  logging.INFO)
         self.client = utils.create_rest_client()
         self.es_db_client = utils.create_es_db_client()
-        utils.restore_provider_context()
-        TestEnvironment.start_celery_management_worker()
-        self.test_logs_file = path.join(testenv_instance.events_and_logs_dir,
-                                        '{0}.log'.format(self.id()))
-        testenv_instance.handle_logs = self._write_test_events_and_logs_to_file
 
     def tearDown(self):
-        TestEnvironment.stop_dispatch_processes()
-        TestEnvironment.stop_celery_management_worker()
-        TestEnvironment.stop_all_celery_processes()
-        TestEnvironment.reset_elasticsearch_data()
+        self.env.stop_dispatch_processes()
 
-    def _write_test_events_and_logs_to_file(self, output, event):
-        with open(self.test_logs_file, 'a') as f:
-            f.write('{0}\n'.format(output))
+    @staticmethod
+    def read_manager_file(file_path, no_strip=False):
+        """
+        Read a file from the cloudify manager filesystem.
+        """
+        return docl.read_file(file_path, no_strip=no_strip)
 
-    def get_plugin_data(self,
-                        plugin_name,
-                        deployment_id):
+    @staticmethod
+    def execute_on_manager(command, quiet=True):
+        """
+        Execute a shell command on the cloudify manager container.
+        """
+        return docl.execute(command, quiet)
 
+    @staticmethod
+    def copy_file_to_manager(source, target):
+        """
+        Copy a file to the cloudify manager filesystem
+
+        """
+        return docl.copy_file_to_manager(source=source, target=target)
+
+    @staticmethod
+    def get_plugin_data(plugin_name, deployment_id):
         """
         Retrieve the plugin state for a certain deployment.
 
@@ -94,25 +92,6 @@ class TestCase(unittest.TestCase):
         :return: plugin data relevant for the deployment.
         :rtype dict
         """
-
-        return self._get_plugin_data(
-            plugin_name=plugin_name,
-            deployment_id=deployment_id
-        )
-
-    def clear_plugin_data(self, plugin_name):
-        """
-        Clears plugin state.
-
-        :param plugin_name: the plugin in question.
-        """
-        return self._clear_plugin_data(
-            plugin_name=plugin_name
-        )
-
-    def _get_plugin_data(self,
-                         plugin_name,
-                         deployment_id):
         storage_file_path = os.path.join(
             testenv_instance.plugins_storage_dir,
             '{0}.json'.format(plugin_name)
@@ -125,8 +104,13 @@ class TestCase(unittest.TestCase):
                 data[deployment_id] = {}
             return data.get(deployment_id)
 
-    def _clear_plugin_data(self,
-                           plugin_name):
+    @staticmethod
+    def clear_plugin_data(plugin_name):
+        """
+        Clears plugin state.
+
+        :param plugin_name: the plugin in question.
+        """
         storage_file_path = os.path.join(
             testenv_instance.plugins_storage_dir,
             '{0}.json'.format(plugin_name)
@@ -141,12 +125,8 @@ class TestCase(unittest.TestCase):
                                 AssertionError,
                                 **kwargs)
 
-    @property
-    def riemann_workdir(self):
-        return TestEnvironment.riemann_workdir()
-
-    def publish_riemann_event(self,
-                              deployment_id,
+    @staticmethod
+    def publish_riemann_event(deployment_id,
                               node_name,
                               node_id='',
                               host='localhost',
@@ -166,365 +146,287 @@ class TestCase(unittest.TestCase):
         }
         queue = '{0}-riemann'.format(deployment_id)
         routing_key = deployment_id
-        utils.publish_event(queue,
-                            routing_key,
-                            event)
-
-    def upload_plugin(self, package_name, package_version):
-        temp_file_path = self._create_wheel(package_name, package_version)
-        response = self.client.plugins.upload(temp_file_path)
-        os.remove(temp_file_path)
-        return response
-
-    def _create_wheel(self, package_name, package_version):
-        module_src = '{0}=={1}'.format(package_name, package_version)
-        wagon_client = Wagon(module_src)
-        return wagon_client.create(
-            archive_destination_dir=tempfile.gettempdir(),
-            force=True)
+        utils.publish_event(queue, routing_key, event)
 
 
-class ProcessModeTestCase(TestCase):
+class TestCase(BaseTestCase):
 
     def setUp(self):
-
-        # can actually be any string
-        # besides the empty one
-        os.environ['PROCESS_MODE'] = 'True'
-        super(ProcessModeTestCase, self).setUp()
+        super(TestCase, self).setUp()
+        utils.restore_provider_context()
 
     def tearDown(self):
-
-        # empty string means false
-        os.environ['PROCESS_MODE'] = ''
-        super(ProcessModeTestCase, self).tearDown()
+        elastic.reset_data()
+        super(TestCase, self).tearDown()
 
 
-class TestEnvironment(object):
+class AgentTestCase(BaseTestCase):
 
-    manager_rest_process = None
-    elasticsearch_process = None
-    riemann_process = None
-    file_server_process = None
-    celery_management_worker_process = None
+    def tearDown(self):
+        logger.info('Removing leftover test containers')
+        docl.clean(label=['marker=test', self.env.env_label])
+        super(AgentTestCase, self).tearDown()
 
-    def __init__(self, test_working_dir):
-        super(TestEnvironment, self).__init__()
+    def read_host_file(self, file_path, deployment_id, node_id):
+        """
+        Read a file from a dockercompute node instance container filesystem.
+        """
+        runtime_props = self._get_runtime_properties(
+            deployment_id=deployment_id, node_id=node_id)
+        container_id = runtime_props['container_id']
+        return docl.read_file(file_path, container_id=container_id)
+
+    def get_host_ip(self, deployment_id, node_id):
+        """
+        Get the ip of a dockercompute node instance container.
+        """
+        runtime_props = self._get_runtime_properties(
+            deployment_id=deployment_id, node_id=node_id)
+        return runtime_props['ip']
+
+    def get_host_key_path(self, deployment_id, node_id):
+        """
+        Get the the path on the manager container to the private key
+        used to SSH into the dockercompute node instance container.
+        """
+        runtime_props = self._get_runtime_properties(
+            deployment_id=deployment_id, node_id=node_id)
+        return runtime_props['cloudify_agent']['key']
+
+    def _get_runtime_properties(self, deployment_id, node_id):
+        instance = self.client.node_instances.list(
+            deployment_id=deployment_id,
+            node_id=node_id)[0]
+        return instance.runtime_properties
+
+
+class BaseTestEnvironment(object):
+    # See _build_resource_mapping
+    mock_cloudify_agent = None
+
+    def __init__(self, test_working_dir, env_label):
         self.test_working_dir = test_working_dir
+        # A label is assigned to all containers started in the suite
+        # (manager and dockercompute node instances)
+        # This label is later used for cleanup purposes.
+        self.env_label = env_label
         self.plugins_storage_dir = os.path.join(
-            self.test_working_dir,
-            'plugins-storage'
-        )
+            self.test_working_dir, 'plugins-storage')
+        self.maintenance_folder = os.path.join(
+            self.test_working_dir, 'maintenance')
         os.makedirs(self.plugins_storage_dir)
-        self.fileserver_dir = path.join(self.test_working_dir, 'fileserver')
-        self.maintenance_folder = path.join(self.test_working_dir,
-                                            'maintenance')
-        self.rest_service_log_level = 'DEBUG'
-        self.rest_service_log_path = path.join(
-            self.test_working_dir, 'cloudify-rest-service.log')
-        self.rest_service_log_file_size_MB = 100
-        self.rest_service_log_files_backup_count = 20
-        self.securest_log_level = 'DEBUG'
-        self.securest_log_file = path.join(
-            self.test_working_dir, 'rest-security-audit.log')
-        self.securest_log_file_size_MB = 100
-        self.securest_log_files_backup_count = 20
-        self.amqp_username = 'guest'
-        self.amqp_password = 'guest'
-        self.events_and_logs_dir = \
-            path.join(self.test_working_dir, 'tests-events-and-logs')
-        os.mkdir(self.events_and_logs_dir)
+        self.amqp_events_printer_thread = threading.Thread(
+            target=self.amqp_events_printer)
+        self.amqp_events_printer_thread.daemon = True
 
     def create(self):
+        logger.info('Setting up test environment... workdir=[{0}]'
+                    .format(self.test_working_dir))
         try:
-            logger.info('Setting up test environment... workdir=[{0}]'
-                        .format(self.test_working_dir))
-
-            # events/logs polling
-            start_events_and_logs_polling(
-                logs_handler_retriever=self._logs_handler_retriever)
-
-            self.start_elasticsearch()
-            self.start_riemann()
-            self.start_fileserver()
-            self.start_manager_rest()
-            self.validate_postgresql_running()
-            self.create_management_worker()
-
-        except BaseException as error:
-            s_traceback = StringIO.StringIO()
-            traceback.print_exc(file=s_traceback)
-            logger.error("Error in test environment setup: %s", error)
-            logger.error(s_traceback.getvalue())
+            logger.info('Starting manager container')
+            docl.run_manager(
+                label=[self.env_label],
+                resources=self._build_resource_mapping())
+            self.amqp_events_printer_thread.start()
+        except:
             self.destroy()
             raise
 
-    def create_management_worker(self):
+    def _build_resource_mapping(self):
+        """
+        This function builds a list of resources to mount on the manager
+        container. Each entry is composed of the source directory on the host
+        machine (the client) and where it should be mounted on the container.
+        """
 
-        mock_plugins_path = os.path.dirname(mock_plugins.__file__)
-        os.environ['MOCK_PLUGINS_PATH'] = mock_plugins_path
+        # The plugins storage dir is mounted as a writable shared directory
+        # between all containers and the host machine. Most mock plugins make
+        # use of a utility method in mock_plugins.utils.update_storage to save
+        # state that the test can later read.
+        resources = [{
+            'src': self.plugins_storage_dir,
+            'dst': '/opt/integration-plugin-storage',
+            'write': True
+        }]
 
-        self.celery_management_worker_process = CeleryWorkerProcess(
-            queues=['cloudify.management'],
-            test_working_dir=self.test_working_dir,
-            # we need high concurrency since all management and
-            # central deployment operations/workflow will be executed
-            # by this worker
-            concurrency=10
-        )
+        # Import only for the sake of finding the module path on the file
+        # system
+        import mock_plugins
+        import fasteners
+        mock_plugins_dir = os.path.dirname(mock_plugins.__file__)
+        fasteners_dir = os.path.dirname(fasteners.__file__)
 
-        # copy plugins to worker env
-        mock_plugins_path = os.path.dirname(mock_plugins.__file__)
+        # All code directories will be mapped to the management worker
+        # virtualenv and will also be included in the custom agent package
+        # created in the test suite setup
+        code_directories = [
+            # Plugins import mock_plugins.utils.update_storage all over the
+            # place
+            mock_plugins_dir,
 
-        shutil.copytree(
-            src=mock_plugins_path,
-            dst=self.celery_management_worker_process.envdir,
-            ignore=shutil.ignore_patterns('*.pyc')
-        )
+            # mock_plugins.utils.update_storage makes use of the fasteners
+            # library
+            fasteners_dir
+        ]
 
-    def start_riemann(self):
-        riemann_config_path = self._get_riemann_config()
-        libs_path = self._get_libs_path()
-        self.riemann_process = RiemannProcess(riemann_config_path,
-                                              libs_path)
-        self.riemann_process.start()
+        # All plugins under mock_plugins are mapped. These are mostly used
+        # as operations and workflows mapped in the different tests blueprints.
+        code_directories += [
+            os.path.join(mock_plugins_dir, directory)
+            for directory in os.listdir(mock_plugins_dir)
+        ]
 
-    def start_manager_rest(self):
+        for directory in code_directories:
+            basename = os.path.basename(directory)
 
-        from manager_rest.file_server import PORT as FS_PORT
-        file_server_base_uri = 'http://localhost:{0}'.format(FS_PORT)
+            # Only map directories (skips __init__.py and utils.py)
+            if not os.path.isdir(directory):
+                continue
 
-        self.manager_rest_process = ManagerRestProcess(
-            REST_PORT,
-            self.fileserver_dir,
-            file_server_base_uri,
-            FILE_SERVER_BLUEPRINTS_FOLDER,
-            FILE_SERVER_DEPLOYMENTS_FOLDER,
-            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            FILE_SERVER_RESOURCES_URI,
-            self.rest_service_log_level,
-            self.rest_service_log_path,
-            self.rest_service_log_file_size_MB,
-            self.rest_service_log_files_backup_count,
-            self.securest_log_level,
-            self.securest_log_file,
-            self.securest_log_file_size_MB,
-            self.securest_log_files_backup_count,
-            self.test_working_dir,
-            self.amqp_username,
-            self.amqp_password,
-            self.maintenance_folder)
-        self.manager_rest_process.start()
+            # In the AgentlessTestEnvironment cloudify_agent is mocked
+            # So we override the original cloudify_agent. In the
+            # AgentTestEnvironment the real cloudify agent is used
+            # so we skip the override
+            if basename == 'cloudify_agent' and not self.mock_cloudify_agent:
+                continue
 
-    def start_elasticsearch(self):
-        # elasticsearch
-        self.elasticsearch_process = ElasticSearchProcess()
-        self.elasticsearch_process.start()
-
-    def validate_postgresql_running(self):
-        self.postgresql = Postgresql()
-        if not self.postgresql.is_running():
-            logger.warning('Postgresql is not running!!!')
-
-    def start_fileserver(self):
-
-        # workaround to update path
-        manager_rest_path = \
-            path.dirname(path.dirname(path.dirname(__file__)))
-        manager_rest_path = path.join(manager_rest_path, 'rest-service')
-        sys.path.append(manager_rest_path)
-        os.mkdir(self.fileserver_dir)
-        from manager_rest.file_server import FileServer
-        from manager_rest.utils import copy_resources
-
-        self.file_server_process = FileServer(self.fileserver_dir)
-        self.file_server_process.start()
-
-        # copy resources (base yaml etc)
-        resources_path = path.abspath(__file__)
-        resources_path = path.dirname(resources_path)
-        resources_path = path.dirname(resources_path)
-        resources_path = path.dirname(resources_path)
-        resources_path = path.join(resources_path, 'resources')
-        copy_resources(self.fileserver_dir, resources_path)
-
-        self.patch_source_urls(self.fileserver_dir)
+            # Each code directory is mounted in two places:
+            # 1. The management worker virtualenv
+            # 2. /opt/agent-template is a directory created by docl that
+            #    contains an extracted CentOS agent package.
+            #    in the AgentTestEnvironment setup, we override the CentOS
+            #    package with the content of this directory using the
+            #    `docl build-agent` command.
+            for dst in ['/opt/mgmtworker/env/lib/python2.7/site-packages/{0}'.format(basename),       # noqa
+                        '/opt/agent-template/env/lib/python2.7/site-packages/{0}'.format(basename)]:  # noqa
+                resources.append({'src': directory, 'dst': dst})
+        return resources
 
     def destroy(self):
         logger.info('Destroying test environment...')
-        if self.riemann_process:
-            self.riemann_process.close()
-        if self.elasticsearch_process:
-            self.elasticsearch_process.close()
-        if self.manager_rest_process:
-            self.manager_rest_process.close()
-        if self.file_server_process:
-            self.file_server_process.stop()
+        docl.clean(label=[self.env_label])
         self.delete_working_directory()
 
     def delete_working_directory(self):
         if os.path.exists(self.test_working_dir):
             logger.info('Deleting test environment from: %s',
                         self.test_working_dir)
-            # shutil.rmtree(self.test_working_dir, ignore_errors=True)
-
-    def handle_logs(self, output, event):
-        pass
-
-    def handle_logs_with_es(self, index):
-        """
-        set this test environment to store logs
-        in a custom elasticsearch index
-
-        :param index: index name to use
-        """
-        def es_log_handler(_, event):
-            timestamp = datetime.now()
-            event['@timestamp'] = timestamp
-            es_client = Elasticsearch()
-            doc_type = event['type']
-
-            # simulate log index
-            res = es_client.index(index=index,
-                                  doc_type=doc_type,
-                                  body=event)
-            if not res['created']:
-                raise Exception('failed to write to elasticsearch')
-        self.handle_logs = es_log_handler
-
-    def _logs_handler_retriever(self):
-        return self.handle_logs
-
-    @classmethod
-    def _get_riemann_config(cls):
-        manager_dir = cls._get_manager_root()
-        plugins_dir = os.path.join(manager_dir, 'plugins')
-        riemann_dir = os.path.join(plugins_dir, 'riemann-controller')
-        package_dir = os.path.join(riemann_dir, 'riemann_controller')
-        resources_dir = os.path.join(package_dir, 'resources')
-        manager_config = os.path.join(resources_dir, 'manager.config')
-        return manager_config
-
-    @classmethod
-    def _get_libs_path(cls):
-        return path.join(cls._get_manager_root(), '.libs')
-
-    @staticmethod
-    def reset_elasticsearch_data():
-        global testenv_instance
-        testenv_instance.elasticsearch_process.reset_data()
-
-    @staticmethod
-    def stop_celery_management_worker():
-        global testenv_instance
-        testenv_instance.celery_management_worker_process.stop()
-
-    @staticmethod
-    def read_celery_management_logs():
-        global testenv_instance
-        process = testenv_instance.celery_management_worker_process
-        return process.try_read_logfile()
-
-    @classmethod
-    def stop_all_celery_processes(cls):
-        logger.info('Shutting down all celery processes')
-        os.system("pkill -9 -f 'celery worker'")
+            shutil.rmtree(self.test_working_dir, ignore_errors=True)
 
     @classmethod
     def stop_dispatch_processes(cls):
         logger.info('Shutting down all dispatch processes')
-        os.system("pkill -9 -f 'cloudify/dispatch.py'")
-
-    @staticmethod
-    def start_celery_management_worker():
-        global testenv_instance
-        testenv_instance.celery_management_worker_process.start()
-
-    @staticmethod
-    def riemann_cleanup():
-        global testenv_instance
-        shutil.rmtree(TestEnvironment.riemann_workdir())
-        os.mkdir(TestEnvironment.riemann_workdir())
-        testenv_instance.riemann_process.restart()
-
-    @staticmethod
-    def riemann_workdir():
-        global testenv_instance
-        return testenv_instance.\
-            celery_management_worker_process.\
-            riemann_config_dir
-
-    @staticmethod
-    def _get_manager_root():
-        init_file = __file__
-        testenv_dir = dirname(init_file)
-        tests_dir = dirname(testenv_dir)
-        manager_dir = dirname(tests_dir)
-        return manager_dir
-
-    @staticmethod
-    def patch_source_urls(resources):
-        with open(path.join(resources,
-                            'cloudify', 'types', 'types.yaml')) as f:
-            types_yaml = yaml.safe_load(f.read())
-        for policy_type in types_yaml.get('policy_types', {}).values():
-            in_path = '/cloudify/policies/'
-            source = policy_type['source']
-            if in_path in source:
-                source = source[source.index(in_path) + 1:]
-            policy_type['source'] = source
-        for policy_trigger in types_yaml.get('policy_triggers', {}).values():
-            in_path = '/cloudify/triggers/'
-            source = policy_trigger['source']
-            if in_path in source:
-                source = source[source.index(in_path) + 1:]
-            policy_trigger['source'] = source
-        with open(path.join(resources,
-                            'cloudify', 'types', 'types.yaml'), 'w') as f:
-            f.write(yaml.safe_dump(types_yaml))
-
-
-def start_events_and_logs_polling(logs_handler_retriever=None):
-    """
-    Fetches events and logs from RabbitMQ.
-    """
-    if not RABBITMQ_POLLING_ENABLED:
-        return
-
-    setup_logger('pika', logging.INFO)
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
-    channel = connection.channel()
-    queues = ['cloudify-events', 'cloudify-logs']
-    for q in queues:
-        channel.queue_declare(queue=q, auto_delete=True, durable=True,
-                              exclusive=False)
-
-    def callback(ch, method, properties, body):
         try:
-            event = json.loads(body)
-            if RABBITMQ_VERBOSE_MESSAGES_ENABLED:
-                output = '\n{0}'.format(json.dumps(event, indent=4))
-            else:
-                output = create_event_message_prefix(event)
-            if output:
-                logger.info(output)
-            if logs_handler_retriever:
-                logs_handler_retriever()(output or '', event)
-        except Exception as e:
-            logger.error('event/log format error - output: {0} [message={1}]'
-                         .format(body, e.message))
-            s_traceback = StringIO.StringIO()
-            traceback.print_exc(file=s_traceback)
-            logger.error(s_traceback.getvalue())
+            docl.execute('pkill -9 -f cloudify/dispatch.py')
+        except sh.ErrorReturnCode as e:
+            if e.exit_code != 1:
+                raise
 
-    def consume():
+    @staticmethod
+    def amqp_events_printer():
+        """
+        This function will consume logs and events directly from the
+        cloudify-logs and cloudify-events exchanges. (As opposed to the usual
+        means of fetching events using the REST api).
+
+        Note: This method is only used for events/logs printing.
+        Tests that need to assert on event should use the REST client events
+        module.
+        """
+        connection = utils.create_pika_connection()
+        channel = connection.channel()
+        exchanges = ['cloudify-events', 'cloudify-logs']
+        queues = []
+        for exchange in exchanges:
+            channel.exchange_declare(exchange=exchange, type='fanout',
+                                     auto_delete=True,
+                                     durable=True)
+            result = channel.queue_declare(exclusive=True)
+            queue_name = result.method.queue
+            queues.append(queue_name)
+            channel.queue_bind(exchange=exchange, queue=queue_name)
+
+        if not os.environ.get('CI'):
+            cloudify.logs.EVENT_CLASS = ColorfulEvent
+        cloudify.logs.EVENT_VERBOSITY_LEVEL = cloudify.event.MEDIUM_VERBOSE
+
+        def callback(ch, method, properties, body):
+            try:
+                ev = json.loads(body)
+                output = cloudify.logs.create_event_message_prefix(ev)
+                if output:
+                    sys.stdout.write('{0}\n'.format(output))
+            except:
+                logger.error('event/log format error - output: {0}'
+                             .format(body), exc_info=True)
+
         channel.basic_consume(callback, queue=queues[0], no_ack=True)
         channel.basic_consume(callback, queue=queues[1], no_ack=True)
-        channel.start_consuming()
-    logger.info("Starting RabbitMQ events/logs polling - queues={0}".format(
-        queues))
+        try:
+            channel.start_consuming()
+        except pika.exceptions.ConnectionClosed:
+            pass
 
-    polling_thread = threading.Thread(target=consume)
-    polling_thread.daemon = True
-    polling_thread.start()
+
+class AgentlessTestEnvironment(BaseTestEnvironment):
+    # See _build_resource_mapping
+    mock_cloudify_agent = True
+
+
+class AgentTestEnvironment(BaseTestEnvironment):
+    # See _build_resource_mapping
+    mock_cloudify_agent = False
+
+    def create(self):
+        super(AgentTestEnvironment, self).create()
+        try:
+            logger.info('Installing docker on manager container (if required)')
+            # Installing docker (only the docker client is used) on the manager
+            # container (docl will only try installing docker if it isn't
+            # already installed).
+            docl.install_docker()
+            # docl will override the CentOS agent package with the content of
+            # /opt/agent-template. See _build_resource_mapping
+            docl.build_agent()
+            self._copy_docker_conf_file()
+        except:
+            self.destroy()
+            raise
+
+    def _copy_docker_conf_file(self):
+        # the docker_conf.json file is used to pass information
+        # to the dockercompute plugin. (see mock_plugins/dockercompute)
+        docl.execute('mkdir -p /root/dockercompute')
+        with tempfile.NamedTemporaryFile() as f:
+            json.dump({
+                # The dockercompute plugin needs to know where to find the
+                # docker host
+                'docker_host': docl.docker_host(),
+
+                # Used to know from where to mount the plugins storage dir
+                # on dockercompute node instances containers
+                'plugins_storage_dir': self.plugins_storage_dir,
+
+                # Used for cleanup purposes
+                'env_label': self.env_label
+            }, f)
+            f.flush()
+            docl.copy_file_to_manager(
+                source=f.name,
+                target='/root/dockercompute/docker_conf.json')
+
+
+def create_env(env_cls):
+    global testenv_instance
+    top_level_dir = os.path.join(tempfile.gettempdir(),
+                                 'cloudify-integration-tests')
+    env_label = cloudify.utils.id_generator(4)
+    env_name = 'WorkflowsTests-{0}'.format(env_label)
+    test_working_dir = os.path.join(top_level_dir, env_name)
+    os.makedirs(test_working_dir)
+    testenv_instance = env_cls(test_working_dir, 'env={0}'.format(env_label))
+    testenv_instance.create()
+
+
+def destroy_env():
+    testenv_instance.destroy()

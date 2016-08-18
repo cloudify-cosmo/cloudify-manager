@@ -2,16 +2,8 @@ language: python
 python:
     - "2.7"
 
-services:
-    - rabbitmq
-
 env:
-    global:
-        - NUMBER_OF_SUITES=3
     matrix:
-        - ACTION="run-integration-tests" SUITE_NUMBER=0
-        - ACTION="run-integration-tests" SUITE_NUMBER=1
-        - ACTION="run-integration-tests" SUITE_NUMBER=2
         - ACTION="test-rest-service-v2_1-client"
         - ACTION="test-rest-service-v2-client"
         - ACTION="test-rest-service-v1-client"

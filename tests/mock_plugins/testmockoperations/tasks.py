@@ -16,14 +16,16 @@
 import time
 import tempfile
 import os
+import sys
 import shutil
 
+import cloudify.utils
 from cloudify.manager import get_rest_client
 from cloudify.manager import get_node_instance_ip
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 from cloudify.exceptions import RecoverableError
-from testenv.utils import update_storage
+from mock_plugins.utils import update_storage
 
 
 @operation
@@ -423,7 +425,8 @@ def get_prop(prop_name, ctx, kwargs, default=None):
 
 
 @operation
-def retrieve_template(ctx, rendering_tests_demo_conf, mode, **_):
+def retrieve_template(ctx, rendering_tests_demo_conf, mode,
+                      property_name='rendered_resource', **_):
     if mode == 'get':
         resource = \
             ctx.get_resource_and_render(rendering_tests_demo_conf)
@@ -432,7 +435,7 @@ def retrieve_template(ctx, rendering_tests_demo_conf, mode, **_):
             ctx.download_resource_and_render(rendering_tests_demo_conf)
 
     with update_storage(ctx) as data:
-        data['rendered_resource'] = resource
+        data[property_name] = resource
 
 
 @operation
@@ -456,3 +459,17 @@ def write_to_workdir(ctx, filename, content):
 @operation
 def store_scaling_groups(ctx, scaling_groups, **_):
     ctx.instance.runtime_properties['scaling_groups'] = scaling_groups
+
+
+@operation
+def execution_logging(ctx, user_cause=False, **_):
+    ctx.logger.info('INFO_MESSAGE')
+    ctx.logger.debug('DEBUG_MESSAGE')
+    causes = []
+    if user_cause:
+        try:
+            raise RuntimeError('ERROR_MESSAGE')
+        except RuntimeError:
+            _, ex, tb = sys.exc_info()
+            causes.append(cloudify.utils.exception_to_error_cause(ex, tb))
+    raise NonRecoverableError('ERROR_MESSAGE', causes=causes)

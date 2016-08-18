@@ -13,15 +13,12 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
-
 from cloudify import ctx
 from cloudify.decorators import operation
 
-from mock_plugins.cloudify_agent import process
 from mock_plugins.cloudify_agent import consumer
 
-from testenv.utils import update_storage
+from mock_plugins.utils import update_storage
 
 
 @operation
@@ -51,6 +48,4 @@ def _operate_on_plugins(plugins, new_state):
 
 
 def get_backend():
-    if os.environ.get('PROCESS_MODE'):
-        return process.ProcessBackedPluginInstaller()
     return consumer.ConsumerBackedPluginInstaller()

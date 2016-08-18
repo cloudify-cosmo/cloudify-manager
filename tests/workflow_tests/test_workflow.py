@@ -15,16 +15,18 @@
 
 import os
 import uuid
-import errno
 import tarfile
 import tempfile
 from contextlib import contextmanager
+
+import sh
 
 from cloudify import context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 
 from testenv import TestCase
+from testenv.services import riemann
 from testenv.utils import (
     get_resource, do_retries, timeout, delete_deployment,
     verify_deployment_environment_creation_complete,
@@ -479,12 +481,10 @@ class BasicWorkflowsTest(TestCase):
         )
         deployment, _ = deploy_application(dsl_path)
 
-        from testenv import testenv_instance
         deployment_dir_path = os.path.join(
-                testenv_instance.test_working_dir, 'cloudify.management',
-                'work', 'deployments', deployment.id)
+                '/opt/mgmtworker/work/deployments', deployment.id)
 
-        self.assertTrue(os.path.isdir(deployment_dir_path))
+        self.execute_on_manager('test -d {0}'.format(deployment_dir_path))
 
         # assert plugin installer installed
         # the necessary plugins.
@@ -510,7 +510,9 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(agent_data['local']['cloudmock'], uninstalled)
         self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
 
-        self.assertFalse(os.path.isdir(deployment_dir_path))
+        self.assertRaises(sh.ErrorReturnCode,
+                          self.execute_on_manager,
+                          'test -d {0}'.format(deployment_dir_path))
 
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
@@ -526,28 +528,17 @@ class BasicWorkflowsTest(TestCase):
             i for i in invocations
             if i == context.NODE_INSTANCE]))
 
-    def _is_riemann_core_up(self, deployment_id):
-        try:
-            with open(os.path.join(self.riemann_workdir,
-                                   deployment_id,
-                                   'ok')) as f:
-                return f.read().strip() == 'ok'
-        except IOError, e:
-            if e.errno == errno.ENOENT:
-                return False
-            raise
-
     def test_riemann_core_started_with_policies(self):
         """A riemann core is started if the blueprint defines policies
         """
         dsl_path = get_resource('dsl/with_policies1.yaml')
         deployment, _ = deploy_application(dsl_path)
 
-        self.assertTrue(self._is_riemann_core_up(deployment.id))
+        self.assertTrue(riemann.is_riemann_core_up(deployment.id))
 
         undeploy_application(deployment.id, is_delete_deployment=True)
 
-        self.assertFalse(self._is_riemann_core_up(deployment.id))
+        self.assertFalse(riemann.is_riemann_core_up(deployment.id))
 
     def test_riemann_core_not_started_without_policies(self):
         """A riemann core isn't started if there's no policies defined
@@ -555,8 +546,8 @@ class BasicWorkflowsTest(TestCase):
         dsl_path = get_resource('dsl/without_policies.yaml')
         deployment, _ = deploy_application(dsl_path)
 
-        self.assertFalse(self._is_riemann_core_up(deployment.id))
+        self.assertFalse(riemann.is_riemann_core_up(deployment.id))
 
         undeploy_application(deployment.id, is_delete_deployment=True)
 
-        self.assertFalse(self._is_riemann_core_up(deployment.id))
+        self.assertFalse(riemann.is_riemann_core_up(deployment.id))

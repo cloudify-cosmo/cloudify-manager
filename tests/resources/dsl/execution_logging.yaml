@@ -1,0 +1,12 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+  - plugins/testmockoperations.yaml
+
+node_templates:
+  node:
+    type: cloudify.nodes.Root
+    interfaces:
+      test:
+        op: testmockoperations.testmockoperations.tasks.execution_logging

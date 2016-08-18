@@ -33,20 +33,19 @@ setup(
         'mock_plugins.target_aware_mock',
         'mock_plugins.testmockoperations',
         'testenv',
-        'testenv.processes'
+        'testenv.services'
     ],
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
-        'cloudify-dsl-parser==4.0a2',
-        'cloudify-rest-client==4.0a2',
-        'cloudify-plugins-common==4.0a2',
-        'cloudify-diamond-plugin==1.3.4',
-        'cloudify-script-plugin==1.4',
+        'cloudify==4.0a2',
         'pika==0.9.14',
         'elasticsearch==1.6.0',
         'celery==3.1.17',
-        'fasteners==0.13.0'
+        'fasteners==0.13.0',
+        'sh==1.11',
+        'pg8000==1.10.6',
+        'docl',
     ],
     entry_points={
         'nose.plugins.0.10': [

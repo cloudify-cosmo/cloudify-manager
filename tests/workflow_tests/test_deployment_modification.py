@@ -15,12 +15,10 @@
 
 
 import uuid
-import datetime
 import dateutil.parser
 
 from cloudify_rest_client.deployment_modifications import (
     DeploymentModification)
-from manager_rest import utils
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
@@ -208,11 +206,7 @@ class TestDeploymentModification(TestCase):
             modification.context)
         created_at = dateutil.parser.parse(modification.created_at)
         ended_at = dateutil.parser.parse(modification.ended_at)
-        self.assertTrue(
-                dateutil.parser.parse(utils.get_formatted_timestamp()) -
-                datetime.timedelta(seconds=30) <=
-                created_at <= ended_at <=
-                dateutil.parser.parse(utils.get_formatted_timestamp()))
+        self.assertTrue(created_at <= ended_at)
         for node_id, modified_node in modified_nodes.items():
             node = self.client.nodes.get(deployment_id, node_id)
             if rollback:

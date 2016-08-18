@@ -2,20 +2,19 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - cloudify/types/types.yaml
-    - plugins/testmockoperations.yaml
-    - plugins/mock_workflows.yaml
+    - plugins/testmockoperations_agent.yaml
+    - plugins/mock_workflows_no_install.yaml
     - plugins/diamond.yaml
+    - plugins/dockercompute.yaml
     - policies/answer_to_life.yaml
 
 node_types:
     monitor_type:
-        derived_from: cloudify.nodes.Compute
+        derived_from: cloudify.nodes.docker.Compute
 
 node_templates:
     node:
         type: monitor_type
-        properties:
-            install_agent: false
         interfaces:
             cloudify.interfaces.monitoring_agent:
                 install:
@@ -65,4 +64,3 @@ workflows:
                 description: a key to write
             value:
                 description: a value to write
-

@@ -13,16 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
-
 from cloudify.decorators import operation
 from cloudify import context
 from cloudify import ctx
 
-from mock_plugins.cloudify_agent.installer import process
 from mock_plugins.cloudify_agent.installer import consumer
 
-from testenv.utils import update_storage
+from mock_plugins.utils import update_storage
 
 
 @operation
@@ -109,8 +106,6 @@ def get_backend(cloudify_agent=None):
     cloudify_agent['queue'] = cloudify_agent['name']
     if ctx.type == context.NODE_INSTANCE:
         ctx.instance.runtime_properties['cloudify_agent'] = cloudify_agent
-    if os.environ.get('PROCESS_MODE'):
-        return process.ProcessBackedAgentInstaller(cloudify_agent)
     return consumer.ConsumerBackedAgentInstaller(cloudify_agent)
 
 

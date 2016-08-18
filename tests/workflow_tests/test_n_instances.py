@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import time
 
 from testenv import TestCase
 from testenv.utils import get_resource as resource
@@ -47,10 +48,16 @@ class TestMultiInstanceApplication(TestCase):
             deployment_id=deployment.id
         )['machines'])
         self.assertEquals(15, len(machines))
-
         self.assertEquals(5, len(filter(lambda ma: ma.startswith('host1'),
                                         machines)))
         self.assertEquals(5, len(filter(lambda ma: ma.startswith('host2'),
                                         machines)))
         self.assertEquals(5, len(filter(lambda ma: ma.startswith('host3'),
                                         machines)))
+
+    def test_deploy_multi_large_scale(self):
+        dsl_path = resource('dsl/multi_instance_large_scale.yaml')
+        start = time.time()
+        deployment, _ = deploy(dsl_path, timeout_seconds=630)
+        self.logger.info('All done! execution took {} seconds'
+                         .format(time.time() - start))
