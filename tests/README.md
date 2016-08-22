@@ -65,7 +65,7 @@ PostgreSQL is our DB.
 You can install it using installer specific for you os. Installers can be found at [PostgreSQL Installers page] (http://www.bigsql.org/postgresql/installers.jsp)
 
 Alternatively, you can install it manually.
-* for CentOS:
+* in CentOS:
 ```bash
 ~/dev/tools$ curl -L -O ftp://rpmfind.net/linux/centos/7.2.1511/os/x86_64/Packages/libxslt-1.1.28-5.el7.x86_64.rpm
 ~/dev/tools$ curl -L -O http://yum.postgresql.org/9.5/redhat/rhel-7-x86_64/postgresql95-9.5.3-2PGDG.rhel7.x86_64.rpm
@@ -74,11 +74,11 @@ Alternatively, you can install it manually.
 ~/dev/tools$ curl -L -O http://yum.postgresql.org/9.5/redhat/rhel-7-x86_64/postgresql95-server-9.5.3-2PGDG.rhel7.x86_64.rpm
 ~/dev/tools$ curl -L -O http://yum.postgresql.org/9.5/redhat/rhel-7-x86_64/postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm
 ~/dev/tools$ sudo rpm -Uvh libxslt-1.1.28-5.el7.x86_64.rpm
-~/dev/tools$ sudo rpm -Uvh postgresql9-*.rpm
+~/dev/tools$ sudo rpm -Uvh postgresql9*.rpm
 ~/dev/tools$ sudo /usr/pgsql-9.5/bin/postgresql95-setup initdb
 ```
 
-* for Ubuntu:
+* in Ubuntu:
 ```bash
 ~/dev/tools$ sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
 ~/dev/tools$ wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -
@@ -88,32 +88,41 @@ Alternatively, you can install it manually.
 
 ## Step 3.1: Configure PostgreSQL
 
+* Define "pg_hba" environment variable that will contain the postgresql configuration file path:
+ * in ubuntu, it'll be something like:
+    ```pg_hba="/etc/postgresql/9.5/main/pg_hba.conf" ```
+ * in RHEL/CentOS, it'll be something like:
+    ```pg_hba="/var/lib/pgsql/9.5/data/pg_hba.conf" ```
+ * can't find the file?
+    * run:   ```locate pg_hba.conf```
+    * or look around the postgres data folder. find the data folder using: ```sudo -u postgres psql -c "show data_directory"```
+
+* Update postgres configuration file, to allow authentication with arbitrary users and passwords:
+```bash
+echo "Creating backup file $pg_hba.backup"
+sudo cp $pg_hba $pg_hba.backup
+echo "Going to modify $pg_hba"
+sudo bash -c "cat $pg_hba | awk '/^host/{gsub(/ident/, \"md5\")}; {print}' > $pg_hba.tmp; cp $pg_hba.tmp $pg_hba"
+```
+
+* Start Postgres:
+    * in Ubuntu:
+    ```bash
+    sudo systemctl stop postgresql
+    sudo systemctl start postgresql
+    ```
+    * in CentOS:
+    ```bash
+    sudo systemctl stop postgresql-9.5.service
+    sudo systemctl start postgresql-9.5.service
+    ```
+
 * Create cloudify user for Postgres:
 ```bash
 sudo -u postgres psql
 CREATE USER cloudify WITH PASSWORD 'cloudify';
 ALTER USER cloudify CREATEDB;
 \q
-```
-
-* Define "pg_hba" environment variable that will contain the postgresql configuration file path:
- * for ubuntu, it'll be something like:
-    ```pg_hba="/etc/postgresql/9.5/main/pg_hba.conf" ```
- * for RHEL/CentOS, it'll be something like:
-    ```pg_hba="/var/lib/pgsql/9.5/data/pg_hba.conf" ```
- * can't find the file?
-    * run:   ```locate pg_hba.conf```
-    * look around the postgres data folder. find the data folder using: ```sudo -u postgres psql -c "show data_directory"```
-
-* Update postgres configuration file, to allow authentication with arbitrary users and passwords:
-```bash
-echo "Creating backup file $pg_hba.backup"
-sudo bash -c "cp $pg_hba $pg_hba.backup;"
-echo "Going to modify $pg_hba"
-sudo bash -c "cat $pg_hba | awk '/^host/{gsub(/ident/, \"md5\")}; {print}' > $pg_hba.tmp; cp $pg_hba.tmp $pg_hba"
-echo "Restarting postgresql"
-sudo systemctl stop postgresql
-sudo systemctl start postgresql
 ```
 
 ## Step 4: Installing Riemann
