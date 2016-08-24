@@ -19,7 +19,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-rest-service',
-    version='4.0a1',
+    version='4.0a2',
     author='Dan Kilman',
     author_email='dank@gigaspaces.com',
     packages=['manager_rest',
@@ -35,7 +35,7 @@ setup(
         'flask-restful-swagger==0.12',
         'flask-sqlalchemy==2.1',
         'supervise==1.1.1',
-        'cloudify-dsl-parser==4.0a1',
+        'cloudify-dsl-parser==4.0a2',
         'requests==2.7.0',
         'gunicorn==18.0',
         'PyYAML==3.10',
