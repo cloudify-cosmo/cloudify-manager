@@ -517,19 +517,21 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         :return: the added and related node instances
         """
         added_instances = []
+        add_related_instances = []
 
-        for node_instance in (i for i in instances if 'modification' in i):
-            changes = {
-                'deployment_id': dep_update.deployment_id,
-                'version': None,
-                'state': None,
-                'runtime_properties': {}
-            }
-            node_instance.update(changes)
-            added_instances.append(node_instance)
-
-        add_related_instances = \
-            [n for n in instances if n not in added_instances]
+        for node_instance in instances:
+            modification = node_instance.get('modification', 'related')
+            if modification == 'added':
+                changes = {
+                    'deployment_id': dep_update.deployment_id,
+                    'version': None,
+                    'state': None,
+                    'runtime_properties': {}
+                }
+                node_instance.update(changes)
+                added_instances.append(node_instance)
+            else:
+                add_related_instances.append(node_instance)
 
         get_blueprints_manager()._create_deployment_node_instances(
                 dep_update.deployment_id,
@@ -549,13 +551,16 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         :return: the removed and related node instances
         """
         removed_raw_instances = []
+        remove_related_raw_instances = []
 
-        for node_instance in (i for i in instances if 'modification' in i):
-            node_instance = DeploymentNodeInstance(**node_instance)
-            removed_raw_instances.append(node_instance)
-
-        remove_related_raw_instances = \
-            [n for n in instances if n not in removed_raw_instances]
+        for raw_node_instance in instances:
+            node_instance = manager_rest.models.DeploymentNodeInstance(
+                **raw_node_instance)
+            modification = raw_node_instance.pop('modification', 'related')
+            if modification == 'removed':
+                removed_raw_instances.append(node_instance)
+            else:
+                remove_related_raw_instances.append(node_instance)
 
         return {
             NODE_MOD_TYPES.AFFECTED: removed_raw_instances,
@@ -569,26 +574,28 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         :return: the extended and related node instances
         """
         modified_raw_instances = []
+        modify_related_raw_instances = []
 
-        for node_instance in (i for i in instances if 'modification' in i):
-            # adding new relationships to the current relationships
-            relationships = \
-                self.sm.get_node_instance(node_instance['id']).relationships
+        for node_instance in instances:
+            modification = node_instance.get('modification', 'related')
+            if modification == 'extended':
+                # adding new relationships to the current relationships
+                relationships = self.sm.get_node_instance(
+                    node_instance['id']).relationships
 
-            node_instance['relationships'] = \
-                sorted(node_instance['relationships'],
-                       key=lambda r: r.get('rel_index', 0))
+                node_instance['relationships'] = \
+                    sorted(node_instance['relationships'],
+                           key=lambda r: r.get('rel_index', 0))
 
-            modified_raw_instances.append(node_instance)
-
-            relationships.extend(node_instance['relationships'])
-            self.sm.update_node_instance(self._node_instance_template(
-                DeploymentNodeInstance(**node_instance),
-                relationships=relationships,
-                version=_handle_version(node_instance['version'])
-            ))
-        modify_related_raw_instances = \
-            [n for n in instances if n not in modified_raw_instances]
+                relationships.extend(node_instance['relationships'])
+                self.sm.update_node_instance(self._node_instance_template(
+                    DeploymentNodeInstance(**node_instance),
+                    relationships=relationships,
+                    version=_handle_version(node_instance['version'])
+                ))
+                modified_raw_instances.append(node_instance)
+            else:
+                modify_related_raw_instances.append(node_instance)
 
         return \
             {
@@ -603,23 +610,25 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         :return: the reduced and related node instances
         """
         modified_raw_instances = []
+        modify_related_raw_instances = []
 
-        for node_instance in (i for i in instances if 'modification' in i):
-            modified_node = \
-                self.sm.get_node_instance(node_instance['id']).to_dict()
-            # changing the new state of relationships on the instance
-            # to not include the removed relationship
-            target_ids = [rel['target_id']
-                          for rel in node_instance['relationships']]
-            relationships = [rel for rel in modified_node['relationships']
-                             if rel['target_id'] not in target_ids]
-            modified_node['relationships'] = relationships
-            modified_node['version'] = \
-                _handle_version(node_instance['version'])
-            modified_raw_instances.append(modified_node)
-
-        modify_related_raw_instances = \
-            [n for n in instances if n not in modified_raw_instances]
+        for node_instance in instances:
+            modification = node_instance.get('modification', 'related')
+            if modification == 'reduced':
+                modified_node = \
+                    self.sm.get_node_instance(node_instance['id']).to_dict()
+                # changing the new state of relationships on the instance
+                # to not include the removed relationship
+                target_ids = [rel['target_id']
+                              for rel in node_instance['relationships']]
+                relationships = [rel for rel in modified_node['relationships']
+                                 if rel['target_id'] not in target_ids]
+                modified_node['relationships'] = relationships
+                modified_node['version'] = \
+                    _handle_version(node_instance['version'])
+                modified_raw_instances.append(modified_node)
+            else:
+                modify_related_raw_instances.append(node_instance)
 
         return {
             NODE_MOD_TYPES.AFFECTED: modified_raw_instances,
