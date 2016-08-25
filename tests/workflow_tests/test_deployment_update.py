@@ -284,6 +284,18 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
 
+    def test_install_execution_order(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('install_execution_order')
+        self.client.deployment_updates.update(deployment.id, modified_bp_path)
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+
+        self.assertFalse(self.client.node_instances.list(
+            node_id='site2').items[0].runtime_properties['is_op_started'],
+                         'Site3 operations were executed '
+                         'before/simultaneously with Site2 operations, '
+                         'although site3 connected_to site2')
+
     def test_add_node_operation(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_node_operation')
@@ -707,6 +719,18 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
 
 
 class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
+
+    def test_uninstall_execution_order(self):
+        deployment, modified_bp_path = \
+            self._deploy_and_get_modified_bp_path('uninstall_execution_order')
+        self.client.deployment_updates.update(deployment.id, modified_bp_path)
+        self._wait_for_execution_to_terminate(deployment.id, 'update')
+
+        self.assertFalse(self.client.node_instances.list(
+            node_id='site1').items[0].runtime_properties['is_op_started'],
+                         'Site2 operations were executed '
+                         'before/simultaneously with Site3 operations, '
+                         'although site3 connected_to site2')
 
     def test_remove_node(self):
         deployment, modified_bp_path = \
