@@ -15,7 +15,7 @@
 
 
 from cloudify.decorators import operation
-from testenv.utils import update_storage
+from mock_plugins.utils import update_storage
 
 
 @operation

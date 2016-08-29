@@ -13,11 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import requests
 import json
-from requests.exceptions import HTTPError
+import os
 
-STORAGE_INDEX_URL = "http://localhost:9200/cloudify_storage"
+import requests
+import requests.exceptions
+
+from testenv import constants
 
 BLUEPRINT_SCHEMA = {
     'blueprint': {
@@ -158,9 +160,11 @@ def create_schema(storage_index_url):
 
             print 'Done creating elasticsearch storage schema.'
             break
-        except HTTPError:
+        except requests.exceptions.HTTPError:
             pass
 
 
 if __name__ == '__main__':
-    create_schema(STORAGE_INDEX_URL)
+    storage_index_url = "http://{0}:9200/cloudify_storage".format(
+        os.environ[constants.DOCL_CONTAINER_IP])
+    create_schema(storage_index_url)

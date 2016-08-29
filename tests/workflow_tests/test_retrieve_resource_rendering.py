@@ -53,7 +53,5 @@ class RetriveResourceRenderingTest(TestCase):
     def test_download_resource_template(self):
         expected, rendered_resource_path = \
             self._retrieve_resource_test('download')
-        with open(rendered_resource_path, 'r') as f:
-            rendered_resource = f.read()
-
-        self.assertEqual(expected, rendered_resource)
+        out = self.read_manager_file(rendered_resource_path)
+        self.assertEqual(expected, out)

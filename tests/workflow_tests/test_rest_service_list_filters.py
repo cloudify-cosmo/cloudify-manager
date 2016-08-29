@@ -12,9 +12,11 @@
 #    * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
+
+from testenv import TestCase
+from testenv import utils
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
-from testenv import TestCase
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
@@ -179,10 +181,10 @@ class TestRestServiceListFilters(TestCase):
                           (self.first_blueprint_id, self.sec_blueprint_id))
 
     def test_plugins_list_with_filters(self):
-        self.upload_plugin(TEST_PACKAGE_NAME,
-                           TEST_PACKAGE_VERSION)
-        sec_plugin_id = self.upload_plugin(TEST_PACKAGE_NAME,
-                                           OLD_TEST_PACKAGE_VERSION)['id']
+        utils.upload_plugin(TEST_PACKAGE_NAME,
+                            TEST_PACKAGE_VERSION)
+        sec_plugin_id = utils.upload_plugin(TEST_PACKAGE_NAME,
+                                            OLD_TEST_PACKAGE_VERSION)['id']
         filter_field = {'id': sec_plugin_id}
         response = self.client.plugins.list(**filter_field)
 
@@ -194,10 +196,10 @@ class TestRestServiceListFilters(TestCase):
                                       .format(filter_field, response[0]))
 
     def test_plugins_list_no_filters(self):
-        self.upload_plugin(TEST_PACKAGE_NAME,
-                           TEST_PACKAGE_VERSION)
-        self.upload_plugin(TEST_PACKAGE_NAME,
-                           OLD_TEST_PACKAGE_VERSION)
+        utils.upload_plugin(TEST_PACKAGE_NAME,
+                            TEST_PACKAGE_VERSION)
+        utils.upload_plugin(TEST_PACKAGE_NAME,
+                            OLD_TEST_PACKAGE_VERSION)
         response = self.client.plugins.list()
 
         self.assertEqual(len(response), 2, 'expecting 2 plugin results, '

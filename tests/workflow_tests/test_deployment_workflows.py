@@ -23,6 +23,7 @@ from testenv.utils import verify_deployment_environment_creation_complete
 from testenv.utils import do_retries
 from testenv.utils import wait_for_execution_to_end
 from testenv.utils import deploy_application as deploy
+from mock_plugins.utils import storage_file_lock
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -103,8 +104,9 @@ class TestDeploymentWorkflows(TestCase):
         data = {
             deployment_id: {'raise_exception_on_delete': True}
         }
-        with open(storage_file_path, 'w') as f:
-            json.dump(data, f)
+        with storage_file_lock(storage_file_path):
+            with open(storage_file_path, 'w') as f:
+                json.dump(data, f)
 
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)

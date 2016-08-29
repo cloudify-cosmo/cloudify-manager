@@ -12,21 +12,21 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from testenv import TestCase
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from testenv import utils
+from testenv import TestCase
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
-OLD_TEST_PACKAGE_VERSION = '1.1'
 
 
 class TestPlugins(TestCase):
 
     def test_get_plugin_by_id(self):
-        put_plugin_response = self.upload_plugin(TEST_PACKAGE_NAME,
-                                                 TEST_PACKAGE_VERSION)
+        put_plugin_response = utils.upload_plugin(TEST_PACKAGE_NAME,
+                                                  TEST_PACKAGE_VERSION)
         plugin_id = put_plugin_response.get('id')
         self.assertIsNotNone(plugin_id)
         self.assertEquals(put_plugin_response.get('package_name'),
@@ -45,8 +45,8 @@ class TestPlugins(TestCase):
             self.assertEquals(404, e.status_code)
 
     def test_delete_plugin(self):
-        put_response = self.upload_plugin(TEST_PACKAGE_NAME,
-                                          TEST_PACKAGE_VERSION)
+        put_response = utils.upload_plugin(TEST_PACKAGE_NAME,
+                                           TEST_PACKAGE_VERSION)
 
         plugins_list = self.client.plugins.list()
         self.assertEqual(1, len(plugins_list),
@@ -70,7 +70,7 @@ class TestPlugins(TestCase):
 
     def test_install_uninstall_workflows_execution(self):
         self.clear_plugin_data('agent')
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
+        utils.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
         plugins = self.get_plugin_data('agent',
                                        deployment_id='system')['local']
         self.assertEqual(plugins[TEST_PACKAGE_NAME], ['installed'])

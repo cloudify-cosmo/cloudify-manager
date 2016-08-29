@@ -15,9 +15,8 @@
 
 
 import os
-import shutil
+import tempfile
 
-import testenv
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
@@ -44,20 +43,26 @@ class TestScriptMapping(TestCase):
         with open(workflow_script_path, 'r') as f:
             workflow_script_content = f.read()
 
-        deployment_folder_on_fs = os.path.join(
-                testenv.testenv_instance.fileserver_dir,
-                'deployments/{0}/scripts/workflows'.format(deployment.id))
+        deployment_folder = ('/opt/manager/resources/deployments/{0}'
+                             .format(deployment.id))
+        workflow_folder = os.path.join(deployment_folder, 'scripts/workflows')
         try:
-            os.makedirs(deployment_folder_on_fs)
+            self.execute_on_manager('mkdir -p {0}'.format(workflow_folder))
             deployment_workflow_script_path = os.path.join(
-                    deployment_folder_on_fs, 'workflow.py')
+                workflow_folder, 'workflow.py')
             self.logger.info('Writing workflow.py to: {0}'.format(
                     deployment_workflow_script_path))
-            with open(deployment_workflow_script_path, 'w') as f:
+            with tempfile.NamedTemporaryFile() as f:
                 f.write(workflow_script_content)
                 f.write(os.linesep)
                 f.write("instance.execute_operation('test.op3')")
                 f.write(os.linesep)
+                f.flush()
+                self.copy_file_to_manager(
+                    source=f.name,
+                    target=deployment_workflow_script_path)
+                self.execute_on_manager(
+                    'chmod 644 {0}'.format(deployment_workflow_script_path))
 
             execute_workflow('workflow', deployment.id)
 
@@ -68,4 +73,4 @@ class TestScriptMapping(TestCase):
             self.assertIn('op3_called', data)
 
         finally:
-            shutil.rmtree(deployment_folder_on_fs, ignore_errors=True)
+            self.execute_on_manager('rm -rf {0}'.format(deployment_folder))

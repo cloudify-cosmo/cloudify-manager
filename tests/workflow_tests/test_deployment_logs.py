@@ -13,9 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
-
-import testenv
 from testenv import TestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
@@ -31,24 +28,21 @@ class TestDeploymentLogs(TestCase):
         dsl_path = resource("dsl/deployment_logs.yaml")
         deployment, _ = deploy(dsl_path, inputs=inputs)
 
-        work_dir = testenv.testenv_instance.test_working_dir
-        deployment_log_path = os.path.join(
-            work_dir, 'cloudify.management', 'work', 'logs',
-            '{0}.log'.format(deployment.id))
+        deployment_log_path = ('/var/log/cloudify/mgmtworker/logs/{0}.log'
+                               .format(deployment.id))
+
+        def read_deployment_logs():
+            return self.read_manager_file(deployment_log_path, no_strip=True)
 
         def verify_logs_exist_with_content():
-            print deployment_log_path
-            self.assertTrue(os.path.isfile(deployment_log_path))
-            with open(deployment_log_path) as f:
-                self.assertIn(message, f.read())
+            self.assertIn(message, read_deployment_logs())
 
         verify_logs_exist_with_content()
 
         undeploy(deployment.id, is_delete_deployment=True)
 
         # Verify log file id truncated on deployment delete
-        with open(deployment_log_path) as f:
-            self.assertTrue('' == f.read())
+        self.assertEqual('', read_deployment_logs())
 
         deployment, _ = deploy(dsl_path, inputs=inputs,
                                deployment_id=deployment.id)

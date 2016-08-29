@@ -1,0 +1,73 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  - cloudify/types/types.yaml
+  - plugins/testmockoperations.yaml
+
+node_types:
+  host:
+    derived_from: cloudify.nodes.Compute
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: testmockoperations.testmockoperations.tasks.mock_create
+        start: testmockoperations.testmockoperations.tasks.mock_start
+        configure: testmockoperations.testmockoperations.tasks.mock_configure
+        stop: testmockoperations.testmockoperations.tasks.mock_stop
+        delete: testmockoperations.testmockoperations.tasks.mock_delete
+
+  middle:
+    derived_from: cloudify.nodes.SoftwareComponent
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        create: testmockoperations.testmockoperations.tasks.mock_create
+        start: testmockoperations.testmockoperations.tasks.mock_start
+        configure: testmockoperations.testmockoperations.tasks.mock_configure
+        stop: testmockoperations.testmockoperations.tasks.mock_stop
+        delete: testmockoperations.testmockoperations.tasks.mock_delete
+
+relationships:
+  contained_in:
+    derived_from: cloudify.relationships.contained_in
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+        postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+        establish: testmockoperations.testmockoperations.tasks.mock_establish
+        unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+
+  connected_to:
+    derived_from: cloudify.relationships.connected_to
+    source_interfaces:
+      cloudify.interfaces.relationship_lifecycle:
+        preconfigure: testmockoperations.testmockoperations.tasks.mock_preconfigure
+        postconfigure: testmockoperations.testmockoperations.tasks.mock_postconfigure
+        establish: testmockoperations.testmockoperations.tasks.mock_establish
+        unlink: testmockoperations.testmockoperations.tasks.mock_unlink
+
+node_templates:
+  host:
+    type: host
+    capabilities:
+      scalable:
+        properties:
+          default_instances: 100
+  middle:
+    type: middle
+    capabilities:
+      scalable:
+        properties:
+          default_instances: 1
+    relationships:
+      - type: contained_in
+        target: host
+  middle2:
+    type: middle
+    capabilities:
+      scalable:
+        properties:
+          default_instances: 100
+    relationships:
+      - type: connected_to
+        target: middle
+        properties:
+          connection_type: all_to_one

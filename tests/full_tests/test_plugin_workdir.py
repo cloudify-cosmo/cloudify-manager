@@ -15,19 +15,17 @@
 
 import os
 
-from testenv import ProcessModeTestCase
+from testenv import AgentTestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
-from testenv.processes.celery import CeleryWorkerProcess
 
 
-class PluginWorkdirTest(ProcessModeTestCase):
+class PluginWorkdirTest(AgentTestCase):
 
     def test_plugin_workdir(self):
         filename = 'test_plugin_workdir.txt'
         host_content = 'HOST_CONTENT'
         central_content = 'CENTRAL_CONTENT'
-
         dsl_path = resource("dsl/plugin_workdir.yaml")
         deployment, _ = deploy(dsl_path,
                                inputs={
@@ -35,21 +33,18 @@ class PluginWorkdirTest(ProcessModeTestCase):
                                    'host_content': host_content,
                                    'central_content': central_content
                                })
-        host_id = self.client.node_instances.list(node_id='host').items[0].id
-
-        from testenv import testenv_instance
-        test_workdir = testenv_instance.test_working_dir
-        central_agent = CeleryWorkerProcess(['cloudify.management'],
-                                            test_workdir)
-        host_agent = CeleryWorkerProcess([host_id], test_workdir)
-
         central_file = os.path.join(
-            central_agent.workdir, 'deployments', deployment.id, 'plugins',
+            '/opt/mgmtworker/work', 'deployments', deployment.id, 'plugins',
             'testmockoperations', filename)
+        host_instance_id = self.client.node_instances.list(
+            deployment_id=deployment.id,
+            node_id='host')[0].id
         host_file = os.path.join(
-            host_agent.workdir, 'plugins', 'testmockoperations', filename)
-
-        with open(central_file) as f:
-            self.assertEqual(central_content, f.read())
-        with open(host_file) as f:
-            self.assertEqual(host_content, f.read())
+            '/root', host_instance_id, 'work/plugins/testmockoperations',
+            filename)
+        out = self.read_manager_file(central_file)
+        self.assertEqual(central_content, out)
+        out = self.read_host_file(host_file,
+                                  deployment_id=deployment.id,
+                                  node_id='host')
+        self.assertEqual(host_content, out)

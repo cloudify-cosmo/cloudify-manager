@@ -19,21 +19,20 @@ from collections import namedtuple
 
 from riemann_controller.config_constants import Constants
 
-from testenv import TestEnvironment
-from testenv import TestCase
+from testenv import TestCase, BaseTestCase
 from testenv import utils
+from testenv.services import riemann
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
-from testenv.utils import undeploy_application as undeploy
 from testenv.utils import execute_workflow
 
 
-class PoliciesTestsBase(TestCase):
+class PoliciesTestsBase(BaseTestCase):
     NUM_OF_INITIAL_WORKFLOWS = 2
 
     def tearDown(self):
         super(PoliciesTestsBase, self).tearDown()
-        TestEnvironment.riemann_cleanup()
+        riemann.reset_data_and_restart()
 
     def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
         deployment, _ = deploy(resource(yaml_file))
@@ -91,7 +90,7 @@ class PoliciesTestsBase(TestCase):
         )
 
 
-class TestPolicies(PoliciesTestsBase):
+class TestPolicies(TestCase, PoliciesTestsBase):
 
     def test_policies_flow(self):
         self._test_policies_flow('dsl/with_policies1.yaml')
@@ -116,21 +115,6 @@ class TestPolicies(PoliciesTestsBase):
         self.assertEqual(self.get_node_instance_by_name('node').id,
                          value('node_id'))
         self.assertEqual(metric_value, value('metric'))
-
-    def test_policies_flow_with_diamond(self):
-        try:
-            self.launch_deployment('dsl/with_policies_and_diamond.yaml')
-            expected_metric_value = 42
-            self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
-            invocations = self.wait_for_invocations(self.deployment.id, 1)
-            self.assertEqual(expected_metric_value, invocations[0]['metric'])
-        finally:
-            try:
-                if self.deployment:
-                    undeploy(self.deployment.id)
-            except BaseException as e:
-                if e.message:
-                    self.logger.warning(e.message)
 
     def test_threshold_policy(self):
         self.launch_deployment('dsl/with_policies2.yaml')
@@ -199,7 +183,7 @@ class TestPolicies(PoliciesTestsBase):
             time.sleep(min_interval_between_workflows)
 
 
-class TestAutohealPolicies(PoliciesTestsBase):
+class TestAutohealPolicies(TestCase, PoliciesTestsBase):
     HEART_BEAT_METRIC = 'heart-beat'
     EVENTS_TTL = 4  # in seconds
     # in seconds, a kind of time buffer for messages to get delivered for sure

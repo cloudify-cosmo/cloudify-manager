@@ -1,0 +1,12 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/dockercompute.yaml
+
+node_templates:
+  setup_host:
+    type: cloudify.nodes.docker.Compute
+    properties:
+      agent_config:
+        install_method: none

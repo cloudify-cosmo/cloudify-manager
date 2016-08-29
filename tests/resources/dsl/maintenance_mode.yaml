@@ -1,0 +1,24 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/testmockoperations_agent.yaml
+    - plugins/dockercompute.yaml
+
+node_templates:
+
+    mock_vm:
+      type: cloudify.nodes.docker.Compute
+
+    mock_node:
+      type: cloudify.nodes.ApplicationServer
+      relationships:
+        - type: cloudify.relationships.contained_in
+          target: mock_vm
+      interfaces:
+        cloudify.interfaces.lifecycle:
+          create:
+            implementation: testmockoperations.testmockoperations.tasks.retry
+            inputs:
+              retry_count: 10000000
+            max_retries: -1

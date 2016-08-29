@@ -19,7 +19,6 @@ from cloudify.celery import gate_keeper
 from cloudify.celery import logging_server
 
 
-app = Celery(broker='amqp://', backend='amqp://')
+app = Celery()
 gate_keeper.configure_app(app)
 logging_server.configure_app(app)
-app.conf.update(CELERY_TASK_RESULT_EXPIRES=600)

@@ -1,7 +1,7 @@
 from cloudify import ctx
 from cloudify.state import ctx_parameters as p
 
-from testenv.utils import update_storage
+from mock_plugins.utils import update_storage
 
 with update_storage(ctx) as data:
     data['op2_prop'] = ctx.instance.runtime_properties['op2_prop']

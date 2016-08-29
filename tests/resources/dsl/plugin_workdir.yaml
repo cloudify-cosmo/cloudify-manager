@@ -2,7 +2,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
   - cloudify/types/types.yaml
-  - plugins/testmockoperations.yaml
+  - plugins/testmockoperations_agent.yaml
+  - plugins/dockercompute.yaml
 
 inputs:
   filename: {}
@@ -11,7 +12,7 @@ inputs:
 
 node_templates:
   host:
-    type: cloudify.nodes.Compute
+    type: cloudify.nodes.docker.Compute
 
   contained_in_host:
     type: cloudify.nodes.Root

@@ -1,10 +1,6 @@
 machine:
   python:
     version: 2.7.9
-  services:
-    - rabbitmq-server
-  environment:
-    NUMBER_OF_SUITES: 3
 
 checkout:
   post:
@@ -22,7 +18,7 @@ dependencies:
 
 test:
   override:
-    - case $CIRCLE_NODE_INDEX in 0) export SUITE_NUMBER=0 && ./run-tests.sh run-integration-tests ;; 1) export SUITE_NUMBER=1 && ./run-tests.sh run-integration-tests ;; 2) export SUITE_NUMBER=2 &&./run-tests.sh run-integration-tests ;; 3) ./run-tests.sh test-rest-service-v1-client ;; 4) ./run-tests.sh test-rest-service-v2-client ;; 5) ./run-tests.sh test-rest-service-v2_1-client ;; 6) ./run-tests.sh test-system-workflows ;; esac:
+    - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh test-rest-service-v1-client ;; 1) ./run-tests.sh test-rest-service-v2-client ;; 2) ./run-tests.sh test-rest-service-v2_1-client ;; 3) ./run-tests.sh test-system-workflows ;; esac:
         parallel: true
     - case $CIRCLE_NODE_INDEX in 0) ./run-tests.sh flake8 ;; esac:
         parallel: true
@@ -32,4 +28,3 @@ deployment:
     tag: /.*/
     commands:
       - (true)
-

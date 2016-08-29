@@ -15,29 +15,29 @@
 
 import json
 import os
+import sys
 import uuid
-import pika
-import requests
 import time
-import glob
-import shlex
-import socket
-import subprocess
+import tempfile
+import tarfile
+import shutil
 from os import path
-from contextlib import contextmanager
 from functools import wraps
 from multiprocessing import Process
-import tarfile
 
-import fasteners
+import elasticsearch
+import requests
+import pika
+import sh
+from wagon import wagon
 from celery import Celery
 
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
 from manager_rest.es_storage_manager import ESStorageManager
-from testenv.constants import REST_PORT, REST_HOST
 
+from testenv import constants
 
 PROVIDER_CONTEXT = {
     'cloudify': {
@@ -50,15 +50,50 @@ PROVIDER_CONTEXT = {
 }
 PROVIDER_NAME = 'integration_tests'
 
-
-celery = Celery(broker='amqp://',
-                backend='amqp://')
-celery.conf.update(
-    CELERY_TASK_SERIALIZER="json",
-    CELERY_TASK_RESULT_EXPIRES=600)
-
-
 logger = setup_logger('testenv.utils')
+
+
+def get_manager_ip():
+    return os.environ[constants.DOCL_CONTAINER_IP]
+
+
+def create_rest_client():
+    return CloudifyClient(host=get_manager_ip(), port=80)
+
+
+def create_es_db_client():
+    return ESStorageManager(host=get_manager_ip(), port=9200)
+
+
+def create_es_client():
+    return elasticsearch.Elasticsearch(hosts=[{'host': get_manager_ip(),
+                                               'port': 9200}])
+
+
+def create_pika_connection():
+    credentials = pika.credentials.PlainCredentials(
+        username='cloudify',
+        password='c10udify')
+    return pika.BlockingConnection(
+        pika.ConnectionParameters(host=get_manager_ip(),
+                                  credentials=credentials))
+
+
+def create_celery_client():
+    celery = Celery(broker='amqp://cloudify:c10udify@{0}'
+                    .format(get_manager_ip()),
+                    backend='amqp://cloudify:c10udify@{0}'
+                    .format(get_manager_ip()))
+    celery.conf.update(
+        CELERY_TASK_SERIALIZER="json",
+        CELERY_TASK_RESULT_EXPIRES=600)
+    return celery
+
+
+def get_cfy():
+    return sh.cfy.bake(_err_to_out=True,
+                       _out=lambda l: sys.stdout.write(l),
+                       _tee=True)
 
 
 def deploy_application(dsl_path,
@@ -94,24 +129,6 @@ def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
     wait_for_deployment_creation_to_complete(
         deployment_id=deployment_id)
     return deployment
-
-
-def build_includes(directory):
-
-    includes = []
-
-    for root, _, filenames in os.walk(directory):
-        for filename in filenames:
-            file_path = os.path.join(root, filename)
-            if '__init__' in file_path:
-                continue
-            if 'pyc' in file_path:
-                continue
-            module = os.path.splitext(file_path)[0].replace(
-                directory, '').strip('/').replace('/', '.')
-            includes.append(module)
-
-    return includes
 
 
 def wait_for_deployment_creation_to_complete(
@@ -166,13 +183,16 @@ def verify_deployment_environment_creation_complete(deployment_id):
     if not execs \
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':
-        from testenv import TestEnvironment  # avoid cyclic import
-        logs = TestEnvironment.read_celery_management_logs() or ''
-        logs = logs[len(logs) - 100000:]
+        # cyclic imports :(
+        from testenv import docl
+        log_path = ('/var/log/cloudify/mgmtworker/'
+                    'cloudify.management_worker.log')
+        logs = docl.execute('tail -n 100 {0}'.format(log_path))
         raise RuntimeError(
             "Expected a single execution for workflow "
             "'create_deployment_environment' with status 'terminated'; "
-            "Found these executions instead: {0}.\nCelery log:\n{1}".format(
+            "Found these executions instead: {0}.\nLast 100 lines for "
+            "management worker log:\n{1}".format(
                 json.dumps(execs.items, indent=2), logs))
 
 
@@ -208,14 +228,6 @@ def is_node_started(node_id):
     client = create_rest_client()
     node_instance = client.node_instances.get(node_id)
     return node_instance['state'] == 'started'
-
-
-def create_rest_client():
-    return CloudifyClient(host=REST_HOST, port=REST_PORT)
-
-
-def create_es_db_client():
-    return ESStorageManager(host='localhost', port=9200)
 
 
 def get_resource(resource):
@@ -293,6 +305,7 @@ def timeout(seconds=60):
 
 
 def send_task(task, queue, args=None):
+    celery = create_celery_client()
     task_name = task.name.replace('mock_plugins.', '')
     return celery.send_task(
         name=task_name,
@@ -305,8 +318,7 @@ def publish_event(queue,
                   event,
                   exchange_name='cloudify-monitoring',
                   exchange_type='topic'):
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
+    connection = create_pika_connection()
     channel = connection.channel()
     channel.exchange_declare(exchange=exchange_name,
                              type=exchange_type,
@@ -329,8 +341,9 @@ def publish_event(queue,
 
 
 def delete_provider_context():
-    requests.delete('http://localhost:9200'
-                    '/cloudify_storage/provider_context/CONTEXT')
+    requests.delete('http://{0}:9200'
+                    '/cloudify_storage/provider_context/CONTEXT'
+                    .format(get_manager_ip()))
 
 
 def restore_provider_context():
@@ -342,45 +355,6 @@ def restore_provider_context():
 def timestamp():
     now = time.strftime("%c")
     return now.replace(' ', '-')
-
-
-@contextmanager
-def update_storage(ctx):
-
-    """
-    A context manager for updating plugin state.
-
-    :param ctx: task invocation context
-    """
-
-    deployment_id = ctx.deployment.id or 'system'
-    plugin_name = ctx.plugin.name
-    if not plugin_name:
-        # hack for tasks that are executed locally.
-        if ctx.task_name.startswith('cloudify_agent'):
-            plugin_name = 'agent'
-
-    storage_file_path = os.path.join(
-        os.environ['TEST_WORKING_DIR'],
-        'plugins-storage',
-        '{0}.json'.format(plugin_name)
-    )
-
-    with fasteners.InterProcessLock('{0}.lock'.format(storage_file_path)):
-        # create storage file
-        # if it doesn't exist
-        if not os.path.exists(storage_file_path):
-            with open(storage_file_path, 'w') as f:
-                json.dump({}, f)
-
-        with open(storage_file_path, 'r') as f:
-            data = json.load(f)
-            if deployment_id not in data:
-                data[deployment_id] = {}
-            yield data.get(deployment_id)
-        with open(storage_file_path, 'w') as f:
-            json.dump(data, f, indent=2)
-            f.write(os.linesep)
 
 
 def tar_blueprint(blueprint_path, dest_dir):
@@ -399,7 +373,7 @@ def tar_blueprint(blueprint_path, dest_dir):
 
 def tar_file(file_to_tar, destination_dir, tar_name=''):
     """
-    tar a file into a desintation dir.
+    tar a file into a destination dir.
     :param file_to_tar:
     :param destination_dir:
     :param tar_name: optional tar name.
@@ -421,47 +395,26 @@ class TimeoutException(Exception):
         return self.message
 
 
-def sudo(command, retries=0, globx=False, ignore_failures=False):
-    if isinstance(command, str):
-        command = shlex.split(command)
-    command.insert(0, 'sudo')
-    return run(command=command, globx=globx, retries=retries,
-               ignore_failures=ignore_failures)
+def upload_plugin(package_name, package_version):
+    client = create_rest_client()
+    temp_file_path = _create_mock_wagon(package_name, package_version)
+    response = client.plugins.upload(temp_file_path)
+    os.remove(temp_file_path)
+    return response
 
 
-def run(command, retries=0, ignore_failures=False, globx=False):
-    if isinstance(command, str):
-        command = shlex.split(command)
-    stderr = subprocess.PIPE
-    stdout = subprocess.PIPE
-    if globx:
-        glob_command = []
-        for arg in command:
-            glob_command.append(glob.glob(arg))
-        command = glob_command
-    logger.debug('Running: {0}'.format(command))
-    proc = subprocess.Popen(command, stdout=stdout, stderr=stderr)
-    proc.aggr_stdout, proc.aggr_stderr = proc.communicate()
-    if proc.returncode != 0:
-        command_str = ' '.join(command)
-        if retries:
-            logger.warning('Failed running command: {0}. Retrying. '
-                           '({1} left)'.format(command_str, retries))
-            proc = run(command, retries - 1)
-        elif not ignore_failures:
-            msg = 'Failed running command: {0} ({1}).'.format(
-                command_str, proc.aggr_stderr)
-            raise RuntimeError(msg)
-    logger.info('Running output: {0}'.format(proc.aggr_stdout))
-    return proc
-
-
-def copy(source, destination):
-    sudo(['cp', '-rp', source, destination])
-
-
-def is_port_open(port, host='localhost'):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    is_open = sock.connect_ex((host, port)) == 0
-    sock.close()
-    return is_open
+def _create_mock_wagon(package_name, package_version):
+    module_src = tempfile.mkdtemp(
+        prefix='plugin-{0}-'.format(package_name))
+    try:
+        with open(os.path.join(module_src, 'setup.py'), 'w') as f:
+            f.write('from setuptools import setup\n')
+            f.write('setup(name="{0}", version={1})'.format(
+                package_name, package_version))
+        wagon_client = wagon.Wagon(module_src)
+        result = wagon_client.create(
+            archive_destination_dir=tempfile.gettempdir(),
+            force=True)
+    finally:
+        shutil.rmtree(module_src)
+    return result

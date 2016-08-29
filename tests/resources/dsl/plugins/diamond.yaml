@@ -1,4 +1,4 @@
 plugins:
     diamond:
-        executor: central_deployment_agent
+        executor: host_agent
         install: false

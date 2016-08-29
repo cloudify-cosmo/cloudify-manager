@@ -14,19 +14,22 @@
 #    * limitations under the License.
 
 
-from nose.tools import eq_ as assertEqual
-
 from cloudify.decorators import operation
 from cloudify import context
 from cloudify import ctx
 
-from testenv.utils import update_storage
+from mock_plugins.utils import update_storage
 
 
 @operation
 def setup(source, target, **_):
     ctx.source.instance.runtime_properties.update(source)
     ctx.target.instance.runtime_properties.update(target)
+
+
+def assertEqual(left, right):
+    if left != right:
+        raise AssertionError('{0} != {1}'.format(left, right))
 
 
 @operation

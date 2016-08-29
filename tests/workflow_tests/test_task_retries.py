@@ -39,11 +39,6 @@ class TaskRetriesTest(TestCase):
         }}}
         self.client.manager.create_context(self._testMethodName, context)
 
-    def _write_test_events_and_logs_to_file(self, output, event):
-        super(TaskRetriesTest, self)._write_test_events_and_logs_to_file(
-            output, event)
-        self.events.append(event)
-
     def test_retries_and_retry_interval(self):
         self._test_retries_and_retry_interval_impl(
             blueprint='dsl/workflow_task_retries_1.yaml',
@@ -116,22 +111,27 @@ class TaskRetriesTest(TestCase):
         )['retry_invocations']
         self.assertEqual(4, invocations)
 
-        # asserting event messages reflect that the task has been rescheduled
-        with open(self.test_logs_file, 'r') as f:
-            events_and_logs = f.read()
-            self.assertIn('Task rescheduled', events_and_logs)
-            # the following is the message that was
-            # passed to the rescheduling request
-            self.assertIn('Retrying operation', events_and_logs)
-
-        # asserting that task events contain current_retries/total_retries
-        # only asserting that the properties exists and nothing logical because
-        # this is already covered in the local workflow tests
+        # 1 asserting event messages reflect that the task has been rescheduled
+        # 2 asserting that task events contain current_retries/total_retries
+        #   only asserting that the properties exists and nothing logical
+        #   because this is already covered in the local workflow tests
         def assertion():
-            events = [e for e in self.events if
+            events = self.client.events.list(deployment_id=deployment_id,
+                                             include_logs=True)
+            self.assertGreater(len(events), 0)
+            for event in events:
+                if 'Task rescheduled' in event['message']['text']:
+                    break
+            else:
+                self.fail('could not find expected message')
+            for event in events:
+                if 'Retrying operation' in event['message']['text']:
+                    break
+            else:
+                self.fail('could not find expected message')
+            events = [e for e in events if
                       e.get('event_type', '').startswith('task_') or
                       e.get('event_type', '') == 'sending_task']
-            self.assertGreater(len(events), 0)
             seen_current_retries = set()
             for event in events:
                 current_retries = event['context']['task_current_retries']
