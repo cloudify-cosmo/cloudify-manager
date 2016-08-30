@@ -23,7 +23,6 @@ import fasteners
 
 @contextmanager
 def update_storage(ctx):
-
     """
     A context manager for updating plugin state.
 
@@ -41,18 +40,17 @@ def update_storage(ctx):
         plugin_name)
 
     with storage_file_lock(storage_file_path):
-        # create storage file
-        # if it doesn't exist
+        # create storage file if it doesn't exist
         if not os.path.exists(storage_file_path):
             with open(storage_file_path, 'w') as f:
                 json.dump({}, f)
             os.chmod(storage_file_path, 0o666)
-
         with open(storage_file_path, 'r') as f:
-            data = json.load(f)
-            if deployment_id not in data:
-                data[deployment_id] = {}
-            yield data.get(deployment_id)
+            try:
+                data = json.load(f)
+            except ValueError:
+                data = {}
+        yield data.setdefault(deployment_id, {})
         with open(storage_file_path, 'w') as f:
             json.dump(data, f, indent=2)
             f.write(os.linesep)
