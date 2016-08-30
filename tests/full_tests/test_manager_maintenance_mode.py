@@ -15,6 +15,8 @@
 
 import uuid
 
+from cloudify_rest_client import exceptions
+
 from testenv import AgentTestCase
 from testenv.utils import get_resource as resource
 from testenv.utils import wait_for_deployment_creation_to_complete
@@ -42,6 +44,7 @@ class ManagerMaintenanceModeTest(AgentTestCase):
 
         self.logger.info('activating maintenance mode')
         self.client.maintenance_mode.activate()
+        self.addCleanup(self.cleanup)
 
         self.logger.info(
             "checking if maintenance status has changed to 'activating'")
@@ -65,3 +68,9 @@ class ManagerMaintenanceModeTest(AgentTestCase):
 
     def _check_maintenance_status(self, status):
         self.assertEqual(status, self.client.maintenance_mode.status().status)
+
+    def cleanup(self):
+        try:
+            self.client.maintenance_mode.deactivate()
+        except exceptions.NotModifiedError:
+            pass

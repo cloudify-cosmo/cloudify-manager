@@ -52,7 +52,7 @@ class ElasticsearchTimestampFormatTest(TestCase):
                                 'deployment ' + deployment.id)
             return res
 
-        result = self.do_assertions(read_events)
+        result = self.do_assertions(read_events, timeout=120)
 
         #  loop over all the events and compare timestamp to regular expression
         for hit in result['hits']['hits']:

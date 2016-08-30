@@ -222,11 +222,14 @@ class BaseTestEnvironment(object):
     def create(self):
         logger.info('Setting up test environment... workdir=[{0}]'
                     .format(self.test_working_dir))
+        os.environ['CFY_WORKDIR'] = self.test_working_dir
         try:
             logger.info('Starting manager container')
             docl.run_manager(
                 label=[self.env_label],
                 resources=self._build_resource_mapping())
+            cfy = utils.get_cfy()
+            cfy.use(utils.get_manager_ip())
             self.amqp_events_printer_thread.start()
         except:
             self.destroy()
@@ -304,6 +307,7 @@ class BaseTestEnvironment(object):
 
     def destroy(self):
         logger.info('Destroying test environment...')
+        os.environ.pop('CFY_WORKDIR', None)
         docl.clean(label=[self.env_label])
         self.delete_working_directory()
 

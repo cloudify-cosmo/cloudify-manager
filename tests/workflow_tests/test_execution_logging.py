@@ -47,7 +47,8 @@ class ExecutionLoggingTest(TestCase):
             if e.parameters['operation_kwargs'].get('user_cause')][0].id
         self.do_assertions(self._wait_for_end_events,
                            execution_ids=[no_user_cause_ex_id,
-                                          user_cause_ex_id])
+                                          user_cause_ex_id],
+                           timeout=120)
 
         def assert_output(verbosity,
                           expect_debug,

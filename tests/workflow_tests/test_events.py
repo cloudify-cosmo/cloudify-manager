@@ -139,7 +139,7 @@ class EventsTest(TestCase):
                 return events
             self.assertGreater(len(events), 0, 'No events')
             return events
-        return self.do_assertions(elist)
+        return self.do_assertions(elist, timeout=120)
 
     @staticmethod
     def _create_deployment():

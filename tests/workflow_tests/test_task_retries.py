@@ -140,7 +140,7 @@ class TaskRetriesTest(TestCase):
                 self.assertEqual(total_retries, 5)
             self.assertSetEqual(seen_current_retries, {0, 1, 2, 3})
         # events are async so we may have to wait some
-        self.do_assertions(assertion)
+        self.do_assertions(assertion, timeout=120)
 
     def _test_retries_and_retry_interval_impl(self,
                                               blueprint,
