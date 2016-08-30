@@ -46,6 +46,7 @@ def update_storage(ctx):
         if not os.path.exists(storage_file_path):
             with open(storage_file_path, 'w') as f:
                 json.dump({}, f)
+            os.chmod(storage_file_path, 0o666)
 
         with open(storage_file_path, 'r') as f:
             data = json.load(f)

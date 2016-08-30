@@ -33,10 +33,13 @@ def uninstall_plugins(plugins, **_):
 
 def _operate_on_plugins(plugins, new_state):
     plugin_installer = get_backend()
-    func = plugin_installer.install if 'installed' \
+    func = plugin_installer.install if new_state == 'installed' \
         else plugin_installer.uninstall
     for plugin in plugins:
         with update_storage(ctx) as data:
+            if (new_state == 'uninstalled' and
+                    'raise_exception_on_delete' in data):
+                raise Exception("Exception raised intentionally")
             func(plugin)
             plugin_name = plugin['name']
             task_target = ctx.task_target or 'local'

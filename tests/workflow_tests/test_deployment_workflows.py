@@ -23,7 +23,6 @@ from testenv.utils import verify_deployment_environment_creation_complete
 from testenv.utils import do_retries
 from testenv.utils import wait_for_execution_to_end
 from testenv.utils import deploy_application as deploy
-from mock_plugins.utils import storage_file_lock
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 
@@ -89,34 +88,23 @@ class TestDeploymentWorkflows(TestCase):
         self.assertEqual(expected_params, execute_op_workflow.parameters)
 
     def test_delete_botched_deployment(self):
-
-        from testenv import testenv_instance
-        storage_file_path = os.path.join(
-            testenv_instance.plugins_storage_dir,
-            'agent.json'
-        )
-
         dsl_path = resource('dsl/basic.yaml')
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
 
-        data = {
-            deployment_id: {'raise_exception_on_delete': True}
-        }
-        with storage_file_lock(storage_file_path):
-            with open(storage_file_path, 'w') as f:
-                json.dump(data, f)
+        data = {deployment_id: {'raise_exception_on_delete': True}}
+        storage_file_path = os.path.join(
+            self.env.plugins_storage_dir, 'agent.json')
+        with open(storage_file_path, 'w') as f:
+            json.dump(data, f)
 
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
-        execution = \
-            self.client.executions.list(deployment_id,
-                                        include_system_workflows=True)[0]
-
+        execution = self.client.executions.list(deployment_id)[0]
         wait_for_execution_to_end(execution)
-        self.client.deployments.delete(deployment_id)
 
+        self.client.deployments.delete(deployment_id)
         try:
             self.client.deployments.get(deployment_id)
             self.fail("Expected deployment to be deleted")
