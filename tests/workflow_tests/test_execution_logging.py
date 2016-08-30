@@ -54,7 +54,8 @@ class ExecutionLoggingTest(TestCase):
                           expect_traceback,
                           expect_rest_logs):
             events = self.cfy.events.list(
-                no_user_cause_ex_id, verbosity).stdout
+                verbosity,
+                execution_id=no_user_cause_ex_id).stdout
             # When running tests locally (not CI), events returned by the CLI
             # maybe colored, depending on his configuration so we strip ansi
             # escape sequences from retrieved events.
@@ -73,8 +74,8 @@ class ExecutionLoggingTest(TestCase):
             rest_assert = assert_in if expect_rest_logs else assert_not_in
             rest_assert('Sending request:', events)
             user_cause_events = self.cfy.events.list(
-                user_cause_ex_id,
-                verbosity
+                verbosity,
+                execution_id=user_cause_ex_id,
             )
             causes_assert = assert_in if expect_traceback else assert_not_in
             causes_assert('Causes', user_cause_events)

@@ -19,6 +19,7 @@ import os
 import socket
 import sys
 import time
+import tempfile
 from functools import partial
 
 import requests.exceptions
@@ -33,6 +34,11 @@ import cloudify_rest_client.exceptions
 import testenv
 from testenv import constants
 from testenv import utils
+
+# All container specific docl commands that are executed with no explicit
+# container id will be executed on the default_container_id which is set
+# after the manager container is started on run_manager()
+default_container_id = None
 
 
 # Using proxies because the sh.Command needs to be baked with an environment
@@ -92,17 +98,21 @@ def run_manager(label=None, resources=None):
     args = ['--mount']
     for l in label:
         args += ['--label', l]
-    _docl.run(*args)
-    with open(os.path.join(_docl_home(), 'work', 'last_container_ip')) as f:
-        container_ip = f.read().strip()
-    os.environ[constants.DOCL_CONTAINER_IP] = container_ip
+    with tempfile.NamedTemporaryFile() as f:
+        args += ['--details-path', f.name]
+        _docl.run(*args)
+        with open(f.name) as f2:
+            container_details = yaml.safe_load(f2)
+    global default_container_id
+    default_container_id = container_details['id']
+    os.environ[constants.DOCL_CONTAINER_IP] = container_details['ip']
     _wait_for_services()
     testenv.logger.info(
         'Container start took {0} seconds'.format(time.time() - start))
 
 
 def _retry(func, exceptions, cleanup=None):
-    for _ in range(200):
+    for _ in range(600):
         try:
             res = func()
             if cleanup:
@@ -146,10 +156,9 @@ def clean(label=None):
 
 
 def read_file(file_path, no_strip=False, container_id=None):
-    kwargs = {}
-    if container_id:
-        kwargs['container_id'] = container_id
-    result = _quiet_docl('exec', 'cat {0}'.format(file_path), **kwargs)
+    container_id = container_id or default_container_id
+    result = _quiet_docl('exec', 'cat {0}'.format(file_path),
+                         container_id=container_id)
     if not no_strip:
         result = result.strip()
     return result
@@ -161,18 +170,23 @@ def docker_host():
     return config['docker_host']
 
 
-def execute(command, quiet=True):
+def execute(command, quiet=True, container_id=None):
+    container_id = container_id or default_container_id
     proc = _quiet_docl if quiet else _docl
-    return proc('exec', command)
+    return proc('exec', command, container_id=container_id)
 
 
-def copy_file_to_manager(source, target):
-    return _quiet_docl('cp', source, ':{0}'.format(target))
+def copy_file_to_manager(source, target, container_id=None):
+    container_id = container_id or default_container_id
+    return _quiet_docl('cp', source, ':{0}'.format(target),
+                       container_id=container_id)
 
 
-def install_docker():
-    return _docl('install-docker')
+def install_docker(container_id=None):
+    container_id = container_id or default_container_id
+    return _docl('install-docker', container_id=container_id)
 
 
-def build_agent():
-    return _docl('build-agent')
+def build_agent(container_id=None):
+    container_id = container_id or default_container_id
+    return _docl('build-agent', container_id=container_id)
