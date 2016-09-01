@@ -36,7 +36,7 @@ function create_resources_tar() {
 
 
 CORE_TAG_NAME="3.4.0.2"
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/3.4.0.2/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
 
 AWS_ACCESS_KEY_ID=$1
