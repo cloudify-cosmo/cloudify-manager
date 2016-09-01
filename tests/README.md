@@ -67,6 +67,8 @@ This project runs tests on a Cloudify Manager container created by `docl`.
    $ pip install -e <SOURCE_ROOT>/cloudify-script-plugin
    $ pip install -e <SOURCE_ROOT>/cloudify-cli
    $ pip install -e <SOURCE_ROOT>/cloudify-manager/tests
+   $ pip install -e <SOURCE_ROOT>/cloudify-agent
+   $ pip install -e <SOURCE_ROOT>/cloudify-diamond-plugin
    ```
 
 5. Configure `docl` (https://github.com/dankilman/docl). (`docl` is installed
