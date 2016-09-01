@@ -67,6 +67,7 @@ This project runs tests on a Cloudify Manager container created by `docl`.
    $ pip install -e <SOURCE_ROOT>/cloudify-script-plugin
    $ pip install -e <SOURCE_ROOT>/cloudify-cli
    $ pip install -e <SOURCE_ROOT>/cloudify-manager/tests
+   $ pip install -e <SOURCE_ROOT>/cloudify-manager/rest-service
    $ pip install -e <SOURCE_ROOT>/cloudify-agent
    $ pip install -e <SOURCE_ROOT>/cloudify-diamond-plugin
    ```
