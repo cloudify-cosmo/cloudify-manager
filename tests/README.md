@@ -60,7 +60,7 @@ This project runs tests on a Cloudify Manager container created by `docl`.
 4. Inside a virtualenv, run:
 
    ```
-   $ pip install nose
+   $ pip install nose python-dateutil
    $ pip install -e <SOURCE_ROOT>/cloudify-dsl-parser
    $ pip install -e <SOURCE_ROOT>/cloudify-rest-client
    $ pip install -e <SOURCE_ROOT>/cloudify-plugins-common
