@@ -5,7 +5,7 @@ Cloudify Integration Tests
 This project runs tests on a Cloudify Manager container created by [`docl`](https://github.com/cloudify-cosmo/docl).
 
 ## Setup
-1. Install [Docker](https://docs.docker.com/engine/installation/). 
+1. Install [Docker](https://docs.docker.com/engine/installation/).
    Make sure docker is installed but not running as a service.
 
 2. The current implementation requires that docker is exposed on TCP rather than
@@ -42,7 +42,7 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
 
 3. The following cloudify-cosmo github repositories need to be cloned to
    some directory (`source_root`):
-   
+
        * `cloudify-amqp-influxdb`
        * `cloudify-plugins-common`
        * `cloudify-agent`
@@ -53,10 +53,10 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
        * `flask-securest`
        * `cloudify-diamond-plugin`
        * `cloudify-cli`
-   
-   **Note**: You may want to consider using [`clue`](http://clue.readthedocs.io/en/latest/).  
+
+   **Note**: You may want to consider using [`clue`](http://clue.readthedocs.io/en/latest/).
    Which amongst other things, will also automate this process for you.
-   
+
 4. Inside a virtualenv, run:
 
    ```
@@ -107,5 +107,5 @@ To test everything is working as it should, run:
 
 ```
 $ cd <root directory of cloudify-manager repository>
-$ nosetests -s tests/workflow_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
+$ nosetests -s tests/integration_tests/tests/agentless_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
 ```
