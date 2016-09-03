@@ -13,37 +13,48 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import os
 
 from setuptools import setup
+
+
+install_requires = [
+    'six==1.8.0',
+    'Flask==0.10.1',
+    'flask-restful==0.2.5',
+    'flask-restful-swagger==0.12',
+    'flask-sqlalchemy==2.1',
+    'supervise==1.1.1',
+    'cloudify-dsl-parser==4.0a2',
+    'requests==2.7.0',
+    'gunicorn==18.0',
+    'PyYAML==3.10',
+    'elasticsearch==1.6.0',
+    'celery==3.1.17',
+    'flask-securest==0.8',
+    'psutil==3.3.0',
+    'jsonpickle==0.9.2',
+    'wagon==0.3.2'
+]
+
+
+if os.environ.get('REST_SERVICE_BUILD'):
+    # since psycopg2 installation require postgres,
+    # we're adding it only to the build process,
+    # where we know there is postgresql..
+    # tests will use pg8000, which doesn't require postgres
+    install_requires.append('psycopg2==2.6.2')
 
 
 setup(
     name='cloudify-rest-service',
     version='4.0a2',
-    author='Dan Kilman',
-    author_email='dank@gigaspaces.com',
+    author='Gigaspaces',
+    author_email='cosmo-admin@gigaspaces.com',
     packages=['manager_rest',
               'manager_rest.deployment_update'],
     package_data={'manager_rest': ['VERSION']},
     license='LICENSE',
     description='Cloudify manager rest service',
     zip_safe=False,
-    install_requires=[
-        'six==1.8.0',
-        'Flask==0.10.1',
-        'flask-restful==0.2.5',
-        'flask-restful-swagger==0.12',
-        'flask-sqlalchemy==2.1',
-        'supervise==1.1.1',
-        'cloudify-dsl-parser==4.0a2',
-        'requests==2.7.0',
-        'gunicorn==18.0',
-        'PyYAML==3.10',
-        'elasticsearch==1.6.0',
-        'celery==3.1.17',
-        'flask-securest==0.8',
-        'psutil==3.3.0',
-        'jsonpickle==0.9.2',
-        'wagon==0.3.2'
-    ]
-)
+    install_requires=install_requires)
