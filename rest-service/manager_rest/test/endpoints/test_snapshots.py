@@ -3,7 +3,7 @@ import os
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
-from base_test import BaseServerTestCase
+from manager_rest.test.base_test import BaseServerTestCase
 from .test_utils import generate_progress_func
 
 

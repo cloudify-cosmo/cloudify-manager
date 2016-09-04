@@ -486,8 +486,8 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                 deployment_id=modified_node['deployment_id'],
                 node_id=modified_node['id'],
                 number_of_instances=modified_node['number_of_instances'],
-                planned_number_of_instances=
-                modified_node['planned_number_of_instances'],
+                planned_number_of_instances=modified_node[
+                    'planned_number_of_instances'],
                 relationships=modified_node['relationships'],
                 operations=modified_node['operations'],
                 plugins=modified_node['plugins'],

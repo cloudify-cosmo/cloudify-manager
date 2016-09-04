@@ -239,7 +239,7 @@ class BaseServerTestCase(unittest.TestCase):
         self.server_configuration = self.create_configuration()
         server.reset_state(self.server_configuration)
         utils.copy_resources(config.instance().file_server_root)
-        self.flask_app = server.setup_app()
+        self.flask_app = server.app
         server.app.config['Testing'] = True
         self.app = server.app.test_client()
         self.client = self.create_client()

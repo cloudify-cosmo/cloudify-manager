@@ -16,7 +16,7 @@ import tempfile
 import os
 import shutil
 
-from base_test import BaseServerTestCase
+from manager_rest.test.base_test import BaseServerTestCase
 
 from wagon.wagon import Wagon
 

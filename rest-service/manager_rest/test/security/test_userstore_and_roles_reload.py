@@ -156,7 +156,7 @@ class TestUserstoreReloadFile(SecurityTestBase):
 
         # modify admin's role config do deny all GET requests
         roles_config = self.get_valid_roles_config()
-        roles_config['administrator']['deny'] = ['GET']
+        roles_config['administrator']['deny'] = {'*': ['GET']}
         with open(self.get_roles_config_file_path(), 'w') as outfile:
             outfile.write(yaml.dump(roles_config,
                                     default_flow_style=True))

@@ -35,7 +35,6 @@ from celery import Celery
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
-from manager_rest.storage.es_storage_manager import ESStorageManager
 from manager_rest.storage.storage_manager import get_storage_manager
 import testenv.services.postgresql
 from testenv import constants

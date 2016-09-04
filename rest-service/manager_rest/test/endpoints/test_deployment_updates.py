@@ -27,7 +27,7 @@ from manager_rest.storage import storage_manager
 from manager_rest.deployment_update.constants import STATES
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
-from utils import get_resource as resource
+from manager_rest.test.utils import get_resource as resource
 
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
