@@ -32,6 +32,17 @@ from utils import get_resource as resource
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
 class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
+    execution_parameters = {
+        'added_instance_ids',
+        'added_target_instances_ids',
+        'removed_instance_ids',
+        'remove_target_instance_ids',
+        'extended_instance_ids',
+        'extend_target_instance_ids',
+        'reduced_instance_ids',
+        'reduce_target_instance_ids'
+    }
+
     def test_get_empty(self):
         result = self.client.deployment_updates.list()
         self.assertEquals(0, len(result))
@@ -79,6 +90,67 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
             self.assertEquals(400, response.status_code)
             self.assertEquals('unknown_deployment_input_error',
                               response.json['error_code'])
+
+    def test_add_node_and_relationship(self):
+        deployment_id = 'dep'
+        changed_params = ['added_instance_ids', 'added_target_instances_ids']
+        self._deploy_base(deployment_id, 'one_node.yaml')
+
+        self._update(deployment_id, 'two_nodes.yaml')
+        dep_update = \
+            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
+        execution = self.client.executions.get(dep_update.execution_id)
+        for param in self.execution_parameters:
+            self.assertEquals(1 if param in changed_params else 0,
+                              len(execution.parameters[param]))
+
+    def test_remove_node_and_relationship(self):
+        deployment_id = 'dep'
+        changed_params = ['removed_instance_ids', 'remove_target_instance_ids']
+
+        self._deploy_base(deployment_id, 'two_nodes.yaml')
+
+        self._update(deployment_id, 'one_node.yaml')
+        dep_update = \
+            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
+
+        execution = self.client.executions.get(dep_update.execution_id)
+        for param in self.execution_parameters:
+            self.assertEquals(1 if param in changed_params else 0,
+                              len(execution.parameters[param]))
+
+    def test_add_relationship(self):
+        deployment_id = 'dep'
+        changed_params = ['extended_instance_ids',
+                          'extend_target_instance_ids']
+
+        self._deploy_base(deployment_id, 'one_relationship.yaml')
+
+        self._update(deployment_id, 'two_relationships.yaml')
+        dep_update = \
+            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
+
+        execution = self.client.executions.get(dep_update.execution_id)
+        for param in self.execution_parameters:
+            self.assertEquals(1 if param in changed_params else 0,
+                              len(execution.parameters[param]))
+
+    def test_remove_relationship(self):
+        deployment_id = 'dep'
+        changed_params = ['reduced_instance_ids', 'reduce_target_instance_ids']
+
+        self._deploy_base(deployment_id, 'two_relationships.yaml')
+
+        self._update(deployment_id, 'one_relationship.yaml')
+        dep_update = \
+            self.client.deployment_updates.list(deployment_id=deployment_id)[0]
+
+        execution = self.client.executions.get(dep_update.execution_id)
+        for param in self.execution_parameters:
+            self.assertEquals(1 if param in changed_params else 0,
+                              len(execution.parameters[param]),
+                              '{0}:{1}'.format(param, execution.parameters[
+                                  param]))
 
     @patch('manager_rest.deployment_update.handlers.'
            'DeploymentUpdateNodeHandler.finalize')
