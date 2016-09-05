@@ -17,7 +17,8 @@ from os import path
 
 from nose.plugins.attrib import attr
 
-from manager_rest import storage_manager, models
+from manager_rest import models
+from manager_rest.storage import storage_manager
 from manager_rest.test import base_test
 from manager_rest.test.security.security_test_base import SecurityTestBase
 from cloudify_rest_client.exceptions import UserUnauthorizedError

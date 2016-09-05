@@ -32,6 +32,7 @@ from flask.ext.restful import Resource, marshal, reqparse
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
 from flask_securest.rest_security import SECURED_MODE, SecuredResource
+from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import config
@@ -43,12 +44,13 @@ from manager_rest import manager_exceptions
 from manager_rest import utils
 from manager_rest import responses_v2
 from manager_rest.files import UploadedDataManager
-from manager_rest.storage_manager import get_storage_manager
+from manager_rest.storage import sql_models
+from manager_rest.storage.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager,
                                              BlueprintsManager)
 from manager_rest import get_version_data
-from manager_rest.manager_elasticsearch import ManagerElasticsearch
+from manager_rest.storage.manager_elasticsearch import ManagerElasticsearch
 from manager_rest.maintenance import is_bypass_maintenance_mode
 
 
@@ -144,7 +146,10 @@ class marshal_with(object):
                 response.items = marshal(wrapped_items, fields_to_include)
                 return marshal(response,
                                responses_v2.ListResponse.resource_fields)
-            if isinstance(response, tuple):
+            # SQLAlchemy returns a class that subtypes tuple, but acts
+            # differently (it's taken care of in `wrap_with_response_object`)
+            if isinstance(response, tuple) and \
+                    not isinstance(response, sql_alchemy_collection):
                 data, code, headers = unpack(response)
                 data = self.wrap_with_response_object(data)
                 return marshal(data, fields_to_include), code, headers
@@ -159,10 +164,15 @@ class marshal_with(object):
             return self.response_class(**data)
         elif isinstance(data, list):
             return map(self.wrap_with_response_object, data)
-        elif isinstance(data, models.SerializableObject):
+        elif isinstance(data, (models.SerializableObject,
+                               sql_models.SerializableBase)):
             return self.wrap_with_response_object(data.to_dict())
-        raise RuntimeError('Unexpected response data type {0}'.format(
-            type(data)))
+        # Support for partial results from SQLAlchemy (i.e. only
+        # certain columns, and not the whole model class)
+        elif isinstance(data, sql_alchemy_collection):
+            return self.wrap_with_response_object(data._asdict())
+        raise RuntimeError('Unexpected response data (type {0}) {1}'.format(
+            type(data), data))
 
 
 def verify_json_content_type():
@@ -393,7 +403,7 @@ class Blueprints(SecuredResource):
         List uploaded blueprints
         """
 
-        blueprints = get_blueprints_manager().blueprints_list(
+        blueprints = get_blueprints_manager().list_blueprints(
             include=_include)
         return blueprints.items
 
@@ -525,7 +535,7 @@ class Executions(SecuredResource):
 
         deployment_id_filter = BlueprintsManager.create_filters_dict(
             deployment_id=deployment_id)
-        executions = get_blueprints_manager().executions_list(
+        executions = get_blueprints_manager().list_executions(
             is_include_system_workflows=is_include_system_workflows,
             include=_include,
             filters=deployment_id_filter)
@@ -672,7 +682,7 @@ class Deployments(SecuredResource):
         """
         List deployments
         """
-        deployments = get_blueprints_manager().deployments_list(
+        deployments = get_blueprints_manager().list_deployments(
             include=_include)
         return deployments.items
 
@@ -839,7 +849,7 @@ class DeploymentModifications(SecuredResource):
         deployment_id = args.get('deployment_id')
         deployment_id_filter = BlueprintsManager.create_filters_dict(
             deployment_id=deployment_id)
-        modifications = get_storage_manager().deployment_modifications_list(
+        modifications = get_storage_manager().list_deployment_modifications(
             filters=deployment_id_filter, include=_include)
         return modifications.items
 
@@ -928,7 +938,7 @@ class Nodes(SecuredResource):
         else:
             deployment_id_filter = BlueprintsManager.create_filters_dict(
                 deployment_id=deployment_id)
-            nodes = get_storage_manager().get_nodes(
+            nodes = get_storage_manager().list_nodes(
                 filters=deployment_id_filter, include=_include).items
         return nodes
 
@@ -975,7 +985,7 @@ class NodeInstances(SecuredResource):
         node_id = args.get('node_name')
         params_filter = BlueprintsManager.create_filters_dict(
             deployment_id=deployment_id, node_id=node_id)
-        node_instances = get_storage_manager().get_node_instances(
+        node_instances = get_storage_manager().list_node_instances(
             filters=params_filter, include=_include)
         return node_instances.items
 

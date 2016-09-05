@@ -21,6 +21,7 @@ from testenv.utils import do_retries
 from testenv.utils import verify_deployment_environment_creation_complete
 from testenv.utils import get_resource as resource
 from testenv.utils import deploy_application as deploy
+from testenv.utils import get_remote_storage_manager
 from testenv import TestCase
 from cloudify_rest_client.executions import Execution
 
@@ -162,19 +163,22 @@ class ExecutionsTest(TestCase):
         execution = self.client.executions.get(execution_id)
         self.assertEquals(Execution.TERMINATED, execution.status)
 
-        self.es_db_client.update_execution_status(
-            execution_id, 'new-status', '')
+        # Manually updating the status, because the client checks for
+        # correct transitions
+        sm = get_remote_storage_manager()
+        sm.update_execution_status(execution_id, 'started', '')
+
         execution = self.client.executions.get(execution_id)
-        self.assertEquals('new-status', execution.status)
+        self.assertEquals('started', execution.status)
         execution = self.client.executions.update(execution_id,
-                                                  'another-new-status',
+                                                  'pending',
                                                   'some-error')
-        self.assertEquals('another-new-status', execution.status)
+        self.assertEquals('pending', execution.status)
         self.assertEquals('some-error', execution.error)
         # verifying that updating only the status field also resets the
         # error field to an empty string
-        execution = self.client.executions.update(execution_id, 'final-status')
-        self.assertEquals('final-status', execution.status)
+        execution = self.client.executions.update(execution_id, 'terminated')
+        self.assertEquals('terminated', execution.status)
         self.assertEquals('', execution.error)
 
     def _execute_and_cancel_execution(self, workflow_id, force=False,

@@ -384,7 +384,7 @@ class DeploymentUpdates(SecuredResource):
         List deployment modification stages
         """
         deployment_updates = \
-            get_deployment_updates_manager().deployment_updates_list(
+            get_deployment_updates_manager().list_deployment_updates(
                     include=_include, filters=filters, pagination=pagination,
                     sort=sort, **kwargs)
         return deployment_updates

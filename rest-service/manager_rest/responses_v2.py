@@ -36,8 +36,8 @@ class BlueprintState(BlueprintStateV1):
 
     def __init__(self, **kwargs):
         super(BlueprintState, self).__init__(**kwargs)
-        self.description = kwargs['description']
-        self.main_file_name = kwargs['main_file_name']
+        self.description = kwargs.get('description')
+        self.main_file_name = kwargs.get('main_file_name')
 
 
 @swagger.model
@@ -58,19 +58,19 @@ class Plugin(object):
         'uploaded_at': fields.String}
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.package_name = kwargs['package_name']
-        self.archive_name = kwargs['archive_name']
-        self.package_source = kwargs['package_source']
-        self.package_version = kwargs['package_version']
-        self.supported_platform = kwargs['supported_platform']
-        self.distribution = kwargs['distribution']
-        self.distribution_version = kwargs['distribution_version']
-        self.distribution_release = kwargs['distribution_release']
-        self.wheels = kwargs['wheels']
-        self.excluded_wheels = kwargs['excluded_wheels']
-        self.supported_py_versions = kwargs['supported_py_versions']
-        self.uploaded_at = kwargs['uploaded_at']
+        self.id = kwargs.get('id')
+        self.package_name = kwargs.get('package_name')
+        self.archive_name = kwargs.get('archive_name')
+        self.package_source = kwargs.get('package_source')
+        self.package_version = kwargs.get('package_version')
+        self.supported_platform = kwargs.get('supported_platform')
+        self.distribution = kwargs.get('distribution')
+        self.distribution_version = kwargs.get('distribution_version')
+        self.distribution_release = kwargs.get('distribution_release')
+        self.wheels = kwargs.get('wheels')
+        self.excluded_wheels = kwargs.get('excluded_wheels')
+        self.supported_py_versions = kwargs.get('supported_py_versions')
+        self.uploaded_at = kwargs.get('uploaded_at')
 
 
 @swagger.model
@@ -84,10 +84,10 @@ class Snapshot(object):
     }
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.created_at = kwargs['created_at']
-        self.status = kwargs['status']
-        self.error = kwargs['error']
+        self.id = kwargs.get('id')
+        self.created_at = kwargs.get('created_at')
+        self.status = kwargs.get('status')
+        self.error = kwargs.get('error')
 
 
 @swagger.model
@@ -97,5 +97,5 @@ class ListResponse(object):
         'items': fields.List(fields.Raw)}
 
     def __init__(self, **kwargs):
-        self.metadata = kwargs['metadata']
-        self.items = kwargs['items']
+        self.metadata = kwargs.get('metadata')
+        self.items = kwargs.get('items')

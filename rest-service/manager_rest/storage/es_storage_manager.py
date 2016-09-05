@@ -19,7 +19,7 @@ from elasticsearch import Elasticsearch
 
 from manager_rest import config
 from manager_rest import manager_exceptions
-from manager_rest.storage_manager import ListResult
+from manager_rest.storage.storage_manager import ListResult
 from manager_rest.models import (BlueprintState,
                                  Snapshot,
                                  Deployment,
@@ -31,7 +31,7 @@ from manager_rest.models import (BlueprintState,
                                  Plugin,
                                  DeploymentUpdate,
                                  Event)
-from manager_rest.manager_elasticsearch import ManagerElasticsearch
+from manager_rest.storage.manager_elasticsearch import ManagerElasticsearch
 
 STORAGE_INDEX_NAME = 'cloudify_storage'
 NODE_TYPE = 'node'
@@ -182,7 +182,7 @@ class ESStorageManager(object):
                 fields_data[field] = None
         return model_class(**fields_data)
 
-    def blueprints_list(self, include=None, filters=None, pagination=None,
+    def list_blueprints(self, include=None, filters=None, pagination=None,
                         sort=None):
         return self._get_items_list(BLUEPRINT_TYPE,
                                     BlueprintState,
@@ -191,7 +191,7 @@ class ESStorageManager(object):
                                     include=include,
                                     sort=sort)
 
-    def snapshots_list(self, include=None, filters=None, pagination=None,
+    def list_snapshots(self, include=None, filters=None, pagination=None,
                        sort=None):
         return self._get_items_list(SNAPSHOT_TYPE,
                                     Snapshot,
@@ -200,7 +200,7 @@ class ESStorageManager(object):
                                     pagination=pagination,
                                     sort=sort)
 
-    def deployments_list(self, include=None, filters=None, pagination=None,
+    def list_deployments(self, include=None, filters=None, pagination=None,
                          sort=None):
         return self._get_items_list(DEPLOYMENT_TYPE,
                                     Deployment,
@@ -209,7 +209,7 @@ class ESStorageManager(object):
                                     include=include,
                                     sort=sort)
 
-    def deployment_updates_list(self, include=None, filters=None,
+    def list_deployment_updates(self, include=None, filters=None,
                                 pagination=None, sort=None):
         return self._get_items_list(DEPLOYMENT_UPDATE_TYPE,
                                     DeploymentUpdate,
@@ -218,7 +218,7 @@ class ESStorageManager(object):
                                     include=include,
                                     sort=sort)
 
-    def executions_list(self, include=None, filters=None, pagination=None,
+    def list_executions(self, include=None, filters=None, pagination=None,
                         sort=None):
         return self._get_items_list(EXECUTION_TYPE,
                                     Execution,
@@ -227,7 +227,7 @@ class ESStorageManager(object):
                                     include=include,
                                     sort=sort)
 
-    def get_blueprint_deployments(self, blueprint_id, include=None):
+    def list_blueprint_deployments(self, blueprint_id, include=None):
         deployment_filters = {'blueprint_id': blueprint_id}
         return self._get_items_list(DEPLOYMENT_TYPE,
                                     Deployment,
@@ -249,8 +249,8 @@ class ESStorageManager(object):
                                              model_class=DeploymentNode,
                                              fields=include)
 
-    def get_node_instances(self, include=None, filters=None, pagination=None,
-                           sort=None):
+    def list_node_instances(self, include=None, filters=None, pagination=None,
+                            sort=None):
         return self._get_items_list(NODE_INSTANCE_TYPE,
                                     DeploymentNodeInstance,
                                     filters=filters,
@@ -258,8 +258,8 @@ class ESStorageManager(object):
                                     pagination=pagination,
                                     sort=sort)
 
-    def get_plugins(self, include=None, filters=None, pagination=None,
-                    sort=None):
+    def list_plugins(self, include=None, filters=None, pagination=None,
+                     sort=None):
         return self._get_items_list(PLUGIN_TYPE,
                                     Plugin,
                                     filters=filters,
@@ -267,8 +267,8 @@ class ESStorageManager(object):
                                     pagination=pagination,
                                     sort=sort)
 
-    def get_nodes(self, include=None, filters=None, pagination=None,
-                  sort=None):
+    def list_nodes(self, include=None, filters=None, pagination=None,
+                   sort=None):
         return self._get_items_list(NODE_TYPE,
                                     DeploymentNode,
                                     filters=filters,
@@ -382,6 +382,8 @@ class ESStorageManager(object):
         return self._delete_doc(SNAPSHOT_TYPE, snapshot_id,
                                 Snapshot)
 
+    # TODO: Move this to manager_elasticsearch.py, to make it independent
+    # of the storage manager (in order to use sql storage manager)
     def delete_events(self, events_list):
         for event in events_list:
             self._delete_doc(event['doc_type'],
@@ -567,7 +569,7 @@ class ESStorageManager(object):
             raise manager_exceptions.NotFoundError(
                 "Modification {0} not found".format(modification_id))
 
-    def deployment_modifications_list(self, include=None, filters=None,
+    def list_deployment_modifications(self, include=None, filters=None,
                                       pagination=None, sort=None):
         return self._get_items_list(DEPLOYMENT_MODIFICATION_TYPE,
                                     DeploymentModification,

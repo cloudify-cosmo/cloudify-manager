@@ -20,7 +20,7 @@ import shutil
 from nose.plugins.attrib import attr
 
 from manager_rest import archiving
-from manager_rest.file_server import FileServer
+from manager_rest.storage.file_server import FileServer
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
 from .test_utils import generate_progress_func

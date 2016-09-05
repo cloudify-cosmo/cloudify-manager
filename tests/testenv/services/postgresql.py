@@ -14,40 +14,70 @@
 # limitations under the License.
 
 import logging
+from flask import Flask
 from contextlib import closing
 
 import pg8000
 
 from cloudify.utils import setup_logger
-
-from testenv import utils
+from manager_rest.storage.sql_models import db
+import testenv.utils
 
 logger = setup_logger('postgresql', logging.INFO)
 setup_logger('postgresql.trace', logging.INFO)
 
 
-def _run_query(query):
-    with closing(pg8000.connect(database='postgres',
-                                user='cloudify',
-                                password='cloudify',
-                                host=utils.get_manager_ip())) as con:
+app = None
+
+
+def setup_app():
+    global app
+    if not app:
+        conf = testenv.utils.get_postgres_client_details()
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = \
+            'postgresql+pg8000://{0}:{1}@{2}/{3}'.format(
+                conf.username,
+                conf.password,
+                conf.host,
+                conf.db_name
+            )
+        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Setup the mock app with the DB
+    db.init_app(app)
+    app.app_context().push()
+
+
+def run_query(query, db_name=None):
+    conf = testenv.utils.get_postgres_client_details()
+    db_name = db_name or conf.db_name
+    with closing(pg8000.connect(database=db_name,
+                                user=conf.username,
+                                password=conf.password,
+                                host=conf.host)) as con:
         con.autocommit = True
         with closing(con.cursor()) as cur:
-            cur.execute(query)
-            logger.info('Running: {0}'.format(query))
-            status_message = cur.description
             try:
+                cur.execute(query)
+                logger.info('Running: ' + cur.query)
+                status_message = cur.statusmessage
                 fetchall = cur.fetchall()
-            except:
+            except Exception, e:
                 fetchall = None
+                status_message = str(e)
             return {'status': status_message, 'all': fetchall}
 
 
-def create_db(db_name):
-    query = "SELECT 1 from pg_database WHERE datname='{0}'".format(db_name)
-    result = _run_query(query)
-    db_exist = '1' in result['status']
-    if db_exist:
-        logger.info('database {0} exist, going to delete it!'.format(db_name))
-    _run_query('DROP DATABASE IF EXISTS {0}'.format(db_name))
-    _run_query('CREATE DATABASE {0}'.format(db_name))
+def reset_data():
+    logger.info('Resetting PostgreSQL DB')
+
+    setup_app()
+
+    # Rebuild the DB
+    db.drop_all()
+    db.create_all()
+
+    # Clear the connection
+    db.session.remove()
+    db.get_engine(app).dispose()

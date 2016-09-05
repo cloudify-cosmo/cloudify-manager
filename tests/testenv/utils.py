@@ -23,10 +23,10 @@ import tarfile
 import shutil
 from os import path
 from functools import wraps
+from collections import namedtuple
 from multiprocessing import Process
 
 import elasticsearch
-import requests
 import pika
 import sh
 from wagon import wagon
@@ -35,8 +35,9 @@ from celery import Celery
 from cloudify.utils import setup_logger
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
-from manager_rest.es_storage_manager import ESStorageManager
-
+from manager_rest.storage.es_storage_manager import ESStorageManager
+from manager_rest.storage.storage_manager import get_storage_manager
+import testenv.services.postgresql
 from testenv import constants
 
 PROVIDER_CONTEXT = {
@@ -61,13 +62,21 @@ def create_rest_client():
     return CloudifyClient(host=get_manager_ip(), port=80)
 
 
-def create_es_db_client():
-    return ESStorageManager(host=get_manager_ip(), port=9200)
-
-
 def create_es_client():
     return elasticsearch.Elasticsearch(hosts=[{'host': get_manager_ip(),
                                                'port': 9200}])
+
+
+def get_postgres_client_details():
+    details = namedtuple('PGDetails', 'db_name username password host')
+    return details('cloudify_db', 'cloudify', 'cloudify', get_manager_ip())
+
+
+def get_remote_storage_manager():
+    """Return the SQL storage manager connected to the remote manager
+    """
+    testenv.services.postgresql.setup_app()
+    return get_storage_manager()
 
 
 def create_pika_connection():
@@ -341,9 +350,7 @@ def publish_event(queue,
 
 
 def delete_provider_context():
-    requests.delete('http://{0}:9200'
-                    '/cloudify_storage/provider_context/CONTEXT'
-                    .format(get_manager_ip()))
+    testenv.services.postgresql.run_query("DELETE from provider_context")
 
 
 def restore_provider_context():

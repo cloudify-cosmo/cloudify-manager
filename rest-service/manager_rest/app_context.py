@@ -1,7 +1,7 @@
 from flask import current_app
 
 from dsl_parser import constants
-from manager_rest import storage_manager
+from manager_rest.storage import storage_manager
 from dsl_parser import utils as dsl_parser_utils
 
 

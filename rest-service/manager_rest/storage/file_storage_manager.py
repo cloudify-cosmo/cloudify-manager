@@ -16,7 +16,7 @@
 import os
 import json
 
-from manager_rest.storage_manager import ListResult
+from manager_rest.storage.storage_manager import ListResult
 from manager_rest.models import (BlueprintState,
                                  Deployment,
                                  DeploymentModification,
@@ -135,31 +135,31 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Node {0} not found".format(node_id))
 
-    def get_node_instances(self, filters=None, pagination=None,
-                           sort=None, **_):
+    def list_node_instances(self, filters=None, pagination=None,
+                            sort=None, **_):
         instances = self._load_data()[NODE_INSTANCES].values()
         instances = sort_list(instances, sort)
         result = self.filter_data(instances, filters)
         return paginate_list(result,
                              pagination=pagination)
 
-    def get_nodes(self, filters=None, pagination=None,
-                  sort=None, **_):
+    def list_nodes(self, filters=None, pagination=None,
+                   sort=None, **_):
         nodes = self._load_data()[NODES].values()
         nodes = sort_list(nodes, sort)
         result = self.filter_data(nodes, filters)
         return paginate_list(result,
                              pagination=pagination)
 
-    def get_plugins(self, include=None, filters=None, pagination=None,
-                    sort=None):
+    def list_plugins(self, include=None, filters=None, pagination=None,
+                     sort=None):
         plugins = self._load_data()[PLUGINS].values()
         plugins = sort_list(plugins, sort)
         result = self.filter_data(plugins, filters)
         return paginate_list(result,
                              pagination=pagination)
 
-    def snapshots_list(self, include=None, filters=None, pagination=None,
+    def list_snapshots(self, include=None, filters=None, pagination=None,
                        sort=None):
         snapshots = self._load_data()[SNAPSHOTS].values()
         snapshots = sort_list(snapshots, sort)
@@ -254,7 +254,7 @@ class FileStorageManager(object):
         data[NODE_INSTANCES][node.id] = node
         self._dump_data(data)
 
-    def blueprints_list(self, filters=None, pagination=None,
+    def list_blueprints(self, filters=None, pagination=None,
                         sort=None, **_):
         blueprints = self._load_data()[BLUEPRINTS].values()
         blueprints = sort_list(blueprints, sort)
@@ -277,7 +277,7 @@ class FileStorageManager(object):
             result = items_lst
         return result
 
-    def deployments_list(self, filters=None, pagination=None,
+    def list_deployments(self, filters=None, pagination=None,
                          sort=None, **_):
         deployments = self._load_data()[DEPLOYMENTS].values()
         deployments = sort_list(deployments, sort)
@@ -285,7 +285,7 @@ class FileStorageManager(object):
         return paginate_list(result,
                              pagination=pagination)
 
-    def deployment_updates_list(self, filters=None, pagination=None,
+    def list_deployment_updates(self, filters=None, pagination=None,
                                 sort=None, **_):
         deployment_updates = self._load_data()[DEPLOYMENT_UPDATES].values()
         deployment_updates = sort_list(deployment_updates, sort)
@@ -293,7 +293,7 @@ class FileStorageManager(object):
         return paginate_list(result,
                              pagination=pagination)
 
-    def executions_list(self, filters=None, pagination=None,
+    def list_executions(self, filters=None, pagination=None,
                         sort=None, **_):
         executions = self._load_data()[EXECUTIONS].values()
         executions = sort_list(executions, sort)
@@ -301,8 +301,8 @@ class FileStorageManager(object):
         return paginate_list(result,
                              pagination=pagination)
 
-    def get_blueprint_deployments(self, blueprint_id, **_):
-        return self.deployments_list(filters={'blueprint_id': blueprint_id})
+    def list_blueprint_deployments(self, blueprint_id, **_):
+        return self.list_deployments(filters={'blueprint_id': blueprint_id})
 
     def get_blueprint(self, blueprint_id, include=None):
         data = self._load_data()
@@ -515,7 +515,7 @@ class FileStorageManager(object):
         raise manager_exceptions.NotFoundError(
             "Deployment modification {0} not found".format(modification_id))
 
-    def deployment_modifications_list(self, include=None, filters=None,
+    def list_deployment_modifications(self, include=None, filters=None,
                                       pagination=None, sort=None):
         modifications = self._load_data()[DEPLOYMENT_MODIFICATIONS].values()
         modifications = sort_list(modifications, sort)

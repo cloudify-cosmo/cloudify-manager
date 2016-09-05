@@ -20,8 +20,8 @@ from flask import current_app
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
-from manager_rest import (app_context, config, models, storage_manager,
-                          manager_exceptions)
+from manager_rest import app_context, config, models, manager_exceptions
+from manager_rest.storage import storage_manager
 import manager_rest.workflow_client as wf_client
 from manager_rest import utils
 from manager_rest.blueprints_manager import BlueprintsManager
@@ -58,7 +58,7 @@ class DeploymentUpdateManager(object):
         """
         return self.sm.get_deployment_update(deployment_update_id)
 
-    def deployment_updates_list(self, include=None, filters=None,
+    def list_deployment_updates(self, include=None, filters=None,
                                 pagination=None, sort=None):
         """Return a list of deployment updates.
 
@@ -68,7 +68,7 @@ class DeploymentUpdateManager(object):
         :param sort:
         :return:
         """
-        return self.sm.deployment_updates_list(include=include,
+        return self.sm.list_deployment_updates(include=include,
                                                filters=filters,
                                                pagination=pagination,
                                                sort=sort)
@@ -220,7 +220,7 @@ class DeploymentUpdateManager(object):
 
         # Retrieve previous_nodes
         previous_nodes = \
-            [node.to_dict() for node in self.sm.get_nodes(
+            [node.to_dict() for node in self.sm.list_nodes(
                 filters={'deployment_id': dep_update.deployment_id}).items]
 
         # Update the nodes on the storage
@@ -278,7 +278,7 @@ class DeploymentUpdateManager(object):
         :param force: force
         """
         existing_updates = \
-            self.deployment_updates_list(filters={
+            self.list_deployment_updates(filters={
                 'deployment_id': deployment_id
             }).items
 
@@ -332,7 +332,7 @@ class DeploymentUpdateManager(object):
         # By this point the node_instances aren't updated yet
         previous_node_instances = \
             [instance.to_dict() for instance in
-             self.sm.get_node_instances(filters=deployment_id_filter).items]
+             self.sm.list_node_instances(filters=deployment_id_filter).items]
 
         # extract all the None relationships from the depup nodes in order
         # to use in the extract changes

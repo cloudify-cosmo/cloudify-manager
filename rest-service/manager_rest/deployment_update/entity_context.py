@@ -1,5 +1,5 @@
 import utils
-from manager_rest import storage_manager
+from manager_rest.storage import storage_manager
 from constants import ENTITY_TYPES
 
 

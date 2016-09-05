@@ -138,7 +138,7 @@ def _check_allowed_endpoint(request_endpoint):
 
 
 def get_running_executions():
-    executions = get_blueprints_manager().executions_list(
+    executions = get_blueprints_manager().list_executions(
             is_include_system_workflows=True).items
     running_executions = []
     for execution in executions:

@@ -33,11 +33,11 @@ class MaintenanceMode(object):
     }
 
     def __init__(self, **kwargs):
-        self.status = kwargs['status']
-        self.activated_at = kwargs['activated_at']
-        self.activation_requested_at = kwargs['activation_requested_at']
-        self.remaining_executions = kwargs['remaining_executions']
-        self.requested_by = kwargs['requested_by']
+        self.status = kwargs.get('status')
+        self.activated_at = kwargs.get('activated_at')
+        self.activation_requested_at = kwargs.get('activation_requested_at')
+        self.remaining_executions = kwargs.get('remaining_executions')
+        self.requested_by = kwargs.get('requested_by')
 
 
 @swagger.model
@@ -50,10 +50,10 @@ class DeploymentUpdateStep(object):
     }
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.action = kwargs['action']
-        self.entity_type = kwargs['entity_type']
-        self.entity_id = kwargs['entity_id']
+        self.id = kwargs.get('id')
+        self.action = kwargs.get('action')
+        self.entity_type = kwargs.get('entity_type')
+        self.entity_id = kwargs.get('entity_id')
 
 
 @swagger.model
@@ -68,12 +68,12 @@ class DeploymentUpdate(object):
     }
 
     def __init__(self, **kwargs):
-        self.id = kwargs['id']
-        self.deployment_id = kwargs['deployment_id']
-        self.steps = kwargs['steps']
-        self.state = kwargs['state']
-        self.execution_id = kwargs['execution_id']
-        self.created_at = kwargs['created_at']
+        self.id = kwargs.get('id')
+        self.deployment_id = kwargs.get('deployment_id')
+        self.steps = kwargs.get('steps')
+        self.state = kwargs.get('state')
+        self.execution_id = kwargs.get('execution_id')
+        self.created_at = kwargs.get('created_at')
 
 
 class Deployment(DeploymentV1):
@@ -84,7 +84,7 @@ class Deployment(DeploymentV1):
 
     def __init__(self, **kwargs):
         super(Deployment, self).__init__(**kwargs)
-        self.scaling_groups = kwargs['scaling_groups']
+        self.scaling_groups = kwargs.get('scaling_groups')
 
 
 @swagger.model
@@ -97,8 +97,8 @@ class Node(NodeV1):
 
     def __init__(self, **kwargs):
         super(Node, self).__init__(**kwargs)
-        self.min_number_of_instances = kwargs['min_number_of_instances']
-        self.max_number_of_instances = kwargs['max_number_of_instances']
+        self.min_number_of_instances = kwargs.get('min_number_of_instances')
+        self.max_number_of_instances = kwargs.get('max_number_of_instances')
 
 
 @swagger.model
@@ -110,4 +110,4 @@ class NodeInstance(NodeInstanceV1):
 
     def __init__(self, **kwargs):
         super(NodeInstance, self).__init__(**kwargs)
-        self.scaling_groups = kwargs['scaling_groups']
+        self.scaling_groups = kwargs.get('scaling_groups')

@@ -1,4 +1,4 @@
-from manager_rest import storage_manager
+from manager_rest.storage import storage_manager
 from manager_rest.deployment_update import utils
 from manager_rest.manager_exceptions import UnknownModificationStageError
 from manager_rest.deployment_update.constants import ENTITY_TYPES, ACTION_TYPES
@@ -59,8 +59,8 @@ class EntityValidatorBase(object):
                 "or doesn't exists in the original deployment blueprint")
 
     def _get_storage_node(self, deployment_id, node_id):
-        nodes = self.sm.get_nodes(filters={'deployment_id': deployment_id,
-                                           'id': node_id})
+        nodes = self.sm.list_nodes(filters={'deployment_id': deployment_id,
+                                            'id': node_id})
         return nodes.items[0].to_dict() if nodes.items else {}
 
 
