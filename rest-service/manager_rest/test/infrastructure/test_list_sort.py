@@ -12,9 +12,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from base_list_test import BaseListTest
-from base_test import LATEST_API_VERSION
 from nose.plugins.attrib import attr
+
+from manager_rest.test.base_test import LATEST_API_VERSION
+from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 
 @attr(client_min_version=2,
@@ -22,7 +23,7 @@ from nose.plugins.attrib import attr
 class ResourceListTestCase(BaseListTest):
 
     def setUp(self):
-        self.num_of_deployments = 10
+        self.num_of_deployments = 5
         super(ResourceListTestCase, self).setUp()
         self._put_n_deployments(id_prefix="test",
                                 number_of_deployments=self.num_of_deployments)

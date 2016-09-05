@@ -19,7 +19,7 @@ from nose.plugins.attrib import attr
 
 from manager_rest import manager_exceptions
 from manager_rest.test import base_test
-from base_test import BaseServerTestCase
+from manager_rest.test.base_test import BaseServerTestCase
 
 from cloudify_rest_client import exceptions
 from .test_utils import generate_progress_func

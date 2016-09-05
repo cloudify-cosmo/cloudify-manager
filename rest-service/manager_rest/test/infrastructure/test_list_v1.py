@@ -16,8 +16,8 @@
 
 from nose.plugins.attrib import attr
 
-from manager_rest.test.base_list_test import BaseListTest
 from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 
 @attr(client_min_version=1, client_max_version=1)

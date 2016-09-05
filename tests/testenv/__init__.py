@@ -33,7 +33,7 @@ from cloudify_cli.colorful_event import ColorfulEvent
 
 from testenv import utils
 from testenv import docl
-from testenv.services import elastic, postgresql
+from testenv.services import postgresql
 
 logger = cloudify.utils.setup_logger('TESTENV')
 cloudify.utils.setup_logger('cloudify.rest_client', logging.INFO)

@@ -19,7 +19,7 @@ import dateutil.parser
 from datetime import timedelta
 from nose.plugins.attrib import attr
 
-from base_test import CLIENT_API_VERSION
+from manager_rest.test.base_test import CLIENT_API_VERSION
 
 from manager_rest import utils
 from manager_rest.test import base_test

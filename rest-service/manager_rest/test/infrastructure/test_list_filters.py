@@ -15,11 +15,11 @@
 
 from nose.plugins.attrib import attr
 
-from manager_rest.test import base_test
-from manager_rest.test.base_list_test import BaseListTest
-from manager_rest import models
-from manager_rest import manager_exceptions
 from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest import manager_exceptions
+from manager_rest import models
+from manager_rest.test import base_test
+from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'

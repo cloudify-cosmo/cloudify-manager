@@ -16,7 +16,7 @@ from manager_rest.deployment_update.step_extractor import (
 from manager_rest.deployment_update.step_extractor \
     import EntityIdBuilder, StepExtractor, \
     DeploymentUpdateStep
-from utils import get_resource
+from manager_rest.test.utils import get_resource
 
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
