@@ -283,7 +283,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
         # updating the execution's status to started to make the first update
         # really be active
-        storage_manager._get_instance().update_execution_status(
+        storage_manager.get_storage_manager().update_execution_status(
             first_execution_id, models.Execution.STARTED, error='')
         self.client.executions.get(execution_id=first_execution_id)
 
@@ -333,7 +333,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
     def test_storage_serialization_and_response(self):
         now = utils.get_formatted_timestamp()
-        sm = storage_manager._get_instance()
+        sm = storage_manager.get_storage_manager()
         deployment_update = models.DeploymentUpdate(
                 deployment_id='deployment-id',
                 deployment_plan={'name': 'my-bp'},

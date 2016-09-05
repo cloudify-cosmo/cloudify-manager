@@ -20,6 +20,7 @@ from manager_rest import config
 
 DEFAULT_SEARCH_SIZE = 10000
 EVENTS_INDICES_PATTERN = 'logstash-*'
+STORAGE_INDEX_NAME = 'cloudify_storage'
 
 RESERVED_CHARS_REGEX = '([\(\)\{\}\+\-\=\>\<\!\[\]\^\"\~\*\?\:\\/]|&&|\|\|\s)'
 
@@ -195,19 +196,6 @@ class ManagerElasticsearch:
         return [item['_source'] for item in search_result['hits']['hits']]
 
     @staticmethod
-    def extract_info_for_deletion(search_result):
-        """Returns a list of items, with information relevant to their deletion
-
-        :param search_result: Valid ES search results
-        :return: A list of dicts, each containing an ID, an ES index and
-        an ES doc type
-        """
-        return [{'id': item['_id'],
-                 'index': item['_index'],
-                 'doc_type': item['_source']['type']}
-                for item in search_result['hits']['hits']]
-
-    @staticmethod
     def build_list_result_metadata(query, search_result):
 
         pagination = {'total': search_result['hits']['total'],
@@ -215,3 +203,13 @@ class ManagerElasticsearch:
                       'offset': query.get('from', 0)}
         metadata = {'pagination': pagination}
         return metadata
+
+    @staticmethod
+    def delete_events(search_result):
+        es = ManagerElasticsearch.get_connection()
+        for event in search_result['hits']['hits']:
+            es.delete(
+                index=STORAGE_INDEX_NAME,
+                doc_type=event['_source']['type'],
+                id=event['_id']
+            )

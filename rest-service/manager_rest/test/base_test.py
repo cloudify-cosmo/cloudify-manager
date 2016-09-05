@@ -20,7 +20,7 @@ import urllib2
 import tempfile
 import time
 import os
-import types
+
 import shutil
 
 from nose.tools import nottest
@@ -28,20 +28,13 @@ from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
 
 from manager_rest import utils, config, archiving
-from manager_rest.storage import storage_manager
 from manager_rest.storage.file_server import FileServer
+from manager_rest.test.mocks import MockHTTPClient, CLIENT_API_VERSION, \
+    build_query_string
 from cloudify_rest_client import CloudifyClient
-from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
 
-try:
-    from cloudify_rest_client.client import \
-        DEFAULT_API_VERSION as CLIENT_API_VERSION
-except ImportError:
-    CLIENT_API_VERSION = 'v1'
 
-
-STORAGE_MANAGER_MODULE_NAME = 'manager_rest.storage.file_storage_manager'
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
 FILE_SERVER_SNAPSHOTS_FOLDER = 'snapshots'
@@ -49,13 +42,6 @@ FILE_SERVER_DEPLOYMENTS_FOLDER = 'deployments'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
 LATEST_API_VERSION = 2.1  # to be used by max_client_version test attribute
-
-
-def build_query_string(query_params):
-    query_string = ''
-    if query_params and len(query_params) > 0:
-        query_string += urllib.urlencode(query_params, True) + '&'
-    return query_string
 
 
 @nottest
@@ -88,83 +74,6 @@ def inject_test_config(f):
             kwargs['test_config'] = test_func.test_config
         return f(test_obj, *args, **kwargs)
     return _wrapper
-
-
-class MockHTTPClient(HTTPClient):
-
-    def __init__(self, app, headers=None, file_server=None):
-        super(MockHTTPClient, self).__init__(host='localhost',
-                                             headers=headers)
-        self.app = app
-        self._file_server = file_server
-
-    def do_request(self,
-                   requests_method,
-                   uri,
-                   data=None,
-                   params=None,
-                   headers=None,
-                   pagination=None,
-                   sort=None,
-                   expected_status_code=200,
-                   stream=False):
-        if CLIENT_API_VERSION == 'v1':
-            # in v1, HTTPClient won't append the version part of the URL
-            # on its own, so it's done here instead
-            uri = '/api/{0}{1}'.format(CLIENT_API_VERSION, uri)
-
-        return super(MockHTTPClient, self).do_request(
-            requests_method=requests_method,
-            uri=uri,
-            data=data,
-            params=params,
-            headers=headers,
-            expected_status_code=expected_status_code,
-            stream=stream)
-
-    def _do_request(self, requests_method, request_url, body, params, headers,
-                    expected_status_code, stream, verify):
-        if 'get' in requests_method.__name__:
-            response = self.app.get(request_url,
-                                    headers=headers,
-                                    data=body,
-                                    query_string=build_query_string(params))
-
-        elif 'put' in requests_method.__name__:
-            if isinstance(body, types.GeneratorType):
-                body = ''.join(body)
-            response = self.app.put(request_url,
-                                    headers=headers,
-                                    data=body,
-                                    query_string=build_query_string(params))
-        elif 'post' in requests_method.__name__:
-            if isinstance(body, types.GeneratorType):
-                body = ''.join(body)
-            response = self.app.post(request_url,
-                                     headers=headers,
-                                     data=body,
-                                     query_string=build_query_string(params))
-        elif 'patch' in requests_method.__name__:
-            response = self.app.patch(request_url,
-                                      headers=headers,
-                                      data=body,
-                                      query_string=build_query_string(params))
-        elif 'delete' in requests_method.__name__:
-            response = self.app.delete(request_url,
-                                       headers=headers,
-                                       data=body,
-                                       query_string=build_query_string(params))
-        else:
-            raise NotImplemented()
-
-        if response.status_code != expected_status_code:
-            response.content = response.data
-            response.json = lambda: json.loads(response.data)
-            self._raise_client_error(response, request_url)
-
-        if stream:
-            return MockStreamedResponse(response, self._file_server)
-        return json.loads(response.data)
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
@@ -209,14 +118,13 @@ class BaseServerTestCase(unittest.TestCase):
         os.close(fd)
         fd, self.securest_log_file = tempfile.mkstemp(prefix='securest-log-')
         os.close(fd)
+        fd, self.sqlite_db_file = tempfile.mkstemp(prefix='sqlite-db-')
+        os.close(fd)
         self.file_server = FileServer(self.tmpdir)
         self.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
 
         self.addCleanup(self.cleanup)
         self.file_server.start()
-
-        storage_manager.storage_manager_module_name = \
-            STORAGE_MANAGER_MODULE_NAME
 
         # workaround for setting the rest service log path, since it's
         # needed when 'server' module is imported.
@@ -237,6 +145,7 @@ class BaseServerTestCase(unittest.TestCase):
             del(os.environ['MANAGER_REST_CONFIG_PATH'])
 
         self.server_configuration = self.create_configuration()
+        server.SQL_DIALECT = 'sqlite'
         server.reset_state(self.server_configuration)
         utils.copy_resources(config.instance().file_server_root)
         self.flask_app = server.app
@@ -248,6 +157,7 @@ class BaseServerTestCase(unittest.TestCase):
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)
         self.quiet_delete(self.securest_log_file)
+        self.quiet_delete(self.sqlite_db_file)
         self.quiet_delete_directory(self.maintenance_mode_dir)
         if self.file_server:
             self.file_server.stop()
@@ -260,9 +170,12 @@ class BaseServerTestCase(unittest.TestCase):
         client.manager.create_context(self.id(), {'cloudify': {}})
 
     def create_configuration(self):
-        from manager_rest.config import Config
-        test_config = Config()
+        test_config = config.Config()
         test_config.test_mode = True
+        test_config.postgresql_db_name = self.sqlite_db_file
+        test_config.postgresql_host = ''
+        test_config.postgresql_username = ''
+        test_config.postgresql_password = ''
         test_config.file_server_root = self.tmpdir
         test_config.file_server_base_uri = 'http://localhost:{0}'.format(
             FILE_SERVER_PORT)
@@ -283,7 +196,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.security_audit_log_file = self.securest_log_file
         test_config.security_audit_log_file_size_MB = 100
         test_config.security_audit_log_files_backup_count = 20
-        test_config._maintenance_folder = self.maintenance_mode_dir
+        test_config.maintenance_folder = self.maintenance_mode_dir
         return test_config
 
     def _version_url(self, url):
@@ -502,35 +415,3 @@ class BaseServerTestCase(unittest.TestCase):
             if execution.status in Execution.END_STATES:
                 break
             time.sleep(3)
-
-
-class MockStreamedResponse(object):
-
-    def __init__(self, response, file_server):
-        self._response = response
-        self._root = file_server.root_path
-
-    @property
-    def headers(self):
-        return self._response.headers
-
-    def bytes_stream(self, chunk_size=8192):
-        # Calculate where the file resides *locally*
-        local_path = self._response.headers['X-Accel-Redirect'].replace(
-            '/resources',
-            self._root
-        )
-        return self._generate_stream(local_path, chunk_size)
-
-    @staticmethod
-    def _generate_stream(local_path, chunk_size):
-        with open(local_path, 'rb') as local_file:
-            while True:
-                chunk = local_file.read(chunk_size)
-                if chunk:
-                    yield chunk
-                else:
-                    break
-
-    def close(self):
-        self._response.close()

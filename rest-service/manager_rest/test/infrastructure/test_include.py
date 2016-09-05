@@ -51,14 +51,14 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         # test that the "include" parameter does not only filter the response
         # fields at the end of the request, but also propagates to the Model
         # section, for more efficient storage queries
-        with mock.patch('manager_rest.blueprints_manager.BlueprintsManager'
-                        '.list_blueprints') as bpm_bp_list:
+        with mock.patch('manager_rest.storage.storage_manager'
+                        '.SQLStorageManager.list_blueprints') as sm_list_bp:
             mock_meta = {'pagination': {'total': 0,
                                         'size': 0,
                                         'offset': 0}}
-            bpm_bp_list.return_value = ListResult([], mock_meta)
+            sm_list_bp.return_value = ListResult([], mock_meta)
             self.client.blueprints.list(_include=['id'])
-            bpm_bp_list.assert_called_once_with(
+            sm_list_bp.assert_called_once_with(
                 **expected_blueprints_list_kwargs)
 
     def test_blueprints(self):

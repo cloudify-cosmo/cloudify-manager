@@ -12,13 +12,15 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+from datetime import datetime
 
 from nose.plugins.attrib import attr
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.storage import storage_manager
-from manager_rest.test import base_test
+from manager_rest.storage.sql_models import Deployment, Node, NodeInstance
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -96,7 +98,7 @@ class NodesTest(base_test.BaseServerTestCase):
                               {
                                   'state': 'a-state',
                                   'runtime_properties': {'aaa': 'bbb'},
-                                  'version': 2
+                                  'version': 1
                               })
         self.assertEqual(200, response.status_code)
         self.assertEqual('bbb', response.json['runtime_properties']['aaa'])
@@ -104,13 +106,13 @@ class NodesTest(base_test.BaseServerTestCase):
 
         # patch with no runtime properties
         response = self.patch('/node-instances/1234', {'state': 'b-state',
-                                                       'version': 3})
+                                                       'version': 2})
         self.assertEqual(200, response.status_code)
         self.assertEqual('bbb', response.json['runtime_properties']['aaa'])
         self.assertEqual('b-state', response.json['state'])
 
         # patch with neither state nor runtime properties
-        response = self.patch('/node-instances/1234', {'version': 4})
+        response = self.patch('/node-instances/1234', {'version': 3})
         self.assertEqual(200, response.status_code)
         self.assertEqual('bbb', response.json['runtime_properties']['aaa'])
         self.assertEqual('b-state', response.json['state'])
@@ -119,28 +121,27 @@ class NodesTest(base_test.BaseServerTestCase):
         response = self.patch('/node-instances/1234',
                               {
                                   'runtime_properties': {'ccc': 'ddd'},
-                                  'version': 5
+                                  'version': 4
                               })
         self.assertEqual(200, response.status_code)
         self.assertEqual('ddd', response.json['runtime_properties']['ccc'])
         self.assertEqual('b-state', response.json['state'])
 
     def test_old_version(self):
-        """Can't update a node instance passing new version <= old version."""
+        """Can't update a node instance passing new version != old version."""
         node_instance_id = '1234'
         self.put_node_instance(
             instance_id=node_instance_id,
             deployment_id='111',
             runtime_properties={
                 'key': 'value'
-            },
-            version=1
+            }
         )
 
         with self.assertRaises(CloudifyClientError) as cm:
             self.client.node_instances.update(
                 node_instance_id,
-                version=1,
+                version=-1,
                 runtime_properties={'key': 'new value'})
         self.assertEqual(cm.exception.status_code, 409)
 
@@ -156,8 +157,8 @@ class NodesTest(base_test.BaseServerTestCase):
         )
         response = self.client.node_instances.update(
             node_instance_id,
-            runtime_properties={'key': 'new_value', 'new_key': 'value'},
-            version=2)
+            runtime_properties={'key': 'new_value', 'new_key': 'value'}
+        )
 
         self.assertEqual(2, len(response.runtime_properties))
         self.assertEqual('new_value', response.runtime_properties['key'])
@@ -186,8 +187,8 @@ class NodesTest(base_test.BaseServerTestCase):
 
         response = self.client.node_instances.update(
             node_instance_id,
-            runtime_properties={'aaa': 'bbb'},
-            version=2)
+            runtime_properties={'aaa': 'bbb'}
+        )
 
         self.assertEqual('1234', response.id)
         self.assertEqual(1, len(response.runtime_properties))
@@ -210,8 +211,8 @@ class NodesTest(base_test.BaseServerTestCase):
         )
         response = self.client.node_instances.update(
             node_instance_id,
-            runtime_properties={'key': 'value2'},
-            version=2)
+            runtime_properties={'key': 'value2'}
+        )
         self.assertEqual('1234', response.id)
         self.assertEqual(1, len(response.runtime_properties))
         self.assertEqual('value2', response.runtime_properties['key'])
@@ -228,8 +229,8 @@ class NodesTest(base_test.BaseServerTestCase):
         )
         response = self.client.node_instances.update(
             node_instance_id,
-            runtime_properties={},
-            version=2)
+            runtime_properties={}
+        )
         self.assertEqual('1234', response['id'])
         self.assertEqual(0, len(response['runtime_properties']))
 
@@ -237,7 +238,7 @@ class NodesTest(base_test.BaseServerTestCase):
         """A conflict inside the storage manager propagates to the client."""
         # patch the storage manager .update_node_instance method to throw an
         # error - remember to revert it after the test
-        sm = storage_manager._get_instance()
+        sm = storage_manager.get_storage_manager()
 
         def _revert_update_node_func(sm, func):
             sm.update_node_instance = func
@@ -261,7 +262,8 @@ class NodesTest(base_test.BaseServerTestCase):
             self.client.node_instances.update(
                 node_instance_id,
                 runtime_properties={'key': 'new_value'},
-                version=2)
+                version=2
+            )
 
         self.assertEqual(cm.exception.status_code, 409)
 
@@ -363,8 +365,8 @@ class NodesTest(base_test.BaseServerTestCase):
         with self.assertRaises(CloudifyClientError) as cm:
             self.client.node_instances.update(
                 '1234',
-                runtime_properties={'key': 'value'},
-                version=0)
+                runtime_properties={'key': 'value'}
+            )
 
         self.assertEqual(cm.exception.status_code, 404)
 
@@ -372,20 +374,54 @@ class NodesTest(base_test.BaseServerTestCase):
                           instance_id,
                           deployment_id,
                           runtime_properties=None,
-                          node_id=None,
+                          node_id='node_id',
                           version=None):
         runtime_properties = runtime_properties or {}
-        from manager_rest.models import DeploymentNodeInstance
-        node = DeploymentNodeInstance(id=instance_id,
-                                      node_id=node_id,
-                                      deployment_id=deployment_id,
-                                      runtime_properties=runtime_properties,
-                                      state=None,
-                                      version=version,
-                                      relationships=None,
-                                      host_id=None,
-                                      scaling_groups=None)
-        storage_manager._get_instance().put_node_instance(node)
+
+        sm = storage_manager.get_storage_manager()
+        self._add_deployment_if_not_exists(sm, deployment_id)
+        self._add_node_if_not_exists(sm, node_id, deployment_id)
+        sm.put_node_instance(
+            NodeInstance(
+                id=instance_id,
+                node_id=node_id,
+                deployment_id=deployment_id,
+                runtime_properties=runtime_properties,
+                state='',
+                version=version,
+                relationships=None,
+                host_id=None,
+                scaling_groups=None
+            )
+        )
+
+    @staticmethod
+    def _add_deployment_if_not_exists(sm, deployment_id):
+        try:
+            sm.get_deployment(deployment_id)
+        except manager_exceptions.NotFoundError:
+            sm.put_deployment(Deployment(
+                id=deployment_id,
+                created_at=datetime.now())
+            )
+
+    @staticmethod
+    def _add_node_if_not_exists(sm, node_id, deployment_id):
+        try:
+            sm.get_node(deployment_id, node_id)
+        except manager_exceptions.NotFoundError:
+            sm.put_node(
+                Node(
+                    id=node_id,
+                    deployment_id=deployment_id,
+                    type='',
+                    number_of_instances=1,
+                    planned_number_of_instances=1,
+                    deploy_number_of_instances=1,
+                    min_number_of_instances=1,
+                    max_number_of_instances=1
+                )
+            )
 
     @attr(client_min_version=2.1,
           client_max_version=base_test.LATEST_API_VERSION)

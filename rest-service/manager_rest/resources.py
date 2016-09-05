@@ -358,7 +358,7 @@ class BlueprintsIdArchive(SecuredResource):
         Download blueprint's archive
         """
         # Verify blueprint exists.
-        get_blueprints_manager().get_blueprint(blueprint_id, {'id'})
+        get_storage_manager().get_blueprint(blueprint_id, include=['id'])
 
         for arc_type in SUPPORTED_ARCHIVE_TYPES:
             # attempting to find the archive file on the file system
@@ -403,8 +403,7 @@ class Blueprints(SecuredResource):
         List uploaded blueprints
         """
 
-        blueprints = get_blueprints_manager().list_blueprints(
-            include=_include)
+        blueprints = get_storage_manager().list_blueprints(include=_include)
         return blueprints.items
 
 
@@ -421,7 +420,7 @@ class BlueprintsId(SecuredResource):
         """
         Get blueprint by id
         """
-        return get_blueprints_manager().get_blueprint(blueprint_id, _include)
+        return get_storage_manager().get_blueprint(blueprint_id, _include)
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -527,8 +526,7 @@ class Executions(SecuredResource):
         """List executions"""
         deployment_id = request.args.get('deployment_id')
         if deployment_id:
-            get_blueprints_manager().get_deployment(deployment_id,
-                                                    include=['id'])
+            get_storage_manager().get_deployment(deployment_id, include=['id'])
         is_include_system_workflows = verify_and_convert_bool(
             'include_system_workflows',
             request.args.get('include_system_workflows', 'false'))
@@ -587,8 +585,8 @@ class ExecutionsId(SecuredResource):
         """
         Get execution by id
         """
-        return get_blueprints_manager().get_execution(execution_id,
-                                                      include=_include)
+        return get_storage_manager().get_execution(execution_id,
+                                                   include=_include)
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -682,7 +680,7 @@ class Deployments(SecuredResource):
         """
         List deployments
         """
-        deployments = get_blueprints_manager().list_deployments(
+        deployments = get_storage_manager().list_deployments(
             include=_include)
         return deployments.items
 
@@ -705,8 +703,8 @@ class DeploymentsId(SecuredResource):
         """
         Get deployment by id
         """
-        return get_blueprints_manager().get_deployment(deployment_id,
-                                                       include=_include)
+        return get_storage_manager().get_deployment(deployment_id,
+                                                    include=_include)
 
     @swagger.operation(
         responseClass=responses.Deployment,
@@ -1073,7 +1071,9 @@ class NodeInstancesId(SecuredResource):
 
         verify_parameter_in_request_body('version', request.json,
                                          param_type=int)
-
+        # Added for backwards compatibility with older client versions that
+        # had version=0 by default
+        version = request.json['version'] or 1
         node = models.DeploymentNodeInstance(
             id=node_instance_id,
             node_id=None,
@@ -1083,7 +1083,7 @@ class NodeInstancesId(SecuredResource):
             scaling_groups=None,
             runtime_properties=request.json.get('runtime_properties'),
             state=request.json.get('state'),
-            version=request.json['version'])
+            version=version)
         get_storage_manager().update_node_instance(node)
         return get_storage_manager().get_node_instance(node_instance_id)
 

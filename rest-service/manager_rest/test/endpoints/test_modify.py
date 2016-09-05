@@ -89,13 +89,13 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.client.node_instances.update(
             node1_instance.id,
             runtime_properties={'test': 'before_start'},
-            version=0)
+            version=1)
         node2_instance = self.client.node_instances.list(
             deployment_id=deployment.id, node_name='node2')[0]
         self.client.node_instances.update(
             node2_instance.id,
             runtime_properties={'test': 'before_start'},
-            version=0)
+            version=1)
 
         before_modification = self.list_items(self.client.node_instances.list,
                                               deployment.id)
@@ -112,11 +112,12 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.client.node_instances.update(
             node1_instance.id,
             runtime_properties={'test': 'after_start'},
-            version=1)
+            version=2)
         self.client.node_instances.update(
             node2_instance.id,
             runtime_properties={'test': 'after_start'},
-            version=1)
+            # version is 3 here because the modification increased it by 1
+            version=3)
 
         node_assertions(num=1, deploy_num=1, planned_num=2)
 
@@ -257,13 +258,13 @@ class ModifyTests(base_test.BaseServerTestCase):
             self.client.deployment_modifications.finish('what')
         self.assertEqual(scope.exception.status_code, 404)
         self.assertRegexpMatches(str(scope.exception),
-                                 'Deployment modification.*not found', )
+                                 'Requested DeploymentModification.*not found')
 
         with self.assertRaises(exceptions.CloudifyClientError) as scope:
             self.client.deployment_modifications.rollback('what')
         self.assertEqual(scope.exception.status_code, 404)
         self.assertRegexpMatches(str(scope.exception),
-                                 'Deployment modification.*not found', )
+                                 'Requested DeploymentModification.*not found')
 
     def test_modify_add_instance(self):
         _, _, _, deployment = self.put_deployment(
@@ -300,6 +301,7 @@ class ModifyTests(base_test.BaseServerTestCase):
                 new_relationship = copy.deepcopy(current_relationship)
                 new_relationship['target_id'] = new_instance.id
                 instance.relationships.append(new_relationship)
+                instance['version'] += 1
         self.assertEqual(sorted(old_instances, key=lambda _i: _i.id),
                          sorted(expected_old_instances, key=lambda _i: _i.id))
 

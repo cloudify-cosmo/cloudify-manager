@@ -26,7 +26,6 @@ from functools import wraps
 from collections import namedtuple
 from multiprocessing import Process
 
-import elasticsearch
 import pika
 import sh
 from wagon import wagon
@@ -59,11 +58,6 @@ def get_manager_ip():
 
 def create_rest_client():
     return CloudifyClient(host=get_manager_ip(), port=80)
-
-
-def create_es_client():
-    return elasticsearch.Elasticsearch(hosts=[{'host': get_manager_ip(),
-                                               'port': 9200}])
 
 
 def get_postgres_client_details():

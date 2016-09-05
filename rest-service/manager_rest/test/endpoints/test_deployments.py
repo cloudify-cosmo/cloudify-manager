@@ -226,7 +226,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         nodes = self.client.node_instances.list(deployment_id=deployment_id)
 
         resp = self.patch('/node-instances/{0}'.format(nodes[0]['id']), {
-            'version': 0,
+            'version': 1,
             'state': 'started'
         })
         self.assertEquals(200, resp.status_code)
@@ -261,7 +261,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         # modifying nodes states
         for node in nodes:
             resp = self.patch('/node-instances/{0}'.format(node['id']), {
-                'version': 0,
+                'version': 1,
                 'state': state
             })
             self.assertEquals(200, resp.status_code)

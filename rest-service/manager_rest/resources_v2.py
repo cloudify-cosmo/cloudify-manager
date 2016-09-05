@@ -204,10 +204,10 @@ class Snapshots(SecuredResource):
     @sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
-        return get_blueprints_manager().list_snapshots(include=_include,
-                                                       filters=filters,
-                                                       pagination=pagination,
-                                                       sort=sort)
+        return get_storage_manager().list_snapshots(include=_include,
+                                                    filters=filters,
+                                                    pagination=pagination,
+                                                    sort=sort)
 
 
 class SnapshotsId(SecuredResource):
@@ -220,8 +220,8 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses_v2.Snapshot)
     def get(self, snapshot_id, _include=None, **kwargs):
-        return get_blueprints_manager().get_snapshot(snapshot_id,
-                                                     include=_include)
+        return get_storage_manager().get_snapshot(snapshot_id,
+                                                  include=_include)
 
     @swagger.operation(
         responseClass=responses_v2.Snapshot,
@@ -262,7 +262,7 @@ class SnapshotsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses_v2.Snapshot)
     def delete(self, snapshot_id):
-        snapshot = get_blueprints_manager().delete_snapshot(snapshot_id)
+        snapshot = get_storage_manager().delete_snapshot(snapshot_id)
         path = _get_snapshot_path(snapshot_id)
         shutil.rmtree(path, ignore_errors=True)
         return snapshot, 200
@@ -320,7 +320,7 @@ class SnapshotsIdArchive(SecuredResource):
     )
     @exceptions_handled
     def get(self, snapshot_id):
-        snap = get_blueprints_manager().get_snapshot(snapshot_id)
+        snap = get_storage_manager().get_snapshot(snapshot_id)
         if snap.status == models.Snapshot.FAILED:
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be downloaded'
@@ -399,7 +399,7 @@ class Blueprints(resources.Blueprints):
         """
         List uploaded blueprints
         """
-        return get_blueprints_manager().list_blueprints(
+        return get_storage_manager().list_blueprints(
             include=_include, filters=filters,
             pagination=pagination, sort=sort)
 
@@ -512,8 +512,7 @@ class Executions(resources.Executions):
         """
         deployment_id = request.args.get('deployment_id')
         if deployment_id:
-            get_blueprints_manager().get_deployment(deployment_id,
-                                                    include=['id'])
+            get_storage_manager().get_deployment(deployment_id, include=['id'])
         is_include_system_workflows = verify_and_convert_bool(
             '_include_system_workflows',
             request.args.get('_include_system_workflows', 'false'))
@@ -546,7 +545,7 @@ class Deployments(resources.Deployments):
         """
         List deployments
         """
-        deployments = get_blueprints_manager().list_deployments(
+        deployments = get_storage_manager().list_deployments(
             include=_include, filters=filters, pagination=pagination,
             sort=sort)
         return deployments
@@ -824,7 +823,7 @@ class PluginsArchive(SecuredResource):
         Download plugin archive
         """
         # Verify plugin exists.
-        plugin = get_blueprints_manager().get_plugin(plugin_id)
+        plugin = get_storage_manager().get_plugin(plugin_id)
 
         archive_name = plugin.archive_name
         # attempting to find the archive file on the file system
@@ -971,11 +970,10 @@ class Events(resources.Events):
         events = ManagerElasticsearch.search_events(body=query)
         metadata = ManagerElasticsearch.build_list_result_metadata(query,
                                                                    events)
-        events = ManagerElasticsearch.extract_info_for_deletion(events)
-        get_blueprints_manager().delete_events(events)
+        ManagerElasticsearch.delete_events(events)
 
         # We don't really want to return all of the deleted events, so it's a
         # bit of a hack to only return the number of events to delete - if any
         # of the events weren't deleted, we'd have gotten an error from the
         # method above
-        return ListResult([len(events)], metadata)
+        return ListResult([events['hits']['total']], metadata)

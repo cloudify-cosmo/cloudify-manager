@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import re
+import elasticsearch
 
 from testenv import TestCase
 from testenv import utils
@@ -39,7 +40,10 @@ class ElasticsearchTimestampFormatTest(TestCase):
         deployment, _ = deploy(dsl_path)
 
         #  connect to Elastic search
-        es = utils.create_es_client()
+        es = elasticsearch.Elasticsearch(hosts=[{
+            'host': utils.get_manager_ip(),
+            'port': 9200}]
+        )
         index = "cloudify_events" if es.indices.exists(
             index=["cloudify_events"]) else "logstash-*"
 
