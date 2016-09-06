@@ -49,12 +49,6 @@ class TestUserstoreReloadFile(SecurityTestBase):
     def stopsec(self):
         self.flask_app.extensions['securest'].userstore_driver.observer.stop()
 
-    def create_configuration(self):
-        test_config = super(TestUserstoreReloadFile, self).\
-            create_configuration()
-        self.security_log_path = test_config.security_audit_log_file
-        return test_config
-
     def create_roles_config_copy(self):
         abs_path = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(abs_path, '../resources/roles_config.yaml')
@@ -188,11 +182,11 @@ class TestUserstoreReloadFile(SecurityTestBase):
             self.wait_for_log_message(USERSTORE_FILE_INVALID_DICT)
 
     def clear_log_file(self):
-        with open(self.security_log_path, "w"):
+        with open(self.securest_log_file, "w"):
             pass
 
     def wait_for_log_message(self, message):
-        timeout = time.time() + 60
+        timeout = time.time() + 5
         while time.time() < timeout:
             time.sleep(1)
             if self.log_contains(message):
@@ -201,7 +195,7 @@ class TestUserstoreReloadFile(SecurityTestBase):
                   .format(message))
 
     def log_contains(self, expected_text):
-        with open(self.security_log_path) as f:
+        with open(self.securest_log_file) as f:
             logged_text = f.read()
         return expected_text in logged_text
 

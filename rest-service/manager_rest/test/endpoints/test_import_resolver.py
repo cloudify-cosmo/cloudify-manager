@@ -79,7 +79,10 @@ class UploadBlueprtinsWithImportResolverTests(base_test.BaseServerTestCase):
         }
         # upload blueprint again and check that
         # the expected resolver passed to the parser
-        with mock.patch('dsl_parser.tasks.parse_dsl') as mock_parse_dsl:
+        with mock.patch(
+                'dsl_parser.tasks.parse_dsl',
+                mock.MagicMock(return_value={})
+        ) as mock_parse_dsl:
             self.put_file(*self.put_blueprint_args())
             mock_parse_dsl.assert_called_once_with(
                 mock.ANY, mock.ANY,

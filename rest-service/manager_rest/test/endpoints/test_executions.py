@@ -74,8 +74,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             error='',
             parameters=dict(),
             is_system_workflow=True)
-        storage_manager._get_instance().put_execution(
-            system_wf_execution_id, system_wf_execution)
+        storage_manager.get_storage_manager().put_execution(
+            system_wf_execution)
 
         # listing only non-system workflow executions
         executions = self.client.executions.list(deployment_id=deployment_id)
@@ -123,8 +123,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             parameters=dict(),
             is_system_workflow=False
         )
-        storage_manager._get_instance().put_execution('0', execution1)
-        storage_manager._get_instance().put_execution('1', execution2)
+        storage_manager.get_storage_manager().put_execution(execution1)
+        storage_manager.get_storage_manager().put_execution(execution2)
 
         executions = self.client.executions.list(sort='created_at')
         self.assertEqual(2, len(executions))
@@ -558,7 +558,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEquals('terminated', execution.status)
         self._modify_execution_status_in_database(
             execution, models.Execution.STARTED)
-        self._modify_execution_status(execution.id, 'new_status')
+        self._modify_execution_status(execution.id, 'pending')
 
     def test_update_execution_status_with_error(self):
         (blueprint_id, deployment_id, blueprint_response,
@@ -572,13 +572,13 @@ class ExecutionsTestCase(BaseServerTestCase):
             execution, models.Execution.STARTED)
 
         execution = self.client.executions.update(
-            execution.id, 'new-status', 'some error')
-        self.assertEquals('new-status', execution.status)
+            execution.id, 'pending', 'some error')
+        self.assertEquals('pending', execution.status)
         self.assertEquals('some error', execution.error)
         # verifying that updating only the status field also resets the
         # error field to an empty string
         execution = self._modify_execution_status(
-            execution.id, 'final-status')
+            execution.id, 'terminated')
         self.assertEquals('', execution.error)
 
     def test_update_nonexistent_execution(self):
@@ -752,7 +752,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             execution_id = execution['id']
         except TypeError:
             execution_id = execution.id
-        storage_manager._get_instance().update_execution_status(
+        storage_manager.get_storage_manager().update_execution_status(
             execution_id, new_status, error='')
         updated_execution = self.client.executions.get(
             execution_id=execution_id)

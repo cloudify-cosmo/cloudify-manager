@@ -66,4 +66,7 @@ class ProviderContextTestCase(base_test.BaseServerTestCase):
             self.fail('Expected failure due to nonexisting context')
         except exceptions.CloudifyClientError as e:
             self.assertEqual(e.status_code, 404)
-            self.assertEqual(e.message, 'Provider Context not found')
+            self.assertEqual(
+                e.message,
+                "Requested ProviderContext with ID `CONTEXT` was not found"
+            )

@@ -15,6 +15,7 @@
 
 import jsonpickle
 from flask_sqlalchemy import SQLAlchemy
+from dateutil import parser as date_parser
 
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 
@@ -30,6 +31,13 @@ class UTCDateTime(db.TypeDecorator):
         # Adhering to the same norms used in the rest of the code
         if value is not None:
             return '{0}Z'.format(value.isoformat()[:-3])
+
+    def process_bind_param(self, value, dialect):
+        if isinstance(value, basestring):
+            # SQLite only accepts datetime objects
+            return date_parser.parse(value)
+        else:
+            return value
 
 
 def _foreign_key_column(parent_table, id_col_name='id', nullable=False):
@@ -77,10 +85,9 @@ def _relationship(
         ),
         backref=db.backref(
             child_table_name,
-            # The following two lines make sure that when the *parent* is
+            # The following line make sure that when the *parent* is
             # deleted, all its connected children are deleted as well
-            passive_deletes=True,
-            cascade='all,delete'
+            cascade='all'
         )
     )
 
@@ -302,6 +309,12 @@ class Node(SerializableBase):
         child_table_name='nodes'
     )
 
+    def to_dict(self):
+        node_dict = super(Node, self).to_dict()
+        # Internal field that shouldn't be sent to users
+        del node_dict['storage_id']
+        return node_dict
+
 
 class NodeInstance(SerializableBase):
     __tablename__ = 'node_instances'
@@ -332,6 +345,12 @@ class NodeInstance(SerializableBase):
         parent_class_name='Deployment',
         child_table_name='node_instances'
     )
+
+    def to_dict(self):
+        node_instance_dict = super(NodeInstance, self).to_dict()
+        # Internal field that shouldn't be sent to users
+        del node_instance_dict['node_storage_id']
+        return node_instance_dict
 
 
 class ProviderContext(SerializableBase):

@@ -297,7 +297,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
         self.assertEquals('terminated', execution.status)
-        storage_manager._get_instance().update_execution_status(
+        storage_manager.get_storage_manager().update_execution_status(
                 execution.id, execution_status, error='')
 
         self.client.maintenance_mode.activate()
@@ -307,7 +307,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         return execution
 
     def _terminate_execution(self, execution_id):
-        storage_manager._get_instance().update_execution_status(
+        storage_manager.get_storage_manager().update_execution_status(
                 execution_id, models.Execution.TERMINATED, error='')
 
     def _activate_and_deactivate_maintenance_mode(self):

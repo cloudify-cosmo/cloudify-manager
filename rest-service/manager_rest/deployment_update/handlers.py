@@ -820,8 +820,9 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
     @staticmethod
     def _deployment_template(dep_update):
         template = copy.deepcopy(dep_update.deployment_update_deployment)
-        for key in {'workflows', 'outputs', 'description'}:
+        for key in {'workflows', 'outputs'}:
             template[key] = []
+        template['description'] = ''
 
         updated_deployment = _data_template(Deployment,
                                             dep_update.deployment_id,

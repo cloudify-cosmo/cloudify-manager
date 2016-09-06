@@ -32,7 +32,6 @@ from flask_securest.rest_security import SecuREST
 
 from manager_rest import endpoint_mapper
 from manager_rest import config
-from manager_rest.storage import storage_manager
 from manager_rest.storage.sql_models import db
 from manager_rest import manager_exceptions
 from manager_rest import utils
@@ -40,6 +39,7 @@ from manager_rest.maintenance import maintenance_mode_handler
 
 IMPLEMENTATION_KEY = 'implementation'
 PROPERTIES_KEY = 'properties'
+SQL_DIALECT = 'postgresql'
 
 
 # app factory
@@ -107,7 +107,8 @@ def setup_app(warnings=None):
     endpoint_mapper.setup_resources(api)
 
     app.config['SQLALCHEMY_DATABASE_URI'] = \
-        'postgresql://{0}:{1}@{2}/{3}'.format(
+        '{0}://{1}:{2}@{3}/{4}'.format(
+            SQL_DIALECT,
             cfy_config.postgresql_username,
             cfy_config.postgresql_password,
             cfy_config.postgresql_host,
@@ -115,8 +116,9 @@ def setup_app(warnings=None):
         )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    db.init_app(app)            # Set the app to use the SQLAlchemy DB
-    app.app_context().push()    # This makes sure db.app == app
+    with app.app_context():
+        db.init_app(app)            # Set the app to use the SQLAlchemy DB
+    app.app_context().push()
     return app
 
 
@@ -171,11 +173,7 @@ def headers_pretty_print(headers):
 
 def reset_state(configuration=None):
     global app
-    # print "resetting state in server"
     config.reset(configuration)
-    # this doesn't really do anything
-    # blueprints_manager.reset()
-    storage_manager.reset()
     app = setup_app()
 
 
@@ -307,7 +305,8 @@ def _is_listening_to_port(port, connection_type='tcp'):
     """
     Check if a port is being listened to
     :param port: port # to check
-    :param type: connection types to scan. see psutil docs for options
+    :param connection_type: connection types to scan.
+    see psutil docs for options
     """
     conns = psutil.net_connections(connection_type)
     return any([(conn.laddr[1] == port and conn.status == 'LISTEN')

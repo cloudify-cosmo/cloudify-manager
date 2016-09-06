@@ -189,6 +189,13 @@ def plugin_installable_on_current_platform(plugin):
     dist, _, release = platform.linux_distribution(
             full_distribution_name=False)
     dist, release = dist.lower(), release.lower()
+
+    # Mac OSX is a special case, in which plugin.distribution and
+    # plugin.release will be None instead of ''
+    if 'macosx' in plugin.supported_platform:
+        dist = dist or None
+        release = release or None
+
     return (plugin.supported_platform == 'any' or all([
         plugin.supported_platform == wagon.utils.get_platform(),
         plugin.distribution == dist,

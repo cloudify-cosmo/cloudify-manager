@@ -343,26 +343,26 @@ class AuthorizationTests(SecurityTestBase):
         # admins and deployers should be able to update executions...
         self._reset_execution_status_in_db(execution_id)
         execution = self.admin_client.executions.update(
-            execution_id, 'dummy_status1')
+            execution_id, 'pending')
         self._assert_execution(execution,
                                expected_blueprint_id='blueprint_1',
                                expected_deployment_id='deployment_1',
                                expected_workflow_name='install',
-                               expected_status='dummy_status1')
+                               expected_status='pending')
         execution = self.admin_client.executions.update(
-            execution_id, 'dummy_status2')
+            execution_id, 'cancelling')
         self._assert_execution(execution,
                                expected_blueprint_id='blueprint_1',
                                expected_deployment_id='deployment_1',
                                expected_workflow_name='install',
-                               expected_status='dummy_status2')
+                               expected_status='cancelling')
         execution = self.deployer_client.executions.update(
-            execution_id, 'dummy_status3')
+            execution_id, 'cancelled')
         self._assert_execution(execution,
                                expected_blueprint_id='blueprint_1',
                                expected_deployment_id='deployment_1',
                                expected_workflow_name='install',
-                               expected_status='dummy_status3')
+                               expected_status='cancelled')
 
         # ...but viewers and simple users should not
         self._assert_unauthorized(self.viewer_client.executions.update,
@@ -463,13 +463,15 @@ class AuthorizationTests(SecurityTestBase):
         # admins and deployers should be able to update nodes instances
         node_instance = self.admin_client.node_instances.update(
             instance_id, state='testing_state',
-            runtime_properties={'prop1': 'value1'})
+            runtime_properties={'prop1': 'value1'},
+            version=1)
         self._assert_node_instance(node_instance, 'mock_node',
                                    'deployment_1', 'testing_state',
                                    {'prop1': 'value1'})
         node_instance = self.deployer_client.node_instances.update(
             instance_id, state='testing_state',
-            runtime_properties={'prop1': 'value1'})
+            runtime_properties={'prop1': 'value1'},
+            version=2)
         self._assert_node_instance(node_instance, 'mock_node',
                                    'deployment_1', 'testing_state',
                                    {'prop1': 'value1'})
@@ -623,7 +625,7 @@ class AuthorizationTests(SecurityTestBase):
         return self.create_client(headers=token_header)
 
     def _reset_execution_status_in_db(self, execution_id):
-        storage_manager._get_instance().update_execution_status(
+        storage_manager.get_storage_manager().update_execution_status(
             execution_id, models.Execution.STARTED, error='')
         updated_execution = self.admin_client.executions.get(
             execution_id=execution_id)

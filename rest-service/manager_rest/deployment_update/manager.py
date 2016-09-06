@@ -502,7 +502,7 @@ class DeploymentUpdateManager(object):
                 execution_parameters),
             is_system_workflow=False)
 
-        self.sm.put_execution(new_execution.id, new_execution)
+        self.sm.put_execution(new_execution)
 
         # executing the user workflow
         workflow_plugins = \
