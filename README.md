@@ -16,7 +16,7 @@ See [here](http://docs.getcloudify.org/api/).
 
 ## Running Integration Tests
 
-Integration tests can found within the `tests` folder of this repository.
+Integration tests can found within the [`tests`](tests) folder of this repository.
 
 Prerequisites:
 
