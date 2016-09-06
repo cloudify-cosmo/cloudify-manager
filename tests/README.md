@@ -2,10 +2,10 @@ Cloudify Integration Tests
 ==========================
 
 ## Goal
-This project runs tests on a Cloudify Manager container created by `docl`.
+This project runs tests on a Cloudify Manager container created by [`docl`](https://github.com/cloudify-cosmo/docl).
 
 ## Setup
-1. Install Docker. (https://docs.docker.com/engine/installation/).
+1. Install [Docker](https://docs.docker.com/engine/installation/). 
    Make sure docker is installed but not running as a service.
 
 2. The current implementation requires that docker is exposed on TCP rather than
@@ -14,7 +14,7 @@ This project runs tests on a Cloudify Manager container created by `docl`.
    machine (your machine) and the containers. This is because we will be running
    docker with no security enabled so we don't want it exposed on external network
    interfaces because that would be quite bad.
-   * Run the following to create a bridge named `cfy0` (Based off of https://docs.docker.com/engine/userguide/networking/default_network/build-bridges/)
+   * Run the following to create a bridge named `cfy0` (Based off of docker [docs] (https://docs.docker.com/engine/userguide/networking/default_network/build-bridges/))
 
      ```
      $ sudo brctl addbr cfy0
@@ -54,7 +54,7 @@ This project runs tests on a Cloudify Manager container created by `docl`.
        * `cloudify-diamond-plugin`
        * `cloudify-cli`
    
-   **Note**: You may want to consider using `clue`. (http://clue.readthedocs.io/en/latest/) 
+   **Note**: You may want to consider using [`clue`](http://clue.readthedocs.io/en/latest/).  
    Which amongst other things, will also automate this process for you.
    
 4. Inside a virtualenv, run:
@@ -72,7 +72,7 @@ This project runs tests on a Cloudify Manager container created by `docl`.
    $ pip install -e <SOURCE_ROOT>/cloudify-diamond-plugin
    ```
 
-5. Configure `docl` (https://github.com/dankilman/docl). (`docl` is installed
+5. Configure [`docl`](https://github.com/cloudify-cosmo/docl). (`docl` is installed
    as a dependency of the integration tests project)
    1. run:
 
