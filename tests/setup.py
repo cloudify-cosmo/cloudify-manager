@@ -21,19 +21,8 @@ setup(
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=[
-        'mock_plugins',
-        'mock_plugins.cloudify_agent',
-        'mock_plugins.cloudify_agent.installer',
-        'mock_plugins.cloudmock',
-        'mock_plugins.connection_configurer_mock',
-        'mock_plugins.context_plugin',
-        'mock_plugins.get_attribute',
-        'mock_plugins.mock_agent_plugin',
-        'mock_plugins.mock_workflows',
-        'mock_plugins.target_aware_mock',
-        'mock_plugins.testmockoperations',
-        'testenv',
-        'testenv.services'
+        'integration_tests',
+        'integration_tests_plugins',
     ],
     description='Cloudify Integration Tests',
     zip_safe=False,
@@ -45,11 +34,12 @@ setup(
         'fasteners==0.13.0',
         'sh==1.11',
         'pg8000==1.10.6',
+        'influxdb==0.1.13',
         'docl',
     ],
     entry_points={
         'nose.plugins.0.10': [
-            'suitesplitter = testenv.suite_splitter:SuiteSplitter',
+            'suitesplitter = integration_tests.suite_splitter:SuiteSplitter',
         ]
     },
 )
