@@ -18,6 +18,6 @@ from setuptools import setup
 
 setup(
     name='mock-wagon-plugin',
-    version='0.1',
+    version='4.0a2',
     packages=['mock_wagon_plugin'],
 )
