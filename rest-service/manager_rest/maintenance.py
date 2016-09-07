@@ -22,7 +22,7 @@ from flask import jsonify, request
 
 from manager_rest import config
 from manager_rest import utils
-from manager_rest import models
+from manager_rest.storage import models
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_STATUS_FILE,

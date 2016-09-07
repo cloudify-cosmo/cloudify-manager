@@ -17,8 +17,7 @@ from os import path
 
 from nose.plugins.attrib import attr
 
-from manager_rest import models
-from manager_rest.storage import storage_manager
+from manager_rest.storage import storage_manager, models
 from manager_rest.test import base_test
 from manager_rest.test.security.security_test_base import SecurityTestBase
 from cloudify_rest_client.exceptions import UserUnauthorizedError
@@ -165,7 +164,7 @@ class AuthorizationTests(SecurityTestBase):
                                         deployer_token_client,
                                         viewer_token_client):
         # admins, deployers and viewers should be able so list blueprints
-        expected_ids = set(['token_bp_example_1', 'token_bp_example_2'])
+        expected_ids = {'token_bp_example_1', 'token_bp_example_2'}
         blueprints_list = admin_token_client.blueprints.list()
         self._assert_resources_list_ids(blueprints_list, expected_ids)
         blueprints_list = deployer_token_client.blueprints.list()
@@ -222,7 +221,7 @@ class AuthorizationTests(SecurityTestBase):
                               secret_blueprint_id):
         # admins, deployers and viewers should be able so list blueprints...
         blueprints_list = self.admin_client.blueprints.list()
-        expected_ids = set([standard_blueprint_id, secret_blueprint_id])
+        expected_ids = {standard_blueprint_id, secret_blueprint_id}
         self._assert_resources_list_ids(blueprints_list, expected_ids)
         blueprints_list = self.deployer_client.blueprints.list()
         self._assert_resources_list_ids(blueprints_list, expected_ids)
@@ -297,7 +296,7 @@ class AuthorizationTests(SecurityTestBase):
     def _test_list_deployments(self):
         # admins, deployers and viewers should be able so list deployments
         deployments_list = self.admin_client.deployments.list()
-        expected_ids = set(['dp_example_1', 'dp_example_2'])
+        expected_ids = {'dp_example_1', 'dp_example_2'}
         self._assert_resources_list_ids(deployments_list, expected_ids)
         deployments_list = self.deployer_client.deployments.list()
         self._assert_resources_list_ids(deployments_list, expected_ids)

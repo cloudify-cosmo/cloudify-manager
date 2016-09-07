@@ -20,7 +20,7 @@ import tempfile
 from nose.tools import nottest
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from manager_rest.models import Execution
+from manager_rest.storage.models import Execution
 from manager_rest.deployment_update.constants import STATES
 
 from integration_tests import AgentlessTestCase

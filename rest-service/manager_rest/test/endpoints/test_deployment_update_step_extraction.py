@@ -5,8 +5,9 @@ from mock import patch
 from nose.plugins.attrib import attr
 import networkx as nx
 
-from manager_rest import models
+
 from manager_rest.test import base_test
+from manager_rest.storage import models
 from manager_rest.deployment_update.step_extractor import (
     PROPERTY, PROPERTIES, OUTPUT, OUTPUTS, WORKFLOW, WORKFLOWS, NODE,
     NODES, OPERATION, OPERATIONS, RELATIONSHIP, RELATIONSHIPS,

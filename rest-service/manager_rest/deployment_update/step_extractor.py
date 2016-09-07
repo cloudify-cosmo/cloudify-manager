@@ -17,7 +17,6 @@ from contextlib import contextmanager
 import networkx as nx
 
 import manager_rest.blueprints_manager
-import manager_rest.models
 from manager_rest.storage.storage_manager import get_storage_manager
 
 

@@ -36,7 +36,6 @@ from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 
 from dsl_parser import utils as dsl_parser_utils
 from manager_rest import config
-from manager_rest import models
 from manager_rest import responses
 from manager_rest import requests_schema
 from manager_rest import archiving
@@ -44,7 +43,7 @@ from manager_rest import manager_exceptions
 from manager_rest import utils
 from manager_rest import responses_v2
 from manager_rest.files import UploadedDataManager
-from manager_rest.storage import sql_models
+from manager_rest.storage import models
 from manager_rest.storage.storage_manager import get_storage_manager
 from manager_rest.blueprints_manager import (DslParseException,
                                              get_blueprints_manager,
@@ -164,8 +163,7 @@ class marshal_with(object):
             return self.response_class(**data)
         elif isinstance(data, list):
             return map(self.wrap_with_response_object, data)
-        elif isinstance(data, (models.SerializableObject,
-                               sql_models.SerializableBase)):
+        elif isinstance(data, models.SerializableBase):
             return self.wrap_with_response_object(data.to_dict())
         # Support for partial results from SQLAlchemy (i.e. only
         # certain columns, and not the whole model class)
@@ -1074,18 +1072,16 @@ class NodeInstancesId(SecuredResource):
         # Added for backwards compatibility with older client versions that
         # had version=0 by default
         version = request.json['version'] or 1
-        node = models.DeploymentNodeInstance(
-            id=node_instance_id,
-            node_id=None,
-            relationships=None,
-            host_id=None,
-            deployment_id=None,
-            scaling_groups=None,
-            runtime_properties=request.json.get('runtime_properties'),
-            state=request.json.get('state'),
-            version=version)
-        get_storage_manager().update_node_instance(node)
-        return get_storage_manager().get_node_instance(node_instance_id)
+
+        instance = get_storage_manager().get_node_instance(node_instance_id)
+        # Only update if new values were included in the request
+        instance.runtime_properties = request.json.get(
+            'runtime_properties',
+            instance.runtime_properties
+        )
+        instance.state = request.json.get('state', instance.state)
+        instance.version = version
+        return get_storage_manager().update_node_instance(instance)
 
 
 class DeploymentsIdOutputs(SecuredResource):

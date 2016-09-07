@@ -31,7 +31,6 @@ from manager_rest.resources import (marshal_with,
                                     verify_json_content_type,
                                     verify_and_convert_bool,
                                     CONVENTION_APPLICATION_BLUEPRINT_FILE)
-from manager_rest import models
 from manager_rest import resources
 from manager_rest import resources_v2
 from manager_rest import responses_v2_1
@@ -39,6 +38,7 @@ from manager_rest import config
 from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
+from manager_rest.storage import models
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,

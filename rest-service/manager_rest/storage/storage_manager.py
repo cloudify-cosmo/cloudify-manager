@@ -19,20 +19,19 @@ from flask import current_app
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 
-from manager_rest import models
 from manager_rest import manager_exceptions
-from manager_rest.storage.sql_models import db
-from manager_rest.storage.sql_models import (Blueprint,
-                                             Snapshot,
-                                             Deployment,
-                                             DeploymentUpdate,
-                                             DeploymentUpdateStep,
-                                             DeploymentModification,
-                                             Execution,
-                                             Node,
-                                             NodeInstance,
-                                             ProviderContext,
-                                             Plugin)
+from manager_rest.storage.models import db
+from manager_rest.storage.models import (Blueprint,
+                                         Snapshot,
+                                         Deployment,
+                                         DeploymentUpdate,
+                                         DeploymentUpdateStep,
+                                         DeploymentModification,
+                                         Execution,
+                                         Node,
+                                         NodeInstance,
+                                         ProviderContext,
+                                         Plugin)
 
 PROVIDER_CONTEXT_ID = 'CONTEXT'
 TABLE_LOCK_STR = 'LOCK TABLE {0} IN ACCESS EXCLUSIVE MODE;'
@@ -270,8 +269,6 @@ class SQLStorageManager(object):
             return model
         elif isinstance(model, dict):
             return model_class(**model)
-        elif isinstance(model, models.SerializableObject):
-            return model_class(**model.to_dict())
         else:
             raise RuntimeError(
                 'Attempt to create a {0} instance '
@@ -533,11 +530,8 @@ class SQLStorageManager(object):
     def delete_node_instance(self, node_instance_id):
         return self._delete_instance_by_id(NodeInstance, node_instance_id)
 
-    def update_snapshot_status(self, snapshot_id, status, error):
-        snapshot = self.get_snapshot(snapshot_id)
-        snapshot.status = status
-        snapshot.error = error
-        return self._safe_add(snapshot)
+    def update_entity(self, entity):
+        return self._safe_add(entity)
 
     def update_execution_status(self, execution_id, status, error):
         execution = self.get_execution(execution_id)
@@ -551,99 +545,18 @@ class SQLStorageManager(object):
         provider_context_instance.context = provider_context.context
         return self._safe_add(provider_context_instance)
 
-    def update_deployment_update(self, deployment_update):
-        # The deployment_update object has already been updated elsewhere,
-        # and the only thing left to do is to flush the update to the DB
-        return self._safe_add(deployment_update)
-
-    def update_node(self, deployment_id, node_id,
-                    number_of_instances=None,
-                    planned_number_of_instances=None,
-                    relationships=None,
-                    operations=None,
-                    plugins=None,
-                    properties=None):
-        node = self.get_node(deployment_id, node_id)
-        if relationships:
-            node.relationships = relationships
-        if operations:
-            node.operations = operations
-        if plugins:
-            node.plugins = plugins
-        if properties:
-            node.properties = properties
-        if number_of_instances is not None:
-            node.number_of_instances = number_of_instances
-        if planned_number_of_instances is not None:
-            node.planned_number_of_instances = planned_number_of_instances
-
-        return self._safe_add(node)
-
-    def update_node_instance(self, node):
+    def update_node_instance(self, node_instance):
         with _lock_table(NodeInstance):
-            current = self.get_node_instance(node.id)
-            if node.state is not None:
-                current.state = node.state
-
-            if node.runtime_properties is not None:
-                current.runtime_properties = node.runtime_properties
-
-            if node.relationships is not None:
-                current.relationships = node.relationships
-            if current.version != node.version:
+            current = self.get_node_instance(node_instance.id)
+            if current.version != node_instance.version:
                 raise manager_exceptions.ConflictError(
                     'Node instance update conflict for node instance {0} '
                     '[current_version={1}, updated_version={2}]'.format(
-                            current.id, current.version, node.version)
+                            current.id, current.version, node_instance.version)
                 )
 
-            current.version += 1
-
-            return self._safe_add(current)
-
-    def update_deployment_modification(self, modification):
-        modification_instance = self.get_deployment_modification(
-            modification.id
-        )
-
-        if modification.status is not None:
-            modification_instance.status = modification.status
-        if modification.ended_at is not None:
-            modification_instance.ended_at = modification.ended_at
-        if modification.node_instances is not None:
-            modification_instance.node_instances = modification.node_instances
-
-        return self._safe_add(modification_instance)
-
-    def update_deployment(self, deployment):
-        # Taking care of the case where deployment was updated outside
-        if isinstance(deployment, Deployment):
-            return self._safe_add(deployment)
-
-        # TODO: This is legacy code, that should be changed in favor
-        # of the above paradigm. Need to make sure that everywhere
-        # `update_deployment` is used it's used as intended (by passing a
-        # valid deployment object)
-        deployment_instance = self.get_deployment(deployment.id)
-        # Create a dict to hold updated, as well as unchanged values
-        new_values_dict = {'id': deployment.id}
-        for k, v in deployment.to_dict().iteritems():
-            curr_attr = getattr(deployment_instance, k)
-            if v is None:
-                new_values_dict[k] = curr_attr
-            else:
-                # Because we want to update dicts, we use a copy, otherwise
-                # `deployment_instance` will be affected, and become dirty
-                if isinstance(curr_attr, dict):
-                    new_val = curr_attr.copy()
-                    new_val.update(v)
-                    v = new_val
-                new_values_dict[k] = v
-
-        # `merge` updates the object with values that differ from the old ones
-        updated_deployment = db.session.merge(Deployment(**new_values_dict))
-        self._safe_commit()
-        return updated_deployment
+            node_instance.version += 1
+            return self._safe_add(node_instance)
 
     @staticmethod
     def _storage_node_id(deployment_id, node_id):

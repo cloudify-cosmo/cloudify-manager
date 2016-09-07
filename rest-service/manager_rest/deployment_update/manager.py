@@ -20,8 +20,8 @@ from flask import current_app
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
-from manager_rest import app_context, config, models, manager_exceptions
-from manager_rest.storage import storage_manager
+from manager_rest import app_context, config, manager_exceptions
+from manager_rest.storage import storage_manager, models
 import manager_rest.workflow_client as wf_client
 from manager_rest import utils
 from manager_rest.blueprints_manager import BlueprintsManager
@@ -127,9 +127,11 @@ class DeploymentUpdateManager(object):
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
 
         deployment_update = \
-            models.DeploymentUpdate(deployment_id,
-                                    prepared_plan,
-                                    created_at=utils.get_formatted_timestamp())
+            models.DeploymentUpdate(
+                deployment_id=deployment_id,
+                deployment_plan=prepared_plan,
+                created_at=utils.get_formatted_timestamp()
+            )
         self.sm.put_deployment_update(deployment_update)
         return deployment_update
 
@@ -176,13 +178,13 @@ class DeploymentUpdateManager(object):
                 self.convert_step_to_model_step(step)
                 for step in supported_steps]
 
-            self.sm.update_deployment_update(deployment_update)
+            self.sm.update_entity(deployment_update)
 
         # if there are unsupported steps, raise an exception telling the user
         # about these unsupported steps
         else:
             deployment_update.state = STATES.FAILED
-            self.sm.update_deployment_update(deployment_update)
+            self.sm.update_entity(deployment_update)
             unsupported_entity_ids = [step.entity_id
                                       for step in unsupported_steps]
             raise \
@@ -212,7 +214,7 @@ class DeploymentUpdateManager(object):
 
         # mark deployment update as committing
         dep_update.state = STATES.UPDATING
-        self.sm.update_deployment_update(dep_update)
+        self.sm.update_entity(dep_update)
 
         # Handle any deployment related changes. i.e. workflows and deployments
         modified_deployment_entities, raw_updated_deployment = \
@@ -245,7 +247,7 @@ class DeploymentUpdateManager(object):
         dep_update.deployment_update_node_instances = depup_node_instances
         dep_update.modified_entity_ids = \
             modified_entity_ids.to_dict(include_rel_order=True)
-        self.sm.update_deployment_update(dep_update)
+        self.sm.update_entity(dep_update)
 
         # Execute the default 'update' workflow or a custom workflow using
         # added and related instances. Any workflow executed should call
@@ -264,7 +266,7 @@ class DeploymentUpdateManager(object):
 
         dep_update.execution_id = execution.id
         dep_update.state = STATES.EXECUTING_WORKFLOW
-        self.sm.update_deployment_update(dep_update)
+        self.sm.update_entity(dep_update)
 
         return self.get_deployment_update(dep_update.id)
 
@@ -312,7 +314,7 @@ class DeploymentUpdateManager(object):
                 # updating their states to failed and continuing.
                 for dep_update in active_updates:
                     dep_update.state = STATES.FAILED
-                    self.sm.update_deployment_update(dep_update)
+                    self.sm.update_entity(dep_update)
 
     def _extract_changes(self,
                          dep_update,
@@ -323,7 +325,7 @@ class DeploymentUpdateManager(object):
 
         :param dep_update:
         :param raw_nodes:
-        :return: a dictionary of modification type and node instanced modifed
+        :return: a dictionary of modification type and node instanced modified
         """
         deployment = self.sm.get_deployment(dep_update.deployment_id)
 
@@ -445,7 +447,7 @@ class DeploymentUpdateManager(object):
 
         # mark deployment update as finalizing
         dep_update.state = STATES.FINALIZING
-        self.sm.update_deployment_update(dep_update)
+        self.sm.update_entity(dep_update)
 
         # The order of these matter
         for finalize in [self._deployment_handler.finalize,
@@ -455,7 +457,7 @@ class DeploymentUpdateManager(object):
 
         # mark deployment update as successful
         dep_update.state = STATES.SUCCESSFUL
-        self.sm.update_deployment_update(dep_update)
+        self.sm.update_entity(dep_update)
 
         return self.get_deployment_update(deployment_update_id)
 

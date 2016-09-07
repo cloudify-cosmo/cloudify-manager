@@ -30,10 +30,10 @@ from flask_securest.rest_security import SecuredResource
 from manager_rest import config
 from manager_rest import files
 from manager_rest import manager_exceptions
-from manager_rest import models
 from manager_rest import resources
 from manager_rest import responses_v2
 from manager_rest import utils
+from manager_rest.storage import models
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.storage.manager_elasticsearch import ManagerElasticsearch
 from manager_rest.storage.storage_manager import ListResult
@@ -276,10 +276,10 @@ class SnapshotsId(SecuredResource):
         request_json = request.json
         verify_parameter_in_request_body('status', request_json)
 
-        get_blueprints_manager().update_snapshot_status(
-            snapshot_id,
-            request_json['status'],
-            request_json.get('error', ''))
+        snapshot = get_storage_manager().get_snapshot(snapshot_id)
+        snapshot.status = request_json['status']
+        snapshot.error = request_json.get('error', '')
+        get_storage_manager().update_entity(snapshot)
 
 
 class SnapshotsIdArchive(SecuredResource):
@@ -383,15 +383,15 @@ class Blueprints(resources.Blueprints):
         nickname="list",
         notes='Returns a list of submitted blueprints for the optionally '
               'provided filter parameters {0}'
-        .format(models.BlueprintState.fields),
+        .format(models.Blueprint.fields),
         parameters=create_filter_params_list_description(
-            models.BlueprintState.fields,
+            models.Blueprint.fields,
             'blueprints'
         )
     )
     @exceptions_handled
     @marshal_with(responses_v2.BlueprintState)
-    @create_filters(models.BlueprintState.fields)
+    @create_filters(models.Blueprint.fields)
     @paginate
     @sortable
     def get(self, _include=None, filters=None, pagination=None, sort=None,
@@ -585,15 +585,15 @@ class Nodes(resources.Nodes):
         responseClass='List[{0}]'.format(responses_v2.Node.__name__),
         nickname="listNodes",
         notes='Returns a nodes list for the optionally provided filter '
-              'parameters: {0}'.format(models.DeploymentNode.fields),
+              'parameters: {0}'.format(models.Node.fields),
         parameters=create_filter_params_list_description(
-            models.DeploymentNode.fields,
+            models.Node.fields,
             'nodes'
         )
     )
     @exceptions_handled
     @marshal_with(responses_v2.Node)
-    @create_filters(models.DeploymentNode.fields)
+    @create_filters(models.Node.fields)
     @paginate
     @sortable
     def get(self, _include=None, filters=None, pagination=None,
@@ -614,15 +614,15 @@ class NodeInstances(resources.NodeInstances):
         nickname="listNodeInstances",
         notes='Returns a node instances list for the optionally provided '
               'filter parameters: {0}'
-        .format(models.DeploymentNodeInstance.fields),
+        .format(models.NodeInstance.fields),
         parameters=create_filter_params_list_description(
-            models.DeploymentNodeInstance.fields,
+            models.NodeInstance.fields,
             'node instances'
         )
     )
     @exceptions_handled
     @marshal_with(responses_v2.NodeInstance)
-    @create_filters(models.DeploymentNodeInstance.fields)
+    @create_filters(models.NodeInstance.fields)
     @paginate
     @sortable
     def get(self, _include=None, filters=None, pagination=None,
