@@ -19,7 +19,7 @@ import urllib
 
 from cloudify_rest_client.client import HTTPClient
 from manager_rest.storage.storage_manager import get_storage_manager
-from manager_rest.models import Execution
+from manager_rest.storage.models import Execution
 
 try:
     from cloudify_rest_client.client import \

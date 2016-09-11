@@ -206,3 +206,25 @@ def plugin_installable_on_current_platform(plugin):
 def get_formatted_timestamp():
     # Adding 'Z' to match ISO format
     return '{0}Z'.format(datetime.now().isoformat()[:-3])
+
+
+class classproperty(object):
+    """A class that acts a a decorator for class-level properties
+
+    class A(object):
+        _prop1 = 1
+        _prop2 = 2
+
+        @classproperty
+        def foo(cls):
+            return cls._prop1 + cls._prop2
+
+    And use it like this:
+    print A.foo  # 3
+
+    """
+    def __init__(self, get_func):
+        self.get_func = get_func
+
+    def __get__(self, owner_self, owner_cls):
+        return self.get_func(owner_cls)

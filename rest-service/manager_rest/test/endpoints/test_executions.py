@@ -20,13 +20,13 @@ from itertools import dropwhile
 import mock
 from nose.plugins.attrib import attr
 
+from cloudify_rest_client import exceptions
+
+from manager_rest import utils
+from manager_rest import manager_exceptions
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.test.base_test import LATEST_API_VERSION
-from cloudify_rest_client import exceptions
-from manager_rest import manager_exceptions
-from manager_rest import models
-from manager_rest.storage import storage_manager
-from manager_rest import utils
+from manager_rest.storage import storage_manager, models
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)

@@ -27,11 +27,10 @@ import celery.exceptions
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
 from manager_rest import app_context
-from manager_rest import models
 from manager_rest import config
 from manager_rest import utils
 from manager_rest import manager_exceptions
-from manager_rest.storage import storage_manager
+from manager_rest.storage import storage_manager, models
 from manager_rest import workflow_client as wf_client
 
 
@@ -120,9 +119,6 @@ class BlueprintsManager(object):
                                        error='')
         self.sm.put_snapshot(new_snapshot)
         return new_snapshot
-
-    def update_snapshot_status(self, snapshot_id, status, error):
-        return self.sm.update_snapshot_status(snapshot_id, status, error)
 
     def create_snapshot(self, snapshot_id,
                         include_metrics,
@@ -250,7 +246,7 @@ class BlueprintsManager(object):
 
         now = utils.get_formatted_timestamp()
 
-        new_blueprint = models.BlueprintState(
+        new_blueprint = models.Blueprint(
             plan=plan,
             id=blueprint_id,
             description=plan.get('description'),
@@ -574,7 +570,7 @@ class BlueprintsManager(object):
         nodes = []
         for raw_node in raw_nodes:
             scalable = raw_node['capabilities']['scalable']['properties']
-            nodes.append(models.DeploymentNode(
+            nodes.append(models.Node(
                 id=raw_node['name'],
                 deployment_id=deployment_id,
                 blueprint_id=blueprint_id,
@@ -603,7 +599,7 @@ class BlueprintsManager(object):
             scaling_groups = node_instance.get('scaling_groups', [])
             relationships = node_instance.get('relationships', [])
             host_id = node_instance.get('host_id')
-            instance = models.DeploymentNodeInstance(
+            instance = models.NodeInstance(
                 id=instance_id,
                 node_id=node_id,
                 host_id=host_id,
@@ -729,10 +725,10 @@ class BlueprintsManager(object):
                 })
                 deployment.scaling_groups = scaling_groups
             else:
-                self.sm.update_node(
-                    modification.deployment_id, node_id,
-                    planned_number_of_instances=modified_node['instances'])
-        self.sm.update_deployment(deployment)
+                node = self.sm.get_node(modification.deployment_id, node_id)
+                node.planned_number_of_instances = modified_node['instances']
+                self.sm.update_entity(node)
+        self.sm.update_entity(deployment)
 
         added_and_related = node_instances_modification['added_and_related']
         added_node_instances = []
@@ -763,16 +759,9 @@ class BlueprintsManager(object):
                         target_name, [])
                     new_relationships += new_relationship_groups.get(
                         target_name, [])
-                self.sm.update_node_instance(models.DeploymentNodeInstance(
-                    id=node_instance['id'],
-                    relationships=new_relationships,
-                    version=current.version,
-                    node_id=None,
-                    host_id=None,
-                    deployment_id=None,
-                    state=None,
-                    runtime_properties=None,
-                    scaling_groups=None))
+                instance = self.sm.get_node_instance(node_instance['id'])
+                instance.relationships = deepcopy(new_relationships)
+                self.sm.update_node_instance(instance)
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
         return modification
@@ -796,10 +785,10 @@ class BlueprintsManager(object):
                 })
                 deployment.scaling_groups = scaling_groups
             else:
-                self.sm.update_node(
-                    modification.deployment_id, node_id,
-                    number_of_instances=modified_node['instances'])
-        self.sm.update_deployment(deployment)
+                node = self.sm.get_node(modification.deployment_id, node_id)
+                node.number_of_instances = modified_node['instances']
+                self.sm.update_entity(node)
+        self.sm.update_entity(deployment)
 
         node_instances = modification.node_instances
         for node_instance in node_instances['removed_and_related']:
@@ -813,38 +802,14 @@ class BlueprintsManager(object):
                 new_relationships = [rel for rel in current.relationships
                                      if rel['target_id']
                                      not in removed_relationship_target_ids]
-                self.sm.update_node_instance(models.DeploymentNodeInstance(
-                    id=node_instance['id'],
-                    relationships=new_relationships,
-                    version=current.version,
-                    node_id=None,
-                    host_id=None,
-                    deployment_id=None,
-                    state=None,
-                    runtime_properties=None,
-                    scaling_groups=None))
+                instance = self.sm.get_node_instance(node_instance['id'])
+                instance.relationships = deepcopy(new_relationships)
+                self.sm.update_node_instance(instance)
 
-        now = utils.get_formatted_timestamp()
-        self.sm.update_deployment_modification(
-            models.DeploymentModification(
-                id=modification_id,
-                status=models.DeploymentModification.FINISHED,
-                ended_at=now,
-                created_at=None,
-                deployment_id=None,
-                modified_nodes=None,
-                node_instances=None,
-                context=None))
-
-        return models.DeploymentModification(
-            id=modification_id,
-            status=models.DeploymentModification.FINISHED,
-            ended_at=None,
-            created_at=None,
-            deployment_id=None,
-            modified_nodes=None,
-            node_instances=None,
-            context=None)
+        modification.status = models.DeploymentModification.FINISHED
+        modification.ended_at = utils.get_formatted_timestamp()
+        self.sm.update_entity(modification)
+        return modification
 
     def rollback_deployment_modification(self, modification_id):
         modification = self.sm.get_deployment_modification(modification_id)
@@ -860,52 +825,35 @@ class BlueprintsManager(object):
             deployment_id=modification.deployment_id)
         node_instances = self.sm.list_node_instances(
             filters=deployment_id_filter).items
-        modification.node_instances['before_rollback'] = [
+        modified_instances = deepcopy(modification.node_instances)
+        modified_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
         for instance in node_instances:
             self.sm.delete_node_instance(instance.id)
-        for instance in modification.node_instances['before_modification']:
-            self.sm.put_node_instance(
-                models.DeploymentNodeInstance(**instance))
+        for instance in modified_instances['before_modification']:
+            self.sm.put_node_instance(models.NodeInstance(**instance))
         nodes_num_instances = {node.id: node for node in self.sm.list_nodes(
             filters=deployment_id_filter,
             include=['id', 'number_of_instances']).items}
 
-        modified_nodes = modification.modified_nodes
         scaling_groups = deepcopy(deployment.scaling_groups)
-        for node_id, modified_node in modified_nodes.items():
+        for node_id, modified_node in modification.modified_nodes.items():
             if node_id in deployment.scaling_groups:
                 props = scaling_groups[node_id]['properties']
                 props['planned_instances'] = props['current_instances']
                 deployment.scaling_groups = scaling_groups
             else:
-                self.sm.update_node(
-                    modification.deployment_id, node_id,
-                    planned_number_of_instances=nodes_num_instances[
-                        node_id].number_of_instances)
-        self.sm.update_deployment(deployment)
+                node = self.sm.get_node(modification.deployment_id, node_id)
+                node.planned_number_of_instances = nodes_num_instances[
+                        node_id].number_of_instances
+                self.sm.update_entity(node)
+        self.sm.update_entity(deployment)
 
-        now = utils.get_formatted_timestamp()
-        self.sm.update_deployment_modification(
-            models.DeploymentModification(
-                id=modification_id,
-                status=models.DeploymentModification.ROLLEDBACK,
-                ended_at=now,
-                created_at=None,
-                deployment_id=None,
-                modified_nodes=None,
-                node_instances=modification.node_instances,
-                context=None))
-
-        return models.DeploymentModification(
-            id=modification_id,
-            status=models.DeploymentModification.ROLLEDBACK,
-            ended_at=None,
-            created_at=None,
-            deployment_id=None,
-            modified_nodes=None,
-            node_instances=None,
-            context=None)
+        modification.status = models.DeploymentModification.ROLLEDBACK
+        modification.ended_at = utils.get_formatted_timestamp()
+        modification.node_instances = modified_instances
+        self.sm.update_entity(modification)
+        return modification
 
     def evaluate_deployment_outputs(self, deployment_id):
         deployment = self.sm.get_deployment(deployment_id, include=['outputs'])

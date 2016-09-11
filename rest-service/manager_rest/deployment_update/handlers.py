@@ -1,16 +1,12 @@
-import copy
+from copy import deepcopy
 
 import utils as deployment_update_utils
-import manager_rest.utils
-import manager_rest.models
-import manager_rest.manager_exceptions
-from manager_rest.storage import storage_manager
-from manager_rest.models import Deployment, DeploymentNodeInstance
+from constants import ENTITY_TYPES, NODE_MOD_TYPES
+
+from manager_rest import utils
+from manager_rest.storage import storage_manager, models
 from manager_rest.blueprints_manager import get_blueprints_manager
 from entity_context import get_entity_context
-
-from constants import (ENTITY_TYPES,
-                       NODE_MOD_TYPES)
 
 
 class StorageClient(object):
@@ -55,13 +51,11 @@ class NodeHandler(FrozenEntitiesHandlerBase):
                       for r in ctx.raw_node.get(ctx.RELATIONSHIPS, [])]
 
         for node_id in target_ids:
-            self.sm.update_node(
-                    deployment_id=ctx.deployment_id,
-                    node_id=node_id,
-                    plugins=deployment_update_utils.get_raw_node(
-                        ctx.deployment_plan, node_id)['plugins'])
-            current_entities[node_id] = \
-                self.sm.get_node(ctx.deployment_id, node_id).to_dict()
+            node = self.sm.get_node(ctx.deployment_id, node_id)
+            node.plugins = deployment_update_utils.get_raw_node(
+                ctx.deployment_plan, node_id)['plugins']
+            self.sm.update_entity(node)
+            current_entities[node_id] = node.to_dict()
 
         return ctx.raw_node_id
 
@@ -120,24 +114,21 @@ class RelationshipHandler(ModifiableEntityHandlerBase):
         self._resize_relationships(raw_relationships, ctx.relationship_index)
         raw_relationships[ctx.relationship_index] = new_relationship
 
-        storage_relationships = ctx.storage_node.relationships
-        storage_relationships.append(new_relationship)
-        source_changes = {
-            ctx.RELATIONSHIPS: storage_relationships,
-            ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
-        }
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_node_id,
-                            **source_changes)
+        relationships = ctx.storage_node.relationships
+        relationships.append(new_relationship)
+        node = self.sm.get_node(ctx.deployment_id, ctx.raw_node_id)
+        node.relationships = deepcopy(relationships)
+        node.plugins = ctx.raw_node[ctx.PLUGINS]
+        self.sm.update_entity(node)
+
         source_node = ctx.storage_node
         raw_source_node = current_entities[source_node.id]
         raw_source_node[ctx.PLUGINS] = source_node.plugins
 
-        # Update target plugins
-        target_changes = {ctx.PLUGINS: ctx.raw_target_node[ctx.PLUGINS]}
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.target_id,
-                            **target_changes)
+        target_node = self.sm.get_node(ctx.deployment_id, ctx.target_id)
+        target_node.plugins = ctx.raw_target_node[ctx.PLUGINS]
+        self.sm.update_entity(target_node)
+
         current_entities[ctx.storage_target_node.id] = \
             ctx.storage_target_node.to_dict()
 
@@ -191,14 +182,13 @@ class OperationHandler(ModifiableEntityHandlerBase):
     def _modify_node_operation(self, ctx, current_entities):
         new_operation = deployment_update_utils.create_dict(
             ctx.modification_breadcrumbs, ctx.raw_entity_value)
+        node = self.sm.get_node(ctx.deployment_id, ctx.raw_node_id)
+        operations = deepcopy(node.operations)
+        operations.update({ctx.operation_id: new_operation})
+        node.operations = operations
+        node.plugins = ctx.raw_node[ctx.PLUGINS]
+        self.sm.update_entity(node)
 
-        changes = {
-            ctx.OPERATIONS: {ctx.operation_id: new_operation},
-            ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
-        }
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_node_id,
-                            **changes)
         current_node = current_entities[ctx.raw_node_id]
         if ctx.modification_breadcrumbs:
             operation_to_update = deployment_update_utils.traverse_object(
@@ -232,14 +222,10 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
         current_node[ctx.PLUGINS] = ctx.raw_node[ctx.PLUGINS]
 
-        changes = {
-            ctx.RELATIONSHIPS: relationships,
-            ctx.PLUGINS: ctx.raw_node[ctx.PLUGINS]
-        }
-
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_node_id,
-                            **changes)
+        node = self.sm.get_node(ctx.deployment_id, ctx.raw_node_id)
+        node.relationships = deepcopy(relationships)
+        node.plugins = ctx.raw_node[ctx.PLUGINS]
+        self.sm.update_entity(node)
 
         return ctx.entity_id
 
@@ -288,17 +274,14 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
 class PropertyHandler(ModifiableEntityHandlerBase):
     def modify(self, ctx, current_entities):
-        changes = {
-            ctx.PROPERTIES: {
-                ctx.property_id:
-                    deployment_update_utils.create_dict(
-                        ctx.modification_breadcrumbs, ctx.raw_entity_value)
-            }
-        }
-
-        self.sm.update_node(deployment_id=ctx.deployment_id,
-                            node_id=ctx.raw_node_id,
-                            **changes)
+        node = self.sm.get_node(ctx.deployment_id, ctx.raw_node_id)
+        properties = deepcopy(node.properties)
+        properties[ctx.property_id] = deployment_update_utils.create_dict(
+            ctx.modification_breadcrumbs,
+            ctx.raw_entity_value
+        )
+        node.properties = properties
+        self.sm.update_entity(node)
 
         properties = current_entities[ctx.raw_node_id][ctx.PROPERTIES]
 
@@ -336,7 +319,7 @@ class WorkflowHandler(ModifiableEntityHandlerBase):
         new_workflows = deployment.workflows.copy()
         new_workflows.update({ctx.workflow_id: new_workflow})
         deployment.workflows = new_workflows
-        self.sm.update_deployment(deployment)
+        self.sm.update_entity(deployment)
 
         current_entities[ctx.WORKFLOWS][ctx.workflow_id] = new_workflow
 
@@ -348,7 +331,7 @@ class WorkflowHandler(ModifiableEntityHandlerBase):
         del new_workflows[ctx.workflow_id]
 
         deployment.workflows = new_workflows
-        self.sm.update_deployment(deployment)
+        self.sm.update_entity(deployment)
 
         return ctx.entity_id
 
@@ -366,7 +349,7 @@ class OutputHandler(ModifiableEntityHandlerBase):
         new_outputs = deployment.outputs.copy()
         new_outputs.update({ctx.output_id: new_output})
         deployment.outputs = new_outputs
-        self.sm.update_deployment(deployment)
+        self.sm.update_entity(deployment)
 
         current_entities[ctx.OUTPUTS][ctx.output_id] = ctx.raw_entity_value
 
@@ -380,7 +363,7 @@ class OutputHandler(ModifiableEntityHandlerBase):
         del new_outputs[ctx.output_id]
 
         deployment.outputs = new_outputs
-        self.sm.update_deployment(deployment)
+        self.sm.update_entity(deployment)
 
         return ctx.entity_id
 
@@ -403,7 +386,7 @@ class DescriptionHandler(ModifiableEntityHandlerBase):
     def _set_description(self, ctx, current_entities, new_value):
         deployment = self.sm.get_deployment(ctx.deployment_id)
         deployment.description = new_value
-        self.sm.update_deployment(deployment)
+        self.sm.update_entity(deployment)
         current_entities[ctx.DESCRIPTION] = new_value
         return ctx.entity_id
 
@@ -482,17 +465,20 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
             # some reason any left).
             modified_node['relationships'] = \
                 [r for r in modified_node['relationships'] if r]
-            self.sm.update_node(
-                deployment_id=modified_node['deployment_id'],
-                node_id=modified_node['id'],
-                number_of_instances=modified_node['number_of_instances'],
-                planned_number_of_instances=modified_node[
-                    'planned_number_of_instances'],
-                relationships=modified_node['relationships'],
-                operations=modified_node['operations'],
-                plugins=modified_node['plugins'],
-                properties=modified_node['properties']
+            node = self.sm.get_node(
+                modified_node['deployment_id'],
+                modified_node['id']
             )
+            node.deployment_id = modified_node['deployment_id']
+            node.node_id = modified_node['id']
+            node.number_of_instances = modified_node['number_of_instances']
+            node.planned_number_of_instances = modified_node[
+                'planned_number_of_instances']
+            node.relationships = modified_node['relationships']
+            node.operations = modified_node['operations']
+            node.plugins = modified_node['plugins']
+            node.properties = modified_node['properties']
+            self.sm.update_entity(node)
 
         for removed_node_instance in removed_node_instances:
             self.sm.delete_node(dep_update.deployment_id,
@@ -578,9 +564,11 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         remove_related_raw_instances = []
 
         for raw_node_instance in instances:
-            node_instance = manager_rest.models.DeploymentNodeInstance(
-                **raw_node_instance)
+            # NodeInstance constructor doesn't expect a `modification` kwarg,
+            # but it still needs to be present in the dict, for later
             modification = raw_node_instance.pop('modification', 'related')
+            node_instance = models.NodeInstance(**raw_node_instance)
+            raw_node_instance['modification'] = modification
             if modification == 'removed':
                 removed_raw_instances.append(node_instance)
             else:
@@ -604,19 +592,17 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
             modification = node_instance.get('modification', 'related')
             if modification == 'extended':
                 # adding new relationships to the current relationships
-                relationships = self.sm.get_node_instance(
-                    node_instance['id']).relationships
+                instance = self.sm.get_node_instance(node_instance['id'])
+                relationships = deepcopy(instance.relationships)
 
                 node_instance['relationships'] = \
                     sorted(node_instance['relationships'],
                            key=lambda r: r.get('rel_index', 0))
 
                 relationships.extend(node_instance['relationships'])
-                self.sm.update_node_instance(self._node_instance_template(
-                    DeploymentNodeInstance(**node_instance),
-                    relationships=relationships,
-                    version=_handle_version(node_instance['version'])
-                ))
+                instance.relationships = relationships
+                instance.version = _handle_version(node_instance['version'])
+                self.sm.update_node_instance(instance)
                 modified_raw_instances.append(node_instance)
             else:
                 modify_related_raw_instances.append(node_instance)
@@ -716,11 +702,9 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 filter(lambda r: r in remaining_relationships,
                        storage_relationships)
 
-            self.sm.update_node_instance(self._node_instance_template(
-                    DeploymentNodeInstance(**reduced_node_instance),
-                    relationships=remaining_relationships,
-                    version=updated_node_instance.version
-            ))
+            updated_node_instance.relationships = deepcopy(
+                remaining_relationships)
+            self.sm.update_node_instance(updated_node_instance)
 
     @staticmethod
     def _clean_relationship_index_field(relationships):
@@ -736,34 +720,23 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 filters={'deployment_id': deployment_id,
                          'node_id': node_id}
             ).items[0]
-            relationships = node_instance.relationships
-            old_relationships = copy.deepcopy(relationships)
+            relationships = deepcopy(node_instance.relationships)
+            old_relationships = deepcopy(relationships)
 
             # Move the order of any 'modified' relationships
             for old_index, new_index in indices_list:
                 relationships[new_index] = old_relationships[old_index]
 
             # Set any new relationships to their final index
-            enum_old_relationships = enumerate(old_relationships)
             for index, relationship in \
-                    ((i, r) for i, r in enum_old_relationships
+                    ((i, r) for i, r in enumerate(old_relationships)
                      if 'rel_index' in r):
                 relationships[index] = None
                 relationships[relationship['rel_index']] = relationship
 
             relationships = [r for r in relationships if r]
-            node_instance_update = self._node_instance_template(
-                    node_instance,
-                    relationships=relationships,
-                    version=_handle_version(node_instance.version))
-            self.sm.update_node_instance(node_instance_update)
-
-    @staticmethod
-    def _node_instance_template(node_instance, **changes):
-        node_instance_template = _data_template(DeploymentNodeInstance,
-                                                node_instance.id,
-                                                **changes)
-        return node_instance_template
+            node_instance.relationships = relationships
+            self.sm.update_node_instance(node_instance)
 
 
 class DeploymentUpdateDeploymentHandler(UpdateHandler):
@@ -803,41 +776,10 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
 
     def finalize(self, dep_update):
 
-        self.sm.update_deployment(self._deployment_template(dep_update))
-
-        # set the `updated_at` field of the deployment related to the
-        # deployment update
-        deployment = dep_update.deployment_update_deployment
-        deployment['updated_at'] = manager_rest.utils.get_formatted_timestamp()
-
-        updated_deployment = \
-            _data_template(Deployment,
-                           dep_update.deployment_id,
-                           'id',
-                           **deployment)
-        self.sm.update_deployment(updated_deployment)
-
-    @staticmethod
-    def _deployment_template(dep_update):
-        template = copy.deepcopy(dep_update.deployment_update_deployment)
-        for key in {'workflows', 'outputs'}:
-            template[key] = []
-        template['description'] = ''
-
-        updated_deployment = _data_template(Deployment,
-                                            dep_update.deployment_id,
-                                            **template)
-        return updated_deployment
+        deployment = self.sm.get_deployment(dep_update.deployment_id)
+        deployment.updated_at = utils.get_formatted_timestamp()
+        self.sm.update_entity(deployment)
 
 
 def _handle_version(version):
     return version if version is not None else 0
-
-
-def _data_template(data_type, data_id, id_key='id',
-                   **custom_deployment_fields):
-    deployment_fields = {k: None for k in data_type.fields}
-    deployment_fields.update(**custom_deployment_fields)
-    deployment_fields[id_key] = data_id
-
-    return data_type(**deployment_fields)

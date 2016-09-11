@@ -20,7 +20,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.storage import storage_manager
-from manager_rest.storage.sql_models import Deployment, Node, NodeInstance
+from manager_rest.storage.models import Deployment, Node, NodeInstance
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)

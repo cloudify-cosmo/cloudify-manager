@@ -19,8 +19,8 @@ from nose.plugins.attrib import attr
 
 from cloudify_rest_client import exceptions
 from manager_rest.test import base_test
-from manager_rest import models, utils
-from manager_rest.storage import storage_manager
+from manager_rest import utils
+from manager_rest.storage import storage_manager, models
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.constants import (
     MAINTENANCE_MODE_ACTIVATED,

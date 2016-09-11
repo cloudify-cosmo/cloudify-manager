@@ -15,9 +15,9 @@
 
 from nose.plugins.attrib import attr
 
-from manager_rest import models, utils
-from manager_rest.storage import storage_manager
+from manager_rest import utils
 from manager_rest.test import base_test
+from manager_rest.storage import storage_manager, models
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -26,13 +26,12 @@ class StorageManagerTests(base_test.BaseServerTestCase):
     def test_store_load_delete_blueprint(self):
         now = utils.get_formatted_timestamp()
         sm = storage_manager.get_storage_manager()
-        blueprint = models.BlueprintState(id='blueprint-id',
-                                          created_at=now,
-                                          updated_at=now,
-                                          description=None,
-                                          plan={'name': 'my-bp'},
-                                          source='bp-source',
-                                          main_file_name='aaa')
+        blueprint = models.Blueprint(id='blueprint-id',
+                                     created_at=now,
+                                     updated_at=now,
+                                     description=None,
+                                     plan={'name': 'my-bp'},
+                                     main_file_name='aaa')
         sm.put_blueprint(blueprint)
         blueprint_from_list = sm.list_blueprints().items[0]
         blueprint_restored = sm.get_blueprint('blueprint-id')
@@ -48,20 +47,18 @@ class StorageManagerTests(base_test.BaseServerTestCase):
     def test_get_blueprint_deployments(self):
         now = utils.get_formatted_timestamp()
         sm = storage_manager.get_storage_manager()
-        blueprint = models.BlueprintState(id='blueprint-id',
-                                          created_at=now,
-                                          updated_at=now,
-                                          description=None,
-                                          plan={'name': 'my-bp'},
-                                          source='bp-source',
-                                          main_file_name='aaa')
+        blueprint = models.Blueprint(id='blueprint-id',
+                                     created_at=now,
+                                     updated_at=now,
+                                     description=None,
+                                     plan={'name': 'my-bp'},
+                                     main_file_name='aaa')
         sm.put_blueprint(blueprint)
 
         deployment1 = models.Deployment(id='dep-1',
                                         created_at=now,
                                         updated_at=now,
                                         blueprint_id='blueprint-id',
-                                        plan={'name': 'my-bp'},
                                         permalink=None,
                                         description=None,
                                         workflows={},
@@ -77,7 +74,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         created_at=now,
                                         updated_at=now,
                                         blueprint_id='blueprint-id',
-                                        plan={'name': 'my-bp'},
                                         permalink=None,
                                         description=None,
                                         workflows={},
@@ -93,7 +89,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         created_at=now,
                                         updated_at=now,
                                         blueprint_id='another-blueprint-id',
-                                        plan={'name': 'my-bp'},
                                         description=None,
                                         permalink=None,
                                         workflows={},
@@ -122,7 +117,6 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 created_at='some-time1',
                                 updated_at='some-time2',
                                 blueprint_id='bp-id',
-                                plan={'field': 'value'},
                                 permalink=None,
                                 description=None,
                                 workflows={},
@@ -152,13 +146,12 @@ class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_fields_query(self):
         now = utils.get_formatted_timestamp()
-        blueprint = models.BlueprintState(id='blueprint-id',
-                                          created_at=now,
-                                          updated_at=now,
-                                          description=None,
-                                          plan={'name': 'my-bp'},
-                                          source='bp-source',
-                                          main_file_name='aaa')
+        blueprint = models.Blueprint(id='blueprint-id',
+                                     created_at=now,
+                                     updated_at=now,
+                                     description=None,
+                                     plan={'name': 'my-bp'},
+                                     main_file_name='aaa')
         sm = storage_manager.get_storage_manager()
         sm.put_blueprint(blueprint)
 

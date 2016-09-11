@@ -17,7 +17,7 @@ from nose.plugins.attrib import attr
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest import manager_exceptions
-from manager_rest import models
+from manager_rest.storage import models
 from manager_rest.test import base_test
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 
@@ -110,7 +110,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.client.nodes.list(**filter_fields)
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
-            self.assert_bad_parameter_error(models.DeploymentNode.fields, e)
+            self.assert_bad_parameter_error(models.Node.fields, e)
 
     def test_executions_list_with_filters(self):
         filter_params = {'deployment_id': self.first_deployment_id,
@@ -189,7 +189,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
             self.assert_bad_parameter_error(
-                models.DeploymentNodeInstance.fields, e)
+                models.NodeInstance.fields, e)
 
     # special parameter 'node_name' is converted to 'node_id' on the server
     def test_node_instances_list_with_node_name_filter(self):
@@ -289,7 +289,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.client.blueprints.list(**filter_fields)
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
-            self.assert_bad_parameter_error(models.BlueprintState.fields, e)
+            self.assert_bad_parameter_error(models.Blueprint.fields, e)
 
     def test_plugins_list_with_filters(self):
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json

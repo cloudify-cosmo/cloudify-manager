@@ -17,6 +17,7 @@ import jsonpickle
 from flask_sqlalchemy import SQLAlchemy
 from dateutil import parser as date_parser
 
+from manager_rest.utils import classproperty
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 
 
@@ -106,6 +107,14 @@ class SerializableBase(db.Model):
 
     def to_json(self):
         return jsonpickle.encode(self.to_dict(), unpicklable=False)
+
+    @classproperty
+    def fields(self):
+        """Return the list of field names for this table
+
+        Mostly for backwards compatibility in the code (that uses `fields`)
+        """
+        return self.__table__.columns.keys()
 
 
 class Blueprint(SerializableBase):
@@ -315,6 +324,12 @@ class Node(SerializableBase):
         del node_dict['storage_id']
         return node_dict
 
+    @classproperty
+    def fields(self):
+        fields = super(Node, self).fields
+        fields.remove('storage_id')
+        return fields
+
 
 class NodeInstance(SerializableBase):
     __tablename__ = 'node_instances'
@@ -351,6 +366,12 @@ class NodeInstance(SerializableBase):
         # Internal field that shouldn't be sent to users
         del node_instance_dict['node_storage_id']
         return node_instance_dict
+
+    @classproperty
+    def fields(self):
+        fields = super(NodeInstance, self).fields
+        fields.remove('node_storage_id')
+        return fields
 
 
 class ProviderContext(SerializableBase):
