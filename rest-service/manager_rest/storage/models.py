@@ -31,7 +31,13 @@ class UTCDateTime(db.TypeDecorator):
     def process_result_value(self, value, engine):
         # Adhering to the same norms used in the rest of the code
         if value is not None:
-            return '{0}Z'.format(value.isoformat()[:-3])
+            # When the date has a microsecond value equal to 0,
+            # isoformat returns the time as 17:22:11 instead of
+            # 17:22:11.000, so we need to adjust the returned value
+            if value.microsecond:
+                return '{0}Z'.format(value.isoformat()[:-3])
+            else:
+                return '{0}.000Z'.format(value.isoformat())
 
     def process_bind_param(self, value, dialect):
         if isinstance(value, basestring):
@@ -115,6 +121,15 @@ class SerializableBase(db.Model):
         Mostly for backwards compatibility in the code (that uses `fields`)
         """
         return self.__table__.columns.keys()
+
+    def __str__(self):
+        return '<{0} id=`{1}`>'.format(self.__class__.__name__, self.id)
+
+    def __repr__(self):
+        return str(self)
+
+    def __unicode__(self):
+        return str(self)
 
 
 class Blueprint(SerializableBase):

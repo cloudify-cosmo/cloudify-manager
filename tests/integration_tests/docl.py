@@ -166,7 +166,10 @@ def bootstrap_prepared_container(container_id=None,
     container_id = container_id or default_container_id
     start = time.time()
     inputs = inputs or {}
-    args = ['--container-id', container_id]
+    args = ['--container-id', container_id,
+            '--cfy-args', "--skip-sanity --skip-validations "
+                          "--task-retries 0"]
+
     if serve_resources_tar:
         args += ['--serve-resources-tar',
                  '--serve-resources-tar-no-progress']

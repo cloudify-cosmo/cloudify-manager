@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from itsdangerous import base64_decode
+from base64 import urlsafe_b64encode
 from flask import request
 from flask_securest.authentication_providers.abstract_authentication_provider\
     import AbstractAuthenticationProvider
@@ -33,7 +33,7 @@ class AuthorizeUserByUsername(AbstractAuthenticationProvider):
 
         auth_header = auth_header.replace(BASIC_AUTH_PREFIX + ' ', '', 1)
         try:
-            api_key = base64_decode(auth_header)
+            api_key = urlsafe_b64encode(auth_header)
         except TypeError:
             pass
         else:

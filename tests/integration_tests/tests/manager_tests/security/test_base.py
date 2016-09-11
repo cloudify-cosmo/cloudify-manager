@@ -14,8 +14,12 @@
 # limitations under the License.
 
 import os
+from contextlib import contextmanager
 
 from cloudify_cli import constants as cli_constants
+from cloudify_rest_client.exceptions import UserUnauthorizedError
+
+from manager_rest.test.security_utils import get_test_users, get_test_roles
 
 from integration_tests import ManagerTestCase
 from integration_tests import constants
@@ -49,43 +53,32 @@ class TestSecuredRestBase(ManagerTestCase):
         pass
 
     def set_env_vars(self):
-        os.environ[cli_constants.CLOUDIFY_USERNAME_ENV] = self.get_username()
-        os.environ[cli_constants.CLOUDIFY_PASSWORD_ENV] = self.get_password()
+        os.environ[cli_constants.CLOUDIFY_USERNAME_ENV] = utils.ADMIN_USERNAME
+        os.environ[cli_constants.CLOUDIFY_PASSWORD_ENV] = utils.ADMIN_PASSWORD
         os.environ[cli_constants.CLOUDIFY_SSL_TRUST_ALL] = 'true'
         self.addCleanup(self.unset_env_vars)
 
-    def unset_env_vars(self):
+    @staticmethod
+    def unset_env_vars():
         os.environ.pop(cli_constants.CLOUDIFY_USERNAME_ENV, None)
         os.environ.pop(cli_constants.CLOUDIFY_PASSWORD_ENV, None)
         os.environ.pop(cli_constants.CLOUDIFY_SSL_TRUST_ALL, None)
         os.environ.pop(cli_constants.LOCAL_REST_CERT_FILE, None)
         os.environ.pop(constants.CLOUDIFY_REST_PORT, None)
 
-    def get_security_settings(self):
-        authentication_providers = self.get_authentication_providers()
-        authorization_provider = self.get_authorization_provider()
-        userstore_drive = self.get_userstore_driver()
-        auth_token_generator = self.get_auth_token_generator()
-        settings = {}
-        if authentication_providers is not None:
-            prop = '{0}.authentication_providers'.format(SECURITY_PROP_PATH)
-            settings[prop] = authentication_providers
-        if authorization_provider is not None:
-            prop = '{0}.authorization_provider'.format(SECURITY_PROP_PATH)
-            settings[prop] = authorization_provider
-        if userstore_drive is not None:
-            prop = '{0}.userstore_driver'.format(SECURITY_PROP_PATH)
-            settings[prop] = userstore_drive
-        if auth_token_generator is not None:
-            prop = '{0}.auth_token_generator'.format(SECURITY_PROP_PATH)
-            settings[prop] = auth_token_generator
+    @staticmethod
+    def get_security_settings():
+        userstore = {
+            'users': get_test_users(),
+            'roles': get_test_roles()
+        }
+        settings = {'{0}.userstore'.format(SECURITY_PROP_PATH): userstore}
         return settings
 
     def get_manager_blueprint_inputs(self):
-        username = self.get_username()
-        password = self.get_password()
+        username = utils.ADMIN_USERNAME
+        password = utils.ADMIN_PASSWORD
         return {
-            'security_enabled': True,
             'ssl_enabled': self.is_ssl_enabled(),
             'admin_username': username,
             'admin_password': password,
@@ -99,24 +92,6 @@ class TestSecuredRestBase(ManagerTestCase):
         if rest_plugins:
             overrides[REST_PLUGIN_PATH] = rest_plugins
         return overrides
-
-    def get_username(self):
-        return 'john_doe'
-
-    def get_password(self):
-        return 'some_password'
-
-    def get_userstore_driver(self):
-        return None
-
-    def get_authentication_providers(self):
-        return None
-
-    def get_authorization_provider(self):
-        return None
-
-    def get_auth_token_generator(self):
-        return None
 
     def is_ssl_enabled(self):
         return False
@@ -135,3 +110,29 @@ class TestSSLRestBase(TestSecuredRestBase):
     def set_env_vars(self):
         super(TestSSLRestBase, self).set_env_vars()
         os.environ[constants.CLOUDIFY_REST_PORT] = '443'
+
+
+class TestAuthenticationBase(TestSecuredRestBase):
+    test_client = None
+
+    @contextmanager
+    def _login_client(self, **kwargs):
+        self.logger.info('performing login to test client with {0}'.format(
+            str(kwargs))
+        )
+        try:
+            self.test_client = utils.create_rest_client(**kwargs)
+            yield
+        finally:
+            self.test_client = None
+
+    def _assert_unauthorized(self, **kwargs):
+        with self._login_client(**kwargs):
+            self.assertRaises(
+                UserUnauthorizedError,
+                self.test_client.manager.get_status
+            )
+
+    def _assert_authorized(self, **kwargs):
+        with self._login_client(**kwargs):
+            self.test_client.manager.get_status()

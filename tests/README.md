@@ -50,7 +50,6 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
        * `cloudify-dsl-parser`
        * `cloudify-manager`
        * `cloudify-script-plugin`
-       * `flask-securest`
        * `cloudify-diamond-plugin`
        * `cloudify-cli`
 

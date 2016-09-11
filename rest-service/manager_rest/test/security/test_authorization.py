@@ -14,19 +14,20 @@
 #  * limitations under the License.
 
 from os import path
-
 from nose.plugins.attrib import attr
 
-from manager_rest.storage import get_storage_manager, models
-from manager_rest.test import base_test
-from manager_rest.test.security.security_test_base import SecurityTestBase
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
+from manager_rest.storage import get_storage_manager, models
+from manager_rest.test.base_test import LATEST_API_VERSION
+
+from .test_base import SecurityTestBase
+
 RUNNING_EXECUTIONS_MESSAGE = 'There are running executions for this deployment'
-UNAUTHORIZED_ERROR_MESSAGE = '401: user unauthorized'
+UNAUTHORIZED_ERROR_MESSAGE = '401: User unauthorized'
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class AuthorizationTests(SecurityTestBase):
 
     def setUp(self):
@@ -34,14 +35,18 @@ class AuthorizationTests(SecurityTestBase):
         self.blueprint_path = path.join(
             self.get_blueprint_path('mock_blueprint'), 'empty_blueprint.yaml')
 
-        self.admin_client = self._get_client_by_password('alice',
-                                                         'alice_password')
-        self.deployer_client = self._get_client_by_password('bob',
-                                                            'bob_password')
-        self.viewer_client = self._get_client_by_password('clair',
-                                                          'clair_password')
-        self.simple_user_client = self._get_client_by_password('dave',
-                                                               'dave_password')
+        self.admin_client = self.get_secured_client(
+            username='alice', password='alice_password'
+        )
+        self.deployer_client = self.get_secured_client(
+            username='bob', password='bob_password'
+        )
+        self.viewer_client = self.get_secured_client(
+            username='clair', password='clair_password'
+        )
+        self.simple_user_client = self.get_secured_client(
+            username='dave', password='dave_password'
+        )
 
     def test_blueprint_operations(self):
         # test
@@ -121,7 +126,7 @@ class AuthorizationTests(SecurityTestBase):
         admin_token_client.blueprints.delete('token_bp_example_2')
 
     @attr(client_min_version=2.1,
-          client_max_version=base_test.LATEST_API_VERSION)
+          client_max_version=LATEST_API_VERSION)
     def test_maintenance_mode(self):
         self._test_get_status_maintenance_mode()
         self._test_activate_maintenance_mode()
@@ -148,11 +153,11 @@ class AuthorizationTests(SecurityTestBase):
     def _test_get_token(self):
         # admins, deployers and viewers should be able to get a token...
         admin_token = self.admin_client.tokens.get().value
-        admin_token_client = self._get_client_by_token(admin_token)
+        admin_token_client = self.get_secured_client(token=admin_token)
         deployer_token = self.deployer_client.tokens.get().value
-        deployer_token_client = self._get_client_by_token(deployer_token)
+        deployer_token_client = self.get_secured_client(token=deployer_token)
         viewer_token = self.viewer_client.tokens.get().value
-        viewer_token_client = self._get_client_by_token(viewer_token)
+        viewer_token_client = self.get_secured_client(token=viewer_token)
 
         # ... but simple users should not be able to get a token
         self._assert_unauthorized(self.simple_user_client.tokens.get)
@@ -244,7 +249,6 @@ class AuthorizationTests(SecurityTestBase):
             expected_id=standard_blueprint_id)
 
         # viewers should not be able to get blueprint_2.
-        # NOTE: update roles_config.yaml for every rest version supported.
         self._assert_unauthorized(self.viewer_client.blueprints.get,
                                   secret_blueprint_id)
 
@@ -515,8 +519,6 @@ class AuthorizationTests(SecurityTestBase):
     ###########################
     # maintenance mode methods
     ###########################
-    # NOTE: update roles_config.yaml for every rest version supported.
-
     def _test_get_status_maintenance_mode(self):
         deactivating_status = 'deactivated'
 
@@ -613,15 +615,6 @@ class AuthorizationTests(SecurityTestBase):
                                 UNAUTHORIZED_ERROR_MESSAGE,
                                 method,
                                 *args)
-
-    def _get_client_by_password(self, username, password):
-        auth_header = SecurityTestBase.create_auth_header(username=username,
-                                                          password=password)
-        return self.create_client(headers=auth_header)
-
-    def _get_client_by_token(self, token):
-        token_header = SecurityTestBase.create_auth_header(token=token)
-        return self.create_client(headers=token_header)
 
     def _reset_execution_status_in_db(self, execution_id):
         get_storage_manager().update_execution_status(

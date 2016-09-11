@@ -16,8 +16,7 @@
 import os
 
 from integration_tests import utils
-from integration_tests.tests.manager_tests.test_secured_rest_base import (
-    TestSSLRestBase)
+from .test_base import TestSSLRestBase
 
 agent_prop_path = (
     'node_templates.vm.properties.agent_config.extra.agent_rest_cert_path')

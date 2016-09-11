@@ -203,11 +203,6 @@ class MaintenanceModeTest(BaseServerTestCase):
         self.assertEqual(models.Execution.STARTED,
                          response.remaining_executions[0]['status'])
 
-    def test_no_user_in_unsecured_maintenance_activation(self):
-        self._activate_maintenance_mode()
-        response = self.client.maintenance_mode.status()
-        self.assertFalse(response.requested_by)
-
     def test_trigger_time_maintenance_activated(self):
         self._activate_maintenance_mode()
         response = self.client.maintenance_mode.status()

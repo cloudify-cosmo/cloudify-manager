@@ -15,25 +15,15 @@
 
 
 from flask import current_app
-from flask_securest.rest_security import SECURED_MODE
+from flask_security import current_user
+
 from manager_rest import celery_client
-from manager_rest import config
 
 
 class WorkflowClient(object):
     @staticmethod
     def _get_rest_credentials():
-        if not current_app.config.get(SECURED_MODE):
-            return {}
-
-        if hasattr(current_app, 'auth_token_generator'):
-            return {'rest_token':
-                    current_app.auth_token_generator.generate_auth_token()}
-
-        return {
-            'rest_username': config.instance().security_rest_username,
-            'rest_password': config.instance().security_rest_password
-        }
+            return {'rest_token': current_user.get_auth_token()}
 
     @classmethod
     def execute_workflow(cls,

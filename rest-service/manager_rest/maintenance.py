@@ -40,7 +40,7 @@ LOCAL_ADDRESS = '127.0.0.1'
 
 def get_maintenance_file_path():
     return os.path.join(
-            config.instance().maintenance_folder,
+            config.instance.maintenance_folder,
             MAINTENANCE_MODE_STATUS_FILE)
 
 
@@ -72,7 +72,7 @@ def maintenance_mode_handler():
     index = request.endpoint.find('/')
     request_endpoint = request.endpoint[index+1:]
     maintenance_file = os.path.join(
-            config.instance().maintenance_folder,
+            config.instance.maintenance_folder,
             MAINTENANCE_MODE_STATUS_FILE)
 
     if os.path.isfile(maintenance_file):

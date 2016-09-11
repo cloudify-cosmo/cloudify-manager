@@ -21,8 +21,7 @@ import requests.exceptions
 from cloudify_cli import constants
 
 from integration_tests import utils
-from integration_tests.tests.manager_tests.test_secured_rest_base import (
-    TestSSLRestBase)
+from .test_base import TestSSLRestBase
 
 
 class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
@@ -42,39 +41,28 @@ class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
                                    trust_all=False)
 
     def _test_no_verify_cert(self):
-        self._assert_valid_request(ssl=True,
-                                   cert_path=None,
-                                   trust_all=True)
+        self._assert_valid_request(ssl=True, trust_all=True)
 
     def _test_verify_missing_cert(self):
-        self._assert_ssl_error(ssl=True,
-                               # False means the rest client creation
-                               # will explicitly pass None, otherwise, it
-                               # will fallback to what the CLI would have used.
-                               cert_path=False,
-                               trust_all=False)
+        self._assert_ssl_error(ssl=True, cert_path=None, trust_all=False)
 
     def _test_verify_wrong_cert(self):
         cert_path = os.path.join(self.workdir, 'wrong.cert')
         key_path = os.path.join(self.workdir, 'wrong.key')
         utils.create_self_signed_certificate(cert_path, key_path, 'test')
-        self._assert_ssl_error(ssl=True,
-                               cert_path=cert_path,
-                               trust_all=False)
+        self._assert_ssl_error(ssl=True, cert_path=cert_path, trust_all=False)
 
     def _test_try_to_connect_to_manager_on_non_secured_port(self):
         self._assert_valid_request(ssl=False,
                                    cert_path=self.cert_path,
                                    trust_all=False)
 
-    def _assert_valid_request(self, ssl, cert_path, trust_all):
-        client = self._create_rest_client(ssl=ssl, cert_path=cert_path,
-                                          trust_all=trust_all)
+    def _assert_valid_request(self, **kwargs):
+        client = self._create_rest_client(**kwargs)
         client.manager.get_status()
 
-    def _assert_ssl_error(self, ssl, cert_path, trust_all):
-        client = self._create_rest_client(ssl=ssl, cert_path=cert_path,
-                                          trust_all=trust_all)
+    def _assert_ssl_error(self, **kwargs):
+        client = self._create_rest_client(**kwargs)
         with self.assertRaises(requests.exceptions.SSLError):
             client.manager.get_status()
 
@@ -116,15 +104,11 @@ class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
         shutil.copy(self.key_path, internal_key_path)
 
     @staticmethod
-    def _create_rest_client(ssl, cert_path, trust_all):
-        if ssl:
-            port = constants.SECURED_REST_PORT
-            protocol = constants.SECURED_REST_PROTOCOL
+    def _create_rest_client(**kwargs):
+        if kwargs.get('ssl'):
+            kwargs['port'] = constants.SECURED_REST_PORT
+            kwargs['protocol'] = constants.SECURED_REST_PROTOCOL
         else:
-            port = constants.DEFAULT_REST_PORT
-            protocol = constants.DEFAULT_REST_PROTOCOL
-        return utils.create_rest_client(
-            rest_port=port,
-            rest_protocol=protocol,
-            cert_path=cert_path,
-            trust_all=trust_all)
+            kwargs['port'] = constants.DEFAULT_REST_PORT
+            kwargs['protocol'] = constants.DEFAULT_REST_PROTOCOL
+        return utils.create_rest_client(**kwargs)

@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 import os
+import yaml
 
 
 class Config(object):
@@ -31,6 +32,12 @@ class Config(object):
         self.amqp_password = 'guest'
         self.amqp_ssl_enabled = False
         self.amqp_ca_path = ''
+        self.ldap_server = None
+        self.ldap_username = None
+        self.ldap_password = None
+        self.ldap_domain = None
+        self.ldap_is_active_directory = True
+        self.ldap_dn_extra = {}
         self.file_server_root = None
         self.file_server_base_uri = None
         self.file_server_blueprints_folder = None
@@ -44,19 +51,14 @@ class Config(object):
         self.rest_service_log_file_size_MB = None
         self.rest_service_log_files_backup_count = None
         self.test_mode = False
-        self.security_enabled = False
+        self.security_enabled = True
         self.security_ssl = {'enabled': False}
-        self.security_auth_token_generator = None
-        self.security_audit_log_level = None
-        self.security_audit_log_file = None
-        self.security_audit_log_file_size_MB = None
-        self.security_audit_log_files_backup_count = None
-        self.security_userstore_driver = None
-        self.security_authentication_providers = []
-        self.security_authorization_provider = None
-        self.insecure_endpoints_disabled = False
+        self.security_userstore = {}
+        self.insecure_endpoints_disabled = True
         self.security_rest_username = None
         self.security_rest_password = None
+
+        self.warnings = []
 
     @property
     def file_server_uploaded_plugins_folder(self):
@@ -64,16 +66,28 @@ class Config(object):
             return None
         return os.path.join(self.file_server_root, 'plugins')
 
-_instance = Config()
+    def load_configuration(self):
+        self._load_config('MANAGER_REST_CONFIG_PATH')
+        self._load_config('MANAGER_REST_SECURITY_CONFIG_PATH', 'security')
+
+    def _load_config(self, env_var_name, namespace=''):
+        if env_var_name in os.environ:
+            with open(os.environ[env_var_name]) as f:
+                yaml_conf = yaml.safe_load(f.read())
+            for key, value in yaml_conf.iteritems():
+                config_key = '{0}_{1}'.format(namespace, key) if namespace \
+                    else key
+                if hasattr(self, config_key):
+                    setattr(self, config_key, value)
+                else:
+                    self.warnings.append(
+                        "Ignoring unknown key '{0}' in configuration file "
+                        "'{1}'".format(key, os.environ[env_var_name]))
+
+
+instance = Config()
 
 
 def reset(configuration=None):
-    global _instance
-    if configuration is not None:
-        _instance = configuration
-    else:
-        _instance = Config()
-
-
-def instance():
-    return _instance
+    global instance
+    instance = configuration

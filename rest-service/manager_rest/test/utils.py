@@ -12,13 +12,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import tarfile
-
-import os
-
-from os.path import expanduser
-
-from os import path
+from os import path, getcwd
 
 
 def get_resource(resource):
@@ -44,9 +40,9 @@ def tar_blueprint(blueprint_path, dest_dir):
     :param dest_dir: destination dir for the path
     :return: the path for the dir.
     """
-    blueprint_path = expanduser(blueprint_path)
-    app_name = os.path.basename(os.path.splitext(blueprint_path)[0])
-    blueprint_directory = os.path.dirname(blueprint_path) or os.getcwd()
+    blueprint_path = path.expanduser(blueprint_path)
+    app_name = path.basename(path.splitext(blueprint_path)[0])
+    blueprint_directory = path.dirname(blueprint_path) or getcwd()
     return tar_file(blueprint_directory, dest_dir, app_name)
 
 
@@ -58,8 +54,8 @@ def tar_file(file_to_tar, destination_dir, tar_name=''):
     :param tar_name: optional tar name.
     :return:
     """
-    tar_name = tar_name or os.path.basename(file_to_tar)
-    tar_path = os.path.join(destination_dir, '{0}.tar.gz'.format(tar_name))
+    tar_name = tar_name or path.basename(file_to_tar)
+    tar_path = path.join(destination_dir, '{0}.tar.gz'.format(tar_name))
     with tarfile.open(tar_path, "w:gz") as tar:
         tar.add(file_to_tar, arcname=tar_name)
     return tar_path

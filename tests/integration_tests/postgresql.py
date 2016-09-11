@@ -20,7 +20,11 @@ from contextlib import closing
 import pg8000
 
 from cloudify.utils import setup_logger
+
 from manager_rest.storage import db
+from manager_rest.security import user_datastore
+from manager_rest.utils import add_users_and_roles_to_userstore
+from manager_rest.test.security_utils import get_admin_user, get_admin_role
 
 from integration_tests import utils
 
@@ -78,6 +82,12 @@ def reset_data():
     # Rebuild the DB
     db.drop_all()
     db.create_all()
+
+    add_users_and_roles_to_userstore(
+        user_datastore,
+        get_admin_user(),
+        get_admin_role()
+    )
 
     # Clear the connection
     db.session.remove()

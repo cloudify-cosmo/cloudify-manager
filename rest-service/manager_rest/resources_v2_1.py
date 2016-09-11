@@ -19,12 +19,11 @@ import urllib
 import shutil
 import sys
 
-from flask.ext.restful_swagger import swagger
-from flask_securest.rest_security import SecuredResource
 from flask import request
-from flask_securest import rest_security
-from manager_rest.deployment_update.constants import PHASES
+from flask_security import current_user
+from flask.ext.restful_swagger import swagger
 
+from manager_rest.deployment_update.constants import PHASES
 from manager_rest.files import UploadedDataManager
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
@@ -39,6 +38,7 @@ from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
 from manager_rest.storage import models
+from manager_rest.security import SecuredResource
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
@@ -70,7 +70,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         return 'blueprint_archive_url'
 
     def _get_target_dir_path(self):
-        return config.instance().file_server_deployments_folder
+        return config.instance.file_server_deployments_folder
 
     def _get_archive_type(self, archive_path):
         return archiving.get_archive_type(archive_path)
@@ -119,7 +119,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
             # create the destination root dir
             file_server_deployment_root = \
                 os.path.join(file_server_root,
-                             config.instance().file_server_deployments_folder,
+                             config.instance.file_server_deployments_folder,
                              deployment_id)
 
             app_root_dir = os.path.join(file_server_root, app_dir)
@@ -242,7 +242,7 @@ class MaintenanceModeAction(SecuredResource):
             now = utils.get_formatted_timestamp()
 
             try:
-                user = rest_security.get_username()
+                user = current_user.username
             except AttributeError:
                 user = ''
 
@@ -250,7 +250,7 @@ class MaintenanceModeAction(SecuredResource):
             status = MAINTENANCE_MODE_ACTIVATING \
                 if remaining_executions else MAINTENANCE_MODE_ACTIVATED
             activated_at = '' if remaining_executions else now
-            utils.mkdirs(config.instance().maintenance_folder)
+            utils.mkdirs(config.instance.maintenance_folder)
             new_state = prepare_maintenance_dict(
                 status=status,
                 activation_requested_at=now,

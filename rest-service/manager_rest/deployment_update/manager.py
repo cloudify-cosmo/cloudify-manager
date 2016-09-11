@@ -92,7 +92,7 @@ class DeploymentUpdateManager(object):
 
         # enables reverting to original blueprint resources
         file_server_base_url = \
-            '{0}/'.format(config.instance().file_server_base_uri)
+            '{0}/'.format(config.instance.file_server_base_uri)
 
         blueprint_resource_dir = os.path.join(file_server_base_url,
                                               'blueprints',

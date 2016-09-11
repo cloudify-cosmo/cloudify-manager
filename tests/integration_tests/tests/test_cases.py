@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import yaml
 import logging
 import os
 import shutil
@@ -33,6 +34,7 @@ from integration_tests import utils
 from integration_tests import hello_world
 from integration_tests import docl
 from integration_tests import postgresql
+from integration_tests.utils import get_resource as resource
 
 
 class BaseTestCase(unittest.TestCase):
@@ -290,11 +292,30 @@ class ManagerTestCase(BaseAgentTestCase):
                exposed on the newly bootstrapped container
         :return:
         """
+        inputs = self._update_inputs_with_dev_resource_urls(inputs)
         self.prepare_bootstrappable_container(
             additional_exposed_ports=additional_exposed_ports)
         self.bootstrap_prepared_container(
             inputs=inputs,
             modify_blueprint_func=modify_blueprint_func)
+
+    @staticmethod
+    def _update_inputs_with_dev_resource_urls(inputs):
+        """Update the inputs to be sent to the manager with the resource URLs
+        from dev_resource_urls.yaml
+
+        To be used during development, when the integration test needs updated
+        code during bootstrap (as opposed to the mount docl does after
+        bootstrap)
+
+        :param inputs: inputs dict
+        :return: The updated inputs dict
+        """
+        inputs = inputs or {}
+        dev_resources_path = resource('dev_resource_urls.yaml')
+        with open(dev_resources_path, 'r') as f:
+            inputs.update(yaml.load(f))
+        return inputs
 
     def run_manager(self):
         self.addCleanup(
