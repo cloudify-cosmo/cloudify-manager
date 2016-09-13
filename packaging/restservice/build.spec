@@ -27,7 +27,7 @@ pip=$(which pip)
 set -e
 
 [ ! -z $pip ] || sudo curl --show-error --silent --retry 5 https://bootstrap.pypa.io/get-pip.py | sudo python
-sudo yum install -y git python-devel postgresql-devel gcc gcc-c++
+sudo yum install -y git python-devel postgresql-devel openldap-devel gcc gcc-c++
 sudo pip install virtualenv
 sudo virtualenv /tmp/env
 sudo /tmp/env/bin/pip install setuptools==18.1 && \
@@ -45,6 +45,8 @@ tar -xzf $destination --strip-components=1 -C "/tmp" && \
 mkdir -p %{buildroot}/opt/manager/resources/
 sudo cp -R "/tmp/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
 
+# ldappy is being install without a specific version, until it'll be stable..
+
 sudo /tmp/env/bin/pip wheel virtualenv --wheel-dir %{buildroot}/var/wheels/%{name} && \
 sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/%{CORE_TAG_NAME}.tar.gz && \
 sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-rest-client/archive/%{CORE_TAG_NAME}.tar.gz && \
@@ -52,7 +54,9 @@ sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-l
 sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/%{CORE_TAG_NAME}.tar.gz && \
 sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.4.tar.gz && \
 sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-agent/archive/%{CORE_TAG_NAME}.tar.gz && \
+sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/dusking/ldapy/archive/master.tar.gz && \
 sudo -E /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} /tmp/rest-service
+
 
 %pre
 %post
@@ -67,6 +71,7 @@ if [ ! -d "/opt/manager/env" ]; then virtualenv /opt/manager/env; fi && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} ldappy --pre && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-service --pre
 
 # sudo cp -R "/tmp/resources/rest-service/cloudify/" "/opt/manager/resources/"
