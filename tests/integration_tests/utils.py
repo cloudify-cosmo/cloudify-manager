@@ -348,7 +348,7 @@ def timeout(seconds=60):
 
 def publish_event(queue, routing_key, event):
     exchange_name = 'cloudify-monitoring'
-    exchange_type = 'type'
+    exchange_type = 'topic'
     connection = create_pika_connection()
     channel = connection.channel()
     try:
