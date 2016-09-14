@@ -19,11 +19,12 @@ import platform
 import tempfile
 import shutil
 import zipfile
-import itertools
 import os
+import pickle
 import subprocess
 from datetime import datetime
 
+import utils
 import elasticsearch
 import elasticsearch.helpers
 from wagon import wagon
@@ -39,6 +40,8 @@ from cloudify_system_workflows.deployment_environment import \
 from cloudify_system_workflows import plugins
 from cloudify.utils import ManagerVersion
 
+from utils import DictToAttributes
+from postgres import Postgres
 
 _METADATA_FILE = 'metadata.json'
 
@@ -48,8 +51,8 @@ _M_VERSION = 'snapshot_version'
 
 _AGENTS_FILE = 'agents.json'
 _ELASTICSEARCH = 'es_data'
+_POSTGRES_DUMP_FILENAME = 'pg_data'
 _CRED_DIR = 'snapshot-credentials'
-_RESTORED_CRED_DIR = os.path.join('/opt/manager', _CRED_DIR)
 _CRED_KEY_NAME = 'agent_key'
 _INFLUXDB = 'influxdb_data'
 _INFLUXDB_DUMP_CMD = ('curl -s -G "http://localhost:8086/db/cloudify/series'
@@ -60,101 +63,85 @@ _INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
                          'series?u=root&p=root" ;done')
 _STORAGE_INDEX_NAME = 'cloudify_storage'
 _EVENTS_INDEX_NAME = 'cloudify_events'
+_CLOUDIFY_DATA_TABLES = ['blueprints',
+                         'deployment_modifications',
+                         'deployment_update_steps',
+                         'deployment_updates',
+                         'deployments',
+                         'node_instances',
+                         'nodes',
+                         'plugins']
 
 
-class _DictToAttributes(object):
-    def __init__(self, dic):
-        self._dict = dic
-
-    def __getattr__(self, name):
-        return self._dict[name]
-
-
-def _get_json_objects(f):
-    def chunks(g):
-        ch = g.read(10000)
-        yield ch
-        while ch:
-            ch = g.read(10000)
-            yield ch
-
-    s = ''
-    n = 0
-    decoder = json.JSONDecoder()
-    for ch in chunks(f):
-        s += ch
-        try:
-            while s:
-                obj, idx = decoder.raw_decode(s)
-                n += 1
-                yield json.dumps(obj)
-                s = s[idx:]
-        except:
-            pass
-
-    # assert not n or not s
-    # not (not n or not s) -> n and s
-    if n and s:
-        raise NonRecoverableError('Error during converting InfluxDB dump '
-                                  'data to data appropriate for snapshot.')
+@workflow(system_wide=True)
+def create(snapshot_id, config, **kwargs):
+    ctx.logger.info('Creating snapshot..')
+    update_status = get_rest_client().snapshots.update_status
+    config = DictToAttributes(config)
+    try:
+        _create_snapshot(snapshot_id, config, **kwargs)
+        update_status(snapshot_id, config.created_status)
+    except BaseException, e:
+        update_status(snapshot_id, config.failed_status, str(e))
+        raise
 
 
-def _copy_data(archive_root, config, to_archive=True):
-    """
-    Copy files/dirs between snapshot/manager and manager/snapshot.
+@workflow(system_wide=True)
+def restore(snapshot_id, recreate_deployments_envs, config, force, timeout,
+            **kwargs):
+    ctx.logger.info('Restoring snapshot {0}'.format(snapshot_id))
+    ctx.logger.debug('Restoring snapshot config: {0}'.format(config))
+    config = DictToAttributes(config)
 
-    :param archive_root: Path to the snapshot archive root.
-    :param config: Config of manager.
-    :param to_archive: If True then copying is from manager to snapshot,
-        otherwise from snapshot to manager.
-    """
+    _assert_clean_postgres(log_warning=force)
 
-    # Files/dirs with constant relative/absolute paths,
-    # where first path is path in manager, second is path in snapshot.
-    # If paths are relative then should be relative to file server (path
-    # in manager) and snapshot archive (path in snapshot). If paths are
-    # absolute then should point to proper data in manager/snapshot archive
-    data_to_copy = [
-        (config.file_server_blueprints_folder, 'blueprints'),
-        (config.file_server_deployments_folder, 'deployments'),
-        (config.file_server_uploaded_blueprints_folder, 'uploaded-blueprints'),
-        (config.file_server_uploaded_plugins_folder, 'plugins')
-    ]
+    tempdir = tempfile.mkdtemp('-snapshot-data')
+    try:
+        file_server_root = config.file_server_root
+        snapshots_dir = os.path.join(
+            file_server_root,
+            config.file_server_snapshots_folder
+        )
+        snapshot_path = os.path.join(snapshots_dir,
+                                     snapshot_id,
+                                     '{0}.zip'.format(snapshot_id))
+        with zipfile.ZipFile(snapshot_path, 'r') as zipf:
+            zipf.extractall(tempdir)
+        with open(os.path.join(tempdir, _METADATA_FILE), 'r') as f:
+            metadata = json.load(f)
+        client = get_rest_client()
+        manager_version = _get_manager_version(client)
+        from_version = ManagerVersion(metadata[_M_VERSION])
+        ctx.logger.info('Manager version = {0}, snapshot version = {1}'.format(
+            str(manager_version), str(from_version)))
+        if from_version.greater_than(manager_version):
+            raise NonRecoverableError(
+                'Cannot restore a newer manager\'s snapshot on this manager '
+                '[{0} > {1}]'.format(str(from_version), str(manager_version)))
+        existing_deployments_ids = [d.id for d in client.deployments.list()]
+        ctx.logger.info('Starting restoring snapshot of manager {0}'
+                        .format(from_version))
 
-    for (p1, p2) in data_to_copy:
-        # first expand relative paths
-        if p1[0] != '/':
-            p1 = os.path.join(config.file_server_root, p1)
-        if p2[0] != '/':
-            p2 = os.path.join(archive_root, p2)
+        version_at_least_4 = _version_at_least(from_version, '4.0.0')
+        plugins_to_install = _restore_snapshot(config,
+                                               tempdir,
+                                               metadata,
+                                               timeout,
+                                               version_at_least_4)
+        if plugins_to_install:
+            _install_plugins(plugins_to_install)
+        if recreate_deployments_envs:
+            _recreate_deployments_environments(existing_deployments_ids)
+        ctx.logger.info('Successfully restored snapshot of manager {0}'
+                        .format(from_version))
+    finally:
+        ctx.logger.debug('Removing temp dir: {0}'.format(tempdir))
+        shutil.rmtree(tempdir)
 
-        # make p1 to always point to source and p2 to target of copying
-        if not to_archive:
-            p1, p2 = p2, p1
 
-        # source doesn't need to exist, then ignore
-        if not os.path.exists(p1):
-            continue
-
-        # copy data
-        if os.path.isfile(p1):
-            shutil.copy(p1, p2)
-        else:
-            if not os.path.exists(p2):
-                os.makedirs(p2)
-
-            for item in os.listdir(p1):
-                s = os.path.join(p1, item)
-                d = os.path.join(p2, item)
-                # The only case when it is possible that `d` exists is when
-                # restoring snapshot with plugins on the same manager this
-                # snapshot was created on. It means it is the same plugin so
-                # we are ok with not copying it.
-                if not os.path.exists(d):
-                    if os.path.isdir(s):
-                        shutil.copytree(s, d)
-                    else:
-                        shutil.copy2(s, d)
+def _version_at_least(version_a, version_b):
+    return version_a.equals(ManagerVersion(version_b)) \
+           or version_a.greater_than(ManagerVersion(version_b))
 
 
 def _create_es_client(config):
@@ -173,8 +160,13 @@ def _get_manager_version(client=None):
     return ManagerVersion(client.manager.get_version()['version'])
 
 
-def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
+def _create_snapshot(snapshot_id,
+                     config,
+                     include_metrics,
+                     include_credentials,
+                     **kw):
     tempdir = tempfile.mkdtemp('-snapshot-data')
+    ctx.logger.debug('Snapshot archive temp dir: {0}'.format(tempdir))
 
     snapshots_dir = os.path.join(
         config.file_server_root,
@@ -188,7 +180,7 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
         metadata = {}
 
         # files/dirs copy
-        _copy_data(tempdir, config)
+        utils.copy_data(tempdir, config)
 
         # elasticsearch
         es = _create_es_client(config)
@@ -196,6 +188,9 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
         _dump_elasticsearch(tempdir, es, has_cloudify_events)
 
         metadata[_M_HAS_CLOUDIFY_EVENTS] = has_cloudify_events
+
+        # postgres
+        _dump_postgres(tempdir, config, metadata)
 
         # influxdb
         if include_metrics:
@@ -216,8 +211,8 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
         _dump_agents(tempdir)
 
         # zip
-        ctx.logger.info('Creating snapshot archive')
         snapshot_dir = os.path.join(snapshots_dir, snapshot_id)
+        ctx.logger.info('Creating snapshot archive: {0}'.format(snapshot_dir))
         os.makedirs(snapshot_dir)
 
         shutil.make_archive(
@@ -227,28 +222,30 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
         )
         # end
     finally:
+        ctx.logger.debug('Snapshot - deleting temp dir: {0}'.format(tempdir))
         shutil.rmtree(tempdir)
 
 
-@workflow(system_wide=True)
-def create(snapshot_id, config, **kwargs):
-    update_status = get_rest_client().snapshots.update_status
-    config = _DictToAttributes(config)
+def _dump_postgres(tempdir, config, metadata):
+    ctx.logger.info('Dumping Postgres data')
+
+    postgres = Postgres(config)
+    destination_path = os.path.join(tempdir,
+                                    _POSTGRES_DUMP_FILENAME)
+    exclude_tables = ['snapshots', 'provider_context']
     try:
-        _create(snapshot_id, config, **kwargs)
-        update_status(snapshot_id, config.created_status)
-    except BaseException, e:
-        update_status(snapshot_id, config.failed_status, str(e))
-        raise
+        postgres.dump(destination_path, exclude_tables)
+    except Exception as ex:
+        raise NonRecoverableError('Error during dumping Postgres data, '
+                                  'exception: {0}'.format(ex))
+
+    delete_current_execution = "DELETE FROM executions WHERE id = '{0}';"\
+        .format(ctx.execution_id)
+    postgres.append_dump(destination_path, delete_current_execution)
 
 
 def _dump_elasticsearch(tempdir, es, has_cloudify_events):
     ctx.logger.info('Dumping elasticsearch data')
-    storage_scan = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME)
-    storage_scan = _except_types(storage_scan,
-                                 'provider_context',
-                                 'snapshot')
-    storage_scan = (e for e in storage_scan if e['_id'] != ctx.execution_id)
 
     event_scan = elasticsearch.helpers.scan(
         es,
@@ -256,7 +253,7 @@ def _dump_elasticsearch(tempdir, es, has_cloudify_events):
     )
 
     with open(os.path.join(tempdir, _ELASTICSEARCH), 'w') as f:
-        for item in itertools.chain(storage_scan, event_scan):
+        for item in event_scan:
             f.write(json.dumps(item) + os.linesep)
 
 
@@ -283,22 +280,27 @@ def _is_compute(node):
 def _dump_credentials(tempdir):
     ctx.logger.info('Dumping credentials data')
     archive_cred_path = os.path.join(tempdir, _CRED_DIR)
+    ctx.logger.debug('Dumping credentials data, archive_cred_path: {0}'.format(
+        archive_cred_path))
     os.makedirs(archive_cred_path)
 
-    hosts = [(dep_id, node)
-             for dep_id, wctx in ctx.deployments_contexts.iteritems()
+    hosts = [(deployment_id, node)
+             for deployment_id, wctx in ctx.deployments_contexts.iteritems()
              for node in wctx.nodes
              if _is_compute(node)]
 
-    for dep_id, n in hosts:
+    for deployment_id, n in hosts:
         props = n.properties
         if 'cloudify_agent' in props and 'key' in props['cloudify_agent']:
-            node_id = dep_id + '_' + n.id
+            node_id = deployment_id + '_' + n.id
             agent_key_path = props['cloudify_agent']['key']
             os.makedirs(os.path.join(archive_cred_path, node_id))
-            shutil.copy(os.path.expanduser(agent_key_path),
-                        os.path.join(archive_cred_path, node_id,
-                                     _CRED_KEY_NAME))
+            source = os.path.expanduser(agent_key_path)
+            destination = os.path.join(archive_cred_path, node_id,
+                                       _CRED_KEY_NAME)
+            ctx.logger.debug('Dumping credentials data, copy from: {0} to {1}'
+                             .format(source, destination))
+            shutil.copy(source, destination)
 
 
 def _dump_agents(tempdir):
@@ -330,171 +332,9 @@ def _dump_agents(tempdir):
         out.write(json.dumps(result))
 
 
-def _add_operation(operations, op_name, inputs, implementation):
-    if op_name not in operations:
-        operations[op_name] = {
-            'inputs': inputs,
-            'has_intrinsic_functions': False,
-            'plugin': 'agent',
-            'retry_interval': None,
-            'max_retries': None,
-            'executor': 'central_deployment_agent',
-            'operation': implementation
-        }
-
-
-def _update_plugin(plugin):
-    for field in ('package_name',
-                  'package_version',
-                  'supported_platform',
-                  'distribution',
-                  'distribution_version',
-                  'distribution_release',):
-        plugin.setdefault(field, None)
-
-
-def _update_es_node(es_node):
-    node_type = es_node['_type']
-    node_data = es_node['_source']
-
-    if node_type == 'deployment':
-        _update_deployment_node_type(node_data)
-
-    if node_type == 'node':
-        _update_node_node_type(node_data)
-
-    if node_type == 'node_instance':
-        node_data.setdefault('scaling_groups', [])
-
-    if node_type == 'blueprint':
-        _update_blueprint_node_type(node_data)
-
-    if node_type == 'snapshot' and node_data['created_at']:
-        node_data['created_at'] = _convert_timestamp(node_data['created_at'])
-
-    if node_type == 'execution' and node_data['created_at']:
-        node_data['created_at'] = _convert_timestamp(node_data['created_at'])
-
-    if node_type == 'deployment_modification':
-        if node_data['created_at']:
-            node_data['created_at'] = \
-                _convert_timestamp(node_data['created_at'])
-        if node_data['ended_at']:
-            node_data['ended_at'] = _convert_timestamp(node_data['ended_at'])
-
-    if node_type == 'deployment_update' and node_data['created_at']:
-        node_data['created_at'] = _convert_timestamp(node_data['created_at'])
-
-    if node_type == 'plugin' and node_data['uploaded_at']:
-        node_data['uploaded_at'] = _convert_timestamp(node_data['uploaded_at'])
-
-    if 'timestamp' in node_data:
-        node_data['timestamp'] = \
-            _convert_timestamp(node_data['timestamp'][:-5])
-
-
-def _update_blueprint_node_type(node_data):
-    node_data.setdefault('description', '')
-    node_data.setdefault('main_file_name', '')
-    plan = node_data.get('plan', {})
-    for plugin in plan.get('deployment_plugins_to_install') or []:
-        _update_plugin(plugin)
-    for plugin in plan.get('workflow_plugins_to_install') or []:
-        _update_plugin(plugin)
-
-    if node_data['created_at']:
-        node_data['created_at'] = \
-            _convert_timestamp(node_data['created_at'])
-    if node_data['updated_at']:
-        node_data['updated_at'] = \
-            _convert_timestamp(node_data['updated_at'])
-
-
-def _update_node_node_type(node_data):
-    type_hierarchy = node_data.get('type_hierarchy', [])
-    if COMPUTE_NODE_TYPE in type_hierarchy:
-        plugins = node_data.setdefault('plugins', [])
-        if not any(p['name'] == 'agent' for p in plugins):
-            plugins.append({
-                'source': None,
-                'executor': 'central_deployment_agent',
-                'name': 'agent',
-                'install': False,
-                'install_arguments': None
-            })
-        operations = node_data['operations']
-        _add_operation(operations,
-                       'cloudify.interfaces.cloudify_agent.create_amqp',
-                       {
-                           'install_agent_timeout': 300
-                       },
-                       'cloudify_agent.operations.create_agent_amqp')
-        _add_operation(operations,
-                       'cloudify.interfaces.cloudify_agent.validate_amqp',
-                       {
-                           'validate_agent_timeout': 20
-                       },
-                       'cloudify_agent.operations.validate_agent_amqp')
-    node_data.setdefault('min_number_of_instances', 0)
-    node_data.setdefault('max_number_of_instances', -1)
-    for plugin in node_data.get('plugins') or []:
-        _update_plugin(plugin)
-    for plugin in node_data.get('plugins_to_install') or []:
-        _update_plugin(plugin)
-
-
-def _update_deployment_node_type(node_data):
-    workflows = node_data['workflows']
-    workflows.setdefault('install_new_agents', {
-        'operation': 'cloudify.plugins.workflows.install_new_agents',
-        'parameters': {
-            'install_agent_timeout': {
-                'default': 300
-            },
-            'node_ids': {
-                'default': []
-            },
-            'node_instance_ids': {
-                'default': []
-            }
-        },
-        'plugin': 'default_workflows'
-    })
-    node_data.setdefault('scaling_groups', {})
-    node_data.setdefault('description', None)
-    if node_data['created_at']:
-        node_data['created_at'] = \
-            _convert_timestamp(node_data['created_at'])
-    if node_data['updated_at']:
-        node_data['updated_at'] = \
-            _convert_timestamp(node_data['updated_at'])
-
-
-def _convert_timestamp(timestamp):
-    try:
-        timestamp = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S.%f')
-    except ValueError:
-        return timestamp
-    # Adding 'Z' to match ISO format
-    return '{0}Z'.format(timestamp.isoformat()[:-3])
-
-
-def _include_es_node(es_node, existing_plugins, new_plugins):
-    node_type = es_node['_type']
-    node_data = es_node['_source']
-
-    if node_type == 'plugin':
-        new_plugin = node_data['archive_name'] not in existing_plugins
-        if new_plugin:
-            new_plugins.append(node_data)
-        return new_plugin
-
-    return True
-
-
-def _assert_clean_elasticsearch(log_warning=False):
+def _assert_clean_postgres(log_warning=False):
     """
-    Check if manager ElasticSearch is clean and raise error (or just
+    Check if Postgres is clean and raise error (or just
     log warning) if it isn't.
 
     :param log_warning: instead raising error just log warning
@@ -513,48 +353,28 @@ def _assert_clean_elasticsearch(log_warning=False):
                 "Snapshot restoration on a dirty manager is not permitted.")
 
 
-def _check_conflicts(es, restored_data):
-    """
-    Check names conflicts in restored snapshot and manager.
-    If in restored snapshot there are blueprints/deployments then
-    manager cannot contain any blueprints/deployments with the same names.
-
-    :param es: ElasticSearch proxy object
-    :param restored_data: iterator to snapshots Elasticsearch data that
-        is supposed to be restored
-    """
-
-    old_data = elasticsearch.helpers.scan(es, index=_STORAGE_INDEX_NAME,
-                                          doc_type='blueprint,deployment')
-    old_data = list(old_data)
-    # if there is no data in manager then just return
-    if not len(old_data):
-        return
-
-    blueprints_names = [e['_id'] for e in old_data
-                        if e['_type'] == 'blueprint']
-    deployments_names = [e['_id'] for e in old_data
-                         if e['_type'] == 'deployment']
-
-    exception_message = 'There are blueprints/deployments names conflicts ' \
-                        'in manager and restored data: blueprints {0}, ' \
-                        'deployments {1}'
-    blueprints_conflicts = []
-    deployments_conflicts = []
-
-    for elem in restored_data:
-        if elem['_type'] == 'blueprint':
-            if elem['_id'] in blueprints_names:
-                blueprints_conflicts.append(elem['_id'])
-        else:
-            if elem['_id'] in deployments_names:
-                deployments_conflicts.append(elem['_id'])
-
-    if blueprints_conflicts or deployments_conflicts:
-        raise NonRecoverableError(
-            exception_message.format(blueprints_conflicts,
-                                     deployments_conflicts)
-        )
+def _restore_postgres(tempdir, config):
+    ctx.logger.info('Restoring Postgres data')
+    postgres = Postgres(config)
+    client = get_rest_client()
+    existing_plugins = client.plugins.list().items
+    existing_plugins_archive_names = set(p.archive_name for p in
+                                         existing_plugins)
+    delete_data_tables = ["DELETE FROM {0};".format(table)
+                          for table in _CLOUDIFY_DATA_TABLES]
+    delete_old_executions = ["DELETE FROM executions "
+                             "WHERE id != '{0}';".format(ctx.execution_id)]
+    queries = delete_data_tables + delete_old_executions
+    dump_file = os.path.join(tempdir, _POSTGRES_DUMP_FILENAME)
+    dump_file = postgres.prepend_dump(dump_file, queries)
+    postgres.restore(dump_file)
+    ctx.logger.debug('Postgres restored')
+    all_plugins = client.plugins.list().items
+    plugins_to_install = filter(
+        lambda x: x.archive_name not in existing_plugins_archive_names,
+        all_plugins
+    )
+    return plugins_to_install
 
 
 def _restore_elasticsearch(tempdir, es, metadata, bulk_read_timeout):
@@ -562,19 +382,11 @@ def _restore_elasticsearch(tempdir, es, metadata, bulk_read_timeout):
     has_cloudify_events_index = es.indices.exists(index=_EVENTS_INDEX_NAME)
     snap_has_cloudify_events_index = metadata[_M_HAS_CLOUDIFY_EVENTS]
 
-    existing_plugins = set(p.archive_name for p in
-                           get_rest_client().plugins.list().items)
-    new_plugins = []
-
     # cloudify_events -> cloudify_events, logstash-* -> logstash-*
     def get_data_itr():
         for line in open(os.path.join(tempdir, _ELASTICSEARCH), 'r'):
             elem = json.loads(line)
-            if _include_es_node(elem, existing_plugins, new_plugins):
-                _update_es_node(elem)
-                yield elem
-
-    _check_conflicts(es, get_data_itr())
+            yield elem
 
     # logstash-* -> cloudify_events
     def logstash_to_cloudify_events():
@@ -603,12 +415,22 @@ def _restore_elasticsearch(tempdir, es, metadata, bulk_read_timeout):
 
     ctx.logger.info('Restoring ElasticSearch data '
                     '[timeout={0} sec]'.format(bulk_read_timeout))
+
+    try:
+        first = next(data_iter)
+    except StopIteration:
+        # no elements to restore
+        return
+
+    def not_empty_data_iter():
+        yield first
+        for e in data_iter:
+            yield e
+
     elasticsearch.helpers.bulk(es,
-                               data_iter,
+                               not_empty_data_iter(),
                                request_timeout=bulk_read_timeout)
     es.indices.flush()
-
-    return new_plugins
 
 
 def _restore_influxdb_3_3(tempdir):
@@ -622,45 +444,126 @@ def _restore_influxdb_3_3(tempdir):
                                       'error code: {0}'.format(rcode))
 
 
-def _restore_credentials_3_3(tempdir, es):
-    ctx.logger.info('Restoring credentials')
-    archive_cred_path = os.path.join(tempdir, _CRED_DIR)
-
-    # in case when this is not the first restore action
-    if os.path.exists(_RESTORED_CRED_DIR):
-        shutil.rmtree(_RESTORED_CRED_DIR)
-
-    os.makedirs(_RESTORED_CRED_DIR)
-
-    update_actions = []
-    if os.path.exists(archive_cred_path):
-        for node_id in os.listdir(archive_cred_path):
-            os.makedirs(os.path.join(_RESTORED_CRED_DIR, node_id))
-            agent_key_path = os.path.join(_RESTORED_CRED_DIR, node_id,
+def _restore_agent_key_from_dump(dump_cred_dir,
+                                 restored_cred_dir,
+                                 deployment_node_id):
+    os.makedirs(os.path.join(restored_cred_dir, deployment_node_id))
+    agent_key_path = os.path.join(restored_cred_dir,
+                                  deployment_node_id,
+                                  _CRED_KEY_NAME)
+    agent_key_path_in_dump = os.path.join(dump_cred_dir,
+                                          deployment_node_id,
                                           _CRED_KEY_NAME)
-            shutil.copy(os.path.join(archive_cred_path, node_id,
-                        _CRED_KEY_NAME), agent_key_path)
-
-            update_action = {
-                '_op_type': 'update',
-                '_index': _STORAGE_INDEX_NAME,
-                '_type': 'node',
-                '_id': node_id,
-                'doc': {
-                    'properties': {
-                        'cloudify_agent': {
-                            'key': agent_key_path
-                        }
-                    }
-                }
-            }
-
-            update_actions.append(update_action)
-
-    elasticsearch.helpers.bulk(es, update_actions)
+    shutil.copy(agent_key_path_in_dump, agent_key_path)
+    return agent_key_path
 
 
-def create_agent(client, nodes):
+def _create_restored_cred_dir():
+    restored_cred_dir = os.path.join('/opt/manager', _CRED_DIR)
+    if os.path.exists(restored_cred_dir):
+        shutil.rmtree(restored_cred_dir)
+    os.makedirs(restored_cred_dir)
+    return restored_cred_dir
+
+
+def _restore_credentials(tempdir, config):
+    ctx.logger.info('Restoring credentials')
+    dump_cred_dir = os.path.join(tempdir, _CRED_DIR)
+    if not os.path.isdir(dump_cred_dir):
+        ctx.logger.info('Missing credentials dir: {0}'.format(dump_cred_dir))
+        return
+    restored_cred_dir = _create_restored_cred_dir()
+    for dep_node_id in os.listdir(dump_cred_dir):
+        restored_agent_key_path = \
+            _restore_agent_key_from_dump(dump_cred_dir,
+                                         restored_cred_dir,
+                                         dep_node_id)
+        deployment_id, node_id = dep_node_id.split('_')
+        agent_key_path_in_db = _agent_key_path_in_db(config,
+                                                     node_id,
+                                                     deployment_id)
+        agent_key_path_in_db = os.path.expanduser(agent_key_path_in_db)
+        if os.path.isfile(agent_key_path_in_db):
+            with open(agent_key_path_in_db) as key_file:
+                content_1 = key_file.read()
+            with open(restored_agent_key_path) as key_file:
+                content_2 = key_file.read()
+            if content_1 != content_2:
+                raise NonRecoverableError('Agent key path already taken: {0}'
+                                          .format(agent_key_path_in_db))
+            ctx.logger.debug('Agent key path already exist: {0}'
+                             .format(agent_key_path_in_db))
+        else:
+            utils.copy(restored_agent_key_path, agent_key_path_in_db)
+
+
+def _agent_key_path_in_db(config, node_id, deployment_id):
+    postgres = Postgres(config)
+    get_node_data = "SELECT properties FROM nodes " \
+                    "WHERE id = '{0}' " \
+                    "AND deployment_id = '{1}';" \
+                    "".format(node_id, deployment_id)
+    result = postgres.run_query(get_node_data)
+    pickled_buffer = result['all'][0][0]
+    properties = pickle.loads(pickled_buffer)
+    key_path = properties['cloudify_agent']['key']
+    ctx.logger.debug('Agent key path in db: {0}'.format(key_path))
+    return key_path
+
+
+def _restore_snapshot(config,
+                      tempdir,
+                      metadata,
+                      elasticsearch_read_timeout,
+                      version_at_least_4):
+    # files/dirs copy
+    utils.copy_data(tempdir, config, to_archive=False)
+
+    # elasticsearch (events)
+    es = _create_es_client(config)
+
+    _restore_elasticsearch(tempdir, es, metadata,
+                           elasticsearch_read_timeout)
+
+    plugins = []
+
+    # postgres
+    if version_at_least_4:
+        plugins = _restore_postgres(tempdir, config)
+
+    # influxdb
+    _restore_influxdb_3_3(tempdir)
+
+    # credentials
+    _restore_credentials(tempdir, config)
+
+    es.indices.flush()
+
+    # agents
+    _restore_agents_data(tempdir)
+
+    return plugins
+
+
+def _restore_agents_data(tempdir):
+    ctx.logger.info('Updating cloudify agent data')
+    client = get_rest_client()
+    with open(os.path.join(tempdir, _AGENTS_FILE)) as agents_file:
+        agents = json.load(agents_file)
+    _insert_agents_data(client, agents)
+
+
+def _insert_agents_data(client, agents):
+    for deployment_id, nodes in agents.iteritems():
+        try:
+            _create_agent(client, nodes)
+        except:
+            ctx.logger.warning('Failed restoring agents for '
+                               'deployment {0}'.format(deployment_id),
+                               exc_info=True)
+
+
+def _create_agent(client, nodes):
     for node_instances in nodes.itervalues():
         for node_instance_id, agent in node_instances.iteritems():
             # We need to retrieve broker_config:
@@ -691,63 +594,12 @@ def create_agent(client, nodes):
             runtime_properties.pop('agent_status', None)
             client.node_instances.update(
                 node_instance_id=node_instance_id,
-                runtime_properties=runtime_properties)
+                runtime_properties=runtime_properties,
+                version=node_instance.version
+            )
 
 
-def insert_agents_data(client, agents):
-    for deployment_id, nodes in agents.iteritems():
-        try:
-            create_agent(client, nodes)
-        except:
-            ctx.logger.warning('Failed restoring agents for '
-                               'deployment {0}'.format(deployment_id),
-                               exc_info=True)
-
-
-def _restore_agents_data(tempdir):
-    ctx.logger.info('Updating cloudify agent data')
-    client = get_rest_client()
-    with open(os.path.join(tempdir, _AGENTS_FILE)) as agents_file:
-        agents = json.load(agents_file)
-    insert_agents_data(client, agents)
-
-
-def _restore_snapshot(config, tempdir, metadata, elasticsearch_read_timeout):
-    # files/dirs copy
-    _copy_data(tempdir, config, to_archive=False)
-
-    # elasticsearch
-    es = _create_es_client(config)
-
-    new_plugins = _restore_elasticsearch(tempdir, es, metadata,
-                                         elasticsearch_read_timeout)
-
-    # influxdb
-    _restore_influxdb_3_3(tempdir)
-
-    # credentials
-    _restore_credentials_3_3(tempdir, es)
-
-    es.indices.flush()
-
-    # agents
-    _restore_agents_data(tempdir)
-
-    return new_plugins
-
-
-def _plugin_installable_on_current_platform(plugin):
-    dist, _, release = platform.linux_distribution(
-        full_distribution_name=False)
-    dist, release = dist.lower(), release.lower()
-    return (plugin['supported_platform'] == 'any' or all([
-        plugin['supported_platform'] == wagon.utils.get_platform(),
-        plugin['distribution'] == dist,
-        plugin['distribution_release'] == release
-    ]))
-
-
-def install_plugins(new_plugins):
+def _install_plugins(new_plugins):
     plugins_to_install = [p for p in new_plugins if
                           _plugin_installable_on_current_platform(p)]
     for plugin in plugins_to_install:
@@ -758,13 +610,13 @@ def install_plugins(new_plugins):
         })
 
 
-def recreate_deployments_environments(deployments_to_skip):
+def _recreate_deployments_environments(deployments_to_skip):
     rest_client = get_rest_client()
-    for dep_id, dep_ctx in ctx.deployments_contexts.iteritems():
-        if dep_id in deployments_to_skip:
+    for deployment_id, dep_ctx in ctx.deployments_contexts.iteritems():
+        if deployment_id in deployments_to_skip:
             continue
         with dep_ctx:
-            dep = rest_client.deployments.get(dep_id)
+            dep = rest_client.deployments.get(deployment_id)
             blueprint = rest_client.blueprints.get(dep_ctx.blueprint.id)
             blueprint_plan = blueprint['plan']
             tasks_graph = generate_create_dep_tasks_graph(
@@ -781,62 +633,44 @@ def recreate_deployments_environments(deployments_to_skip):
             )
             tasks_graph.execute()
             ctx.logger.info('Successfully created deployment environment '
-                            'for deployment {0}'.format(dep_id))
+                            'for deployment {0}'.format(deployment_id))
 
 
-@workflow(system_wide=True)
-def restore(snapshot_id, recreate_deployments_envs, config, force, timeout,
-            **kwargs):
+def _plugin_installable_on_current_platform(plugin):
+    dist, _, release = platform.linux_distribution(
+        full_distribution_name=False)
+    dist, release = dist.lower(), release.lower()
+    return (plugin['supported_platform'] == 'any' or all([
+        plugin['supported_platform'] == wagon.utils.get_platform(),
+        plugin['distribution'] == dist,
+        plugin['distribution_release'] == release
+    ]))
 
-    ctx.logger.info('Restoring snapshot {0}'.format(snapshot_id))
 
-    config = _DictToAttributes(config)
+def _get_json_objects(f):
+    def chunks(g):
+        ch = g.read(10000)
+        yield ch
+        while ch:
+            ch = g.read(10000)
+            yield ch
 
-    _assert_clean_elasticsearch(log_warning=force)
+    s = ''
+    n = 0
+    decoder = json.JSONDecoder()
+    for ch in chunks(f):
+        s += ch
+        try:
+            while s:
+                obj, idx = decoder.raw_decode(s)
+                n += 1
+                yield json.dumps(obj)
+                s = s[idx:]
+        except:
+            pass
 
-    tempdir = tempfile.mkdtemp('-snapshot-data')
-
-    try:
-        file_server_root = config.file_server_root
-        snapshots_dir = os.path.join(
-            file_server_root,
-            config.file_server_snapshots_folder
-        )
-
-        snapshot_path = os.path.join(snapshots_dir, snapshot_id, '{0}.zip'
-                                     .format(snapshot_id))
-
-        with zipfile.ZipFile(snapshot_path, 'r') as zipf:
-            zipf.extractall(tempdir)
-
-        with open(os.path.join(tempdir, _METADATA_FILE), 'r') as f:
-            metadata = json.load(f)
-
-        client = get_rest_client()
-
-        manager_version = _get_manager_version(client)
-        from_version = ManagerVersion(metadata[_M_VERSION])
-
-        ctx.logger.info('Manager version = {0}, snapshot version = {1}'.format(
-            str(manager_version), str(from_version)))
-
-        if from_version.greater_than(manager_version):
-            raise NonRecoverableError(
-                'Cannot restore a newer manager\'s snapshot on this manager '
-                '[{0} > {1}]'.format(str(from_version), str(manager_version)))
-
-        existing_deployments_ids = [d.id for d in client.deployments.list()]
-        ctx.logger.info('Starting restoring snapshot of manager {0}'
-                        .format(from_version))
-
-        new_plugins = _restore_snapshot(config, tempdir, metadata, timeout)
-
-        install_plugins(new_plugins)
-
-        if recreate_deployments_envs:
-            recreate_deployments_environments(existing_deployments_ids)
-
-        ctx.logger.info('Successfully restored snapshot of manager {0}'
-                        .format(from_version))
-    finally:
-        shutil.rmtree(tempdir)
+    # assert not n or not s
+    # not (not n or not s) -> n and s
+    if n and s:
+        raise NonRecoverableError('Error during converting InfluxDB dump '
+                                  'data to data appropriate for snapshot.')

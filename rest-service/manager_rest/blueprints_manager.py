@@ -93,7 +93,8 @@ class BlueprintsManager(object):
 
     def _get_conf_for_snapshots_wf(self):
         return {
-            'file_server_root': config.instance().file_server_root,
+            'file_server_root':
+                config.instance().file_server_root,
             'file_server_snapshots_folder':
                 config.instance().file_server_snapshots_folder,
             'file_server_blueprints_folder':
@@ -102,12 +103,26 @@ class BlueprintsManager(object):
                 config.instance().file_server_deployments_folder,
             'file_server_uploaded_blueprints_folder':
                 config.instance().file_server_uploaded_blueprints_folder,
-            'db_address': config.instance().db_address,
-            'db_port': config.instance().db_port,
-            'created_status': models.Snapshot.CREATED,
-            'failed_status': models.Snapshot.FAILED,
+            'db_address':
+                config.instance().db_address,
+            'db_port':
+                config.instance().db_port,
+            'created_status':
+                models.Snapshot.CREATED,
+            'failed_status':
+                models.Snapshot.FAILED,
             'file_server_uploaded_plugins_folder':
-                config.instance().file_server_uploaded_plugins_folder
+                config.instance().file_server_uploaded_plugins_folder,
+            'postgresql_bin_path':
+                config.instance().postgresql_bin_path,
+            'postgresql_username':
+                config.instance().postgresql_username,
+            'postgresql_password':
+                config.instance().postgresql_password,
+            'postgresql_db_name':
+                config.instance().postgresql_db_name,
+            'postgresql_host':
+                config.instance().postgresql_host
         }
 
     def create_snapshot_model(self, snapshot_id,
