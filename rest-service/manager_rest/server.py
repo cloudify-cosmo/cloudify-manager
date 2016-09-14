@@ -318,18 +318,19 @@ def _detect_debug_environment():
     Detect whether server is running in a debug environment
     if so, connect to debug server at a port stored in env[DEBUG_REST_SERVICE]
     """
-    if os.environ.get('DEBUG_REST_SERVICE'):
-        try:
-            import pydevd
-            debug_port = int(os.environ.get('DEBUG_REST_SERVICE'))
-            if _is_listening_to_port(debug_port):
-                pydevd.settrace(port=debug_port,
-                                stdoutToServer=True,
-                                stderrToServer=True,
-                                suspend=False)
-        except Exception, e:
-            raise Exception('Failed to connect to debug server, {0}: {1}'.
-                            format(type(e).__name__, str(e)))
+    try:
+        docl_debug_path = os.environ.get('DEBUG_CONFIG')
+        if docl_debug_path and os.path.isfile(docl_debug_path):
+            with open(docl_debug_path, 'r') as docl_debug_file:
+                debug_config = yaml.safe_load(docl_debug_file)
+            if debug_config.get('is_debug_on'):
+                import pydevd
+                pydevd.settrace(
+                    debug_config['host_ip'], port=53100, stdoutToServer=True,
+                    stderrToServer=True, suspend=False)
+    except BaseException, e:
+        raise Exception('Failed to connect to debug server, {0}: {1}'.
+                        format(type(e).__name__, str(e)))
 
 app = setup_app(load_configuration())
 
