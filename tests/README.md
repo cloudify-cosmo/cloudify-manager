@@ -103,9 +103,28 @@ This project runs tests on a Cloudify Manager container created by [`docl`](http
 
 All done!
 
+## Running Tests
+
 To test everything is working as it should, run:
 
 ```
 $ cd <root directory of cloudify-manager repository>
 $ nosetests -s tests/integration_tests/tests/agentless_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
 ```
+
+## Using Docl
+* To get an overview of different features supplied by docl, see the README at [`docl`'s](https://github.com/cloudify-cosmo/docl) repo.
+
+* If you want to manaully start a manager container, run `docl run --mount`. The `--mount` flag will start the manager container with code running on your laptop, without it, you get a plain vanilla manager container.
+
+* Run `docl ssh` to ssh into the most recently started container.
+
+* Tests running in the integration tests will start and stop containers all the time. If tests are stopped halfway through, it is recommened that you run `docl clean` to remove left over containers. While this is not strictly required, every container is running a full blown manager on your laptop which is quite heavy in terms of resources consumed.
+
+* From time to time, you may want to make small modifications to the manager image. To do so, run `docl run`, then `docl ssh` to make the required changes. Afterwards, run `docl save-image` to override the existing image with your changes. 
+
+* All commands that operate on containers accept an optional `--container-id` flag, in case there is need to operate on a different container than the one most recently started. To get the id, run `docker ps` and locate the relevant container.
+
+* To start a plain CentOS container that can be manually bootstrapped on, run `docl prepare`. An inputs file that is suitable for bootstrap will be generated as well as part of this command.
+
+* By default, `docl run` uses a docker image named `cloudify/centos-manager:7`. There may be cases where you'll want modifications you made in `save-image` not to override the default image. In these cases, you can supply the `--tag` flag to the `save-image` command with your own name, and then, supply the same `--tag` flag when you run `docl run`.
