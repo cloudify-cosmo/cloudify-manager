@@ -60,13 +60,16 @@ class BaseTestEnvironment(object):
             self.test_working_dir, 'maintenance')
         os.makedirs(self.plugins_storage_dir)
         self.amqp_events_printer_thread = None
-        self.core_branch_name = os.environ.get('BRANCH_NAME_CORE', 'master')
+        # This is used by tests/framework when a repository is fetched from
+        # github. For example, the hello world repo or the plugin template.
+        self.core_branch_name = os.environ.get(constants.BRANCH_NAME_CORE,
+                                               'master')
 
     def start_events_printer(self):
         self.amqp_events_printer_thread = EventsPrinter()
         self.amqp_events_printer_thread.start()
 
-    def create(self):
+    def create_environment(self):
         logger.info('Setting up test environment... workdir=[{0}]'
                     .format(self.test_working_dir))
         os.environ['CFY_WORKDIR'] = self.test_working_dir
@@ -77,12 +80,12 @@ class BaseTestEnvironment(object):
             cfy = utils.get_cfy()
             cfy.init(**kwargs)
             docl.init(resources=self._build_resource_mapping())
-            self.create_impl()
+            self.on_environment_created()
         except:
             self.destroy()
             raise
 
-    def create_impl(self):
+    def on_environment_created(self):
         raise NotImplementedError
 
     def run_manager(self, tag=None, label=None):
@@ -201,7 +204,7 @@ class AgentlessTestEnvironment(BaseTestEnvironment):
     # See _build_resource_mapping
     mock_cloudify_agent = True
 
-    def create_impl(self):
+    def on_environment_created(self):
         self.run_manager()
 
 
@@ -209,7 +212,7 @@ class AgentTestEnvironment(BaseTestEnvironment):
     # See _build_resource_mapping
     mock_cloudify_agent = False
 
-    def create_impl(self):
+    def on_environment_created(self):
         self.run_manager()
 
     def on_manager_created(self):
@@ -250,7 +253,7 @@ class AgentTestEnvironment(BaseTestEnvironment):
 
 class ManagerTestEnvironment(AgentTestEnvironment):
 
-    def create_impl(self):
+    def on_environment_created(self):
         pass
 
     def prepare_bootstrappable_container(self,
@@ -261,58 +264,56 @@ class ManagerTestEnvironment(AgentTestEnvironment):
             self.prepared_inputs = docl.prepare_bootstrappable_container(
                 label=[self.env_label] + list((label or [])))
 
-    def bootstrap_manager(self, inputs=None, label=None,
-                          modify_blueprint_func=None,
-                          additional_exposed_ports=None,
-                          prepared_container=False):
+    def bootstrap_prepared_container(self, inputs=None, label=None,
+                                     modify_blueprint_func=None,
+                                     additional_exposed_ports=None):
         inputs = inputs or {}
-        if prepared_container:
-            inputs.update(self.prepared_inputs)
+        inputs.update(self.prepared_inputs)
         logger.info('Bootstrapping manager on a new container')
         test_manager_blueprint_path = None
         if modify_blueprint_func:
-            manager_blueprint_path = docl.simple_manager_blueprint_path()
-            manager_blueprint_dir = os.path.dirname(manager_blueprint_path)
-            test_manager_blueprint_dir = os.path.join(
-                self.test_working_dir, 'test-manager-blueprint')
-            if os.path.isdir(test_manager_blueprint_dir):
-                shutil.rmtree(test_manager_blueprint_dir)
-            shutil.copytree(manager_blueprint_dir, test_manager_blueprint_dir)
-            test_manager_blueprint_path = os.path.join(
-                test_manager_blueprint_dir,
-                os.path.basename(manager_blueprint_path))
-            with utils.YamlPatcher(test_manager_blueprint_path) as patcher:
-                modify_blueprint_func(patcher, test_manager_blueprint_dir)
-        with docl.update_config(
+            self._handle_modify_blueprint_func(modify_blueprint_func)
+        with self.update_config(
                 manager_blueprint_path=test_manager_blueprint_path,
-                additional_expose=additional_exposed_ports):
-            if prepared_container:
-                docl.bootstrap_prepared_container(inputs=inputs)
-            else:
-                docl.bootstrap(label=[self.env_label] + list((label or [])),
-                               inputs=inputs)
+                additional_exposed_ports=additional_exposed_ports):
+            docl.bootstrap_prepared_container(inputs=inputs)
         tag = 'integration-tests/{0}'.format(self.env_id)
         docl.save_image(tag=tag)
         self.run_manager(tag=tag, label=label)
 
-    def clean_run_manager(self, label=None):
-        docl.clean(label=[self.env_label] + list((label or [])))
+    def _handle_modify_blueprint_func(self, modify_blueprint_func):
+        manager_blueprint_path = docl.simple_manager_blueprint_path()
+        manager_blueprint_dir = os.path.dirname(manager_blueprint_path)
+        test_manager_blueprint_dir = os.path.join(
+            self.test_working_dir, 'test-manager-blueprint')
+        if os.path.isdir(test_manager_blueprint_dir):
+            shutil.rmtree(test_manager_blueprint_dir)
+        shutil.copytree(manager_blueprint_dir, test_manager_blueprint_dir)
+        test_manager_blueprint_path = os.path.join(
+            test_manager_blueprint_dir,
+            os.path.basename(manager_blueprint_path))
+        with utils.YamlPatcher(test_manager_blueprint_path) as patcher:
+            modify_blueprint_func(patcher, test_manager_blueprint_dir)
 
-    def clean_bootstrap_manager(self, label=None):
-        self.clean_run_manager(label=label)
-        tag = 'integration-tests/{0}'.format(self.env_id)
-        try:
-            logger.info('Removing container image {0}'.format(tag))
-            docl.remove_image(tag=tag)
-        except sh.ErrorReturnCode:
-            logger.warn(
-                'Failed removing container image {0}. This most likely '
-                'means the image never got created in the first place'
-                .format(tag))
+    def clean_manager(self, label=None, clean_tag=False):
+        docl.clean(label=[self.env_label] + list((label or [])))
+        if clean_tag:
+            tag = 'integration-tests/{0}'.format(self.env_id)
+            try:
+                logger.info('Removing container image {0}'.format(tag))
+                docl.remove_image(tag=tag)
+            except sh.ErrorReturnCode:
+                logger.warn(
+                    'Failed removing container image {0}. This most likely '
+                    'means the image never got created in the first place'
+                    .format(tag))
 
     @contextmanager
-    def update_config(self, additional_exposed_ports=None):
-        with docl.update_config(additional_expose=additional_exposed_ports):
+    def update_config(self,
+                      additional_exposed_ports=None,
+                      manager_blueprint_path=None):
+        with docl.update_config(additional_expose=additional_exposed_ports,
+                                manager_blueprint_path=manager_blueprint_path):
             yield
 
 
@@ -325,7 +326,7 @@ def create_env(env_cls):
     test_working_dir = os.path.join(top_level_dir, env_name)
     os.makedirs(test_working_dir)
     instance = env_cls(test_working_dir, env_id)
-    instance.create()
+    instance.create_environment()
 
 
 def destroy_env():

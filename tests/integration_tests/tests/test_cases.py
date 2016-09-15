@@ -242,35 +242,48 @@ class ManagerTestCase(BaseAgentTestCase):
     def prepare_bootstrappable_container(self,
                                          additional_exposed_ports=None):
         self.addCleanup(
-            lambda: self.env.clean_bootstrap_manager(
-                label=[self.manager_label]))
+            lambda: self.env.clean_manager(
+                label=[self.manager_label],
+                clean_tag=True))
         self.env.prepare_bootstrappable_container(
             label=[self.manager_label],
             additional_exposed_ports=additional_exposed_ports)
 
-    def bootstrap_prepared_container(self, inputs=None,
+    def bootstrap_prepared_container(self,
+                                     inputs=None,
                                      modify_blueprint_func=None):
-        self.env.bootstrap_manager(
+        self.env.bootstrap_prepared_container(
             inputs=inputs,
-            modify_blueprint_func=modify_blueprint_func,
-            prepared_container=True)
+            modify_blueprint_func=modify_blueprint_func)
         self._setup_running_manager_attributes()
 
-    def bootstrap(self, inputs=None, modify_blueprint_func=None,
+    def bootstrap(self,
+                  inputs=None,
+                  modify_blueprint_func=None,
                   additional_exposed_ports=None):
-        self.addCleanup(
-            lambda: self.env.clean_bootstrap_manager(
-                label=[self.manager_label]))
-        self.env.bootstrap_manager(
-            inputs=inputs,
-            label=[self.manager_label],
-            modify_blueprint_func=modify_blueprint_func,
+        """
+        The modify_blueprint_func can be used in cases where there is need to
+        perform some modification to the manager blueprint. The signature of
+        this function is (patcher, manager_blueprint_dir) where patcher is a
+        yaml patcher that can be used to override the main blueprint file.
+        manager blueprint dir can be used in case the tests needs to modify
+        other files in the the manager blueprint directory.
+
+        :param inputs:
+        :param modify_blueprint_func: Modification func
+        :param additional_exposed_ports: additional ports that should be
+               exposed on the newly bootstrapped container
+        :return:
+        """
+        self.prepare_bootstrappable_container(
             additional_exposed_ports=additional_exposed_ports)
-        self._setup_running_manager_attributes()
+        self.bootstrap_prepared_container(
+            inputs=inputs,
+            modify_blueprint_func=modify_blueprint_func)
 
     def run_manager(self):
         self.addCleanup(
-            lambda: self.env.clean_run_manager(label=[self.manager_label]))
+            lambda: self.env.clean_manager(label=[self.manager_label]))
         self.env.run_manager(label=[self.manager_label])
         self._setup_running_manager_attributes()
 

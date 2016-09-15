@@ -140,32 +140,6 @@ def update_config(additional_expose=None,
         _save_docl_config(previous_conf)
 
 
-def bootstrap(label=None,
-              inputs=None,
-              serve_resources_tar=True):
-    start = time.time()
-    inputs = inputs or {}
-    label = label or []
-    args = []
-    for l in label:
-        args += ['--label', l]
-    if serve_resources_tar:
-        args += ['--serve-resources-tar',
-                 '--serve-resources-tar-no-progress']
-    with tempfile.NamedTemporaryFile() as inputs_file:
-        yaml.safe_dump(inputs, inputs_file)
-        inputs_file.flush()
-        args += ['--inputs', inputs_file.name]
-        with tempfile.NamedTemporaryFile() as details_file:
-            args += ['--details-path', details_file.name]
-            _docl.bootstrap(*args)
-            with open(details_file.name) as f2:
-                container_details = yaml.safe_load(f2)
-    _set_container_id_and_ip(container_details)
-    logger.info(
-        'Container bootstrap took {0} seconds'.format(time.time() - start))
-
-
 def prepare_bootstrappable_container(label=None, tag=None):
     args = []
     label = label or []

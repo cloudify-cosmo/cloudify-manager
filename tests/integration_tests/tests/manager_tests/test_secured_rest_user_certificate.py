@@ -28,16 +28,7 @@ from integration_tests.tests.manager_tests.test_secured_rest_base import (
 class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
 
     def test_secured_manager_verify_user_certificate(self):
-        # we need to start a container in advance so we have an ip
-        # when we generate ssl certificates
-        self.prepare_bootstrappable_container()
-        self.manager_ip = utils.get_manager_ip()
-
-        # TODO this call will actually remove the current container
-        # and start a new one with mounted user code, so it is possible the
-        # container will get a different ip address, which is bad.
-        self.bootstrap_secured_manager_on_prepared_container()
-
+        self.bootstrap_secured_manager()
         self._test_verify_cert()
         self._test_no_verify_cert()
         self._test_verify_missing_cert()
@@ -104,11 +95,15 @@ class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
             os.mkdir(ssl_dir)
         self.cert_path = os.path.join(ssl_dir, 'external_rest_host.crt')
         self.key_path = os.path.join(ssl_dir, 'external_rest_host.key')
-        # create certificate with the ip intended to be used for this manager
+        # create certificate with the IP intended to be used for this manager
+        # The IP we use here may actually change because after bootstrap is
+        # done we save an image and run a new container from that image with
+        # user mounted code. The IP of the new container may change if there
+        # are parallel tests running on the same machine.
         utils.create_self_signed_certificate(
             target_certificate_path=self.cert_path,
             target_key_path=self.key_path,
-            common_name=self.manager_ip)
+            common_name=utils.get_manager_ip())
         # TODO: fix bug in current manager blueprint certificate handling
         # where if private and public ips are the same and only a public
         # certificate is provided, then an internal one is generated and
