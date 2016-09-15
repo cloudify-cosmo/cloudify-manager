@@ -33,11 +33,6 @@ class TestSecuredRestBase(ManagerTestCase):
         self.bootstrap(inputs=self.get_manager_blueprint_inputs(),
                        modify_blueprint_func=self._update_manager_blueprint)
 
-    def bootstrap_secured_manager_on_prepared_container(self):
-        self.bootstrap_prepared_container(
-            inputs=self.get_manager_blueprint_inputs(),
-            modify_blueprint_func=self._update_manager_blueprint)
-
     def _update_manager_blueprint(self, patcher, manager_blueprint_dir):
         for key, value in self.get_manager_blueprint_override().items():
             patcher.set_value(key, value)

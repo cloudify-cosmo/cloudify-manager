@@ -13,5 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# User configured environment variables
+#######################################
+# if your test fetches hello world or some other repo, configure this env var
+# to your liking if you wish to use a branch different than master
+BRANCH_NAME_CORE = 'BRANCH_NAME_CORE'
+
+# Internal framework environment variables
+##########################################
 DOCL_CONTAINER_IP = 'DOCL_CONTAINER_IP'
 CLOUDIFY_REST_PORT = 'CLOUDIFY_REST_PORT'

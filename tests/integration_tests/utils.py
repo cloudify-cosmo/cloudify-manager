@@ -101,7 +101,8 @@ def create_rest_client(username=None,
         else:
             credentials = '{0}:{1}'.format(username, password)
             headers = {'Authorization':
-                       'Basic {0}'.format(cli_env.base64_encode(credentials))}
+                       'Basic {0}'.format(
+                           cli_env.urlsafe_b64encode(credentials))}
 
     if cert_path is False:
         cert_path = None
