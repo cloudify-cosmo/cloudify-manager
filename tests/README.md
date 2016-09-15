@@ -128,3 +128,41 @@ $ nosetests -s tests/integration_tests/tests/agentless_tests/test_workflow.py:Ba
 * To start a plain CentOS container that can be manually bootstrapped on, run `docl prepare`. An inputs file that is suitable for bootstrap will be generated as well as part of this command.
 
 * By default, `docl run` uses a docker image named `cloudify/centos-manager:7`. There may be cases where you'll want modifications you made in `save-image` not to override the default image. In these cases, you can supply the `--tag` flag to the `save-image` command with your own name, and then, supply the same `--tag` flag when you run `docl run`.
+
+
+## Remote Debugging
+
+If you work with `IntelliJ` or `PyCharm` IDE, you can debug the container's rest-service code from your editor.
+
+* First, you have to configure your remote debugger (you will probably have to do that only the first time):
+   1. Enter your editor's Run/Debug Configuration.
+   2. Add a new configuration, by using the default `Python Remote Debug`.
+   3. Give your configuration a name of your choosing.
+   4. Set `Local host name` to: `172.20.0.1`.
+   5. Set `Port` to: `53100`.
+   6. Set 'Path mapping' (may not be necessary, since it can be automatically detected):
+      * Set `local path` to your local path to the `manager_rest` directory.
+      * Set `remote path` to the container's `manager_rest` directory, which is probably:
+      `/opt/manager/env/lib/python2.7/site-packages/manager_rest`.
+   7. Press OK to save your configuration.
+   
+* Define the environment variable `DEBUG_MODE` in your terminal. You can set it to be anything you want, as long as it is    not empty, i.e: `export DEBUG_MODE=yariv`.
+* In your editor, mark breakpoints inside the rest-service code, wherever you choose.
+
+* In your editor, start the debugger you have configured, by choosing it and press `Debug`.
+
+* Run tests from the same terminal in which you have defined the environemt variable `DEBUG_MODE`.
+
+* The test(s) will run until reaching a breakpoint and you will be able to debug from your editor.
+
+* To turn off debug-mode, unset the `DEBUG_MODE` variable from your terminal, or set it to an empty string, i.e:
+
+  ```
+  unset DEBUG_MODE
+  ```
+  
+  or:
+  
+  ```
+  export DEBUG_MODE=
+  ```
