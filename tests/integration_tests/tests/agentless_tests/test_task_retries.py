@@ -16,10 +16,8 @@
 import uuid
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import delete_provider_context
-from integration_tests.utils import restore_provider_context
+from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests import utils as test_utils
 
 INFINITY = -1
 
@@ -28,8 +26,8 @@ class TaskRetriesTest(AgentlessTestCase):
 
     def setUp(self):
         super(TaskRetriesTest, self).setUp()
-        delete_provider_context()
-        self.addCleanup(restore_provider_context)
+        test_utils.delete_provider_context()
+        self.addCleanup(test_utils.restore_provider_context)
         self.events = []
 
     def configure(self, retries, retry_interval):
@@ -103,8 +101,9 @@ class TaskRetriesTest(AgentlessTestCase):
     def test_operation_retry(self):
         self.configure(retries=5, retry_interval=5)
         deployment_id = str(uuid.uuid4())
-        deploy(resource('dsl/test-operation-retry-blueprint.yaml'),
-               deployment_id=deployment_id)
+        self.deploy_application(
+            resource('dsl/test-operation-retry-blueprint.yaml'),
+            deployment_id=deployment_id)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id
@@ -153,12 +152,13 @@ class TaskRetriesTest(AgentlessTestCase):
         self.configure(retries=retries, retry_interval=retry_interval)
         deployment_id = str(uuid.uuid4())
         if expect_failure:
-            self.assertRaises(RuntimeError, deploy,
+            self.assertRaises(RuntimeError, self.deploy_application,
                               dsl_path=resource(blueprint),
                               deployment_id=deployment_id)
         else:
-            deploy(resource(blueprint),
-                   deployment_id=deployment_id)
+            self.deploy_application(
+                resource(blueprint),
+                deployment_id=deployment_id)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id

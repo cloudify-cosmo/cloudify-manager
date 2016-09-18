@@ -16,18 +16,16 @@
 import uuid
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import delete_provider_context
-from integration_tests.utils import restore_provider_context
+from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests import utils as test_utils
 
 
 class TaskRetriesTest(AgentlessTestCase):
 
     def setUp(self):
         super(TaskRetriesTest, self).setUp()
-        delete_provider_context()
-        self.addCleanup(restore_provider_context)
+        test_utils.delete_provider_context()
+        self.addCleanup(test_utils.restore_provider_context)
 
     def test_subgraph_retries_provider_config_config(self):
         context = {'cloudify': {'workflows': {
@@ -37,8 +35,9 @@ class TaskRetriesTest(AgentlessTestCase):
         }}}
         deployment_id = str(uuid.uuid4())
         self.client.manager.create_context(self._testMethodName, context)
-        deploy(resource('dsl/workflow_subgraph_retries.yaml'),
-               deployment_id=deployment_id)
+        self.deploy_application(
+            resource('dsl/workflow_subgraph_retries.yaml'),
+            deployment_id=deployment_id)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id

@@ -13,23 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
-import sh
-
-from integration_tests import docl
+from integration_tests.framework import docl
 
 
 RIEMANN_CONFIGS_DIR = '/opt/riemann'
-
-
-def is_riemann_core_up(deployment_id):
-    core_indicator = os.path.join(RIEMANN_CONFIGS_DIR, deployment_id, 'ok')
-    try:
-        out = docl.read_file(core_indicator)
-        return out == 'ok'
-    except sh.ErrorReturnCode:
-        return False
 
 
 def reset_data_and_restart():

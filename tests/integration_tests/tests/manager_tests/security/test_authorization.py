@@ -19,7 +19,8 @@ import os
 from contextlib import contextmanager
 
 from .test_base import TestSecuredRestBase
-from integration_tests.utils import get_resource as resource
+
+from integration_tests.tests.utils import get_resource as resource
 
 RUNNING_EXECUTIONS_MESSAGE = 'There are running executions for this deployment'
 

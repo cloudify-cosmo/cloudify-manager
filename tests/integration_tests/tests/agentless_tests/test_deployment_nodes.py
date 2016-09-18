@@ -16,15 +16,14 @@
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestDeploymentNodes(AgentlessTestCase):
 
     def test_get_deployment_nodes(self):
         dsl_path = resource("dsl/deployment_nodes_three_nodes.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
 
         def assert_node_state(node_id_infix, nodes):
@@ -44,7 +43,7 @@ class TestDeploymentNodes(AgentlessTestCase):
 
     def test_partial_update_node_instance(self):
         dsl_path = resource("dsl/set_property.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
 
         node_id = self.client.node_instances.list(
             deployment_id=deployment.id)[0].id
@@ -111,7 +110,7 @@ class TestDeploymentNodes(AgentlessTestCase):
 
     def test_update_node_instance_runtime_properties(self):
         dsl_path = resource('dsl/set_property.yaml')
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
 
         node_id = self.client.node_instances.list(
             deployment_id=deployment.id)[0].id
@@ -157,7 +156,7 @@ class TestDeploymentNodes(AgentlessTestCase):
     def test_update_runtime_properties_old_version(self):
         """Updating runtime properties with an old version throws an error."""
         dsl_path = resource('dsl/set_property.yaml')
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
 
         node_id = self.client.node_instances.list(
             deployment_id=deployment.id)[0].id

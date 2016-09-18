@@ -22,9 +22,7 @@ import uuid
 from wagon.wagon import Wagon
 
 from integration_tests import ManagerTestCase
-from integration_tests import utils
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 TEST_PACKAGE_NAME = 'mock-wagon-plugin'
 
@@ -59,10 +57,10 @@ class DownloadInstallPluginTest(ManagerTestCase):
         execution = self.client.snapshots.create(snapshot_id=snapshot_id,
                                                  include_metrics=False,
                                                  include_credentials=False)
-        utils.wait_for_execution_to_end(execution, timeout_seconds=1000)
+        self.wait_for_execution_to_end(execution, timeout_seconds=1000)
         self.client.plugins.delete(self.plugin.id)
         execution = self.client.snapshots.restore(snapshot_id)
-        utils.wait_for_execution_to_end(execution, timeout_seconds=1000)
+        self.wait_for_execution_to_end(execution, timeout_seconds=1000)
 
         self._verify_plugin_can_be_used_in_blueprint()
 
@@ -77,7 +75,7 @@ class DownloadInstallPluginTest(ManagerTestCase):
         blueprint_path = resource('dsl/managed_plugins.yaml')
         test_input_value = 'MY_TEST_INPUT'
         inputs = {'test_input': test_input_value}
-        deployment, _ = deploy(blueprint_path, inputs=inputs)
+        deployment, _ = self.deploy_application(blueprint_path, inputs=inputs)
         outputs = self.client.deployments.outputs.get(deployment.id)
         self.assertEqual(outputs.outputs['test_output'], test_input_value)
 

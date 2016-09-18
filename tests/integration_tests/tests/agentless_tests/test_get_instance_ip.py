@@ -14,15 +14,14 @@
 #    * limitations under the License.
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class GetInstanceIPTest(AgentlessTestCase):
 
     def test_get_instance_ip(self):
         dsl_path = resource("dsl/get_instance_ip.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
 
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',

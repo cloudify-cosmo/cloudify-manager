@@ -17,12 +17,14 @@ import os
 import sys
 import logging
 from multiprocessing import Process
+from os import path
 from os.path import dirname, abspath, join
 
 import sh
 import yaml
 
 from utils import sh_bake
+from integration_tests import resources
 
 nosetests = sh_bake(sh.nosetests)
 
@@ -35,9 +37,11 @@ class SuiteRunner(object):
 
     def __init__(self, descriptor, reports_dir):
         self.groups = descriptor.split('#')
-        self.integration_tests_dir = dirname(abspath(__file__))
+        resources_path = path.dirname(resources.__file__)
+        self.integration_tests_dir = dirname(abspath(resources_path))
         self.reports_dir = reports_dir
-        with open(join(self.integration_tests_dir, 'suites.yaml')) as f:
+        with open(join(
+                self.integration_tests_dir, 'suites', 'suites.yaml')) as f:
             self.suites_yaml = yaml.load(f.read())
 
         if not os.path.isdir(reports_dir):
@@ -79,7 +83,8 @@ class SuiteRunner(object):
 
 def main():
     descriptor = sys.argv[1]
-    reports_dir = join(dirname(abspath(__file__)), 'xunit-reports')
+    resources_path = path.dirname(resources.__file__)
+    reports_dir = join(dirname(abspath(resources_path)), 'xunit-reports')
     if len(sys.argv) > 2:
         reports_dir = sys.argv[2]
     suites_runner = SuiteRunner(descriptor, reports_dir)

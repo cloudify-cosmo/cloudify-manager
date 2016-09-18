@@ -34,8 +34,7 @@ import yaml
 import cloudify_rest_client.exceptions
 import cloudify.utils
 
-from integration_tests import constants
-from integration_tests import utils
+from integration_tests.framework import utils, constants
 
 # All container specific docl commands that are executed with no explicit
 # container id will be executed on the default_container_id which is set
@@ -65,7 +64,7 @@ _quiet_docl = proxy_tools.Proxy(partial(_docl_proxy, quiet=True))
 
 
 def _docl_home():
-    from integration_tests import env
+    from integration_tests.framework import env
     return os.path.join(env.instance.test_working_dir, 'docl')
 
 

@@ -15,15 +15,13 @@
 
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import execute_workflow
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestScaleWorkflow(AgentlessTestCase):
 
     def test_compute_scale_out_compute(self):
-        expectations = self.deploy('scale1')
+        expectations = self.deploy_app('scale1')
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
 
@@ -34,7 +32,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_compute_scale_in_compute(self):
-        expectations = self.deploy('scale4')
+        expectations = self.deploy_app('scale4')
         expectations['compute']['new']['install'] = 3
         self.deployment_assertions(expectations)
 
@@ -47,7 +45,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_compute_scale_in_compute_ignore_failure_true(self):
-        expectations = self.deploy('scale_ignore_failure')
+        expectations = self.deploy_app('scale_ignore_failure')
         expectations['compute']['new']['install'] = 3
         self.deployment_assertions(expectations)
 
@@ -61,7 +59,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_compute_scale_in_compute_ignore_failure_false(self):
-        expectations = self.deploy('scale_ignore_failure')
+        expectations = self.deploy_app('scale_ignore_failure')
         expectations['compute']['new']['install'] = 3
         self.deployment_assertions(expectations)
 
@@ -79,7 +77,7 @@ class TestScaleWorkflow(AgentlessTestCase):
             self.fail()
 
     def test_compute_scale_out_and_in_compute_from_0(self):
-        expectations = self.deploy('scale10')
+        expectations = self.deploy_app('scale10')
         expectations['compute']['new']['install'] = 0
         self.deployment_assertions(expectations)
 
@@ -98,7 +96,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_compute_scale_out_2_compute(self):
-        expectations = self.deploy('scale1')
+        expectations = self.deploy_app('scale1')
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
 
@@ -110,7 +108,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_compute_scale_in_2_compute(self):
-        expectations = self.deploy('scale4')
+        expectations = self.deploy_app('scale4')
         expectations['compute']['new']['install'] = 3
         self.deployment_assertions(expectations)
 
@@ -123,7 +121,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_out_compute(self):
-        expectations = self.deploy('scale2')
+        expectations = self.deploy_app('scale2')
         expectations['compute']['new']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -140,7 +138,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_in_compute(self):
-        expectations = self.deploy('scale5')
+        expectations = self.deploy_app('scale5')
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 4
         expectations['db']['new']['rel_install'] = 8
@@ -161,7 +159,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_out_db(self):
-        expectations = self.deploy('scale2')
+        expectations = self.deploy_app('scale2')
         expectations['compute']['new']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -179,7 +177,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_in_db(self):
-        expectations = self.deploy('scale5')
+        expectations = self.deploy_app('scale5')
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 4
         expectations['db']['new']['rel_install'] = 8
@@ -201,7 +199,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_out_db_scale_db(self):
-        expectations = self.deploy('scale2')
+        expectations = self.deploy_app('scale2')
         expectations['compute']['new']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -218,7 +216,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_contained_in_compute_scale_in_db_scale_db(self):
-        expectations = self.deploy('scale5')
+        expectations = self.deploy_app('scale5')
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 4
         expectations['db']['new']['rel_install'] = 8
@@ -238,7 +236,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_connected_to_compute_scale_out_compute(self):
-        expectations = self.deploy('scale3')
+        expectations = self.deploy_app('scale3')
         expectations['compute']['new']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -254,7 +252,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_connected_to_compute_scale_in_compute(self):
-        expectations = self.deploy('scale6')
+        expectations = self.deploy_app('scale6')
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 2
         expectations['db']['new']['rel_install'] = 8
@@ -272,7 +270,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_connected_to_compute_scale_in_and_out_compute_from_0(self):
-        expectations = self.deploy('scale11')
+        expectations = self.deploy_app('scale11')
         expectations['compute']['new']['install'] = 0
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 0
@@ -301,7 +299,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_connected_to_compute_scale_out_db(self):
-        expectations = self.deploy('scale3')
+        expectations = self.deploy_app('scale3')
         expectations['compute']['new']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -317,7 +315,7 @@ class TestScaleWorkflow(AgentlessTestCase):
         self.deployment_assertions(expectations)
 
     def test_db_connected_to_compute_scale_in_db(self):
-        expectations = self.deploy('scale6')
+        expectations = self.deploy_app('scale6')
         expectations['compute']['new']['install'] = 2
         expectations['db']['new']['install'] = 2
         expectations['db']['new']['rel_install'] = 8
@@ -342,7 +340,8 @@ class TestScaleWorkflow(AgentlessTestCase):
             'operation': 'cloudify.interfaces.lifecycle.start'
         }]
 
-        expectations = self.deploy('scale7', inputs={'fail': fail_operations})
+        expectations = self.deploy_app(
+                'scale7', inputs={'fail': fail_operations})
         expectations['compute']['new']['install'] = 1
         self.deployment_assertions(expectations)
 
@@ -362,7 +361,8 @@ class TestScaleWorkflow(AgentlessTestCase):
             'operation': 'cloudify.interfaces.lifecycle.start'
         }]
 
-        expectations = self.deploy('scale8', inputs={'fail': fail_operations})
+        expectations = self.deploy_app(
+                'scale8', inputs={'fail': fail_operations})
         expectations['compute']['new']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -396,7 +396,8 @@ class TestScaleWorkflow(AgentlessTestCase):
             'operation': 'cloudify.interfaces.lifecycle.start'
         }]
 
-        expectations = self.deploy('scale9', inputs={'fail': fail_operations})
+        expectations = self.deploy_app(
+                'scale9', inputs={'fail': fail_operations})
         expectations['compute']['new']['install'] = 1
         expectations['db']['new']['install'] = 1
         expectations['db']['new']['rel_install'] = 2
@@ -472,7 +473,7 @@ class TestScaleWorkflow(AgentlessTestCase):
 
             self.clear_plugin_data(plugin_name)
 
-        self.deploy('scale_groups')
+        self.deploy_app('scale_groups')
         test_assertions(expected_node_count=1, assert_type='install')
 
         self.scale(parameters={'scalable_entity_name': 'group1', 'delta': 1})
@@ -611,12 +612,15 @@ class TestScaleWorkflow(AgentlessTestCase):
             }
         }
 
-    def deploy(self, resource_name, inputs=None):
-        deployment, _ = deploy(resource('dsl/{0}.yaml'.format(resource_name)),
-                               inputs=inputs)
+    def deploy_app(self, resource_name, inputs=None):
+        deployment, _ = self.deploy_application(
+                resource('dsl/{0}.yaml'.format(resource_name)),
+                inputs=inputs)
         self.deployment_id = deployment.id
         return self.expectations()
 
     def scale(self, parameters):
-        execute_workflow('scale', self.deployment_id, parameters=parameters)
+        self.execute_workflow('scale',
+                              self.deployment_id,
+                              parameters=parameters)
         return self.expectations()

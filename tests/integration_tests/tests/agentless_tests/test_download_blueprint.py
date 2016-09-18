@@ -20,7 +20,7 @@ import tarfile
 import uuid
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
+from integration_tests.tests.utils import get_resource as resource
 
 
 class DownloadBlueprintTest(AgentlessTestCase):

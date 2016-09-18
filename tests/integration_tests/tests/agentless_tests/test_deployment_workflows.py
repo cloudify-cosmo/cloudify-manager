@@ -20,19 +20,17 @@ import json
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import (
+from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import (
     verify_deployment_environment_creation_complete)
-from integration_tests.utils import do_retries
-from integration_tests.utils import wait_for_execution_to_end
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import do_retries
 
 
 class TestDeploymentWorkflows(AgentlessTestCase):
 
     def test_deployment_workflows(self):
         dsl_path = resource("dsl/custom_workflow_mapping.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
         workflows = self.client.deployments.get(deployment_id).workflows
         self.assertEqual(8, len(workflows))
@@ -57,7 +55,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
                    deployment_id=deployment_id)
         execution = self.client.executions.start(deployment_id,
                                                  'custom_execute_operation')
-        wait_for_execution_to_end(execution)
+        self.wait_for_execution_to_end(execution)
 
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
@@ -104,7 +102,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
         execution = self.client.executions.list(deployment_id)[0]
-        wait_for_execution_to_end(execution)
+        self.wait_for_execution_to_end(execution)
 
         self.client.deployments.delete(deployment_id)
         try:

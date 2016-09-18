@@ -19,13 +19,10 @@ import uuid
 from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import wait_for_execution_to_end
-from integration_tests.utils import do_retries
-from integration_tests.utils import (
+from integration_tests.tests.utils import do_retries
+from integration_tests.tests.utils import (
     verify_deployment_environment_creation_complete)
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import get_remote_storage_manager
+from integration_tests.tests.utils import get_resource as resource
 
 
 class ExecutionsTest(AgentlessTestCase):
@@ -52,7 +49,7 @@ class ExecutionsTest(AgentlessTestCase):
         # cancel didn't work (unsupported) - use force-cancel instead
         execution = self.client.executions.cancel(execution.id, True)
         self.assertEquals(Execution.FORCE_CANCELLING, execution.status)
-        wait_for_execution_to_end(execution)
+        self.wait_for_execution_to_end(execution)
         execution = self.client.executions.get(execution.id)
 
         self._assert_execution_cancelled(execution, deployment_id)
@@ -78,10 +75,12 @@ class ExecutionsTest(AgentlessTestCase):
 
     def test_sort_executions(self):
         dsl_path = resource("dsl/basic.yaml")
-        deployment, execution_id = deploy(dsl_path)
-        wait_for_execution_to_end(self.client.executions.get(execution_id))
-        deployment, execution_id = deploy(dsl_path)
-        wait_for_execution_to_end(self.client.executions.get(execution_id))
+        deployment, execution_id = self.deploy_application(dsl_path)
+        self.wait_for_execution_to_end(
+                self.client.executions.get(execution_id))
+        deployment, execution_id = self.deploy_application(dsl_path)
+        self.wait_for_execution_to_end(
+                self.client.executions.get(execution_id))
         deployments_executions = self.client.executions.list(sort='created_at')
         for i in range(len(deployments_executions)-1):
             self.assertTrue(deployments_executions[i]['created_at'] <
@@ -97,7 +96,7 @@ class ExecutionsTest(AgentlessTestCase):
 
     def test_get_deployments_executions_with_status(self):
         dsl_path = resource("dsl/basic.yaml")
-        deployment, execution_id = deploy(dsl_path)
+        deployment, execution_id = self.deploy_application(dsl_path)
 
         def assertions():
             deployments_executions = self.client.executions.list(
@@ -137,7 +136,7 @@ class ExecutionsTest(AgentlessTestCase):
             deployment_id, 'another_execute_operation',
             parameters=execution_parameters,
             allow_custom_parameters=True)
-        wait_for_execution_to_end(execution)
+        self.wait_for_execution_to_end(execution)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment_id
@@ -161,13 +160,14 @@ class ExecutionsTest(AgentlessTestCase):
 
     def test_update_execution_status(self):
         dsl_path = resource("dsl/basic.yaml")
-        _, execution_id = deploy(dsl_path, wait_for_execution=True)
+        _, execution_id = self.deploy_application(dsl_path,
+                                                  wait_for_execution=True)
         execution = self.client.executions.get(execution_id)
         self.assertEquals(Execution.TERMINATED, execution.status)
 
         # Manually updating the status, because the client checks for
         # correct transitions
-        sm = get_remote_storage_manager()
+        sm = self.get_remote_storage_manager()
         sm.update_execution_status(execution_id, 'started', '')
 
         execution = self.client.executions.get(execution_id)
@@ -215,7 +215,7 @@ class ExecutionsTest(AgentlessTestCase):
             Execution.CANCELLING
         self.assertEquals(expected_status, execution.status)
         if wait_for_termination:
-            wait_for_execution_to_end(execution)
+            self.wait_for_execution_to_end(execution)
             execution = self.client.executions.get(execution.id)
         return execution, deployment_id
 

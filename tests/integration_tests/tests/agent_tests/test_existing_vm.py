@@ -16,8 +16,7 @@
 import uuid
 
 from integration_tests import AgentTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class ExistingVMTest(AgentTestCase):
@@ -26,11 +25,12 @@ class ExistingVMTest(AgentTestCase):
         super(ExistingVMTest, self).setUp()
         self.setup_deployment_id = str(uuid.uuid4())
         dsl_path = resource("dsl/existing-vm-setup.yaml")
-        deploy(dsl_path, deployment_id=self.setup_deployment_id)
+        self.deploy_application(dsl_path,
+                                deployment_id=self.setup_deployment_id)
 
     def test_existing_vm(self):
         dsl_path = resource("dsl/existing-vm.yaml")
-        deployment, _ = deploy(dsl_path, inputs={
+        deployment, _ = self.deploy_application(dsl_path, inputs={
             'ip': self.get_host_ip(
                 node_id='setup_host',
                 deployment_id=self.setup_deployment_id),

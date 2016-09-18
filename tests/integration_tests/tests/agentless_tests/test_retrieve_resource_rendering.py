@@ -16,8 +16,7 @@
 import uuid
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class RetrieveResourceRenderingTest(AgentlessTestCase):
@@ -32,7 +31,7 @@ class RetrieveResourceRenderingTest(AgentlessTestCase):
 
     def _retrieve_resource_test(self, mode):
         blueprint_id = 'blueprint-' + str(uuid.uuid4())
-        deployment, _ = deploy(
+        deployment, _ = self.deploy_application(
             self.dsl_path,
             blueprint_id=blueprint_id,
             timeout_seconds=15,

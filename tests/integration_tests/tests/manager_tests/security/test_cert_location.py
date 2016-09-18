@@ -15,7 +15,7 @@
 
 import os
 
-from integration_tests import utils
+from integration_tests.tests import utils as test_utils
 from .test_base import TestSSLRestBase
 
 agent_prop_path = (
@@ -67,9 +67,10 @@ class CertsLocationTestBase(TestSSLRestBase):
                        self).get_manager_blueprint_inputs()
         cert_path = os.path.join(self.workdir, 'broker.crt')
         key_path = os.path.join(self.workdir, 'broker.key')
-        utils.create_self_signed_certificate(target_certificate_path=cert_path,
-                                             target_key_path=key_path,
-                                             common_name='cloudify-manager')
+        test_utils.create_self_signed_certificate(
+                target_certificate_path=cert_path,
+                target_key_path=key_path,
+                common_name='cloudify-manager')
         with open(cert_path) as f:
             cert_content = f.read()
         with open(key_path) as f:

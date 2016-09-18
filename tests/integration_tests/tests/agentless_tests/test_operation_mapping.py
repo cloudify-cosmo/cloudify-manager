@@ -14,15 +14,14 @@
 #    * limitations under the License.
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_and_execute_workflow as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class OperationMappingTest(AgentlessTestCase):
 
     def test_operation_mapping(self):
         dsl_path = resource("dsl/operation_mapping.yaml")
-        deployment, _ = deploy(dsl_path, 'workflow1')
+        deployment, _ = self.deploy_and_execute_workflow(dsl_path, 'workflow1')
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -34,7 +33,7 @@ class OperationMappingTest(AgentlessTestCase):
 
     def test_operation_mapping_override(self):
         dsl_path = resource("dsl/operation_mapping.yaml")
-        deployment, _ = deploy(dsl_path, 'workflow2')
+        deployment, _ = self.deploy_and_execute_workflow(dsl_path, 'workflow2')
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -46,4 +45,4 @@ class OperationMappingTest(AgentlessTestCase):
 
     def test_operation_mapping_undeclared_override(self):
         dsl_path = resource("dsl/operation_mapping.yaml")
-        deploy(dsl_path, 'workflow3')
+        self.deploy_and_execute_workflow(dsl_path, 'workflow3')

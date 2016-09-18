@@ -20,7 +20,7 @@ import requests.exceptions
 
 from cloudify_cli import constants
 
-from integration_tests import utils
+from integration_tests.tests import utils as test_utils
 from .test_base import TestSSLRestBase
 
 
@@ -49,7 +49,7 @@ class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
     def _test_verify_wrong_cert(self):
         cert_path = os.path.join(self.workdir, 'wrong.cert')
         key_path = os.path.join(self.workdir, 'wrong.key')
-        utils.create_self_signed_certificate(cert_path, key_path, 'test')
+        test_utils.create_self_signed_certificate(cert_path, key_path, 'test')
         self._assert_ssl_error(ssl=True, cert_path=cert_path, trust_all=False)
 
     def _test_try_to_connect_to_manager_on_non_secured_port(self):
@@ -88,10 +88,10 @@ class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
         # done we save an image and run a new container from that image with
         # user mounted code. The IP of the new container may change if there
         # are parallel tests running on the same machine.
-        utils.create_self_signed_certificate(
+        test_utils.create_self_signed_certificate(
             target_certificate_path=self.cert_path,
             target_key_path=self.key_path,
-            common_name=utils.get_manager_ip())
+            common_name=self.get_manager_ip())
         # TODO: fix bug in current manager blueprint certificate handling
         # where if private and public ips are the same and only a public
         # certificate is provided, then an internal one is generated and
@@ -111,4 +111,4 @@ class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
         else:
             kwargs['port'] = constants.DEFAULT_REST_PORT
             kwargs['protocol'] = constants.DEFAULT_REST_PROTOCOL
-        return utils.create_rest_client(**kwargs)
+        return test_utils.create_rest_client(**kwargs)

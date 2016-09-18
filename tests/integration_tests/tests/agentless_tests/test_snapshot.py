@@ -17,7 +17,6 @@ import os
 import tempfile
 import requests
 
-from integration_tests import utils
 from integration_tests import AgentlessTestCase
 from cloudify_rest_client.executions import Execution
 
@@ -67,8 +66,9 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEquals(snapshot['id'], snapshot_id)
         self.assertEquals(snapshot['status'], 'uploaded')
         execution = self.client.snapshots.restore(snapshot_id)
-        execution = utils.wait_for_execution_to_end(execution,
-                                                    timeout_seconds=30)
+        execution = self.wait_for_execution_to_end(
+                execution,
+                timeout_seconds=30)
         if execution.status == Execution.FAILED:
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(Execution.TERMINATED, execution.status)

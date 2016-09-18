@@ -14,11 +14,7 @@
 #    * limitations under the License.
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application
-from integration_tests.utils import deploy
-from integration_tests.utils import execute_workflow
-from integration_tests.utils import undeploy_application
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestAgentAliveVerification(AgentlessTestCase):
@@ -26,15 +22,16 @@ class TestAgentAliveVerification(AgentlessTestCase):
     AGENT_ALIVE_FAIL = 'AGENT_ALIVE_FAIL'
 
     def test_uninstall(self):
-        deployment = deploy(resource("dsl/basic_stop_not_exists.yaml"))
-        undeploy_application(deployment.id,
-                             parameters={
-                                 'ignore_failure': True
-                             })
+        deployment = self.deploy(resource("dsl/basic_stop_not_exists.yaml"))
+        self.undeploy_application(deployment.id,
+                                  parameters={
+                                      'ignore_failure': True
+                                  })
 
     def test_install(self):
         with self.assertRaisesRegexp(RuntimeError, self.AGENT_ALIVE_FAIL):
-            deploy_application(resource("dsl/basic_start_not_exists.yaml"))
+            self.deploy_application(
+                    resource("dsl/basic_start_not_exists.yaml"))
 
     def test_not_exist_operation_workflow(self):
         self._test_custom_workflow('not_exist_operation_workflow', True)
@@ -60,9 +57,9 @@ class TestAgentAliveVerification(AgentlessTestCase):
             'fail_handler_on_not_exist_operation_workflow', True)
 
     def _test_custom_workflow(self, workflow, error_expected=False):
-        deployment = deploy(resource("dsl/basic_task_not_exist.yaml"))
+        deployment = self.deploy(resource("dsl/basic_task_not_exist.yaml"))
         try:
-            execute_workflow(workflow, deployment.id)
+            self.execute_workflow(workflow, deployment.id)
             if error_expected:
                 self.fail('RuntimeError expected')
         except RuntimeError as e:

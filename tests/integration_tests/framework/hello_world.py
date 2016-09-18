@@ -21,8 +21,8 @@ import nose.tools
 import requests
 
 
-from integration_tests import utils
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.framework import utils
+from integration_tests.tests import utils as test_utils
 
 _HELLO_WORLD_URL = 'https://github.com/cloudify-cosmo/{0}/archive/{1}.tar.gz'
 
@@ -43,7 +43,9 @@ class _HelloWorld(object):
     @nose.tools.nottest
     def test_hello_world(self):
         blueprint_file = self._prepare_hello_world()
-        deployment, _ = deploy(blueprint_file, timeout_seconds=120)
+        deployment, _ = self.test_case.deploy_application(
+            blueprint_file,
+            timeout_seconds=120)
 
         self._assert_hello_world_events(deployment.id)
         self._assert_hello_world_metric(deployment.id)
@@ -56,13 +58,13 @@ class _HelloWorld(object):
             return requests.get(url, timeout=1)
 
         # assert webserver running
-        response = utils.do_retries(
+        response = test_utils.do_retries(
             _webserver_request,
             exception_class=requests.exceptions.ConnectionError)
         self.test_case.assertIn('http_web_server', response.text)
 
         if not self.skip_uninstall:
-            utils.undeploy_application(deployment.id)
+            self.test_case.undeploy_application(deployment.id)
 
             # assert webserver not running
             self.test_case.assertRaises(requests.exceptions.ConnectionError,
@@ -71,7 +73,7 @@ class _HelloWorld(object):
         return deployment
 
     def _assert_hello_world_events(self, deployment_id):
-        rest_client = utils.create_rest_client()
+        rest_client = test_utils.create_rest_client()
         events = rest_client.events.list(
             deployment_id=deployment_id)
         self.test_case.assertGreater(len(events.items), 0)
@@ -114,13 +116,14 @@ class _HelloWorld(object):
             with tarfile.open(blueprint_tar, 'r:gz') as tar:
                 tar.extractall(path=workdir)
             shutil.copy(
-                utils.get_resource('dockercompute_helloworld/blueprint.yaml'),
+                test_utils.get_resource(
+                        'dockercompute_helloworld/blueprint.yaml'),
                 blueprint_file)
             shutil.copy(
-                utils.get_resource('dsl/plugins/diamond.yaml'),
+                test_utils.get_resource('dsl/plugins/diamond.yaml'),
                 os.path.join(blueprint_dir, 'diamond.yaml'))
             shutil.copy(
-                utils.get_resource('dsl/plugins/dockercompute.yaml'),
+                test_utils.get_resource('dsl/plugins/dockercompute.yaml'),
                 os.path.join(blueprint_dir, 'dockercompute.yaml'))
         else:
             logger.info('Reusing existing hello world tar')

@@ -18,9 +18,7 @@ import re
 import elasticsearch
 
 from integration_tests import AgentlessTestCase
-from integration_tests import utils
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 ELASTICSEARCH_PORT = 9200
 TIMESTAMP_PATTERN = '\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z'
@@ -38,11 +36,11 @@ class ElasticsearchTimestampFormatTest(AgentlessTestCase):
 
     def test_events_timestamp_format(self):
         dsl_path = resource('dsl/empty_blueprint.yaml')
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
 
         #  connect to Elastic search
         es = elasticsearch.Elasticsearch(hosts=[{
-            'host': utils.get_manager_ip(),
+            'host': self.get_manager_ip(),
             'port': 9200}]
         )
         index = "cloudify_events" if es.indices.exists(

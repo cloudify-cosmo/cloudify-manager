@@ -19,9 +19,11 @@ import logging
 import os
 import shutil
 import time
+import uuid
 import tempfile
 import unittest
 
+import sh
 import nose.tools
 
 import cloudify.utils
@@ -30,11 +32,12 @@ import cloudify.event
 
 from manager_rest.utils import mkdirs
 
-from integration_tests import utils
-from integration_tests import hello_world
-from integration_tests import docl
-from integration_tests import postgresql
-from integration_tests.utils import get_resource as resource
+from integration_tests.tests.utils import get_resource as resource
+from integration_tests.framework import utils, hello_world, docl, postgresql
+from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
+from integration_tests.tests import utils as test_utils
+from cloudify_rest_client.executions import Execution
+from manager_rest.storage.storage_manager import get_storage_manager
 
 
 class BaseTestCase(unittest.TestCase):
@@ -43,19 +46,19 @@ class BaseTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        import integration_tests.env
-        self.env = integration_tests.env.instance
+        import integration_tests.framework.env
+        self.env = integration_tests.framework.env.instance
         self.workdir = tempfile.mkdtemp(
             dir=self.env.test_working_dir,
             prefix='{0}-'.format(self._testMethodName))
-        self.cfy = utils.get_cfy()
+        self.cfy = test_utils.get_cfy()
         self.addCleanup(shutil.rmtree, self.workdir, ignore_errors=True)
         self.logger = cloudify.utils.setup_logger(self._testMethodName,
                                                   logging.INFO)
         self.client = None
 
     def _setup_running_manager_attributes(self):
-        self.client = utils.create_rest_client()
+        self.client = test_utils.create_rest_client()
 
     def tearDown(self):
         self.env.stop_dispatch_processes()
@@ -128,10 +131,10 @@ class BaseTestCase(unittest.TestCase):
 
     @staticmethod
     def do_assertions(assertions_func, timeout=10, **kwargs):
-        return utils.do_retries(assertions_func,
-                                timeout,
-                                AssertionError,
-                                **kwargs)
+        return test_utils.do_retries(assertions_func,
+                                     timeout,
+                                     AssertionError,
+                                     **kwargs)
 
     @staticmethod
     def publish_riemann_event(deployment_id,
@@ -154,7 +157,159 @@ class BaseTestCase(unittest.TestCase):
         }
         queue = '{0}-riemann'.format(deployment_id)
         routing_key = deployment_id
-        utils.publish_event(queue, routing_key, event)
+        test_utils.publish_event(queue, routing_key, event)
+
+    @staticmethod
+    def execute_workflow(workflow_name, deployment_id,
+                         parameters=None,
+                         timeout_seconds=240,
+                         wait_for_execution=True):
+        """
+        A blocking method which runs the requested workflow
+        """
+        client = test_utils.create_rest_client()
+
+        execution = client.executions.start(deployment_id, workflow_name,
+                                            parameters=parameters or {})
+
+        if wait_for_execution:
+            BaseTestCase.wait_for_execution_to_end(
+                    execution,
+                    timeout_seconds=timeout_seconds)
+
+        return execution
+
+    @staticmethod
+    def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
+        client = test_utils.create_rest_client()
+        if not blueprint_id:
+            blueprint_id = str(uuid.uuid4())
+        blueprint = client.blueprints.upload(dsl_path, blueprint_id)
+        if deployment_id is None:
+            deployment_id = str(uuid.uuid4())
+        deployment = client.deployments.create(
+                blueprint.id,
+                deployment_id,
+                inputs=inputs)
+
+        test_utils.wait_for_deployment_creation_to_complete(
+            deployment_id=deployment_id)
+        return deployment
+
+    @staticmethod
+    def deploy_and_execute_workflow(dsl_path,
+                                    workflow_name,
+                                    timeout_seconds=240,
+                                    blueprint_id=None,
+                                    deployment_id=None,
+                                    wait_for_execution=True,
+                                    parameters=None,
+                                    inputs=None):
+        """
+        A blocking method which deploys an application from
+        the provided dsl path, and runs the requested workflows
+        """
+        deployment = BaseTestCase.deploy(dsl_path,
+                                         blueprint_id,
+                                         deployment_id,
+                                         inputs)
+        execution = BaseTestCase.execute_workflow(
+                workflow_name, deployment.id, parameters,
+                timeout_seconds, wait_for_execution)
+        return deployment, execution.id
+
+    @staticmethod
+    def deploy_application(dsl_path,
+                           timeout_seconds=30,
+                           blueprint_id=None,
+                           deployment_id=None,
+                           wait_for_execution=True,
+                           inputs=None):
+        """
+        A blocking method which deploys an application
+        from the provided dsl path.
+        """
+        return BaseTestCase.deploy_and_execute_workflow(
+                dsl_path=dsl_path,
+                workflow_name='install',
+                timeout_seconds=timeout_seconds,
+                blueprint_id=blueprint_id,
+                deployment_id=deployment_id,
+                wait_for_execution=wait_for_execution,
+                inputs=inputs)
+
+    @staticmethod
+    def undeploy_application(deployment_id,
+                             timeout_seconds=240,
+                             is_delete_deployment=False,
+                             parameters=None):
+        """
+        A blocking method which undeploys an application from the provided dsl
+        path.
+        """
+        client = test_utils.create_rest_client()
+        execution = client.executions.start(deployment_id,
+                                            'uninstall',
+                                            parameters=parameters)
+        BaseTestCase.wait_for_execution_to_end(
+                execution,
+                timeout_seconds=timeout_seconds)
+
+        if execution.error and execution.error != 'None':
+            raise RuntimeError(
+                    'Workflow execution failed: {0}'.format(execution.error))
+        if is_delete_deployment:
+            BaseTestCase.delete_deployment(deployment_id)
+
+    @staticmethod
+    def get_manager_ip():
+        utils.get_manager_ip()
+
+    @staticmethod
+    def delete_deployment(deployment_id, ignore_live_nodes=False):
+        client = test_utils.create_rest_client()
+        return client.deployments.delete(deployment_id,
+                                         ignore_live_nodes=ignore_live_nodes)
+
+    @staticmethod
+    def is_node_started(node_id):
+        client = test_utils.create_rest_client()
+        node_instance = client.node_instances.get(node_id)
+        return node_instance['state'] == 'started'
+
+    @staticmethod
+    def wait_for_execution_to_end(execution, timeout_seconds=240):
+        client = test_utils.create_rest_client()
+        deadline = time.time() + timeout_seconds
+        while execution.status not in Execution.END_STATES:
+            time.sleep(0.5)
+            execution = client.executions.get(execution.id)
+            if time.time() > deadline:
+                raise utils.TimeoutException(
+                        'Execution timed out: \n{0}'
+                        .format(json.dumps(execution, indent=2)))
+        if execution.status == Execution.FAILED:
+            raise RuntimeError(
+                    'Workflow execution failed: {0} [{1}]'.format(
+                            execution.error,
+                            execution.status))
+        return execution
+
+    @staticmethod
+    def is_riemann_core_up(deployment_id):
+        core_indicator = os.path.join(RIEMANN_CONFIGS_DIR, deployment_id, 'ok')
+        try:
+            out = docl.read_file(core_indicator)
+            return out == 'ok'
+        except sh.ErrorReturnCode:
+            return False
+
+    @staticmethod
+    def get_remote_storage_manager():
+        """Return the SQL storage manager connected to the remote manager
+        """
+        postgresql.setup_app()
+        return get_storage_manager()
 
 
 class AgentlessTestCase(BaseTestCase):
@@ -162,7 +317,7 @@ class AgentlessTestCase(BaseTestCase):
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
-        utils.restore_provider_context()
+        test_utils.restore_provider_context()
         self.addCleanup(self._save_logs)
 
     def tearDown(self):

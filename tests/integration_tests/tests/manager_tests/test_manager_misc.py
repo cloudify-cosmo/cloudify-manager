@@ -22,7 +22,7 @@ import requests
 import sh
 
 from integration_tests import ManagerTestCase
-from integration_tests import utils
+from integration_tests.tests import utils as test_utils
 
 
 class MiscManagerTest(ManagerTestCase):
@@ -105,15 +105,18 @@ class MiscManagerTest(ManagerTestCase):
                 self.copy_file_to_manager(f.name, '/etc/es_test/run.sh')
             self.execute_on_manager('bash /etc/es_test/run.sh')
 
-            node1_url = 'http://{0}:9200/_nodes'.format(utils.get_manager_ip())
-            node2_url = 'http://{0}:9201/_nodes'.format(utils.get_manager_ip())
+            node1_url = 'http://{0}:9200/_nodes'.format(
+                    self.get_manager_ip())
+            node2_url = 'http://{0}:9201/_nodes'.format(
+                    self.get_manager_ip())
 
             def get_node_count_impl(url):
                 return len(requests.get(url).json()['nodes'])
 
             def get_node_count(url):
-                return utils.do_retries(get_node_count_impl, url=url,
-                                        timeout_seconds=60)
+                return test_utils.do_retries(
+                        get_node_count_impl, url=url,
+                        timeout_seconds=60)
 
             self.logger.info(
                 'Verifying that both nodes are running but not clustered...')

@@ -26,10 +26,8 @@ import cloudify.utils
 import cloudify.logs
 import cloudify.event
 
-from integration_tests import constants
-from integration_tests import docl
-from integration_tests import utils
-from integration_tests.amqp_events_printer import EventsPrinter
+from integration_tests.framework import constants, docl, utils
+from integration_tests.framework.amqp_events_printer import EventsPrinter
 
 
 logger = cloudify.utils.setup_logger('TESTENV')

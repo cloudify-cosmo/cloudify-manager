@@ -24,9 +24,8 @@ from manager_rest.storage.models import Execution
 from manager_rest.deployment_update.constants import STATES
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import tar_blueprint
+from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import tar_blueprint
 
 blueprints_base_path = 'dsl/deployment_update'
 
@@ -109,9 +108,10 @@ class DeploymentUpdateBase(AgentlessTestCase):
         base_bp_path, modified_bp_path = \
             self._get_base_and_modified_bp_path(test_name)
 
-        deployment, _ = deploy(base_bp_path,
-                               inputs=inputs,
-                               deployment_id=deployment_id)
+        deployment, _ = self.deploy_application(
+                base_bp_path,
+                inputs=inputs,
+                deployment_id=deployment_id)
 
         return deployment, modified_bp_path
 
@@ -1726,7 +1726,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             'update_deployment_twice',
             'deployment_updated_twice_remodification.yaml')
 
-        deployment, _ = deploy(base_bp_path)
+        deployment, _ = self.deploy_application(base_bp_path)
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
         self.assertDictContainsSubset({'custom_output': {'value': 0}},
@@ -1774,7 +1774,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
             'modify_deployment_update_schema',
             'modify_deployment_update_schema_remodification.yaml')
 
-        deployment, _ = deploy(base_bp_path)
+        deployment, _ = self.deploy_application(base_bp_path)
         # assert initial deployment state
         deployment = self.client.deployments.get(deployment.id)
         self.assertDictContainsSubset({'custom_output': {'value': '0.0.0.0'}},

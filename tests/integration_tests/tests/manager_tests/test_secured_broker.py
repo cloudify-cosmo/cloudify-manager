@@ -20,7 +20,7 @@ import pika
 import pika.exceptions
 
 from integration_tests import ManagerTestCase
-from integration_tests import utils
+from integration_tests.tests import utils as test_utils
 
 
 class SecuredBrokerManagerTests(ManagerTestCase):
@@ -29,7 +29,7 @@ class SecuredBrokerManagerTests(ManagerTestCase):
         # we need to start a container in advance so we have an ip
         # when we generate ssl certificates
         self.prepare_bootstrappable_container()
-        self.manager_ip = utils.get_manager_ip()
+        self.manager_ip = self.get_manager_ip()
         self.rabbitmq_username = 'cloudify'
         self.rabbitmq_password = 'c10udify'
 
@@ -144,13 +144,13 @@ class SecuredBrokerManagerTests(ManagerTestCase):
         self.wrong_cert_path = os.path.join(ssl_dir, 'invalid.crt')
         self.wrong_key_path = os.path.join(ssl_dir, 'invalid.key')
         # create certificate with the ip intended to be used for this manager
-        utils.create_self_signed_certificate(
+        test_utils.create_self_signed_certificate(
             target_certificate_path=self.cert_path,
             target_key_path=self.key_path,
             common_name=self.manager_ip,
         )
         # create invalid certificate to test that invalid certs aren't allowed
-        utils.create_self_signed_certificate(
+        test_utils.create_self_signed_certificate(
             target_certificate_path=self.wrong_cert_path,
             target_key_path=self.wrong_key_path,
             common_name='invalid',

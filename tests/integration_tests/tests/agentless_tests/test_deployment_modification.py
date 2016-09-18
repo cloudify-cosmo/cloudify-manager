@@ -21,19 +21,16 @@ from cloudify_rest_client.deployment_modifications import (
     DeploymentModification)
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import deploy as create_deployment
-from integration_tests.utils import execute_workflow
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestDeploymentModification(AgentlessTestCase):
 
     def test_modification_operations(self):
         dsl_path = resource("dsl/deployment_modification_operations.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
-        execute_workflow('deployment_modification', deployment_id)
+        self.execute_workflow('deployment_modification', deployment_id)
         invocations = self.get_plugin_data(
             'testmockoperations', deployment_id)['mock_operation_invocation']
         self.assertEqual(1, len([i for i in invocations
@@ -162,9 +159,10 @@ class TestDeploymentModification(AgentlessTestCase):
         if not deployment_id:
             dsl_path = resource("dsl/deployment_modification.yaml")
             test_id = str(uuid.uuid4())
-            deployment, _ = deploy(dsl_path,
-                                   deployment_id=test_id,
-                                   blueprint_id='b_{0}'.format(test_id))
+            deployment, _ = self.deploy_application(
+                    dsl_path,
+                    deployment_id=test_id,
+                    blueprint_id='b_{0}'.format(test_id))
             deployment_id = deployment.id
 
         nodes_before_modification = {
@@ -178,7 +176,7 @@ class TestDeploymentModification(AgentlessTestCase):
         workflow_id = 'deployment_modification_{0}'.format(
             'rollback' if rollback else 'finish')
 
-        execution = execute_workflow(
+        execution = self.execute_workflow(
             workflow_id, deployment_id,
             parameters={'nodes': modified_nodes})
 
@@ -293,7 +291,7 @@ class TestDeploymentModification(AgentlessTestCase):
     def test_group_deployment_modification(self):
         # this test specifically tests elasticsearch's implementation
         # of update_deployment. other features are tested elsewhere.
-        deployment = create_deployment(
+        deployment = self.deploy(
             resource('dsl/deployment_modification_groups.yaml'))
         modification = self.client.deployment_modifications.start(
             deployment_id=deployment.id,

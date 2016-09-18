@@ -22,10 +22,8 @@ from riemann_controller.config_constants import Constants
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.test_cases import BaseTestCase
 from integration_tests import riemann
-from integration_tests import utils
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import execute_workflow
+from integration_tests.tests.utils import do_retries, do_retries_boolean
+from integration_tests.tests.utils import get_resource as resource
 
 
 class PoliciesTestsBase(BaseTestCase):
@@ -36,7 +34,7 @@ class PoliciesTestsBase(BaseTestCase):
         riemann.reset_data_and_restart()
 
     def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
-        deployment, _ = deploy(resource(yaml_file))
+        deployment, _ = self.deploy_application(resource(yaml_file))
         self.deployment = deployment
         self.node_instances = self.client.node_instances.list(deployment.id)
         self.assertEqual(
@@ -69,7 +67,7 @@ class PoliciesTestsBase(BaseTestCase):
             )['mock_operation_invocation']
             self.assertEqual(expected_count, len(invocations))
             return invocations
-        return utils.do_retries(assertion)
+        return do_retries(assertion)
 
     def publish(self, metric, ttl=60, node_name='node',
                 service='service', node_id=''):
@@ -346,7 +344,7 @@ class TestAutohealPolicies(AgentlessTestCase, PoliciesTestsBase):
                 if e.workflow_id == workflow_id and e.status == 'terminated':
                     found_workflows += 1
             return found_workflows == num_of_workflows
-        utils.do_retries_boolean(is_workflow_terminated, timeout)
+        do_retries_boolean(is_workflow_terminated, timeout)
 
     def test_autoheal_policy_triggering(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
@@ -514,14 +512,14 @@ class TestAutohealPolicies(AgentlessTestCase, PoliciesTestsBase):
 
     def test_autoheal_doesnt_get_triggered_after_regular_uninstall(self):
         self.launch_deployment(self.SIMPLE_AUTOHEAL_POLICY_YAML)
-        execute_workflow('uninstall', self.deployment.id)
+        self.execute_workflow('uninstall', self.deployment.id)
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 1)
 
     def test_workflow_gets_triggered_with_isstarted_check_turned_off(self):
         self.launch_deployment('dsl/isstarted_check_turned_off.yaml')
-        execute_workflow('uninstall', self.deployment.id)
+        self.execute_workflow('uninstall', self.deployment.id)
         self._publish_heart_beat_event()
         self._wait_for_event_expiration()
         self.wait_for_executions(self.NUM_OF_INITIAL_WORKFLOWS + 2)
