@@ -24,16 +24,7 @@ from cloudify.workflows import ctx
 class Postgres(object):
     def __init__(self, config):
         ctx.logger.debug('Init Postgres config: {0}'.format(config))
-        self._psql_bin = os.path.join(config.postgresql_bin_path,
-                                      'psql')
-        self._pg_dump_bin = os.path.join(config.postgresql_bin_path,
-                                         'pg_dump')
-        self._pg_restore = os.path.join(config.postgresql_bin_path,
-                                        'pg_restore')
-        self._drop_db_bin = os.path.join(config.postgresql_bin_path,
-                                         'dropdb')
-        self._create_db_bin = os.path.join(config.postgresql_bin_path,
-                                           'createdb')
+        self._bin_dir = config.postgresql_bin_path
         self._db_name = config.postgresql_db_name
         self._host = config.postgresql_host
         self._username = config.postgresql_username
@@ -41,7 +32,8 @@ class Postgres(object):
 
     def drop_db(self):
         ctx.logger.info('Dropping db')
-        command = [self._drop_db_bin,
+        drop_db_bin = os.path.join(self._bin_dir, 'dropdb')
+        command = [drop_db_bin,
                    '--host', self._host,
                    '-U', self._username,
                    self._db_name]
@@ -49,7 +41,8 @@ class Postgres(object):
 
     def create_db(self):
         ctx.logger.debug('Creating db')
-        command = [self._create_db_bin,
+        create_db_bin = os.path.join(self._bin_dir, 'createdb')
+        command = [create_db_bin,
                    '--host', self._host,
                    '-U', self._username,
                    '-T', 'template0',
@@ -64,7 +57,8 @@ class Postgres(object):
                  for t in exclude_tables]
         flags.extend(["--exclude-table-data={0}".format(t)
                       for t in exclude_tables])
-        command = [self._pg_dump_bin,
+        pg_dump_bin = os.path.join(self._bin_dir, 'pg_dump')
+        command = [pg_dump_bin,
                    '-a',
                    '--host', self._host,
                    '-U', self._username,
@@ -75,7 +69,8 @@ class Postgres(object):
 
     def restore(self, dump_file):
         ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
-        command = [self._psql_bin,
+        psql_bin = os.path.join(self._bin_dir, 'psql')
+        command = [psql_bin,
                    '--single-transaction',
                    '--host', self._host,
                    '-U', self._username,
@@ -120,8 +115,9 @@ class Postgres(object):
                     fetchall = None
                     status_message = str(e)
                     result = {'status': status_message, 'all': fetchall}
-                    ctx.logger.error('Running query result status: {0}'
-                                     .format(status_message))
+                    if status_message != 'no results to fetch':
+                        ctx.logger.error('Running query result status: {0}'
+                                         .format(status_message))
                 return result
 
     def _connect(self):

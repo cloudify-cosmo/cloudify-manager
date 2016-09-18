@@ -14,6 +14,7 @@
 #    * limitations under the License.
 
 import os
+import json
 import shlex
 import shutil
 import subprocess
@@ -27,6 +28,14 @@ class DictToAttributes(object):
 
     def __getattr__(self, name):
         return self._dict[name]
+
+    def __str__(self):
+        try:
+            # try to convert to json,
+            # may fail on UTF-8 and stuff, don't sweat on it..
+            return json.dumps(self._dict)
+        except:
+            return self._dict
 
 
 def copy_data(archive_root, config, to_archive=True):

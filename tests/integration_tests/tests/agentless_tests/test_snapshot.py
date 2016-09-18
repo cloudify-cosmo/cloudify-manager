@@ -36,6 +36,16 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEquals(1, len(response), 'expecting 1 deployment, '
                                             ' got {0}'.format(len(response)))
 
+    def test_prev_snapshot_with_deployment(self):
+        snapshot_path = self._get_snapshot('snap_3.4.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+        response = self.client.blueprints.list()
+        self.assertEquals(1, len(response), 'expecting 1 blueprints, '
+                                            ' got {0}'.format(len(response)))
+        response = self.client.deployments.list()
+        self.assertEquals(1, len(response), 'expecting 1 deployment, '
+                                            ' got {0}'.format(len(response)))
+
     def _get_snapshot(self, name):
         snapshot_url = os.path.join(SNAPSHOTS, name)
         self.logger.info('Retrieving snapshot: {0}'.format(snapshot_url))
