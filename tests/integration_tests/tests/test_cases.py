@@ -27,6 +27,8 @@ import cloudify.utils
 import cloudify.logs
 import cloudify.event
 
+from manager_rest.utils import mkdirs
+
 from integration_tests import utils
 from integration_tests import hello_world
 from integration_tests import docl
@@ -55,6 +57,16 @@ class BaseTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.env.stop_dispatch_processes()
+
+    def _save_logs(self, purge=True):
+        logs_dir = os.environ.get('CFY_LOGS_PATH')
+        if not logs_dir:
+            return
+        logs_dir = os.path.join(logs_dir, *self.id().split('.'))
+        mkdirs(logs_dir)
+        self.cfy.logs.download(output_path=logs_dir)
+        if purge:
+            self.cfy.logs.purge(force=True)
 
     @staticmethod
     def read_manager_file(file_path, no_strip=False):
@@ -149,6 +161,7 @@ class AgentlessTestCase(BaseTestCase):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
         utils.restore_provider_context()
+        self.addCleanup(self._save_logs)
 
     def tearDown(self):
         postgresql.reset_data()
@@ -231,6 +244,7 @@ class AgentTestCase(BaseAgentTestCase):
     def setUp(self):
         super(AgentTestCase, self).setUp()
         self._setup_running_manager_attributes()
+        self.addCleanup(self._save_logs)
 
 
 class ManagerTestCase(BaseAgentTestCase):
@@ -245,6 +259,7 @@ class ManagerTestCase(BaseAgentTestCase):
             lambda: self.env.clean_manager(
                 label=[self.manager_label],
                 clean_tag=True))
+        self.addCleanup(self._save_logs, purge=False)
         self.env.prepare_bootstrappable_container(
             label=[self.manager_label],
             additional_exposed_ports=additional_exposed_ports)
@@ -284,6 +299,7 @@ class ManagerTestCase(BaseAgentTestCase):
     def run_manager(self):
         self.addCleanup(
             lambda: self.env.clean_manager(label=[self.manager_label]))
+        self.addCleanup(self._save_logs, purge=False)
         self.env.run_manager(label=[self.manager_label])
         self._setup_running_manager_attributes()
 
