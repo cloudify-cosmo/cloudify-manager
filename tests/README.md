@@ -166,3 +166,25 @@ If you work with `IntelliJ` or `PyCharm` IDE, you can debug the container's rest
   ```
   export DEBUG_MODE=
   ```
+
+
+## Logs
+
+To keep the manager logs after the tests has finished running, set the environment variable `CFY_LOGS_PATH`, to be the path the logs would be saved into:
+
+```
+export CFY_LOGS_PATH=<path>
+```
+
+Now, when running test(s), the manager logs will be saved in the given path, before the environment is destroyed.
+To turn off logs saving, unset `CFY_LOGS_PATH`:
+
+  ```
+  unset CFY_LOGS_PATH
+  ```
+  
+  or:
+  
+  ```
+  export CFY_LOGS_PATH=
+  ```
