@@ -17,15 +17,14 @@
 import json
 import os
 import sys
-import logging
 import shutil
-import importlib
 import traceback
 import StringIO
 import errno
 import platform
 from datetime import datetime
 from os import path, makedirs
+from base64 import urlsafe_b64encode
 
 import wagon.utils
 from flask.ext.restful import abort
@@ -33,40 +32,9 @@ from flask.ext.restful import abort
 from manager_rest import config
 
 
-def setup_logger(logger_name, logger_level=logging.DEBUG, handlers=None,
-                 remove_existing_handlers=True):
-    """
-    :param logger_name: Name of the logger.
-    :param logger_level: Level for the logger (not for specific handler).
-    :param handlers: An optional list of handlers (formatter will be
-                     overridden); If None, only a StreamHandler for
-                     sys.stdout will be used.
-    :param remove_existing_handlers: Determines whether to remove existing
-                                     handlers before adding new ones
-    :return: A logger instance.
-    :rtype: Logger
-    """
-
-    logger = logging.getLogger(logger_name)
-
-    if remove_existing_handlers:
-        for handler in logger.handlers:
-            logger.removeHandler(handler)
-
-    if not handlers:
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.DEBUG)
-        handlers = [handler]
-
-    formatter = logging.Formatter(fmt='%(asctime)s [%(levelname)s] '
-                                      '[%(name)s] %(message)s',
-                                  datefmt='%d/%m/%Y %H:%M:%S')
-    for handler in handlers:
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-
-    logger.setLevel(logger_level)
-    return logger
+CLOUDIFY_AUTH_HEADER = 'Authorization'
+CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
+BASIC_AUTH_PREFIX = 'Basic '
 
 
 def copy_resources(file_server_root, resources_path=None):
@@ -80,51 +48,6 @@ def copy_resources(file_server_root, resources_path=None):
                                    'cloudify')
     shutil.copytree(cloudify_resources, path.join(file_server_root,
                                                   'cloudify'))
-
-
-def get_class(class_path):
-    """Returns a class from a string formatted as module:class"""
-    if not class_path:
-        raise ValueError('class path is missing or empty')
-
-    if not isinstance(class_path, basestring):
-        raise ValueError('class path is not a string')
-
-    class_path = class_path.strip()
-    if ':' not in class_path or class_path.count(':') > 1:
-        raise ValueError('Invalid class path, expected format: '
-                         'module:class')
-
-    class_path_parts = class_path.split(':')
-    class_module_str = class_path_parts[0].strip()
-    class_name = class_path_parts[1].strip()
-
-    if not class_module_str or not class_name:
-        raise ValueError('Invalid class path, expected format: '
-                         'module:class')
-
-    module = importlib.import_module(class_module_str)
-    if not hasattr(module, class_name):
-        raise ValueError('module {0}, does not contain class {1}'
-                         .format(class_module_str, class_name))
-
-    return getattr(module, class_name)
-
-
-def get_class_instance(class_path, properties=None):
-    """Returns an instance of a class from a string formatted as module:class
-    the given *args, **kwargs are passed to the instance's __init__"""
-    if not properties:
-        properties = {}
-    try:
-        cls = get_class(class_path)
-        instance = cls(**properties)
-    except Exception as e:
-        exc_type, exc, traceback = sys.exc_info()
-        raise RuntimeError('Failed to instantiate {0}, error: {1}'
-                           .format(class_path, e)), None, traceback
-
-    return instance
 
 
 def abort_error(error, logger, hide_server_message=False):
@@ -180,7 +103,7 @@ def is_bypass_maintenance_mode(request):
 
 
 def get_plugin_archive_path(plugin_id, archive_name):
-    return os.path.join(config.instance().file_server_uploaded_plugins_folder,
+    return os.path.join(config.instance.file_server_uploaded_plugins_folder,
                         plugin_id,
                         archive_name)
 
@@ -228,3 +151,46 @@ class classproperty(object):
 
     def __get__(self, owner_self, owner_cls):
         return self.get_func(owner_cls)
+
+
+def create_auth_header(username=None, password=None, token=None):
+    """Create a valid authentication header either from username/password or
+    a token if any were provided; return an empty dict otherwise
+    """
+    header = {}
+    if username and password:
+        credentials = '{0}:{1}'.format(username, password)
+        header = {CLOUDIFY_AUTH_HEADER:
+                  BASIC_AUTH_PREFIX + urlsafe_b64encode(credentials)}
+    elif token:
+        header = {CLOUDIFY_AUTH_TOKEN_HEADER: token}
+
+    return header
+
+
+def add_users_and_roles_to_userstore(user_datastore, users, roles):
+    """Create passed roles and users in the datastore, and add
+    relevant roles to their respective users
+
+    :param user_datastore: A valid flask-security UserDataStore
+    :param users: A list of dicts (see manager_types.yaml)
+    :param roles: A list of dicts (see manager_types.yaml)
+    """
+    for role in roles:
+        user_datastore.create_role(
+            name=role['name'],
+            description=role.get('description'),
+            allowed=role['allow'],
+            denied=role.get('deny')
+        )
+
+    for user in users:
+        user_obj = user_datastore.create_user(
+            username=user['username'],
+            password=user['password']
+        )
+        for role in user.get('roles', []):
+            role_obj = user_datastore.find_role(role)
+            user_datastore.add_role_to_user(user_obj, role_obj)
+
+    user_datastore.commit()

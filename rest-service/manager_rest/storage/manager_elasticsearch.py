@@ -153,8 +153,8 @@ class ManagerElasticsearch:
     def get_connection():
         """Return a connection to Cloudify manager's Elasticsearch."""
         if 'es_connection' not in current_app.extensions:
-            es_host = config.instance().db_address
-            es_port = config.instance().db_port
+            es_host = config.instance.db_address
+            es_port = config.instance.db_port
             current_app.extensions['es_connection'] = \
                 elasticsearch.Elasticsearch(
                     hosts=[{"host": es_host, "port": es_port}])

@@ -20,15 +20,16 @@ import urllib2
 import tempfile
 import time
 import os
-
 import shutil
 
+from flask.testing import FlaskClient
 from nose.tools import nottest
 from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
 
-from manager_rest.storage import FileServer
 from manager_rest import utils, config, archiving
+from manager_rest.storage import FileServer, get_storage_manager
+from manager_rest.test.security_utils import get_admin_user, get_admin_role
 from manager_rest.test.mocks import MockHTTPClient, CLIENT_API_VERSION, \
     build_query_string
 from cloudify_rest_client import CloudifyClient
@@ -76,6 +77,19 @@ def inject_test_config(f):
     return _wrapper
 
 
+class TestClient(FlaskClient):
+    """A helper class that overrides flask's default testing.FlaskClient
+    class for the purpose of adding authorization headers to all rest calls
+    """
+    def open(self, *args, **kwargs):
+        kwargs = kwargs or {}
+        kwargs['headers'] = kwargs.get('headers') or {}
+        kwargs['headers'].update(utils.create_auth_header(
+            username='admin', password='admin')
+        )
+        return super(TestClient, self).open(*args, **kwargs)
+
+
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
 
@@ -116,8 +130,6 @@ class BaseServerTestCase(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
         fd, self.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
         os.close(fd)
-        fd, self.securest_log_file = tempfile.mkstemp(prefix='securest-log-')
-        os.close(fd)
         fd, self.sqlite_db_file = tempfile.mkstemp(prefix='sqlite-db-')
         os.close(fd)
         self.file_server = FileServer(self.tmpdir)
@@ -146,28 +158,48 @@ class BaseServerTestCase(unittest.TestCase):
 
         self.server_configuration = self.create_configuration()
         server.SQL_DIALECT = 'sqlite'
-        server.reset_state(self.server_configuration)
-        utils.copy_resources(config.instance().file_server_root)
-        self.flask_app = server.app
-        server.app.config['Testing'] = True
-        self.app = server.app.test_client()
+        server.reset_app(self.server_configuration)
+        utils.copy_resources(config.instance.file_server_root)
+        server.db.create_all()
+        self._add_users_and_roles(server.user_datastore)
+        self.app = self._get_app(server.app)
         self.client = self.create_client()
+        self.sm = get_storage_manager()
         self.initialize_provider_context()
+
+    @staticmethod
+    def _get_app(flask_app):
+        """Create a flask.testing FlaskClient
+
+        :param flask_app: Flask app
+        """
+        flask_app.test_client_class = TestClient
+        return flask_app.test_client()
+
+    def _add_users_and_roles(self, user_datastore):
+        """Add users and roles for the test
+
+        :param user_datastore: SQLAlchemyDataUserstore
+        """
+        # Add a fictitious admin user to the user_datastore
+        utils.add_users_and_roles_to_userstore(
+            user_datastore,
+            get_admin_user(),
+            get_admin_role()
+        )
 
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)
-        self.quiet_delete(self.securest_log_file)
         self.quiet_delete(self.sqlite_db_file)
         self.quiet_delete_directory(self.maintenance_mode_dir)
         if self.file_server:
             self.file_server.stop()
         self.quiet_delete_directory(self.tmpdir)
 
-    def initialize_provider_context(self, client=None):
-        if not client:
-            client = self.client
-        # creating an empty bootstrap context
-        client.manager.create_context(self.id(), {'cloudify': {}})
+    def initialize_provider_context(self):
+        self.sm.put_provider_context(
+            {'name': self.id(), 'context': {'cloudify': {}}}
+        )
 
     def create_configuration(self):
         test_config = config.Config()
@@ -192,10 +224,6 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_path = self.rest_service_log
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 20
-        test_config.security_audit_log_level = 'DEBUG'
-        test_config.security_audit_log_file = self.securest_log_file
-        test_config.security_audit_log_file_size_MB = 100
-        test_config.security_audit_log_files_backup_count = 20
         test_config.maintenance_folder = self.maintenance_mode_dir
         return test_config
 
@@ -288,12 +316,6 @@ class BaseServerTestCase(unittest.TestCase):
     def check_if_resource_on_fileserver(self, blueprint_id, resource_path):
         return self._check_if_resource_on_fileserver(
             FILE_SERVER_BLUEPRINTS_FOLDER, blueprint_id, resource_path)
-
-    def check_if_deployment_resource_on_fileserver(self,
-                                                   deployment_id,
-                                                   resource_path):
-        return self._check_if_resource_on_fileserver(
-            FILE_SERVER_DEPLOYMENTS_FOLDER, deployment_id, resource_path)
 
     def get_blueprint_path(self, blueprint_dir_name):
         return os.path.join(os.path.dirname(

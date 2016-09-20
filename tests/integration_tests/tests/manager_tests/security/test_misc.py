@@ -13,9 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from integration_tests.tests.manager_tests.test_secured_rest_base import (
-    TestSecuredRestBase,
-    TestSSLRestBase)
+from .test_base import TestSecuredRestBase, TestSSLRestBase
 
 
 class TestBasicSecuredRest(TestSecuredRestBase):

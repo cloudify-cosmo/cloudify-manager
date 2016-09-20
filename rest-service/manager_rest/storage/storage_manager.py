@@ -563,18 +563,12 @@ class SQLStorageManager(object):
         return '{0}_{1}'.format(deployment_id, node_id)
 
 
-def _create_instance():
-    db.create_all()
-    return SQLStorageManager()
-
-
-# What we need to access this manager in Flask
 def get_storage_manager():
-    """Get the current app's storage manager, create if necessary
+    """Get the current Flask app's storage manager, create if necessary
     """
     manager = current_app.config.get('storage_manager')
     if not manager:
-        current_app.config['storage_manager'] = _create_instance()
+        current_app.config['storage_manager'] = SQLStorageManager()
         manager = current_app.config.get('storage_manager')
     return manager
 

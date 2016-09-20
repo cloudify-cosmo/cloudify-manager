@@ -28,10 +28,10 @@ from flask import (
     make_response,
     current_app as app
 )
-from flask.ext.restful import Resource, marshal, reqparse
+from flask.ext.restful import marshal, reqparse
+from flask_security import current_user
 from flask_restful_swagger import swagger
 from flask.ext.restful.utils import unpack
-from flask_securest.rest_security import SECURED_MODE, SecuredResource
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 
 from dsl_parser import utils as dsl_parser_utils
@@ -44,6 +44,7 @@ from manager_rest import utils
 from manager_rest import responses_v2
 from manager_rest.files import UploadedDataManager
 from manager_rest.storage import models
+from manager_rest.security import SecuredResource
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage import ManagerElasticsearch
 from manager_rest.blueprints_manager import (DslParseException,
@@ -63,8 +64,7 @@ def insecure_rest_method(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        cfg = config.instance()
-        if cfg.insecure_endpoints_disabled:
+        if config.instance.insecure_endpoints_disabled:
             raise manager_exceptions.MethodNotAllowedError()
         return func(*args, **kwargs)
     return wrapper
@@ -237,7 +237,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
         return 'blueprint_archive_url'
 
     def _get_target_dir_path(self):
-        return config.instance().file_server_uploaded_blueprints_folder
+        return config.instance.file_server_uploaded_blueprints_folder
 
     def _get_archive_type(self, archive_path):
         return archiving.get_archive_type(archive_path)
@@ -306,7 +306,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
             shutil.move(os.path.join(file_server_root, app_dir),
                         os.path.join(
                             file_server_root,
-                            config.instance().file_server_blueprints_folder,
+                            config.instance.file_server_blueprints_folder,
                             blueprint.id))
             cls._process_plugins(file_server_root, blueprint.id)
             return blueprint
@@ -361,8 +361,8 @@ class BlueprintsIdArchive(SecuredResource):
         for arc_type in SUPPORTED_ARCHIVE_TYPES:
             # attempting to find the archive file on the file system
             local_path = os.path.join(
-                config.instance().file_server_root,
-                config.instance().file_server_uploaded_blueprints_folder,
+                config.instance.file_server_root,
+                config.instance.file_server_uploaded_blueprints_folder,
                 blueprint_id,
                 '{0}.{1}'.format(blueprint_id, arc_type))
 
@@ -374,8 +374,8 @@ class BlueprintsIdArchive(SecuredResource):
                                "Blueprint ID: {0}".format(blueprint_id))
 
         blueprint_path = '{0}/{1}/{2}/{2}.{3}'.format(
-            config.instance().file_server_resources_uri,
-            config.instance().file_server_uploaded_blueprints_folder,
+            config.instance.file_server_resources_uri,
+            config.instance.file_server_uploaded_blueprints_folder,
             blueprint_id,
             archive_type)
 
@@ -483,13 +483,13 @@ class BlueprintsId(SecuredResource):
 
         # Delete blueprint resources from file server
         blueprint_folder = os.path.join(
-            config.instance().file_server_root,
-            config.instance().file_server_blueprints_folder,
+            config.instance.file_server_root,
+            config.instance.file_server_blueprints_folder,
             blueprint.id)
         shutil.rmtree(blueprint_folder)
         uploaded_blueprint_folder = os.path.join(
-            config.instance().file_server_root,
-            config.instance().file_server_uploaded_blueprints_folder,
+            config.instance.file_server_root,
+            config.instance.file_server_uploaded_blueprints_folder,
             blueprint.id)
         shutil.rmtree(uploaded_blueprint_folder)
 
@@ -772,8 +772,8 @@ class DeploymentsId(SecuredResource):
 
         # Delete deployment resources from file server
         deployment_folder = os.path.join(
-            config.instance().file_server_root,
-            config.instance().file_server_deployments_folder,
+            config.instance.file_server_root,
+            config.instance.file_server_deployments_folder,
             deployment.id)
         if os.path.exists(deployment_folder):
             shutil.rmtree(deployment_folder)
@@ -1286,7 +1286,7 @@ class ProviderContext(SecuredResource):
             raise manager_exceptions.ResolverInstantiationError(str(ex))
 
 
-class Version(Resource):
+class Version(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.Version,
@@ -1356,14 +1356,4 @@ class Tokens(SecuredResource):
         """
         Get authentication token
         """
-        if not app.config.get(SECURED_MODE):
-            raise manager_exceptions.AppNotSecuredError(
-                'token generation not supported, application is not secured')
-
-        if not hasattr(app, 'auth_token_generator'):
-            raise manager_exceptions.NoTokenGeneratorError(
-                'token generation not supported, an auth token generator was '
-                'not registered')
-
-        token = app.auth_token_generator.generate_auth_token()
-        return dict(value=token)
+        return dict(value=current_user.get_auth_token())

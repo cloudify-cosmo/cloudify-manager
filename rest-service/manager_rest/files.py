@@ -32,7 +32,7 @@ from manager_rest import config, chunked, manager_exceptions
 class UploadedDataManager(object):
 
     def receive_uploaded_data(self, data_id):
-        file_server_root = config.instance().file_server_root
+        file_server_root = config.instance.file_server_root
         resource_target_path = tempfile.mktemp(dir=file_server_root)
         try:
             additional_inputs = self._save_file_locally_and_extract_inputs(

@@ -18,6 +18,7 @@ from nose.plugins.attrib import attr
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
+from manager_rest.storage.manager_elasticsearch import ManagerElasticsearch
 
 
 @attr(client_min_version=1, client_max_version=1)
@@ -35,33 +36,35 @@ class TestResourceListV1(BaseListTest):
         self.sec_blueprint_id = 'test1_blueprint'
         self.sec_deployment_id = 'test1_deployment'
 
-    def test_insecure_endpoints_disabled(self):
-        from manager_rest import config
+    def _mock_es_search(self, *args, **kwargs):
+        result = {
+            'hits': {
+                'total': 10,
+                'hits': [{'_source': {k: k}} for k in range(1, 6)]
+            }
+        }
+        return result
 
-        def config_instance_dec(func):
-            def instance(*args, **kwargs):
-                new_instance = func(*args, **kwargs)
-                new_instance.insecure_endpoints_disabled = True
-                return new_instance
-            return instance
-        # store original function before decorating it
-        original_instance_func = config.instance
-
-        config.instance = config_instance_dec(config.instance)
+    def test_insecure_endpoints_disabled_by_default(self):
         try:
             self.client.events.get(execution_id='111')
-            self.fail()
         except CloudifyClientError, e:
-            self.assertEqual(405, e.status_code)
+            self.assertEquals(405, e.status_code)
+
+    def test_insecure_endpoints_enabled(self):
+        ManagerElasticsearch.search_events = self._mock_es_search
+        from manager_rest.config import instance
+        try:
+            instance.insecure_endpoints_disabled = False
+            result = self.client.events.get(execution_id='111')
         finally:
-            # restore original function
-            config.instance = original_instance_func
+            # restore original value
+            instance.insecure_endpoints_disabled = True
 
-    def test_insecure_endpoints_enabled_by_default(self):
-        try:
-            self.client.events.get(execution_id='111')
-        except CloudifyClientError, e:
-            self.assertNotEquals(405, e.status_code)
+        self.assertEqual(
+            result,
+            ([{u'1': 1}, {u'2': 2}, {u'3': 3}, {u'4': 4}, {u'5': 5}], 10)
+        )
 
     def test_blueprints_list_no_params(self):
         response = self.client.blueprints.list()

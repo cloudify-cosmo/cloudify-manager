@@ -37,6 +37,8 @@ from cloudify_cli import env as cli_env
 from cloudify_rest_client import CloudifyClient
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
+
+from manager_rest.utils import create_auth_header
 from manager_rest.storage import get_storage_manager
 
 from integration_tests import constants
@@ -51,6 +53,8 @@ PROVIDER_CONTEXT = {
     }
 }
 PROVIDER_NAME = 'integration_tests'
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD = 'admin'
 
 logger = setup_logger('testenv.utils')
 
@@ -73,44 +77,23 @@ def get_manager_ip():
     return os.environ[constants.DOCL_CONTAINER_IP]
 
 
-def create_rest_client(username=None,
-                       password=None,
-                       token=None,
-                       rest_port=None,
-                       rest_protocol=None,
-                       cert_path=None,
-                       trust_all=None):
-    rest_port = rest_port or os.environ.get(
-        constants.CLOUDIFY_REST_PORT, 80)
-    rest_protocol = rest_protocol or ('https' if rest_port == '443' else
-                                      'http')
-    if username is False:
-        username = None
-    elif username is None:
-        username = cli_env.get_username()
+def create_rest_client(**kwargs):
+    # Doing it with kwargs instead of arguments with default values to allow
+    # not passing args (which will then use the default values), or explicitly
+    # passing None (or False) which will then be passed as-is to the Client
 
-    if password is False:
-        password = None
-    elif password is None:
-        password = password or cli_env.get_password()
+    # Default values from the inputs (the manager is "secured" by default)
+    username = kwargs.get('username', ADMIN_USERNAME)
+    password = kwargs.get('password', ADMIN_PASSWORD)
+    token = kwargs.get('token')
+    rest_port = kwargs.get('rest_port',
+                           os.environ.get(constants.CLOUDIFY_REST_PORT, 80))
+    rest_protocol = kwargs.get('rest_protocol',
+                               'https' if rest_port == '443' else 'http')
+    cert_path = kwargs.get('cert_path', cli_env.get_ssl_cert())
+    trust_all = kwargs.get('trust_all', cli_env.get_ssl_trust_all())
 
-    headers = None
-    if (username is not None and password is not None) or (token is not None):
-        if token is not None:
-            headers = {'Authentication-Token': token}
-        else:
-            credentials = '{0}:{1}'.format(username, password)
-            headers = {'Authorization':
-                       'Basic {0}'.format(
-                           cli_env.urlsafe_b64encode(credentials))}
-
-    if cert_path is False:
-        cert_path = None
-    elif cert_path is None:
-        cert_path = cert_path or cli_env.get_ssl_cert()
-
-    if trust_all is None:
-        trust_all = cli_env.get_ssl_trust_all()
+    headers = create_auth_header(username, password, token)
 
     return CloudifyClient(
         host=get_manager_ip(),

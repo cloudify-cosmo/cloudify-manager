@@ -14,14 +14,12 @@
 #    * limitations under the License.
 #
 
+import sh
 import os
 from contextlib import contextmanager
 
-import sh
-
+from .test_base import TestSecuredRestBase
 from integration_tests.utils import get_resource as resource
-from integration_tests.tests.manager_tests.test_secured_rest_base import (
-    TestSecuredRestBase)
 
 RUNNING_EXECUTIONS_MESSAGE = 'There are running executions for this deployment'
 
@@ -288,7 +286,7 @@ class AuthorizationTest(TestSecuredRestBase):
     def _assert_unauthorized(self, method, *args, **kwargs):
         with self.assertRaises(sh.ErrorReturnCode) as c:
             method(*args, **kwargs)
-        self.assertIn('401: user unauthorized', c.exception.stdout)
+        self.assertIn('401: User unauthorized', c.exception.stdout)
 
     @contextmanager
     def _login_cli(self, username=None, password=None):
@@ -303,35 +301,3 @@ class AuthorizationTest(TestSecuredRestBase):
         finally:
             os.environ['CLOUDIFY_USERNAME'] = prev_username
             os.environ['CLOUDIFY_PASSWORD'] = prev_password
-
-    def get_username(self):
-        return self.admin_username
-
-    def get_password(self):
-        return self.admin_password
-
-    def get_userstore_driver(self):
-        implementation = 'flask_securest.userstores.simple:SimpleUserstore'
-        users = [{'username': self.admin_username,
-                  'password': self.admin_password,
-                  'groups': ['cfy_admins']},
-                 {'username': self.deployer_username,
-                  'password': self.deployer_password,
-                  'groups': ['managers', 'users']},
-                 {'username': self.viewer_username,
-                  'password': self.viewer_password,
-                  'groups': ['users'],
-                  'roles': ['viewer']},
-                 {'username': self.no_role_username,
-                  'password': self.no_role_password,
-                  'groups': ['users']}]
-        groups = [{'name': 'cfy_admins',
-                   'roles': ['administrator']},
-                  {'name': 'managers',
-                   'roles': ['deployer', 'viewer']},
-                  {'name': 'users',
-                   'roles': []}]
-        return {
-            'implementation': implementation,
-            'properties': {'userstore': {'users': users,
-                                         'groups': groups}}}

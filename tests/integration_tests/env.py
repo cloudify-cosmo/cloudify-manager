@@ -272,7 +272,8 @@ class ManagerTestEnvironment(AgentTestEnvironment):
         logger.info('Bootstrapping manager on a new container')
         test_manager_blueprint_path = None
         if modify_blueprint_func:
-            self._handle_modify_blueprint_func(modify_blueprint_func)
+            test_manager_blueprint_path = \
+                self._handle_modify_blueprint_func(modify_blueprint_func)
         with self.update_config(
                 manager_blueprint_path=test_manager_blueprint_path,
                 additional_exposed_ports=additional_exposed_ports):
@@ -294,6 +295,7 @@ class ManagerTestEnvironment(AgentTestEnvironment):
             os.path.basename(manager_blueprint_path))
         with utils.YamlPatcher(test_manager_blueprint_path) as patcher:
             modify_blueprint_func(patcher, test_manager_blueprint_dir)
+        return test_manager_blueprint_path
 
     def clean_manager(self, label=None, clean_tag=False):
         docl.clean(label=[self.env_label] + list((label or [])))

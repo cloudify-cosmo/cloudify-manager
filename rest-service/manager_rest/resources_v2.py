@@ -25,7 +25,6 @@ from uuid import uuid4
 from flask import request
 from flask.ext.restful import marshal
 from flask_restful_swagger import swagger
-from flask_securest.rest_security import SecuredResource
 
 from manager_rest import config
 from manager_rest import files
@@ -34,6 +33,7 @@ from manager_rest import resources
 from manager_rest import responses_v2
 from manager_rest import utils
 from manager_rest.storage import models
+from manager_rest.security import SecuredResource
 from manager_rest.blueprints_manager import get_blueprints_manager
 from manager_rest.storage import ListResult
 from manager_rest.storage import get_storage_manager
@@ -159,8 +159,8 @@ def create_filters(fields=None):
 
 def _get_snapshot_path(snapshot_id):
     return os.path.join(
-        config.instance().file_server_root,
-        config.instance().file_server_snapshots_folder,
+        config.instance.file_server_root,
+        config.instance.file_server_snapshots_folder,
         snapshot_id
     )
 
@@ -174,7 +174,7 @@ class UploadedSnapshotsManager(files.UploadedDataManager):
         return 'snapshot_archive_url'
 
     def _get_target_dir_path(self):
-        return config.instance().file_server_snapshots_folder
+        return config.instance.file_server_snapshots_folder
 
     def _get_archive_type(self, archive_path):
         return 'zip'
@@ -332,8 +332,8 @@ class SnapshotsIdArchive(SecuredResource):
         )
 
         snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
-            config.instance().file_server_resources_uri,
-            config.instance().file_server_snapshots_folder,
+            config.instance.file_server_resources_uri,
+            config.instance.file_server_snapshots_folder,
             snapshot_id
         )
 
@@ -722,7 +722,7 @@ class UploadedPluginsManager(files.UploadedDataManager):
         return 'plugin_archive_url'
 
     def _get_target_dir_path(self):
-        return config.instance().file_server_uploaded_plugins_folder
+        return config.instance.file_server_uploaded_plugins_folder
 
     def _get_archive_type(self, archive_path):
         return 'tar.gz'
@@ -833,7 +833,7 @@ class PluginsArchive(SecuredResource):
                                "Plugin ID: {0}".format(plugin_id))
 
         plugin_path = '{0}/{1}/{2}/{3}'.format(
-            config.instance().file_server_resources_uri,
+            config.instance.file_server_resources_uri,
             'plugins',
             plugin_id,
             archive_name)

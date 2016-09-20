@@ -32,23 +32,23 @@ class CeleryClient(object):
 
     def __init__(self):
         ssl_settings = self._get_broker_ssl_settings(
-            ssl_enabled=config.instance().amqp_ssl_enabled,
-            cert_path=config.instance().amqp_ca_path,
+            ssl_enabled=config.instance.amqp_ssl_enabled,
+            cert_path=config.instance.amqp_ca_path,
         )
 
         # Port not required as currently the address is provided with port and
         # vhost included.
         amqp_uri = 'amqp://{username}:{password}@{address}'.format(
-            address=config.instance().amqp_address,
-            username=config.instance().amqp_username,
-            password=config.instance().amqp_password,
+            address=config.instance.amqp_address,
+            username=config.instance.amqp_username,
+            password=config.instance.amqp_password,
         )
 
         self.celery = Celery(broker=amqp_uri, backend=amqp_uri)
         self.celery.conf.update(
             CELERY_TASK_SERIALIZER="json",
             CELERY_TASK_RESULT_EXPIRES=600)
-        if config.instance().amqp_ssl_enabled:
+        if config.instance.amqp_ssl_enabled:
             self.celery.conf.update(BROKER_USE_SSL=ssl_settings)
 
     def close(self):
@@ -114,7 +114,7 @@ class CeleryClient(object):
 
 
 def get_client():
-    if config.instance().test_mode:
+    if config.instance.test_mode:
         from test.mocks import MockCeleryClient
         return MockCeleryClient()
     else:
