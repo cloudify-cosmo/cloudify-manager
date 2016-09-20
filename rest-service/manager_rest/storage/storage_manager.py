@@ -14,9 +14,7 @@
 #  * limitations under the License.
 
 import uuid
-from functools import wraps
 from flask import current_app
-from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 
 from manager_rest import manager_exceptions
@@ -34,45 +32,10 @@ from manager_rest.storage.models import (Blueprint,
                                          Plugin)
 
 PROVIDER_CONTEXT_ID = 'CONTEXT'
-TABLE_LOCK_STR = 'LOCK TABLE {0} IN ACCESS EXCLUSIVE MODE;'
-
-
-def _close_session(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        finally:
-            db.session.close()
-            db.engine.dispose()
-    return wrapper
-
-
-@contextmanager
-def _lock_table(table_class):
-    """Use optimistic lock to lock out a postgres table table
-
-    :param table_class: The SQLAlchemy class
-    """
-    sql_connection_str = current_app.config.get('SQLALCHEMY_DATABASE_URI')
-    sql_dialect = sql_connection_str.split(':')[0]
-
-    # Locking is only relevant for PostgreSQL
-    if 'postgresql' in sql_dialect:
-        table_name = table_class.__tablename__
-        db.session.begin_nested()  # Start nested transaction
-        db.session.execute(TABLE_LOCK_STR.format(table_name))
-        try:
-            yield
-        finally:
-            db.session.commit()  # Commit the nested transaction
-    else:
-        yield
 
 
 class SQLStorageManager(object):
     @staticmethod
-    @_close_session
     def _safe_commit(exception=None):
         """Try to commit changes in the session. Roll back if exception raised
 
@@ -81,8 +44,6 @@ class SQLStorageManager(object):
         one raised by SQLAlchemy
         """
         try:
-            db.session.flush()
-            db.session.expunge_all()
             db.session.commit()
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -199,16 +160,19 @@ class SQLStorageManager(object):
         query = self._sort_query(query, model_class, sort)
         return query
 
-    @_close_session
     def _get_by_id(self,
                    model_class,
                    element_id,
                    include=None,
-                   filters=None):
+                   filters=None,
+                   locking=False):
         """Return a single result based on the model class and element ID
         """
         filters = filters or {'id': element_id}
-        result = self._get_query(model_class, include, filters).first()
+        query = self._get_query(model_class, include, filters)
+        if locking:
+            query = query.with_for_update()
+        result = query.first()
 
         if not result:
             raise manager_exceptions.NotFoundError(
@@ -239,7 +203,6 @@ class SQLStorageManager(object):
             results = query.all()
             return results, len(results), 0, 0
 
-    @_close_session
     def _list_results(self,
                       model_class,
                       include=None,
@@ -278,7 +241,7 @@ class SQLStorageManager(object):
                 )
             )
 
-    def _create_model(self, model_class, model):
+    def _create_model(self, model_class, model, add_tenant=False):
         """Create a `model_class` instance from a serializable `model` object
 
         :param model_class: SQL DB table class
@@ -287,6 +250,8 @@ class SQLStorageManager(object):
         :return: An instance of `model_class`
         """
         instance = self._get_instance(model_class, model)
+        if add_tenant:
+            instance.tenant_id = _get_current_tenant_id()
         return self._safe_add(instance)
 
     def _delete_instance_by_id(self, model_class, element_id, filters=None):
@@ -401,18 +366,16 @@ class SQLStorageManager(object):
         )
 
     def list_blueprint_deployments(self, blueprint_id, include=None):
-        # TODO: Should probably be done this way (doesn't work with
-        # closed session)
-        # blueprint = self._get_by_id(Blueprint, blueprint_id, include)
-        # return ListResult(items=blueprint.deployments, metadata={})
+        blueprint = self._get_by_id(Blueprint, blueprint_id, include)
+        return ListResult(items=blueprint.deployments, metadata={})
 
-        return self.list_deployments(
-            include=include,
-            filters={'blueprint_id': blueprint_id}
+    def get_node_instance(self, node_instance_id, include=None, locking=False):
+        return self._get_by_id(
+            NodeInstance,
+            node_instance_id,
+            include,
+            locking=locking
         )
-
-    def get_node_instance(self, node_instance_id, include=None):
-        return self._get_by_id(NodeInstance, node_instance_id, include)
 
     def get_provider_context(self, include=None):
         return self._get_by_id(ProviderContext, PROVIDER_CONTEXT_ID, include)
@@ -448,19 +411,19 @@ class SQLStorageManager(object):
         return self._get_by_id(DeploymentUpdate, deployment_update_id, include)
 
     def put_blueprint(self, blueprint):
-        return self._create_model(Blueprint, blueprint)
+        return self._create_model(Blueprint, blueprint, add_tenant=True)
 
     def put_snapshot(self, snapshot):
-        return self._create_model(Snapshot, snapshot)
+        return self._create_model(Snapshot, snapshot, add_tenant=True)
 
     def put_deployment(self, deployment):
         return self._create_model(Deployment, deployment)
 
     def put_execution(self, execution):
-        return self._create_model(Execution, execution)
+        return self._create_model(Execution, execution, add_tenant=True)
 
     def put_plugin(self, plugin):
-        return self._create_model(Plugin, plugin)
+        return self._create_model(Plugin, plugin, add_tenant=True)
 
     def put_node(self, node):
         # Need to add the storage id separately - only used for relations
@@ -487,19 +450,14 @@ class SQLStorageManager(object):
         )
         return self._create_model(DeploymentUpdate, deployment_update)
 
-    def put_deployment_update_step(self, deployment_update_id, step):
-        deployment_update = self._get_by_id(
-            DeploymentUpdate,
-            deployment_update_id
-        )
-
-        deployment_update.steps += [DeploymentUpdateStep(**step.to_dict())]
-        return self._safe_add(deployment_update)
+    def put_deployment_update_step(self, step):
+        return self._safe_add(step)
 
     def put_provider_context(self, provider_context):
         # The ID is always the same, and only the name changes
         instance = self._get_instance(ProviderContext, provider_context)
         instance.id = PROVIDER_CONTEXT_ID
+        instance.tenant_id = _get_current_tenant_id()
         return self._safe_add(instance)
 
     def put_deployment_modification(self, modification):
@@ -530,6 +488,9 @@ class SQLStorageManager(object):
     def delete_node_instance(self, node_instance_id):
         return self._delete_instance_by_id(NodeInstance, node_instance_id)
 
+    def delete_deployment_update_step(self, step_id):
+        return self._delete_instance_by_id(DeploymentUpdateStep, step_id)
+
     def update_entity(self, entity):
         return self._safe_add(entity)
 
@@ -546,17 +507,8 @@ class SQLStorageManager(object):
         return self._safe_add(provider_context_instance)
 
     def update_node_instance(self, node_instance):
-        with _lock_table(NodeInstance):
-            current = self.get_node_instance(node_instance.id)
-            if current.version != node_instance.version:
-                raise manager_exceptions.ConflictError(
-                    'Node instance update conflict for node instance {0} '
-                    '[current_version={1}, updated_version={2}]'.format(
-                            current.id, current.version, node_instance.version)
-                )
-
-            node_instance.version += 1
-            return self._safe_add(node_instance)
+        node_instance.version += 1
+        return self._safe_add(node_instance)
 
     @staticmethod
     def _storage_node_id(deployment_id, node_id):
@@ -573,6 +525,10 @@ def get_storage_manager():
     return manager
 
 
+def _get_current_tenant_id():
+    return current_app.config.get('tenant')
+
+
 class ListResult(object):
     """
     a ListResult contains results about the requested items.
@@ -580,3 +536,12 @@ class ListResult(object):
     def __init__(self, items, metadata):
         self.items = items
         self.metadata = metadata
+
+    def __len__(self):
+        return len(self.items)
+
+    def __iter__(self):
+        return iter(self.items)
+
+    def __getitem__(self, item):
+        return self.items[item]

@@ -339,7 +339,6 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                 deployment_plan={'name': 'my-bp'},
                 state='staged',
                 id='depup-id',
-                steps=[],
                 deployment_update_nodes=None,
                 deployment_update_node_instances=None,
                 deployment_update_deployment=None,

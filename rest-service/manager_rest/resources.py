@@ -1073,7 +1073,10 @@ class NodeInstancesId(SecuredResource):
         # had version=0 by default
         version = request.json['version'] or 1
 
-        instance = get_storage_manager().get_node_instance(node_instance_id)
+        instance = get_storage_manager().get_node_instance(
+            node_instance_id,
+            locking=True
+        )
         # Only update if new values were included in the request
         instance.runtime_properties = request.json.get(
             'runtime_properties',

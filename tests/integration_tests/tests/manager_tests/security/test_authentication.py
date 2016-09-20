@@ -14,7 +14,7 @@
 #    * limitations under the License.
 
 
-from integration_tests import utils
+from integration_tests.framework import utils
 from .test_base import TestAuthenticationBase
 
 

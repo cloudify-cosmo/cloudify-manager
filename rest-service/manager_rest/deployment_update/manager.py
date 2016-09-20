@@ -148,23 +148,13 @@ class DeploymentUpdateManager(object):
         :param entity_id:
         :return:
         """
-        step = models.DeploymentUpdateStep(action,
-                                           entity_type,
-                                           entity_id)
-        dep_update = self.get_deployment_update(deployment_update_id)
-
-        self._step_validator.validate(dep_update, step)
-
-        self.sm.put_deployment_update_step(deployment_update_id, step)
-        return step
-
-    @staticmethod
-    def convert_step_to_model_step(step):
-        return models.DeploymentUpdateStep(
-            action=step.action,
-            entity_type=step.entity_type,
-            entity_id=step.entity_id
+        step = models.DeploymentUpdateStep(
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            deployment_update_id=deployment_update_id
         )
+        return self.sm.put_deployment_update_step(step)
 
     def extract_steps_from_deployment_update(self, deployment_update_id):
 
@@ -174,11 +164,13 @@ class DeploymentUpdateManager(object):
             step_extractor.extract_steps(deployment_update)
 
         if not unsupported_steps:
-            deployment_update.steps = [
-                self.convert_step_to_model_step(step)
-                for step in supported_steps]
-
-            self.sm.update_entity(deployment_update)
+            for step in supported_steps:
+                self.create_deployment_update_step(
+                    deployment_update_id=deployment_update.id,
+                    action=step.action,
+                    entity_type=step.entity_type,
+                    entity_id=step.entity_id,
+                )
 
         # if there are unsupported steps, raise an exception telling the user
         # about these unsupported steps

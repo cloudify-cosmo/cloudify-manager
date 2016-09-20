@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from integration_tests import env
+from integration_tests.framework import env
 
 
 def setup_package():

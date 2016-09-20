@@ -57,6 +57,8 @@ class Config(object):
         self.insecure_endpoints_disabled = True
         self.security_rest_username = None
         self.security_rest_password = None
+        self.broker_ssl_cert_path = None
+        self.agent_rest_cert_path = None
 
         self.warnings = []
 

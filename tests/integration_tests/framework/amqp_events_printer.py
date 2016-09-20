@@ -18,7 +18,7 @@ import os
 import sys
 import threading
 
-import pika.exceptions
+from pika.exceptions import ConnectionClosed
 
 import cloudify.event
 import cloudify.logs
@@ -76,5 +76,5 @@ class EventsPrinter(threading.Thread):
         channel.basic_consume(callback, queue=queues[1], no_ack=True)
         try:
             channel.start_consuming()
-        except pika.exceptions.ConnectionClosed:
+        except ConnectionClosed:
             pass
