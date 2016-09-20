@@ -19,7 +19,7 @@ from nose.plugins.attrib import attr
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
-from manager_rest.storage import storage_manager
+from manager_rest.storage import get_storage_manager
 from manager_rest.storage.models import Deployment, Node, NodeInstance
 
 
@@ -238,7 +238,7 @@ class NodesTest(base_test.BaseServerTestCase):
         """A conflict inside the storage manager propagates to the client."""
         # patch the storage manager .update_node_instance method to throw an
         # error - remember to revert it after the test
-        sm = storage_manager.get_storage_manager()
+        sm = get_storage_manager()
 
         def _revert_update_node_func(sm, func):
             sm.update_node_instance = func
@@ -378,7 +378,7 @@ class NodesTest(base_test.BaseServerTestCase):
                           version=None):
         runtime_properties = runtime_properties or {}
 
-        sm = storage_manager.get_storage_manager()
+        sm = get_storage_manager()
         self._add_deployment_if_not_exists(sm, deployment_id)
         self._add_node_if_not_exists(sm, node_id, deployment_id)
         sm.put_node_instance(

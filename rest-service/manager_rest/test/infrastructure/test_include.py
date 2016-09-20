@@ -19,7 +19,7 @@ import mock
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
-from manager_rest.storage.storage_manager import ListResult
+from manager_rest.storage import ListResult
 from cloudify_rest_client.exceptions import NoSuchIncludeFieldError
 
 

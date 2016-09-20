@@ -30,7 +30,7 @@ from manager_rest import app_context
 from manager_rest import config
 from manager_rest import utils
 from manager_rest import manager_exceptions
-from manager_rest.storage import storage_manager, models
+from manager_rest.storage import get_storage_manager, models
 from manager_rest import workflow_client as wf_client
 
 
@@ -47,7 +47,7 @@ class BlueprintAlreadyExistsException(Exception):
 class BlueprintsManager(object):
 
     def __init__(self):
-        self.sm = storage_manager.get_storage_manager()
+        self.sm = get_storage_manager()
         self.workflow_client = wf_client.get_workflow_client()
 
     def list_executions(self, include=None, is_include_system_workflows=False,

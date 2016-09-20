@@ -1,5 +1,5 @@
 import utils
-from manager_rest.storage import storage_manager
+from manager_rest.storage import get_storage_manager
 from constants import ENTITY_TYPES
 
 
@@ -39,7 +39,7 @@ class EntityContextBase(object):
     PLUGINS = 'plugins'
 
     def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
-        self.sm = storage_manager.get_storage_manager()
+        self.sm = get_storage_manager()
         self._deployment_id = deployment_id
         self._entity_type = entity_type
         self._top_level_entity_id = top_level_entity_id

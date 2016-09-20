@@ -21,7 +21,7 @@ from flask import current_app
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 from manager_rest import app_context, config, manager_exceptions
-from manager_rest.storage import storage_manager, models
+from manager_rest.storage import get_storage_manager, models
 import manager_rest.workflow_client as wf_client
 from manager_rest import utils
 from manager_rest.blueprints_manager import BlueprintsManager
@@ -43,7 +43,7 @@ from manager_rest.deployment_update.handlers import (
 class DeploymentUpdateManager(object):
 
     def __init__(self):
-        self.sm = storage_manager.get_storage_manager()
+        self.sm = get_storage_manager()
         self.workflow_client = wf_client.get_workflow_client()
         self._node_handler = DeploymentUpdateNodeHandler()
         self._node_instance_handler = DeploymentUpdateNodeInstanceHandler()

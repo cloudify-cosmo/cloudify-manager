@@ -1,12 +1,12 @@
 from flask import current_app
 
 from dsl_parser import constants
-from manager_rest.storage import storage_manager
+from manager_rest.storage import get_storage_manager
 from dsl_parser import utils as dsl_parser_utils
 
 
 def get_parser_context(sm=None):
-    sm = sm or storage_manager.get_storage_manager()
+    sm = sm or get_storage_manager()
     if not hasattr(current_app, 'parser_context'):
         update_parser_context(sm.get_provider_context().context)
     return current_app.parser_context
