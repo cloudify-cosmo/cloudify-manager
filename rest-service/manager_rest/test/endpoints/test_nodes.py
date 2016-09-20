@@ -15,6 +15,7 @@
 from datetime import datetime
 
 from nose.plugins.attrib import attr
+from unittest import skip
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
@@ -127,6 +128,7 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEqual('ddd', response.json['runtime_properties']['ccc'])
         self.assertEqual('b-state', response.json['state'])
 
+    @skip('Deprecated since using sqlalchemy locking mechanism')
     def test_old_version(self):
         """Can't update a node instance passing new version != old version."""
         node_instance_id = '1234'
@@ -141,7 +143,7 @@ class NodesTest(base_test.BaseServerTestCase):
         with self.assertRaises(CloudifyClientError) as cm:
             self.client.node_instances.update(
                 node_instance_id,
-                version=-1,
+                version=2,  # Expecting version==1
                 runtime_properties={'key': 'new value'})
         self.assertEqual(cm.exception.status_code, 409)
 

@@ -47,7 +47,12 @@ class UTCDateTime(db.TypeDecorator):
             return value
 
 
-def _foreign_key_column(parent_table, id_col_name='id', nullable=False):
+def _foreign_key_column(
+        parent_table,
+        id_col_name='id',
+        nullable=False,
+        column_type=db.Text
+):
     """Return a ForeignKey object with the relevant
 
     :param parent_table: SQL name of the parent table
@@ -56,7 +61,7 @@ def _foreign_key_column(parent_table, id_col_name='id', nullable=False):
     :return:
     """
     return db.Column(
-        db.Text,
+        column_type,
         db.ForeignKey(
             '{0}.{1}'.format(parent_table.__tablename__, id_col_name),
             ondelete='CASCADE'
@@ -102,25 +107,31 @@ def _relationship(
 class SerializableBase(db.Model):
     """Abstract base class for all SQL models that allows [de]serialization
     """
-    # A list of columns that shouldn't be serialized
-    __hidden__ = ()
-
     # SQLAlchemy syntax
     __abstract__ = True
 
+    # A list of columns that shouldn't be serialized
+    _private_fields = ['tenant_id']
+
     def to_dict(self):
-        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        res = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        for field in self._private_fields:
+            if field in res:
+                del res[field]
+        return res
 
     def to_json(self):
         return jsonpickle.encode(self.to_dict(), unpicklable=False)
 
     @classproperty
-    def fields(self):
+    def fields(cls):
         """Return the list of field names for this table
 
         Mostly for backwards compatibility in the code (that uses `fields`)
         """
-        return self.__table__.columns.keys()
+        fields = cls.__table__.columns.keys()
+        fields = [f for f in fields if f not in cls._private_fields]
+        return fields
 
     def __str__(self):
         return '<{0} id=`{1}`>'.format(self.__class__.__name__, self.id)
@@ -132,6 +143,13 @@ class SerializableBase(db.Model):
         return str(self)
 
 
+class Tenant(SerializableBase):
+    __tablename__ = 'tenants'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Text, unique=True, index=True)
+
+
 class Blueprint(SerializableBase):
     __tablename__ = 'blueprints'
 
@@ -141,6 +159,14 @@ class Blueprint(SerializableBase):
     description = db.Column(db.Text, nullable=True)
     main_file_name = db.Column(db.Text, nullable=False)
     plan = db.Column(db.PickleType, nullable=False)
+    tenant_id = _foreign_key_column(Tenant, column_type=db.Integer)
+
+    tenant = _relationship(
+        child_class_name='Blueprint',
+        column_name='tenant_id',
+        parent_class_name='Tenant',
+        child_table_name='blueprints'
+    )
 
 
 class Snapshot(SerializableBase):
@@ -158,6 +184,14 @@ class Snapshot(SerializableBase):
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     status = db.Column(db.Enum(*STATES, name='snapshot_status'))
     error = db.Column(db.Text, nullable=True)
+    tenant_id = _foreign_key_column(Tenant, column_type=db.Integer)
+
+    tenant = _relationship(
+        child_class_name='Snapshot',
+        column_name='tenant_id',
+        parent_class_name='Tenant',
+        child_table_name='snapshots'
+    )
 
 
 class Deployment(SerializableBase):
@@ -183,6 +217,10 @@ class Deployment(SerializableBase):
         parent_class_name='Blueprint',
         child_table_name='deployments'
     )
+
+    @property
+    def tenant(self):
+        return self.blueprint.tenant
 
 
 class Execution(SerializableBase):
@@ -210,6 +248,7 @@ class Execution(SerializableBase):
     error = db.Column(db.Text, nullable=True)
     parameters = db.Column(db.PickleType, nullable=True)
     is_system_workflow = db.Column(db.Boolean, nullable=False)
+    tenant_id = _foreign_key_column(Tenant, column_type=db.Integer)
 
     blueprint = _relationship(
         child_class_name='Execution',
@@ -224,14 +263,12 @@ class Execution(SerializableBase):
         child_table_name='executions'
     )
 
-
-class DeploymentUpdateStep(SerializableBase):
-    __tablename__ = 'deployment_update_steps'
-
-    id = db.Column(db.Text, primary_key=True, index=True)
-    action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
-    entity_type = db.Column(db.Enum(*ENTITY_TYPES, name='entity_type'))
-    entity_id = db.Column(db.Text, nullable=False)
+    tenant = _relationship(
+        child_class_name='Execution',
+        column_name='tenant_id',
+        parent_class_name='Tenant',
+        child_table_name='executions'
+    )
 
 
 class DeploymentUpdate(SerializableBase):
@@ -241,7 +278,6 @@ class DeploymentUpdate(SerializableBase):
     deployment_id = _foreign_key_column(Deployment)
     deployment_plan = db.Column(db.PickleType, nullable=True)
     state = db.Column(db.Text, nullable=True)
-    steps = db.Column(db.PickleType, nullable=True)
     deployment_update_nodes = db.Column(db.PickleType, nullable=True)
     deployment_update_node_instances = db.Column(db.PickleType, nullable=True)
     deployment_update_deployment = db.Column(db.PickleType, nullable=True)
@@ -265,9 +301,33 @@ class DeploymentUpdate(SerializableBase):
     def to_dict(self):
         dep_update_dict = super(DeploymentUpdate, self).to_dict()
         # Taking care of the fact the DeploymentSteps are objects
-        dep_update_dict['steps'] = \
-            [step.to_dict() for step in dep_update_dict['steps']]
+        dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
         return dep_update_dict
+
+    @property
+    def tenant(self):
+        return self.deployment.tenant
+
+
+class DeploymentUpdateStep(SerializableBase):
+    __tablename__ = 'deployment_update_steps'
+
+    id = db.Column(db.Integer, primary_key=True)
+    action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
+    entity_type = db.Column(db.Enum(*ENTITY_TYPES, name='entity_type'))
+    entity_id = db.Column(db.Text, nullable=False)
+    deployment_update_id = _foreign_key_column(DeploymentUpdate)
+
+    deployment_update = _relationship(
+        child_class_name='DeploymentUpdateStep',
+        column_name='deployment_update_id',
+        parent_class_name='DeploymentUpdate',
+        child_table_name='steps'
+    )
+
+    @property
+    def tenant(self):
+        return self.deployment_update.tenant
 
 
 class DeploymentModification(SerializableBase):
@@ -296,9 +356,15 @@ class DeploymentModification(SerializableBase):
         child_table_name='deployment_modifications'
     )
 
+    @property
+    def tenant(self):
+        return self.deployment.tenant
+
 
 class Node(SerializableBase):
     __tablename__ = 'nodes'
+
+    _private_fields = ['tenant_id', 'storage_id']
 
     storage_id = db.Column(db.Text, primary_key=True, index=True)
     id = db.Column(db.Text, nullable=False)
@@ -333,21 +399,15 @@ class Node(SerializableBase):
         child_table_name='nodes'
     )
 
-    def to_dict(self):
-        node_dict = super(Node, self).to_dict()
-        # Internal field that shouldn't be sent to users
-        del node_dict['storage_id']
-        return node_dict
-
-    @classproperty
-    def fields(self):
-        fields = super(Node, self).fields
-        fields.remove('storage_id')
-        return fields
+    @property
+    def tenant(self):
+        return self.deployment.tenant
 
 
 class NodeInstance(SerializableBase):
     __tablename__ = 'node_instances'
+
+    _private_fields = ['tenant_id', 'node_storage_id']
 
     id = db.Column(db.Text, primary_key=True, index=True)
     node_storage_id = _foreign_key_column(Node, 'storage_id')
@@ -376,17 +436,9 @@ class NodeInstance(SerializableBase):
         child_table_name='node_instances'
     )
 
-    def to_dict(self):
-        node_instance_dict = super(NodeInstance, self).to_dict()
-        # Internal field that shouldn't be sent to users
-        del node_instance_dict['node_storage_id']
-        return node_instance_dict
-
-    @classproperty
-    def fields(self):
-        fields = super(NodeInstance, self).fields
-        fields.remove('node_storage_id')
-        return fields
+    @property
+    def tenant(self):
+        return self.deployment.tenant
 
 
 class ProviderContext(SerializableBase):
@@ -395,6 +447,14 @@ class ProviderContext(SerializableBase):
     id = db.Column(db.Text, primary_key=True)
     name = db.Column(db.Text, nullable=False)
     context = db.Column(db.PickleType, nullable=False)
+    tenant_id = _foreign_key_column(Tenant, column_type=db.Integer)
+
+    tenant = _relationship(
+        child_class_name='ProviderContext',
+        column_name='tenant_id',
+        parent_class_name='Tenant',
+        child_table_name='provider_context'
+    )
 
 
 class Plugin(SerializableBase):
@@ -413,3 +473,11 @@ class Plugin(SerializableBase):
     excluded_wheels = db.Column(db.PickleType, nullable=True)
     supported_py_versions = db.Column(db.PickleType, nullable=True)
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
+    tenant_id = _foreign_key_column(Tenant, column_type=db.Integer)
+
+    tenant = _relationship(
+        child_class_name='Plugin',
+        column_name='tenant_id',
+        parent_class_name='Tenant',
+        child_table_name='plugins'
+    )

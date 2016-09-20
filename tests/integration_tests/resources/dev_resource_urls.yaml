@@ -1,5 +1,5 @@
 cli_source_url: ''
-rest_service_source_url: ''
+rest_service_source_url: https://github.com/cloudify-cosmo/cloudify-manager/archive/CFY-5978-add-default-tenant.tar.gz
 dsl_parser_source_url: ''
 rest_client_source_url: ''
 plugins_common_source_url: ''

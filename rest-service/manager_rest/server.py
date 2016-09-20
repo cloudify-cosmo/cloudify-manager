@@ -53,7 +53,6 @@ class CloudifyFlaskApp(Flask):
         self._set_sql_alchemy()
         self._set_flask_security()
 
-        self.app_context().push()  # Set the app's context globally
         setup_resources(Api(self))
 
     def _set_flask_security(self):

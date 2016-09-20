@@ -764,7 +764,10 @@ class BlueprintsManager(object):
                         target_name, [])
                     new_relationships += new_relationship_groups.get(
                         target_name, [])
-                instance = self.sm.get_node_instance(node_instance['id'])
+                instance = self.sm.get_node_instance(
+                    node_instance['id'],
+                    locking=True
+                )
                 instance.relationships = deepcopy(new_relationships)
                 self.sm.update_node_instance(instance)
         self._create_deployment_node_instances(deployment_id,
@@ -803,11 +806,13 @@ class BlueprintsManager(object):
                 removed_relationship_target_ids = set(
                     [rel['target_id']
                      for rel in node_instance['relationships']])
-                current = self.sm.get_node_instance(node_instance['id'])
-                new_relationships = [rel for rel in current.relationships
+                instance = self.sm.get_node_instance(
+                    node_instance['id'],
+                    locking=True
+                )
+                new_relationships = [rel for rel in instance.relationships
                                      if rel['target_id']
                                      not in removed_relationship_target_ids]
-                instance = self.sm.get_node_instance(node_instance['id'])
                 instance.relationships = deepcopy(new_relationships)
                 self.sm.update_node_instance(instance)
 
