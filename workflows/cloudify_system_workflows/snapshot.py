@@ -42,6 +42,7 @@ from cloudify.utils import ManagerVersion
 
 from utils import DictToAttributes
 from postgres import Postgres
+from elasticsearchdump import ElasticSearchDump
 
 _METADATA_FILE = 'metadata.json'
 
@@ -353,28 +354,22 @@ def _assert_clean_postgres(log_warning=False):
                 "Snapshot restoration on a dirty manager is not permitted.")
 
 
-def _restore_postgres(tempdir, config):
-    ctx.logger.info('Restoring Postgres data')
-    postgres = Postgres(config)
-    client = get_rest_client()
-    existing_plugins = client.plugins.list().items
-    existing_plugins_archive_names = set(p.archive_name for p in
-                                         existing_plugins)
+def _clean_db_queries():
     delete_data_tables = ["DELETE FROM {0};".format(table)
                           for table in _CLOUDIFY_DATA_TABLES]
     delete_old_executions = ["DELETE FROM executions "
                              "WHERE id != '{0}';".format(ctx.execution_id)]
-    queries = delete_data_tables + delete_old_executions
+    return delete_data_tables + delete_old_executions
+
+
+def _restore_postgres(tempdir, config):
+    ctx.logger.info('Restoring Postgres data')
+    postgres = Postgres(config)
+    queries = _clean_db_queries()
     dump_file = os.path.join(tempdir, _POSTGRES_DUMP_FILENAME)
     dump_file = postgres.prepend_dump(dump_file, queries)
     postgres.restore(dump_file)
     ctx.logger.debug('Postgres restored')
-    all_plugins = client.plugins.list().items
-    plugins_to_install = filter(
-        lambda x: x.archive_name not in existing_plugins_archive_names,
-        all_plugins
-    )
-    return plugins_to_install
 
 
 def _restore_elasticsearch(tempdir, es, metadata, bulk_read_timeout):
@@ -519,17 +514,27 @@ def _restore_snapshot(config,
     # files/dirs copy
     utils.copy_data(tempdir, config, to_archive=False)
 
+    # existing plugins
+    existing_plugins_names = _existing_plugins_names()
+
     # elasticsearch (events)
     es = _create_es_client(config)
+
+    # postgres
+    if version_at_least_4:
+        _restore_postgres(tempdir, config)
+    else:
+        ctx.logger.info('Cleaning db before restore..')
+        postgres = Postgres(config)
+        for query in _clean_db_queries():
+            postgres.run_query(query)
+        ctx.logger.info('Restoring es data of version previous to 4')
+        ElasticSearchDump().restore_prev_4(tempdir)
 
     _restore_elasticsearch(tempdir, es, metadata,
                            elasticsearch_read_timeout)
 
-    plugins = []
-
-    # postgres
-    if version_at_least_4:
-        plugins = _restore_postgres(tempdir, config)
+    plugins = _plugins_to_install(existing_plugins_names)
 
     # influxdb
     _restore_influxdb_3_3(tempdir)
@@ -543,6 +548,26 @@ def _restore_snapshot(config,
     _restore_agents_data(tempdir)
 
     return plugins
+
+
+def _existing_plugins_names():
+    ctx.logger.info('Collecting existing plugins')
+    client = get_rest_client()
+    existing_plugins = client.plugins.list().items
+    return set(p.archive_name for p in existing_plugins)
+
+
+def _plugins_to_install(existing_plugins_names):
+    ctx.logger.info('Finding plugins to install')
+    client = get_rest_client()
+    all_plugins = client.plugins.list().items
+    plugins_to_install = filter(
+        lambda x: x.archive_name not in existing_plugins_names,
+        all_plugins
+    )
+    ctx.logger.info('Found {0} plugins to install'
+                    .format(len(plugins_to_install)))
+    return plugins_to_install
 
 
 def _restore_agents_data(tempdir):
