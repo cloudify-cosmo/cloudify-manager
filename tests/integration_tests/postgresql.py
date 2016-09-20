@@ -20,7 +20,7 @@ from contextlib import closing
 import pg8000
 
 from cloudify.utils import setup_logger
-from manager_rest.storage.models import db
+from manager_rest.storage import db
 
 from integration_tests import utils
 

@@ -1,4 +1,4 @@
-from manager_rest.storage import storage_manager
+from manager_rest.storage import get_storage_manager
 from manager_rest.deployment_update import utils
 from manager_rest.manager_exceptions import UnknownModificationStageError
 from manager_rest.deployment_update.constants import ENTITY_TYPES, ACTION_TYPES
@@ -13,7 +13,7 @@ NODE_ENTITY_LEN = 2
 
 class EntityValidatorBase(object):
     def __init__(self):
-        self.sm = storage_manager.get_storage_manager()
+        self.sm = get_storage_manager()
         self._validation_mapper = {
             ACTION_TYPES.ADD: self._validate_add,
             ACTION_TYPES.MODIFY: self._validate_modify,

@@ -20,7 +20,7 @@ from nose.plugins.attrib import attr
 from cloudify_rest_client import exceptions
 from manager_rest.test import base_test
 from manager_rest import utils
-from manager_rest.storage import storage_manager, models
+from manager_rest.storage import get_storage_manager, models
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.constants import (
     MAINTENANCE_MODE_ACTIVATED,
@@ -297,8 +297,8 @@ class MaintenanceModeTest(BaseServerTestCase):
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
         self.assertEquals('terminated', execution.status)
-        storage_manager.get_storage_manager().update_execution_status(
-                execution.id, execution_status, error='')
+        get_storage_manager().update_execution_status(
+            execution.id, execution_status, error='')
 
         self.client.maintenance_mode.activate()
         response = self.client.maintenance_mode.status()
@@ -307,8 +307,8 @@ class MaintenanceModeTest(BaseServerTestCase):
         return execution
 
     def _terminate_execution(self, execution_id):
-        storage_manager.get_storage_manager().update_execution_status(
-                execution_id, models.Execution.TERMINATED, error='')
+        get_storage_manager().update_execution_status(
+            execution_id, models.Execution.TERMINATED, error='')
 
     def _activate_and_deactivate_maintenance_mode(self):
         self._activate_maintenance_mode()

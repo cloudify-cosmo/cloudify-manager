@@ -17,7 +17,7 @@ from contextlib import contextmanager
 import networkx as nx
 
 import manager_rest.blueprints_manager
-from manager_rest.storage.storage_manager import get_storage_manager
+from manager_rest.storage import get_storage_manager
 
 
 RELEVANT_DEPLOYMENT_FIELDS = ['blueprint_id', 'id', 'inputs', 'nodes',

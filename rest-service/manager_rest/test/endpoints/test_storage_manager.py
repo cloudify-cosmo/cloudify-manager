@@ -17,7 +17,7 @@ from nose.plugins.attrib import attr
 
 from manager_rest import utils
 from manager_rest.test import base_test
-from manager_rest.storage import storage_manager, models
+from manager_rest.storage import get_storage_manager, models
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -25,7 +25,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_store_load_delete_blueprint(self):
         now = utils.get_formatted_timestamp()
-        sm = storage_manager.get_storage_manager()
+        sm = get_storage_manager()
         blueprint = models.Blueprint(id='blueprint-id',
                                      created_at=now,
                                      updated_at=now,
@@ -46,7 +46,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
 
     def test_get_blueprint_deployments(self):
         now = utils.get_formatted_timestamp()
-        sm = storage_manager.get_storage_manager()
+        sm = get_storage_manager()
         blueprint = models.Blueprint(id='blueprint-id',
                                      created_at=now,
                                      updated_at=now,
@@ -152,7 +152,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                      description=None,
                                      plan={'name': 'my-bp'},
                                      main_file_name='aaa')
-        sm = storage_manager.get_storage_manager()
+        sm = get_storage_manager()
         sm.put_blueprint(blueprint)
 
         blueprint_restored = sm.get_blueprint('blueprint-id',

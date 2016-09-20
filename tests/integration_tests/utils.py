@@ -37,7 +37,7 @@ from cloudify_cli import env as cli_env
 from cloudify_rest_client import CloudifyClient
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
-from manager_rest.storage.storage_manager import get_storage_manager
+from manager_rest.storage import get_storage_manager
 
 from integration_tests import constants
 

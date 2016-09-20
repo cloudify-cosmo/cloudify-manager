@@ -4,14 +4,14 @@ import utils as deployment_update_utils
 from constants import ENTITY_TYPES, NODE_MOD_TYPES
 
 from manager_rest import utils
-from manager_rest.storage import storage_manager, models
+from manager_rest.storage import get_storage_manager, models
 from manager_rest.blueprints_manager import get_blueprints_manager
 from entity_context import get_entity_context
 
 
 class StorageClient(object):
     def __init__(self):
-        self.sm = storage_manager.get_storage_manager()
+        self.sm = get_storage_manager()
 
 
 class UpdateHandler(StorageClient):

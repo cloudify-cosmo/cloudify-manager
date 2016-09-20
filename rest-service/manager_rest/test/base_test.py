@@ -27,8 +27,8 @@ from nose.tools import nottest
 from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
 
+from manager_rest.storage import FileServer
 from manager_rest import utils, config, archiving
-from manager_rest.storage.file_server import FileServer
 from manager_rest.test.mocks import MockHTTPClient, CLIENT_API_VERSION, \
     build_query_string
 from cloudify_rest_client import CloudifyClient

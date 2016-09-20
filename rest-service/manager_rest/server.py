@@ -32,7 +32,7 @@ from flask_securest.rest_security import SecuREST
 
 from manager_rest import endpoint_mapper
 from manager_rest import config
-from manager_rest.storage.models import db
+from manager_rest.storage import db
 from manager_rest import manager_exceptions
 from manager_rest import utils
 from manager_rest.maintenance import maintenance_mode_handler

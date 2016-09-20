@@ -26,7 +26,7 @@ from manager_rest import utils
 from manager_rest import manager_exceptions
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.test.base_test import LATEST_API_VERSION
-from manager_rest.storage import storage_manager, models
+from manager_rest.storage import get_storage_manager, models
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
@@ -74,8 +74,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             error='',
             parameters=dict(),
             is_system_workflow=True)
-        storage_manager.get_storage_manager().put_execution(
-            system_wf_execution)
+        get_storage_manager().put_execution(system_wf_execution)
 
         # listing only non-system workflow executions
         executions = self.client.executions.list(deployment_id=deployment_id)
@@ -123,8 +122,8 @@ class ExecutionsTestCase(BaseServerTestCase):
             parameters=dict(),
             is_system_workflow=False
         )
-        storage_manager.get_storage_manager().put_execution(execution1)
-        storage_manager.get_storage_manager().put_execution(execution2)
+        get_storage_manager().put_execution(execution1)
+        get_storage_manager().put_execution(execution2)
 
         executions = self.client.executions.list(sort='created_at')
         self.assertEqual(2, len(executions))
@@ -752,7 +751,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             execution_id = execution['id']
         except TypeError:
             execution_id = execution.id
-        storage_manager.get_storage_manager().update_execution_status(
+        get_storage_manager().update_execution_status(
             execution_id, new_status, error='')
         updated_execution = self.client.executions.get(
             execution_id=execution_id)

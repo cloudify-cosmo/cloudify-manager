@@ -35,9 +35,9 @@ from manager_rest import responses_v2
 from manager_rest import utils
 from manager_rest.storage import models
 from manager_rest.blueprints_manager import get_blueprints_manager
-from manager_rest.storage.manager_elasticsearch import ManagerElasticsearch
-from manager_rest.storage.storage_manager import ListResult
-from manager_rest.storage.storage_manager import get_storage_manager
+from manager_rest.storage import ListResult
+from manager_rest.storage import get_storage_manager
+from manager_rest.storage import ManagerElasticsearch
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled,
                                     verify_and_convert_bool,

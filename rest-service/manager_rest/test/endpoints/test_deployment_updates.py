@@ -23,7 +23,7 @@ from nose.tools import nottest
 from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest import archiving, utils
-from manager_rest.storage import storage_manager, models
+from manager_rest.storage import get_storage_manager, models
 from manager_rest.deployment_update.constants import STATES
 from manager_rest.test import base_test
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -283,7 +283,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
         # updating the execution's status to started to make the first update
         # really be active
-        storage_manager.get_storage_manager().update_execution_status(
+        get_storage_manager().update_execution_status(
             first_execution_id, models.Execution.STARTED, error='')
         self.client.executions.get(execution_id=first_execution_id)
 
@@ -333,7 +333,7 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
     def test_storage_serialization_and_response(self):
         now = utils.get_formatted_timestamp()
-        sm = storage_manager.get_storage_manager()
+        sm = get_storage_manager()
         deployment_update = models.DeploymentUpdate(
                 deployment_id='deployment-id',
                 deployment_plan={'name': 'my-bp'},
