@@ -17,9 +17,9 @@
 import uuid
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application
-from integration_tests.utils import wait_for_deployment_creation_to_complete
+from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import \
+    wait_for_deployment_creation_to_complete
 
 
 class RestAPITest(AgentlessTestCase):
@@ -44,9 +44,9 @@ class RestAPITest(AgentlessTestCase):
             deployment_id=deployment_id)
 
     def _deploy_basic_blueprint(self):
-        deploy_application(self.dsl_path,
-                           blueprint_id=self.blueprint_id,
-                           deployment_id=self.deployment_id)
+        self.deploy_application(self.dsl_path,
+                                blueprint_id=self.blueprint_id,
+                                deployment_id=self.deployment_id)
 
     def test_nodes(self):
         self._create_basic_deployment()

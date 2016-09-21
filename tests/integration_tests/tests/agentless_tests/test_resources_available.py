@@ -20,14 +20,13 @@ import requests.status_codes
 from requests.exceptions import ConnectionError
 
 from integration_tests import AgentlessTestCase
-from integration_tests import utils
-from integration_tests.utils import get_resource as resource
+from integration_tests.tests.utils import get_resource as resource
 
 
 class ResourcesAvailableTest(AgentlessTestCase):
 
     def test_resources_available(self):
-        container_ip = utils.get_manager_ip()
+        container_ip = self.get_manager_ip()
         blueprint_id = str(uuid.uuid4())
         blueprint_name = 'empty_blueprint.yaml'
         blueprint_path = resource('dsl/{0}'.format(blueprint_name))

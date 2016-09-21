@@ -19,8 +19,7 @@ import uuid
 import sh
 
 from integration_tests import ManagerTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import wait_for_execution_to_end
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestCeleryRestart(ManagerTestCase):
@@ -32,7 +31,7 @@ class TestCeleryRestart(ManagerTestCase):
         self._stop_celery()
         execution = self._create_execution()
         self._start_celery()
-        wait_for_execution_to_end(execution)
+        self.wait_for_execution_to_end(execution)
 
     def _create_execution(self):
         blueprint_id = str(uuid.uuid4())

@@ -21,8 +21,7 @@ from functools import partial
 from wagon.wagon import Wagon
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy, execute_workflow
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestRestServiceListPagination(AgentlessTestCase):
@@ -35,11 +34,11 @@ class TestRestServiceListPagination(AgentlessTestCase):
 
     def test_deployments_pagination(self):
         for i in range(10):
-            deploy(resource('dsl/pagination.yaml'))
+            self.deploy(resource('dsl/pagination.yaml'))
         self._test_pagination(self.client.deployments.list)
 
     def test_deployment_modifications_pagination(self):
-        deployment = deploy(resource('dsl/pagination.yaml'))
+        deployment = self.deploy(resource('dsl/pagination.yaml'))
         for i in range(2, 12):
             modification = self.client.deployment_modifications.start(
                 deployment_id=deployment.id,
@@ -50,20 +49,21 @@ class TestRestServiceListPagination(AgentlessTestCase):
             deployment_id=deployment.id))
 
     def test_executions_pagination(self):
-        deployment = deploy(resource('dsl/pagination.yaml'))
+        deployment = self.deploy(resource('dsl/pagination.yaml'))
         for i in range(5):
-            execute_workflow('install', deployment.id)
-            execute_workflow('uninstall', deployment.id)
+            self.execute_workflow('install', deployment.id)
+            self.execute_workflow('uninstall', deployment.id)
         self._test_pagination(partial(self.client.executions.list,
                                       deployment_id=deployment.id))
 
     def test_nodes_pagination(self):
-        deployment = deploy(resource('dsl/pagination-nodes.yaml'))
+        deployment = self.deploy(resource('dsl/pagination-nodes.yaml'))
         self._test_pagination(partial(self.client.nodes.list,
                                       deployment_id=deployment.id))
 
     def test_node_instances_pagination(self):
-        deployment = deploy(resource('dsl/pagination-node-instances.yaml'))
+        deployment = self.deploy(
+                resource('dsl/pagination-node-instances.yaml'))
         self._test_pagination(partial(
             self.client.node_instances.list,
                               deployment_id=deployment.id))

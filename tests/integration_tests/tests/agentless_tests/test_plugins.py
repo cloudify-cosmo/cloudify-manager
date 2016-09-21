@@ -15,7 +15,7 @@
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from integration_tests import utils
+from integration_tests.tests import utils as test_utils
 from integration_tests import AgentlessTestCase
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
@@ -25,8 +25,9 @@ TEST_PACKAGE_VERSION = '1.2'
 class TestPlugins(AgentlessTestCase):
 
     def test_get_plugin_by_id(self):
-        put_plugin_response = utils.upload_mock_plugin(TEST_PACKAGE_NAME,
-                                                       TEST_PACKAGE_VERSION)
+        put_plugin_response = test_utils.upload_mock_plugin(
+                TEST_PACKAGE_NAME,
+                TEST_PACKAGE_VERSION)
         plugin_id = put_plugin_response.get('id')
         self.assertIsNotNone(plugin_id)
         self.assertEquals(put_plugin_response.get('package_name'),
@@ -48,8 +49,9 @@ class TestPlugins(AgentlessTestCase):
             self.assertEquals(404, e.status_code)
 
     def test_delete_plugin(self):
-        put_response = utils.upload_mock_plugin(TEST_PACKAGE_NAME,
-                                                TEST_PACKAGE_VERSION)
+        put_response = test_utils.upload_mock_plugin(
+                TEST_PACKAGE_NAME,
+                TEST_PACKAGE_VERSION)
 
         plugins_list = self.client.plugins.list()
         self.assertEqual(1, len(plugins_list),
@@ -76,7 +78,7 @@ class TestPlugins(AgentlessTestCase):
 
     def test_install_uninstall_workflows_execution(self):
         self.clear_plugin_data('agent')
-        utils.upload_mock_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
+        test_utils.upload_mock_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
         plugins = self.get_plugin_data('agent',
                                        deployment_id='system')['local']
         self.assertEqual(plugins[TEST_PACKAGE_NAME], ['installed'])

@@ -26,11 +26,12 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
-from integration_tests import riemann
-from integration_tests.utils import (
-    get_resource, do_retries, timeout, delete_deployment,
-    verify_deployment_environment_creation_complete,
-    deploy_application, undeploy_application,
+from integration_tests.framework import riemann
+from integration_tests.framework.utils import timeout
+from integration_tests.tests.utils import (
+    get_resource,
+    do_retries,
+    verify_deployment_environment_creation_complete
 )
 
 
@@ -38,7 +39,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_execute_operation(self):
         dsl_path = get_resource('dsl/basic.yaml')
         blueprint_id = self.id()
-        deployment, _ = deploy_application(
+        deployment, _ = self.deploy_application(
             dsl_path,
             blueprint_id=blueprint_id,
             timeout_seconds=15
@@ -58,7 +59,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_dependencies_order_with_two_nodes(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
         blueprint_id = self.id()
-        deployment, _ = deploy_application(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = self.deploy_application(dsl_path,
+                                                blueprint_id=blueprint_id)
 
         self.assertEquals(blueprint_id, deployment.blueprint_id)
 
@@ -75,7 +77,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment_id = str(uuid.uuid4())
         dsl_path = get_resource("dsl/basic.yaml")
         try:
-            deploy_application(dsl_path, deployment_id=deployment_id)
+            self.deploy_application(dsl_path, deployment_id=deployment_id)
             self.fail('expected exception')
         except Exception as e:
             if e.message:
@@ -84,7 +86,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def test_cloudify_runtime_properties_injection(self):
         dsl_path = get_resource("dsl/dependencies_order_with_two_nodes.yaml")
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         states = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -102,11 +104,11 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def test_non_existing_operation_exception(self):
         dsl_path = get_resource("dsl/wrong_operation_name.yaml")
-        self.assertRaises(RuntimeError, deploy_application, dsl_path)
+        self.assertRaises(RuntimeError, self.deploy_application, dsl_path)
 
     def test_inject_properties_to_operation(self):
         dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         states = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -122,7 +124,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def test_start_monitor_node_operation(self):
         dsl_path = get_resource("dsl/hardcoded_operation_properties.yaml")
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -133,7 +135,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def test_plugin_get_resource(self):
         dsl_path = get_resource("dsl/get_resource_in_plugin.yaml")
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
             deployment_id=deployment.id
@@ -155,7 +157,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_get_blueprint(self):
         dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = str(uuid.uuid4())
-        deployment, _ = deploy_application(dsl_path, blueprint_id=blueprint_id)
+        deployment, _ = self.deploy_application(dsl_path,
+                                                blueprint_id=blueprint_id)
 
         self.assertEqual(blueprint_id, deployment.blueprint_id)
         blueprint = self.client.blueprints.get(blueprint_id)
@@ -233,11 +236,11 @@ class BasicWorkflowsTest(AgentlessTestCase):
                    timeout_seconds=30,
                    deployment_id=deployment_id)
 
-        delete_deployment(deployment_id, ignore_live_nodes=False)
+        self.delete_deployment(deployment_id, ignore_live_nodes=False)
         self.client.blueprints.delete(blueprint_id)
 
         # recreating the deployment, this time actually deploying it too
-        _, execution_id = deploy_application(
+        _, execution_id = self.deploy_application(
             dsl_path,
             blueprint_id=blueprint_id,
             deployment_id=deployment_id,
@@ -278,11 +281,11 @@ class BasicWorkflowsTest(AgentlessTestCase):
                                'ignore_live_nodes flag was set to False'
                                .format(deployment_id),
                 expect_in_error_message='live nodes'):
-            delete_deployment(deployment_id)
+            self.delete_deployment(deployment_id)
 
         # deleting deployment - this time there's no execution running,
         # and using the ignore_live_nodes parameter to force deletion
-        deleted_deployment_id = delete_deployment(deployment_id, True).id
+        deleted_deployment_id = self.delete_deployment(deployment_id, True).id
         self.assertEqual(deployment_id, deleted_deployment_id)
 
         # verifying deployment does no longer exist
@@ -324,7 +327,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
                                "though it wasn't expected to exist"
                                .format(deployment_id),
                 expect_in_error_message='not found'):
-            delete_deployment(deployment_id)
+            self.delete_deployment(deployment_id)
 
     def test_node_state_uninitialized(self):
         dsl_path = get_resource('dsl/node_states.yaml')
@@ -352,7 +355,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         _id = uuid.uuid1()
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
-        deployment, _ = deploy_application(
+        deployment, _ = self.deploy_application(
             dsl_path,
             blueprint_id=blueprint_id,
             deployment_id=deployment_id)
@@ -373,7 +376,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def test_deploy_with_agent_worker(self):
         dsl_path = get_resource('dsl/with_agent_worker.yaml')
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment.id
         )
@@ -406,7 +409,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         expected_invocations = ['create', 'start']
         self.assertListEqual(invocations, expected_invocations)
 
-        undeploy_application(deployment_id=deployment.id)
+        self.undeploy_application(deployment_id=deployment.id)
         invocations = self.get_plugin_data(
             plugin_name='mock_agent_plugin',
             deployment_id=deployment.id
@@ -428,7 +431,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def test_deploy_with_operation_executor_override(self):
         dsl_path = get_resource('dsl/operation_executor_override.yaml')
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment.id
         )
@@ -455,13 +458,13 @@ class BasicWorkflowsTest(AgentlessTestCase):
         # overrides the executor (with a local task)
         self.assertEqual(agent_data['local']['target_aware_mock_plugin'],
                          ['installed'])
-        undeploy_application(deployment_id=deployment.id)
+        self.undeploy_application(deployment_id=deployment.id)
 
     def test_deployment_creation_workflow(self):
         dsl_path = get_resource(
             'dsl/basic_with_deployment_plugin_and_workflow_plugin.yaml'
         )
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
 
         deployment_dir_path = os.path.join(
                 '/opt/mgmtworker/work/deployments', deployment.id)
@@ -480,7 +483,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEqual(agent_data['local']['cloudmock'], installed)
         self.assertEqual(agent_data['local']['mock_workflows'], installed)
 
-        undeploy_application(deployment.id, is_delete_deployment=True)
+        self.undeploy_application(deployment.id, is_delete_deployment=True)
 
         # assert plugin installer uninstalled
         # the necessary plugins.
@@ -499,7 +502,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
         dsl_path = get_resource('dsl/get_attributes.yaml')
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         data = self.get_plugin_data(plugin_name='get_attribute',
                                     deployment_id=deployment.id)
         invocations = data['invocations']
@@ -514,11 +517,11 @@ class BasicWorkflowsTest(AgentlessTestCase):
         """A riemann core is started if the blueprint defines policies
         """
         dsl_path = get_resource('dsl/with_policies1.yaml')
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
 
         self.assertTrue(riemann.is_riemann_core_up(deployment.id))
 
-        undeploy_application(deployment.id, is_delete_deployment=True)
+        self.undeploy_application(deployment.id, is_delete_deployment=True)
 
         self.assertFalse(riemann.is_riemann_core_up(deployment.id))
 
@@ -526,10 +529,10 @@ class BasicWorkflowsTest(AgentlessTestCase):
         """A riemann core isn't started if there's no policies defined
         """
         dsl_path = get_resource('dsl/without_policies.yaml')
-        deployment, _ = deploy_application(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
 
         self.assertFalse(riemann.is_riemann_core_up(deployment.id))
 
-        undeploy_application(deployment.id, is_delete_deployment=True)
+        self.undeploy_application(deployment.id, is_delete_deployment=True)
 
         self.assertFalse(riemann.is_riemann_core_up(deployment.id))

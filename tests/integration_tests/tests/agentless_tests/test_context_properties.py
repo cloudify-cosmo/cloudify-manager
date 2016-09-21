@@ -14,9 +14,7 @@
 #    * limitations under the License.
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import undeploy_application as undeploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestContextProperties(AgentlessTestCase):
@@ -25,7 +23,7 @@ class TestContextProperties(AgentlessTestCase):
         dsl_path = resource("dsl/set_property.yaml")
 
         # testing set property
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         node_id = self.client.node_instances.list(
             deployment_id=deployment.id)[0].id
         node_runtime_props = self.client.node_instances.get(
@@ -33,7 +31,7 @@ class TestContextProperties(AgentlessTestCase):
         self.assertEqual('property_value', node_runtime_props['property_name'])
 
         # testing delete property
-        undeploy(deployment.id)
+        self.undeploy_application(deployment.id)
         node_runtime_props = self.client.node_instances.get(
             node_id).runtime_properties
         self.assertNotIn('property_name', node_runtime_props)
@@ -41,4 +39,4 @@ class TestContextProperties(AgentlessTestCase):
     def test_no_update_runtime_properties(self):
         dsl_path = resource("dsl/update_node_state.yaml")
         # simply expecting workflow execution to succeed
-        deploy(dsl_path)
+        self.deploy_application(dsl_path)

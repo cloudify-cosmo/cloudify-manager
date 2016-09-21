@@ -24,7 +24,7 @@ import cloudify.event
 import cloudify.logs
 from cloudify_cli.colorful_event import ColorfulEvent
 
-from integration_tests import utils
+from integration_tests.framework import utils
 
 logger = utils.setup_logger('events_printer')
 

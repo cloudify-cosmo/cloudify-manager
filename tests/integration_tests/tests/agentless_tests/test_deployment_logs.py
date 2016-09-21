@@ -14,9 +14,7 @@
 #    * limitations under the License.
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import undeploy_application as undeploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestDeploymentLogs(AgentlessTestCase):
@@ -26,7 +24,7 @@ class TestDeploymentLogs(AgentlessTestCase):
         inputs = {'message': message}
 
         dsl_path = resource("dsl/deployment_logs.yaml")
-        deployment, _ = deploy(dsl_path, inputs=inputs)
+        deployment, _ = self.deploy_application(dsl_path, inputs=inputs)
 
         deployment_log_path = ('/var/log/cloudify/mgmtworker/logs/{0}.log'
                                .format(deployment.id))
@@ -39,13 +37,14 @@ class TestDeploymentLogs(AgentlessTestCase):
 
         verify_logs_exist_with_content()
 
-        undeploy(deployment.id, is_delete_deployment=True)
+        self.undeploy_application(deployment.id, is_delete_deployment=True)
 
         # Verify log file id truncated on deployment delete
         self.assertEqual('', read_deployment_logs())
 
-        deployment, _ = deploy(dsl_path, inputs=inputs,
-                               deployment_id=deployment.id)
+        deployment, _ = self.deploy_application(
+                dsl_path, inputs=inputs,
+                deployment_id=deployment.id)
 
         # Verify new deployment with the same deployment id
         # can write to the previous location.

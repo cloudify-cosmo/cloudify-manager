@@ -16,9 +16,7 @@
 import re
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import execute_workflow
+from integration_tests.tests.utils import get_resource as resource
 
 ansi_escape = re.compile(r'\x1b[^m]*m')
 
@@ -27,10 +25,10 @@ class ExecutionLoggingTest(AgentlessTestCase):
 
     def test_execution_logging(self):
         blueprint_path = resource('dsl/execution_logging.yaml')
-        deployment, _ = deploy(blueprint_path)
+        deployment, _ = self.deploy_application(blueprint_path)
         for user_cause in [False, True]:
             with self.assertRaises(RuntimeError):
-                execute_workflow(
+                self.execute_workflow(
                     'execute_operation',
                     deployment_id=deployment.id,
                     parameters={'operation': 'test.op',

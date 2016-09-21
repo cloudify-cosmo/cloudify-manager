@@ -18,8 +18,9 @@ import uuid
 from cloudify_rest_client import exceptions
 
 from integration_tests import AgentTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import wait_for_deployment_creation_to_complete
+from integration_tests.tests.utils import get_resource as resource
+from integration_tests.tests.utils import \
+    wait_for_deployment_creation_to_complete
 
 
 class ManagerMaintenanceModeTest(AgentTestCase):

@@ -20,8 +20,7 @@ import shutil
 from wagon.wagon import Wagon
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy, execute_workflow
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestRestServiceListSort(AgentlessTestCase):
@@ -34,11 +33,11 @@ class TestRestServiceListSort(AgentlessTestCase):
 
     def test_deployments_sort(self):
         for i in range(10):
-            deploy(resource('dsl/sort.yaml'))
+            self.deploy(resource('dsl/sort.yaml'))
         self._test_sort('deployments', 'id')
 
     def test_deployment_modifications_sort(self):
-        deployment = deploy(resource('dsl/sort.yaml'))
+        deployment = self.deploy(resource('dsl/sort.yaml'))
         for i in range(2, 12):
             modification = self.client.deployment_modifications.start(
                 deployment_id=deployment.id,
@@ -47,19 +46,19 @@ class TestRestServiceListSort(AgentlessTestCase):
         self._test_sort('deployment_modifications', 'deployment_id')
 
     def test_executions_sort(self):
-        deployment = deploy(resource('dsl/sort.yaml'))
+        deployment = self.deploy(resource('dsl/sort.yaml'))
         for i in range(5):
-            execute_workflow('install', deployment.id)
-            execute_workflow('uninstall', deployment.id)
+            self.execute_workflow('install', deployment.id)
+            self.execute_workflow('uninstall', deployment.id)
         self._test_sort('executions',
                         ['deployment_id', '-status'])
 
     def test_nodes_sort(self):
-        deploy(resource('dsl/sort.yaml'))
+        self.deploy(resource('dsl/sort.yaml'))
         self._test_sort('nodes', '-id')
 
     def test_node_instances_sort(self):
-        deploy(resource('dsl/sort.yaml'))
+        self.deploy(resource('dsl/sort.yaml'))
         self._test_sort('node_instances', ['node_id', '-id'])
 
     def test_plugins_sort(self):

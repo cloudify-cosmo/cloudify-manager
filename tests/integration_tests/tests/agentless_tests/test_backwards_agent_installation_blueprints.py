@@ -14,16 +14,14 @@
 #    * limitations under the License.
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import undeploy_application as undeploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestInstallWorkflowBackwards(AgentlessTestCase):
 
     def test_deploy_with_agent_worker_3_2(self):
         dsl_path = resource('dsl/with_agent_worker_3_2.yaml')
-        deployment, _ = deploy(dsl_path, timeout_seconds=500)
+        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=500)
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment.id
         )
@@ -60,7 +58,7 @@ class TestInstallWorkflowBackwards(AgentlessTestCase):
         expected_invocations = ['create', 'start']
         self.assertListEqual(invocations, expected_invocations)
 
-        undeploy(deployment_id=deployment.id)
+        self.undeploy_application(deployment_id=deployment.id)
         invocations = self.get_plugin_data(
             plugin_name='mock_agent_plugin',
             deployment_id=deployment.id
@@ -82,7 +80,7 @@ class TestInstallWorkflowBackwards(AgentlessTestCase):
 
     def test_deploy_with_agent_worker_windows_3_2(self):
         dsl_path = resource('dsl/with_agent_worker_windows_3_2.yaml')
-        deployment, _ = deploy(dsl_path, timeout_seconds=500)
+        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=500)
         deployment_nodes = self.client.node_instances.list(
             deployment_id=deployment.id
         )
@@ -119,7 +117,7 @@ class TestInstallWorkflowBackwards(AgentlessTestCase):
         expected_invocations = ['create', 'start']
         self.assertListEqual(invocations, expected_invocations)
 
-        undeploy(deployment_id=deployment.id)
+        self.undeploy_application(deployment_id=deployment.id)
         invocations = self.get_plugin_data(
             plugin_name='mock_agent_plugin',
             deployment_id=deployment.id

@@ -16,8 +16,7 @@
 import os
 
 from integration_tests import AgentTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class PluginWorkdirTest(AgentTestCase):
@@ -27,12 +26,13 @@ class PluginWorkdirTest(AgentTestCase):
         host_content = 'HOST_CONTENT'
         central_content = 'CENTRAL_CONTENT'
         dsl_path = resource("dsl/plugin_workdir.yaml")
-        deployment, _ = deploy(dsl_path,
-                               inputs={
-                                   'filename': filename,
-                                   'host_content': host_content,
-                                   'central_content': central_content
-                               })
+        deployment, _ = self.deploy_application(
+                dsl_path,
+                inputs={
+                    'filename': filename,
+                    'host_content': host_content,
+                    'central_content': central_content
+                    })
         central_file = os.path.join(
             '/opt/mgmtworker/work', 'deployments', deployment.id, 'plugins',
             'testmockoperations', filename)

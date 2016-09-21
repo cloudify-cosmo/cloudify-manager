@@ -22,8 +22,8 @@ from cloudify_rest_client.exceptions import UserUnauthorizedError
 from manager_rest.test.security_utils import get_test_users, get_test_roles
 
 from integration_tests import ManagerTestCase
-from integration_tests import constants
-from integration_tests import utils
+from integration_tests.framework import constants, utils
+from integration_tests.tests import utils as test_utils
 
 SECURITY_PROP_PATH = ('node_types.cloudify\.nodes\.MyCloudifyManager.'
                       'properties.security.default')
@@ -44,7 +44,7 @@ class TestSecuredRestBase(ManagerTestCase):
         security_settings = self.get_security_settings()
         test_manager_types_path = os.path.join(manager_blueprint_dir,
                                                'types/manager-types.yaml')
-        with utils.YamlPatcher(test_manager_types_path) as patch:
+        with test_utils.patch_yaml(test_manager_types_path) as patch:
             for key, value in security_settings.items():
                 patch.set_value(key, value)
         self.set_env_vars()

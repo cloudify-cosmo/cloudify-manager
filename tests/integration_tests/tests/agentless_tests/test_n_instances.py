@@ -16,15 +16,14 @@
 import time
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestMultiInstanceApplication(AgentlessTestCase):
 
     def test_deploy_multi_instance_application(self):
         dsl_path = resource("dsl/multi_instance.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         machines = set(self.get_plugin_data(
             plugin_name='cloudmock',
             deployment_id=deployment.id
@@ -42,7 +41,7 @@ class TestMultiInstanceApplication(AgentlessTestCase):
 
     def test_deploy_multi_instance_many_different_hosts(self):
         dsl_path = resource('dsl/multi_instance_many_different_hosts.yaml')
-        deployment, _ = deploy(dsl_path, timeout_seconds=60)
+        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=60)
         machines = set(self.get_plugin_data(
             plugin_name='cloudmock',
             deployment_id=deployment.id
@@ -58,6 +57,6 @@ class TestMultiInstanceApplication(AgentlessTestCase):
     def test_deploy_multi_large_scale(self):
         dsl_path = resource('dsl/multi_instance_large_scale.yaml')
         start = time.time()
-        deployment, _ = deploy(dsl_path, timeout_seconds=630)
+        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=630)
         self.logger.info('All done! execution took {} seconds'
                          .format(time.time() - start))

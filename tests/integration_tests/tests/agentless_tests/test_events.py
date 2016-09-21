@@ -16,8 +16,7 @@
 import re
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class EventsTest(AgentlessTestCase):
@@ -142,8 +141,7 @@ class EventsTest(AgentlessTestCase):
             return events
         return self.do_assertions(elist, timeout=120)
 
-    @staticmethod
-    def _create_deployment():
+    def _create_deployment(self):
         dsl_path = resource('dsl/basic_event_and_log.yaml')
-        test_deployment, _ = deploy(dsl_path)
+        test_deployment, _ = self.deploy_application(dsl_path)
         return test_deployment.id

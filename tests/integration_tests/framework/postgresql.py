@@ -26,7 +26,7 @@ from manager_rest.security import user_datastore
 from manager_rest.utils import add_users_and_roles_to_userstore
 from manager_rest.test.security_utils import get_admin_user, get_admin_role
 
-from integration_tests import utils
+from integration_tests.framework import utils
 
 logger = setup_logger('postgresql', logging.INFO)
 setup_logger('postgresql.trace', logging.INFO)

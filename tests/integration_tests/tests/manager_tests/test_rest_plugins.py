@@ -17,7 +17,7 @@ import os
 import shutil
 
 from integration_tests import ManagerTestCase
-from integration_tests.utils import get_resource as resource
+from integration_tests.tests.utils import get_resource as resource
 
 
 class RestPluginsTests(ManagerTestCase):

@@ -16,15 +16,14 @@
 
 from integration_tests import AgentTestCase
 from integration_tests.tests.agentless_tests import test_policies
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestPoliciesWithDiamond(AgentTestCase, test_policies.PoliciesTestsBase):
 
     def test_policies_flow_with_diamond(self):
         dsl_path = resource('dsl/with_policies_and_diamond.yaml')
-        self.deployment, _ = deploy(dsl_path)
+        self.deployment, _ = self.deploy_application(dsl_path)
         expected_metric_value = 42
         self.wait_for_executions(3)
         invocations = self.wait_for_invocations(self.deployment.id, 1)

@@ -14,9 +14,7 @@
 #    * limitations under the License.
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import is_node_started
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestRelationships(AgentlessTestCase):
@@ -24,7 +22,7 @@ class TestRelationships(AgentlessTestCase):
     def test_pre_source_started_location_source(self):
         dsl_path = resource(
             "dsl/relationship_interface_pre_source_location_source.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         self.verify_assertions(deployment.id,
                                hook='pre-init',
                                runs_on_source=True)
@@ -32,7 +30,7 @@ class TestRelationships(AgentlessTestCase):
     def test_post_source_started_location_target(self):
         dsl_path = resource(
             "dsl/relationship_interface_post_source_location_target.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         self.verify_assertions(deployment.id,
                                hook='post-init',
                                runs_on_source=False)
@@ -59,7 +57,7 @@ class TestRelationships(AgentlessTestCase):
         self.assertTrue(source_id.startswith(source_node_id_prefix))
         self.assertTrue(target_id.startswith(target_node_id_prefix))
 
-        self.assertTrue(is_node_started(target_id))
+        self.assertTrue(self.is_node_started(target_id))
 
         self.assertEquals('source_property_value',
                           state['source_properties']['source_property_key'])
@@ -77,7 +75,7 @@ class TestRelationships(AgentlessTestCase):
         )
 
         if hook == 'post-init':
-            self.assertTrue(is_node_started(source_id))
+            self.assertTrue(self.is_node_started(source_id))
         elif hook != 'pre-init':
             self.fail('unhandled state')
 

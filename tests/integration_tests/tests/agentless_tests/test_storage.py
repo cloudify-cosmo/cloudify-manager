@@ -18,14 +18,13 @@ import uuid
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestStorage(AgentlessTestCase):
 
     def test_update_node_bad_version(self):
-        deploy(resource("dsl/basic.yaml"))
+        self.deploy_application(resource("dsl/basic.yaml"))
         client = self.client
         instance = client.node_instances.list()[0]
         instance = client.node_instances.get(instance.id)  # need the version

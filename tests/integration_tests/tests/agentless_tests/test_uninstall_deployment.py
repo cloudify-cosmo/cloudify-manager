@@ -15,18 +15,16 @@
 
 
 from integration_tests import AgentlessTestCase
-from integration_tests.utils import get_resource as resource
-from integration_tests.utils import deploy_application as deploy
-from integration_tests.utils import undeploy_application as undeploy
+from integration_tests.tests.utils import get_resource as resource
 
 
 class TestUninstallDeployment(AgentlessTestCase):
 
     def test_uninstall_application_single_node_no_host(self):
         dsl_path = resource("dsl/single_node_no_host.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
-        undeploy(deployment_id)
+        self.undeploy_application(deployment_id)
 
         states = self.get_plugin_data(
             plugin_name='testmockoperations',
@@ -49,10 +47,10 @@ class TestUninstallDeployment(AgentlessTestCase):
     def test_uninstall_application_single_host_node(self):
         dsl_path = resource("dsl/basic.yaml")
 
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
 
-        undeploy(deployment_id)
+        self.undeploy_application(deployment_id)
 
         machines = self.get_plugin_data(
             plugin_name='cloudmock',
@@ -64,9 +62,9 @@ class TestUninstallDeployment(AgentlessTestCase):
     def test_uninstall_with_dependency_order(self):
         dsl_path = resource(
             "dsl/uninstall_dependencies-order-with-three-nodes.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
-        undeploy(deployment_id)
+        self.undeploy_application(deployment_id)
         # Checking that uninstall wasn't called on the contained node
         states = self.get_plugin_data(
             plugin_name='testmockoperations',
@@ -102,9 +100,9 @@ class TestUninstallDeployment(AgentlessTestCase):
     def test_stop_monitor_node_operation(self):
         dsl_path = resource(
             "dsl/hardcoded_operation_properties.yaml")
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
-        undeploy(deployment_id)
+        self.undeploy_application(deployment_id)
         # test stop monitor invocations
         invocations = self.get_plugin_data(
             plugin_name='testmockoperations',
@@ -118,9 +116,10 @@ class TestUninstallDeployment(AgentlessTestCase):
 
     def test_failed_uninstall_task(self):
         dsl_path = resource('dsl/basic_stop_error.yaml')
-        deployment, _ = deploy(dsl_path)
+        deployment, _ = self.deploy_application(dsl_path)
         deployment_id = deployment.id
-        undeploy(deployment_id, parameters={'ignore_failure': True})
+        self.undeploy_application(deployment_id,
+                                  parameters={'ignore_failure': True})
 
         machines = self.get_plugin_data(
             plugin_name='cloudmock',
