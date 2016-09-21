@@ -69,6 +69,8 @@ class BaseTestCase(unittest.TestCase):
             return
         logs_dir = os.path.join(logs_dir, *self.id().split('.'))
         mkdirs(logs_dir)
+        if os.environ.get('CFY_LOGS_FILE_NAME'):
+            logs_dir = os.path.join(logs_dir, os.environ['CFY_LOGS_FILE_NAME'])
         self.cfy.logs.download(output_path=logs_dir)
         if purge:
             self.cfy.logs.purge(force=True)
