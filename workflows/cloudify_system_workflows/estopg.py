@@ -81,8 +81,18 @@ class EsToPg(object):
         for line in open(self._deployments_ex_path, 'r'):
             elem = json.loads(line)
             node_data = elem['_source']
+            node_type = elem['_type']
             self._update_deployment(node_data)
-            self._storage_manager.put_deployment(node_data)
+            if node_type == 'deployment_updates':
+                self._storage_manager.put_deployment_updates(node_data)
+                if 'steps' in node_data:
+                    steps = node_data['steps']
+                    for step in steps:
+                        self._storage_manager.put_deployment_update_step(step)
+            elif node_type == 'deployment_modifications':
+                self._storage_manager.put_deployment_modification(node_data)
+            else:
+                logger.warning('Unknown node type: {0}'.format(node_type))
 
         for line in open(self._nodes_path, 'r'):
             elem = json.loads(line)
