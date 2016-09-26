@@ -196,10 +196,16 @@ node_templates:
             script_path: scripts/run_tests.py
             fabric_env: *manager_fabric_env
       cloudify.interfaces.exec_script:
-        execute:
+        upload_docker_image:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
             script_path: scripts/upload_docker_image.sh
+            fabric_env: *manager_fabric_env
+          executor: host_agent
+        upload_manager_logs:
+          implementation: fabric.fabric_plugin.tasks.run_script
+          inputs:
+            script_path: scripts/upload_manager_logs.sh
             fabric_env: *manager_fabric_env
           executor: host_agent
 
