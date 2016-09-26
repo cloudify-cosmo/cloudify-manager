@@ -195,10 +195,11 @@ node_templates:
           inputs:
             script_path: scripts/run_tests.py
             fabric_env: *manager_fabric_env
+      cloudify.interfaces.exec_script:
         execute:
           implementation: fabric.fabric_plugin.tasks.run_script
           inputs:
-            script_path: upload_docker_image.sh
+            script_path: scripts/upload_docker_image.sh
             fabric_env: *manager_fabric_env
           executor: host_agent
 

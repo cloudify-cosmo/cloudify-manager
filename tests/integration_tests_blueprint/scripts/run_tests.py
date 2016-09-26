@@ -25,8 +25,7 @@ def run_integration_tests():
     utils.run('{0} {1} {2} {3}'.format(remote_script_path,
                                        utils.CLOUDIFY_VENV_PATH,
                                        suites_runner_path,
-                                       tests_descriptor),
-              out=True)
+                                       tests_descriptor))
 
 
 def main():
