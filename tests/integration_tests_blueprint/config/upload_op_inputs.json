@@ -1,0 +1,1 @@
+{"operation": "cloudify.interfaces.exec_script.execute","operation_kwargs": {"s3_user_id": "#s3_user_id#", "s3_user_key": "#s3_user_key#", "s3_bucket": "#s3_bucket#"},"node_ids": ["docl_node"]}
