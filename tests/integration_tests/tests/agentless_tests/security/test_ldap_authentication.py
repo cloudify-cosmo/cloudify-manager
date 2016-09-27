@@ -13,39 +13,37 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from .test_base import TestAuthenticationBase
-from integration_tests.postgresql import user_datastore
+import yaml
+import tempfile
+
+from unittest import skip
+
+from .security_base import TestAuthenticationBase
+from integration_tests.framework.postgresql import user_datastore
 
 # See here for explanation on how to make AD allow simple passwords
 # http://serverfault.com/questions/19611/disable-password-complexity-rule-in-active-directory#19613 # NOQA
 
 
+@skip
 class LDAPAuthenticationTest(TestAuthenticationBase):
-    def get_manager_blueprint_inputs(self):
-        inputs = \
-            super(LDAPAuthenticationTest, self).get_manager_blueprint_inputs()
-        inputs['ldap_server'] = 'ldap://52.57.5.220:389/'
-        inputs['ldap_username'] = 'alice'
-        inputs['ldap_password'] = 'alice_new_password'
-        inputs['ldap_domain'] = 'cloudify.com'
-        inputs['ldap_is_active_directory'] = True
+    def setUp(self):
+        super(LDAPAuthenticationTest, self).setUp()
 
-    def test_ldap_authentication(self):
-        self.bootstrap_secured_manager()
-        self._test_credentials_authentication()
-        self._test_token_authentication()
+        # Update the config on the manager to include LDAP configurations
+        config_file_location = '/opt/manager/cloudify-rest.conf'
+        config = yaml.load(self.read_manager_file(config_file_location))
+        config['ldap_server'] = 'ldap://52.57.5.220:389/'
+        config['ldap_username'] = 'alice'
+        config['ldap_password'] = 'alice_new_password'
+        config['ldap_domain'] = 'cloudify.com'
+        config['ldap_is_active_directory'] = True
+        with tempfile.NamedTemporaryFile() as f:
+            yaml.dump(config, f)
+            f.flush()
+            self.copy_file_to_manager(f.name, config_file_location)
 
-    def _test_credentials_authentication(self):
-        self._test_valid_credentials()
-        self._test_wrong_credentials()
-        self._test_unknown_user()
-        self._test_new_user()
-
-    def _test_token_authentication(self):
-        self._test_valid_token_authentication()
-        self._test_invalid_token_authentication()
-
-    def _test_valid_credentials(self):
+    def test_valid_credentials(self):
         # Before the first successful call (and authentication), we should see
         # the old password
         alice = user_datastore.get_user('alice')
@@ -58,16 +56,16 @@ class LDAPAuthenticationTest(TestAuthenticationBase):
         alice = user_datastore.get_user('alice')
         self.assertEqual(alice.password, 'alice_new_password')
 
-    def _test_wrong_credentials(self):
+    def test_wrong_credentials(self):
         self._assert_unauthorized(username='alice',
                                   password='wrong_password')
 
-    def _test_unknown_user(self):
+    def test_unknown_user(self):
         self._assert_unauthorized(username='unknown', password='unknown')
         unknown = user_datastore.get_user('unknown')
         self.assertIsNone(unknown)
 
-    def _test_new_user(self):
+    def test_new_user(self):
         # The user is not present in the userstore
         eve = user_datastore.get_user('eve')
         self.assertIsNone(eve)
@@ -91,9 +89,9 @@ class LDAPAuthenticationTest(TestAuthenticationBase):
         self._assert_authorized(username='eve',
                                 password='eve_new_password')
 
-    def _test_valid_token_authentication(self):
+    def test_valid_token_authentication(self):
         token = self.client.tokens.get()
         self._assert_authorized(token=token.value, username=None)
 
-    def _test_invalid_token_authentication(self):
+    def test_invalid_token_authentication(self):
         self._assert_unauthorized(token='wrong token', username=None)

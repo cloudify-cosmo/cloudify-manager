@@ -169,20 +169,24 @@ def create_auth_header(username=None, password=None, token=None):
     return header
 
 
-def add_users_and_roles_to_userstore(user_datastore, users, roles):
+def add_users_and_roles_to_userstore(user_datastore,
+                                     users,
+                                     roles,
+                                     default_tenant):
     """Create passed roles and users in the datastore, and add
     relevant roles to their respective users
 
     :param user_datastore: A valid flask-security UserDataStore
     :param users: A list of dicts (see manager_types.yaml)
     :param roles: A list of dicts (see manager_types.yaml)
+    :param default_tenant: The default tenant object
     """
 
     logger = current_app.logger
     logger.debug('Adding users: {0} \n& roles: {1}'.format(users, roles))
 
     for role in roles:
-        user_datastore.create_role(
+        user_datastore.find_or_create_role(
             name=role['name'],
             description=role.get('description'),
             allowed=role['allow'],
@@ -197,5 +201,6 @@ def add_users_and_roles_to_userstore(user_datastore, users, roles):
         for role in user.get('roles', []):
             role_obj = user_datastore.find_role(role)
             user_datastore.add_role_to_user(user_obj, role_obj)
+        user_obj.tenants.append(default_tenant)
 
     user_datastore.commit()

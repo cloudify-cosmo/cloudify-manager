@@ -42,7 +42,6 @@ def get_test_users():
             'roles': []
         }
     ]
-    test_users.extend(get_admin_user())
     return test_users
 
 

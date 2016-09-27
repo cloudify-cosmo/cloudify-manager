@@ -86,9 +86,10 @@ class TestClient(FlaskClient):
     """
     def open(self, *args, **kwargs):
         kwargs = kwargs or {}
+        admin = get_admin_user()[0]
         kwargs['headers'] = kwargs.get('headers') or {}
         kwargs['headers'].update(utils.create_auth_header(
-            username='admin', password='admin'))
+            username=admin['username'], password=admin['password']))
         kwargs['headers']['tenant'] = DEFAULT_TENANT_NAME
         return super(TestClient, self).open(*args, **kwargs)
 
@@ -171,9 +172,9 @@ class BaseServerTestCase(unittest.TestCase):
         self.app = self._get_app(server.app)
         self.client = self.create_client()
         server.db.create_all()
-        self._init_default_tenant(server.db, server.app)
+        default_tenant = self._init_default_tenant(server.db, server.app)
         self.sm = get_storage_manager()
-        self._add_users_and_roles(server.user_datastore)
+        self._add_users_and_roles(server.user_datastore, default_tenant)
         self.initialize_provider_context()
 
     @staticmethod
@@ -184,6 +185,7 @@ class BaseServerTestCase(unittest.TestCase):
         db.session.commit()
 
         app.config['tenant'] = t
+        return t
 
     @staticmethod
     def _get_app(flask_app):
@@ -194,7 +196,7 @@ class BaseServerTestCase(unittest.TestCase):
         flask_app.test_client_class = TestClient
         return flask_app.test_client()
 
-    def _add_users_and_roles(self, user_datastore):
+    def _add_users_and_roles(self, user_datastore, default_tenant):
         """Add users and roles for the test
 
         :param user_datastore: SQLAlchemyDataUserstore
@@ -203,7 +205,8 @@ class BaseServerTestCase(unittest.TestCase):
         utils.add_users_and_roles_to_userstore(
             user_datastore,
             self._get_users(),
-            self._get_roles()
+            self._get_roles(),
+            default_tenant
         )
 
         for user in self._get_users():

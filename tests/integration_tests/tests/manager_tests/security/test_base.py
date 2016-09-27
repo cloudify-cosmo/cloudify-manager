@@ -19,14 +19,14 @@ from contextlib import contextmanager
 from cloudify_cli import constants as cli_constants
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
-from manager_rest.test.security_utils import get_test_users, get_test_roles
+from manager_rest.test.security_utils import get_test_users
 
 from integration_tests import ManagerTestCase
 from integration_tests.framework import constants, utils
 from integration_tests.tests import utils as test_utils
 
 SECURITY_PROP_PATH = ('node_types.cloudify\.nodes\.MyCloudifyManager.'
-                      'properties.security.default')
+                      'properties.security.default.userstore.users')
 REST_PLUGIN_PATH = 'node_templates.rest_service.properties.plugins'
 USERDATA_PATH = 'node_templates.manager_host.properties.parameters.user_data'
 
@@ -41,50 +41,27 @@ class TestSecuredRestBase(ManagerTestCase):
         for key, value in self.get_manager_blueprint_override().items():
             patcher.set_value(key, value)
         self.handle_ssl_files(manager_blueprint_dir)
-        security_settings = self.get_security_settings()
         test_manager_types_path = os.path.join(manager_blueprint_dir,
                                                'types/manager-types.yaml')
         with test_utils.patch_yaml(test_manager_types_path) as patch:
-            for key, value in security_settings.items():
-                patch.set_value(key, value)
+            patch.append_value(SECURITY_PROP_PATH, get_test_users())
         self.set_env_vars()
 
     def handle_ssl_files(self, manager_blueprint_dir):
         pass
 
     def set_env_vars(self):
-        os.environ[cli_constants.CLOUDIFY_USERNAME_ENV] = utils.ADMIN_USERNAME
-        os.environ[cli_constants.CLOUDIFY_PASSWORD_ENV] = utils.ADMIN_PASSWORD
         os.environ[cli_constants.CLOUDIFY_SSL_TRUST_ALL] = 'true'
         self.addCleanup(self.unset_env_vars)
 
     @staticmethod
     def unset_env_vars():
-        os.environ.pop(cli_constants.CLOUDIFY_USERNAME_ENV, None)
-        os.environ.pop(cli_constants.CLOUDIFY_PASSWORD_ENV, None)
         os.environ.pop(cli_constants.CLOUDIFY_SSL_TRUST_ALL, None)
         os.environ.pop(cli_constants.LOCAL_REST_CERT_FILE, None)
         os.environ.pop(constants.CLOUDIFY_REST_PORT, None)
 
-    @staticmethod
-    def get_security_settings():
-        userstore = {
-            'users': get_test_users(),
-            'roles': get_test_roles()
-        }
-        settings = {'{0}.userstore'.format(SECURITY_PROP_PATH): userstore}
-        return settings
-
     def get_manager_blueprint_inputs(self):
-        username = utils.ADMIN_USERNAME
-        password = utils.ADMIN_PASSWORD
-        return {
-            'ssl_enabled': self.is_ssl_enabled(),
-            'admin_username': username,
-            'admin_password': password,
-            'agent_rest_username': username,
-            'agent_rest_password': password
-        }
+        return {'ssl_enabled': self.is_ssl_enabled()}
 
     def get_manager_blueprint_override(self):
         rest_plugins = self.get_rest_plugins()

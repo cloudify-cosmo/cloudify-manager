@@ -26,7 +26,7 @@ from manager_rest.config import instance
 from manager_rest.storage.models import Tenant
 from manager_rest.security import user_datastore
 from manager_rest.utils import add_users_and_roles_to_userstore
-from manager_rest.test.security_utils import get_admin_user, get_admin_role
+from manager_rest.test.security_utils import get_admin_role
 
 from integration_tests.framework import utils
 
@@ -50,6 +50,7 @@ def setup_app():
                 conf.db_name
             )
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
 
     # Setup the mock app with the DB
     db.init_app(app)
@@ -85,15 +86,15 @@ def reset_data():
     db.drop_all()
     db.create_all()
 
+    default_tenant = Tenant(name=instance.default_tenant_name)
+    db.session.add(default_tenant)
+
     add_users_and_roles_to_userstore(
         user_datastore,
-        get_admin_user(),
-        get_admin_role()
+        utils.get_admin_user(),
+        get_admin_role(),
+        default_tenant
     )
-
-    t = Tenant(name=instance.default_tenant_name)
-    db.session.add(t)
-    db.session.commit()
 
     # Clear the connection
     db.session.remove()
