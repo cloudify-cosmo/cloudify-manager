@@ -162,9 +162,9 @@ class BaseServerTestCase(unittest.TestCase):
         server.reset_app(self.server_configuration)
         utils.copy_resources(config.instance.file_server_root)
 
-        self._ctx = server.app.test_request_context()
-        self._ctx.push()
-        self.addCleanup(self._ctx.pop)
+        self._flask_app_context = server.app.test_request_context()
+        self._flask_app_context.push()
+        self.addCleanup(self._flask_app_context.pop)
 
         self.app = self._get_app(server.app)
         self.client = self.create_client()
