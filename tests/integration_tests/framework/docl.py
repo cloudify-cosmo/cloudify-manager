@@ -19,6 +19,7 @@ import copy
 import os
 import socket
 import sys
+import json
 import time
 import tempfile
 from contextlib import contextmanager
@@ -166,7 +167,7 @@ def bootstrap_prepared_container(container_id=None,
     start = time.time()
     inputs = inputs or {}
     args = ['--container-id', container_id,
-            '--cfy-args', "--skip-sanity --skip-validations "
+            '--cfy-args', "--skip-sanity "
                           "--task-retries 0"]
 
     if serve_resources_tar:
@@ -195,9 +196,16 @@ def run_manager(label=None, tag=None):
         with open(f.name) as f2:
             container_details = yaml.safe_load(f2)
     _set_container_id_and_ip(container_details)
+    _load_credentials_to_env()
     _wait_for_services()
     logger.info(
         'Container start took {0} seconds'.format(time.time() - start))
+
+
+def _load_credentials_to_env():
+    credentials = json.loads(read_file('/root/test_credentials.json'))
+    os.environ[utils.CLOUDIFY_USERNAME_ENV] = credentials['admin_username']
+    os.environ[utils.CLOUDIFY_PASSWORD_ENV] = credentials['admin_password']
 
 
 def save_image(tag, container_id=None):

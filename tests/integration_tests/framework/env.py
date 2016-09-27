@@ -94,15 +94,25 @@ class BaseTestEnvironment(object):
 
     def on_manager_created(self):
         cfy = utils.get_cfy()
+        cfy.use(utils.get_manager_ip(),
+                ssh_user='root',
+                ssh_key=docl.ssh_key_path(),
+                **self._get_cfy_use_kwargs())
+        self.start_events_printer()
+
+    @staticmethod
+    def _get_cfy_use_kwargs():
         kwargs = {}
         rest_port = os.environ.get(constants.CLOUDIFY_REST_PORT)
+        manager_username = os.environ.get(utils.CLOUDIFY_USERNAME_ENV)
+        manager_password = os.environ.get(utils.CLOUDIFY_PASSWORD_ENV)
         if rest_port:
-            kwargs = {'rest_port': rest_port}
-        cfy.use(utils.get_manager_ip(),
-                manager_user='root',
-                manager_key=docl.ssh_key_path(),
-                **kwargs)
-        self.start_events_printer()
+            kwargs['rest_port'] = rest_port
+        if manager_username:
+            kwargs['manager_username'] = manager_username
+        if manager_password:
+            kwargs['manager_password'] = manager_password
+        return kwargs
 
     def _build_resource_mapping(self):
         """

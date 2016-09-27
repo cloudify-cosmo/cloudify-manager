@@ -18,7 +18,7 @@ import sh
 import os
 from contextlib import contextmanager
 
-from .test_base import TestSecuredRestBase
+from .security_base import TestSecuredRestBase
 
 from integration_tests.tests.utils import get_resource as resource
 
@@ -37,7 +37,6 @@ class AuthorizationTest(TestSecuredRestBase):
     no_role_password = 'dave_password'
 
     def test_authorization(self):
-        self.bootstrap_secured_manager()
         blueprint_id = self._assert_blueprint_operations()
         deployment_id = self._assert_deployment_operations(blueprint_id)
         self._assert_execution_operations(deployment_id)

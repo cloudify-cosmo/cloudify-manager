@@ -32,14 +32,12 @@ from wagon import wagon
 
 from manager_rest.utils import create_auth_header
 from cloudify_cli import env as cli_env
+from cloudify_cli.constants import CLOUDIFY_USERNAME_ENV, CLOUDIFY_PASSWORD_ENV
 from cloudify_rest_client import CloudifyClient
 from cloudify.utils import setup_logger
 from integration_tests.framework import constants
 
 logger = setup_logger('testenv.utils')
-
-ADMIN_USERNAME = 'admin'
-ADMIN_PASSWORD = 'admin'
 
 
 def _write(stream, s):
@@ -60,14 +58,21 @@ def get_manager_ip():
     return os.environ[constants.DOCL_CONTAINER_IP]
 
 
+def get_username():
+    return os.environ[CLOUDIFY_USERNAME_ENV]
+
+
+def get_password():
+    return os.environ[CLOUDIFY_PASSWORD_ENV]
+
+
 def create_rest_client(**kwargs):
     # Doing it with kwargs instead of arguments with default values to allow
     # not passing args (which will then use the default values), or explicitly
     # passing None (or False) which will then be passed as-is to the Client
 
-    # Default values from the inputs (the manager is "secured" by default)
-    username = kwargs.get('username', ADMIN_USERNAME)
-    password = kwargs.get('password', ADMIN_PASSWORD)
+    username = kwargs.get('username', get_username())
+    password = kwargs.get('password', get_password())
     token = kwargs.get('token')
     rest_port = kwargs.get('rest_port',
                            os.environ.get(constants.CLOUDIFY_REST_PORT, 80))
@@ -251,3 +256,13 @@ class YamlPatcher(object):
     @staticmethod
     def _raise_illegal(prop_path):
         raise RuntimeError('illegal path: {0}'.format(prop_path))
+
+
+def get_admin_user():
+    return [
+        {
+            'username': cli_env.get_username(),
+            'password': cli_env.get_password(),
+            'roles': ['administrator']
+        }
+    ]
