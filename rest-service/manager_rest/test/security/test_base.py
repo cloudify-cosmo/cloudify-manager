@@ -17,8 +17,7 @@ from contextlib import contextmanager
 
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
-from manager_rest.utils import create_auth_header, \
-    add_users_and_roles_to_userstore
+from manager_rest.utils import create_auth_header
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.test.security_utils import get_test_users, get_test_roles
 
@@ -44,13 +43,13 @@ class SecurityTestBase(BaseServerTestCase):
         headers = headers or create_auth_header(**kwargs)
         return self.create_client(headers)
 
-    def _add_users_and_roles(self, user_datastore):
-        # Override the parent method to add more users/roles to the userstore
-        add_users_and_roles_to_userstore(
-            user_datastore,
-            get_test_users(),
-            get_test_roles()
-        )
+    @staticmethod
+    def _get_users():
+        return get_test_users()
+
+    @staticmethod
+    def _get_roles():
+        return get_test_roles()
 
     def _assert_user_authorized(self, headers=None, **kwargs):
         with self.use_secured_client(headers, **kwargs):

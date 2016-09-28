@@ -47,6 +47,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
     def test_get_blueprint_deployments(self):
         now = utils.get_formatted_timestamp()
         sm = get_storage_manager()
+
         blueprint = models.Blueprint(id='blueprint-id',
                                      created_at=now,
                                      updated_at=now,
@@ -100,8 +101,9 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         outputs={})
         sm.put_deployment(deployment3)
 
+        filters_bp = {'blueprint_id': 'blueprint-id'}
         blueprint_deployments = \
-            sm.list_blueprint_deployments('blueprint-id').items
+            sm.list_deployments(filters=filters_bp).items
 
         self.assertEquals(2, len(blueprint_deployments))
         if blueprint_deployments[0].id != deployment1.id:

@@ -24,6 +24,15 @@ class ManagerException(Exception):
         self.error_code = error_code
 
 
+class MissingPremiumPackage(ManagerException):
+    MISSING_PREMIUM_ERROR_CODE = 'missing_premium_package_error'
+
+    def __init__(self, *args, **kwargs):
+        super(MissingPremiumPackage, self).__init__(
+            404, MissingPremiumPackage.MISSING_PREMIUM_ERROR_CODE,
+            *args, **kwargs)
+
+
 class ConflictError(ManagerException):
     CONFLICT_ERROR_CODE = 'conflict_error'
 

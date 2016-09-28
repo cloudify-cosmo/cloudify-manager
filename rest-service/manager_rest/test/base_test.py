@@ -30,12 +30,12 @@ from wagon.wagon import Wagon
 from manager_rest.storage.models import Tenant
 from manager_rest import utils, config, archiving
 from manager_rest.storage import FileServer, get_storage_manager
+from manager_rest.security.security_models import User
 from manager_rest.test.security_utils import get_admin_user, get_admin_role
 from manager_rest.test.mocks import MockHTTPClient, CLIENT_API_VERSION, \
     build_query_string
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
-
 
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
@@ -43,7 +43,8 @@ FILE_SERVER_SNAPSHOTS_FOLDER = 'snapshots'
 FILE_SERVER_DEPLOYMENTS_FOLDER = 'deployments'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
-LATEST_API_VERSION = 2.1  # to be used by max_client_version test attribute
+LATEST_API_VERSION = 3  # to be used by max_client_version test attribute
+DEFAULT_TENANT_NAME = 'default_tenant'
 
 
 @nottest
@@ -86,8 +87,8 @@ class TestClient(FlaskClient):
         kwargs = kwargs or {}
         kwargs['headers'] = kwargs.get('headers') or {}
         kwargs['headers'].update(utils.create_auth_header(
-            username='admin', password='admin')
-        )
+            username='admin', password='admin'))
+        kwargs['headers']['tenant'] = DEFAULT_TENANT_NAME
         return super(TestClient, self).open(*args, **kwargs)
 
 
@@ -169,9 +170,9 @@ class BaseServerTestCase(unittest.TestCase):
         self.app = self._get_app(server.app)
         self.client = self.create_client()
         server.db.create_all()
-        self._add_users_and_roles(server.user_datastore)
-        self.sm = get_storage_manager()
         self._init_default_tenant(server.db, server.app)
+        self.sm = get_storage_manager()
+        self._add_users_and_roles(server.user_datastore)
         self.initialize_provider_context()
 
     @staticmethod
@@ -181,7 +182,7 @@ class BaseServerTestCase(unittest.TestCase):
         db.session.add(t)
         db.session.commit()
 
-        app.config['tenant'] = t.id
+        app.config['tenant'] = t
 
     @staticmethod
     def _get_app(flask_app):
@@ -200,9 +201,24 @@ class BaseServerTestCase(unittest.TestCase):
         # Add a fictitious admin user to the user_datastore
         utils.add_users_and_roles_to_userstore(
             user_datastore,
-            get_admin_user(),
-            get_admin_role()
+            self._get_users(),
+            self._get_roles()
         )
+
+        for user in self._get_users():
+            user = User.query.filter_by(username=user['username']).first()
+            tenant = self.sm.get_tenant_by_name(DEFAULT_TENANT_NAME)
+            if tenant not in user.tenants:
+                user.tenants.append(tenant)
+                self.sm.update_entity(user)
+
+    @staticmethod
+    def _get_users():
+        return get_admin_user()
+
+    @staticmethod
+    def _get_roles():
+        return get_admin_role()
 
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)

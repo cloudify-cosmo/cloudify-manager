@@ -22,6 +22,7 @@ import pg8000
 from cloudify.utils import setup_logger
 
 from manager_rest.storage import db
+from manager_rest.config import instance
 from manager_rest.storage.models import Tenant
 from manager_rest.security import user_datastore
 from manager_rest.utils import add_users_and_roles_to_userstore
@@ -90,7 +91,7 @@ def reset_data():
         get_admin_role()
     )
 
-    t = Tenant(name='default_tenant')
+    t = Tenant(name=instance.default_tenant_name)
     db.session.add(t)
     db.session.commit()
 
