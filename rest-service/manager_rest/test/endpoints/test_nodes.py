@@ -21,7 +21,10 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.storage import get_storage_manager
-from manager_rest.storage.models import Deployment, Node, NodeInstance
+from manager_rest.storage.models import (Blueprint,
+                                         Deployment,
+                                         Node,
+                                         NodeInstance)
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -377,11 +380,13 @@ class NodesTest(base_test.BaseServerTestCase):
                           deployment_id,
                           runtime_properties=None,
                           node_id='node_id',
-                          version=None):
+                          version=None,
+                          blueprint_id='blueprint_id'):
         runtime_properties = runtime_properties or {}
 
         sm = get_storage_manager()
-        self._add_deployment_if_not_exists(sm, deployment_id)
+        self._add_blueprint_if_not_exists(sm, blueprint_id)
+        self._add_deployment_if_not_exists(sm, deployment_id, blueprint_id)
         self._add_node_if_not_exists(sm, node_id, deployment_id)
         sm.put_node_instance(
             NodeInstance(
@@ -398,12 +403,25 @@ class NodesTest(base_test.BaseServerTestCase):
         )
 
     @staticmethod
-    def _add_deployment_if_not_exists(sm, deployment_id):
+    def _add_blueprint_if_not_exists(sm, blueprint_id):
+        try:
+            sm.get_blueprint(blueprint_id)
+        except manager_exceptions.NotFoundError:
+            sm.put_blueprint(Blueprint(
+                id=blueprint_id,
+                created_at=datetime.now(),
+                main_file_name='',
+                plan={})
+            )
+
+    @staticmethod
+    def _add_deployment_if_not_exists(sm, deployment_id, blueprint_id):
         try:
             sm.get_deployment(deployment_id)
         except manager_exceptions.NotFoundError:
             sm.put_deployment(Deployment(
                 id=deployment_id,
+                blueprint_id=blueprint_id,
                 created_at=datetime.now())
             )
 

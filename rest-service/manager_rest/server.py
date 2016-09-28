@@ -27,9 +27,13 @@ from manager_rest import config
 from manager_rest.storage import db
 from manager_rest.endpoint_mapper import setup_resources
 from manager_rest.maintenance import maintenance_mode_handler
-from manager_rest.security import user_datastore, user_loader, configure_ldap
+from manager_rest.security import user_datastore, user_loader
 from manager_rest.app_logging import setup_logger, log_request, log_response
 from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
+try:
+    from manager_rest.cloudify_premium import configure_ldap
+except:
+    configure_ldap = None
 
 SQL_DIALECT = 'postgresql'
 
@@ -43,7 +47,7 @@ class CloudifyFlaskApp(Flask):
 
         # These two need to be called after the configuration was loaded
         setup_logger(self.logger, 'manager_rest')
-        configure_ldap()
+        configure_ldap() if configure_ldap else None
 
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)
@@ -137,7 +141,7 @@ def _detect_debug_environment():
             if debug_config.get('is_debug_on'):
                 import pydevd
                 pydevd.settrace(
-                    debug_config['host_ip'], port=53100, stdoutToServer=True,
+                    debug_config['host'], port=53100, stdoutToServer=True,
                     stderrToServer=True, suspend=False)
     except BaseException, e:
         raise Exception('Failed to connect to debug server, {0}: {1}'.

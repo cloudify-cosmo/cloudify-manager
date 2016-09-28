@@ -25,10 +25,24 @@ roles_users_table = db.Table(
 )
 
 
+groups_users_table = db.Table(
+    'groups_users',
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id')),
+    db.Column('group_id', db.Integer, db.ForeignKey('groups.id'))
+)
+
+
+tenants_users_table = db.Table(
+    'tenants_users',
+    db.Column('user_id', db.Integer, db.ForeignKey('users.id')),
+    db.Column('tenant_id', db.Integer, db.ForeignKey('tenants.id'))
+)
+
+
 class User(SerializableBase, UserMixin):
     __tablename__ = 'users'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(255), index=True, unique=True)
     email = db.Column(db.String(255), index=True)
     password = db.Column(db.String(255))
@@ -44,11 +58,31 @@ class User(SerializableBase, UserMixin):
         backref=db.backref('users', lazy='dynamic')
     )
 
+    groups = db.relationship(
+        'Group',
+        secondary=groups_users_table,
+        backref=db.backref('users', lazy='dynamic')
+    )
+
+    tenants = db.relationship(
+        'Tenant',
+        secondary=tenants_users_table,
+        backref=db.backref('users', lazy='dynamic')
+    )
+
+    def get_all_tenants(self):
+        tenant_list = self.tenants
+        for group in self.groups:
+            for tenant in group.tenants:
+                tenant_list.append(tenant)
+
+        return list(set(tenant_list))
+
 
 class Role(SerializableBase, RoleMixin):
     __tablename__ = 'roles'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
     allowed = db.Column(db.PickleType, nullable=False)
     denied = db.Column(db.PickleType)

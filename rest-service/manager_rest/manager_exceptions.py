@@ -24,6 +24,15 @@ class ManagerException(Exception):
         self.error_code = error_code
 
 
+class NotImplementedError(ManagerException):
+    NOT_IMPLEMENTED_ERROR_CODE = 'not_implemented_error'
+
+    def __init__(self, *args, **kwargs):
+        super(NotImplementedError, self).__init__(
+            404, NotImplementedError.NOT_IMPLEMENTED_ERROR_CODE,
+            *args, **kwargs)
+
+
 class ConflictError(ManagerException):
     CONFLICT_ERROR_CODE = 'conflict_error'
 

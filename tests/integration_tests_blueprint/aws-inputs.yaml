@@ -13,3 +13,5 @@ server_name: 'docl-machine'
 ssh_user: ubuntu
 ssh_port: 22
 instance_type: m3.large
+
+
