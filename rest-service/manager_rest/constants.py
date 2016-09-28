@@ -19,3 +19,6 @@ MAINTENANCE_MODE_ACTIVATED = 'activated'
 MAINTENANCE_MODE_DEACTIVATED = 'deactivated'
 MAINTENANCE_MODE_ACTIVE_ERROR_CODE = 'maintenance_mode_active'
 MAINTENANCE_MODE_ACTIVATING_ERROR_CODE = 'entering_maintenance_mode'
+
+CLOUDIFY_TENANT_HEADER = 'Tenant'
+ADMIN_ROLE_NAME = 'administrator'

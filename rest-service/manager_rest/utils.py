@@ -25,6 +25,7 @@ import platform
 from datetime import datetime
 from os import path, makedirs
 from base64 import urlsafe_b64encode
+from flask import current_app
 
 import wagon.utils
 from flask.ext.restful import abort
@@ -176,6 +177,10 @@ def add_users_and_roles_to_userstore(user_datastore, users, roles):
     :param users: A list of dicts (see manager_types.yaml)
     :param roles: A list of dicts (see manager_types.yaml)
     """
+
+    logger = current_app.logger
+    logger.debug('Adding users: {0} \n& roles: {1}'.format(users, roles))
+
     for role in roles:
         user_datastore.create_role(
             name=role['name'],

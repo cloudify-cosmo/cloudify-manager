@@ -88,10 +88,4 @@ def get_user_and_hashed_pass(request):
             return None, None
         user, hashed_pass = _get_user_from_token(token)
 
-    if user:
-        db = current_app.extensions['sqlalchemy'].db
-        # This hack makes sure the roles are actually loaded from the DB
-        _ = user.roles  # NOQA
-        # This is necessary to allow access after the SQLA session has closed
-        db.make_transient(user)
     return user, hashed_pass

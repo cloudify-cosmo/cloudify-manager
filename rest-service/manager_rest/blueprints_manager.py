@@ -262,8 +262,8 @@ class BlueprintsManager(object):
         return new_blueprint
 
     def delete_blueprint(self, blueprint_id):
-        blueprint_deployments = self.sm.list_blueprint_deployments(
-            blueprint_id).items
+        blueprint_deployments = self.sm.list_deployments(
+            filters={'blueprint_id': blueprint_id}).items
 
         if len(blueprint_deployments) > 0:
             raise manager_exceptions.DependentExistsError(

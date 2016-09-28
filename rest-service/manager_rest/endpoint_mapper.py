@@ -12,12 +12,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from manager_rest import resources, resources_v2, resources_v2_1
+from manager_rest import resources, resources_v2, resources_v2_1, resources_v3
 from manager_rest import swagger as rest_swagger
 
 SUPPORTED_API_VERSIONS = [('v1', resources),
                           ('v2', resources_v2),
-                          ('v2.1', resources_v2_1)]
+                          ('v2.1', resources_v2_1),
+                          ('v3', resources_v3)]
 
 
 def setup_resources(api):
@@ -62,7 +63,13 @@ def setup_resources(api):
             'deployment-updates/<string:id>/update/<string:phase>',
         'DeploymentUpdateId': 'deployment-updates/<string:update_id>',
         'DeploymentUpdates': 'deployment-updates',
-
+        'Tenants': 'tenants',
+        'TenantsId': 'tenants/<string:tenant_name>',
+        'TenantUsers': 'tenants/users',
+        'TenantGroups': 'tenants/user-groups',
+        'UserGroups': 'user-groups',
+        'UserGroupsId': 'user-groups/<string:group_name>',
+        'UserGroupsUsers': 'user-groups/users',
     }
 
     for resource, endpoint_suffix in resources_endpoints.iteritems():
@@ -80,9 +87,7 @@ def _set_versioned_urls(api, resource_name, endpoint_suffix):
         if resource:
             endpoint = '{0}/{1}'.format(version_name, endpoint_suffix)
             url = '/api/{0}'.format(endpoint)
-            api.add_resource(resource,
-                             url,
-                             endpoint=endpoint)
+            api.add_resource(resource, url, endpoint=endpoint)
             rest_swagger.add_swagger_resource(api,
                                               version_name,
                                               resource,

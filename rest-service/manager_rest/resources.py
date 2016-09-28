@@ -58,6 +58,10 @@ CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
 
 SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
 
+MISSING_PREMIUM_PACKAGE_MESSAGE = 'This feature exists only in the premium' \
+                                  ' edition of Cloudify.\n' \
+                                  'Please contact sales for additional info.'
+
 
 def insecure_rest_method(func):
     """block an insecure REST method if manager disabled insecure endpoints
@@ -118,7 +122,7 @@ class marshal_with(object):
         :param response_class: response class to marshal result with.
          class must have a "resource_fields" class variable
         """
-        if not hasattr(response_class, 'resource_fields'):
+        if response_class and not hasattr(response_class, 'resource_fields'):
             raise RuntimeError(
                 'Response class {0} does not contain a "resource_fields" '
                 'class variable'.format(type(response_class)))
@@ -127,6 +131,12 @@ class marshal_with(object):
     def __call__(self, f):
         @wraps(f)
         def wrapper(*args, **kwargs):
+            if not self.response_class:
+                utils.abort_error(manager_exceptions.MissingPremiumPackage
+                                  (MISSING_PREMIUM_PACKAGE_MESSAGE),
+                                  app.logger,
+                                  hide_server_message=True)
+
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
 
