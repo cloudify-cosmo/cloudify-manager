@@ -169,11 +169,11 @@ inputs:
 
   rebuild:
     type: string
-    default: true
+    default: false
 
   ssh_user:
     type: string
-    default: ''
+    default: 'ubuntu'
 
   ssh_port:
     type: string
