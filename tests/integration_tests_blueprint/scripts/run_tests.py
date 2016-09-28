@@ -22,10 +22,12 @@ def run_integration_tests():
                                      'tests', 'integration_tests', 'framework')
     suites_runner_path = os.path.join(manager_test_path, 'suites_runner.py')
 
-    utils.run('{0} {1} {2} {3}'.format(remote_script_path,
-                                       utils.CLOUDIFY_VENV_PATH,
-                                       suites_runner_path,
-                                       tests_descriptor))
+    utils.run('{0} {1} {2} {3} {4}'.format(
+        remote_script_path,
+        utils.CLOUDIFY_VENV_PATH,
+        suites_runner_path,
+        tests_descriptor,
+        ctx.node.properties['cfy_logs_path']))
 
 
 def main():

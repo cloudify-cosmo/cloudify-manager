@@ -8,6 +8,9 @@ VENV_PATH=$1
 SUITE_RUNNER_PATH=$2
 TESTS=$3
 
+export CFY_LOGS_PATH=$4
+export CFY_LOGS_FILE_NAME=logs.tar.gz
+
 echo 'activating venv ' $VENV_PATH
 source $VENV_PATH/bin/activate
 

@@ -3,10 +3,13 @@ node_types:
     derived_from: cloudify.nodes.SoftwareComponent
     interfaces:
       cloudify.interfaces.exec_script:
-        execute: {}
+        upload_docker_image: {}
+        upload_manager_logs: {}
     properties:
       test_suites:
         default: { get_input: test_suites }
+      cfy_logs_path:
+        default: { get_input: cfy_logs_path }
       cloudify_manager_blueprints_branch:
         default: { get_input: cloudify_manager_blueprints_branch }
       cloudify_manager_blueprints_org:
@@ -170,6 +173,10 @@ inputs:
   rebuild:
     type: string
     default: false
+
+  cfy_logs_path:
+    type: string
+    default: '~/logs'
 
   ssh_user:
     type: string
