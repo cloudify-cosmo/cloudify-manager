@@ -479,6 +479,16 @@ workflows:
             and this property is 'true', operate on the compute node instead
             of the specified node.
         default: false
+      min_instances:
+        description: The minimum number of allowed instances (default 0)
+        default: 0
+        type: integer
+      max_instances:
+        description: >
+          The maximum number of allowed instances A negative number means
+          no limits (default -1)
+        default: -1
+        type: integer
       ignore_failure:
         default: false
         type: boolean
