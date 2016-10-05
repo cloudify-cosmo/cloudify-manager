@@ -17,7 +17,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-integration-tests',
-    version='4.0a4',
+    version='4.0a5',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=[
@@ -27,7 +27,7 @@ setup(
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
-        'cloudify==4.0a4',
+        'cloudify==4.0a5',
         'pika==0.9.14',
         'elasticsearch==1.6.0',
         'celery==3.1.17',
