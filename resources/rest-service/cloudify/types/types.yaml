@@ -485,7 +485,7 @@ workflows:
         type: integer
       max_instances:
         description: >
-          The maximum number of allowed instances A negative number means
+          The maximum number of allowed instances. A negative number means
           no limits (default -1)
         default: -1
         type: integer
