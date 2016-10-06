@@ -145,16 +145,19 @@ If you work with `IntelliJ` or `PyCharm` IDE, you can debug the container's rest
       `/opt/manager/env/lib/python2.7/site-packages/manager_rest`.
    7. Press OK to save your configuration.
    
-* Define the environment variable `DEBUG_MODE` in your terminal. You can set it to be anything you want, as long as it is    not empty, i.e: `export DEBUG_MODE=yariv`.
+* Define the environment variable `DEBUG_MODE` to be anything you want, as long as it is not empty.
+   * If you run the test(s) from your editor, set the environment variable in your test configuration:
+   Enter `Run` -> `Edit Configurations` and edit the `Environment Variables` field.  Add a variable named `DEBUG_MODE` and set its value to be any non-empty string.
+   * If you run the test(s) from a terminal, you must set the environment variable on the same terminal, i.e: `export DEBUG_MODE=yariv`.
 * In your editor, mark breakpoints inside the rest-service code, wherever you choose.
 
 * In your editor, start the debugger you have configured, by choosing it and press `Debug`.
 
-* Run tests from the same terminal in which you have defined the environemt variable `DEBUG_MODE`.
+* Run tests from your editor, or with the same terminal in which you have defined the environemt variable `DEBUG_MODE`.
 
 * The test(s) will run until reaching a breakpoint and you will be able to debug from your editor.
 
-* To turn off debug-mode, unset the `DEBUG_MODE` variable from your terminal, or set it to an empty string, i.e:
+* To turn off debug-mode, unset the `DEBUG_MODE` variable.  If you have defined it in your editor, remove it.  If you have exported it in your terminal, unset it or set it to an empty string on the same terminal, i.e:
 
   ```
   unset DEBUG_MODE
