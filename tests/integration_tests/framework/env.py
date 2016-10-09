@@ -318,6 +318,7 @@ class ManagerTestEnvironment(AgentTestEnvironment):
 
 
 def create_env(env_cls):
+    logger.info('Creating testing env..')
     global instance
     top_level_dir = os.path.join(tempfile.gettempdir(),
                                  'cloudify-integration-tests')
@@ -330,4 +331,5 @@ def create_env(env_cls):
 
 
 def destroy_env():
+    logger.info('Destroying testing env..')
     instance.destroy()
