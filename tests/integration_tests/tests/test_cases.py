@@ -15,6 +15,7 @@
 
 import json
 import yaml
+import tarfile
 import logging
 import os
 import shutil
@@ -65,15 +66,23 @@ class BaseTestCase(unittest.TestCase):
 
     def _save_logs(self, purge=True):
         logs_dir = os.environ.get('CFY_LOGS_PATH')
+        test_path = self.id().split('.')[1:]
         if not logs_dir:
+            self.logger.info('Saving manager logs is disabled by configuration'
+                             ' for test:  {0}'.format(test_path[-1]))
             return
-        logs_dir = os.path.join(logs_dir, *self.id().split('.'))
+        self.logger.info(
+            'Saving manager logs for test:  {0}'.format(test_path[-1]))
+
+        logs_dir = os.path.join(logs_dir, *test_path)
         mkdirs(logs_dir)
-        if os.environ.get('CFY_LOGS_FILE_NAME'):
-            logs_dir = os.path.join(logs_dir, os.environ['CFY_LOGS_FILE_NAME'])
-        self.cfy.logs.download(output_path=logs_dir)
+        target = os.path.join(logs_dir, 'logs.tar.gz')
+        self.cfy.logs.download(output_path=target)
         if purge:
             self.cfy.logs.purge(force=True)
+        with tarfile.open(target) as tar:
+            tar.extractall(path=logs_dir)
+        os.remove(target)
 
     @staticmethod
     def read_manager_file(file_path, no_strip=False):

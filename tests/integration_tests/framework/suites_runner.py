@@ -17,6 +17,7 @@ import os
 import sys
 import logging
 import tempfile
+import datetime
 
 from multiprocessing import Process
 from os import path
@@ -107,18 +108,27 @@ class SuiteRunner(object):
         nosetests(tmp_dir,
                   verbose=True,
                   nocapture=True,
-                  with_xunit=True,
+                  with_xunit=bool(os.environ.get('JENKINS_JOB')),
                   xunit_file=report_file).wait()
 
 
 def main():
     descriptor = sys.argv[1]
+    if os.environ.get('CFY_LOGS_PATH') and not os.environ.get('JENKINS_JOB'):
+        time = str(datetime.datetime.now()).split('.')[0]
+        time = time.replace(' ', '_').replace('-', '').replace(':', '')
+        os.environ['CFY_LOGS_PATH'] = os.path.join(
+            os.path.expanduser(os.environ['CFY_LOGS_PATH']),
+            '{0}_{1}'.format(time, descriptor))
     resources_path = path.dirname(resources.__file__)
     reports_dir = join(dirname(abspath(resources_path)), 'xunit-reports')
     if len(sys.argv) > 2:
         reports_dir = sys.argv[2]
     suites_runner = SuiteRunner(descriptor, reports_dir)
     suites_runner.run_all_groups()
+    if os.environ.get('CFY_LOGS_PATH') and not os.environ.get('JENKINS_JOB'):
+        logger.info('manager logs are available at {0}'.format(
+            os.environ['CFY_LOGS_PATH']))
 
 if __name__ == '__main__':
     main()
