@@ -1,12 +1,11 @@
 security:
   - manager_tests/test_secured_broker.py
-  - manager_tests/test_secured_rest.py
-  - manager_tests/test_secured_rest_authentication.py
-  - manager_tests/test_secured_rest_authorization.py
-  - manager_tests/test_secured_rest_base.py
-  - manager_tests/test_secured_rest_cert_location.py
-  - manager_tests/test_secured_rest_no_userstore.py
-  - manager_tests/test_secured_rest_user_certificate.py
+  - manager_tests/security/test_authentication.py
+  - manager_tests/security/test_authorization.py
+  - manager_tests/security/test_cert_location.py
+  - manager_tests/security/test_ldap_authentication.py
+  - manager_tests/security/test_misc.py
+  - manager_tests/security/test_user_certificate.py
 
 load:
   - agentless_tests/test_n_instances.py
