@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
-from datetime import datetime
 from itertools import dropwhile
 
 import mock
@@ -100,30 +98,10 @@ class ExecutionsTestCase(BaseServerTestCase):
     @attr(client_min_version=2.1,
           client_max_version=LATEST_API_VERSION)
     def test_sort_list(self):
-        execution1 = models.Execution(
-            id='0',
-            status=models.Execution.TERMINATED,
-            deployment_id='',
-            workflow_id='',
-            blueprint_id='',
-            created_at=datetime.now().isoformat(),
-            error='',
-            parameters=dict(),
-            is_system_workflow=False
-        )
-        execution2 = models.Execution(
-            id='1',
-            status=models.Execution.TERMINATED,
-            deployment_id='',
-            workflow_id='',
-            blueprint_id='',
-            created_at=datetime.now().isoformat(),
-            error='',
-            parameters=dict(),
-            is_system_workflow=False
-        )
-        get_storage_manager().put_execution(execution1)
-        get_storage_manager().put_execution(execution2)
+        blueprint = self._add_blueprint()
+        deployment = self._add_deployment(blueprint.id)
+        self._add_execution(deployment.id, blueprint.id, '0')
+        self._add_execution(deployment.id, blueprint.id, '1')
 
         executions = self.client.executions.list(sort='created_at')
         self.assertEqual(2, len(executions))

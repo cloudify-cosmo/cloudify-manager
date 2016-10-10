@@ -22,7 +22,7 @@ from nose.tools import nottest
 
 from dsl_parser import exceptions as parser_exceptions
 
-from manager_rest import archiving, utils
+from manager_rest import archiving
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.deployment_update.constants import STATES
 from manager_rest.test import base_test
@@ -332,27 +332,18 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                               query_params=kwargs)
 
     def test_storage_serialization_and_response(self):
-        now = utils.get_formatted_timestamp()
-        sm = get_storage_manager()
-        deployment_update = models.DeploymentUpdate(
-                deployment_id='deployment-id',
-                deployment_plan={'name': 'my-bp'},
-                state='staged',
-                id='depup-id',
-                deployment_update_nodes=None,
-                deployment_update_node_instances=None,
-                deployment_update_deployment=None,
-                modified_entity_ids=None,
-                execution_id='execution-id',
-                created_at=now)
-        sm.put_deployment_update(deployment_update)
-
-        depup_from_client = self.client.deployment_updates.get('depup-id')
+        self.sm = get_storage_manager()
+        blueprint = self._add_blueprint()
+        deployment = self._add_deployment(blueprint.id)
+        execution = self._add_execution(deployment.id,
+                                        blueprint.id)
+        depup = self._add_deployment_update(blueprint.id, execution.id)
+        depup_from_client = self.client.deployment_updates.get(depup.id)
         depup_response_attributes = {'id', 'state', 'deployment_id', 'steps',
                                      'execution_id', 'created_at'}
         for att in depup_response_attributes:
             self.assertEqual(getattr(depup_from_client, att),
-                             getattr(deployment_update, att))
+                             getattr(depup, att))
 
 
 @nottest

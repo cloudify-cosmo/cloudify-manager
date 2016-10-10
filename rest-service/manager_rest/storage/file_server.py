@@ -34,7 +34,15 @@ class FileServer(object):
         self.use_subprocess = use_subprocess
         self.port = port
 
+    def validate_port_free(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(('localhost', self.port))
+        if result == 0:
+            raise Exception('FileServer port is already taken ({0})'
+                            .format(self.port))
+
     def start(self):
+        self.validate_port_free()
         if self.use_subprocess:
             subprocess.Popen(
                 [sys.executable, __file__, self.root_path],

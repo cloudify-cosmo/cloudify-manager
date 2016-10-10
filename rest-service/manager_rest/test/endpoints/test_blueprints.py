@@ -269,8 +269,11 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         tmp_dir = '/tmp/tmp_upload_blueprint'
         blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
                                                     tmp_dir)
+
+        size = self.client.blueprints.calc_size(blueprint_path)
+
         progress_func = generate_progress_func(
-            total_size=32917,  # Calculated by trial and error
+            total_size=size,
             assert_equal=self.assertEqual,
             assert_almost_equal=self.assertAlmostEqual)
 
@@ -287,10 +290,13 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
 
         blueprint_path = self._create_big_blueprint('empty_blueprint.yaml',
                                                     tmp_dir)
+
+        size = self.client.blueprints.calc_size(blueprint_path)
+
         try:
             self.client.blueprints.upload(blueprint_path, '0')
             progress_func = generate_progress_func(
-                total_size=32917,  # Calculated by trial and error
+                total_size=size,
                 assert_equal=self.assertEqual,
                 assert_almost_equal=self.assertAlmostEqual)
 
