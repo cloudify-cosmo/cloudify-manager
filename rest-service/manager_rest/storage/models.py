@@ -284,6 +284,7 @@ class Execution(SerializableBase):
         parent_class_name='Blueprint',
         child_table_name='executions'
     )
+
     deployment = _relationship(
         child_class_name='Execution',
         column_name='deployment_id',
@@ -291,6 +292,8 @@ class Execution(SerializableBase):
         child_table_name='executions'
     )
 
+    # Execution of system workflow doesn't have deployment
+    # hence need explicit tenant field
     tenant = _relationship(
         child_class_name='Execution',
         column_name='tenant_id',
