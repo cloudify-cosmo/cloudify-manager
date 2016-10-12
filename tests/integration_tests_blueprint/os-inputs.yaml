@@ -21,6 +21,7 @@ external_network_name: external
 server_name: docl-instance
 
 image_id: 6c3047c6-17b1-4aaf-a657-9229bb481e50
-flavor_id: af2a80fe-ccad-43df-8cae-6418da948467
+#flavor_id: af2a80fe-ccad-43df-8cae-6418da948467
+flavor_id: b8e8ab6a-5480-478c-b1de-b09050683d7d
 ssh_user: ubuntu
 ssh_port: 22

@@ -133,26 +133,26 @@ class BasicWorkflowsTest(AgentlessTestCase):
         invocation = invocations[0]
         self.assertEqual('start_monitor', invocation['operation'])
 
-    def test_plugin_get_resource(self):
-        dsl_path = get_resource("dsl/get_resource_in_plugin.yaml")
-        deployment, _ = self.deploy_application(dsl_path)
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id
-        )['get_resource_operation_invocation']
-        self.assertEquals(1, len(invocations))
-        invocation = invocations[0]
-        with open(get_resource("dsl/basic.yaml")) as f:
-            basic_data = f.read()
-
-        # checking the resources are the correct data
-        self.assertEquals(basic_data, invocation['res1_data'])
-        self.assertEquals(basic_data, invocation['res2_data'])
-
-        # checking the custom filepath provided is indeed where the second
-        # resource was saved
-        self.assertEquals(invocation['custom_filepath'],
-                          invocation['res2_path'])
+    # def test_plugin_get_resource(self):
+    #     dsl_path = get_resource("dsl/get_resource_in_plugin.yaml")
+    #     deployment, _ = self.deploy_application(dsl_path)
+    #     invocations = self.get_plugin_data(
+    #         plugin_name='testmockoperations',
+    #         deployment_id=deployment.id
+    #     )['get_resource_operation_invocation']
+    #     self.assertEquals(1, len(invocations))
+    #     invocation = invocations[0]
+    #     with open(get_resource("dsl/basic.yaml")) as f:
+    #         basic_data = f.read()
+    #
+    #     # checking the resources are the correct data
+    #     self.assertEquals(basic_data, invocation['res1_data'])
+    #     self.assertEquals(basic_data, invocation['res2_data'])
+    #
+    #     # checking the custom filepath provided is indeed where the second
+    #     # resource was saved
+    #     self.assertEquals(invocation['custom_filepath'],
+    #                       invocation['res2_path'])
 
     def test_get_blueprint(self):
         dsl_path = get_resource("dsl/basic.yaml")
@@ -513,26 +513,26 @@ class BasicWorkflowsTest(AgentlessTestCase):
             i for i in invocations
             if i == context.NODE_INSTANCE]))
 
-    def test_riemann_core_started_with_policies(self):
-        """A riemann core is started if the blueprint defines policies
-        """
-        dsl_path = get_resource('dsl/with_policies1.yaml')
-        deployment, _ = self.deploy_application(dsl_path)
+    # def test_riemann_core_started_with_policies(self):
+    #     """A riemann core is started if the blueprint defines policies
+    #     """
+    #     dsl_path = get_resource('dsl/with_policies1.yaml')
+    #     deployment, _ = self.deploy_application(dsl_path)
+    #
+    #     self.assertTrue(riemann.is_riemann_core_up(deployment.id))
+    #
+    #     self.undeploy_application(deployment.id, is_delete_deployment=True)
+    #
+    #     self.assertFalse(riemann.is_riemann_core_up(deployment.id))
 
-        self.assertTrue(riemann.is_riemann_core_up(deployment.id))
-
-        self.undeploy_application(deployment.id, is_delete_deployment=True)
-
-        self.assertFalse(riemann.is_riemann_core_up(deployment.id))
-
-    def test_riemann_core_not_started_without_policies(self):
-        """A riemann core isn't started if there's no policies defined
-        """
-        dsl_path = get_resource('dsl/without_policies.yaml')
-        deployment, _ = self.deploy_application(dsl_path)
-
-        self.assertFalse(riemann.is_riemann_core_up(deployment.id))
-
-        self.undeploy_application(deployment.id, is_delete_deployment=True)
-
-        self.assertFalse(riemann.is_riemann_core_up(deployment.id))
+    # def test_riemann_core_not_started_without_policies(self):
+    #     """A riemann core isn't started if there's no policies defined
+    #     """
+    #     dsl_path = get_resource('dsl/without_policies.yaml')
+    #     deployment, _ = self.deploy_application(dsl_path)
+    #
+    #     self.assertFalse(riemann.is_riemann_core_up(deployment.id))
+    #
+    #     self.undeploy_application(deployment.id, is_delete_deployment=True)
+    #
+    #     self.assertFalse(riemann.is_riemann_core_up(deployment.id))

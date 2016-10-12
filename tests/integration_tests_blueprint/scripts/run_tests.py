@@ -27,7 +27,7 @@ def run_integration_tests():
         utils.CLOUDIFY_VENV_PATH,
         suites_runner_path,
         tests_descriptor,
-        ctx.node.properties['cfy_logs_path']))
+        ctx.node.properties['cfy_logs_path']), out=True)
 
 
 def main():

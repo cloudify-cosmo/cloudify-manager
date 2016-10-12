@@ -16,13 +16,11 @@
 import os
 import sys
 import logging
-import tempfile
 import datetime
 
 from multiprocessing import Process
 from os import path
 from os.path import dirname, abspath, join
-from shutil import copyfile
 
 import sh
 import yaml
@@ -35,6 +33,10 @@ nosetests = sh_bake(sh.nosetests)
 logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
 logger = logging.getLogger('suite_runner')
+
+log_file_path = os.path.join(os.path.expanduser('~'), 'suites_log_file.log')
+file_handler = logging.FileHandler(log_file_path)
+logger.addHandler(file_handler)
 
 logging.getLogger('sh').setLevel(logging.INFO)
 
@@ -93,23 +95,14 @@ class SuiteRunner(object):
         logger.debug('Running tests: {0}, report: {1}'
                      .format(tests, report_file))
 
-        tmp_dir = tempfile.mkdtemp()
-
-        logger.debug('Copying tests files into tmp dir: {0}'.format(tmp_dir))
         os.chdir(join(self.integration_tests_dir, 'tests'))
-        for test_file in tests:
-            copyfile(test_file, os.path.join(tmp_dir,
-                                             os.path.basename(test_file)))
-
-        logger.debug('Copying __init__.py to tmp dir: {0}'.format(tmp_dir))
-        copyfile(os.path.join(os.path.dirname(test_file), '__init__.py'),
-                 os.path.join(tmp_dir, '__init__.py'))
-
-        nosetests(tmp_dir,
+        suites = ['agentless_tests/']
+        nosetests(suites,
                   verbose=True,
                   nocapture=True,
                   with_xunit=bool(os.environ.get('JENKINS_JOB')),
                   xunit_file=report_file).wait()
+        logger.info('Tests execution terminated successfully.')
 
 
 def main():

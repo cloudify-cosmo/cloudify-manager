@@ -140,7 +140,7 @@ inputs:
 
   cloudify_manager_branch:
     type: string
-    default: 'master'
+    default: 'CFY-6014-fix-suites'
 
   cloudify_manager_org:
     type: string
@@ -168,7 +168,7 @@ inputs:
 
   test_suites:
     type: string
-    default: security#load#orchestration#backwards#rest#manager#manager_with_bootstrap#plugins_infrastructure#sanity
+    default: 'security,load,orchestration,backwards,rest,manager,manager_with_bootstrap,plugins_infrastructure,sanity'
 
   rebuild:
     type: string

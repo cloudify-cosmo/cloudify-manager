@@ -20,5 +20,7 @@ if [ "${REBUILD,,}" = "true" ]; then
 
 else
     echo performing docl pull-image
+    docl prepare
+    docl clean
     docl pull-image --no-progress
 fi
