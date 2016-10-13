@@ -199,6 +199,7 @@ def run_manager(label=None, tag=None):
     _wait_for_services()
     logger.info(
         'Container start took {0} seconds'.format(time.time() - start))
+    return container_details
 
 
 def save_image(tag, container_id=None):
@@ -274,8 +275,9 @@ def _retry(func, exceptions, cleanup=None):
         raise
 
 
-def _wait_for_services():
-    container_ip = utils.get_manager_ip()
+def _wait_for_services(container_ip=None):
+    if container_ip is None:
+        container_ip = utils.get_manager_ip()
     logger.info('Waiting for RabbitMQ')
     _retry(func=utils.create_pika_connection,
            exceptions=pika.exceptions.AMQPConnectionError,
