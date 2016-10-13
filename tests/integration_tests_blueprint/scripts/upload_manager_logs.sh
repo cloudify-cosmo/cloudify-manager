@@ -13,8 +13,10 @@ sed -i "s~access_key = XXX~access_key = $ACCESS_KEY~g" ~/.s3cfg
 
 
 logs_folder=$(ctx node properties cfy_logs_path)
-tar -zcvf ~/logs.tar.gz ${logs_folder/'~'/$HOME}
+cd ${logs_folder/'~'/$HOME}
+tar -zcvf ~/logs.tar.gz *
+cd -
 
 set -x
 
-s3cmd put --acl-public ~/logs.tar.gz ${S3_BUCKET}/logs_${BUILD}.tar.gz
+s3cmd put --acl-public ~/logs.tar.gz ${S3_BUCKET}/${BUILD}.tar.gz

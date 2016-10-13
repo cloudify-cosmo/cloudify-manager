@@ -65,24 +65,31 @@ class BaseTestCase(unittest.TestCase):
         self.env.stop_dispatch_processes()
 
     def _save_logs(self, purge=True):
+        self.logger.debug('save_logs started')
         logs_dir = os.environ.get('CFY_LOGS_PATH')
         test_path = self.id().split('.')[1:]
         if not logs_dir:
             self.logger.info('Saving manager logs is disabled by configuration'
                              ' for test:  {0}'.format(test_path[-1]))
+            self.logger.info('To enable logs keeping, define "CFY_LOGS_PATH"')
+
             return
         self.logger.info(
             'Saving manager logs for test:  {0}'.format(test_path[-1]))
 
-        logs_dir = os.path.join(logs_dir, *test_path)
+        logs_dir = os.path.join(os.path.expanduser(logs_dir), *test_path)
         mkdirs(logs_dir)
         target = os.path.join(logs_dir, 'logs.tar.gz')
         self.cfy.logs.download(output_path=target)
         if purge:
             self.cfy.logs.purge(force=True)
+
+        self.logger.debug('opening tar.gz: {0}'.format(target))
         with tarfile.open(target) as tar:
             tar.extractall(path=logs_dir)
+        self.logger.debug('removing {0}'.format(target))
         os.remove(target)
+        self.logger.debug('save_logs completed')
 
     @staticmethod
     def read_manager_file(file_path, no_strip=False):
