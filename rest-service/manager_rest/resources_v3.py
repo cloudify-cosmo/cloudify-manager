@@ -32,10 +32,14 @@ try:
     from cloudify_premium import (TenantResponse,
                                   GroupResponse,
                                   UserResponse,
-                                  SecuredMultiTenancyResource)
+                                  SecuredMultiTenancyResource,
+                                  ClusterResourceBase,
+                                  ClusterState,
+                                  ClusterNode)
 except ImportError:
-    TenantResponse, GroupResponse, UserResponse = (None, ) * 3
-    SecuredMultiTenancyResource = SecuredResource
+    TenantResponse, GroupResponse, UserResponse, ClusterNode, ClusterState = \
+        (None, ) * 5
+    SecuredMultiTenancyResource, ClusterResourceBase = (SecuredResource, ) * 2
 
 
 class Tenants(SecuredMultiTenancyResource):
@@ -256,3 +260,87 @@ class UsersGroups(SecuredMultiTenancyResource):
             request_json['username'],
             request_json['group_name']
         )
+
+
+class Cluster(ClusterResourceBase):
+    @exceptions_handled
+    @marshal_with(ClusterState)
+    @create_filters()
+    def get(self, cluster, _include=None, filters=None):
+        """
+        Current state of the cluster.
+        """
+        return cluster.cluster_status(_include=_include, filters=filters)
+
+    @exceptions_handled
+    @marshal_with(ClusterState)
+    def put(self, cluster):
+        """
+        Start the "create cluster" execution.
+
+        The created cluster will already have one node (the current manager).
+        """
+        verify_json_content_type()
+        request_json = request.get_json()
+        verify_parameter_in_request_body('config', request_json)
+        config = request_json['config']
+        return cluster.start(config)
+
+    @exceptions_handled
+    @marshal_with(ClusterState)
+    def patch(self, cluster):
+        """
+        Update the cluster config.
+
+        Use this to change settings or promote a replica machine to master.
+        """
+        verify_json_content_type()
+        request_json = request.get_json()
+        verify_parameter_in_request_body('config', request_json)
+        config = request_json['config']
+        return cluster.update_config(config)
+
+
+class ClusterNodes(ClusterResourceBase):
+    @exceptions_handled
+    @marshal_with(ClusterNode)
+    def get(self, cluster):
+        """
+        List the nodes in the current cluster.
+
+        This will also list inactive nodes that weren't deleted. 404 if the
+        cluster isn't created yet.
+        """
+        return cluster.list_nodes()
+
+
+class ClusterNodesId(ClusterResourceBase):
+    @exceptions_handled
+    @marshal_with(ClusterNode)
+    def get(self, node_id, cluster):
+        """
+        Details of a node from the cluster.
+        """
+        return cluster.get_node(node_id)
+
+    @exceptions_handled
+    @marshal_with(ClusterState)
+    def put(self, node_id, cluster):
+        """
+        Join the current manager to the cluster.
+        """
+        verify_json_content_type()
+        request_json = request.get_json()
+        verify_parameter_in_request_body('config', request_json)
+        config = request_json['config']
+        return cluster.join(config)
+
+    @exceptions_handled
+    @marshal_with(ClusterNode)
+    def delete(self, node_id, cluster):
+        """
+        Remove the node from the cluster.
+
+        Use this when a node is permanently down.
+        """
+        return cluster.remove_node(node_id)
