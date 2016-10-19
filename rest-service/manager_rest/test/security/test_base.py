@@ -19,7 +19,7 @@ from cloudify_rest_client.exceptions import UserUnauthorizedError
 
 from manager_rest.utils import create_auth_header
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.test.security_utils import get_test_users, get_test_roles
+from manager_rest.test.security_utils import get_test_users
 
 
 class SecurityTestBase(BaseServerTestCase):
@@ -43,13 +43,16 @@ class SecurityTestBase(BaseServerTestCase):
         headers = headers or create_auth_header(**kwargs)
         return self.create_client(headers)
 
-    @staticmethod
-    def _get_users():
-        return get_test_users()
-
-    @staticmethod
-    def _get_roles():
-        return get_test_roles()
+    def _init_admin_user(self, user_datastore):
+        super(SecurityTestBase, self)._init_admin_user(user_datastore)
+        for user in get_test_users():
+            role = user_datastore.find_role(user['role'])
+            user_obj = user_datastore.create_user(
+                username=user['username'],
+                password=user['password'],
+                roles=[role]
+            )
+            user_obj.tenants.append(self.default_tenant)
 
     def _assert_user_authorized(self, headers=None, **kwargs):
         with self.use_secured_client(headers, **kwargs):

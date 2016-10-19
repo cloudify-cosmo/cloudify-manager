@@ -1,22 +1,25 @@
+########
+# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 def get_admin_user():
-    return [
-        {
+    return {
             'username': 'admin',
             'password': 'admin',
-            'roles': ['administrator']
-        }
-    ]
-
-
-def get_admin_role():
-    return [
-        {
-            'name': 'administrator',
-            'description': 'The administrator role can access any '
-                           'endpoint, and call any method',
-            'allow': {'*': ['*']}
-         }
-    ]
+            'role': 'administrator'
+    }
 
 
 def get_test_users():
@@ -24,51 +27,39 @@ def get_test_users():
         {
             'username': 'alice',
             'password': 'alice_password',
-            'roles': ['administrator']
+            'role': 'administrator'
         },
         {
             'username': 'bob',
             'password': 'bob_password',
-            'roles': ['deployer']
+            'role': 'default'
         },
         {
             'username': 'clair',
             'password': 'clair_password',
-            'roles': ['viewer']
+            'role': 'viewer'
         },
         {
             'username': 'dave',
             'password': 'dave_password',
-            'roles': []
+            'role': 'suspended'
+        },
+        {
+            'username': 'eve',
+            'password': 'eve_password',
+            'role': 'default'
         }
     ]
     return test_users
 
 
-def get_test_roles():
-    return [
-        {
-            'name': 'administrator',
-            'description': 'The administrator role can access any '
-                           'endpoint, and call any method',
-            'allow': {'*': ['*']}
-         },
-        {
-            'name': 'deployer',
-            'description': 'The deployer role can access any '
-                           'endpoint, and call any method except DELETE',
-            'allow': {'*': ['*']},
-            'deny': {'/api/v2.1/maintenance/*': ['POST'], '*': ['DELETE']}
-        },
-        {
-            'name': 'viewer',
-            'description': 'The viewer role can can access any '
-                           'endpoint, but only call the GET method',
-            'allow': {'*': ['GET']},
-            'deny': {
-                '/api/v1/blueprints/blueprint_2': ['*'],
-                '/api/v2/blueprints/blueprint_2': ['*'],
-                '/api/v2.1/blueprints/blueprint_2': ['*']
-            }
-        }
-    ]
+def add_users_to_db(user_datastore, user_list, default_tenant):
+    for user in user_list:
+        role = user_datastore.find_role(user['role'])
+        user_obj = user_datastore.create_user(
+            username=user['username'],
+            password=user['password'],
+            roles=[role]
+        )
+        user_obj.tenants.append(default_tenant)
+    user_datastore.commit()

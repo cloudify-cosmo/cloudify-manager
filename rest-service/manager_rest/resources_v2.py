@@ -23,7 +23,7 @@ from collections import OrderedDict
 from uuid import uuid4
 
 from flask import request
-from flask.ext.restful import marshal
+from flask_restful import marshal
 from flask_restful_swagger import swagger
 
 from manager_rest import config

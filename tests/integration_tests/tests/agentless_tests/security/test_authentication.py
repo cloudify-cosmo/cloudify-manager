@@ -20,8 +20,8 @@ from .security_base import TestAuthenticationBase
 
 class AuthenticationTest(TestAuthenticationBase):
     def test_valid_credentials_authenticate(self):
-        self._assert_authorized(username=utils.get_username(),
-                                password=utils.get_password())
+        self._assert_authorized(username=utils.get_manager_username(),
+                                password=utils.get_manager_password())
 
     def test_invalid_credentials_fails(self):
         self._assert_unauthorized(username='wrong_username',

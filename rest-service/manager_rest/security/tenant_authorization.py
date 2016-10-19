@@ -1,9 +1,9 @@
 from flask import current_app
 
-from manager_rest.config import instance
+from manager_rest import config
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import get_storage_manager
-from manager_rest.constants import CLOUDIFY_TENANT_HEADER, ADMIN_ROLE_NAME
+from manager_rest.constants import CLOUDIFY_TENANT_HEADER, SYSTEM_ADMIN_ROLE
 
 from .user_handler import unauthorized_user_handler
 from .security_models import user_datastore
@@ -15,10 +15,10 @@ class TenantAuthorization(object):
 
         logger.debug('Tenant authorization for user {0}'.format(user))
 
-        admin_role = user_datastore.find_role(ADMIN_ROLE_NAME)
+        admin_role = user_datastore.find_role(SYSTEM_ADMIN_ROLE)
         tenant_name = request.headers.get(
             CLOUDIFY_TENANT_HEADER,
-            instance.default_tenant_name
+            config.instance.default_tenant_name
         )
         logger.debug(
             'User attempting to connect with tenant `{0}`'.format(tenant_name)

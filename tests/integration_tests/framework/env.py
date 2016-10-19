@@ -70,6 +70,7 @@ class BaseTestEnvironment(object):
     def create_environment(self):
         logger.info('Setting up test environment... workdir=[{0}]'
                     .format(self.test_working_dir))
+        utils.set_cfy_paths(self.test_working_dir)
         os.environ['CFY_WORKDIR'] = self.test_working_dir
         try:
             kwargs = {}

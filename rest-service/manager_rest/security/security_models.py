@@ -16,6 +16,12 @@
 from flask_security import UserMixin, RoleMixin, SQLAlchemyUserDatastore
 
 from manager_rest.storage.models import db, SerializableBase, UTCDateTime
+from manager_rest.constants import (ADMINISTRATOR_ROLES,
+                                    SYSTEM_ADMIN_ROLE,
+                                    TENANT_ADMIN_ROLE,
+                                    DEFAULT_ROLE,
+                                    VIEWER_ROLE,
+                                    SUSPENDED_ROLE)
 
 
 roles_users_table = db.Table(
@@ -83,8 +89,30 @@ class User(SerializableBase, UserMixin):
         all_tenants = [tenant.name for tenant in self.get_all_tenants()]
         user_dict['tenants'] = all_tenants
         user_dict['groups'] = [group.name for group in self.groups]
-        user_dict['role'] = self.roles[0].name
+        user_dict['role'] = self.role
         return user_dict
+
+    @property
+    def role(self):
+        return self.roles[0].name
+
+    def is_sys_admin(self):
+        return self.role == SYSTEM_ADMIN_ROLE
+
+    def is_tenant_admin(self):
+        return self.role == TENANT_ADMIN_ROLE
+
+    def is_default_user(self):
+        return self.role == DEFAULT_ROLE
+
+    def is_viewer(self):
+        return self.role == VIEWER_ROLE
+
+    def is_admin(self):
+        return self.role in ADMINISTRATOR_ROLES
+
+    def is_suspended(self):
+        return self.role == SUSPENDED_ROLE
 
 
 class Role(SerializableBase, RoleMixin):
@@ -92,8 +120,6 @@ class Role(SerializableBase, RoleMixin):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
-    allowed = db.Column(db.PickleType, nullable=False)
-    denied = db.Column(db.PickleType)
     description = db.Column(db.Text)
 
 

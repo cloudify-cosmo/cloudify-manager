@@ -36,7 +36,6 @@ from logging.handlers import RotatingFileHandler
 
 from manager_rest.utils import mkdirs
 
-from integration_tests.tests.utils import get_resource as resource
 from integration_tests.framework import utils, hello_world, docl, postgresql
 from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
@@ -518,7 +517,7 @@ class ManagerTestCase(BaseAgentTestCase):
         :return: The updated inputs dict
         """
         inputs = inputs or {}
-        dev_resources_path = resource('dev_resource_urls.yaml')
+        dev_resources_path = test_utils.get_resource('dev_resource_urls.yaml')
         with open(dev_resources_path, 'r') as f:
             inputs.update(yaml.load(f))
         return inputs

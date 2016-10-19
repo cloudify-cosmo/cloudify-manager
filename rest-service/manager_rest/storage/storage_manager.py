@@ -15,6 +15,7 @@
 
 import uuid
 from flask import current_app
+from flask_security import current_user
 from sqlalchemy.exc import SQLAlchemyError
 
 from manager_rest import manager_exceptions
@@ -113,8 +114,7 @@ class SQLStorageManager(object):
                 query = query.order_by(column)
         return query
 
-    @staticmethod
-    def _filter_query(query, model_class, filters=None):
+    def _filter_query(self, query, model_class, filters=None):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -135,6 +135,20 @@ class SQLStorageManager(object):
                     query = query.filter(column.in_(value))
                 else:
                     query = query.filter_by(**{key: value})
+
+        query = self._filter_by_tenant(query, model_class)
+        return query
+
+    @staticmethod
+    def _filter_by_tenant(query, model_class):
+        """
+        Filter by the tenant ID associated with `model_class` (either
+        directly via a relationship with the tenants table, or via an
+        ancestor who has such a relationship)
+        """
+        # System administrators should see all resources, regardless of tenant
+        if current_user.is_sys_admin():
+            return query
 
         # Filter by the tenant ID associated with that model class (either
         # directly via a relationship with the tenants table, or via an
@@ -508,7 +522,6 @@ class SQLStorageManager(object):
         # The ID is always the same, and only the name changes
         instance = self._get_instance(ProviderContext, provider_context)
         instance.id = PROVIDER_CONTEXT_ID
-        instance.tenant_id = _get_current_tenant_id()
         return self._safe_add(instance)
 
     def put_deployment_modification(self, modification):

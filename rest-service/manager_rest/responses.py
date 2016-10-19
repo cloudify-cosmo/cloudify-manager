@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask.ext.restful import fields
+from flask_restful import fields
 from flask_restful_swagger import swagger
 
 

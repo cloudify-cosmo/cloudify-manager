@@ -27,7 +27,7 @@ class Config(object):
         self.postgresql_username = None
         self.postgresql_password = None
         self.postgresql_bin_path = None
-        self.default_tenant_name = 'default_tenant'
+        self.default_tenant_name = None
         self.amqp_address = 'localhost'
         self.amqp_username = 'guest'
         self.amqp_password = 'guest'
@@ -56,8 +56,6 @@ class Config(object):
         self.security_ssl = {'enabled': False}
         self.security_userstore = {}
         self.insecure_endpoints_disabled = True
-        self.security_rest_username = None
-        self.security_rest_password = None
         self.broker_ssl_cert_path = None
         self.agent_rest_cert_path = None
 

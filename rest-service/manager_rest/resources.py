@@ -28,10 +28,10 @@ from flask import (
     make_response,
     current_app as app
 )
-from flask.ext.restful import marshal, reqparse
+from flask_restful import marshal, reqparse
 from flask_security import current_user
 from flask_restful_swagger import swagger
-from flask.ext.restful.utils import unpack
+from flask_restful.utils import unpack
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 
 from dsl_parser import utils as dsl_parser_utils
