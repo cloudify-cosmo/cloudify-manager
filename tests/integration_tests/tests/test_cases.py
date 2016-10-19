@@ -18,6 +18,7 @@ import yaml
 import tarfile
 import logging
 import os
+import sys
 import shutil
 import time
 import uuid
@@ -30,6 +31,8 @@ import nose.tools
 import cloudify.utils
 import cloudify.logs
 import cloudify.event
+
+from logging.handlers import RotatingFileHandler
 
 from manager_rest.utils import mkdirs
 
@@ -54,8 +57,7 @@ class BaseTestCase(unittest.TestCase):
             prefix='{0}-'.format(self._testMethodName))
         self.cfy = test_utils.get_cfy()
         self.addCleanup(shutil.rmtree, self.workdir, ignore_errors=True)
-        self.logger = cloudify.utils.setup_logger(self._testMethodName,
-                                                  logging.INFO)
+        self._set_tests_framework_logger()
         self.client = None
 
     def _setup_running_manager_attributes(self):
@@ -64,19 +66,18 @@ class BaseTestCase(unittest.TestCase):
     def tearDown(self):
         self.env.stop_dispatch_processes()
 
-    def _save_logs(self, purge=True):
-        self.logger.debug('save_logs started')
+    def _save_manager_logs_after_test(self, purge=True):
+        self.logger.debug('_save_manager_logs_after_test started')
         logs_dir = os.environ.get('CFY_LOGS_PATH')
         test_path = self.id().split('.')[1:]
         if not logs_dir:
             self.logger.info('Saving manager logs is disabled by configuration'
                              ' for test:  {0}'.format(test_path[-1]))
             self.logger.info('To enable logs keeping, define "CFY_LOGS_PATH"')
-
             return
+
         self.logger.info(
             'Saving manager logs for test:  {0}'.format(test_path[-1]))
-
         logs_dir = os.path.join(os.path.expanduser(logs_dir), *test_path)
         mkdirs(logs_dir)
         target = os.path.join(logs_dir, 'logs.tar.gz')
@@ -89,7 +90,39 @@ class BaseTestCase(unittest.TestCase):
             tar.extractall(path=logs_dir)
         self.logger.debug('removing {0}'.format(target))
         os.remove(target)
-        self.logger.debug('save_logs completed')
+        self.logger.debug('_save_manager_logs_after_test completed')
+
+    @staticmethod
+    def _set_file_handler(path):
+        mega = 1024 * 1024
+        if not os.path.isdir(path):
+            raise IOError('dir does not exist')
+        path = os.path.join(path, 'integration_tests_framework.log')
+        handler = RotatingFileHandler(path, maxBytes=5 * mega, backupCount=5)
+        handler.setLevel(logging.DEBUG)
+        return handler
+
+    def _set_tests_framework_logger(self):
+        handlers = [logging.StreamHandler(sys.stdout)]
+        handlers[0].setLevel(logging.INFO)
+        logs_path = '/var/log/cloudify'
+        try:
+            handlers.append(BaseTestCase._set_file_handler(logs_path))
+        except IOError:
+            self.logger = cloudify.utils.setup_logger(self._testMethodName)
+            self.logger.info('Framework logs are not saved into a file. '
+                             'To allow logs saving, make sure the directory '
+                             '/var/log/cloudify '
+                             'exists with Permissions to edit.')
+            return
+
+        self.logger = cloudify.utils.setup_logger(self._testMethodName,
+                                                  logging.NOTSET,
+                                                  handlers=handlers)
+        separator = '\n\n\n' + ('=' * 100)
+        self.logger.debug(separator)
+        self.logger.debug('Starting test:  {0}'.format(self.id()))
+        self.logger.info('Framework logs are saved in {0}'.format(logs_path))
 
     @staticmethod
     def read_manager_file(file_path, no_strip=False):
@@ -336,7 +369,7 @@ class AgentlessTestCase(BaseTestCase):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
         test_utils.restore_provider_context()
-        self.addCleanup(self._save_logs)
+        self.addCleanup(self._save_manager_logs_after_test)
 
     def tearDown(self):
         postgresql.reset_data()
@@ -419,7 +452,7 @@ class AgentTestCase(BaseAgentTestCase):
     def setUp(self):
         super(AgentTestCase, self).setUp()
         self._setup_running_manager_attributes()
-        self.addCleanup(self._save_logs)
+        self.addCleanup(self._save_manager_logs_after_test)
 
 
 class ManagerTestCase(BaseAgentTestCase):
@@ -434,7 +467,7 @@ class ManagerTestCase(BaseAgentTestCase):
             lambda: self.env.clean_manager(
                 label=[self.manager_label],
                 clean_tag=True))
-        self.addCleanup(self._save_logs, purge=False)
+        self.addCleanup(self._save_manager_logs_after_test, purge=False)
         self.env.prepare_bootstrappable_container(
             label=[self.manager_label],
             additional_exposed_ports=additional_exposed_ports)
@@ -493,7 +526,7 @@ class ManagerTestCase(BaseAgentTestCase):
     def run_manager(self):
         self.addCleanup(
             lambda: self.env.clean_manager(label=[self.manager_label]))
-        self.addCleanup(self._save_logs, purge=False)
+        self.addCleanup(self._save_manager_logs_after_test, purge=False)
         self.env.run_manager(label=[self.manager_label])
         self._setup_running_manager_attributes()
 
