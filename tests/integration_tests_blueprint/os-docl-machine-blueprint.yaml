@@ -8,7 +8,7 @@ description: >
 
 imports:
   - http://www.getcloudify.org/spec/fabric-plugin/1.4.2/plugin.yaml
-  - http://www.getcloudify.org/spec/cloudify/4.0m5/types.yaml
+  - http://www.getcloudify.org/spec/cloudify/4.0m6/types.yaml
   - http://www.getcloudify.org/spec/openstack-plugin/1.5/plugin.yaml
   - docl-base-types.yaml
 
