@@ -27,14 +27,17 @@ from flask.testing import FlaskClient
 from nose.tools import nottest
 from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
+from mock import MagicMock
 
 from manager_rest.storage.models import Tenant
 from manager_rest import utils, config, archiving
+from manager_rest.constants import DEFAULT_TENANT_NAME
+from manager_rest.test.security_utils import get_admin_user
 from manager_rest.storage import FileServer, get_storage_manager, models
-from manager_rest.security.security_models import User
-from manager_rest.test.security_utils import get_admin_user, get_admin_role
-from manager_rest.test.mocks import MockHTTPClient, CLIENT_API_VERSION, \
-    build_query_string
+from manager_rest.test.mocks import (MockHTTPClient,
+                                     CLIENT_API_VERSION,
+                                     build_query_string)
+
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.executions import Execution
 
@@ -45,7 +48,6 @@ FILE_SERVER_DEPLOYMENTS_FOLDER = 'deployments'
 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
 FILE_SERVER_RESOURCES_URI = '/resources'
 LATEST_API_VERSION = 3  # to be used by max_client_version test attribute
-DEFAULT_TENANT_NAME = 'default_tenant'
 
 
 @nottest
@@ -86,7 +88,7 @@ class TestClient(FlaskClient):
     """
     def open(self, *args, **kwargs):
         kwargs = kwargs or {}
-        admin = get_admin_user()[0]
+        admin = get_admin_user()
         kwargs['headers'] = kwargs.get('headers') or {}
         kwargs['headers'].update(utils.create_auth_header(
             username=admin['username'], password=admin['password']))
@@ -128,26 +130,47 @@ class BaseServerTestCase(unittest.TestCase):
                 client.maintenance_mode.api = mock_http_client
                 client.deployment_updates.api = mock_http_client
 
+                # only exists in v3 and above
+                if CLIENT_API_VERSION != 'v2.1':
+                    client.tenants.api = mock_http_client
+                    client.user_groups.api = mock_http_client
+                    client.users.api = mock_http_client
+
         return client
 
     def setUp(self):
+        self._create_temp_files_and_folders()
+        self._init_file_server()
+
+        server_module = self._set_config_path_and_get_server_module()
+        self._create_config_and_reset_app(server_module)
+        self._handle_flask_app_and_db(server_module)
+        self.client = self.create_client()
+        self.sm = get_storage_manager()
+        self.initialize_provider_context()
+
+    def _create_temp_files_and_folders(self):
         self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
         fd, self.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
         os.close(fd)
         fd, self.sqlite_db_file = tempfile.mkstemp(prefix='sqlite-db-')
         os.close(fd)
-        self.file_server = FileServer(self.tmpdir)
         self.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
-
-        self.addCleanup(self.cleanup)
-        self.file_server.start()
-
-        # workaround for setting the rest service log path, since it's
-        # needed when 'server' module is imported.
-        # right after the import the log path is set normally like the rest
-        # of the variables (used in the reset_state)
         fd, self.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
         os.close(fd)
+
+    def _init_file_server(self):
+        self.file_server = FileServer(self.tmpdir)
+        self.file_server.start()
+        self.addCleanup(self.cleanup)
+
+    def _set_config_path_and_get_server_module(self):
+        """Workaround for setting the rest service log path, since it's
+        needed when 'server' module is imported.
+        right after the import the log path is set normally like the rest
+        of the variables (used in the reset_state)
+        """
+
         with open(self.tmp_conf_file, 'w') as f:
             json.dump({'rest_service_log_path': self.rest_service_log,
                        'rest_service_log_file_size_MB': 1,
@@ -159,74 +182,82 @@ class BaseServerTestCase(unittest.TestCase):
             from manager_rest import server
         finally:
             del(os.environ['MANAGER_REST_CONFIG_PATH'])
+        return server
 
+    def _create_config_and_reset_app(self, server):
+        """Create config, and reset Flask app
+        :type server: module
+        """
         self.server_configuration = self.create_configuration()
+        utils.copy_resources(self.server_configuration.file_server_root)
         server.SQL_DIALECT = 'sqlite'
         server.reset_app(self.server_configuration)
-        utils.copy_resources(config.instance.file_server_root)
 
-        self._flask_app_context = server.app.test_request_context()
-        self._flask_app_context.push()
-        self.addCleanup(self._flask_app_context.pop)
-
+    def _handle_flask_app_and_db(self, server):
+        """Set up Flask app context, and handle DB related tasks
+        :type server: module
+        """
+        self._set_flask_app_context(server.app)
         self.app = self._get_app(server.app)
-        self.client = self.create_client()
-        server.db.create_all()
-        default_tenant = self._init_default_tenant(server.db, server.app)
-        self.sm = get_storage_manager()
-        self._add_users_and_roles(server.user_datastore, default_tenant)
-        self.initialize_provider_context()
+        self._handle_default_db_config(server)
+        self._setup_anonymous_user(server.app, server.user_datastore)
 
-    @staticmethod
-    def _init_default_tenant(db, app):
-        default_tenant = 'default_tenant'
-        t = Tenant(name=default_tenant)
+    def _init_default_tenant(self, db, app):
+        t = Tenant(name=DEFAULT_TENANT_NAME)
         db.session.add(t)
         db.session.commit()
 
         app.config['tenant_id'] = t.id
-        return t
+        self.default_tenant = t
+
+    def _set_flask_app_context(self, flask_app):
+        flask_app_context = flask_app.test_request_context()
+        flask_app_context.push()
+        self.addCleanup(flask_app_context.pop)
+
+    def _handle_default_db_config(self, server):
+        server.db.create_all()
+        self._init_default_tenant(server.db, server.app)
+        self._init_admin_user(server.user_datastore)
 
     @staticmethod
     def _get_app(flask_app):
         """Create a flask.testing FlaskClient
 
         :param flask_app: Flask app
+        :return: Our modified version of Flask's test client
         """
         flask_app.test_client_class = TestClient
         return flask_app.test_client()
 
-    def _add_users_and_roles(self, user_datastore, default_tenant):
+    @staticmethod
+    def _setup_anonymous_user(flask_app, user_datastore):
+        """Change the anonymous user to be admin, in order to have arbitrary
+        access to the storage manager (which otherwise requires a valid user)
+
+        :param flask_app: Flask app
+        """
+        admin_user = user_datastore.get_user(get_admin_user()['username'])
+        login_manager = flask_app.extensions['security'].login_manager
+        login_manager.anonymous_user = MagicMock(return_value=admin_user)
+
+    def _init_admin_user(self, user_datastore):
         """Add users and roles for the test
 
         :param user_datastore: SQLAlchemyDataUserstore
         """
-        # Add a fictitious admin user to the user_datastore
-        utils.add_users_and_roles_to_userstore(
+        admin_user = get_admin_user()
+        utils.create_security_roles_and_admin_user(
             user_datastore,
-            self._get_users(),
-            self._get_roles(),
-            default_tenant
+            admin_username=admin_user['username'],
+            admin_password=admin_user['password'],
+            default_tenant=self.default_tenant
         )
-
-        for user in self._get_users():
-            user = User.query.filter_by(username=user['username']).first()
-            tenant = self.sm.get_tenant_by_name(DEFAULT_TENANT_NAME)
-            if tenant not in user.tenants:
-                user.tenants.append(tenant)
-                self.sm.update_entity(user)
-
-    @staticmethod
-    def _get_users():
-        return get_admin_user()
-
-    @staticmethod
-    def _get_roles():
-        return get_admin_role()
 
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)
         self.quiet_delete(self.sqlite_db_file)
+        self.quiet_delete(self.tmp_conf_file)
         self.quiet_delete_directory(self.maintenance_mode_dir)
         if self.file_server:
             self.file_server.stop()
@@ -261,6 +292,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 20
         test_config.maintenance_folder = self.maintenance_mode_dir
+        test_config.default_tenant_name = DEFAULT_TENANT_NAME
         return test_config
 
     def _version_url(self, url):

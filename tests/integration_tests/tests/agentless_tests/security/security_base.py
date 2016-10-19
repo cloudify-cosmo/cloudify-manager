@@ -20,11 +20,10 @@ from cloudify_rest_client.exceptions import UserUnauthorizedError
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql, utils
 
-from manager_rest.config import instance
 from manager_rest.storage.models import Tenant
 from manager_rest.security import user_datastore
-from manager_rest.test.security_utils import get_test_users, get_test_roles
-from manager_rest.utils import add_users_and_roles_to_userstore
+from manager_rest.constants import DEFAULT_TENANT_NAME
+from manager_rest.test.security_utils import get_test_users, add_users_to_db
 
 
 class TestSecuredRestBase(AgentlessTestCase):
@@ -32,13 +31,9 @@ class TestSecuredRestBase(AgentlessTestCase):
         super(TestSecuredRestBase, self).setUp()
         postgresql.setup_app()
         default_tenant = Tenant.query.filter_by(
-            name=instance.default_tenant_name).first()
-        add_users_and_roles_to_userstore(
-            user_datastore,
-            users=get_test_users(),
-            roles=get_test_roles(),
-            default_tenant=default_tenant
-        )
+            name=DEFAULT_TENANT_NAME
+        ).first()
+        add_users_to_db(user_datastore, get_test_users(), default_tenant)
 
 
 class TestAuthenticationBase(TestSecuredRestBase):
@@ -46,7 +41,7 @@ class TestAuthenticationBase(TestSecuredRestBase):
 
     @contextmanager
     def _login_client(self, **kwargs):
-        self.logger.info('performing login to test client with {0}'.format(
+        self.logger.info('Logging in to test client with {0}'.format(
             str(kwargs))
         )
         try:

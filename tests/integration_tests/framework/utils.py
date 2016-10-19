@@ -30,12 +30,15 @@ import pika
 import sh
 from wagon import wagon
 
-from manager_rest.utils import create_auth_header
-from cloudify_cli import env as cli_env
-from cloudify_cli.constants import CLOUDIFY_USERNAME_ENV, CLOUDIFY_PASSWORD_ENV
-from cloudify_rest_client import CloudifyClient
 from cloudify.utils import setup_logger
-from integration_tests.framework import constants
+from cloudify_cli import env as cli_env
+from cloudify_rest_client import CloudifyClient
+from manager_rest.utils import create_auth_header
+from cloudify_cli.constants import (CLOUDIFY_BASE_DIRECTORY_NAME,
+                                    CLOUDIFY_TENANT_HEADER)
+
+
+from . import constants
 
 logger = setup_logger('testenv.utils')
 
@@ -58,16 +61,32 @@ def get_manager_ip():
     return os.environ[constants.DOCL_CONTAINER_IP]
 
 
-def get_username():
-    return os.environ[CLOUDIFY_USERNAME_ENV]
+def get_manager_username():
+    return cli_env.get_username()
 
 
-def get_password():
-    return os.environ[CLOUDIFY_PASSWORD_ENV]
+def get_manager_password():
+    return cli_env.get_password()
+
+
+def get_manager_tenant():
+    return cli_env.get_tenant_name()
 
 
 def update_profile_context():
     cli_env.profile = cli_env.get_profile_context(get_manager_ip())
+
+
+def set_cfy_paths(new_workdir):
+    cli_env.CLOUDIFY_WORKDIR = os.path.join(
+        new_workdir,
+        CLOUDIFY_BASE_DIRECTORY_NAME
+    )
+    cli_env.PROFILES_DIR = os.path.join(cli_env.CLOUDIFY_WORKDIR, 'profiles')
+    cli_env.ACTIVE_PRO_FILE = os.path.join(
+        cli_env.CLOUDIFY_WORKDIR,
+        'active.profile'
+    )
 
 
 def create_rest_client(**kwargs):
@@ -75,8 +94,9 @@ def create_rest_client(**kwargs):
     # not passing args (which will then use the default values), or explicitly
     # passing None (or False) which will then be passed as-is to the Client
 
-    username = kwargs.get('username', cli_env.get_username())
-    password = kwargs.get('password', cli_env.get_password())
+    username = kwargs.get('username', get_manager_username())
+    password = kwargs.get('password', get_manager_password())
+    tenant = kwargs.get('tenant', get_manager_tenant())
     token = kwargs.get('token')
     rest_port = kwargs.get('rest_port',
                            os.environ.get(constants.CLOUDIFY_REST_PORT, 80))
@@ -86,6 +106,7 @@ def create_rest_client(**kwargs):
     trust_all = kwargs.get('trust_all', cli_env.get_ssl_trust_all())
 
     headers = create_auth_header(username, password, token)
+    headers[CLOUDIFY_TENANT_HEADER] = tenant
 
     return CloudifyClient(
             host=get_manager_ip(),
@@ -260,13 +281,3 @@ class YamlPatcher(object):
     @staticmethod
     def _raise_illegal(prop_path):
         raise RuntimeError('illegal path: {0}'.format(prop_path))
-
-
-def get_admin_user():
-    return [
-        {
-            'username': cli_env.get_username(),
-            'password': cli_env.get_password(),
-            'roles': ['administrator']
-        }
-    ]

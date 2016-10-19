@@ -15,6 +15,7 @@
 
 import logging
 from flask import Flask
+from flask_security import Security
 from contextlib import closing
 
 import pg8000
@@ -22,11 +23,10 @@ import pg8000
 from cloudify.utils import setup_logger
 
 from manager_rest.storage import db
-from manager_rest.config import instance
 from manager_rest.storage.models import Tenant
 from manager_rest.security import user_datastore
-from manager_rest.utils import add_users_and_roles_to_userstore
-from manager_rest.test.security_utils import get_admin_role
+from manager_rest.constants import DEFAULT_TENANT_NAME
+from manager_rest.utils import create_security_roles_and_admin_user
 
 from integration_tests.framework import utils
 
@@ -39,8 +39,8 @@ app = None
 
 def setup_app():
     global app
-    default_tenant_id = 1
     if not app:
+        default_tenant_id = 1
         conf = utils.get_postgres_client_details()
         app = Flask(__name__)
         app.config['SQLALCHEMY_DATABASE_URI'] = \
@@ -54,9 +54,10 @@ def setup_app():
         app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
         app.config['tenant_id'] = default_tenant_id
 
-    # Setup the mock app with the DB
-    db.init_app(app)
-    app.app_context().push()
+        # Setup the mock app with the DB and Security
+        Security(app=app, datastore=user_datastore)
+        db.init_app(app)
+        app.app_context().push()
 
 
 def run_query(query, db_name=None):
@@ -88,14 +89,14 @@ def reset_data():
     db.drop_all()
     db.create_all()
 
-    default_tenant = Tenant(name=instance.default_tenant_name)
+    default_tenant = Tenant(name=DEFAULT_TENANT_NAME)
     db.session.add(default_tenant)
 
-    add_users_and_roles_to_userstore(
+    create_security_roles_and_admin_user(
         user_datastore,
-        utils.get_admin_user(),
-        get_admin_role(),
-        default_tenant
+        admin_username=utils.get_manager_username(),
+        admin_password=utils.get_manager_password(),
+        default_tenant=default_tenant
     )
 
     # Clear the connection

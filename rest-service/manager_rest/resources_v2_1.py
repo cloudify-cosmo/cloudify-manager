@@ -21,7 +21,7 @@ import sys
 
 from flask import request
 from flask_security import current_user
-from flask.ext.restful_swagger import swagger
+from flask_restful_swagger import swagger
 
 from manager_rest.deployment_update.constants import PHASES
 from manager_rest.files import UploadedDataManager

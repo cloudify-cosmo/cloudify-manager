@@ -25,12 +25,12 @@ import platform
 from datetime import datetime
 from os import path, makedirs
 from base64 import urlsafe_b64encode
-from flask import current_app
 
 import wagon.utils
-from flask.ext.restful import abort
+from flask_restful import abort
 
 from manager_rest import config
+from manager_rest.constants import ALL_ROLES, SYSTEM_ADMIN_ROLE
 
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
@@ -169,38 +169,21 @@ def create_auth_header(username=None, password=None, token=None):
     return header
 
 
-def add_users_and_roles_to_userstore(user_datastore,
-                                     users,
-                                     roles,
-                                     default_tenant):
-    """Create passed roles and users in the datastore, and add
-    relevant roles to their respective users
-
-    :param user_datastore: A valid flask-security UserDataStore
-    :param users: A list of dicts (see manager_types.yaml)
-    :param roles: A list of dicts (see manager_types.yaml)
-    :param default_tenant: The default tenant object
+def create_security_roles_and_admin_user(user_datastore,
+                                         admin_username,
+                                         admin_password,
+                                         default_tenant):
     """
+    Create security roles and an admin user
+    """
+    for role in ALL_ROLES:
+        user_datastore.create_role(name=role)
 
-    logger = current_app.logger
-    logger.debug('Adding users: {0} \n& roles: {1}'.format(users, roles))
-
-    for role in roles:
-        user_datastore.find_or_create_role(
-            name=role['name'],
-            description=role.get('description'),
-            allowed=role['allow'],
-            denied=role.get('deny')
-        )
-
-    for user in users:
-        user_obj = user_datastore.create_user(
-            username=user['username'],
-            password=user['password']
-        )
-        for role in user.get('roles', []):
-            role_obj = user_datastore.find_role(role)
-            user_datastore.add_role_to_user(user_obj, role_obj)
-        user_obj.tenants.append(default_tenant)
-
+    admin_role = user_datastore.find_role(SYSTEM_ADMIN_ROLE)
+    user_obj = user_datastore.create_user(
+        username=admin_username,
+        password=admin_password,
+        roles=[admin_role]
+    )
+    user_obj.tenants.append(default_tenant)
     user_datastore.commit()
