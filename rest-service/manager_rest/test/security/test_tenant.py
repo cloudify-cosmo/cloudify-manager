@@ -45,4 +45,4 @@ class AuthenticationTests(BaseServerTestCase):
         self.assertEqual(plugin.tenant.name, 'default_tenant')
 
         provider_context = self.sm.get_provider_context()
-        self.assertEqual(provider_context.tenant.name, 'default_tenant')
+        self.assertFalse(hasattr(provider_context, 'tenant'))

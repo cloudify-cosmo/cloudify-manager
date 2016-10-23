@@ -70,6 +70,9 @@ def setup_resources(api):
         'UserGroups': 'user-groups',
         'UserGroupsId': 'user-groups/<string:group_name>',
         'UserGroupsUsers': 'user-groups/users',
+        'Users': 'users',
+        'UsersId': 'users/<string:username>',
+        'UsersGroups': 'users/groups'
     }
 
     for resource, endpoint_suffix in resources_endpoints.iteritems():

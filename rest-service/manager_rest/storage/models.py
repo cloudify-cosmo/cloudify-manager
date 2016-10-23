@@ -478,14 +478,6 @@ class ProviderContext(SerializableBase):
     id = db.Column(db.Text, primary_key=True)
     name = db.Column(db.Text, nullable=False)
     context = db.Column(db.PickleType, nullable=False)
-    tenant_id = _foreign_key_column(Tenant, column_type=db.Integer)
-
-    tenant = _relationship(
-        child_class_name='ProviderContext',
-        column_name='tenant_id',
-        parent_class_name='Tenant',
-        child_table_name='provider_context'
-    )
 
 
 class Plugin(SerializableBase):
