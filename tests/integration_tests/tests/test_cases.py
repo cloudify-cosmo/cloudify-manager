@@ -281,7 +281,7 @@ class BaseTestCase(unittest.TestCase):
 
     @staticmethod
     def get_manager_ip():
-        utils.get_manager_ip()
+        return utils.get_manager_ip()
 
     @staticmethod
     def delete_deployment(deployment_id, ignore_live_nodes=False):
