@@ -39,6 +39,7 @@ app = None
 
 def setup_app():
     global app
+    default_tenant_id = 1
     if not app:
         conf = utils.get_postgres_client_details()
         app = Flask(__name__)
@@ -51,6 +52,7 @@ def setup_app():
             )
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
+        app.config['tenant_id'] = default_tenant_id
 
     # Setup the mock app with the DB
     db.init_app(app)
