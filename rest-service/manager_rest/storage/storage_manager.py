@@ -136,24 +136,23 @@ class SQLStorageManager(object):
                 else:
                     query = query.filter_by(**{key: value})
 
-        if model_class not in (Tenant, Group):
-            # Filter by the tenant ID associated with that model class (either
-            # directly via a relationship with the tenants table, or via an
-            # ancestor who has such a relationship)
-            tenant_id = _get_current_tenant_id()
-            if hasattr(model_class, 'tenant_id'):
-                # model have field named tenant_id (Blueprint, ..)
-                current_app.logger.debug('filter {0} by tenant_id field'
-                                         .format(model_class))
-                query = query.filter_by(tenant_id=tenant_id)
-            else:
-                # model can be Deployment, or it can have relation to
-                # Deployment, so we can do join / filter query by it
-                current_app.logger.debug('filter {0} by tenant_id relation'
-                                         .format(model_class))
-                query = query.filter(
-                    Deployment.blueprint.has(tenant_id=tenant_id)
-                )
+        # Filter by the tenant ID associated with that model class (either
+        # directly via a relationship with the tenants table, or via an
+        # ancestor who has such a relationship)
+        tenant_id = _get_current_tenant_id()
+        if hasattr(model_class, 'tenant_id'):
+            # model have field named tenant_id (Blueprint, ..)
+            current_app.logger.debug('filter {0} by tenant_id field'
+                                     .format(model_class))
+            query = query.filter_by(tenant_id=tenant_id)
+        elif hasattr(model_class, 'tenant'):
+            # model can be Deployment, or it can have relation to
+            # Deployment, so we can do join / filter query by it
+            current_app.logger.debug('filter {0} by tenant_id relation'
+                                     .format(model_class))
+            query = query.filter(
+                Deployment.blueprint.has(tenant_id=tenant_id)
+            )
         return query
 
     def _get_query(self,
@@ -578,7 +577,7 @@ def get_storage_manager():
 
 
 def _get_current_tenant_id():
-    return current_app.config.get('tenant').id
+    return current_app.config.get('tenant_id')
 
 
 class ListResult(object):

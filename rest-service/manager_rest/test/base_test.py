@@ -184,7 +184,7 @@ class BaseServerTestCase(unittest.TestCase):
         db.session.add(t)
         db.session.commit()
 
-        app.config['tenant'] = t
+        app.config['tenant_id'] = t.id
         return t
 
     @staticmethod

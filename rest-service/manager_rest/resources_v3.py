@@ -19,6 +19,7 @@ from flask_security import current_user
 
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
+from manager_rest.security.security_models import User as UserModel
 from manager_rest.resources import (marshal_with,
                                     exceptions_handled)
 from manager_rest.resources_v2 import (create_filters,
@@ -30,13 +31,13 @@ try:
     from cloudify_premium import (TenantResponse,
                                   GroupResponse,
                                   UserResponse,
-                                  SecuredTenantResource)
+                                  SecuredMultiTenancyResource)
 except:
     TenantResponse, GroupResponse, UserResponse = (None, ) * 3
-    SecuredTenantResource = SecuredResource
+    SecuredMultiTenancyResource = SecuredResource
 
 
-class Tenants(SecuredTenantResource):
+class Tenants(SecuredMultiTenancyResource):
     @exceptions_handled
     @marshal_with(TenantResponse)
     @create_filters(models.Tenant.fields)
@@ -54,7 +55,7 @@ class Tenants(SecuredTenantResource):
                                           sort)
 
 
-class TenantsId(SecuredTenantResource):
+class TenantsId(SecuredMultiTenancyResource):
     @exceptions_handled
     @marshal_with(TenantResponse)
     def post(self, tenant_name, multi_tenancy=None):
@@ -64,7 +65,7 @@ class TenantsId(SecuredTenantResource):
         return multi_tenancy.create_tenant(tenant_name)
 
 
-class TenantUsers(SecuredTenantResource):
+class TenantUsers(SecuredMultiTenancyResource):
     @exceptions_handled
     @marshal_with(UserResponse)
     def put(self, multi_tenancy):
@@ -94,7 +95,7 @@ class TenantUsers(SecuredTenantResource):
                                                      tenant_name)
 
 
-class TenantGroups(SecuredTenantResource):
+class TenantGroups(SecuredMultiTenancyResource):
     @exceptions_handled
     @marshal_with(GroupResponse)
     def put(self, multi_tenancy):
@@ -124,7 +125,7 @@ class TenantGroups(SecuredTenantResource):
         )
 
 
-class UserGroups(SecuredTenantResource):
+class UserGroups(SecuredMultiTenancyResource):
     @exceptions_handled
     @marshal_with(GroupResponse)
     @create_filters(models.Group.fields)
@@ -142,7 +143,7 @@ class UserGroups(SecuredTenantResource):
             sort)
 
 
-class UserGroupsId(SecuredTenantResource):
+class UserGroupsId(SecuredMultiTenancyResource):
     @exceptions_handled
     @marshal_with(GroupResponse)
     def post(self, group_name, multi_tenancy):
@@ -152,7 +153,42 @@ class UserGroupsId(SecuredTenantResource):
         return multi_tenancy.create_group(group_name)
 
 
-class UserGroupsUsers(SecuredTenantResource):
+class Users(SecuredMultiTenancyResource):
+    @exceptions_handled
+    @marshal_with(UserResponse)
+    @create_filters(UserModel.fields)
+    @paginate
+    @sortable
+    def get(self, _include=None, filters=None, pagination=None, sort=None,
+            multi_tenancy=None, **kwargs):
+        """
+        List users
+        """
+        return multi_tenancy.list_users(_include,
+                                        filters,
+                                        pagination,
+                                        sort)
+
+
+class UsersId(SecuredMultiTenancyResource):
+    @exceptions_handled
+    @marshal_with(UserResponse)
+    def post(self, multi_tenancy=None):
+        """
+        Create a user
+        """
+        verify_json_content_type()
+        request_json = request.json
+        verify_parameter_in_request_body('username', request_json)
+        verify_parameter_in_request_body('password', request_json)
+        username = request_json['username']
+        password = request_json['password']
+        role_name = request_json.get('role')
+
+        return multi_tenancy.create_user(username, password, role_name)
+
+
+class UsersGroups(SecuredMultiTenancyResource):
     @exceptions_handled
     @marshal_with(UserResponse)
     def put(self, multi_tenancy):
@@ -163,8 +199,8 @@ class UserGroupsUsers(SecuredTenantResource):
         request_json = request.json
         verify_parameter_in_request_body('username', request_json)
         verify_parameter_in_request_body('group_name', request_json)
-        return multi_tenancy.add_user_to_group(request_json['username'],
-                                               request_json['group_name'])
+        return multi_tenancy.add_user_to_group(request_json['group_name'],
+                                               request_json['username'])
 
     @exceptions_handled
     @marshal_with(UserResponse)
@@ -176,5 +212,7 @@ class UserGroupsUsers(SecuredTenantResource):
         request_json = request.json
         verify_parameter_in_request_body('username', request_json)
         verify_parameter_in_request_body('group_name', request_json)
-        return multi_tenancy.remove_user_from_group(request_json['username'],
-                                                    request_json['group_name'])
+        return multi_tenancy.remove_user_from_group(
+            request_json['username'],
+            request_json['group_name']
+        )

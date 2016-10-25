@@ -78,6 +78,14 @@ class User(SerializableBase, UserMixin):
 
         return list(set(tenant_list))
 
+    def to_dict(self):
+        user_dict = super(User, self).to_dict()
+        all_tenants = [tenant.name for tenant in self.get_all_tenants()]
+        user_dict['tenants'] = all_tenants
+        user_dict['groups'] = [group.name for group in self.groups]
+        user_dict['role'] = self.roles[0].name
+        return user_dict
+
 
 class Role(SerializableBase, RoleMixin):
     __tablename__ = 'roles'

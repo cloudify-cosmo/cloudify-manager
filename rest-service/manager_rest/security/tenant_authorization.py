@@ -38,6 +38,6 @@ class TenantAuthorization(object):
                 )
             )
 
-        current_app.config['tenant'] = tenant
+        current_app.config['tenant_id'] = tenant.id
 
 tenant_authorizer = TenantAuthorization()

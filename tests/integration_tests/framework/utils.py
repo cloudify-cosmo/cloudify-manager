@@ -66,13 +66,17 @@ def get_password():
     return os.environ[CLOUDIFY_PASSWORD_ENV]
 
 
+def update_profile_context():
+    cli_env.profile = cli_env.get_profile_context(get_manager_ip())
+
+
 def create_rest_client(**kwargs):
     # Doing it with kwargs instead of arguments with default values to allow
     # not passing args (which will then use the default values), or explicitly
     # passing None (or False) which will then be passed as-is to the Client
 
-    username = kwargs.get('username', get_username())
-    password = kwargs.get('password', get_password())
+    username = kwargs.get('username', cli_env.get_username())
+    password = kwargs.get('password', cli_env.get_password())
     token = kwargs.get('token')
     rest_port = kwargs.get('rest_port',
                            os.environ.get(constants.CLOUDIFY_REST_PORT, 80))
