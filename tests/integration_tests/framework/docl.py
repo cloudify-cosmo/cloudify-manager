@@ -195,6 +195,7 @@ def run_manager(label=None, tag=None):
         with open(f.name) as f2:
             container_details = yaml.safe_load(f2)
     _set_container_id_and_ip(container_details)
+    utils.update_profile_context()
     _wait_for_services()
     logger.info(
         'Container start took {0} seconds'.format(time.time() - start))

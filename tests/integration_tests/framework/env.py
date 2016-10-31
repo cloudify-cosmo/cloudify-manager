@@ -94,7 +94,6 @@ class BaseTestEnvironment(object):
         self.on_manager_created()
 
     def on_manager_created(self):
-        utils.update_profile_context()
         self.start_events_printer()
 
     def _build_resource_mapping(self):
