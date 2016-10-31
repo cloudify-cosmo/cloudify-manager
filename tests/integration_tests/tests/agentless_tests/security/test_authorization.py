@@ -299,12 +299,18 @@ class AuthorizationTest(TestSecuredRestBase):
     def _login_cli(self, username=None, password=None):
         self.logger.info('Logging in with username: {0}, '
                          'password: {1}'.format(username, password))
-        prev_username = os.environ.pop('CLOUDIFY_USERNAME', '')
-        prev_password = os.environ.pop('CLOUDIFY_PASSWORD', '')
+        prev_username = os.environ.get('CLOUDIFY_USERNAME')
+        prev_password = os.environ.get('CLOUDIFY_PASSWORD')
         try:
             os.environ['CLOUDIFY_USERNAME'] = username
             os.environ['CLOUDIFY_PASSWORD'] = password
             yield
         finally:
-            os.environ['CLOUDIFY_USERNAME'] = prev_username
-            os.environ['CLOUDIFY_PASSWORD'] = prev_password
+            if prev_username:
+                os.environ['CLOUDIFY_USERNAME'] = prev_username
+            else:
+                os.environ.pop('CLOUDIFY_USERNAME')
+            if prev_password:
+                os.environ['CLOUDIFY_PASSWORD'] = prev_password
+            else:
+                os.environ.pop('CLOUDIFY_PASSWORD')
