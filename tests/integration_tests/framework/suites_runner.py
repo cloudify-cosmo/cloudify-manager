@@ -125,10 +125,14 @@ def main():
     if len(sys.argv) > 2:
         reports_dir = sys.argv[2]
     suites_runner = SuiteRunner(descriptor, reports_dir)
-    suites_runner.run_all_groups()
-    if os.environ.get('CFY_LOGS_PATH') and not os.environ.get('JENKINS_JOB'):
-        logger.info('manager logs are available at {0}'.format(
+    if os.environ.get('CFY_LOGS_PATH'):
+        logger.info('manager logs will be saved at {0}'.format(
             os.environ['CFY_LOGS_PATH']))
+    else:
+        logger.info('Saving manager logs is disabled by configuration, '
+                    'to enable logs keeping, define "CFY_LOGS_PATH"')
+    suites_runner.run_all_groups()
+
 
 if __name__ == '__main__':
     main()
