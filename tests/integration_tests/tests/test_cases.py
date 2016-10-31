@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import json
+
+import datetime
 import yaml
 import tarfile
 import logging
@@ -70,9 +72,7 @@ class BaseTestCase(unittest.TestCase):
         logs_dir = os.environ.get('CFY_LOGS_PATH')
         test_path = self.id().split('.')[1:]
         if not logs_dir:
-            self.logger.info('Saving manager logs is disabled by configuration'
-                             ' for test:  {0}'.format(test_path[-1]))
-            self.logger.info('To enable logs keeping, define "CFY_LOGS_PATH"')
+            self.logger.debug('not saving manager logs')
             return
 
         self.logger.info(
@@ -109,10 +109,10 @@ class BaseTestCase(unittest.TestCase):
             handlers.append(BaseTestCase._set_file_handler(logs_path))
         except IOError:
             self.logger = cloudify.utils.setup_logger(self._testMethodName)
-            self.logger.info('Framework logs are not saved into a file. '
-                             'To allow logs saving, make sure the directory '
-                             '/var/log/cloudify '
-                             'exists with Permissions to edit.')
+            self.logger.debug('Framework logs are not saved into a file. '
+                              'To allow logs saving, make sure the directory '
+                              '/var/log/cloudify '
+                              'exists with Permissions to edit.')
             return
 
         self.logger = cloudify.utils.setup_logger(self._testMethodName,
@@ -120,7 +120,8 @@ class BaseTestCase(unittest.TestCase):
                                                   handlers=handlers)
         separator = '\n\n\n' + ('=' * 100)
         self.logger.debug(separator)
-        self.logger.debug('Starting test:  {0}'.format(self.id()))
+        self.logger.debug('Starting test:  {0} on {1}'.format(
+            self.id(), datetime.datetime.now()))
         self.logger.info('Framework logs are saved in {0}'.format(logs_path))
 
     @staticmethod

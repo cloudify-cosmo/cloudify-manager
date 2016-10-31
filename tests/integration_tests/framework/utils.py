@@ -21,6 +21,7 @@ import json
 import yaml
 import tempfile
 import shutil
+
 from functools import wraps
 from collections import namedtuple
 from multiprocessing import Process
@@ -28,7 +29,10 @@ from multiprocessing import Process
 import influxdb
 import pika
 import sh
+
 from wagon import wagon
+
+import constants
 
 from cloudify.utils import setup_logger
 from cloudify_cli import env as cli_env
@@ -37,8 +41,6 @@ from manager_rest.utils import create_auth_header
 from cloudify_cli.constants import (CLOUDIFY_BASE_DIRECTORY_NAME,
                                     CLOUDIFY_TENANT_HEADER)
 
-
-from . import constants
 
 logger = setup_logger('testenv.utils')
 

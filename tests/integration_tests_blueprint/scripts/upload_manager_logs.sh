@@ -13,9 +13,9 @@ sed -i "s~access_key = XXX~access_key = $ACCESS_KEY~g" ~/.s3cfg
 
 
 logs_folder=$(ctx node properties cfy_logs_path)
-cd ${logs_folder/'~'/$HOME}
-tar -zcvf ~/logs.tar.gz *
-cd -
+pushd ${logs_folder/'~'/$HOME}
+    tar -zcvf ~/logs.tar.gz *
+popd
 
 set -x
 
