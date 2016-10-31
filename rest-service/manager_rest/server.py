@@ -30,9 +30,10 @@ from manager_rest.maintenance import maintenance_mode_handler
 from manager_rest.security import user_datastore, user_loader
 from manager_rest.app_logging import setup_logger, log_request, log_response
 from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
+
 try:
-    from manager_rest.cloudify_premium import configure_ldap
-except:
+    from cloudify_premium import configure_ldap
+except ImportError:
     configure_ldap = None
 
 SQL_DIALECT = 'postgresql'

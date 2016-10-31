@@ -23,8 +23,8 @@ from .security_models import user_datastore
 from .user_handler import unauthorized_user_handler
 
 try:
-    from manager_rest.cloudify_premium import ldap_authenticator
-except:
+    from cloudify_premium import ldap_authenticator
+except ImportError:
     ldap_authenticator = None
 
 
