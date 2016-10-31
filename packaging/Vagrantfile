@@ -22,6 +22,9 @@ AWS_ACCESS_KEY_ID_UPLOAD_TEMP = ENV['AWS_ACCESS_KEY_ID_UPLOAD_TEMP']
 AWS_ACCESS_KEY_UPLOAD_TEMP = ENV['AWS_ACCESS_KEY_UPLOAD_TEMP']
 MANAGER_BRANCH = ENV['tag']
 PACKAGER_BRANCH = ENV['PACKAGER_BRANCH']
+PREMIUM = ENV['PREMIUM']
+GITHUB_USERNAME = ENV['GITHUB_USERNAME']
+GITHUB_PASSWORD = ENV['GITHUB_PASSWORD']
 
 CENTOS7_OFFICIAL_BOX_URL = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7.box'
 
@@ -69,7 +72,7 @@ Vagrant.configure('2') do |config|
     end
     rest.vm.provision "shell" do |s|
       s.path = "restservice/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
+      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{PREMIUM} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
       s.privileged = false
     end
   end
@@ -117,7 +120,7 @@ Vagrant.configure('2') do |config|
     end
     mgr.vm.provision "shell" do |s|
       s.path = "manager/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
+      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{PREMIUM}"
       s.privileged = false
     end
   end
