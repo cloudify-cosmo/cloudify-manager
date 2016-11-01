@@ -15,35 +15,11 @@
 
 import uuid
 
-from cloudify_rest_client.exceptions import CloudifyClientError
-
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
 class TestStorage(AgentlessTestCase):
-
-    def test_update_node_bad_version(self):
-        self.deploy_application(resource("dsl/basic.yaml"))
-        client = self.client
-        instance = client.node_instances.list()[0]
-        instance = client.node_instances.get(instance.id)  # need the version
-
-        props = {'key': 'value'}
-        result = client.node_instances.update(instance.id,
-                                              state='started',
-                                              runtime_properties=props,
-                                              version=instance.version,)
-        self.assertEquals(instance.version+1, result.version)
-        self.assertEquals(instance.id, result.id)
-        self.assertDictContainsSubset(props, result.runtime_properties)
-        self.assertEquals('started', result.state)
-
-        # making another call with a bad version
-        self.assertRaises(
-            CloudifyClientError, client.node_instances.update,
-            instance.id, version=1)
-
     def test_deployment_inputs(self):
         blueprint_id = str(uuid.uuid4())
         blueprint = self.client.blueprints.upload(resource("dsl/basic.yaml"),

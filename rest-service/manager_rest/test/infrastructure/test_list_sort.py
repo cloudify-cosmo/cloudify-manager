@@ -55,7 +55,7 @@ class ResourceListTestCase(BaseListTest):
         self._put_n_snapshots(3)
         self._resource_list_sorted_test('snapshots', 'id')
 
-    @attr(client_min_version=2.1,
+    @attr(client_min_version=3,
           client_max_version=LATEST_API_VERSION)
     def test_sort_snapshots_list(self):
         self._put_n_snapshots(2)

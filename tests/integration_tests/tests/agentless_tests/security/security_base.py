@@ -21,7 +21,7 @@ from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql, utils
 
 from manager_rest.storage.models import Tenant
-from manager_rest.security import user_datastore
+from manager_rest.storage import user_datastore
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.test.security_utils import get_test_users, add_users_to_db
 
@@ -41,22 +41,21 @@ class TestAuthenticationBase(TestSecuredRestBase):
 
     @contextmanager
     def _login_client(self, **kwargs):
-        self.logger.info('Logging in to test client with {0}'.format(
-            str(kwargs))
-        )
+        self.logger.info('Logging in to  client with {0}'.format(str(kwargs)))
+        client = self.client
         try:
-            self.test_client = utils.create_rest_client(**kwargs)
+            self.client = utils.create_rest_client(**kwargs)
             yield
         finally:
-            self.test_client = None
+            self.client = client
 
     def _assert_unauthorized(self, **kwargs):
         with self._login_client(**kwargs):
             self.assertRaises(
                 UserUnauthorizedError,
-                self.test_client.manager.get_status
+                self.client.manager.get_status
             )
 
     def _assert_authorized(self, **kwargs):
         with self._login_client(**kwargs):
-            self.test_client.manager.get_status()
+            self.client.manager.get_status()

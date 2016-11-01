@@ -55,10 +55,12 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
             self.addCleanup(patcher.stop)
             patcher.start()
 
+        stub_deployment = models.Deployment(id='deployment_id')
+
         stub_deployment_update = models.DeploymentUpdate(
-            deployment_id='deployment_id',
             deployment_plan=None,
             id='deployment_update_id')
+        stub_deployment.deployment_updates.append(stub_deployment_update)
 
         self.step_extractor = StepExtractor(
             deployment_update=stub_deployment_update)

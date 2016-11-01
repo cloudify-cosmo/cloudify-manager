@@ -18,15 +18,11 @@ from flask import request
 
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
-from manager_rest.resources import (marshal_with,
-                                    exceptions_handled)
-from manager_rest.resources_v2 import (create_filters,
-                                       paginate,
-                                       sortable,
-                                       verify_json_content_type,
-                                       verify_parameter_in_request_body)
 from manager_rest.manager_exceptions import BadParametersError
-from manager_rest.security.security_models import User as UserModel
+
+from . import rest_decorators
+from .rest_utils import (verify_json_content_type,
+                         verify_parameter_in_request_body)
 
 try:
     from cloudify_premium import (TenantResponse,
@@ -39,15 +35,16 @@ try:
 except ImportError:
     TenantResponse, GroupResponse, UserResponse, ClusterNode, ClusterState = \
         (None, ) * 5
-    SecuredMultiTenancyResource, ClusterResourceBase = (SecuredResource, ) * 2
+    SecuredMultiTenancyResource = SecuredResource
+    ClusterResourceBase = SecuredResource
 
 
 class Tenants(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(TenantResponse)
-    @create_filters(models.Tenant.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(TenantResponse)
+    @rest_decorators.create_filters(models.Tenant.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -57,16 +54,16 @@ class Tenants(SecuredMultiTenancyResource):
 
 
 class TenantsId(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(TenantResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(TenantResponse)
     def post(self, tenant_name, multi_tenancy):
         """
         Create a tenant
         """
         return multi_tenancy.create_tenant(tenant_name)
 
-    @exceptions_handled
-    @marshal_with(TenantResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(TenantResponse)
     def get(self, tenant_name, multi_tenancy):
         """
         Get details for a single tenant
@@ -75,8 +72,8 @@ class TenantsId(SecuredMultiTenancyResource):
 
 
 class TenantUsers(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(UserResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
     def put(self, multi_tenancy):
         """
         Add a user to a tenant
@@ -88,8 +85,8 @@ class TenantUsers(SecuredMultiTenancyResource):
         return multi_tenancy.add_user_to_tenant(request_json['username'],
                                                 request_json['tenant_name'])
 
-    @exceptions_handled
-    @marshal_with(UserResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
     def delete(self, multi_tenancy):
         """
         Remove a user from a tenant
@@ -105,8 +102,8 @@ class TenantUsers(SecuredMultiTenancyResource):
 
 
 class TenantGroups(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(GroupResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(GroupResponse)
     def put(self, multi_tenancy):
         """
         Add a group to a tenant
@@ -118,8 +115,8 @@ class TenantGroups(SecuredMultiTenancyResource):
         return multi_tenancy.add_group_to_tenant(request_json['group_name'],
                                                  request_json['tenant_name'])
 
-    @exceptions_handled
-    @marshal_with(GroupResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(GroupResponse)
     def delete(self, multi_tenancy):
         """
         Remove a group from a tenant
@@ -135,11 +132,11 @@ class TenantGroups(SecuredMultiTenancyResource):
 
 
 class UserGroups(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(GroupResponse)
-    @create_filters(models.Group.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(GroupResponse)
+    @rest_decorators.create_filters(models.Group.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -153,16 +150,16 @@ class UserGroups(SecuredMultiTenancyResource):
 
 
 class UserGroupsId(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(GroupResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(GroupResponse)
     def post(self, group_name, multi_tenancy):
         """
         Create a group
         """
         return multi_tenancy.create_group(group_name)
 
-    @exceptions_handled
-    @marshal_with(GroupResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(GroupResponse)
     def get(self, group_name, multi_tenancy):
         """
         Get info for a single group
@@ -171,11 +168,11 @@ class UserGroupsId(SecuredMultiTenancyResource):
 
 
 class Users(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(UserResponse)
-    @create_filters(UserModel.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
+    @rest_decorators.create_filters(models.User.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -186,8 +183,8 @@ class Users(SecuredMultiTenancyResource):
                                         pagination,
                                         sort)
 
-    @exceptions_handled
-    @marshal_with(UserResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
     def put(self, multi_tenancy):
         """
         Create a user
@@ -204,8 +201,8 @@ class Users(SecuredMultiTenancyResource):
 
 
 class UsersId(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(UserResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
         """
         Set password/role for a certain user
@@ -223,8 +220,8 @@ class UsersId(SecuredMultiTenancyResource):
         else:
             raise BadParametersError('Neither `password` nor `role` provided')
 
-    @exceptions_handled
-    @marshal_with(UserResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
     def get(self, username, multi_tenancy):
         """
         Get details for a single user
@@ -233,8 +230,8 @@ class UsersId(SecuredMultiTenancyResource):
 
 
 class UsersGroups(SecuredMultiTenancyResource):
-    @exceptions_handled
-    @marshal_with(UserResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
     def put(self, multi_tenancy):
         """
         Add a user to a group
@@ -246,8 +243,8 @@ class UsersGroups(SecuredMultiTenancyResource):
         return multi_tenancy.add_user_to_group(request_json['username'],
                                                request_json['group_name'])
 
-    @exceptions_handled
-    @marshal_with(UserResponse)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
     def delete(self, multi_tenancy):
         """
         Remove a user from a group
@@ -263,17 +260,17 @@ class UsersGroups(SecuredMultiTenancyResource):
 
 
 class Cluster(ClusterResourceBase):
-    @exceptions_handled
-    @marshal_with(ClusterState)
-    @create_filters()
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ClusterState)
+    @rest_decorators.create_filters()
     def get(self, cluster, _include=None, filters=None):
         """
         Current state of the cluster.
         """
         return cluster.cluster_status(_include=_include, filters=filters)
 
-    @exceptions_handled
-    @marshal_with(ClusterState)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ClusterState)
     def put(self, cluster):
         """
         Start the "create cluster" execution.
@@ -286,8 +283,8 @@ class Cluster(ClusterResourceBase):
         config = request_json['config']
         return cluster.start(config)
 
-    @exceptions_handled
-    @marshal_with(ClusterState)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ClusterState)
     def patch(self, cluster):
         """
         Update the cluster config.
@@ -302,8 +299,8 @@ class Cluster(ClusterResourceBase):
 
 
 class ClusterNodes(ClusterResourceBase):
-    @exceptions_handled
-    @marshal_with(ClusterNode)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ClusterNode)
     def get(self, cluster):
         """
         List the nodes in the current cluster.
@@ -315,16 +312,16 @@ class ClusterNodes(ClusterResourceBase):
 
 
 class ClusterNodesId(ClusterResourceBase):
-    @exceptions_handled
-    @marshal_with(ClusterNode)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ClusterNode)
     def get(self, node_id, cluster):
         """
         Details of a node from the cluster.
         """
         return cluster.get_node(node_id)
 
-    @exceptions_handled
-    @marshal_with(ClusterState)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ClusterState)
     def put(self, node_id, cluster):
         """
         Join the current manager to the cluster.
@@ -335,8 +332,8 @@ class ClusterNodesId(ClusterResourceBase):
         config = request_json['config']
         return cluster.join(config)
 
-    @exceptions_handled
-    @marshal_with(ClusterNode)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ClusterNode)
     def delete(self, node_id, cluster):
         """
         Remove the node from the cluster.

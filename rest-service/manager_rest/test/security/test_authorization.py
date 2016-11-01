@@ -18,12 +18,11 @@ import unittest
 from os import path
 from nose.plugins.attrib import attr
 
-from cloudify_rest_client.exceptions import (UserUnauthorizedError,
-                                             CloudifyClientError)
+from cloudify_rest_client.exceptions import UserUnauthorizedError
 
-from manager_rest.utils import create_auth_header
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage import models
 from manager_rest.test.base_test import LATEST_API_VERSION
+from manager_rest.storage.models_states import ExecutionState
 
 from .test_base import SecurityTestBase
 
@@ -123,49 +122,6 @@ class AuthorizationTests(SecurityTestBase):
         self._test_blueprint_delete_with_token(admin_token_client,
                                                default_token_client,
                                                viewer_token_client)
-
-    @attr(client_min_version=3, client_max_version=LATEST_API_VERSION)
-    def test_tenant_authorization(self):
-        new_tenant = 'new_tenant'
-        headers = create_auth_header(username='eve', password='eve_password')
-        headers['tenant'] = new_tenant
-        eve_client = self.get_secured_client(headers=headers)
-
-        self.admin_client.tenants.create(new_tenant)
-        self.admin_client.tenants.add_user('eve', new_tenant)
-
-        blueprint = eve_client.blueprints.upload(
-            self.blueprint_path, 'blueprint_id')
-        self._assert_resource_id(blueprint, 'blueprint_id')
-
-        self._test_tenant_get(eve_client)
-
-    def _test_tenant_get(self, eve_client):
-        # admin and eve should be able to get the blueprint
-        self._assert_resource_id(
-            self.admin_client.blueprints.get('blueprint_id'),
-            expected_id='blueprint_id'
-        )
-        self._assert_resource_id(
-            eve_client.blueprints.get('blueprint_id'),
-            expected_id='blueprint_id'
-        )
-
-        # ...but the default users, viewers and suspended users shouldn't
-        self.assertRaisesRegexp(
-            CloudifyClientError,
-            NOT_FOUND_ERROR_MESSAGE,
-            self.default_client.blueprints.get,
-            'blueprint_id'
-        )
-        self.assertRaisesRegexp(
-            CloudifyClientError,
-            NOT_FOUND_ERROR_MESSAGE,
-            self.viewer_client.blueprints.get,
-            'blueprint_id'
-        )
-        self._assert_unauthorized(self.suspended_client.blueprints.get,
-                                  'blueprint_id')
 
     @attr(client_min_version=2.1,
           client_max_version=LATEST_API_VERSION)
@@ -658,8 +614,10 @@ class AuthorizationTests(SecurityTestBase):
                                 *args)
 
     def _reset_execution_status_in_db(self, execution_id):
-        get_storage_manager().update_execution_status(
-            execution_id, models.Execution.STARTED, error='')
+        execution = self.sm.get(models.Execution, execution_id)
+        execution.status = ExecutionState.STARTED
+        execution.error = ''
+        self.sm.update(execution)
         updated_execution = self.admin_client.executions.get(
             execution_id=execution_id)
-        self.assertEqual(models.Execution.STARTED, updated_execution['status'])
+        self.assertEqual(ExecutionState.STARTED, updated_execution['status'])

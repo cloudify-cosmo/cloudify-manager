@@ -44,7 +44,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         self.assertIsNotNone(deployment_response['created_at'])
         self.assertIsNotNone(deployment_response['updated_at'])
 
-    @attr(client_min_version=2.1,
+    @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_list(self):
         self.put_deployment(deployment_id='0', blueprint_id='0')

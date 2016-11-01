@@ -14,6 +14,4 @@
 #  * limitations under the License.
 
 # Setting NOQA to avoid flake errors - these are convenience imports
-from .user_handler import user_loader           # NOQA
-from .security_models import user_datastore     # NOQA
-from .secured_resource import SecuredResource   # NOQA
+from .secured_resource import SecuredResource           # NOQA

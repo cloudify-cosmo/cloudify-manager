@@ -53,6 +53,7 @@ setup(
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=['manager_rest',
+              'manager_rest.rest',
               'manager_rest.deployment_update',
               'manager_rest.storage',
               'manager_rest.security'],

@@ -6,6 +6,18 @@ test_system_workflows()
     pushd workflows && tox && popd
 }
 
+test_rest_service_v3_endpoints()
+{
+    echo "### Testing rest-service endpoints with V3 client..."
+    pushd rest-service && tox -e clientV3_endpoints && popd
+}
+
+test_rest_service_v3_infrastructure()
+{
+    echo "### Testing rest-service infrastructure with V3 client..."
+    pushd rest-service && tox -e clientV3_infrastructure && popd
+}
+
 test_rest_service_v2_1_endpoints()
 {
     echo "### Testing rest-service endpoints with V2.1 client..."
@@ -53,6 +65,8 @@ run_flake8()
 }
 
 case $1 in
+    test-rest-service-endpoints-v3-client           ) test_rest_service_v3_endpoints;;
+    test-rest-service-infrastructure-v3-client      ) test_rest_service_v3_infrastructure;;
     test-rest-service-endpoints-v2_1-client         ) test_rest_service_v2_1_endpoints;;
     test-rest-service-infrastructure-v2_1-client    ) test_rest_service_v2_1_infrastructure;;
     test-rest-service-endpoints-v2-client           ) test_rest_service_v2_endpoints;;

@@ -21,10 +21,11 @@ from nose.plugins.attrib import attr
 from cloudify_rest_client import exceptions
 
 from manager_rest import utils
+from manager_rest.storage import models
 from manager_rest import manager_exceptions
 from manager_rest.test.base_test import BaseServerTestCase
 from manager_rest.test.base_test import LATEST_API_VERSION
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.storage.models_states import ExecutionState
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
@@ -64,15 +65,15 @@ class ExecutionsTestCase(BaseServerTestCase):
         system_wf_id = 'mock_system_workflow_id'
         system_wf_execution = models.Execution(
             id=system_wf_execution_id,
-            status=models.Execution.TERMINATED,
-            deployment_id=deployment_id,
+            status=ExecutionState.TERMINATED,
             workflow_id=system_wf_id,
-            blueprint_id=blueprint_id,
             created_at=utils.get_formatted_timestamp(),
             error='',
             parameters=dict(),
             is_system_workflow=True)
-        get_storage_manager().put_execution(system_wf_execution)
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        deployment.executions.append(system_wf_execution)
+        self.sm.put(models.Execution, system_wf_execution)
 
         # listing only non-system workflow executions
         executions = self.client.executions.list(deployment_id=deployment_id)
@@ -95,13 +96,13 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         return deployment_id, system_wf_id
 
-    @attr(client_min_version=2.1,
+    @attr(client_min_version=3,
           client_max_version=LATEST_API_VERSION)
     def test_sort_list(self):
         blueprint = self._add_blueprint()
-        deployment = self._add_deployment(blueprint.id)
-        self._add_execution(deployment.id, blueprint.id, '0')
-        self._add_execution(deployment.id, blueprint.id, '1')
+        deployment = self._add_deployment(blueprint)
+        self._add_execution(deployment, '0')
+        self._add_execution(deployment, '1')
 
         executions = self.client.executions.list(sort='created_at')
         self.assertEqual(2, len(executions))
@@ -470,16 +471,16 @@ class ExecutionsTestCase(BaseServerTestCase):
             "Invalid relationship - can't change status from {0} to {1}")
 
         force_cancelling_invalid_future_statuses = (
-            models.Execution.ACTIVE_STATES + [models.Execution.TERMINATED])
+            ExecutionState.ACTIVE_STATES + [ExecutionState.TERMINATED])
         cancelling_invalid_future_statuses = dropwhile(
-            lambda status: status == models.Execution.CANCELLING,
+            lambda status: status == ExecutionState.CANCELLING,
             force_cancelling_invalid_future_statuses)
         invalid_status_map = {
-            models.Execution.TERMINATED: models.Execution.STATES,
-            models.Execution.FAILED: models.Execution.STATES,
-            models.Execution.CANCELLED: models.Execution.STATES,
-            models.Execution.CANCELLING: cancelling_invalid_future_statuses,
-            models.Execution.FORCE_CANCELLING:
+            ExecutionState.TERMINATED: ExecutionState.STATES,
+            ExecutionState.FAILED: ExecutionState.STATES,
+            ExecutionState.CANCELLED: ExecutionState.STATES,
+            ExecutionState.CANCELLING: cancelling_invalid_future_statuses,
+            ExecutionState.FORCE_CANCELLING:
                 force_cancelling_invalid_future_statuses,
         }
 
@@ -504,8 +505,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.test_get_execution_by_id()
         expected_message = (
             "Invalid relationship - can't change status from {0} to {1}")
-        last_status = models.Execution.TERMINATED
-        next_status = models.Execution.STARTED
+        last_status = ExecutionState.TERMINATED
+        next_status = ExecutionState.STARTED
         self._modify_execution_status_in_database(
             execution=execution,
             new_status=last_status)
@@ -534,7 +535,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.client.executions.get(execution.id)
         self.assertEquals('terminated', execution.status)
         self._modify_execution_status_in_database(
-            execution, models.Execution.STARTED)
+            execution, ExecutionState.STARTED)
         self._modify_execution_status(execution.id, 'pending')
 
     def test_update_execution_status_with_error(self):
@@ -546,7 +547,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         self.assertEquals('terminated', execution.status)
         self.assertEquals('', execution.error)
         self._modify_execution_status_in_database(
-            execution, models.Execution.STARTED)
+            execution, ExecutionState.STARTED)
 
         execution = self.client.executions.update(
             execution.id, 'pending', 'some error')
@@ -568,25 +569,25 @@ class ExecutionsTestCase(BaseServerTestCase):
         #  legal action
         self._modify_execution_status_in_database(
             execution=execution,
-            new_status=models.Execution.PENDING)
+            new_status=ExecutionState.PENDING)
 
         resource_path = '/executions/{0}'.format(execution['id'])
         cancel_response = self.post(resource_path, {
             'action': 'cancel'
         }).json
-        execution['status'] = models.Execution.CANCELLING
+        execution['status'] = ExecutionState.CANCELLING
         self.assertEquals(execution, cancel_response)
 
     def test_force_cancel_execution_by_id(self):
         execution = self.test_get_execution_by_id()
         self._modify_execution_status_in_database(
             execution=execution,
-            new_status=models.Execution.PENDING)
+            new_status=ExecutionState.PENDING)
         resource_path = '/executions/{0}'.format(execution['id'])
 
         cancel_response = self.post(
             resource_path, {'action': 'force-cancel'}).json
-        execution['status'] = models.Execution.FORCE_CANCELLING
+        execution['status'] = ExecutionState.FORCE_CANCELLING
         self.assertEquals(execution, cancel_response)
 
     def test_illegal_cancel_on_execution(self):
@@ -610,32 +611,32 @@ class ExecutionsTestCase(BaseServerTestCase):
                     cancel_response.json['error_code'])
             else:
                 self.assertEquals(200, cancel_response.status_code)
-                expected_status = models.Execution.FORCE_CANCELLING if force\
-                    else models.Execution.CANCELLING
+                expected_status = ExecutionState.FORCE_CANCELLING if force\
+                    else ExecutionState.CANCELLING
                 self.assertEquals(expected_status,
                                   cancel_response.json['status'])
 
         # end states - can't either cancel or force-cancel
-        attempt_cancel_on_status(models.Execution.TERMINATED)
-        attempt_cancel_on_status(models.Execution.TERMINATED, True)
-        attempt_cancel_on_status(models.Execution.FAILED)
-        attempt_cancel_on_status(models.Execution.FAILED, True)
-        attempt_cancel_on_status(models.Execution.CANCELLED)
-        attempt_cancel_on_status(models.Execution.CANCELLED, True)
+        attempt_cancel_on_status(ExecutionState.TERMINATED)
+        attempt_cancel_on_status(ExecutionState.TERMINATED, True)
+        attempt_cancel_on_status(ExecutionState.FAILED)
+        attempt_cancel_on_status(ExecutionState.FAILED, True)
+        attempt_cancel_on_status(ExecutionState.CANCELLED)
+        attempt_cancel_on_status(ExecutionState.CANCELLED, True)
 
         # force-cancelling status - can't either cancel or force-cancel
-        attempt_cancel_on_status(models.Execution.FORCE_CANCELLING)
-        attempt_cancel_on_status(models.Execution.FORCE_CANCELLING, True)
+        attempt_cancel_on_status(ExecutionState.FORCE_CANCELLING)
+        attempt_cancel_on_status(ExecutionState.FORCE_CANCELLING, True)
 
         # cancelling state - can only override with force-cancel
-        attempt_cancel_on_status(models.Execution.CANCELLING)
-        attempt_cancel_on_status(models.Execution.CANCELLING, True, False)
+        attempt_cancel_on_status(ExecutionState.CANCELLING)
+        attempt_cancel_on_status(ExecutionState.CANCELLING, True, False)
 
         # pending and started states - can both cancel and force-cancel
-        attempt_cancel_on_status(models.Execution.PENDING, False, False)
-        attempt_cancel_on_status(models.Execution.PENDING, True, False)
-        attempt_cancel_on_status(models.Execution.STARTED, False, False)
-        attempt_cancel_on_status(models.Execution.STARTED, True, False)
+        attempt_cancel_on_status(ExecutionState.PENDING, False, False)
+        attempt_cancel_on_status(ExecutionState.PENDING, True, False)
+        attempt_cancel_on_status(ExecutionState.STARTED, False, False)
+        attempt_cancel_on_status(ExecutionState.STARTED, True, False)
 
     def test_cancel_non_existent_execution(self):
         resource_path = '/executions/do_not_exist'
@@ -681,7 +682,7 @@ class ExecutionsTestCase(BaseServerTestCase):
         execution = self.client.executions.start(deployment_id, 'install')
         self._modify_execution_status_in_database(
             execution=execution,
-            new_status=models.Execution.PENDING)
+            new_status=ExecutionState.PENDING)
 
         if expected_status_code < 400:
             self.client.executions.start(deployment_id,
@@ -703,12 +704,12 @@ class ExecutionsTestCase(BaseServerTestCase):
 
     def test_start_execution_dep_env_pending(self):
         self._test_start_execution_dep_env(
-            models.Execution.PENDING,
+            ExecutionState.PENDING,
             exceptions.DeploymentEnvironmentCreationPendingError)
 
     def test_start_execution_dep_env_in_progress(self):
         self._test_start_execution_dep_env(
-            models.Execution.STARTED,
+            ExecutionState.STARTED,
             exceptions.DeploymentEnvironmentCreationInProgressError)
 
     def _test_start_execution_dep_env(self, task_state, expected_ex):
@@ -729,8 +730,9 @@ class ExecutionsTestCase(BaseServerTestCase):
             execution_id = execution['id']
         except TypeError:
             execution_id = execution.id
-        get_storage_manager().update_execution_status(
-            execution_id, new_status, error='')
+        execution = self.sm.get(models.Execution, execution_id)
+        execution.status = new_status
+        self.sm.update(execution)
         updated_execution = self.client.executions.get(
             execution_id=execution_id)
         self.assertEqual(new_status, updated_execution['status'])

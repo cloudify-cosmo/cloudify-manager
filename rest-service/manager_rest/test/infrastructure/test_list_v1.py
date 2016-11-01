@@ -17,6 +17,7 @@
 from nose.plugins.attrib import attr
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+
 from manager_rest.test.infrastructure.base_list_test import BaseListTest
 from manager_rest.storage.manager_elasticsearch import ManagerElasticsearch
 

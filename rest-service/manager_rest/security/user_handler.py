@@ -17,9 +17,8 @@ from flask import current_app
 from flask_security.utils import md5
 
 from manager_rest.utils import abort_error
+from manager_rest.storage import user_datastore
 from manager_rest.manager_exceptions import UnauthorizedError
-
-from .security_models import user_datastore
 
 
 def unauthorized_user_handler(extra_info=None):
@@ -40,7 +39,7 @@ def user_loader(request):
     Having this function makes sure that this will work:
     > from flask_security import current_user
     > current_user
-    <manager_rest.security.security_models.User object at 0x50d9d10>
+    <manager_rest.storage.models.User object at 0x50d9d10>
 
     :param request: flask's request
     :return: A user object, or None if not found

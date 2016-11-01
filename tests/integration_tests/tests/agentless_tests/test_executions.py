@@ -18,6 +18,7 @@ import uuid
 
 from cloudify_rest_client.executions import Execution
 
+from manager_rest.storage import models
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import do_retries
 from integration_tests.tests.utils import (
@@ -168,7 +169,9 @@ class ExecutionsTest(AgentlessTestCase):
         # Manually updating the status, because the client checks for
         # correct transitions
         sm = self.get_remote_storage_manager()
-        sm.update_execution_status(execution_id, 'started', '')
+        execution = sm.get(models.Execution, execution_id)
+        execution.status = 'started'
+        sm.update(execution)
 
         execution = self.client.executions.get(execution_id)
         self.assertEquals('started', execution.status)

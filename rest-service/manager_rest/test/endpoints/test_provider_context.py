@@ -15,9 +15,9 @@
 
 from nose.plugins.attrib import attr
 
-from manager_rest import manager_exceptions
 from manager_rest.test import base_test
 from cloudify_rest_client import exceptions
+from manager_rest.manager_exceptions import SQLStorageException
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -40,15 +40,12 @@ class ProviderContextTestCase(base_test.BaseServerTestCase):
 
     def test_post_provider_context_twice_fails(self):
         self.test_post_provider_context()
-        try:
+        with self.assertRaises(exceptions.CloudifyClientError) as cm:
             self.test_post_provider_context()
-            self.fail('Expected failure when trying to re-post provider '
-                      'context')
-        except exceptions.CloudifyClientError as e:
-            self.assertEqual(409, e.status_code)
             self.assertEqual(
-                manager_exceptions.ConflictError.CONFLICT_ERROR_CODE,
-                e.error_code)
+                cm.exception.error_status,
+                SQLStorageException.STORAGE_ERROR_CODE
+            )
 
     def test_update_provider_context(self):
         self.test_post_provider_context()

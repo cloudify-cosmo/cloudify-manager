@@ -18,8 +18,8 @@ import types
 import urllib
 
 from cloudify_rest_client.client import HTTPClient
-from manager_rest.storage import get_storage_manager
-from manager_rest.storage.models import Execution
+from cloudify_rest_client.executions import Execution
+from manager_rest.storage import get_storage_manager, models
 
 try:
     from cloudify_rest_client.client import \
@@ -52,7 +52,8 @@ class MockHTTPClient(HTTPClient):
                    pagination=None,
                    sort=None,
                    expected_status_code=200,
-                   stream=False):
+                   stream=False,
+                   versioned_url=True):
         if CLIENT_API_VERSION == 'v1':
             # in v1, HTTPClient won't append the version part of the URL
             # on its own, so it's done here instead
@@ -151,9 +152,11 @@ def task_state():
 class MockCeleryClient(object):
 
     def execute_task(self, task_queue, task_id=None, kwargs=None):
-        get_storage_manager().update_execution_status(task_id,
-                                                      task_state(),
-                                                      '')
+        sm = get_storage_manager()
+        execution = sm.get(models.Execution, task_id)
+        execution.status = task_state()
+        execution.error = ''
+        sm.update(execution)
         return MockAsyncResult(task_id)
 
     def get_task_status(self, task_id):

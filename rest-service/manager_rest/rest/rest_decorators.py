@@ -1,0 +1,271 @@
+#########
+# Copyright (c) 2015 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+
+from functools import wraps
+from collections import OrderedDict
+
+from flask_restful import marshal
+from flask_restful.utils import unpack
+from flask import request, current_app
+from sqlalchemy.util._collections import _LW as sql_alchemy_collection
+
+
+from manager_rest import utils, config, manager_exceptions
+from manager_rest.storage.models_base import SQLModelBase
+
+from .responses_v2 import ListResponse
+from .rest_utils import skip_nested_marshalling
+
+
+MISSING_PREMIUM_PACKAGE_MESSAGE = 'This feature exists only in the premium' \
+                                  ' edition of Cloudify.\n' \
+                                  'Please contact sales for additional info.'
+
+
+# region V1 decorators
+
+def insecure_rest_method(func):
+    """block an insecure REST method if manager disabled insecure endpoints
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if config.instance.insecure_endpoints_disabled:
+            raise manager_exceptions.MethodNotAllowedError()
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def exceptions_handled(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except manager_exceptions.ManagerException as e:
+            utils.abort_error(e, current_app.logger)
+    return wrapper
+
+
+class marshal_with(object):
+    def __init__(self, response_class):
+        """
+        :param response_class: response class to marshal result with.
+         class must have a "resource_fields" class variable
+        """
+        if response_class and not hasattr(response_class, 'resource_fields'):
+            raise RuntimeError(
+                'Response class {0} does not contain a "resource_fields" '
+                'class variable'.format(type(response_class)))
+        self.response_class = response_class
+
+    def __call__(self, f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if not self.response_class:
+                utils.abort_error(manager_exceptions.MissingPremiumPackage
+                                  (MISSING_PREMIUM_PACKAGE_MESSAGE),
+                                  current_app.logger,
+                                  hide_server_message=True)
+
+            if hasattr(request, '__skip_marshalling'):
+                return f(*args, **kwargs)
+
+            fields_to_include = self._get_fields_to_include(
+                self.response_class.resource_fields)
+            if self._is_include_parameter_in_request():
+                # only pushing "_include" into kwargs when the request
+                # contained this parameter, to keep things cleaner (identical
+                # behavior for passing "_include" which contains all fields)
+                kwargs['_include'] = fields_to_include.keys()
+
+            response = f(*args, **kwargs)
+
+            if isinstance(response, ListResponse):
+                wrapped_items = self.wrap_with_response_object(response.items)
+                response.items = marshal(wrapped_items, fields_to_include)
+                return marshal(response, ListResponse.resource_fields)
+            # SQLAlchemy returns a class that subtypes tuple, but acts
+            # differently (it's taken care of in `wrap_with_response_object`)
+            if isinstance(response, tuple) and \
+                    not isinstance(response, sql_alchemy_collection):
+                data, code, headers = unpack(response)
+                data = self.wrap_with_response_object(data)
+                return marshal(data, fields_to_include), code, headers
+            else:
+                response = self.wrap_with_response_object(response)
+                return marshal(response, fields_to_include)
+
+        return wrapper
+
+    def wrap_with_response_object(self, data):
+        if isinstance(data, dict):
+            return self.response_class(**data)
+        elif isinstance(data, list):
+            return map(self.wrap_with_response_object, data)
+        elif isinstance(data, SQLModelBase):
+            return self.wrap_with_response_object(data.to_dict())
+        # Support for partial results from SQLAlchemy (i.e. only
+        # certain columns, and not the whole model class)
+        elif isinstance(data, sql_alchemy_collection):
+            return self.wrap_with_response_object(data._asdict())
+        raise RuntimeError('Unexpected response data (type {0}) {1}'.format(
+            type(data), data))
+
+    @staticmethod
+    def _is_include_parameter_in_request():
+        return '_include' in request.args and request.args['_include']
+
+    def _get_fields_to_include(self, model_fields):
+        if self._is_include_parameter_in_request():
+            include = set(request.args['_include'].split(','))
+            include_fields = {}
+            illegal_fields = None
+            for field in include:
+                if field not in model_fields:
+                    if not illegal_fields:
+                        illegal_fields = []
+                    illegal_fields.append(field)
+                    continue
+                include_fields[field] = model_fields[field]
+            if illegal_fields:
+                raise manager_exceptions.NoSuchIncludeFieldError(
+                    'Illegal include fields: [{}] - available fields: '
+                    '[{}]'.format(', '.join(illegal_fields),
+                                  ', '.join(model_fields.keys())))
+            return include_fields
+        return model_fields
+
+
+# endregion
+
+# region V2 decorators
+
+def projection(func):
+    """Decorator for enabling projection
+    """
+    def create_projection_params(*args, **kw):
+        projection_params = None
+        if '_include' in request.args:
+            projection_params = request.args["_include"].split(',')
+        return func(_include=projection_params, *args, **kw)
+    return create_projection_params
+
+
+def rangeable(func):
+    """
+    Decorator for enabling range
+    """
+    def create_range_params(*args, **kw):
+        range_args = request.args.getlist("_range")
+        range_params = {}
+        for range_arg in range_args:
+            try:
+                range_key, range_from, range_to = \
+                    range_arg.split(',')
+            except ValueError:
+                raise ValueError('Range parameter requires 3 values')
+            range_param = {}
+            if range_from:
+                range_param['from'] = range_from
+            if range_to:
+                range_param['to'] = range_to
+            if range_param:
+                range_params[range_key] = range_param
+
+        return func(range_filters=range_params, *args, **kw)
+    return create_range_params
+
+
+def sortable(func):
+    """
+    Decorator for enabling sort
+    """
+    def create_sort_params(*args, **kw):
+        sort_args = request.args.getlist("_sort")
+        # maintain order of sort fields
+        sort_params = OrderedDict()
+        for sort_arg in sort_args:
+            field = sort_arg.lstrip('-+')
+            order = "desc" if sort_arg[0] == '-' else "asc"
+            sort_params.update({field: order})
+        return func(sort=sort_params, *args, **kw)
+    return create_sort_params
+
+
+def marshal_events(func):
+    """
+    Decorator for marshalling raw event responses
+    """
+    def marshal_response(*args, **kwargs):
+        return marshal(func(*args, **kwargs), ListResponse.resource_fields)
+    return marshal_response
+
+
+def paginate(func):
+    """
+    Decorator for adding pagination
+    """
+    def verify_and_create_pagination_params(*args, **kw):
+        offset = request.args.get('_offset')
+        size = request.args.get('_size')
+        pagination_params = {}
+        if offset:
+            pagination_params['offset'] = int(offset)
+        if size:
+            pagination_params['size'] = int(size)
+        result = func(pagination=pagination_params, *args, **kw)
+
+        return ListResponse(items=result.items, metadata=result.metadata)
+
+    return verify_and_create_pagination_params
+
+
+def create_filters(fields=None):
+    """
+    Decorator for extracting filter parameters from the request arguments and
+    optionally verifying their validity according to the provided fields.
+    :param fields: a set of valid filter fields.
+    :return: a Decorator for creating and validating the accepted fields.
+    """
+    def create_filters_dec(f):
+        def some_func(*args, **kw):
+            request_args = request.args.to_dict(flat=False)
+            # NOTE: all filters are created as lists
+            filters = {k: v for k, v in
+                       request_args.iteritems() if not k.startswith('_')}
+            if fields:
+                unknowns = [k for k in filters.iterkeys() if k not in fields]
+                if unknowns:
+                    raise manager_exceptions.BadParametersError(
+                        'Filter keys \'{key_names}\' do not exist. Allowed '
+                        'filters are: {fields}'
+                        .format(key_names=unknowns, fields=list(fields)))
+            return f(filters=filters, *args, **kw)
+        return some_func
+    return create_filters_dec
+
+# endregion
+
+# region V2.1 decorators
+
+
+def override_marshal_with(f, model):
+    @exceptions_handled
+    @marshal_with(model)
+    def wrapper(*args, **kwargs):
+        with skip_nested_marshalling():
+            return f(*args, **kwargs)
+    return wrapper
+
+# endregion

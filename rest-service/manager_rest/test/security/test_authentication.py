@@ -84,33 +84,3 @@ class AuthenticationTests(SecurityTestBase):
             self.test_client.maintenance_mode.activate()
             response = self.test_client.maintenance_mode.status()
         self.assertEqual(response.requested_by, 'alice')
-
-    @attr(client_min_version=3,
-          client_max_version=LATEST_API_VERSION)
-    def test_create_new_user(self):
-        self._assert_user_unauthorized(username='fred',
-                                       password='fred_password')
-        # Create a new user and add it to the default tenant
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            self.test_client.users.create('fred', 'fred_password', 'default')
-            self.test_client.tenants.add_user('fred', 'default_tenant')
-
-        self._assert_user_authorized(username='fred',
-                                     password='fred_password')
-
-    @attr(client_min_version=3,
-          client_max_version=LATEST_API_VERSION)
-    def test_create_new_user_with_group(self):
-        self._assert_user_unauthorized(username='fred',
-                                       password='fred_password')
-        # Create a new user and a new group. Add the user to the group, and
-        # add the group to the default tenant
-        with self.use_secured_client(username='alice',
-                                     password='alice_password'):
-            self.test_client.users.create('fred', 'fred_password', 'default')
-            self.test_client.user_groups.create('fred_group')
-            self.test_client.tenants.add_group('fred_group', 'default_tenant')
-            self.test_client.users.add_to_group('fred', 'fred_group')
-
-        self._assert_user_authorized(username='fred', password='fred_password')

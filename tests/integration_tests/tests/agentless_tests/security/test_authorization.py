@@ -14,18 +14,16 @@
 #    * limitations under the License.
 #
 
-import sh
-import os
-from contextlib import contextmanager
+from .security_base import TestAuthenticationBase
 
-from .security_base import TestSecuredRestBase
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests.tests.utils import get_resource as resource
 
 RUNNING_EXECUTIONS_MESSAGE = 'There are running executions for this deployment'
 
 
-class AuthorizationTest(TestSecuredRestBase):
+class AuthorizationTest(TestAuthenticationBase):
 
     admin_username = 'alice'
     admin_password = 'alice_password'
@@ -72,245 +70,270 @@ class AuthorizationTest(TestSecuredRestBase):
         blueprint_path = resource('dsl/empty_blueprint.yaml')
 
         # admins and default users should be able to upload blueprints...
-        with self._login_cli(self.admin_username, self.admin_password):
-            self.cfy.blueprints.upload(blueprint_path,
-                                       blueprint_id=self.blueprint1_id)
-            self.cfy.blueprints.upload(blueprint_path,
-                                       blueprint_id=self.blueprint2_id)
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
+            self.client.blueprints.upload(blueprint_path, self.blueprint1_id)
+            self.client.blueprints.upload(blueprint_path, self.blueprint2_id)
 
-        with self._login_cli(self.default_username, self.default_password):
-            self.cfy.blueprints.upload(blueprint_path,
-                                       blueprint_id=self.blueprint3_id)
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
+            self.client.blueprints.upload(blueprint_path, self.blueprint3_id)
 
         # ...but viewers and suspended users should not
-        with self._login_cli(self.viewer_username, self.viewer_password):
-            self._assert_unauthorized(self.cfy.blueprints.upload,
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
+            self._assert_unauthorized(self.client.blueprints.upload,
                                       blueprint_path, blueprint_id='dummy_bp')
 
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.blueprints.upload,
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.blueprints.upload,
                                       blueprint_path, blueprint_id='dummy_bp')
 
     def _assert_list_blueprint(self):
         def _list_and_assert():
-            output = self.cfy.blueprints.list()
+            bp_ids = [bp.id for bp in self.client.blueprints.list()]
             for blueprint_id in (self.blueprint1_id,
                                  self.blueprint2_id,
                                  self.blueprint3_id):
-                self.assertIn(blueprint_id, output)
+                self.assertIn(blueprint_id, bp_ids)
 
         # admins, default users and viewers should be able to list
         # blueprints...
-        with self._login_cli(self.admin_username, self.admin_password):
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
             _list_and_assert()
 
-        with self._login_cli(self.default_username, self.default_password):
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
             _list_and_assert()
 
-        with self._login_cli(self.viewer_username, self.viewer_password):
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
             _list_and_assert()
 
         # ...but suspended users should not
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.blueprints.list)
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.blueprints.list)
 
     def _assert_get_blueprint(self):
         # admins, default users and viewers should be able to get blueprints...
-        with self._login_cli(self.admin_username, self.admin_password):
-            self.cfy.blueprints.get(self.blueprint1_id)
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
+            self.client.blueprints.get(self.blueprint1_id)
 
-        with self._login_cli(self.default_username, self.default_password):
-            self.cfy.blueprints.get(self.blueprint1_id)
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
+            self.client.blueprints.get(self.blueprint1_id)
 
-        with self._login_cli(self.viewer_username, self.viewer_password):
-            self.cfy.blueprints.get(self.blueprint1_id)
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
+            self.client.blueprints.get(self.blueprint1_id)
 
         # ...but suspended users should not
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.blueprints.get,
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.blueprints.get,
                                       self.blueprint1_id)
 
     def _assert_delete_blueprint(self):
         # admins and default users should be able to delete blueprints...
-        with self._login_cli(self.admin_username, self.admin_password):
-            self.cfy.blueprints.delete(self.blueprint2_id)
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
+            self.client.blueprints.delete(self.blueprint2_id)
 
-        with self._login_cli(self.default_username, self.default_password):
-            self.cfy.blueprints.delete(self.blueprint3_id)
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
+            self.client.blueprints.delete(self.blueprint3_id)
 
         # ...but viewers and suspended users should not
-        with self._login_cli(self.viewer_username, self.viewer_password):
-            self._assert_unauthorized(self.cfy.blueprints.delete, 'dummy_bp')
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
+            self._assert_unauthorized(self.client.blueprints.delete,
+                                      'dummy_bp')
 
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.blueprints.delete, 'dummy_bp')
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.blueprints.delete,
+                                      'dummy_bp')
 
     def _assert_create_deployment(self):
         # admins and default users should be able to create deployments...
-        with self._login_cli(self.admin_username, self.admin_password):
-            self.cfy.deployments.create(self.deployment1_id,
-                                        blueprint_id=self.blueprint1_id)
-            self.cfy.deployments.create(self.deployment2_id,
-                                        blueprint_id=self.blueprint1_id)
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
+            self.client.deployments.create(blueprint_id=self.blueprint1_id,
+                                           deployment_id=self.deployment1_id)
+            self.client.deployments.create(blueprint_id=self.blueprint1_id,
+                                           deployment_id=self.deployment2_id)
 
-        with self._login_cli(self.default_username, self.default_password):
-            self.cfy.deployments.create(self.deployment3_id,
-                                        blueprint_id=self.blueprint1_id)
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
+            self.client.deployments.create(blueprint_id=self.blueprint1_id,
+                                           deployment_id=self.deployment3_id)
 
         # ...but viewers and suspended users should not
-        with self._login_cli(self.viewer_username, self.viewer_password):
-            self._assert_unauthorized(self.cfy.deployments.create, 'dummy_dp',
-                                      blueprint_id=self.blueprint1_id)
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
+            self._assert_unauthorized(self.client.deployments.create,
+                                      blueprint_id=self.blueprint1_id,
+                                      deployment_id='dummy_dp')
 
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.deployments.create, 'dummy_dp',
-                                      blueprint_id=self.blueprint1_id)
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.deployments.create,
+                                      blueprint_id=self.blueprint1_id,
+                                      deployment_id='dummy_dp')
 
     def _assert_list_deployment(self):
         def _list_and_assert():
-            output = self.cfy.deployments.list()
+            dep_ids = [dep.id for dep in self.client.deployments.list()]
             for deployment_id in (self.deployment1_id,
                                   self.deployment2_id,
                                   self.deployment3_id):
-                self.assertIn(deployment_id, output)
+                self.assertIn(deployment_id, dep_ids)
 
         # admins, default users and viewers should be able to list
         # deployments...
-        with self._login_cli(self.admin_username, self.admin_password):
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
             _list_and_assert()
 
-        with self._login_cli(self.default_username, self.default_password):
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
             _list_and_assert()
 
-        with self._login_cli(self.viewer_username, self.viewer_password):
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
             _list_and_assert()
 
         # ...but suspended users should not
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.deployments.list)
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.deployments.list)
 
     def _assert_delete_deployment(self):
         # admins and default users should be able to delete deployments...
-        with self._login_cli(self.admin_username, self.admin_password):
-            self.cfy.deployments.delete(self.deployment2_id)
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
+            self.client.deployments.delete(self.deployment2_id)
 
-        with self._login_cli(self.default_username, self.default_password):
-            self.cfy.deployments.delete(self.deployment3_id)
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
+            self.client.deployments.delete(self.deployment3_id)
 
         # ...but viewers and suspended users should not
-        with self._login_cli(self.viewer_username, self.viewer_password):
-            self._assert_unauthorized(self.cfy.deployments.delete, 'dummy_dp')
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
+            self._assert_unauthorized(self.client.deployments.delete,
+                                      'dummy_dp')
 
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.deployments.delete, 'dummy_dp')
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.deployments.delete,
+                                      'dummy_dp')
 
     def _assert_start_execution(self):
         workflow = 'install'
 
         # admins and default users should be able to start executions...
-        with self._login_cli(self.admin_username, self.admin_password):
-            self.cfy.executions.start(workflow,
-                                      deployment_id=self.deployment1_id)
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
+            self.client.executions.start(workflow, self.deployment1_id)
 
-        with self._login_cli(self.default_username, self.default_password):
-            self.cfy.executions.start(workflow,
-                                      deployment_id=self.deployment1_id)
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
+            self.client.executions.start(workflow, self.deployment1_id)
 
         # ...but viewers and suspended users should not
-        with self._login_cli(self.viewer_username, self.viewer_password):
-            self._assert_unauthorized(self.cfy.executions.start, workflow,
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
+            self._assert_unauthorized(self.client.executions.start, workflow,
                                       deployment_id='dummy_dp')
 
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.executions.start, workflow,
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.executions.start, workflow,
                                       deployment_id='dummy_dp')
 
     def _assert_list_executions(self, execution_ids):
         def _list_and_assert():
-            output = self.cfy.executions.list()
+            ex_ids = [ex.id for ex in self.client.deployments.list()]
             for execution_id in execution_ids:
-                self.assertIn(execution_id, output)
+                self.assertIn(execution_id, ex_ids)
 
         # admins, default users and viewers should be able so
         # list executions...
-        with self._login_cli(self.admin_username, self.admin_password):
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
             _list_and_assert()
 
-        with self._login_cli(self.default_username, self.default_password):
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
             _list_and_assert()
 
-        with self._login_cli(self.viewer_username, self.viewer_password):
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
             _list_and_assert()
 
         # ...but suspended users should not
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.executions.list)
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.executions.list)
 
     def _assert_get_execution(self, execution_id):
         def _get_and_assert():
-            output = self.cfy.executions.get(execution_id)
+            output = self.client.executions.get(execution_id)
             self.assertIn(execution_id, output)
 
         # admins, default users and viewers should be able to get executions...
-        with self._login_cli(self.admin_username, self.admin_password):
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
             _get_and_assert()
 
-        with self._login_cli(self.default_username, self.default_password):
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
             _get_and_assert()
 
-        with self._login_cli(self.viewer_username, self.viewer_password):
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
             _get_and_assert()
 
         # ...but suspended users should not
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.executions.get, execution_id)
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.executions.get, execution_id)
 
     def _assert_cancel_execution(self, execution_id):
         def _cancel_and_assert():
             # In this case, either option is ok, cancel or can't cancel
             # due to already terminated. important thing is no auth error
             try:
-                self.cfy.executions.cancel(execution_id)
-            except sh.ErrorReturnCode as e:
-                self.assertIn('in status terminated', e.stdout)
+                self.client.executions.cancel(execution_id)
+            except CloudifyClientError as e:
+                self.assertIn('in status terminated', str(e))
 
         # admins and default users should be able to cancel executions...
-        with self._login_cli(self.admin_username, self.admin_password):
+        with self._login_client(username=self.admin_username,
+                                password=self.admin_password):
             _cancel_and_assert()
 
-        with self._login_cli(self.default_username, self.default_password):
+        with self._login_client(username=self.default_username,
+                                password=self.default_password):
             _cancel_and_assert()
 
         # ...but viewers and suspended users should not
-        with self._login_cli(self.viewer_username, self.viewer_password):
-            self._assert_unauthorized(self.cfy.executions.cancel,
+        with self._login_client(username=self.viewer_username,
+                                password=self.viewer_password):
+            self._assert_unauthorized(self.client.executions.cancel,
                                       execution_id)
 
-        with self._login_cli(self.suspended_username, self.suspended_password):
-            self._assert_unauthorized(self.cfy.executions.cancel,
+        with self._login_client(username=self.suspended_username,
+                                password=self.suspended_password):
+            self._assert_unauthorized(self.client.executions.cancel,
                                       execution_id)
 
     def _assert_unauthorized(self, method, *args, **kwargs):
-        with self.assertRaises(sh.ErrorReturnCode) as c:
+        with self.assertRaises(CloudifyClientError) as cm:
             method(*args, **kwargs)
-        self.assertIn('401: User unauthorized', c.exception.stdout)
-
-    @contextmanager
-    def _login_cli(self, username=None, password=None):
-        self.logger.info('Logging in with username: {0}, '
-                         'password: {1}'.format(username, password))
-        prev_username = os.environ.get('CLOUDIFY_USERNAME')
-        prev_password = os.environ.get('CLOUDIFY_PASSWORD')
-        try:
-            os.environ['CLOUDIFY_USERNAME'] = username
-            os.environ['CLOUDIFY_PASSWORD'] = password
-            yield
-        finally:
-            if prev_username:
-                os.environ['CLOUDIFY_USERNAME'] = prev_username
-            else:
-                os.environ.pop('CLOUDIFY_USERNAME')
-            if prev_password:
-                os.environ['CLOUDIFY_PASSWORD'] = prev_password
-            else:
-                os.environ.pop('CLOUDIFY_PASSWORD')
+            self.assertIn('401: User unauthorized', str(cm.exception))

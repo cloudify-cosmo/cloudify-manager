@@ -22,9 +22,8 @@ import pg8000
 
 from cloudify.utils import setup_logger
 
-from manager_rest.storage import db
 from manager_rest.storage.models import Tenant
-from manager_rest.security import user_datastore
+from manager_rest.storage import db, user_datastore
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.utils import create_security_roles_and_admin_user
 

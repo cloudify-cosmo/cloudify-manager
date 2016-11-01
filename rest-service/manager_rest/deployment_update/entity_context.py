@@ -1,6 +1,9 @@
 import utils
-from manager_rest.storage import get_storage_manager
+
 from constants import ENTITY_TYPES
+
+from manager_rest.storage import get_storage_manager, models
+from manager_rest.resource_manager import get_resource_manager
 
 
 def get_entity_context(plan, deployment_id, entity_type, entity_id):
@@ -40,6 +43,7 @@ class EntityContextBase(object):
 
     def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
         self.sm = get_storage_manager()
+        self.rm = get_resource_manager()
         self._deployment_id = deployment_id
         self._entity_type = entity_type
         self._top_level_entity_id = top_level_entity_id
@@ -94,16 +98,8 @@ class NodeContextBase(EntityContextBase):
 
     @property
     def storage_node(self):
-        return self.sm.get_node(self._deployment_id,
-                                self._top_level_entity_id) or {}
-
-    @property
-    def storage_node_instance(self):
-        old_node_instances = self.sm.get_node_instance(
-                filters={'deployment_id': self._deployment_id,
-                         'node_id': self._top_level_entity_id}
-        )
-        return old_node_instances[0] if old_node_instances else {}
+        return self.rm.get_node(self._deployment_id,
+                                self._top_level_entity_id) or None
 
     @property
     def raw_node(self):
@@ -112,10 +108,6 @@ class NodeContextBase(EntityContextBase):
     @property
     def raw_node_id(self):
         return self.raw_node['id']
-
-    @property
-    def storage_node_id(self):
-        return self.storage_node.id
 
 
 class NodeContext(NodeContextBase):
@@ -176,7 +168,7 @@ class RelationshipContext(NodeContextBase):
 
     @property
     def storage_target_node(self):
-        return self.sm.get_node(self._deployment_id, self.target_id) or {}
+        return self.rm.get_node(self._deployment_id, self.target_id) or None
 
     @property
     def raw_target_node(self):
@@ -442,8 +434,8 @@ class WorkflowContext(DeploymentContextBase):
 
     @property
     def storage_entity(self):
-        deployment = self.sm.get_deployment(deployment_id=self.deployment_id)
-        return self._get_entity(deployment[self.WORKFLOWS])
+        deployment = self.sm.get(models.Deployment, self.deployment_id)
+        return self._get_entity(deployment.workflows)
 
     @property
     def raw_entity(self):
@@ -487,8 +479,8 @@ class DescriptionContext(DeploymentContextBase):
 
     @property
     def storage_entity(self):
-        deployment = self.sm.get_deployment(deployment_id=self.deployment_id)
-        return self._get_entity(deployment.to_dict())
+        deployment = self.sm.get(models.Deployment, self.deployment_id)
+        return deployment.description
 
     @property
     def raw_entity(self):
@@ -522,8 +514,8 @@ class OutputContext(DeploymentContextBase):
 
     @property
     def storage_entity(self):
-        deployment = self.sm.get_deployment(deployment_id=self.deployment_id)
-        return self._get_entity(deployment[self.OUTPUTS])
+        deployment = self.sm.get(models.Deployment, self.deployment_id)
+        return self._get_entity(deployment.outputs)
 
     @property
     def raw_entity(self):

@@ -13,12 +13,18 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
+
+SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
+
 MAINTENANCE_MODE_STATUS_FILE = 'status.json'
 MAINTENANCE_MODE_ACTIVATING = 'activating'
 MAINTENANCE_MODE_ACTIVATED = 'activated'
 MAINTENANCE_MODE_DEACTIVATED = 'deactivated'
 MAINTENANCE_MODE_ACTIVE_ERROR_CODE = 'maintenance_mode_active'
 MAINTENANCE_MODE_ACTIVATING_ERROR_CODE = 'entering_maintenance_mode'
+
+PROVIDER_CONTEXT_ID = 'CONTEXT'
 
 CLOUDIFY_TENANT_HEADER = 'tenant'
 DEFAULT_TENANT_NAME = 'default_tenant'

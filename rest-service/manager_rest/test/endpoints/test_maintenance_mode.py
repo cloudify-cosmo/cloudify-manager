@@ -18,15 +18,16 @@ from mock import patch
 from nose.plugins.attrib import attr
 
 from cloudify_rest_client import exceptions
-from manager_rest.test import base_test
+
 from manager_rest import utils
-from manager_rest.storage import get_storage_manager, models
+from manager_rest.test import base_test
+from manager_rest.storage import models
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.constants import (
-    MAINTENANCE_MODE_ACTIVATED,
-    MAINTENANCE_MODE_ACTIVATING,
-    MAINTENANCE_MODE_DEACTIVATED,
-    MAINTENANCE_MODE_STATUS_FILE)
+from manager_rest.storage.models_states import ExecutionState
+from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
+                                    MAINTENANCE_MODE_ACTIVATING,
+                                    MAINTENANCE_MODE_DEACTIVATED,
+                                    MAINTENANCE_MODE_STATUS_FILE)
 
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -200,7 +201,7 @@ class MaintenanceModeTest(BaseServerTestCase):
                          response.remaining_executions[0]['deployment_id'])
         self.assertEqual(execution.workflow_id,
                          response.remaining_executions[0]['workflow_id'])
-        self.assertEqual(models.Execution.STARTED,
+        self.assertEqual(ExecutionState.STARTED,
                          response.remaining_executions[0]['status'])
 
     def test_trigger_time_maintenance_activated(self):
@@ -252,16 +253,16 @@ class MaintenanceModeTest(BaseServerTestCase):
 
     def test_pending_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode(
-                models.Execution.PENDING)
+                ExecutionState.PENDING)
 
     def test_cancelling_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode(
-                models.Execution.CANCELLING)
+                ExecutionState.CANCELLING)
 
     def test_force_cancelling_execution_maintenance_activating_error_raised(
             self):
         self._test_different_execution_status_in_activating_mode(
-                models.Execution.FORCE_CANCELLING)
+                ExecutionState.FORCE_CANCELLING)
 
     def _test_different_execution_status_in_activating_mode(
             self,
@@ -284,7 +285,7 @@ class MaintenanceModeTest(BaseServerTestCase):
             self,
             bp_id='transition_blueprint',
             dep_id='transition_deployment',
-            execution_status=models.Execution.STARTED):
+            execution_status=ExecutionState.STARTED):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
                 blueprint_id=bp_id,
@@ -292,8 +293,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         execution = self.client.executions.start(deployment_id, 'install')
         execution = self.client.executions.get(execution.id)
         self.assertEquals('terminated', execution.status)
-        get_storage_manager().update_execution_status(
-            execution.id, execution_status, error='')
+        self._update_execution_status(execution.id, execution_status)
 
         self.client.maintenance_mode.activate()
         response = self.client.maintenance_mode.status()
@@ -301,9 +301,14 @@ class MaintenanceModeTest(BaseServerTestCase):
 
         return execution
 
+    def _update_execution_status(self, execution_id, new_status, error=''):
+        execution = self.sm.get(models.Execution, execution_id)
+        execution.status = new_status
+        execution.error = error
+        self.sm.update(execution)
+
     def _terminate_execution(self, execution_id):
-        get_storage_manager().update_execution_status(
-            execution_id, models.Execution.TERMINATED, error='')
+        self._update_execution_status(execution_id, ExecutionState.TERMINATED)
 
     def _activate_and_deactivate_maintenance_mode(self):
         self._activate_maintenance_mode()
