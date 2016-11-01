@@ -16,342 +16,36 @@
 
 import collections
 import os
-import zipfile
-import urllib
 import shutil
-from contextlib import contextmanager
-from functools import wraps
-from os import path
 
-from flask import (
-    request,
-    make_response,
-    current_app as app
-)
-from flask_restful import marshal, reqparse
+from flask import request
+from flask_restful import reqparse
 from flask_security import current_user
 from flask_restful_swagger import swagger
-from flask_restful.utils import unpack
-from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 
 from dsl_parser import utils as dsl_parser_utils
-from manager_rest import config
-from manager_rest import responses
-from manager_rest import requests_schema
-from manager_rest import archiving
-from manager_rest import manager_exceptions
-from manager_rest import utils
-from manager_rest import responses_v2
-from manager_rest.files import UploadedDataManager
-from manager_rest.storage import models
+
 from manager_rest.security import SecuredResource
-from manager_rest.storage import get_storage_manager
-from manager_rest.storage import ManagerElasticsearch
-from manager_rest.blueprints_manager import (DslParseException,
-                                             get_blueprints_manager,
-                                             BlueprintsManager)
-from manager_rest import get_version_data
+from manager_rest.constants import PROVIDER_CONTEXT_ID, SUPPORTED_ARCHIVE_TYPES
 from manager_rest.maintenance import is_bypass_maintenance_mode
+from manager_rest.upload_manager import UploadedBlueprintsManager
+from manager_rest import (config,
+                          manager_exceptions,
+                          get_version_data)
+from manager_rest.storage import (models,
+                                  get_storage_manager,
+                                  ManagerElasticsearch)
+from manager_rest.resource_manager import (get_resource_manager,
+                                           ResourceManager)
 
-
-CONVENTION_APPLICATION_BLUEPRINT_FILE = 'blueprint.yaml'
-
-SUPPORTED_ARCHIVE_TYPES = ['zip', 'tar', 'tar.gz', 'tar.bz2']
-
-MISSING_PREMIUM_PACKAGE_MESSAGE = 'This feature exists only in the premium' \
-                                  ' edition of Cloudify.\n' \
-                                  'Please contact sales for additional info.'
-
-
-def insecure_rest_method(func):
-    """block an insecure REST method if manager disabled insecure endpoints
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if config.instance.insecure_endpoints_disabled:
-            raise manager_exceptions.MethodNotAllowedError()
-        return func(*args, **kwargs)
-    return wrapper
-
-
-def exceptions_handled(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except manager_exceptions.ManagerException as e:
-            utils.abort_error(e, app.logger)
-    return wrapper
-
-
-def _is_include_parameter_in_request():
-    return '_include' in request.args and request.args['_include']
-
-
-def _get_fields_to_include(model_fields):
-    if _is_include_parameter_in_request():
-        include = set(request.args['_include'].split(','))
-        include_fields = {}
-        illegal_fields = None
-        for field in include:
-            if field not in model_fields:
-                if not illegal_fields:
-                    illegal_fields = []
-                illegal_fields.append(field)
-                continue
-            include_fields[field] = model_fields[field]
-        if illegal_fields:
-            raise manager_exceptions.NoSuchIncludeFieldError(
-                'Illegal include fields: [{}] - available fields: '
-                '[{}]'.format(', '.join(illegal_fields),
-                              ', '.join(model_fields.keys())))
-        return include_fields
-    return model_fields
-
-
-@contextmanager
-def skip_nested_marshalling():
-    request.__skip_marshalling = True
-    yield
-    delattr(request, '__skip_marshalling')
-
-
-class marshal_with(object):
-    def __init__(self, response_class):
-        """
-        :param response_class: response class to marshal result with.
-         class must have a "resource_fields" class variable
-        """
-        if response_class and not hasattr(response_class, 'resource_fields'):
-            raise RuntimeError(
-                'Response class {0} does not contain a "resource_fields" '
-                'class variable'.format(type(response_class)))
-        self.response_class = response_class
-
-    def __call__(self, f):
-        @wraps(f)
-        def wrapper(*args, **kwargs):
-            if not self.response_class:
-                utils.abort_error(manager_exceptions.MissingPremiumPackage
-                                  (MISSING_PREMIUM_PACKAGE_MESSAGE),
-                                  app.logger,
-                                  hide_server_message=True)
-
-            if hasattr(request, '__skip_marshalling'):
-                return f(*args, **kwargs)
-
-            fields_to_include = _get_fields_to_include(
-                self.response_class.resource_fields)
-            if _is_include_parameter_in_request():
-                # only pushing "_include" into kwargs when the request
-                # contained this parameter, to keep things cleaner (identical
-                # behavior for passing "_include" which contains all fields)
-                kwargs['_include'] = fields_to_include.keys()
-
-            response = f(*args, **kwargs)
-
-            if isinstance(response, responses_v2.ListResponse):
-                wrapped_items = self.wrap_with_response_object(response.items)
-                response.items = marshal(wrapped_items, fields_to_include)
-                return marshal(response,
-                               responses_v2.ListResponse.resource_fields)
-            # SQLAlchemy returns a class that subtypes tuple, but acts
-            # differently (it's taken care of in `wrap_with_response_object`)
-            if isinstance(response, tuple) and \
-                    not isinstance(response, sql_alchemy_collection):
-                data, code, headers = unpack(response)
-                data = self.wrap_with_response_object(data)
-                return marshal(data, fields_to_include), code, headers
-            else:
-                response = self.wrap_with_response_object(response)
-                return marshal(response, fields_to_include)
-
-        return wrapper
-
-    def wrap_with_response_object(self, data):
-        if isinstance(data, dict):
-            return self.response_class(**data)
-        elif isinstance(data, list):
-            return map(self.wrap_with_response_object, data)
-        elif isinstance(data, models.SerializableBase):
-            return self.wrap_with_response_object(data.to_dict())
-        # Support for partial results from SQLAlchemy (i.e. only
-        # certain columns, and not the whole model class)
-        elif isinstance(data, sql_alchemy_collection):
-            return self.wrap_with_response_object(data._asdict())
-        raise RuntimeError('Unexpected response data (type {0}) {1}'.format(
-            type(data), data))
-
-
-def verify_json_content_type():
-    if request.content_type != 'application/json':
-        raise manager_exceptions.UnsupportedContentTypeError(
-            'Content type must be application/json')
-
-
-def verify_parameter_in_request_body(param,
-                                     request_json,
-                                     param_type=None,
-                                     optional=False):
-    if param not in request_json:
-        if optional:
-            return
-        raise manager_exceptions.BadParametersError(
-            'Missing {0} in json request body'.format(param))
-    if param_type and not isinstance(request_json[param], param_type):
-        raise manager_exceptions.BadParametersError(
-            '{0} parameter is expected to be of type {1} but is of type '
-            '{2}'.format(param,
-                         param_type.__name__,
-                         type(request_json[param]).__name__))
-
-
-def verify_and_convert_bool(attribute_name, str_bool):
-    if isinstance(str_bool, bool):
-        return str_bool
-    if str_bool.lower() == 'true':
-        return True
-    if str_bool.lower() == 'false':
-        return False
-    raise manager_exceptions.BadParametersError(
-        '{0} must be <true/false>, got {1}'.format(attribute_name, str_bool))
-
-
-def convert_to_int(value):
-    try:
-        return int(value)
-    except:
-        raise manager_exceptions.BadParametersError(
-            'invalid parameter, should be int, got: {0}'.format(value))
-
-
-def make_streaming_response(res_id, res_path, content_length, archive_type):
-    response = make_response()
-    response.headers['Content-Description'] = 'File Transfer'
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['Content-Type'] = 'application/octet-stream'
-    response.headers['Content-Disposition'] = \
-        'attachment; filename={0}.{1}'.format(res_id, archive_type)
-    response.headers['Content-Length'] = content_length
-    response.headers['X-Accel-Redirect'] = res_path
-    response.headers['X-Accel-Buffering'] = 'yes'
-    return response
-
-
-class UploadedBlueprintsManager(UploadedDataManager):
-
-    def _get_kind(self):
-        return 'blueprint'
-
-    def _get_data_url_key(self):
-        return 'blueprint_archive_url'
-
-    def _get_target_dir_path(self):
-        return config.instance.file_server_uploaded_blueprints_folder
-
-    def _get_archive_type(self, archive_path):
-        return archiving.get_archive_type(archive_path)
-
-    def _prepare_and_process_doc(self,
-                                 data_id,
-                                 file_server_root,
-                                 archive_target_path,
-                                 **kwargs):
-        application_dir = self._extract_file_to_file_server(
-                archive_target_path,
-                file_server_root
-            )
-        return self._prepare_and_submit_blueprint(file_server_root,
-                                                  application_dir,
-                                                  data_id), None
-
-    @classmethod
-    def _process_plugins(cls, file_server_root, blueprint_id):
-        plugins_directory = path.join(file_server_root,
-                                      "blueprints", blueprint_id, "plugins")
-        if not path.isdir(plugins_directory):
-            return
-        plugins = [path.join(plugins_directory, directory)
-                   for directory in os.listdir(plugins_directory)
-                   if path.isdir(path.join(plugins_directory, directory))]
-
-        for plugin_dir in plugins:
-            final_zip_name = '{0}.zip'.format(path.basename(plugin_dir))
-            target_zip_path = path.join(file_server_root,
-                                        "blueprints", blueprint_id,
-                                        'plugins', final_zip_name)
-            cls._zip_dir(plugin_dir, target_zip_path)
-
-    @classmethod
-    def _zip_dir(cls, dir_to_zip, target_zip_path):
-        zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
-        try:
-            plugin_dir_base_name = path.basename(dir_to_zip)
-            rootlen = len(dir_to_zip) - len(plugin_dir_base_name)
-            for base, dirs, files in os.walk(dir_to_zip):
-                for entry in files:
-                    fn = os.path.join(base, entry)
-                    zipf.write(fn, fn[rootlen:])
-        finally:
-            zipf.close()
-
-    @classmethod
-    def _prepare_and_submit_blueprint(cls, file_server_root,
-                                      app_dir,
-                                      blueprint_id):
-
-        app_dir, app_file_name = cls._extract_application_file(
-            file_server_root, app_dir)
-
-        # add to blueprints manager (will also dsl_parse it)
-        try:
-            blueprint = get_blueprints_manager().publish_blueprint(
-                app_dir,
-                app_file_name,
-                'file://{0}/'.format(file_server_root),
-                blueprint_id)
-
-            # moving the app directory in the file server to be under a
-            # directory named after the blueprint id
-            shutil.move(os.path.join(file_server_root, app_dir),
-                        os.path.join(
-                            file_server_root,
-                            config.instance.file_server_blueprints_folder,
-                            blueprint.id))
-            cls._process_plugins(file_server_root, blueprint.id)
-            return blueprint
-        except DslParseException, ex:
-            shutil.rmtree(os.path.join(file_server_root, app_dir))
-            raise manager_exceptions.InvalidBlueprintError(
-                'Invalid blueprint - {0}'.format(ex.message))
-
-    @classmethod
-    def _extract_application_file(cls, file_server_root, application_dir):
-
-        full_application_dir = path.join(file_server_root, application_dir)
-
-        if 'application_file_name' in request.args:
-            application_file_name = urllib.unquote(
-                request.args['application_file_name']).decode('utf-8')
-            application_file = path.join(full_application_dir,
-                                         application_file_name)
-            if not path.isfile(application_file):
-                raise manager_exceptions.BadParametersError(
-                    '{0} does not exist in the application '
-                    'directory'.format(application_file_name)
-                )
-        else:
-            application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
-            application_file = path.join(full_application_dir,
-                                         application_file_name)
-            if not path.isfile(application_file):
-                raise manager_exceptions.BadParametersError(
-                    'application directory is missing blueprint.yaml and '
-                    'application_file_name query parameter was not passed')
-
-        # return relative path from the file server root since this path
-        # is appended to the file server base uri
-        return application_dir, application_file_name
+from . import responses, requests_schema
+from .rest_decorators import (exceptions_handled,
+                              marshal_with,
+                              insecure_rest_method)
+from .rest_utils import (make_streaming_response,
+                         verify_and_convert_bool,
+                         verify_json_content_type,
+                         verify_parameter_in_request_body)
 
 
 class BlueprintsIdArchive(SecuredResource):
@@ -366,7 +60,11 @@ class BlueprintsIdArchive(SecuredResource):
         Download blueprint's archive
         """
         # Verify blueprint exists.
-        get_storage_manager().get_blueprint(blueprint_id, include=['id'])
+        get_storage_manager().get(
+            models.Blueprint,
+            blueprint_id,
+            include=['id']
+        )
 
         for arc_type in SUPPORTED_ARCHIVE_TYPES:
             # attempting to find the archive file on the file system
@@ -411,8 +109,8 @@ class Blueprints(SecuredResource):
         List uploaded blueprints
         """
 
-        blueprints = get_storage_manager().list_blueprints(include=_include)
-        return blueprints.items
+        return get_storage_manager().list(
+            models.Blueprint, include=_include).items
 
 
 class BlueprintsId(SecuredResource):
@@ -428,7 +126,11 @@ class BlueprintsId(SecuredResource):
         """
         Get blueprint by id
         """
-        return get_storage_manager().get_blueprint(blueprint_id, _include)
+        return get_storage_manager().get(
+            models.Blueprint,
+            blueprint_id,
+            _include
+        )
 
     @swagger.operation(
         responseClass=responses.BlueprintState,
@@ -489,7 +191,7 @@ class BlueprintsId(SecuredResource):
         # for the blueprint exists, the deletion operation will fail.
         # However, there is no handling of possible concurrency issue with
         # regard to that matter at the moment.
-        blueprint = get_blueprints_manager().delete_blueprint(blueprint_id)
+        blueprint = get_resource_manager().delete_blueprint(blueprint_id)
 
         # Delete blueprint resources from file server
         blueprint_folder = os.path.join(
@@ -534,18 +236,21 @@ class Executions(SecuredResource):
         """List executions"""
         deployment_id = request.args.get('deployment_id')
         if deployment_id:
-            get_storage_manager().get_deployment(deployment_id, include=['id'])
+            get_storage_manager().get(
+                models.Deployment,
+                deployment_id,
+                include=['id']
+            )
         is_include_system_workflows = verify_and_convert_bool(
             'include_system_workflows',
             request.args.get('include_system_workflows', 'false'))
 
-        deployment_id_filter = BlueprintsManager.create_filters_dict(
+        deployment_id_filter = ResourceManager.create_filters_dict(
             deployment_id=deployment_id)
-        executions = get_blueprints_manager().list_executions(
+        return get_resource_manager().list_executions(
             is_include_system_workflows=is_include_system_workflows,
             include=_include,
-            filters=deployment_id_filter)
-        return executions.items
+            filters=deployment_id_filter).items
 
     @exceptions_handled
     @marshal_with(responses.Execution)
@@ -573,7 +278,7 @@ class Executions(SecuredResource):
                 " is of type {0}".format(parameters.__class__.__name__))
 
         bypass_maintenance = is_bypass_maintenance_mode()
-        execution = get_blueprints_manager().execute_workflow(
+        execution = get_resource_manager().execute_workflow(
             deployment_id, workflow_id, parameters=parameters,
             allow_custom_parameters=allow_custom_parameters, force=force,
             bypass_maintenance=bypass_maintenance)
@@ -593,8 +298,11 @@ class ExecutionsId(SecuredResource):
         """
         Get execution by id
         """
-        return get_storage_manager().get_execution(execution_id,
-                                                   include=_include)
+        return get_storage_manager().get(
+            models.Execution,
+            execution_id,
+            include=_include
+        )
 
     @swagger.operation(
         responseClass=responses.Execution,
@@ -632,7 +340,7 @@ class ExecutionsId(SecuredResource):
                     action, valid_actions))
 
         if action in ('cancel', 'force-cancel'):
-            return get_blueprints_manager().cancel_execution(
+            return get_resource_manager().cancel_execution(
                 execution_id, action == 'force-cancel')
 
     @swagger.operation(
@@ -667,12 +375,11 @@ class ExecutionsId(SecuredResource):
         request_json = request.json
         verify_parameter_in_request_body('status', request_json)
 
-        get_blueprints_manager().update_execution_status(
+        return get_resource_manager().update_execution_status(
             execution_id,
             request_json['status'],
-            request_json.get('error', ''))
-
-        return get_storage_manager().get_execution(execution_id)
+            request_json.get('error', '')
+        )
 
 
 class Deployments(SecuredResource):
@@ -688,9 +395,8 @@ class Deployments(SecuredResource):
         """
         List deployments
         """
-        deployments = get_storage_manager().list_deployments(
-            include=_include)
-        return deployments.items
+        return get_storage_manager().list(
+            models.Deployment, include=_include).items
 
 
 class DeploymentsId(SecuredResource):
@@ -711,8 +417,11 @@ class DeploymentsId(SecuredResource):
         """
         Get deployment by id
         """
-        return get_storage_manager().get_deployment(deployment_id,
-                                                    include=_include)
+        return get_storage_manager().get(
+            models.Deployment,
+            deployment_id,
+            include=_include
+        )
 
     @swagger.operation(
         responseClass=responses.Deployment,
@@ -743,7 +452,7 @@ class DeploymentsId(SecuredResource):
                                          optional=True)
         blueprint_id = request.json['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
-        deployment = get_blueprints_manager().create_deployment(
+        deployment = get_resource_manager().create_deployment(
             blueprint_id,
             deployment_id,
             inputs=request_json.get('inputs', {}),
@@ -777,7 +486,7 @@ class DeploymentsId(SecuredResource):
 
         bypass_maintenance = is_bypass_maintenance_mode()
 
-        deployment = get_blueprints_manager().delete_deployment(
+        deployment = get_resource_manager().delete_deployment(
             deployment_id, bypass_maintenance, ignore_live_nodes)
 
         # Delete deployment resources from file server
@@ -832,7 +541,7 @@ class DeploymentModifications(SecuredResource):
                                          param_type=dict,
                                          optional=True)
         nodes = request_json.get('nodes', {})
-        modification = get_blueprints_manager(). \
+        modification = get_resource_manager(). \
             start_deployment_modification(deployment_id, nodes, context)
         return modification, 201
 
@@ -853,11 +562,13 @@ class DeploymentModifications(SecuredResource):
     def get(self, _include=None, **kwargs):
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
-        deployment_id_filter = BlueprintsManager.create_filters_dict(
+        deployment_id_filter = ResourceManager.create_filters_dict(
             deployment_id=deployment_id)
-        modifications = get_storage_manager().list_deployment_modifications(
-            filters=deployment_id_filter, include=_include)
-        return modifications.items
+        return get_storage_manager().list(
+            models.DeploymentModification,
+            filters=deployment_id_filter,
+            include=_include
+        ).items
 
 
 class DeploymentModificationsId(SecuredResource):
@@ -870,8 +581,11 @@ class DeploymentModificationsId(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
     def get(self, modification_id, _include=None, **kwargs):
-        return get_storage_manager().get_deployment_modification(
-            modification_id, include=_include)
+        return get_storage_manager().get(
+            models.DeploymentModification,
+            modification_id,
+            include=_include
+        )
 
 
 class DeploymentModificationsIdFinish(SecuredResource):
@@ -884,7 +598,7 @@ class DeploymentModificationsIdFinish(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
     def post(self, modification_id, **kwargs):
-        return get_blueprints_manager().finish_deployment_modification(
+        return get_resource_manager().finish_deployment_modification(
             modification_id)
 
 
@@ -898,7 +612,7 @@ class DeploymentModificationsIdRollback(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
     def post(self, modification_id, **kwargs):
-        return get_blueprints_manager().rollback_deployment_modification(
+        return get_resource_manager().rollback_deployment_modification(
             modification_id)
 
 
@@ -937,15 +651,20 @@ class Nodes(SecuredResource):
         node_id = args.get('node_id')
         if deployment_id and node_id:
             try:
-                nodes = [get_storage_manager().get_node(deployment_id,
-                                                        node_id)]
+                nodes = [get_resource_manager().get_node(
+                    deployment_id,
+                    node_id
+                )]
             except manager_exceptions.NotFoundError:
                 nodes = []
         else:
-            deployment_id_filter = BlueprintsManager.create_filters_dict(
+            deployment_id_filter = ResourceManager.create_filters_dict(
                 deployment_id=deployment_id)
-            nodes = get_storage_manager().list_nodes(
-                filters=deployment_id_filter, include=_include).items
+            nodes = get_storage_manager().list(
+                models.Node,
+                filters=deployment_id_filter,
+                include=_include
+            ).items
         return nodes
 
 
@@ -989,11 +708,13 @@ class NodeInstances(SecuredResource):
         args = self._args_parser.parse_args()
         deployment_id = args.get('deployment_id')
         node_id = args.get('node_name')
-        params_filter = BlueprintsManager.create_filters_dict(
+        params_filter = ResourceManager.create_filters_dict(
             deployment_id=deployment_id, node_id=node_id)
-        node_instances = get_storage_manager().list_node_instances(
-            filters=params_filter, include=_include)
-        return node_instances.items
+        return get_storage_manager().list(
+            models.NodeInstance,
+            filters=params_filter,
+            include=_include
+        ).items
 
 
 class NodeInstancesId(SecuredResource):
@@ -1024,8 +745,11 @@ class NodeInstancesId(SecuredResource):
         """
         Get node instance by id
         """
-        return get_storage_manager().get_node_instance(node_instance_id,
-                                                       include=_include)
+        return get_storage_manager().get(
+            models.NodeInstance,
+            node_instance_id,
+            include=_include
+        )
 
     @swagger.operation(
         responseClass=responses.NodeInstance,
@@ -1083,7 +807,8 @@ class NodeInstancesId(SecuredResource):
         # had version=0 by default
         version = request.json['version'] or 1
 
-        instance = get_storage_manager().get_node_instance(
+        instance = get_storage_manager().get(
+            models.NodeInstance,
             node_instance_id,
             locking=True
         )
@@ -1093,8 +818,8 @@ class NodeInstancesId(SecuredResource):
             instance.runtime_properties
         )
         instance.state = request.json.get('state', instance.state)
-        instance.version = version
-        return get_storage_manager().update_node_instance(instance)
+        instance.version = version + 1
+        return get_storage_manager().update(instance)
 
 
 class DeploymentsIdOutputs(SecuredResource):
@@ -1108,7 +833,7 @@ class DeploymentsIdOutputs(SecuredResource):
     @marshal_with(responses.DeploymentOutputs)
     def get(self, deployment_id, **kwargs):
         """Get deployment outputs"""
-        outputs = get_blueprints_manager().evaluate_deployment_outputs(
+        outputs = get_resource_manager().evaluate_deployment_outputs(
             deployment_id)
         return dict(deployment_id=deployment_id, outputs=outputs)
 
@@ -1253,11 +978,14 @@ class ProviderContext(SecuredResource):
     )
     @exceptions_handled
     @marshal_with(responses.ProviderContext)
-    def get(self, _include=None, **kwargs):
+    def get(self, **kwargs):
         """
         Get provider context
         """
-        return get_storage_manager().get_provider_context(include=_include)
+        return get_storage_manager().get(
+            models.ProviderContext,
+            PROVIDER_CONTEXT_ID
+        )
 
     @swagger.operation(
         responseClass=responses.ProviderContextPostStatus,
@@ -1283,8 +1011,11 @@ class ProviderContext(SecuredResource):
         request_json = request.json
         verify_parameter_in_request_body('context', request_json)
         verify_parameter_in_request_body('name', request_json)
-        context = models.ProviderContext(name=request.json['name'],
-                                         context=request.json['context'])
+        context = dict(
+            id=PROVIDER_CONTEXT_ID,
+            name=request.json['name'],
+            context=request.json['context']
+        )
         update = verify_and_convert_bool(
             'update',
             request.args.get('update', 'false')
@@ -1293,7 +1024,7 @@ class ProviderContext(SecuredResource):
         status_code = 200 if update else 201
 
         try:
-            get_blueprints_manager().update_provider_context(update, context)
+            get_resource_manager().update_provider_context(update, context)
             return dict(status='ok'), status_code
         except dsl_parser_utils.ResolverInstantiationError, ex:
             raise manager_exceptions.ResolverInstantiationError(str(ex))
@@ -1349,7 +1080,7 @@ class EvaluateFunctions(SecuredResource):
         deployment_id = request_json['deployment_id']
         context = request_json.get('context', {})
         payload = request_json.get('payload')
-        processed_payload = get_blueprints_manager().evaluate_functions(
+        processed_payload = get_resource_manager().evaluate_functions(
             deployment_id=deployment_id,
             context=context,
             payload=payload)

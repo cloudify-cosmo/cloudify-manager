@@ -24,10 +24,10 @@ from flask import Flask, jsonify
 from flask_security import Security
 
 from manager_rest import config
-from manager_rest.storage import db
-from manager_rest.endpoint_mapper import setup_resources
+from manager_rest.storage import db, user_datastore
+from manager_rest.security.user_handler import user_loader
 from manager_rest.maintenance import maintenance_mode_handler
-from manager_rest.security import user_datastore, user_loader
+from manager_rest.rest.endpoint_mapper import setup_resources
 from manager_rest.app_logging import setup_logger, log_request, log_response
 from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
 

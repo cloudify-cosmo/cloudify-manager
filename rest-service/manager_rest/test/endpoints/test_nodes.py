@@ -18,9 +18,10 @@ from nose.plugins.attrib import attr
 from unittest import skip
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
-from manager_rest.storage import get_storage_manager
+from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.models import (Blueprint,
                                          Deployment,
                                          Node,
@@ -56,7 +57,7 @@ class NodesTest(base_test.BaseServerTestCase):
         self.assertEqual(1, len(response.json['runtime_properties']))
         self.assertEqual('value', response.json['runtime_properties']['key'])
 
-    @attr(client_min_version=2.1,
+    @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_nodes_list(self):
         self.put_deployment(deployment_id='0', blueprint_id='0')
@@ -243,16 +244,11 @@ class NodesTest(base_test.BaseServerTestCase):
         """A conflict inside the storage manager propagates to the client."""
         # patch the storage manager .update_node_instance method to throw an
         # error - remember to revert it after the test
-        sm = get_storage_manager()
-
-        def _revert_update_node_func(sm, func):
-            sm.update_node_instance = func
+        def _revert_update_node_func(func):
+            self.sm.update = func
 
         def conflict_update_node_func(node):
             raise manager_exceptions.ConflictError()
-
-        self.addCleanup(_revert_update_node_func, sm, sm.update_node_instance)
-        sm.update_node_instance = conflict_update_node_func
 
         node_instance_id = '1234'
         self.put_node_instance(
@@ -262,6 +258,9 @@ class NodesTest(base_test.BaseServerTestCase):
                 'key': 'value'
             }
         )
+
+        self.addCleanup(_revert_update_node_func, self.sm.update)
+        self.sm.update = conflict_update_node_func
 
         with self.assertRaises(CloudifyClientError) as cm:
             self.client.node_instances.update(
@@ -346,7 +345,7 @@ class NodesTest(base_test.BaseServerTestCase):
         assert_dep_and_node(2, '222', '3', dep2_n3_instances)
         assert_dep_and_node(2, '222', '4', dep2_n4_instances)
 
-    @attr(client_min_version=2.1,
+    @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_node_instances_list(self):
         self.put_node_instance(
@@ -384,64 +383,60 @@ class NodesTest(base_test.BaseServerTestCase):
                           blueprint_id='blueprint_id'):
         runtime_properties = runtime_properties or {}
 
-        sm = get_storage_manager()
-        self._add_blueprint_if_not_exists(sm, blueprint_id)
-        self._add_deployment_if_not_exists(sm, deployment_id, blueprint_id)
-        self._add_node_if_not_exists(sm, node_id, deployment_id)
-        sm.put_node_instance(
-            NodeInstance(
-                id=instance_id,
-                node_id=node_id,
-                deployment_id=deployment_id,
-                runtime_properties=runtime_properties,
-                state='',
-                version=version,
-                relationships=None,
-                host_id=None,
-                scaling_groups=None
-            )
+        blueprint = self._get_or_create_blueprint(blueprint_id)
+        deployment = self._get_or_create_deployment(deployment_id, blueprint)
+        node = self._get_or_create_node(node_id, deployment)
+        node_instance = NodeInstance(
+            id=instance_id,
+            runtime_properties=runtime_properties,
+            state='',
+            version=version,
+            relationships=None,
+            host_id=None,
+            scaling_groups=None
         )
+        node.node_instances.append(node_instance)
+        return self.sm.put(NodeInstance, node_instance)
 
-    @staticmethod
-    def _add_blueprint_if_not_exists(sm, blueprint_id):
+    def _get_or_create_blueprint(self, blueprint_id):
         try:
-            sm.get_blueprint(blueprint_id)
+            return self.sm.get(Blueprint, blueprint_id)
         except manager_exceptions.NotFoundError:
-            sm.put_blueprint(Blueprint(
+            blueprint = Blueprint(
                 id=blueprint_id,
                 created_at=datetime.now(),
                 main_file_name='',
-                plan={})
+                plan={}
             )
+            return self.sm.put(Blueprint, blueprint)
 
-    @staticmethod
-    def _add_deployment_if_not_exists(sm, deployment_id, blueprint_id):
+    def _get_or_create_deployment(self, deployment_id, blueprint):
         try:
-            sm.get_deployment(deployment_id)
+            return self.sm.get(Deployment, deployment_id)
         except manager_exceptions.NotFoundError:
-            sm.put_deployment(Deployment(
+            deployment = Deployment(
                 id=deployment_id,
-                blueprint_id=blueprint_id,
-                created_at=datetime.now())
+                created_at=datetime.now()
             )
+            blueprint.deployments.append(deployment)
+            return self.sm.put(Deployment, deployment)
 
-    @staticmethod
-    def _add_node_if_not_exists(sm, node_id, deployment_id):
+    def _get_or_create_node(self, node_id, deployment):
         try:
-            sm.get_node(deployment_id, node_id)
+            bm = get_resource_manager()
+            return bm.get_node(deployment.id, node_id)
         except manager_exceptions.NotFoundError:
-            sm.put_node(
-                Node(
-                    id=node_id,
-                    deployment_id=deployment_id,
-                    type='',
-                    number_of_instances=1,
-                    planned_number_of_instances=1,
-                    deploy_number_of_instances=1,
-                    min_number_of_instances=1,
-                    max_number_of_instances=1
-                )
+            node = Node(
+                id=node_id,
+                type='',
+                number_of_instances=1,
+                planned_number_of_instances=1,
+                deploy_number_of_instances=1,
+                min_number_of_instances=1,
+                max_number_of_instances=1
             )
+            deployment.nodes.append(node)
+            return self.sm.put(Node, node)
 
     @attr(client_min_version=2.1,
           client_max_version=base_test.LATEST_API_VERSION)

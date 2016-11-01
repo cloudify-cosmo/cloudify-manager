@@ -1,5 +1,21 @@
-from manager_rest.storage import get_storage_manager
+#########
+# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  * See the License for the specific language governing permissions and
+#  * limitations under the License.
+
 from manager_rest.deployment_update import utils
+from manager_rest.storage import get_storage_manager, models
+from manager_rest.resource_manager import get_resource_manager
 from manager_rest.manager_exceptions import UnknownModificationStageError
 from manager_rest.deployment_update.constants import ENTITY_TYPES, ACTION_TYPES
 
@@ -14,6 +30,7 @@ NODE_ENTITY_LEN = 2
 class EntityValidatorBase(object):
     def __init__(self):
         self.sm = get_storage_manager()
+        self.rm = get_resource_manager()
         self._validation_mapper = {
             ACTION_TYPES.ADD: self._validate_add,
             ACTION_TYPES.MODIFY: self._validate_modify,
@@ -59,9 +76,8 @@ class EntityValidatorBase(object):
                 "or doesn't exists in the original deployment blueprint")
 
     def _get_storage_node(self, deployment_id, node_id):
-        nodes = self.sm.list_nodes(filters={'deployment_id': deployment_id,
-                                            'id': node_id})
-        return nodes.items[0].to_dict() if nodes.items else {}
+        node = self.rm.get_node(deployment_id, node_id)
+        return node.to_dict() if node else {}
 
 
 class NodeValidator(EntityValidatorBase):
@@ -238,11 +254,8 @@ class WorkflowValidator(EntityValidatorBase):
         return utils.traverse_object(raw_workflows, workflow_id) is not None
 
     def _in_old(self, dep_update, workflow_id, workflows):
-        deployment_id = dep_update.deployment_id
-        storage_workflows = getattr(self.sm.get_deployment(deployment_id),
-                                    workflows,
-                                    {})
-
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        storage_workflows = deployment.workflows or {}
         return \
             utils.traverse_object(storage_workflows, workflow_id) is not None
 
@@ -272,10 +285,8 @@ class OutputValidator(EntityValidatorBase):
         return utils.traverse_object(raw_outputs, output_id) is not None
 
     def _in_old(self, dep_update, output_id, outputs):
-        storage_outputs = getattr(
-                self.sm.get_deployment(dep_update.deployment_id),
-                outputs,
-                {})
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        storage_outputs = deployment.outputs or {}
         return utils.traverse_object(storage_outputs, output_id) is not None
 
 
@@ -294,10 +305,8 @@ class DescriptionValidator(EntityValidatorBase):
         return bool(raw_description)
 
     def _in_old(self, dep_update, description_key):
-        deployment_id = dep_update.deployment_id
-        storage_description = getattr(self.sm.get_deployment(deployment_id),
-                                      description_key,
-                                      {})
+        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        storage_description = deployment.description or {}
         return bool(storage_description)
 
 

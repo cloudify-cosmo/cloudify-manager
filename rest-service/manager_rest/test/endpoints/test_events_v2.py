@@ -15,7 +15,7 @@
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
-from manager_rest.resources_v2 import Events
+from manager_rest.rest.resources_v2 import Events
 from manager_rest.storage import ManagerElasticsearch
 
 
@@ -38,7 +38,7 @@ class EventsTest(base_test.BaseServerTestCase):
         self.assertEquals(total, response.metadata.pagination.total)
         self.assertEquals(len(hits), len(response.items))
 
-    @attr(client_min_version=2.1,
+    @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_delete_events(self):
         def delete_events(events_list):

@@ -31,15 +31,15 @@ from mock import MagicMock
 
 from manager_rest.storage.models import Tenant
 from manager_rest import utils, config, archiving
-from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.test.security_utils import get_admin_user
+from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
+from manager_rest.constants import DEFAULT_TENANT_NAME, PROVIDER_CONTEXT_ID
 from manager_rest.test.mocks import (MockHTTPClient,
                                      CLIENT_API_VERSION,
                                      build_query_string)
 
 from cloudify_rest_client import CloudifyClient
-from cloudify_rest_client.executions import Execution
 
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
@@ -264,9 +264,12 @@ class BaseServerTestCase(unittest.TestCase):
         self.quiet_delete_directory(self.tmpdir)
 
     def initialize_provider_context(self):
-        self.sm.put_provider_context(
-            {'name': self.id(), 'context': {'cloudify': {}}}
+        provider_context = models.ProviderContext(
+            id=PROVIDER_CONTEXT_ID,
+            name=self.id(),
+            context={'cloudify': {}}
         )
+        self.sm.put(models.ProviderContext, provider_context)
 
     def create_configuration(self):
         test_config = config.Config()
@@ -298,7 +301,7 @@ class BaseServerTestCase(unittest.TestCase):
     def _version_url(self, url):
         # method for versionifying URLs for requests which don't go through
         # the REST client; the version is taken from the REST client regardless
-        if CLIENT_API_VERSION not in url:
+        if not url.startswith('/api/'):
             url = '/api/{0}{1}'.format(CLIENT_API_VERSION, url)
 
         return url
@@ -502,7 +505,7 @@ class BaseServerTestCase(unittest.TestCase):
                     format(execution.workflow_id, execution.deployment_id))
 
             execution = client.executions.get(execution.id)
-            if execution.status in Execution.END_STATES:
+            if execution.status in ExecutionState.END_STATES:
                 break
             time.sleep(3)
 
@@ -517,9 +520,9 @@ class BaseServerTestCase(unittest.TestCase):
                                      description=None,
                                      plan={'name': 'my-bp'},
                                      main_file_name='aaa')
-        return self.sm.put_blueprint(blueprint)
+        return self.sm.put(models.Blueprint, blueprint)
 
-    def _add_deployment(self, blueprint_id, deployment_id=None):
+    def _add_deployment(self, blueprint, deployment_id=None):
         if not deployment_id:
             unique_str = str(uuid.uuid4())
             deployment_id = 'deployment-{0}'.format(unique_str)
@@ -527,7 +530,6 @@ class BaseServerTestCase(unittest.TestCase):
         deployment = models.Deployment(id=deployment_id,
                                        created_at=now,
                                        updated_at=now,
-                                       blueprint_id=blueprint_id,
                                        permalink=None,
                                        description=None,
                                        workflows={},
@@ -537,37 +539,36 @@ class BaseServerTestCase(unittest.TestCase):
                                        groups={},
                                        scaling_groups={},
                                        outputs={})
-        return self.sm.put_deployment(deployment)
+        blueprint.deployments.append(deployment)
+        return self.sm.put(models.Deployment, deployment)
 
     def _add_execution_with_id(self, execution_id):
         blueprint = self._add_blueprint()
         deployment = self._add_deployment(blueprint.id)
-        return self._add_execution(deployment.id, blueprint.id, execution_id)
+        return self._add_execution(deployment.id, execution_id)
 
-    def _add_execution(self, deployment_id, blueprint_id, execution_id=None):
+    def _add_execution(self, deployment, execution_id=None):
         if not execution_id:
             unique_str = str(uuid.uuid4())
             execution_id = 'execution-{0}'.format(unique_str)
         execution = models.Execution(
             id=execution_id,
-            status=models.Execution.TERMINATED,
-            deployment_id=deployment_id,
+            status=ExecutionState.TERMINATED,
             workflow_id='',
-            blueprint_id=blueprint_id,
             created_at=utils.get_formatted_timestamp(),
             error='',
             parameters=dict(),
             is_system_workflow=False)
-        return self.sm.put_execution(execution)
+        deployment.executions.append(execution)
+        return self.sm.put(models.Execution, execution)
 
-    def _add_deployment_update(self, blueprint_id, execution_id,
+    def _add_deployment_update(self, deployment, execution,
                                deployment_update_id=None):
         if not deployment_update_id:
             unique_str = str(uuid.uuid4())
             deployment_update_id = 'deployment_update-{0}'.format(unique_str)
         now = utils.get_formatted_timestamp()
         deployment_update = models.DeploymentUpdate(
-            deployment_id=blueprint_id,
             deployment_plan={'name': 'my-bp'},
             state='staged',
             id=deployment_update_id,
@@ -575,6 +576,8 @@ class BaseServerTestCase(unittest.TestCase):
             deployment_update_node_instances=None,
             deployment_update_deployment=None,
             modified_entity_ids=None,
-            execution_id=execution_id,
             created_at=now)
-        return self.sm.put_deployment_update(deployment_update)
+        deployment.deployment_updates.append(deployment_update)
+        if execution:
+            execution.deployment_updates.append(deployment_update)
+        return self.sm.put(models.DeploymentUpdate, deployment_update)

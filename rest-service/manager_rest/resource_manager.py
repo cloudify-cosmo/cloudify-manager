@@ -26,25 +26,20 @@ import celery.exceptions
 
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
-from manager_rest import app_context
-from manager_rest import config
-from manager_rest import utils
-from manager_rest import manager_exceptions
+
 from manager_rest.storage import get_storage_manager, models
-from manager_rest import workflow_client as wf_client
+from manager_rest.storage.models_states import (SnapshotState,
+                                                ExecutionState,
+                                                DeploymentModificationState)
+
+from . import utils
+from . import config
+from . import app_context
+from . import manager_exceptions
+from . import workflow_client as wf_client
 
 
-class DslParseException(Exception):
-    pass
-
-
-class BlueprintAlreadyExistsException(Exception):
-    def __init__(self, blueprint_id, *args):
-        Exception.__init__(self, args)
-        self.blueprint_id = blueprint_id
-
-
-class BlueprintsManager(object):
+class ResourceManager(object):
 
     def __init__(self):
         self.sm = get_storage_manager()
@@ -61,31 +56,37 @@ class BlueprintsManager(object):
                 filters['is_system_workflow'].append(value)
         elif not is_include_system_workflows:
             filters['is_system_workflow'] = [False]
-        return self.sm.list_executions(include=include, filters=filters,
-                                       pagination=pagination, sort=sort)
+        return self.sm.list(
+            models.Execution,
+            include=include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort
+        )
 
     def update_execution_status(self, execution_id, status, error):
-        execution = self.sm.get_execution(execution_id)
+        execution = self.sm.get(models.Execution, execution_id)
         if not self._validate_execution_update(execution.status, status):
             raise manager_exceptions.InvalidExecutionUpdateStatus(
                 "Invalid relationship - can't change status from {0} to {1}"
                 .format(execution.status, status))
-
-        return self.sm.update_execution_status(execution_id, status, error)
+        execution.status = status
+        execution.error = error
+        return self.sm.update(execution)
 
     def _validate_execution_update(self, current_status, future_status):
-        if current_status in models.Execution.END_STATES:
+        if current_status in ExecutionState.END_STATES:
             return False
 
-        invalid_cancel_statuses = models.Execution.ACTIVE_STATES + [
-            models.Execution.TERMINATED]
-        if all((current_status == models.Execution.CANCELLING,
+        invalid_cancel_statuses = ExecutionState.ACTIVE_STATES + [
+            ExecutionState.TERMINATED]
+        if all((current_status == ExecutionState.CANCELLING,
                 future_status in invalid_cancel_statuses)):
             return False
 
         invalid_force_cancel_statuses = invalid_cancel_statuses + [
-            models.Execution.CANCELLING]
-        if all((current_status == models.Execution.FORCE_CANCELLING,
+            ExecutionState.CANCELLING]
+        if all((current_status == ExecutionState.FORCE_CANCELLING,
                 future_status in invalid_force_cancel_statuses)):
             return False
 
@@ -104,8 +105,8 @@ class BlueprintsManager(object):
                 config.instance.file_server_uploaded_blueprints_folder,
             'db_address': config.instance.db_address,
             'db_port': config.instance.db_port,
-            'created_status': models.Snapshot.CREATED,
-            'failed_status': models.Snapshot.FAILED,
+            'created_status': SnapshotState.CREATED,
+            'failed_status': SnapshotState.FAILED,
             'file_server_uploaded_plugins_folder':
                 config.instance.file_server_uploaded_plugins_folder,
             'postgresql_bin_path': config.instance.postgresql_bin_path,
@@ -115,15 +116,15 @@ class BlueprintsManager(object):
             'postgresql_host': config.instance.postgresql_host
         }
 
-    def create_snapshot_model(self, snapshot_id,
-                              status=models.Snapshot.CREATING):
+    def create_snapshot_model(self,
+                              snapshot_id,
+                              status=SnapshotState.CREATING):
         now = utils.get_formatted_timestamp()
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
                                        status=status,
                                        error='')
-        self.sm.put_snapshot(new_snapshot)
-        return new_snapshot
+        return self.sm.put(models.Snapshot, new_snapshot)
 
     def create_snapshot(self, snapshot_id,
                         include_metrics,
@@ -143,7 +144,7 @@ class BlueprintsManager(object):
                 bypass_maintenance=bypass_maintenance
             )
         except manager_exceptions.ExistingRunningExecutionError:
-            self.sm.delete_snapshot(snapshot_id)
+            self.sm.delete(models.Snapshot, snapshot_id)
             raise
 
         return execution
@@ -154,8 +155,8 @@ class BlueprintsManager(object):
                          bypass_maintenance,
                          timeout):
         # Throws error if no snapshot found
-        snap = self.sm.get_snapshot(snapshot_id)
-        if snap.status == models.Snapshot.FAILED:
+        snap = self.sm.get(models.Snapshot, snapshot_id)
+        if snap.status == SnapshotState.FAILED:
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be restored'
             )
@@ -190,21 +191,20 @@ class BlueprintsManager(object):
 
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists.
-        plugin = self.sm.get_plugin(plugin_id)
+        plugin = self.sm.get(models.Plugin, plugin_id)
 
         # Uninstall (if applicable)
         if utils.plugin_installable_on_current_platform(plugin):
             if not force:
                 used_blueprints = list(set(
                     d.blueprint_id for d in
-                    self.sm.list_deployments(include=['blueprint_id']).items))
+                    self.sm.list(models.Deployment, include=['blueprint_id'])))
                 plugins = [b.plan[constants.WORKFLOW_PLUGINS_TO_INSTALL] +
                            b.plan[constants.DEPLOYMENT_PLUGINS_TO_INSTALL]
                            for b in
-                           self.sm.list_blueprints(include=['plan'],
-                                                   filters={
-                                                       'id': used_blueprints
-                                                   }).items]
+                           self.sm.list(models.Blueprint,
+                                        include=['plan'],
+                                        filters={'id': used_blueprints})]
                 plugins = set((p.get('package_name'), p.get('package_version'))
                               for sublist in plugins for p in sublist)
                 if (plugin.package_name, plugin.package_version) in plugins:
@@ -226,7 +226,7 @@ class BlueprintsManager(object):
                 timeout=300)
 
         # Remove from storage
-        self.sm.delete_plugin(plugin.id)
+        self.sm.delete(models.Plugin, plugin.id)
 
         # Remove from file system
         archive_path = utils.get_plugin_archive_path(plugin_id,
@@ -247,7 +247,7 @@ class BlueprintsManager(object):
                                    resources_base,
                                    **app_context.get_parser_context())
         except Exception, ex:
-            raise DslParseException(str(ex))
+            raise manager_exceptions.DslParseException(str(ex))
 
         now = utils.get_formatted_timestamp()
 
@@ -258,36 +258,36 @@ class BlueprintsManager(object):
             created_at=now,
             updated_at=now,
             main_file_name=application_file_name)
-        self.sm.put_blueprint(new_blueprint)
-        return new_blueprint
+        return self.sm.put(models.Blueprint, new_blueprint)
 
     def delete_blueprint(self, blueprint_id):
-        blueprint_deployments = self.sm.list_deployments(
-            filters={'blueprint_id': blueprint_id}).items
+        blueprint = self.sm.get(models.Blueprint, blueprint_id)
 
-        if len(blueprint_deployments) > 0:
+        if len(blueprint.deployments) > 0:
             raise manager_exceptions.DependentExistsError(
                 "Can't delete blueprint {0} - There exist "
                 "deployments for this blueprint; Deployments ids: {1}"
                 .format(blueprint_id,
                         ','.join([dep.id for dep
-                                  in blueprint_deployments])))
+                                  in blueprint.deployments])))
 
-        return self.sm.delete_blueprint(blueprint_id)
+        return self.sm.delete(models.Blueprint, blueprint_id)
 
     def delete_deployment(self,
                           deployment_id,
                           bypass_maintenance=None,
                           ignore_live_nodes=False):
         # Verify deployment exists.
-        self.sm.get_deployment(deployment_id)
+        self.sm.get(models.Deployment, deployment_id)
 
         # validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
-        executions = self.sm.list_executions(
-            filters=deplyment_id_filter).items
-        if any(execution.status not in models.Execution.END_STATES for
+        executions = self.sm.list(
+            models.Execution,
+            filters=deplyment_id_filter
+        )
+        if any(execution.status not in ExecutionState.END_STATES for
            execution in executions):
             raise manager_exceptions.DependentExistsError(
                 "Can't delete deployment {0} - There are running "
@@ -296,13 +296,15 @@ class BlueprintsManager(object):
                     deployment_id,
                     ','.join([execution.id for execution in
                               executions if execution.status not
-                              in models.Execution.END_STATES])))
+                              in ExecutionState.END_STATES])))
 
         if not ignore_live_nodes:
             deplyment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id)
-            node_instances = self.sm.list_node_instances(
-                filters=deplyment_id_filter).items
+            node_instances = self.sm.list(
+                models.NodeInstance,
+                filters=deplyment_id_filter
+            )
             # validate either all nodes for this deployment are still
             # uninitialized or have been deleted
             if any(node.state not in ('uninitialized', 'deleted') for node in
@@ -317,14 +319,14 @@ class BlueprintsManager(object):
 
         self._delete_deployment_environment(deployment_id, bypass_maintenance)
         self._delete_deployment_logs(deployment_id, bypass_maintenance)
-        return self.sm.delete_deployment(deployment_id)
+        return self.sm.delete(models.Deployment, deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
                          allow_custom_parameters=False,
                          force=False, bypass_maintenance=None):
-        deployment = self.sm.get_deployment(deployment_id)
-        blueprint = self.sm.get_blueprint(deployment.blueprint_id)
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
 
         if workflow_id not in deployment.workflows:
             raise manager_exceptions.NonexistentWorkflowError(
@@ -338,24 +340,24 @@ class BlueprintsManager(object):
         self._check_for_active_executions(deployment_id, force)
 
         execution_parameters = \
-            BlueprintsManager._merge_and_validate_execution_parameters(
+            ResourceManager._merge_and_validate_execution_parameters(
                 workflow, workflow_id, parameters, allow_custom_parameters)
 
         execution_id = str(uuid.uuid4())
 
         new_execution = models.Execution(
             id=execution_id,
-            status=models.Execution.PENDING,
+            status=ExecutionState.PENDING,
             created_at=utils.get_formatted_timestamp(),
-            blueprint_id=deployment.blueprint_id,
             workflow_id=workflow_id,
-            deployment_id=deployment_id,
             error='',
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
             is_system_workflow=False)
 
-        self.sm.put_execution(new_execution)
+        if deployment:
+            deployment.executions.append(new_execution)
+        self.sm.put(models.Execution, new_execution)
 
         # executing the user workflow
         workflow_plugins = blueprint.plan[
@@ -374,7 +376,7 @@ class BlueprintsManager(object):
 
     def _check_for_any_active_executions(self):
         filters = {
-            'status': models.Execution.ACTIVE_STATES
+            'status': ExecutionState.ACTIVE_STATES
         }
         executions = [
             e.id
@@ -391,7 +393,7 @@ class BlueprintsManager(object):
 
     def _check_for_active_system_wide_execution(self):
         filters = {
-            'status': models.Execution.ACTIVE_STATES
+            'status': ExecutionState.ACTIVE_STATES
         }
         for e in self.list_executions(is_include_system_workflows=True,
                                       filters=filters).items:
@@ -433,17 +435,17 @@ class BlueprintsManager(object):
 
         execution = models.Execution(
             id=execution_id,
-            status=models.Execution.PENDING,
+            status=ExecutionState.PENDING,
             created_at=created_at or utils.get_formatted_timestamp(),
-            blueprint_id=deployment.blueprint_id if deployment else None,
             workflow_id=wf_id,
-            deployment_id=deployment.id if deployment else None,
             error='',
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
             is_system_workflow=is_system_workflow)
 
-        self.sm.put_execution(execution)
+        if deployment:
+            deployment.executions.append(execution)
+        self.sm.put(models.Execution, execution)
 
         async_task = self.workflow_client.execute_system_workflow(
             wf_id=wf_id,
@@ -477,10 +479,8 @@ class BlueprintsManager(object):
                     error_msg, tb.getvalue())
                 current_app.logger.error(log_error_msg)
                 raise manager_exceptions.ExecutionFailure(error_msg)
-
-            # verify the execution completed successfully
-            execution = self.sm.get_execution(execution_id)
-            if execution.status != models.Execution.TERMINATED:
+            self.sm.refresh(execution)  # Reload the status form the DB
+            if execution.status != ExecutionState.TERMINATED:
                 raise manager_exceptions.ExecutionFailure(
                     'Failed executing the {0} system workflow: '
                     'Execution did not complete successfully.'.format(wf_id))
@@ -514,11 +514,10 @@ class BlueprintsManager(object):
         :raises manager_exceptions.IllegalActionError
         """
 
-        execution = self.sm.get_execution(execution_id)
-        if execution.status not in (models.Execution.PENDING,
-                                    models.Execution.STARTED) and \
-                (not force or execution.status != models.Execution
-                    .CANCELLING):
+        execution = self.sm.get(models.Execution, execution_id)
+        if execution.status not in (ExecutionState.PENDING,
+                                    ExecutionState.STARTED) and \
+                (not force or execution.status != ExecutionState.CANCELLING):
             raise manager_exceptions.IllegalActionError(
                 "Can't {0}cancel execution {1} because it's in status {2}"
                 .format(
@@ -526,41 +525,35 @@ class BlueprintsManager(object):
                     execution_id,
                     execution.status))
 
-        new_status = models.Execution.CANCELLING if not force \
-            else models.Execution.FORCE_CANCELLING
-        self.sm.update_execution_status(
-            execution_id, new_status, '')
-        return self.sm.get_execution(execution_id)
+        new_status = ExecutionState.CANCELLING if not force \
+            else ExecutionState.FORCE_CANCELLING
+        execution.status = new_status
+        execution.error = ''
+        return self.sm.update(execution)
 
     @staticmethod
-    def prepare_deployment_for_storage(blueprint_id, deployment_id,
-                                       deployment_plan, inputs=None):
+    def prepare_deployment_for_storage(deployment_id, deployment_plan):
+        deployment = models.Deployment(id=deployment_id)
 
         now = utils.get_formatted_timestamp()
-        new_deployment = models.Deployment(
-            id=deployment_id,
-            blueprint_id=blueprint_id,
-            created_at=now,
-            updated_at=now,
-            description=deployment_plan['description'],
-            workflows=deployment_plan['workflows'],
-            inputs=deployment_plan['inputs'],
-            policy_types=deployment_plan['policy_types'],
-            policy_triggers=deployment_plan['policy_triggers'],
-            groups=deployment_plan['groups'],
-            scaling_groups=deployment_plan['scaling_groups'],
-            outputs=deployment_plan['outputs'])
+        deployment.created_at = now
+        deployment.updated_at = now
+        deployment.description = deployment_plan['description']
+        deployment.workflows = deployment_plan['workflows']
+        deployment.inputs = deployment_plan['inputs']
+        deployment.policy_types = deployment_plan['policy_types']
+        deployment.policy_triggers = deployment_plan['policy_triggers']
+        deployment.groups = deployment_plan['groups']
+        deployment.scaling_groups = deployment_plan['scaling_groups']
+        deployment.outputs = deployment_plan['outputs']
 
-        return new_deployment
+        return deployment
 
-    def prepare_deployment_nodes_for_storage(self, blueprint_id,
-                                             deployment_id,
+    def prepare_deployment_nodes_for_storage(self,
                                              deployment_plan,
                                              node_ids=None):
         """
         create deployment nodes in storage based on a provided blueprint
-        :param blueprint_id: blueprint id
-        :param deployment_id: deployment id
         :param deployment_plan: deployment_plan
         :param node_ids: optionally create only nodes with these ids
         """
@@ -577,8 +570,6 @@ class BlueprintsManager(object):
             scalable = raw_node['capabilities']['scalable']['properties']
             nodes.append(models.Node(
                 id=raw_node['name'],
-                deployment_id=deployment_id,
-                blueprint_id=blueprint_id,
                 type=raw_node['type'],
                 type_hierarchy=raw_node['type_hierarchy'],
                 number_of_instances=scalable['current_instances'],
@@ -594,40 +585,40 @@ class BlueprintsManager(object):
                 relationships=self._prepare_node_relationships(raw_node)))
         return nodes
 
-    @staticmethod
-    def _prepare_deployment_node_instances_for_storage(deployment_id,
+    def _prepare_deployment_node_instances_for_storage(self,
+                                                       deployment_id,
                                                        dsl_node_instances):
         node_instances = []
         for node_instance in dsl_node_instances:
+            node = self.get_node(deployment_id, node_instance['node_id'])
             instance_id = node_instance['id']
-            node_id = node_instance['node_id']
             scaling_groups = node_instance.get('scaling_groups', [])
             relationships = node_instance.get('relationships', [])
             host_id = node_instance.get('host_id')
             instance = models.NodeInstance(
                 id=instance_id,
-                node_id=node_id,
                 host_id=host_id,
                 relationships=relationships,
-                deployment_id=deployment_id,
                 state='uninitialized',
                 runtime_properties={},
                 version=None,
-                scaling_groups=scaling_groups)
+                scaling_groups=scaling_groups
+            )
+            node.node_instances.append(instance)
             node_instances.append(instance)
 
         return node_instances
 
-    def _create_deployment_nodes(self, blueprint_id, deployment_id, plan,
+    def _create_deployment_nodes(self,
+                                 deployment_id,
+                                 plan,
                                  node_ids=None):
-        nodes = self.prepare_deployment_nodes_for_storage(
-            blueprint_id,
-            deployment_id,
-            plan,
-            node_ids)
+        nodes = self.prepare_deployment_nodes_for_storage(plan, node_ids)
+        deployment = self.sm.get(models.Deployment, deployment_id)
 
         for node in nodes:
-            self.sm.put_node(node)
+            deployment.nodes.append(node)
+            self.sm.put(models.Node, node)
 
     def _create_deployment_node_instances(self,
                                           deployment_id,
@@ -637,12 +628,12 @@ class BlueprintsManager(object):
             dsl_node_instances)
 
         for node_instance in node_instances:
-            self.sm.put_node_instance(node_instance)
+            self.sm.put(models.NodeInstance, node_instance)
 
     def create_deployment(self, blueprint_id, deployment_id, inputs=None,
                           bypass_maintenance=None):
 
-        blueprint = self.sm.get_blueprint(blueprint_id)
+        blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
         try:
             deployment_plan = tasks.prepare_deployment_plan(plan, inputs)
@@ -653,15 +644,12 @@ class BlueprintsManager(object):
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
 
         new_deployment = self.prepare_deployment_for_storage(
-            blueprint_id,
             deployment_id,
-            deployment_plan,
-            inputs=inputs)
-        self.sm.put_deployment(new_deployment)
+            deployment_plan)
+        blueprint.deployments.append(new_deployment)
+        self.sm.put(models.Deployment, new_deployment)
 
-        self._create_deployment_nodes(blueprint_id,
-                                      deployment_id,
-                                      deployment_plan)
+        self._create_deployment_nodes(deployment_id, deployment_plan)
 
         self._create_deployment_node_instances(
             deployment_id,
@@ -676,15 +664,17 @@ class BlueprintsManager(object):
                                       deployment_id,
                                       modified_nodes,
                                       context):
-        deployment = self.sm.get_deployment(deployment_id)
+        deployment = self.sm.get(models.Deployment, deployment_id)
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
-        existing_modifications = self.sm.list_deployment_modifications(
+        existing_modifications = self.sm.list(
+            models.DeploymentModification,
             include=['id', 'status'],
-            filters=deployment_id_filter).items
+            filters=deployment_id_filter
+        )
         active_modifications = [
             m.id for m in existing_modifications
-            if m.status == models.DeploymentModification.STARTED]
+            if m.status == DeploymentModificationState.STARTED]
         if active_modifications:
             raise \
                 manager_exceptions.ExistingStartedDeploymentModificationError(
@@ -693,11 +683,11 @@ class BlueprintsManager(object):
                     'started deployment modifications: {0}'
                     .format(active_modifications))
 
-        nodes = [node.to_dict() for node in self.sm.list_nodes(
-            filters=deployment_id_filter).items]
+        nodes = [node.to_dict() for node
+                 in self.sm.list(models.Node, filters=deployment_id_filter)]
         node_instances = [instance.to_dict() for instance
-                          in self.sm.list_node_instances(
-                          filters=deployment_id_filter).items]
+                          in self.sm.list(models.NodeInstance,
+                          filters=deployment_id_filter)]
         node_instances_modification = tasks.modify_deployment(
             nodes=nodes,
             previous_nodes=nodes,
@@ -707,7 +697,7 @@ class BlueprintsManager(object):
 
         node_instances_modification['before_modification'] = [
             instance.to_dict() for instance in
-            self.sm.list_node_instances(filters=deployment_id_filter).items]
+            self.sm.list(models.NodeInstance, filters=deployment_id_filter)]
 
         now = utils.get_formatted_timestamp()
         modification_id = str(uuid.uuid4())
@@ -715,12 +705,12 @@ class BlueprintsManager(object):
             id=modification_id,
             created_at=now,
             ended_at=None,
-            status=models.DeploymentModification.STARTED,
-            deployment_id=deployment_id,
+            status=DeploymentModificationState.STARTED,
             modified_nodes=modified_nodes,
             node_instances=node_instances_modification,
             context=context)
-        self.sm.put_deployment_modification(modification)
+        deployment.modifications.append(modification)
+        self.sm.put(models.DeploymentModification, modification)
 
         scaling_groups = deepcopy(deployment.scaling_groups)
         for node_id, modified_node in modified_nodes.items():
@@ -730,10 +720,10 @@ class BlueprintsManager(object):
                 })
                 deployment.scaling_groups = scaling_groups
             else:
-                node = self.sm.get_node(modification.deployment_id, node_id)
+                node = self.get_node(modification.deployment_id, node_id)
                 node.planned_number_of_instances = modified_node['instances']
-                self.sm.update_entity(node)
-        self.sm.update_entity(deployment)
+                self.sm.update(node)
+        self.sm.update(deployment)
 
         added_and_related = node_instances_modification['added_and_related']
         added_node_instances = []
@@ -741,11 +731,12 @@ class BlueprintsManager(object):
             if node_instance.get('modification') == 'added':
                 added_node_instances.append(node_instance)
             else:
-                node = self.sm.get_node(deployment_id=deployment_id,
-                                        node_id=node_instance['node_id'],
-                                        include=['relationships'])
+                node = self.get_node(
+                    deployment_id=deployment_id,
+                    node_id=node_instance['node_id']
+                )
                 target_names = [r['target_id'] for r in node.relationships]
-                current = self.sm.get_node_instance(node_instance['id'])
+                current = self.sm.get(models.NodeInstance, node_instance['id'])
                 current_relationship_groups = {
                     target_name: list(group)
                     for target_name, group in itertools.groupby(
@@ -764,25 +755,30 @@ class BlueprintsManager(object):
                         target_name, [])
                     new_relationships += new_relationship_groups.get(
                         target_name, [])
-                instance = self.sm.get_node_instance(
+                instance = self.sm.get(
+                    models.NodeInstance,
                     node_instance['id'],
                     locking=True
                 )
                 instance.relationships = deepcopy(new_relationships)
-                self.sm.update_node_instance(instance)
+                instance.version += 1
+                self.sm.update(instance)
         self._create_deployment_node_instances(deployment_id,
                                                added_node_instances)
         return modification
 
     def finish_deployment_modification(self, modification_id):
-        modification = self.sm.get_deployment_modification(modification_id)
+        modification = self.sm.get(
+            models.DeploymentModification,
+            modification_id
+        )
 
-        if modification.status in models.DeploymentModification.END_STATES:
+        if modification.status in DeploymentModificationState.END_STATES:
             raise manager_exceptions.DeploymentModificationAlreadyEndedError(
                 'Cannot finish deployment modification: {0}. It is already in'
                 ' {1} status.'.format(modification_id,
                                       modification.status))
-        deployment = self.sm.get_deployment(modification.deployment_id)
+        deployment = self.sm.get(models.Deployment, modification.deployment_id)
 
         modified_nodes = modification.modified_nodes
         scaling_groups = deepcopy(deployment.scaling_groups)
@@ -793,20 +789,21 @@ class BlueprintsManager(object):
                 })
                 deployment.scaling_groups = scaling_groups
             else:
-                node = self.sm.get_node(modification.deployment_id, node_id)
+                node = self.get_node(modification.deployment_id, node_id)
                 node.number_of_instances = modified_node['instances']
-                self.sm.update_entity(node)
-        self.sm.update_entity(deployment)
+                self.sm.update(node)
+        self.sm.update(deployment)
 
         node_instances = modification.node_instances
         for node_instance in node_instances['removed_and_related']:
             if node_instance.get('modification') == 'removed':
-                self.sm.delete_node_instance(node_instance['id'])
+                self.sm.delete(models.NodeInstance, node_instance['id'])
             else:
                 removed_relationship_target_ids = set(
                     [rel['target_id']
                      for rel in node_instance['relationships']])
-                instance = self.sm.get_node_instance(
+                instance = self.sm.get(
+                    models.NodeInstance,
                     node_instance['id'],
                     locking=True
                 )
@@ -814,37 +811,46 @@ class BlueprintsManager(object):
                                      if rel['target_id']
                                      not in removed_relationship_target_ids]
                 instance.relationships = deepcopy(new_relationships)
-                self.sm.update_node_instance(instance)
+                instance.version += 1
+                self.sm.update(instance)
 
-        modification.status = models.DeploymentModification.FINISHED
+        modification.status = DeploymentModificationState.FINISHED
         modification.ended_at = utils.get_formatted_timestamp()
-        self.sm.update_entity(modification)
+        self.sm.update(modification)
         return modification
 
     def rollback_deployment_modification(self, modification_id):
-        modification = self.sm.get_deployment_modification(modification_id)
+        modification = self.sm.get(
+            models.DeploymentModification,
+            modification_id
+        )
 
-        if modification.status in models.DeploymentModification.END_STATES:
+        if modification.status in DeploymentModificationState.END_STATES:
             raise manager_exceptions.DeploymentModificationAlreadyEndedError(
                 'Cannot rollback deployment modification: {0}. It is already '
                 'in {1} status.'.format(modification_id,
                                         modification.status))
 
-        deployment = self.sm.get_deployment(modification.deployment_id)
+        deployment = self.sm.get(models.Deployment, modification.deployment_id)
         deployment_id_filter = self.create_filters_dict(
             deployment_id=modification.deployment_id)
-        node_instances = self.sm.list_node_instances(
-            filters=deployment_id_filter).items
+        node_instances = self.sm.list(
+            models.NodeInstance,
+            filters=deployment_id_filter
+        )
         modified_instances = deepcopy(modification.node_instances)
         modified_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
         for instance in node_instances:
-            self.sm.delete_node_instance(instance.id)
-        for instance in modified_instances['before_modification']:
-            self.sm.put_node_instance(models.NodeInstance(**instance))
-        nodes_num_instances = {node.id: node for node in self.sm.list_nodes(
-            filters=deployment_id_filter,
-            include=['id', 'number_of_instances']).items}
+            self.sm.delete(models.NodeInstance, instance.id)
+        for instance_dict in modified_instances['before_modification']:
+            self.add_node_instance_from_dict(instance_dict)
+        nodes_num_instances = {
+            node.id: node for node in self.sm.list(
+                models.Node,
+                filters=deployment_id_filter,
+                include=['id', 'number_of_instances'])
+            }
 
         scaling_groups = deepcopy(deployment.scaling_groups)
         for node_id, modified_node in modification.modified_nodes.items():
@@ -853,31 +859,50 @@ class BlueprintsManager(object):
                 props['planned_instances'] = props['current_instances']
                 deployment.scaling_groups = scaling_groups
             else:
-                node = self.sm.get_node(modification.deployment_id, node_id)
+                node = self.get_node(modification.deployment_id, node_id)
                 node.planned_number_of_instances = nodes_num_instances[
                         node_id].number_of_instances
-                self.sm.update_entity(node)
-        self.sm.update_entity(deployment)
+                self.sm.update(node)
+        self.sm.update(deployment)
 
-        modification.status = models.DeploymentModification.ROLLEDBACK
+        modification.status = DeploymentModificationState.ROLLEDBACK
         modification.ended_at = utils.get_formatted_timestamp()
         modification.node_instances = modified_instances
-        self.sm.update_entity(modification)
+        self.sm.update(modification)
         return modification
 
+    def add_node_instance_from_dict(self, instance_dict):
+        # Remove the IDs from the dict - they don't have comparable columns
+        deployment_id = instance_dict.pop('deployment_id')
+        node_id = instance_dict.pop('node_id')
+
+        # Link the node instance object to to the node, and add it to the DB
+        new_node_instance = models.NodeInstance(**instance_dict)
+        node = self.get_node(deployment_id, node_id)
+        node.node_instances.append(new_node_instance)
+        self.sm.put(models.NodeInstance, new_node_instance)
+
+        # Return the IDs to the dict for later use
+        instance_dict['deployment_id'] = deployment_id
+        instance_dict['node_id'] = node_id
+
     def evaluate_deployment_outputs(self, deployment_id):
-        deployment = self.sm.get_deployment(deployment_id, include=['outputs'])
+        deployment = self.sm.get(
+            models.Deployment,
+            deployment_id,
+            include=['outputs']
+        )
 
         def get_node_instances(node_id=None):
             filters = self.create_filters_dict(deployment_id=deployment_id,
                                                node_id=node_id)
-            return self.sm.list_node_instances(filters=filters).items
+            return self.sm.list(models.NodeInstance, filters=filters).items
 
         def get_node_instance(node_instance_id):
-            return self.sm.get_node_instance(node_instance_id)
+            return self.sm.get(models.NodeInstance, node_instance_id)
 
         def get_node(node_id):
-            return self.sm.get_node(deployment_id, node_id)
+            return self.get_node(deployment_id, node_id)
 
         try:
             return functions.evaluate_outputs(
@@ -889,18 +914,18 @@ class BlueprintsManager(object):
             raise manager_exceptions.DeploymentOutputsEvaluationError(str(e))
 
     def evaluate_functions(self, deployment_id, context, payload):
-        self.sm.get_deployment(deployment_id, include=['id'])
+        self.sm.get(models.Deployment, deployment_id, include=['id'])
 
         def get_node_instances(node_id=None):
             filters = self.create_filters_dict(deployment_id=deployment_id,
                                                node_id=node_id)
-            return self.sm.list_node_instances(filters=filters).items
+            return self.sm.list(models.NodeInstance, filters=filters).items
 
         def get_node_instance(node_instance_id):
-            return self.sm.get_node_instance(node_instance_id)
+            return self.sm.get(models.NodeInstance, node_instance_id)
 
         def get_node(node_id):
-            return self.sm.get_node(deployment_id, node_id)
+            return self.get_node(deployment_id, node_id)
 
         try:
             return functions.evaluate_functions(
@@ -1037,7 +1062,7 @@ class BlueprintsManager(object):
             deployment_id=deployment_id)
         env_creation = next(
             (execution for execution in
-             self.sm.list_executions(filters=deployment_id_filter).items
+             self.sm.list(models.Execution, filters=deployment_id_filter)
              if execution.workflow_id == 'create_deployment_environment'),
             None)
 
@@ -1046,26 +1071,26 @@ class BlueprintsManager(object):
                                ' execution for deployment {0}'.format(
                                    deployment_id))
         status = env_creation.status
-        if status == models.Execution.TERMINATED:
+        if status == ExecutionState.TERMINATED:
             return
-        elif status == models.Execution.PENDING:
+        elif status == ExecutionState.PENDING:
             raise manager_exceptions \
                 .DeploymentEnvironmentCreationPendingError(
                     'Deployment environment creation is still pending, '
                     'try again in a minute')
-        elif status == models.Execution.STARTED:
+        elif status == ExecutionState.STARTED:
             raise manager_exceptions\
                 .DeploymentEnvironmentCreationInProgressError(
                     'Deployment environment creation is still in progress, '
                     'try again in a minute')
-        elif status == models.Execution.FAILED:
+        elif status == ExecutionState.FAILED:
             raise RuntimeError(
                 "Can't launch executions since environment creation for "
                 "deployment {0} has failed: {1}".format(
                     deployment_id, env_creation.error))
         elif status in (
-            models.Execution.CANCELLED, models.Execution.CANCELLING,
-                models.Execution.FORCE_CANCELLING):
+            ExecutionState.CANCELLED, ExecutionState.CANCELLING,
+                ExecutionState.FORCE_CANCELLING):
             raise RuntimeError(
                 "Can't launch executions since the environment creation for "
                 "deployment {0} has been cancelled [status={1}]".format(
@@ -1113,8 +1138,8 @@ class BlueprintsManager(object):
     def _delete_deployment_environment(self,
                                        deployment_id,
                                        bypass_maintenance):
-        deployment = self.sm.get_deployment(deployment_id)
-        blueprint = self.sm.get_blueprint(deployment.blueprint_id)
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
         wf_id = 'delete_deployment_environment'
         deployment_env_deletion_task_name = \
             'cloudify_system_workflows.deployment_environment.delete'
@@ -1153,11 +1178,9 @@ class BlueprintsManager(object):
             executions = self.list_executions(
                 filters=deployment_id_filter,
                 is_include_system_workflows=include_system).items
-            running = [
-                e.id for e in executions if
-                self.sm.get_execution(e.id).status
-                not in models.Execution.END_STATES]
-            return running
+            return [e.id for e in executions if
+                    self.sm.get(models.Execution, e.id).status
+                    not in ExecutionState.END_STATES]
 
         # validate no execution is currently in progress
         if not force:
@@ -1174,21 +1197,43 @@ class BlueprintsManager(object):
         return {k: v for k, v in execution_parameters.iteritems()
                 if not k.startswith('__')}
 
-    def update_provider_context(self, update, provider_context):
+    def update_provider_context(self, update, context_dict):
         if update:
-            self.sm.update_provider_context(provider_context)
+            context_instance = self.sm.get(
+                models.ProviderContext,
+                context_dict['id']
+            )
         else:
-            self.sm.put_provider_context(provider_context)
-        app_context.update_parser_context(provider_context.context)
+            context_instance = models.ProviderContext(id=context_dict['id'])
+
+        context_instance.name = context_dict['name']
+        context_instance.context = context_dict['context']
+        self.sm.update(context_instance)
+
+        app_context.update_parser_context(context_dict['context'])
+
+    def get_node(self, deployment_id, node_id):
+        """Return the single node associated with a given ID and Dep ID
+        """
+        nodes = self.sm.list(
+            models.Node,
+            filters={'deployment_id': deployment_id, 'id': node_id}
+        )
+        if not nodes:
+            raise manager_exceptions.NotFoundError(
+                'Requested Node with ID `{0}` on Deployment `{1}` '
+                'was not found'.format(node_id, deployment_id)
+            )
+        return nodes[0]
 
 
 # What we need to access this manager in Flask
-def get_blueprints_manager():
+def get_resource_manager():
     """
-    Get the current app's blueprints manager, create if necessary
+    Get the current app's resource manager, create if necessary
     """
-    manager = current_app.config.get('blueprints_manager')
+    manager = current_app.config.get('resource_manager')
     if not manager:
-        current_app.config['blueprints_manager'] = BlueprintsManager()
-        manager = current_app.config.get('blueprints_manager')
+        current_app.config['resource_manager'] = ResourceManager()
+        manager = current_app.config.get('resource_manager')
     return manager

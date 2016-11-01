@@ -292,7 +292,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.assert_bad_parameter_error(models.Blueprint.fields, e)
 
     def test_plugins_list_with_filters(self):
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
         sec_plugin_id = self.upload_plugin(TEST_PACKAGE_NAME,
                                            OLD_TEST_PACKAGE_VERSION).json['id']
         filter_field = {'id': sec_plugin_id}

@@ -41,6 +41,14 @@ class ConflictError(ManagerException):
             409, ConflictError.CONFLICT_ERROR_CODE, *args, **kwargs)
 
 
+class SQLStorageException(ManagerException):
+    STORAGE_ERROR_CODE = 'storage_error'
+
+    def __init__(self, *args, **kwargs):
+        super(SQLStorageException, self).__init__(
+            409, SQLStorageException.STORAGE_ERROR_CODE, *args, **kwargs)
+
+
 class NotFoundError(ManagerException):
     NOT_FOUND_ERROR_CODE = 'not_found_error'
 
@@ -397,3 +405,13 @@ class ExecutionFailure(RuntimeError):
 
 class ExecutionTimeout(RuntimeError):
     pass
+
+
+class DslParseException(Exception):
+    pass
+
+
+class BlueprintAlreadyExistsException(Exception):
+    def __init__(self, blueprint_id, *args):
+        Exception.__init__(self, args)
+        self.blueprint_id = blueprint_id

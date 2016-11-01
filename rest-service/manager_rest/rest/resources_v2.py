@@ -16,145 +16,28 @@
 
 import os
 import sys
-import json
 import shutil
-import tarfile
-from collections import OrderedDict
 from uuid import uuid4
 
 from flask import request
-from flask_restful import marshal
+
 from flask_restful_swagger import swagger
 
 from manager_rest import config
-from manager_rest import files
 from manager_rest import manager_exceptions
-from manager_rest import resources
-from manager_rest import responses_v2
 from manager_rest import utils
-from manager_rest.storage import models
 from manager_rest.security import SecuredResource
-from manager_rest.blueprints_manager import get_blueprints_manager
-from manager_rest.storage import ListResult
-from manager_rest.storage import get_storage_manager
-from manager_rest.storage import ManagerElasticsearch
-from manager_rest.resources import (marshal_with,
-                                    exceptions_handled,
-                                    verify_and_convert_bool,
-                                    verify_parameter_in_request_body,
-                                    verify_json_content_type,
-                                    convert_to_int,
-                                    make_streaming_response)
+from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage.models_states import SnapshotState
+from manager_rest.upload_manager import (UploadedSnapshotsManager,
+                                         UploadedPluginsManager)
+from manager_rest.storage import (models,
+                                  ListResult,
+                                  get_storage_manager,
+                                  ManagerElasticsearch)
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.utils import create_filter_params_list_description
-
-
-def projection(func):
-    """Decorator for enabling projection
-    """
-    def create_projection_params(*args, **kw):
-        projection_params = None
-        if '_include' in request.args:
-            projection_params = request.args["_include"].split(',')
-        return func(_include=projection_params, *args, **kw)
-    return create_projection_params
-
-
-def rangeable(func):
-    """
-    Decorator for enabling range
-    """
-    def create_range_params(*args, **kw):
-        range_args = request.args.getlist("_range")
-        range_params = {}
-        for range_arg in range_args:
-            try:
-                range_key, range_from, range_to = \
-                    range_arg.split(',')
-            except ValueError:
-                raise ValueError('Range parameter requires 3 values')
-            range_param = {}
-            if range_from:
-                range_param['from'] = range_from
-            if range_to:
-                range_param['to'] = range_to
-            if range_param:
-                range_params[range_key] = range_param
-
-        return func(range_filters=range_params, *args, **kw)
-    return create_range_params
-
-
-def sortable(func):
-    """
-    Decorator for enabling sort
-    """
-    def create_sort_params(*args, **kw):
-        sort_args = request.args.getlist("_sort")
-        # maintain order of sort fields
-        sort_params = OrderedDict()
-        for sort_arg in sort_args:
-            field = sort_arg.lstrip('-+')
-            order = "desc" if sort_arg[0] == '-' else "asc"
-            sort_params.update({field: order})
-        return func(sort=sort_params, *args, **kw)
-    return create_sort_params
-
-
-def marshal_events(func):
-    """
-    Decorator for marshalling raw event responses
-    """
-    def marshal_response(*args, **kwargs):
-        return marshal(func(*args, **kwargs),
-                       responses_v2.ListResponse.resource_fields)
-    return marshal_response
-
-
-def paginate(func):
-    """
-    Decorator for adding pagination
-    """
-    def verify_and_create_pagination_params(*args, **kw):
-        offset = request.args.get('_offset')
-        size = request.args.get('_size')
-        pagination_params = {}
-        if offset:
-            pagination_params['offset'] = int(offset)
-        if size:
-            pagination_params['size'] = int(size)
-        result = func(pagination=pagination_params, *args, **kw)
-
-        return responses_v2.ListResponse(
-            items=result.items,
-            metadata=result.metadata)
-
-    return verify_and_create_pagination_params
-
-
-def create_filters(fields=None):
-    """
-    Decorator for extracting filter parameters from the request arguments and
-    optionally verifying their validity according to the provided fields.
-    :param fields: a set of valid filter fields.
-    :return: a Decorator for creating and validating the accepted fields.
-    """
-    def create_filters_dec(f):
-        def some_func(*args, **kw):
-            request_args = request.args.to_dict(flat=False)
-            # NOTE: all filters are created as lists
-            filters = {k: v for k, v in
-                       request_args.iteritems() if not k.startswith('_')}
-            if fields:
-                unknowns = [k for k in filters.iterkeys() if k not in fields]
-                if unknowns:
-                    raise manager_exceptions.BadParametersError(
-                        'Filter keys \'{key_names}\' do not exist. Allowed '
-                        'filters are: {fields}'
-                        .format(key_names=unknowns, fields=list(fields)))
-            return f(filters=filters, *args, **kw)
-        return some_func
-    return create_filters_dec
+from . import resources, responses_v2, rest_decorators, rest_utils
 
 
 def _get_snapshot_path(snapshot_id):
@@ -165,31 +48,6 @@ def _get_snapshot_path(snapshot_id):
     )
 
 
-class UploadedSnapshotsManager(files.UploadedDataManager):
-
-    def _get_kind(self):
-        return 'snapshot'
-
-    def _get_data_url_key(self):
-        return 'snapshot_archive_url'
-
-    def _get_target_dir_path(self):
-        return config.instance.file_server_snapshots_folder
-
-    def _get_archive_type(self, archive_path):
-        return 'zip'
-
-    def _prepare_and_process_doc(self,
-                                 data_id,
-                                 file_server_root,
-                                 archive_target_path,
-                                 **kwargs):
-        return get_blueprints_manager().create_snapshot_model(
-            data_id,
-            status=models.Snapshot.UPLOADED
-        ), None
-
-
 class Snapshots(SecuredResource):
 
     @swagger.operation(
@@ -197,17 +55,20 @@ class Snapshots(SecuredResource):
         nickname='list',
         notes='Returns a list of existing snapshots.'
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Snapshot)
-    @create_filters(models.Snapshot.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Snapshot)
+    @rest_decorators.create_filters(models.Snapshot.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
-        return get_storage_manager().list_snapshots(include=_include,
-                                                    filters=filters,
-                                                    pagination=pagination,
-                                                    sort=sort)
+        return get_storage_manager().list(
+            models.Snapshot,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort
+        )
 
 
 class SnapshotsId(SecuredResource):
@@ -217,11 +78,14 @@ class SnapshotsId(SecuredResource):
         nickname='getById',
         notes='Returns a snapshot by its id.'
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Snapshot)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Snapshot)
     def get(self, snapshot_id, _include=None, **kwargs):
-        return get_storage_manager().get_snapshot(snapshot_id,
-                                                  include=_include)
+        return get_storage_manager().get(
+            models.Snapshot,
+            snapshot_id,
+            include=_include
+        )
 
     @swagger.operation(
         responseClass=responses_v2.Snapshot,
@@ -231,22 +95,22 @@ class SnapshotsId(SecuredResource):
             "application/json"
         ]
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Execution)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Execution)
     def put(self, snapshot_id):
-        verify_json_content_type()
+        rest_utils.verify_json_content_type()
         request_json = request.json
-        include_metrics = verify_and_convert_bool(
+        include_metrics = rest_utils.verify_and_convert_bool(
             'include_metrics',
             request_json.get('include_metrics', 'false')
         )
-        include_credentials = verify_and_convert_bool(
+        include_credentials = rest_utils.verify_and_convert_bool(
             'include_credentials',
             request_json.get('include_credentials', 'true')
         )
         bypass_maintenance = is_bypass_maintenance_mode()
 
-        execution = get_blueprints_manager().create_snapshot(
+        execution = get_resource_manager().create_snapshot(
             snapshot_id,
             include_metrics,
             include_credentials,
@@ -259,27 +123,27 @@ class SnapshotsId(SecuredResource):
         nickname='deleteSnapshot',
         notes='Delete existing snapshot.'
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Snapshot)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Snapshot)
     def delete(self, snapshot_id):
-        snapshot = get_storage_manager().delete_snapshot(snapshot_id)
+        snapshot = get_storage_manager().delete(models.Snapshot, snapshot_id)
         path = _get_snapshot_path(snapshot_id)
         shutil.rmtree(path, ignore_errors=True)
         return snapshot, 200
 
-    @exceptions_handled
+    @rest_decorators.exceptions_handled
     def patch(self, snapshot_id):
         """
         Update snapshot status by id
         """
-        verify_json_content_type()
+        rest_utils.verify_json_content_type()
         request_json = request.json
-        verify_parameter_in_request_body('status', request_json)
+        rest_utils.verify_parameter_in_request_body('status', request_json)
 
-        snapshot = get_storage_manager().get_snapshot(snapshot_id)
+        snapshot = get_storage_manager().get(models.Snapshot, snapshot_id)
         snapshot.status = request_json['status']
         snapshot.error = request_json.get('error', '')
-        get_storage_manager().update_entity(snapshot)
+        get_storage_manager().update(snapshot)
 
 
 class SnapshotsIdArchive(SecuredResource):
@@ -309,8 +173,8 @@ class SnapshotsIdArchive(SecuredResource):
             "application/octet-stream"
         ]
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Snapshot)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Snapshot)
     def put(self, snapshot_id):
         return UploadedSnapshotsManager().receive_uploaded_data(snapshot_id)
 
@@ -318,10 +182,10 @@ class SnapshotsIdArchive(SecuredResource):
         nickname='downloadSnapshot',
         notes='Downloads snapshot as an archive.'
     )
-    @exceptions_handled
+    @rest_decorators.exceptions_handled
     def get(self, snapshot_id):
-        snap = get_storage_manager().get_snapshot(snapshot_id)
-        if snap.status == models.Snapshot.FAILED:
+        snap = get_storage_manager().get(models.Snapshot, snapshot_id)
+        if snap.status == SnapshotState.FAILED:
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be downloaded'
             )
@@ -337,7 +201,7 @@ class SnapshotsIdArchive(SecuredResource):
             snapshot_id
         )
 
-        return make_streaming_response(
+        return rest_utils.make_streaming_response(
             snapshot_id,
             snapshot_uri,
             os.path.getsize(snapshot_path),
@@ -351,23 +215,28 @@ class SnapshotsIdRestore(SecuredResource):
         nickname='restoreSnapshot',
         notes='Restore existing snapshot.'
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Snapshot)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Snapshot)
     def post(self, snapshot_id):
-        verify_json_content_type()
+        rest_utils.verify_json_content_type()
         request_json = request.json
-        verify_parameter_in_request_body('recreate_deployments_envs',
-                                         request_json)
-        recreate_deployments_envs = verify_and_convert_bool(
+        rest_utils.verify_parameter_in_request_body(
+            'recreate_deployments_envs',
+            request_json
+        )
+        recreate_deployments_envs = rest_utils.verify_and_convert_bool(
             'recreate_deployments_envs',
             request_json['recreate_deployments_envs']
         )
         bypass_maintenance = is_bypass_maintenance_mode()
-        force = verify_and_convert_bool('force', request_json['force'])
+        force = rest_utils.verify_and_convert_bool(
+            'force',
+            request_json['force']
+        )
         default_timeout_sec = 300
         request_timeout = request_json.get('timeout', default_timeout_sec)
-        timeout = convert_to_int(request_timeout)
-        execution = get_blueprints_manager().restore_snapshot(
+        timeout = rest_utils.convert_to_int(request_timeout)
+        execution = get_resource_manager().restore_snapshot(
             snapshot_id,
             recreate_deployments_envs,
             force,
@@ -389,19 +258,23 @@ class Blueprints(resources.Blueprints):
             'blueprints'
         )
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.BlueprintState)
-    @create_filters(models.Blueprint.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.BlueprintState)
+    @rest_decorators.create_filters(models.Blueprint.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None, sort=None,
             **kwargs):
         """
         List uploaded blueprints
         """
-        return get_storage_manager().list_blueprints(
-            include=_include, filters=filters,
-            pagination=pagination, sort=sort)
+        return get_storage_manager().list(
+            models.Blueprint,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort
+        )
 
 
 class BlueprintsId(resources.BlueprintsId):
@@ -411,13 +284,13 @@ class BlueprintsId(resources.BlueprintsId):
         nickname="getById",
         notes="Returns a blueprint by its id."
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.BlueprintState)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.BlueprintState)
     def get(self, blueprint_id, _include=None, **kwargs):
         """
         Get blueprint by id
         """
-        with resources.skip_nested_marshalling():
+        with rest_utils.skip_nested_marshalling():
             return super(BlueprintsId, self).get(blueprint_id=blueprint_id,
                                                  _include=_include,
                                                  **kwargs)
@@ -457,13 +330,13 @@ class BlueprintsId(resources.BlueprintsId):
         ]
 
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.BlueprintState)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.BlueprintState)
     def put(self, blueprint_id, **kwargs):
         """
         Upload a blueprint (id specified)
         """
-        with resources.skip_nested_marshalling():
+        with rest_utils.skip_nested_marshalling():
             return super(BlueprintsId, self).put(blueprint_id=blueprint_id,
                                                  **kwargs)
 
@@ -472,13 +345,13 @@ class BlueprintsId(resources.BlueprintsId):
         nickname="deleteById",
         notes="deletes a blueprint by its id."
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.BlueprintState)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.BlueprintState)
     def delete(self, blueprint_id, **kwargs):
         """
         Delete blueprint by id
         """
-        with resources.skip_nested_marshalling():
+        with rest_utils.skip_nested_marshalling():
             return super(BlueprintsId, self).delete(
                 blueprint_id=blueprint_id, **kwargs)
 
@@ -500,11 +373,11 @@ class Executions(resources.Executions):
              'paramType': 'query'}
         ]
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Execution)
-    @create_filters(models.Execution.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Execution)
+    @rest_decorators.create_filters(models.Execution.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -512,16 +385,22 @@ class Executions(resources.Executions):
         """
         deployment_id = request.args.get('deployment_id')
         if deployment_id:
-            get_storage_manager().get_deployment(deployment_id, include=['id'])
-        is_include_system_workflows = verify_and_convert_bool(
+            get_storage_manager().get(
+                models.Deployment,
+                deployment_id,
+                include=['id']
+            )
+        is_include_system_workflows = rest_utils.verify_and_convert_bool(
             '_include_system_workflows',
             request.args.get('_include_system_workflows', 'false'))
 
-        executions = get_blueprints_manager().list_executions(
-            filters=filters, pagination=pagination, sort=sort,
+        return get_resource_manager().list_executions(
+            filters=filters,
+            pagination=pagination,
+            sort=sort,
             is_include_system_workflows=is_include_system_workflows,
-            include=_include)
-        return executions
+            include=_include
+        )
 
 
 class Deployments(resources.Deployments):
@@ -535,20 +414,23 @@ class Deployments(resources.Deployments):
             'deployments'
         )
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Deployment)
-    @create_filters(models.Deployment.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Deployment)
+    @rest_decorators.create_filters(models.Deployment.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None, sort=None,
             **kwargs):
         """
         List deployments
         """
-        deployments = get_storage_manager().list_deployments(
-            include=_include, filters=filters, pagination=pagination,
-            sort=sort)
-        return deployments
+        return get_storage_manager().list(
+            models.Deployment,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort
+        )
 
 
 class DeploymentModifications(resources.DeploymentModifications):
@@ -564,20 +446,23 @@ class DeploymentModifications(resources.DeploymentModifications):
             'deployment modifications'
         )
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.DeploymentModification)
-    @create_filters(models.DeploymentModification.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.DeploymentModification)
+    @rest_decorators.create_filters(models.DeploymentModification.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
         List deployment modifications
         """
-        modifications = get_storage_manager().list_deployment_modifications(
-            include=_include, filters=filters, pagination=pagination,
-            sort=sort)
-        return modifications
+        return get_storage_manager().list(
+            models.DeploymentModification,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort
+        )
 
 
 class Nodes(resources.Nodes):
@@ -591,21 +476,23 @@ class Nodes(resources.Nodes):
             'nodes'
         )
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Node)
-    @create_filters(models.Node.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Node)
+    @rest_decorators.create_filters(models.Node.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
         List nodes
         """
-        nodes = get_storage_manager().list_nodes(include=_include,
-                                                 pagination=pagination,
-                                                 filters=filters,
-                                                 sort=sort)
-        return nodes
+        return get_storage_manager().list(
+            models.Node,
+            include=_include,
+            pagination=pagination,
+            filters=filters,
+            sort=sort
+        )
 
 
 class NodeInstances(resources.NodeInstances):
@@ -620,20 +507,23 @@ class NodeInstances(resources.NodeInstances):
             'node instances'
         )
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.NodeInstance)
-    @create_filters(models.NodeInstance.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.NodeInstance)
+    @rest_decorators.create_filters(models.NodeInstance.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
         List node instances
         """
-        node_instances = get_storage_manager().list_node_instances(
-            include=_include, filters=filters,
-            pagination=pagination, sort=sort)
-        return node_instances
+        return get_storage_manager().list(
+            models.NodeInstance,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort
+        )
 
 
 class Plugins(SecuredResource):
@@ -647,21 +537,23 @@ class Plugins(SecuredResource):
             'plugins'
         )
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Plugin)
-    @create_filters(models.Plugin.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Plugin)
+    @rest_decorators.create_filters(models.Plugin.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
         List uploaded plugins
         """
-        plugins = get_storage_manager().list_plugins(include=_include,
-                                                     filters=filters,
-                                                     pagination=pagination,
-                                                     sort=sort)
-        return plugins
+        return get_storage_manager().list(
+            models.Plugin,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort
+        )
 
     @swagger.operation(
         responseClass=responses_v2.Plugin,
@@ -688,8 +580,8 @@ class Plugins(SecuredResource):
                      'paramType': 'body'}],
         consumes=["application/octet-stream"]
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Plugin)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Plugin)
     def post(self, **kwargs):
         """
         Upload a plugin
@@ -697,115 +589,20 @@ class Plugins(SecuredResource):
         plugin, code = UploadedPluginsManager().receive_uploaded_data(
             str(uuid4()))
         try:
-            get_blueprints_manager().install_plugin(plugin)
+            get_resource_manager().install_plugin(plugin)
         except manager_exceptions.ExecutionTimeout:
             tp, ex, tb = sys.exc_info()
             raise manager_exceptions.PluginInstallationTimeout(
                 'Timed out during plugin installation. ({0}: {1})'
                 .format(tp.__name__, ex)), None, tb
         except Exception:
-            get_blueprints_manager().remove_plugin(
+            get_resource_manager().remove_plugin(
                 plugin_id=plugin.id, force=True)
             tp, ex, tb = sys.exc_info()
             raise manager_exceptions.PluginInstallationError(
                 'Failed during plugin installation. ({0}: {1})'
                 .format(tp.__name__, ex)), None, tb
         return plugin, code
-
-
-class UploadedPluginsManager(files.UploadedDataManager):
-
-    def _get_kind(self):
-        return 'plugin'
-
-    def _get_data_url_key(self):
-        return 'plugin_archive_url'
-
-    def _get_target_dir_path(self):
-        return config.instance.file_server_uploaded_plugins_folder
-
-    def _get_archive_type(self, archive_path):
-        return 'tar.gz'
-
-    def _prepare_and_process_doc(self,
-                                 data_id,
-                                 file_server_root,
-                                 archive_target_path,
-                                 **kwargs):
-        new_plugin = self._create_plugin_from_archive(data_id,
-                                                      archive_target_path)
-
-        filter_by_name = {'package_name': new_plugin.package_name}
-        plugins = get_storage_manager().list_plugins(
-            filters=filter_by_name).items
-
-        for plugin in plugins:
-            if plugin.archive_name == new_plugin.archive_name:
-                raise manager_exceptions.ConflictError(
-                    'a plugin archive by the name of {archive_name} already '
-                    'exists for package with name {package_name} and version '
-                    '{version}'.format(archive_name=new_plugin.archive_name,
-                                       package_name=new_plugin.package_name,
-                                       version=new_plugin.package_version))
-        else:
-            get_storage_manager().put_plugin(new_plugin)
-
-        return new_plugin, new_plugin.archive_name
-
-    def _create_plugin_from_archive(self, plugin_id, archive_path):
-        plugin = self._load_plugin_package_json(archive_path)
-        build_props = plugin.get('build_server_os_properties')
-        now = utils.get_formatted_timestamp()
-        return models.Plugin(
-            id=plugin_id,
-            package_name=plugin.get('package_name'),
-            package_version=plugin.get('package_version'),
-            archive_name=plugin.get('archive_name'),
-            package_source=plugin.get('package_source'),
-            supported_platform=plugin.get('supported_platform'),
-            distribution=build_props.get('distribution'),
-            distribution_version=build_props.get('distribution_version'),
-            distribution_release=build_props.get('distribution_release'),
-            wheels=plugin.get('wheels'),
-            excluded_wheels=plugin.get('excluded_wheels'),
-            supported_py_versions=plugin.get('supported_python_versions'),
-            uploaded_at=now)
-
-    @staticmethod
-    def _load_plugin_package_json(tar_source):
-
-        if not tarfile.is_tarfile(tar_source):
-            raise manager_exceptions.InvalidPluginError(
-                'the provided tar archive can not be read.')
-
-        with tarfile.open(tar_source) as tar:
-            tar_members = tar.getmembers()
-            # a wheel plugin will contain exactly one sub directory
-            if not tar_members:
-                raise manager_exceptions.InvalidPluginError(
-                    'archive file structure malformed. expecting exactly one '
-                    'sub directory; got none.')
-            package_json_path = os.path.join(tar_members[0].name,
-                                             'package.json')
-            try:
-                package_member = tar.getmember(package_json_path)
-            except KeyError:
-                raise manager_exceptions. \
-                    InvalidPluginError("'package.json' was not found under {0}"
-                                       .format(package_member))
-            try:
-                package_json = tar.extractfile(package_member)
-            except (tarfile.ExtractError, tarfile.EnvironmentError) as e:
-                raise manager_exceptions. \
-                    InvalidPluginError(str(e))
-            try:
-                return json.load(package_json)
-            except ValueError as e:
-                raise manager_exceptions. \
-                    InvalidPluginError("'package.json' is not a valid json: "
-                                       "{json_str}. error is {error}"
-                                       .format(json_str=package_json.read(),
-                                               error=str(e)))
 
 
 class PluginsArchive(SecuredResource):
@@ -817,13 +614,13 @@ class PluginsArchive(SecuredResource):
         nickname="downloadPlugin",
         notes="download a plugin archive according to the plugin ID. "
     )
-    @exceptions_handled
+    @rest_decorators.exceptions_handled
     def get(self, plugin_id, **kwargs):
         """
         Download plugin archive
         """
         # Verify plugin exists.
-        plugin = get_storage_manager().get_plugin(plugin_id)
+        plugin = get_storage_manager().get(models.Plugin, plugin_id)
 
         archive_name = plugin.archive_name
         # attempting to find the archive file on the file system
@@ -838,7 +635,7 @@ class PluginsArchive(SecuredResource):
             plugin_id,
             archive_name)
 
-        return make_streaming_response(
+        return rest_utils.make_streaming_response(
             plugin_id,
             plugin_path,
             os.path.getsize(local_path),
@@ -852,27 +649,31 @@ class PluginsId(SecuredResource):
         nickname="getById",
         notes="Returns a plugin according to its ID."
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Plugin)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Plugin)
     def get(self, plugin_id, _include=None, **kwargs):
         """
         Returns plugin by ID
         """
-        return get_storage_manager().get_plugin(plugin_id, include=_include)
+        return get_storage_manager().get(
+            models.Plugin,
+            plugin_id,
+            include=_include
+        )
 
     @swagger.operation(
         responseClass=responses_v2.Plugin,
         nickname="deleteById",
         notes="deletes a plugin according to its ID."
     )
-    @exceptions_handled
-    @marshal_with(responses_v2.Plugin)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2.Plugin)
     def delete(self, plugin_id, **kwargs):
         """
         Delete plugin by ID
         """
-        return get_blueprints_manager().remove_plugin(plugin_id=plugin_id,
-                                                      force=False)
+        return get_resource_manager().remove_plugin(plugin_id=plugin_id,
+                                                    force=False)
 
 
 class Events(resources.Events):
@@ -925,13 +726,13 @@ class Events(resources.Events):
         nickname="list events",
         notes='Returns a list of events for optionally provided filters'
     )
-    @exceptions_handled
-    @marshal_events
-    @create_filters()
-    @paginate
-    @rangeable
-    @projection
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_events
+    @rest_decorators.create_filters()
+    @rest_decorators.paginate
+    @rest_decorators.rangeable
+    @rest_decorators.projection
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None,
             pagination=None, sort=None, range_filters=None, **kwargs):
         """
@@ -943,7 +744,7 @@ class Events(resources.Events):
                                   range_filters=range_filters)
         return self.list_events(query, include=_include)
 
-    @exceptions_handled
+    @rest_decorators.exceptions_handled
     def post(self):
         raise manager_exceptions.MethodNotAllowedError()
 
@@ -952,13 +753,13 @@ class Events(resources.Events):
         nickname="delete events",
         notes='Deletes events according to a passed Deployment ID'
     )
-    @exceptions_handled
-    @marshal_events
-    @create_filters()
-    @paginate
-    @rangeable
-    @projection
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_events
+    @rest_decorators.create_filters()
+    @rest_decorators.paginate
+    @rest_decorators.rangeable
+    @rest_decorators.projection
+    @rest_decorators.sortable
     def delete(self, filters=None, pagination=None, sort=None,
                range_filters=None, **kwargs):
         """Delete events/logs connected to a certain Deployment ID

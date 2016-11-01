@@ -12,8 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from manager_rest import resources, resources_v2, resources_v2_1, resources_v3
-from manager_rest import swagger as rest_swagger
+from . import swagger, resources, resources_v2, resources_v2_1, resources_v3
 
 SUPPORTED_API_VERSIONS = [('v1', resources),
                           ('v2', resources_v2),
@@ -96,7 +95,4 @@ def _set_versioned_urls(api, resource_name, endpoint_suffix):
             endpoint = '{0}/{1}'.format(version_name, endpoint_suffix)
             url = '/api/{0}'.format(endpoint)
             api.add_resource(resource, url, endpoint=endpoint)
-            rest_swagger.add_swagger_resource(api,
-                                              version_name,
-                                              resource,
-                                              url)
+            swagger.add_swagger_resource(api, version_name, resource, url)

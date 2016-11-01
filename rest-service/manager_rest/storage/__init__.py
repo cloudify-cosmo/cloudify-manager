@@ -13,8 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .models import db                                      # NOQA
 from .file_server import FileServer                         # NOQA
+from .models import db, user_datastore                      # NOQA
 from .storage_manager import ListResult                     # NOQA
 from .storage_manager import get_storage_manager            # NOQA
 from .manager_elasticsearch import ManagerElasticsearch     # NOQA

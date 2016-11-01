@@ -19,7 +19,8 @@ from collections import namedtuple
 from flask import current_app
 from flask_security.utils import md5
 
-from .security_models import user_datastore
+from manager_rest.storage import user_datastore
+
 from .user_handler import unauthorized_user_handler
 
 try:
@@ -48,7 +49,7 @@ class Authentication(object):
             unauthorized_user_handler('No authentication info provided')
 
         logger = current_app.logger
-        logger.debug('Running user authentication for user {0}'.format(user))
+        logger.debug('Running user authentication for {0}'.format(user))
 
         if not auth:
             # Creating this dummy auth object to have a simpler syntax
@@ -77,7 +78,7 @@ class Authentication(object):
         """
         if not user or md5(user.password) != hashed_pass:
             unauthorized_user_handler('HTTP authentication failed '
-                                      'for user: {0}'.format(user))
+                                      'for {0}'.format(user))
 
         # Reloading the user from the datastore, because the current user
         # object is detached from a session

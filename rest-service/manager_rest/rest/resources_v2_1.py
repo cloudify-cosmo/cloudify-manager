@@ -14,9 +14,6 @@
 #  * limitations under the License.
 #
 import os
-import zipfile
-import urllib
-import shutil
 import sys
 
 from flask import request
@@ -24,22 +21,12 @@ from flask_security import current_user
 from flask_restful_swagger import swagger
 
 from manager_rest.deployment_update.constants import PHASES
-from manager_rest.files import UploadedDataManager
-from manager_rest.resources import (marshal_with,
-                                    exceptions_handled,
-                                    verify_json_content_type,
-                                    verify_and_convert_bool,
-                                    CONVENTION_APPLICATION_BLUEPRINT_FILE)
-from manager_rest import resources
-from manager_rest import resources_v2
-from manager_rest import responses_v2_1
 from manager_rest import config
-from manager_rest import archiving
 from manager_rest import manager_exceptions
 from manager_rest import utils
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
-from manager_rest.blueprints_manager import get_blueprints_manager
+from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_DEACTIVATED)
@@ -47,168 +34,18 @@ from manager_rest.maintenance import (get_maintenance_file_path,
                                       prepare_maintenance_dict,
                                       get_running_executions)
 from manager_rest.manager_exceptions import BadParametersError
-from deployment_update.manager import get_deployment_updates_manager
-from manager_rest.resources_v2 import create_filters, paginate, sortable
 from manager_rest.utils import create_filter_params_list_description
-
-
-def override_marshal_with(f, model):
-    @exceptions_handled
-    @marshal_with(model)
-    def wrapper(*args, **kwargs):
-        with resources.skip_nested_marshalling():
-            return f(*args, **kwargs)
-    return wrapper
-
-
-class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
-
-    def _get_kind(self):
-        return 'deployment'
-
-    def _get_data_url_key(self):
-        return 'blueprint_archive_url'
-
-    def _get_target_dir_path(self):
-        return config.instance.file_server_deployments_folder
-
-    def _get_archive_type(self, archive_path):
-        return archiving.get_archive_type(archive_path)
-
-    def _prepare_and_process_doc(self,
-                                 data_id,
-                                 file_server_root,
-                                 archive_target_path,
-                                 additional_inputs=None):
-        application_dir = self._extract_file_to_file_server(
-            archive_target_path,
-            file_server_root
-        )
-        return self._prepare_and_submit_blueprint(
-                file_server_root,
-                application_dir,
-                data_id,
-                additional_inputs), archive_target_path
-
-    def _move_archive_to_uploaded_dir(self, *args, **kwargs):
-        pass
-
-    @classmethod
-    def _prepare_and_submit_blueprint(cls,
-                                      file_server_root,
-                                      app_dir,
-                                      deployment_id,
-                                      additional_inputs=None):
-
-        app_dir, app_file_name = \
-            cls._extract_application_file(file_server_root, app_dir)
-
-        # add to deployment update manager (will also dsl_parse it)
-        try:
-            cls._process_plugins(file_server_root, app_dir, deployment_id)
-            update = get_deployment_updates_manager().stage_deployment_update(
-                    deployment_id,
-                    app_dir,
-                    app_file_name,
-                    additional_inputs=additional_inputs or {}
-                )
-
-            # Moving the contents of the app dir to the dest dir, while
-            # overwriting any file encountered
-
-            # create the destination root dir
-            file_server_deployment_root = \
-                os.path.join(file_server_root,
-                             config.instance.file_server_deployments_folder,
-                             deployment_id)
-
-            app_root_dir = os.path.join(file_server_root, app_dir)
-
-            for root, dirs, files in os.walk(app_root_dir):
-                # Creates a corresponding dir structure in the deployment dir
-                dest_rel_dir = os.path.relpath(root, app_root_dir)
-                dest_dir = os.path.abspath(
-                        os.path.join(file_server_deployment_root,
-                                     dest_rel_dir))
-                utils.mkdirs(dest_dir)
-
-                # Calculate source dir
-                source_dir = os.path.join(file_server_root, app_dir, root)
-
-                for file_name in files:
-                    source_file = os.path.join(source_dir, file_name)
-                    relative_dest_path = os.path.relpath(source_file,
-                                                         app_root_dir)
-                    dest_file = os.path.join(file_server_deployment_root,
-                                             relative_dest_path)
-                    shutil.copy(source_file, dest_file)
-
-            return update
-        except Exception:
-            shutil.rmtree(os.path.join(file_server_root, app_dir))
-            raise
-
-    @classmethod
-    def _extract_application_file(cls, file_server_root, application_dir):
-
-        full_application_dir = os.path.join(file_server_root, application_dir)
-
-        if 'application_file_name' in request.args:
-            application_file_name = urllib.unquote(
-                    request.args['application_file_name']).decode('utf-8')
-            application_file = os.path.join(full_application_dir,
-                                            application_file_name)
-            if not os.path.isfile(application_file):
-                raise manager_exceptions.BadParametersError(
-                        '{0} does not exist in the application '
-                        'directory'.format(application_file_name)
-                )
-        else:
-            application_file_name = CONVENTION_APPLICATION_BLUEPRINT_FILE
-            application_file = os.path.join(full_application_dir,
-                                            application_file_name)
-            if not os.path.isfile(application_file):
-                raise manager_exceptions.BadParametersError(
-                        'application directory is missing blueprint.yaml and '
-                        'application_file_name query parameter was not passed')
-
-        # return relative path from the file server root since this path
-        # is appended to the file server base uri
-        return application_dir, application_file_name
-
-    @classmethod
-    def _process_plugins(cls, file_server_root, app_dir, deployment_id):
-        plugins_directory = os.path.join(file_server_root, app_dir, 'plugins')
-        if not os.path.isdir(plugins_directory):
-            return
-        plugins = [os.path.join(plugins_directory, directory)
-                   for directory in os.listdir(plugins_directory)
-                   if os.path.isdir(os.path.join(plugins_directory,
-                                                 directory))]
-
-        for plugin_dir in plugins:
-            final_zip_name = '{0}.zip'.format(os.path.basename(plugin_dir))
-            target_zip_path = os.path.join(file_server_root, app_dir,
-                                           'plugins', final_zip_name)
-            cls._zip_dir(plugin_dir, target_zip_path)
-
-    @classmethod
-    def _zip_dir(cls, dir_to_zip, target_zip_path):
-        zipf = zipfile.ZipFile(target_zip_path, 'w', zipfile.ZIP_DEFLATED)
-        try:
-            plugin_dir_base_name = os.path.basename(dir_to_zip)
-            rootlen = len(dir_to_zip) - len(plugin_dir_base_name)
-            for base, dirs, files in os.walk(dir_to_zip):
-                for entry in files:
-                    fn = os.path.join(base, entry)
-                    zipf.write(fn, fn[rootlen:])
-        finally:
-            zipf.close()
+from manager_rest.upload_manager import \
+    UploadedBlueprintsDeploymentUpdateManager
+from manager_rest.deployment_update.manager import \
+    get_deployment_updates_manager
+from .rest_utils import verify_and_convert_bool, verify_json_content_type
+from . import resources, rest_decorators, responses_v2_1, resources_v2
 
 
 class MaintenanceMode(SecuredResource):
-    @exceptions_handled
-    @marshal_with(responses_v2_1.MaintenanceMode)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2_1.MaintenanceMode)
     def get(self, **_):
         maintenance_file_path = get_maintenance_file_path()
         if os.path.isfile(maintenance_file_path):
@@ -229,8 +66,8 @@ class MaintenanceMode(SecuredResource):
 
 
 class MaintenanceModeAction(SecuredResource):
-    @exceptions_handled
-    @marshal_with(responses_v2_1.MaintenanceMode)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2_1.MaintenanceMode)
     def post(self, maintenance_action, **_):
         maintenance_file_path = get_maintenance_file_path()
 
@@ -275,8 +112,8 @@ class MaintenanceModeAction(SecuredResource):
 
 
 class DeploymentUpdate(SecuredResource):
-    @exceptions_handled
-    @marshal_with(responses_v2_1.DeploymentUpdate)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2_1.DeploymentUpdate)
     def post(self, id, phase):
         """
         Provides support for two phases of deployment update. The phase is
@@ -336,8 +173,7 @@ class DeploymentUpdate(SecuredResource):
             UploadedBlueprintsDeploymentUpdateManager(). \
             receive_uploaded_data(deployment_id)
 
-        manager.extract_steps_from_deployment_update(
-            deployment_update.id)
+        manager.extract_steps_from_deployment_update(deployment_update)
 
         return manager.commit_deployment_update(
             deployment_update.id,
@@ -355,8 +191,8 @@ class DeploymentUpdateId(SecuredResource):
                     models.DeploymentUpdate.fields, 'deployment update'
             )
     )
-    @exceptions_handled
-    @marshal_with(responses_v2_1.DeploymentUpdate)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2_1.DeploymentUpdate)
     def get(self, update_id):
         return \
             get_deployment_updates_manager().get_deployment_update(update_id)
@@ -373,11 +209,11 @@ class DeploymentUpdates(SecuredResource):
                     'deployment updates'
             )
     )
-    @exceptions_handled
-    @marshal_with(responses_v2_1.DeploymentUpdate)
-    @create_filters(models.DeploymentUpdate.fields)
-    @paginate
-    @sortable
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2_1.DeploymentUpdate)
+    @rest_decorators.create_filters(models.DeploymentUpdate.fields)
+    @rest_decorators.paginate
+    @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -392,41 +228,57 @@ class DeploymentUpdates(SecuredResource):
 
 class Deployments(resources_v2.Deployments):
 
-    get = override_marshal_with(resources_v2.Deployments.get,
-                                responses_v2_1.Deployment)
+    get = rest_decorators.override_marshal_with(
+        resources_v2.Deployments.get,
+        responses_v2_1.Deployment
+    )
 
 
 class DeploymentsId(resources.DeploymentsId):
 
-    get = override_marshal_with(resources.DeploymentsId.get,
-                                responses_v2_1.Deployment)
+    get = rest_decorators.override_marshal_with(
+        resources.DeploymentsId.get,
+        responses_v2_1.Deployment
+    )
 
-    put = override_marshal_with(resources.DeploymentsId.put,
-                                responses_v2_1.Deployment)
+    put = rest_decorators.override_marshal_with(
+        resources.DeploymentsId.put,
+        responses_v2_1.Deployment
+    )
 
-    delete = override_marshal_with(resources.DeploymentsId.delete,
-                                   responses_v2_1.Deployment)
+    delete = rest_decorators.override_marshal_with(
+        resources.DeploymentsId.delete,
+        responses_v2_1.Deployment
+    )
 
 
 class Nodes(resources_v2.Nodes):
 
-    get = override_marshal_with(resources_v2.Nodes.get,
-                                responses_v2_1.Node)
+    get = rest_decorators.override_marshal_with(
+        resources_v2.Nodes.get,
+        responses_v2_1.Node
+    )
 
 
 class NodeInstances(resources_v2.NodeInstances):
 
-    get = override_marshal_with(resources_v2.NodeInstances.get,
-                                responses_v2_1.NodeInstance)
+    get = rest_decorators.override_marshal_with(
+        resources_v2.NodeInstances.get,
+        responses_v2_1.NodeInstance
+    )
 
 
 class NodeInstancesId(resources.NodeInstancesId):
 
-    get = override_marshal_with(resources.NodeInstancesId.get,
-                                responses_v2_1.NodeInstance)
+    get = rest_decorators.override_marshal_with(
+        resources.NodeInstancesId.get,
+        responses_v2_1.NodeInstance
+    )
 
-    patch = override_marshal_with(resources.NodeInstancesId.patch,
-                                  responses_v2_1.NodeInstance)
+    patch = rest_decorators.override_marshal_with(
+        resources.NodeInstancesId.patch,
+        responses_v2_1.NodeInstance
+    )
 
 
 class PluginsId(resources_v2.PluginsId):
@@ -436,19 +288,20 @@ class PluginsId(resources_v2.PluginsId):
         nickname="deleteById",
         notes="deletes a plugin according to its ID."
     )
-    @exceptions_handled
-    @marshal_with(responses_v2_1.Plugin)
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(responses_v2_1.Plugin)
     def delete(self, plugin_id, **kwargs):
         """
         Delete plugin by ID
         """
         verify_json_content_type()
         request_json = request.json
-        force = verify_and_convert_bool('force', request_json.get('force',
-                                                                  False))
+        force = verify_and_convert_bool(
+            'force', request_json.get('force', False)
+        )
         try:
-            return get_blueprints_manager().remove_plugin(plugin_id=plugin_id,
-                                                          force=force)
+            return get_resource_manager().remove_plugin(plugin_id=plugin_id,
+                                                        force=force)
         except manager_exceptions.ManagerException:
             raise
         except manager_exceptions.ExecutionTimeout:

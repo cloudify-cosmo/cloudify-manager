@@ -22,8 +22,8 @@ from flask import jsonify, request
 
 from manager_rest import config
 from manager_rest import utils
-from manager_rest.storage import models
-from manager_rest.blueprints_manager import get_blueprints_manager
+from manager_rest.storage.models_states import ExecutionState
+from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_STATUS_FILE,
                                     MAINTENANCE_MODE_ACTIVATING,
@@ -138,11 +138,11 @@ def _check_allowed_endpoint(request_endpoint):
 
 
 def get_running_executions():
-    executions = get_blueprints_manager().list_executions(
+    executions = get_resource_manager().list_executions(
             is_include_system_workflows=True).items
     running_executions = []
     for execution in executions:
-        if execution.status not in models.Execution.END_STATES:
+        if execution.status not in ExecutionState.END_STATES:
             running_executions.append({
                 'id': execution.id,
                 'status': execution.status,

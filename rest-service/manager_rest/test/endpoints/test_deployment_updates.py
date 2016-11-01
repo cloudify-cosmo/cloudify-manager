@@ -21,12 +21,13 @@ from nose.plugins.attrib import attr
 from nose.tools import nottest
 
 from dsl_parser import exceptions as parser_exceptions
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest import archiving
-from manager_rest.storage import get_storage_manager, models
-from manager_rest.deployment_update.constants import STATES
 from manager_rest.test import base_test
-from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest.storage import models
+from manager_rest.storage.models_states import ExecutionState
+from manager_rest.deployment_update.constants import STATES
 from manager_rest.test.utils import get_resource as resource
 
 
@@ -283,8 +284,9 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
 
         # updating the execution's status to started to make the first update
         # really be active
-        get_storage_manager().update_execution_status(
-            first_execution_id, models.Execution.STARTED, error='')
+        execution = self.sm.get(models.Execution, first_execution_id)
+        execution.status = ExecutionState.STARTED
+        self.sm.update(execution)
         self.client.executions.get(execution_id=first_execution_id)
 
         response = self._update(deployment_id,
@@ -332,12 +334,10 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                               query_params=kwargs)
 
     def test_storage_serialization_and_response(self):
-        self.sm = get_storage_manager()
         blueprint = self._add_blueprint()
-        deployment = self._add_deployment(blueprint.id)
-        execution = self._add_execution(deployment.id,
-                                        blueprint.id)
-        depup = self._add_deployment_update(blueprint.id, execution.id)
+        deployment = self._add_deployment(blueprint)
+        execution = self._add_execution(deployment)
+        depup = self._add_deployment_update(deployment, execution)
         depup_from_client = self.client.deployment_updates.get(depup.id)
         depup_response_attributes = {'id', 'state', 'deployment_id', 'steps',
                                      'execution_id', 'created_at'}

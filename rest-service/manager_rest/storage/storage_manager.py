@@ -13,130 +13,98 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import uuid
+from collections import OrderedDict
+
 from flask import current_app
 from flask_security import current_user
-from sqlalchemy.exc import SQLAlchemyError
 
 from manager_rest import manager_exceptions
-from manager_rest.storage.models import db
-from manager_rest.storage.models import (Blueprint,
-                                         Snapshot,
-                                         Deployment,
-                                         DeploymentUpdate,
-                                         DeploymentUpdateStep,
-                                         DeploymentModification,
-                                         Execution,
-                                         Node,
-                                         NodeInstance,
-                                         Tenant,
-                                         ProviderContext,
-                                         Plugin,
-                                         Group)
+from manager_rest.storage.models_base import db
 
-PROVIDER_CONTEXT_ID = 'CONTEXT'
+from sqlalchemy.sql.elements import Label
+from sqlite3 import DatabaseError as SQLiteDBError
+from sqlalchemy.exc import SQLAlchemyError
+
+try:
+    from psycopg2 import DatabaseError as Psycopg2DBError
+    sql_errors = (SQLAlchemyError, SQLiteDBError, Psycopg2DBError)
+except ImportError:
+    sql_errors = (SQLAlchemyError, SQLiteDBError)
+    Psycopg2DBError = None
 
 
 class SQLStorageManager(object):
     @staticmethod
-    def _safe_commit(exception=None):
+    def _safe_commit():
         """Try to commit changes in the session. Roll back if exception raised
-
         Excepts SQLAlchemy errors and rollbacks if they're caught
-        :param exception: Optional exception to raise instead of the
-        one raised by SQLAlchemy
         """
         try:
             db.session.commit()
-        except SQLAlchemyError as e:
+        except sql_errors as e:
             db.session.rollback()
-            if exception:
-                full_err = '{0}\nSQL error: {1}'.format(
-                    str(exception), str(e)
-                )
-                exception.args = (full_err,) + exception.args[1:]
-                raise exception
-            raise
-
-    def _safe_add(self, instance):
-        """Add `instance` to the DB session, and attempt to commit
-
-        :param instance: Instance to be added to the DB
-        """
-        db.session.add(instance)
-        custom_exception = manager_exceptions.ConflictError(
-            '{0} with ID `{1}` already exists'.format(
-                instance.__class__.__name__,
-                instance.id
+            raise manager_exceptions.SQLStorageException(
+                'SQL Storage error: {0}'.format(str(e))
             )
-        )
-        self._safe_commit(custom_exception)
-        return instance
 
     @staticmethod
-    def _get_base_query(model_class, include=None):
+    def _get_base_query(model_class, include, joins):
         """Create the initial query from the model class and included columns
 
         :param model_class: SQL DB table class
-        :param include: An optional list of columns to include in the query
+        :param include: A (possibly empty) list of columns to include in
+        the query
+        :param joins: A (possibly empty) list of models on which the query
+        should join
         :return: An SQLAlchemy AppenderQuery object
         """
-        # If all columns should be returned, query directly from the model
-        if not include:
-            return model_class.query
 
-        for column_name in include:
-            if not hasattr(model_class, column_name):
-                raise manager_exceptions.BadParametersError(
-                    'Class {0} does not have a {1} field'.format(
-                        model_class.__name__, column_name
-                    )
-                )
         # If only some columns are included, query through the session object
-        columns_to_query = [getattr(model_class, column) for column in include]
-        return db.session.query(*columns_to_query)
+        if include:
+            query = db.session.query(*include)
+        else:
+            # If all columns should be returned, query directly from the model
+            query = model_class.query
+
+        # Add any joins that might be necessary
+        for join_model in joins:
+            query = query.join(join_model)
+
+        return query
 
     @staticmethod
-    def _sort_query(query, model_class, sort=None):
+    def _sort_query(query, sort=None):
         """Add sorting clauses to the query
 
         :param query: Base SQL query
-        :param model_class: SQL DB table class
         :param sort: An optional dictionary where keys are column names to
         sort by, and values are the order (asc/desc)
         :return: An SQLAlchemy AppenderQuery object
         """
         if sort:
-            for sort_param, order in sort.iteritems():
-                column = getattr(model_class, sort_param)
+            for column, order in sort.iteritems():
                 if order == 'desc':
                     column = column.desc()
                 query = query.order_by(column)
         return query
 
-    def _filter_query(self, query, model_class, filters=None):
+    @staticmethod
+    def _filter_query(query, filters):
         """Add filter clauses to the query
 
         :param query: Base SQL query
-        :param model_class: SQL DB table class
         :param filters: An optional dictionary where keys are column names to
         filter by, and values are values applicable for those columns (or lists
         of such values)
         :return: An SQLAlchemy AppenderQuery object
         """
-        if filters:
-            # We need to differentiate between different kinds of filers:
-            # if the value of the filter is a list, we'll use SQLAlchemy's `in`
-            # operator, to check against multiple values. Otherwise, we use a
-            # simple keyword filter
-            for key, value in filters.iteritems():
-                if isinstance(value, (list, tuple)):
-                    column = getattr(model_class, key)
-                    query = query.filter(column.in_(value))
-                else:
-                    query = query.filter_by(**{key: value})
+        for column, value in filters.iteritems():
+            # If there are multiple values, use `in_`, otherwise, use `eq`
+            if isinstance(value, (list, tuple)):
+                query = query.filter(column.in_(value))
+            else:
+                query = query.filter(column == value)
 
-        query = self._filter_by_tenant(query, model_class)
         return query
 
     @staticmethod
@@ -146,27 +114,29 @@ class SQLStorageManager(object):
         directly via a relationship with the tenants table, or via an
         ancestor who has such a relationship)
         """
-        # System administrators should see all resources, regardless of tenant
-        if current_user.is_sys_admin():
+        # System administrators should see all resources, regardless of tenant.
+        # Queries of elements that aren't resources (tenants, users, etc.),
+        # or resources that are independent of tenants (e.g. provider context)
+        # shouldn't be filtered as well
+        if current_user.is_sys_admin() or \
+                not model_class.is_resource or \
+                ('tenant_id' not in model_class.join_properties and
+                 not hasattr(model_class, 'tenant_id')):
             return query
 
-        # Filter by the tenant ID associated with that model class (either
-        # directly via a relationship with the tenants table, or via an
-        # ancestor who has such a relationship)
-        tenant_id = _get_current_tenant_id()
-        if hasattr(model_class, 'tenant_id'):
-            # model have field named tenant_id (Blueprint, ..)
-            current_app.logger.debug('filter {0} by tenant_id field'
-                                     .format(model_class))
-            query = query.filter_by(tenant_id=tenant_id)
-        elif hasattr(model_class, 'tenant'):
-            # model can be Deployment, or it can have relation to
-            # Deployment, so we can do join / filter query by it
-            current_app.logger.debug('filter {0} by tenant_id relation'
-                                     .format(model_class))
-            query = query.filter(
-                Deployment.blueprint.has(tenant_id=tenant_id)
-            )
+        # Other users should only see resources for which they were granted
+        # privileges via association with a tenant
+        tenant_ids = [tenant.id for tenant in current_user.get_all_tenants()]
+        current_app.logger.debug('Filtering tenants for {0}'
+                                 ''.format(model_class))
+
+        if 'tenant_id' in model_class.join_properties:
+            tenant_column = model_class.join_properties['tenant_id']['column']
+        else:
+            tenant_column = model_class.tenant_id
+
+        # Filter by the `tenant_id` column
+        query = query.filter(tenant_column.in_(tenant_ids))
         return query
 
     def _get_query(self,
@@ -186,31 +156,96 @@ class SQLStorageManager(object):
         :return: A sorted and filtered query with only the relevant
         columns
         """
-        query = self._get_base_query(model_class, include)
-        query = self._filter_query(query, model_class, filters)
-        query = self._sort_query(query, model_class, sort)
+
+        include = include or []
+        filters = filters or dict()
+        sort = sort or OrderedDict()
+
+        joins = self._get_join_models_list(model_class, include, filters, sort)
+        include, filters, sort = self._get_columns_from_field_names(
+            model_class, include, filters, sort
+        )
+
+        query = self._get_base_query(model_class, include, joins)
+        query = self._filter_by_tenant(query, model_class)
+        query = self._filter_query(query, filters)
+        query = self._sort_query(query, sort)
         return query
 
-    def _get_by_id(self,
-                   model_class,
-                   element_id,
-                   include=None,
-                   filters=None,
-                   locking=False):
-        """Return a single result based on the model class and element ID
+    def _get_columns_from_field_names(self,
+                                      model_class,
+                                      include,
+                                      filters,
+                                      sort):
+        """Go over the optional parameters (include, filters, sort), and
+        replace column names with actual SQLA column objects
         """
-        filters = filters or {'id': element_id}
-        query = self._get_query(model_class, include, filters)
-        if locking:
-            query = query.with_for_update()
-        result = query.first()
+        all_includes = [self._get_column(model_class, c) for c in include]
+        include = []
+        # Columns that are inferred from properties (Labels) should be included
+        # last for the following joins to work properly
+        for col in all_includes:
+            if isinstance(col, Label):
+                include.append(col)
+            else:
+                include.insert(0, col)
 
-        if not result:
-            raise manager_exceptions.NotFoundError(
-                'Requested {0} with ID `{1}` was not found'
-                .format(model_class.__name__, element_id)
+        filters = {self._get_column(model_class, c): filters[c]
+                   for c in filters}
+        sort = OrderedDict((self._get_column(model_class, c), sort[c])
+                           for c in sort)
+
+        return include, filters, sort
+
+    def _get_join_models_list(self, model_class, include, filters, sort):
+        """Return a list of models on which the query should be joined, as
+        inferred from the include, filter and sort column names
+        """
+        if not model_class.is_resource:
+            return []
+
+        all_column_names = include + filters.keys() + sort.keys()
+        join_columns = {column_name for column_name in all_column_names
+                        if self._is_join_column(model_class, column_name)}
+
+        # If the only columns included are the columns on which we would
+        # normally join, there isn't actually a need to join, as the FROM
+        # clause in the query will be generated from the relevant models anyway
+        if include == list(join_columns):
+            return []
+
+        # Initializing a set, because the same model can appear in several
+        # join lists
+        join_models = set()
+        for column_name in join_columns:
+            join_models.update(
+                model_class.join_properties[column_name]['models']
             )
-        return result
+        # Sort the models by their correct join order
+        join_models = sorted(join_models,
+                             key=lambda model: model.join_order, reverse=True)
+
+        return join_models
+
+    @staticmethod
+    def _is_join_column(model_class, column_name):
+        """Return False if the column name corresponds to a regular SQLA
+        column that `model_class` has.
+        Return True if the column that should be used is a join column (see
+        SQLModelBase for an explanation)
+        """
+        return model_class.is_resource and \
+            column_name in model_class.join_properties
+
+    def _get_column(self, model_class, column_name):
+        """Return the column on which an action (filtering, sorting, etc.)
+        would need to be performed. Can be either an attribute of the class,
+        or needs to be inferred from the class' `join_properties` property
+        """
+        if self._is_join_column(model_class, column_name):
+            return model_class.join_properties[column_name]['column']
+        else:
+            return getattr(model_class, column_name)
 
     @staticmethod
     def _paginate(query, pagination):
@@ -234,12 +269,72 @@ class SQLStorageManager(object):
             results = query.all()
             return results, len(results), 0, 0
 
-    def _list_results(self,
-                      model_class,
-                      include=None,
-                      filters=None,
-                      pagination=None,
-                      sort=None):
+    def _validate_unique_resource_id_per_tenant(self, model_class, instance):
+        """Assert that only a single resource exists with a given id in a
+        given tenant
+        """
+        # Only relevant for resources that have unique IDs and are connected
+        # to a tenant
+        if not model_class.is_resource or \
+                not hasattr(model_class, 'tenant') or \
+                not model_class.is_id_unique:
+            return
+
+        tenant_id = _get_current_tenant_id()
+        filters = {'id': instance.id, 'tenant_id': tenant_id}
+
+        # There should be only one instance with this id on this tenant
+        if len(self.list(model_class, filters=filters)) != 1:
+            # Delete the newly added instance, and raise an error
+            db.session.delete(instance)
+            self._safe_commit()
+
+            raise manager_exceptions.ConflictError(
+                '{0} with ID `{1}` already exists on tenant `{2}`'.format(
+                    instance.__class__.__name__,
+                    instance.id,
+                    tenant_id
+                )
+            )
+
+    @staticmethod
+    def _load_properties(instance):
+        """A helper method used to overcome a problem where the properties
+        that rely on joins aren't being loaded automatically
+        """
+        if instance.is_resource:
+            for prop in instance.join_properties:
+                if prop == 'tenant_id':
+                    continue
+                getattr(instance, prop)
+
+    def get(self,
+            model_class,
+            element_id,
+            include=None,
+            filters=None,
+            locking=False):
+        """Return a single result based on the model class and element ID
+        """
+        filters = filters or {'id': element_id}
+        query = self._get_query(model_class, include, filters)
+        if locking:
+            query = query.with_for_update()
+        result = query.first()
+
+        if not result:
+            raise manager_exceptions.NotFoundError(
+                'Requested {0} with ID `{1}` was not found'
+                .format(model_class.__name__, element_id)
+            )
+        return result
+
+    def list(self,
+             model_class,
+             include=None,
+             filters=None,
+             pagination=None,
+             sort=None):
         """Return a (possibly empty) list of `model_class` results
         """
         query = self._get_query(model_class, include, filters, sort)
@@ -249,47 +344,27 @@ class SQLStorageManager(object):
 
         return ListResult(items=results, metadata={'pagination': pagination})
 
-    @staticmethod
-    def _get_instance(model_class, model):
-        """Return an instance of `model_class` from a model dict/object
-        `model` can be of type `model_class`, be a dict, or implement `to_dict`
-
-        :param model_class: SQL DB table class
-        :param model: An instance of a class that has a `to_dict` method, and
-        whose attributes match the columns of `model_class`
-        :return: An instance of `model_class`
-        """
-        if isinstance(model, model_class):
-            return model
-        elif isinstance(model, dict):
-            return model_class(**model)
-        else:
-            raise RuntimeError(
-                'Attempt to create a {0} instance '
-                'from an object of type {1}'.format(
-                    model_class.__name__,
-                    type(model)
-                )
-            )
-
-    def _create_model(self, model_class, model, add_tenant=False):
+    def put(self, model_class, instance):
         """Create a `model_class` instance from a serializable `model` object
 
         :param model_class: SQL DB table class
-        :param model: An instance of a class that has a `to_dict` method, and
-        whose attributes match the columns of `model_class`
+        :param instance: A dict with relevant kwargs, or an instance of a class
+        that has a `to_dict` method, and whose attributes match the columns
+        of `model_class` (might also my just an instance of `model_class`)
         :return: An instance of `model_class`
         """
-        instance = self._get_instance(model_class, model)
-        if add_tenant:
+        if hasattr(instance, 'tenant_id'):
             instance.tenant_id = _get_current_tenant_id()
-        return self._safe_add(instance)
+        self.update(instance)
 
-    def _delete_instance_by_id(self, model_class, element_id, filters=None):
+        self._validate_unique_resource_id_per_tenant(model_class, instance)
+        return instance
+
+    def delete(self, model_class, element_id, filters=None):
         """Delete a single result based on the model class and element ID
         """
         try:
-            instance = self._get_by_id(
+            instance = self.get(
                 model_class,
                 element_id,
                 filters=filters
@@ -302,281 +377,30 @@ class SQLStorageManager(object):
                     element_id
                 )
             )
+        self._load_properties(instance)
         db.session.delete(instance)
         self._safe_commit()
         return instance
 
-    def list_blueprints(self, include=None, filters=None, pagination=None,
-                        sort=None):
-        return self._list_results(
-            Blueprint,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
+    def update(self, instance):
+        """Add `instance` to the DB session, and attempt to commit
 
-    def list_snapshots(self, include=None, filters=None, pagination=None,
-                       sort=None):
-        return self._list_results(
-            Snapshot,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
+        :param instance: Instance to be updated in the DB
+        :return: The updated instance
+        """
+        db.session.add(instance)
+        self._safe_commit()
+        return instance
 
-    def list_deployments(self, include=None, filters=None, pagination=None,
-                         sort=None):
-        return self._list_results(
-            Deployment,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
+    def refresh(self, instance):
+        """Reload the instance with fresh information from the DB
 
-    def list_deployment_updates(self, include=None, filters=None,
-                                pagination=None, sort=None):
-        return self._list_results(
-            DeploymentUpdate,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
-
-    def list_executions(self, include=None, filters=None, pagination=None,
-                        sort=None):
-        return self._list_results(
-            Execution,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
-
-    def list_node_instances(self, include=None, filters=None, pagination=None,
-                            sort=None):
-        return self._list_results(
-            NodeInstance,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
-
-    def list_plugins(self, include=None, filters=None, pagination=None,
-                     sort=None):
-        return self._list_results(
-            Plugin,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
-
-    def list_nodes(self, include=None, filters=None, pagination=None,
-                   sort=None):
-        return self._list_results(
-            Node,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
-
-    def list_deployment_modifications(self, include=None, filters=None,
-                                      pagination=None, sort=None):
-        return self._list_results(
-            DeploymentModification,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
-
-    def list_tenants(self, include=None, filters=None, pagination=None,
-                     sort=None):
-        return self._list_results(
-            Tenant,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
-
-    def list_groups(self, include=None, filters=None, pagination=None,
-                    sort=None):
-        return self._list_results(
-            Group,
-            include=include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort
-        )
-
-    def get_node_instance(self, node_instance_id, include=None, locking=False):
-        return self._get_by_id(
-            NodeInstance,
-            node_instance_id,
-            include,
-            locking=locking
-        )
-
-    def get_provider_context(self, include=None):
-        return self._get_by_id(ProviderContext, PROVIDER_CONTEXT_ID, include)
-
-    def get_tenant(self, tenant_id, include=None):
-        return self._get_by_id(Tenant, tenant_id, include=include)
-
-    def get_group(self, group_id, include=None):
-        return self._get_by_id(Group, group_id, include=include)
-
-    def get_tenant_by_name(self, tenant_name):
-        return self._get_by_id(Tenant, None, filters={'name': tenant_name})
-
-    def get_group_by_name(self, group_name):
-        return self._get_by_id(Group, None, filters={'name': group_name})
-
-    def get_deployment_modification(self, modification_id, include=None):
-        return self._get_by_id(
-            DeploymentModification,
-            modification_id,
-            include
-        )
-
-    def get_node(self, deployment_id, node_id, include=None):
-        storage_node_id = self._storage_node_id(deployment_id, node_id)
-        filters = {'storage_id': storage_node_id}
-        return self._get_by_id(Node, storage_node_id, include, filters=filters)
-
-    def get_blueprint(self, blueprint_id, include=None):
-        return self._get_by_id(Blueprint, blueprint_id, include)
-
-    def get_snapshot(self, snapshot_id, include=None):
-        return self._get_by_id(Snapshot, snapshot_id, include)
-
-    def get_deployment(self, deployment_id, include=None):
-        return self._get_by_id(Deployment, deployment_id, include)
-
-    def get_execution(self, execution_id, include=None):
-        return self._get_by_id(Execution, execution_id, include)
-
-    def get_plugin(self, plugin_id, include=None):
-        return self._get_by_id(Plugin, plugin_id, include)
-
-    def get_deployment_update(self, deployment_update_id, include=None):
-        return self._get_by_id(DeploymentUpdate, deployment_update_id, include)
-
-    def put_blueprint(self, blueprint):
-        return self._create_model(Blueprint, blueprint, add_tenant=True)
-
-    def put_snapshot(self, snapshot):
-        return self._create_model(Snapshot, snapshot, add_tenant=True)
-
-    def put_deployment(self, deployment):
-        return self._create_model(Deployment, deployment)
-
-    def put_execution(self, execution):
-        return self._create_model(Execution, execution, add_tenant=True)
-
-    def put_plugin(self, plugin):
-        return self._create_model(Plugin, plugin, add_tenant=True)
-
-    def put_tenant(self, tenant):
-        return self._create_model(Tenant, tenant)
-
-    def put_group(self, group):
-        return self._create_model(Group, group)
-
-    def put_node(self, node):
-        # Need to add the storage id separately - only used for relations
-        node = self._get_instance(Node, node)
-        node.storage_id = self._storage_node_id(
-            node.deployment_id,
-            node.id
-        )
-        return self._create_model(Node, node)
-
-    def put_node_instance(self, node_instance):
-        # Need to add the storage id separately - only used for relations
-        node_instance = self._get_instance(NodeInstance, node_instance)
-        node_instance.node_storage_id = self._storage_node_id(
-            node_instance.deployment_id,
-            node_instance.node_id
-        )
-        return self._create_model(NodeInstance, node_instance)
-
-    def put_deployment_update(self, deployment_update):
-        deployment_update.id = deployment_update.id or '{0}-{1}'.format(
-            deployment_update.deployment_id,
-            uuid.uuid4()
-        )
-        return self._create_model(DeploymentUpdate, deployment_update)
-
-    def put_deployment_update_step(self, step):
-        return self._safe_add(step)
-
-    def put_provider_context(self, provider_context):
-        # The ID is always the same, and only the name changes
-        instance = self._get_instance(ProviderContext, provider_context)
-        instance.id = PROVIDER_CONTEXT_ID
-        return self._safe_add(instance)
-
-    def put_deployment_modification(self, modification):
-        return self._create_model(DeploymentModification, modification)
-
-    def delete_blueprint(self, blueprint_id):
-        return self._delete_instance_by_id(Blueprint, blueprint_id)
-
-    def delete_plugin(self, plugin_id):
-        return self._delete_instance_by_id(Plugin, plugin_id)
-
-    def delete_snapshot(self, snapshot_id):
-        return self._delete_instance_by_id(Snapshot, snapshot_id)
-
-    def delete_deployment(self, deployment_id):
-        # Previously deleted all relations manually - now will be handled
-        # by SQL with cascade
-        return self._delete_instance_by_id(Deployment, deployment_id)
-
-    def delete_node(self, deployment_id, node_id):
-        storage_node_id = self._storage_node_id(deployment_id, node_id)
-        return self._delete_instance_by_id(
-            Node,
-            node_id,
-            filters={'storage_id': storage_node_id}
-        )
-
-    def delete_node_instance(self, node_instance_id):
-        return self._delete_instance_by_id(NodeInstance, node_instance_id)
-
-    def delete_deployment_update_step(self, step_id):
-        return self._delete_instance_by_id(DeploymentUpdateStep, step_id)
-
-    def update_entity(self, entity):
-        return self._safe_add(entity)
-
-    def update_execution_status(self, execution_id, status, error):
-        execution = self.get_execution(execution_id)
-        execution.status = status
-        execution.error = error
-        return self._safe_add(execution)
-
-    def update_provider_context(self, provider_context):
-        provider_context_instance = self.get_provider_context()
-        provider_context_instance.name = provider_context.name
-        provider_context_instance.context = provider_context.context
-        return self._safe_add(provider_context_instance)
-
-    def update_node_instance(self, node_instance):
-        node_instance.version += 1
-        return self._safe_add(node_instance)
-
-    @staticmethod
-    def _storage_node_id(deployment_id, node_id):
-        return '{0}_{1}'.format(deployment_id, node_id)
+        :param instance: Instance to be re-loaded from the DB
+        :return: The refreshed instance
+        """
+        db.session.refresh(instance)
+        self._load_properties(instance)
+        return instance
 
 
 def get_storage_manager():

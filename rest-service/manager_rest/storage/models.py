@@ -13,151 +13,44 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import jsonpickle
-from flask_sqlalchemy import SQLAlchemy
-from dateutil import parser as date_parser
+from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
-from manager_rest.utils import classproperty
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
+from manager_rest.constants import (ADMINISTRATOR_ROLES,
+                                    SYSTEM_ADMIN_ROLE,
+                                    TENANT_ADMIN_ROLE,
+                                    DEFAULT_ROLE,
+                                    VIEWER_ROLE,
+                                    SUSPENDED_ROLE)
+
+from .models_base import (db,
+                          SQLModelBase,
+                          SQLResource,
+                          UTCDateTime)
+from .relationships import (one_to_many_relationship,
+                            many_to_many_relationship,
+                            foreign_key,
+                            tenants_groups_table,
+                            roles_users_table,
+                            groups_users_table,
+                            tenants_users_table)
+from .models_states import (DeploymentModificationState,
+                            SnapshotState,
+                            ExecutionState)
 
 
-db = SQLAlchemy()
-
-
-class UTCDateTime(db.TypeDecorator):
-
-    impl = db.DateTime
-
-    def process_result_value(self, value, engine):
-        # Adhering to the same norms used in the rest of the code
-        if value is not None:
-            # When the date has a microsecond value equal to 0,
-            # isoformat returns the time as 17:22:11 instead of
-            # 17:22:11.000, so we need to adjust the returned value
-            if value.microsecond:
-                return '{0}Z'.format(value.isoformat()[:-3])
-            else:
-                return '{0}.000Z'.format(value.isoformat())
-
-    def process_bind_param(self, value, dialect):
-        if isinstance(value, basestring):
-            # SQLite only accepts datetime objects
-            return date_parser.parse(value)
-        else:
-            return value
-
-
-def foreign_key_column(
-        parent_table,
-        id_col_name='id',
-        nullable=False,
-        column_type=db.Text
-):
-    """Return a ForeignKey object with the relevant
-
-    :param parent_table: SQL name of the parent table
-    :param id_col_name: Name of the parent table's ID column [default: `id`]
-    :param nullable: Should the column be allowed to remain empty
-    :return:
-    """
-    return db.Column(
-        column_type,
-        db.ForeignKey(
-            '{0}.{1}'.format(parent_table.__tablename__, id_col_name),
-            ondelete='CASCADE'
-        ),
-        nullable=nullable
-    )
-
-
-def one_to_many_relationship(
-        child_class_name,
-        column_name,
-        parent_class_name,
-        child_table_name,
-        parent_id_name='id'
-):
-    """Return an SQL relationship object
-    Meant to be used from the inside the *child* object
-
-    :param child_class_name: Class name of the child table
-    :param column_name: Name of the column pointing to the parent table
-    :param parent_class_name: Class name of the parent table
-    :param child_table_name: SQL name of the parent table
-    :param parent_id_name: Name of the parent table's ID column [default: `id`]
-    :return:
-    """
-    return db.relationship(
-        parent_class_name,
-        primaryjoin='{0}.{1} == {2}.{3}'.format(
-            child_class_name,
-            column_name,
-            parent_class_name,
-            parent_id_name
-        ),
-        backref=db.backref(
-            child_table_name,
-            # The following line make sure that when the *parent* is
-            # deleted, all its connected children are deleted as well
-            cascade='all'
-        )
-    )
-
-
-class SerializableBase(db.Model):
-    """Abstract base class for all SQL models that allows [de]serialization
-    """
-    # SQLAlchemy syntax
-    __abstract__ = True
-
-    # A list of columns that shouldn't be serialized
-    _private_fields = ['tenant_id']
-
-    def to_dict(self):
-        res = {c.name: getattr(self, c.name) for c in self.__table__.columns}
-        for field in self._private_fields:
-            if field in res:
-                del res[field]
-        return res
-
-    def to_json(self):
-        return jsonpickle.encode(self.to_dict(), unpicklable=False)
-
-    @classproperty
-    def fields(cls):
-        """Return the list of field names for this table
-
-        Mostly for backwards compatibility in the code (that uses `fields`)
-        """
-        fields = cls.__table__.columns.keys()
-        fields = [f for f in fields if f not in cls._private_fields]
-        return fields
-
-    def __str__(self):
-        return '<{0} id=`{1}`>'.format(self.__class__.__name__, self.id)
-
-    def __repr__(self):
-        return str(self)
-
-    def __unicode__(self):
-        return str(self)
-
-
-tenants_groups_table = db.Table(
-    'tenants_groups',
-    db.Column('group_id', db.Integer, db.ForeignKey('groups.id')),
-    db.Column('tenant_id', db.Integer, db.ForeignKey('tenants.id'))
-)
-
-
-class Tenant(SerializableBase):
+#  region Users, Groups, Tenants
+class Tenant(SQLModelBase):
     __tablename__ = 'tenants'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, index=True)
 
-    def to_dict(self):
-        tenant_dict = super(Tenant, self).to_dict()
+    def _get_unique_id(self):
+        return 'name', self.name
+
+    def to_dict(self, suppress_error=False):
+        tenant_dict = super(Tenant, self).to_dict(suppress_error)
         all_groups_names = [group.name for group in self.groups.all()]
         all_users_names = [user.username for user in self.users.all()]
         tenant_dict['groups'] = all_groups_names
@@ -165,320 +58,559 @@ class Tenant(SerializableBase):
         return tenant_dict
 
 
-class Group(SerializableBase):
+class Group(SQLModelBase):
     __tablename__ = 'groups'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
 
-    tenants = db.relationship(
-        'Tenant',
-        secondary=tenants_groups_table,
-        backref=db.backref('groups', lazy='dynamic')
+    def _get_unique_id(self):
+        return 'name', self.name
+
+    tenants = many_to_many_relationship(
+        other_table_class_name='Tenant',
+        connecting_table=tenants_groups_table,
+        back_reference_name='groups'
     )
 
-    def to_dict(self):
-        group_dict = super(Group, self).to_dict()
+    def to_dict(self, suppress_error=False):
+        group_dict = super(Group, self).to_dict(suppress_error)
         group_dict['tenants'] = [tenant.name for tenant in self.tenants]
         group_dict['users'] = [user.username for user in self.users]
         return group_dict
 
 
-class Blueprint(SerializableBase):
+class User(SQLModelBase, UserMixin):
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    username = db.Column(db.String(255), index=True, unique=True)
+
+    active = db.Column(db.Boolean)
+    created_at = db.Column(UTCDateTime)
+    email = db.Column(db.String(255), index=True)
+    first_name = db.Column(db.String(255))
+    last_login_at = db.Column(UTCDateTime, index=True)
+    last_name = db.Column(db.String(255))
+    password = db.Column(db.String(255))
+
+    def _get_unique_id(self):
+        return 'username', self.username
+
+    roles = many_to_many_relationship(
+        other_table_class_name='Role',
+        connecting_table=roles_users_table,
+        back_reference_name='users'
+    )
+
+    groups = many_to_many_relationship(
+        other_table_class_name='Group',
+        connecting_table=groups_users_table,
+        back_reference_name='users'
+    )
+
+    tenants = many_to_many_relationship(
+        other_table_class_name='Tenant',
+        connecting_table=tenants_users_table,
+        back_reference_name='users'
+    )
+
+    def get_all_tenants(self):
+        """Return all tenants associated with a user - either directly, or
+        via a group the user is in
+
+        Note: recursive membership in groups is currently not supported
+        """
+        tenant_list = self.tenants
+        for group in self.groups:
+            for tenant in group.tenants:
+                tenant_list.append(tenant)
+
+        return list(set(tenant_list))
+
+    def to_dict(self, suppress_error=False):
+        user_dict = super(User, self).to_dict(suppress_error)
+        all_tenants = [tenant.name for tenant in self.get_all_tenants()]
+        user_dict['tenants'] = all_tenants
+        user_dict['groups'] = [group.name for group in self.groups]
+        user_dict['role'] = self.role
+        return user_dict
+
+    @property
+    def role(self):
+        return self.roles[0].name
+
+    def is_sys_admin(self):
+        return self.role == SYSTEM_ADMIN_ROLE
+
+    def is_tenant_admin(self):
+        return self.role == TENANT_ADMIN_ROLE
+
+    def is_default_user(self):
+        return self.role == DEFAULT_ROLE
+
+    def is_viewer(self):
+        return self.role == VIEWER_ROLE
+
+    def is_admin(self):
+        return self.role in ADMINISTRATOR_ROLES
+
+    def is_suspended(self):
+        return self.role == SUSPENDED_ROLE
+
+
+class Role(SQLModelBase, RoleMixin):
+    __tablename__ = 'roles'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.Text, unique=True, nullable=False, index=True)
+
+    description = db.Column(db.Text)
+
+    def _get_unique_id(self):
+        return 'name', self.name
+
+#  endregion
+
+
+#  region Resources
+class Blueprint(SQLResource):
     __tablename__ = 'blueprints'
 
-    id = db.Column(db.Text, primary_key=True, index=True)
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
-    updated_at = db.Column(UTCDateTime, nullable=True, index=True)
-    description = db.Column(db.Text, nullable=True)
     main_file_name = db.Column(db.Text, nullable=False)
     plan = db.Column(db.PickleType, nullable=False)
-    tenant_id = foreign_key_column(Tenant, column_type=db.Integer)
+    updated_at = db.Column(UTCDateTime)
+    description = db.Column(db.Text)
 
+    tenant_id = foreign_key(Tenant, id_col_name='id')
     tenant = one_to_many_relationship(
         child_class_name='Blueprint',
         column_name='tenant_id',
         parent_class_name='Tenant',
-        child_table_name='blueprints'
+        back_reference_name='blueprints',
+        parent_id_name='id'
     )
 
 
-class Snapshot(SerializableBase):
+class Snapshot(SQLResource):
     __tablename__ = 'snapshots'
 
-    CREATED = 'created'
-    FAILED = 'failed'
-    CREATING = 'creating'
-    UPLOADED = 'uploaded'
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
 
-    STATES = [CREATED, FAILED, CREATING, UPLOADED]
-    END_STATES = [CREATED, FAILED, UPLOADED]
-
-    id = db.Column(db.Text, primary_key=True, index=True)
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
-    status = db.Column(db.Enum(*STATES, name='snapshot_status'))
-    error = db.Column(db.Text, nullable=True)
-    tenant_id = foreign_key_column(Tenant, column_type=db.Integer)
+    status = db.Column(db.Enum(*SnapshotState.STATES, name='snapshot_status'))
+    error = db.Column(db.Text)
 
+    tenant_id = foreign_key(Tenant, id_col_name='id')
     tenant = one_to_many_relationship(
         child_class_name='Snapshot',
         column_name='tenant_id',
         parent_class_name='Tenant',
-        child_table_name='snapshots'
+        back_reference_name='snapshots',
+        parent_id_name='id'
     )
 
 
-class Deployment(SerializableBase):
+class Deployment(SQLResource):
     __tablename__ = 'deployments'
 
-    id = db.Column(db.Text, primary_key=True, index=True)
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
-    updated_at = db.Column(UTCDateTime, nullable=True, index=True)
-    blueprint_id = foreign_key_column(Blueprint, nullable=True)
-    workflows = db.Column(db.PickleType, nullable=True)
-    inputs = db.Column(db.PickleType, nullable=True)
-    policy_types = db.Column(db.PickleType, nullable=True)
-    policy_triggers = db.Column(db.PickleType, nullable=True)
-    groups = db.Column(db.PickleType, nullable=True)
-    scaling_groups = db.Column(db.PickleType, nullable=True)
-    description = db.Column(db.Text, nullable=True)
-    outputs = db.Column(db.PickleType, nullable=True)
-    permalink = db.Column(db.Text, nullable=True)
+    # See base class for an explanation on these properties
+    join_properties = {
+        'blueprint_id': {
+            # No need to provide the Blueprint table, as it's already joined
+            'models': [Blueprint],
+            'column': Blueprint.id.label('blueprint_id')
+        },
+        'tenant_id': {
+            'models': [Blueprint],
+            'column': Tenant.id.label('tenant_id')
+        }
+    }
+    join_order = 2
 
+    _private_fields = SQLResource._private_fields + ['blueprint_storage_id']
+
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
+    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+    description = db.Column(db.Text)
+    inputs = db.Column(db.PickleType)
+    groups = db.Column(db.PickleType)
+    permalink = db.Column(db.Text)
+    policy_triggers = db.Column(db.PickleType)
+    policy_types = db.Column(db.PickleType)
+    outputs = db.Column(db.PickleType(comparator=lambda *a: False))
+    scaling_groups = db.Column(db.PickleType)
+    updated_at = db.Column(UTCDateTime)
+    workflows = db.Column(db.PickleType(comparator=lambda *a: False))
+
+    blueprint_storage_id = foreign_key(Blueprint)
     blueprint = one_to_many_relationship(
         child_class_name='Deployment',
-        column_name='blueprint_id',
+        column_name='blueprint_storage_id',
         parent_class_name='Blueprint',
-        child_table_name='deployments'
+        back_reference_name='deployments'
     )
 
     @property
     def tenant(self):
         return self.blueprint.tenant
 
+    @property
+    def blueprint_id(self):
+        return self.blueprint.id
 
-class Execution(SerializableBase):
+
+class Execution(SQLResource):
     __tablename__ = 'executions'
 
-    TERMINATED = 'terminated'
-    FAILED = 'failed'
-    CANCELLED = 'cancelled'
-    PENDING = 'pending'
-    STARTED = 'started'
-    CANCELLING = 'cancelling'
-    FORCE_CANCELLING = 'force_cancelling'
+    # See base class for an explanation on these properties
+    join_properties = {
+        'blueprint_id': {
+            'models': [Deployment, Blueprint],
+            'column': Blueprint.id.label('blueprint_id')
+        },
+        'deployment_id': {
+            'models': [Deployment],
+            'column': Deployment.id.label('deployment_id')
+        }
+    }
+    join_order = 3
 
-    STATES = [TERMINATED, FAILED, CANCELLED, PENDING, STARTED,
-              CANCELLING, FORCE_CANCELLING]
-    END_STATES = [TERMINATED, FAILED, CANCELLED]
-    ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
+    _private_fields = SQLResource._private_fields + ['deployment_storage_id']
 
-    id = db.Column(db.Text, primary_key=True, index=True)
-    status = db.Column(db.Enum(*STATES, name='execution_status'))
-    deployment_id = foreign_key_column(Deployment, nullable=True)
-    workflow_id = db.Column(db.Text, nullable=False)
-    blueprint_id = foreign_key_column(Blueprint, nullable=True)
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
-    error = db.Column(db.Text, nullable=True)
-    parameters = db.Column(db.PickleType, nullable=True)
+    error = db.Column(db.Text)
     is_system_workflow = db.Column(db.Boolean, nullable=False)
-    tenant_id = foreign_key_column(Tenant, column_type=db.Integer)
-
-    blueprint = one_to_many_relationship(
-        child_class_name='Execution',
-        column_name='blueprint_id',
-        parent_class_name='Blueprint',
-        child_table_name='executions'
+    parameters = db.Column(db.PickleType)
+    status = db.Column(
+        db.Enum(*ExecutionState.STATES, name='execution_status')
     )
+    workflow_id = db.Column(db.Text, nullable=False)
 
+    deployment_storage_id = foreign_key(Deployment, nullable=True)
     deployment = one_to_many_relationship(
         child_class_name='Execution',
-        column_name='deployment_id',
+        column_name='deployment_storage_id',
         parent_class_name='Deployment',
-        child_table_name='executions'
+        back_reference_name='executions'
     )
 
-    # Execution of system workflow doesn't have deployment
-    # hence need explicit tenant field
+    # Executions of system workflow don't have a deployment attached,
+    # hence the need for an explicit tenant field
+    tenant_id = foreign_key(Tenant, id_col_name='id')
     tenant = one_to_many_relationship(
         child_class_name='Execution',
         column_name='tenant_id',
         parent_class_name='Tenant',
-        child_table_name='executions'
+        back_reference_name='executions',
+        parent_id_name='id'
     )
 
+    @property
+    def deployment_id(self):
+        return self.deployment.id if self.deployment else None
 
-class DeploymentUpdate(SerializableBase):
+    @property
+    def blueprint_id(self):
+        return self.deployment.blueprint_id if self.deployment else None
+
+    def __str__(self):
+        id_name, id_value = self._get_unique_id()
+        return '<{0} {1}=`{2}` (status={3})>'.format(
+            self.__class__.__name__,
+            id_name,
+            id_value,
+            self.status
+        )
+
+
+class DeploymentUpdate(SQLResource):
     __tablename__ = 'deployment_updates'
 
-    id = db.Column(db.Text, primary_key=True, index=True)
-    deployment_id = foreign_key_column(Deployment)
-    deployment_plan = db.Column(db.PickleType, nullable=True)
-    state = db.Column(db.Text, nullable=True)
-    deployment_update_nodes = db.Column(db.PickleType, nullable=True)
-    deployment_update_node_instances = db.Column(db.PickleType, nullable=True)
-    deployment_update_deployment = db.Column(db.PickleType, nullable=True)
-    modified_entity_ids = db.Column(db.PickleType, nullable=True)
-    execution_id = foreign_key_column(Execution, nullable=True)
-    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+    # See base class for an explanation on these properties
+    join_properties = {
+        'execution_id': {
+            'models': [Execution],
+            'column': Execution.id.label('execution_id')
+        },
+        'deployment_id': {
+            'models': [Deployment],
+            'column': Deployment.id.label('deployment_id')
+        },
+        'tenant_id': {
+            'models': [Deployment, Blueprint],
+            'column': Tenant.id.label('tenant_id')
+        }
+    }
+    join_order = 4
 
-    deployment = one_to_many_relationship(
-        child_class_name='DeploymentUpdate',
-        column_name='deployment_id',
-        parent_class_name='Deployment',
-        child_table_name='deployment_updates'
-    )
+    _private_fields = SQLResource._private_fields + ['execution_storage_id']
+
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
+    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+    deployment_plan = db.Column(db.PickleType)
+    deployment_update_node_instances = db.Column(db.PickleType)
+    deployment_update_deployment = db.Column(db.PickleType)
+    deployment_update_nodes = db.Column(db.PickleType)
+    modified_entity_ids = db.Column(db.PickleType)
+    state = db.Column(db.Text)
+
+    execution_storage_id = foreign_key(Execution, nullable=True)
     execution = one_to_many_relationship(
         child_class_name='DeploymentUpdate',
-        column_name='execution_id',
+        column_name='execution_storage_id',
         parent_class_name='Execution',
-        child_table_name='deployment_updates'
+        back_reference_name='deployment_updates'
     )
 
-    def to_dict(self):
-        dep_update_dict = super(DeploymentUpdate, self).to_dict()
-        # Taking care of the fact the DeploymentSteps are objects
-        dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
-        return dep_update_dict
+    deployment_storage_id = foreign_key(Deployment)
+    deployment = one_to_many_relationship(
+        child_class_name='DeploymentUpdate',
+        column_name='deployment_storage_id',
+        parent_class_name='Deployment',
+        back_reference_name='deployment_updates'
+    )
 
     @property
     def tenant(self):
         return self.deployment.tenant
 
+    @property
+    def execution_id(self):
+        return self.execution.id if self.execution else None
 
-class DeploymentUpdateStep(SerializableBase):
+    @property
+    def deployment_id(self):
+        return self.deployment.id
+
+    def to_dict(self, suppress_error=False):
+        dep_update_dict = super(DeploymentUpdate, self).to_dict(suppress_error)
+        # Taking care of the fact the DeploymentSteps are objects
+        dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
+        return dep_update_dict
+
+
+class DeploymentUpdateStep(SQLResource):
     __tablename__ = 'deployment_update_steps'
 
-    id = db.Column(db.Integer, primary_key=True)
-    action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
-    entity_type = db.Column(db.Enum(*ENTITY_TYPES, name='entity_type'))
-    entity_id = db.Column(db.Text, nullable=False)
-    deployment_update_id = foreign_key_column(DeploymentUpdate)
+    # See base class for an explanation on these properties
+    join_properties = {
+        'deployment_update_id': {
+            'models': [DeploymentUpdate],
+            'column': DeploymentUpdate.id.label('deployment_update_id')
+        },
+        'tenant_id': {
+            'models': [DeploymentUpdate, Deployment, Blueprint],
+            'column': Tenant.id.label('tenant_id')
+        }
+    }
+    join_order = 5
 
+    _private_fields = \
+        SQLResource._private_fields + ['deployment_update_storage_id']
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
+    entity_id = db.Column(db.Text, nullable=False)
+    entity_type = db.Column(db.Enum(*ENTITY_TYPES, name='entity_type'))
+
+    deployment_update_storage_id = foreign_key(DeploymentUpdate)
     deployment_update = one_to_many_relationship(
         child_class_name='DeploymentUpdateStep',
-        column_name='deployment_update_id',
+        column_name='deployment_update_storage_id',
         parent_class_name='DeploymentUpdate',
-        child_table_name='steps'
+        back_reference_name='steps'
     )
 
     @property
     def tenant(self):
         return self.deployment_update.tenant
 
+    @property
+    def deployment_update_id(self):
+        return self.deployment_update.id
 
-class DeploymentModification(SerializableBase):
+
+class DeploymentModification(SQLResource):
     __tablename__ = 'deployment_modifications'
 
-    STARTED = 'started'
-    FINISHED = 'finished'
-    ROLLEDBACK = 'rolledback'
+    # See base class for an explanation on these properties
+    join_properties = {
+        'deployment_id': {
+            'models': [Deployment],
+            'column': Deployment.id.label('deployment_id')
+        },
+        'tenant_id': {
+            'models': [Deployment, Blueprint],
+            'column': Tenant.id.label('tenant_id')
+        }
+    }
+    join_order = 3
 
-    STATES = [STARTED, FINISHED, ROLLEDBACK]
-    END_STATES = [FINISHED, ROLLEDBACK]
+    _private_fields = SQLResource._private_fields + ['deployment_storage_id']
 
-    id = db.Column(db.Text, primary_key=True, index=True)
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
+    context = db.Column(db.PickleType)
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
-    ended_at = db.Column(UTCDateTime, nullable=True, index=True)
-    status = db.Column(db.Enum(*STATES, name='deployment_modification_status'))
-    deployment_id = foreign_key_column(Deployment)
-    modified_nodes = db.Column(db.PickleType, nullable=True)
-    node_instances = db.Column(db.PickleType, nullable=True)
-    context = db.Column(db.PickleType, nullable=True)
+    ended_at = db.Column(UTCDateTime, index=True)
+    modified_nodes = db.Column(db.PickleType)
+    node_instances = db.Column(db.PickleType)
+    status = db.Column(db.Enum(
+        *DeploymentModificationState.STATES,
+        name='deployment_modification_status'
+    ))
 
+    deployment_storage_id = foreign_key(Deployment)
     deployment = one_to_many_relationship(
         child_class_name='DeploymentModification',
-        column_name='deployment_id',
+        column_name='deployment_storage_id',
         parent_class_name='Deployment',
-        child_table_name='deployment_modifications'
+        back_reference_name='modifications'
     )
 
     @property
     def tenant(self):
         return self.deployment.tenant
 
+    @property
+    def deployment_id(self):
+        return self.deployment.id
 
-class Node(SerializableBase):
+
+class Node(SQLResource):
     __tablename__ = 'nodes'
 
-    _private_fields = ['tenant_id', 'storage_id']
+    # See base class for an explanation on these properties
+    is_id_unique = False
+    join_properties = {
+        'blueprint_id': {
+            'models': [Deployment, Blueprint],
+            'column': Blueprint.id.label('blueprint_id')
+        },
+        'deployment_id': {
+            'models': [Deployment],
+            'column': Deployment.id.label('deployment_id')
+        },
+        'tenant_id': {
+            'models': [Deployment, Blueprint],
+            'column': Tenant.id.label('tenant_id')
+        }
+    }
+    join_order = 3
 
-    storage_id = db.Column(db.Text, primary_key=True, index=True)
-    id = db.Column(db.Text, nullable=False)
-    deployment_id = foreign_key_column(Deployment)
-    blueprint_id = foreign_key_column(Blueprint, nullable=True)
-    type = db.Column(db.Text, nullable=False, index=True)
-    type_hierarchy = db.Column(db.PickleType, nullable=True)
-    number_of_instances = db.Column(db.Integer, nullable=False)
-    planned_number_of_instances = db.Column(db.Integer, nullable=False)
+    _private_fields = SQLResource._private_fields + ['deployment_storage_id']
+
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
     deploy_number_of_instances = db.Column(db.Integer, nullable=False)
-    min_number_of_instances = db.Column(db.Integer, nullable=False)
-    max_number_of_instances = db.Column(db.Integer, nullable=False)
     # TODO: This probably should be a foreign key, but there's no guarantee
     # in the code, currently, that the host will be created beforehand
-    host_id = db.Column(db.Text, nullable=True)
-    properties = db.Column(db.PickleType, nullable=True)
-    operations = db.Column(db.PickleType, nullable=True)
-    plugins = db.Column(db.PickleType, nullable=True)
-    relationships = db.Column(db.PickleType, nullable=True)
-    plugins_to_install = db.Column(db.PickleType, nullable=True)
+    host_id = db.Column(db.Text)
+    max_number_of_instances = db.Column(db.Integer, nullable=False)
+    min_number_of_instances = db.Column(db.Integer, nullable=False)
+    number_of_instances = db.Column(db.Integer, nullable=False)
+    planned_number_of_instances = db.Column(db.Integer, nullable=False)
+    plugins = db.Column(db.PickleType)
+    plugins_to_install = db.Column(db.PickleType)
+    properties = db.Column(db.PickleType)
+    relationships = db.Column(db.PickleType)
+    operations = db.Column(db.PickleType)
+    type = db.Column(db.Text, nullable=False, index=True)
+    type_hierarchy = db.Column(db.PickleType)
 
-    blueprint = one_to_many_relationship(
-        child_class_name='Node',
-        column_name='blueprint_id',
-        parent_class_name='Blueprint',
-        child_table_name='nodes'
-    )
+    deployment_storage_id = foreign_key(Deployment)
     deployment = one_to_many_relationship(
         child_class_name='Node',
-        column_name='deployment_id',
+        column_name='deployment_storage_id',
         parent_class_name='Deployment',
-        child_table_name='nodes'
+        back_reference_name='nodes'
     )
 
     @property
     def tenant(self):
         return self.deployment.tenant
 
+    @property
+    def deployment_id(self):
+        return self.deployment.id
 
-class NodeInstance(SerializableBase):
+    @property
+    def blueprint_id(self):
+        return self.deployment.blueprint_id
+
+
+class NodeInstance(SQLResource):
     __tablename__ = 'node_instances'
 
-    _private_fields = ['tenant_id', 'node_storage_id']
+    # See base class for an explanation on these properties
+    join_properties = {
+        'node_id': {
+            'models': [Node],
+            'column': Node.id.label('node_id')
+        },
+        'deployment_id': {
+            'models': [Node, Deployment],
+            'column': Deployment.id.label('deployment_id')
+        },
+        'tenant_id': {
+            'models': [Node, Deployment, Blueprint],
+            'column': Tenant.id.label('tenant_id')
+        }
+    }
+    join_order = 4
 
-    id = db.Column(db.Text, primary_key=True, index=True)
-    node_storage_id = foreign_key_column(Node, 'storage_id')
-    node_id = db.Column(db.Text, nullable=False)
-    deployment_id = foreign_key_column(Deployment)
-    runtime_properties = db.Column(db.PickleType, nullable=True)
-    state = db.Column(db.Text, nullable=False)
-    version = db.Column(db.Integer, default=1)
-    relationships = db.Column(db.PickleType, nullable=True)
+    _private_fields = SQLResource._private_fields + ['node_storage_id']
+
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
     # TODO: This probably should be a foreign key, but there's no guarantee
     # in the code, currently, that the host will be created beforehand
-    host_id = db.Column(db.Text, nullable=True)
-    scaling_groups = db.Column(db.PickleType, nullable=True)
+    host_id = db.Column(db.Text)
+    relationships = db.Column(db.PickleType)
+    runtime_properties = db.Column(db.PickleType)
+    scaling_groups = db.Column(db.PickleType)
+    state = db.Column(db.Text, nullable=False)
+    version = db.Column(db.Integer, default=1)
 
+    node_storage_id = foreign_key(Node)
     node = one_to_many_relationship(
         child_class_name='NodeInstance',
         column_name='node_storage_id',
         parent_class_name='Node',
-        child_table_name='node_instances',
-        parent_id_name='storage_id'
-    )
-    deployment = one_to_many_relationship(
-        child_class_name='NodeInstance',
-        column_name='deployment_id',
-        parent_class_name='Deployment',
-        child_table_name='node_instances'
+        back_reference_name='node_instances'
     )
 
     @property
     def tenant(self):
         return self.deployment.tenant
 
+    @property
+    def node_id(self):
+        return self.node.id
 
-class ProviderContext(SerializableBase):
+    @property
+    def deployment_id(self):
+        return self.node.deployment_id
+
+
+class ProviderContext(SQLResource):
     __tablename__ = 'provider_context'
 
     id = db.Column(db.Text, primary_key=True)
@@ -486,27 +618,34 @@ class ProviderContext(SerializableBase):
     context = db.Column(db.PickleType, nullable=False)
 
 
-class Plugin(SerializableBase):
+class Plugin(SQLResource):
     __tablename__ = 'plugins'
 
-    id = db.Column(db.Text, primary_key=True, index=True)
-    package_name = db.Column(db.Text, nullable=False, index=True)
-    archive_name = db.Column(db.Text, nullable=False, index=True)
-    package_source = db.Column(db.Text, nullable=True)
-    package_version = db.Column(db.Text, nullable=True)
-    supported_platform = db.Column(db.PickleType, nullable=True)
-    distribution = db.Column(db.Text, nullable=True)
-    distribution_version = db.Column(db.Text, nullable=True)
-    distribution_release = db.Column(db.Text, nullable=True)
-    wheels = db.Column(db.PickleType, nullable=False)
-    excluded_wheels = db.Column(db.PickleType, nullable=True)
-    supported_py_versions = db.Column(db.PickleType, nullable=True)
-    uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
-    tenant_id = foreign_key_column(Tenant, column_type=db.Integer)
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
 
+    archive_name = db.Column(db.Text, nullable=False, index=True)
+    distribution = db.Column(db.Text)
+    distribution_release = db.Column(db.Text)
+    distribution_version = db.Column(db.Text)
+    excluded_wheels = db.Column(db.PickleType)
+    package_name = db.Column(db.Text, nullable=False, index=True)
+    package_source = db.Column(db.Text)
+    package_version = db.Column(db.Text)
+    supported_platform = db.Column(db.PickleType)
+    supported_py_versions = db.Column(db.PickleType)
+    uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
+    wheels = db.Column(db.PickleType, nullable=False)
+
+    tenant_id = foreign_key(Tenant, id_col_name='id')
     tenant = one_to_many_relationship(
         child_class_name='Plugin',
         column_name='tenant_id',
         parent_class_name='Tenant',
-        child_table_name='plugins'
+        back_reference_name='plugins',
+        parent_id_name='id'
     )
+
+# endregion
+
+user_datastore = SQLAlchemyUserDatastore(db, User, Role)

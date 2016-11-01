@@ -16,8 +16,8 @@ from contextlib import contextmanager
 
 import networkx as nx
 
-import manager_rest.blueprints_manager
-from manager_rest.storage import get_storage_manager
+import manager_rest.resource_manager
+from manager_rest.storage import get_storage_manager, models
 
 
 RELEVANT_DEPLOYMENT_FIELDS = ['blueprint_id', 'id', 'inputs', 'nodes',
@@ -110,7 +110,7 @@ class DeploymentPlan(dict):
         super(DeploymentPlan, self).__init__()
 
         filtered_deployment = {k: v
-                               for k, v in deployment.to_dict().iteritems()
+                               for k, v in deployment.iteritems()
                                if k in RELEVANT_DEPLOYMENT_FIELDS}
         self.update(filtered_deployment)
 
@@ -127,8 +127,6 @@ class DeploymentPlan(dict):
             'workflow_plugins_to_install':
                 workflow_plugins_to_install_by_name})
 
-        # update the plan with the nodes
-        nodes = self._transform_nodes(nodes)
         self['nodes'] = nodes
 
     @classmethod
@@ -136,12 +134,8 @@ class DeploymentPlan(dict):
         """ Create a DeploymentPlan from a stored deployment"""
         sm = get_storage_manager()
         # get deployment from storage
-        deployment = sm.get_deployment(deployment_id)
-
-        # get deployment_plugins_to_install and workflow_plugins_to_install
-        # from the deployment's blueprint plan
-        blueprint = sm.get_blueprint(deployment.blueprint_id)
-        blueprint_plan = blueprint.plan
+        deployment = sm.get(models.Deployment, deployment_id)
+        blueprint_plan = deployment.blueprint.plan
 
         deployment_plugins_to_install = \
             blueprint_plan['deployment_plugins_to_install']
@@ -149,10 +143,12 @@ class DeploymentPlan(dict):
             blueprint_plan['workflow_plugins_to_install']
 
         # get the nodes from the storage
-        nodes = sm.list_nodes(
-            filters={'deployment_id': [deployment_id]}).items
-
-        return cls(deployment, nodes, deployment_plugins_to_install,
+        nodes = sm.list(
+            models.Node,
+            filters={'deployment_id': [deployment_id]}
+        )
+        nodes = {node.id: node.to_dict() for node in nodes}
+        return cls(deployment.to_dict(), nodes, deployment_plugins_to_install,
                    workflow_plugins_to_install)
 
     @classmethod
@@ -160,52 +156,39 @@ class DeploymentPlan(dict):
         """ Create a DeploymentPlan from a DeploymentUpdate object
 
         Using the processed blueprint plan (informally referred to
-        as a 'deployment plan' in the blueprints_manager module), this method
+        as a 'deployment plan' in the resource_manager module), this method
         creates a deployment a nodes in their stored format, to pass to the
         constructor.
         """
 
-        blueprints_manager = \
-            manager_rest.blueprints_manager.get_blueprints_manager()
+        rm = manager_rest.resource_manager.get_resource_manager()
 
         deployment_plan = deployment_update.deployment_plan
         deployment_id = deployment_update.deployment_id
 
-        sm = blueprints_manager.sm
-        blueprint_id = sm.get_deployment(deployment_id).blueprint_id
+        blueprint_id = rm.sm.get(models.Deployment, deployment_id).blueprint_id
 
-        deployment = blueprints_manager.prepare_deployment_for_storage(
-            blueprint_id,
+        deployment = rm.prepare_deployment_for_storage(
             deployment_id,
-            deployment_plan)
+            deployment_plan
+        )
+        dep_dict = deployment.to_dict(suppress_error=True)
+        dep_dict['blueprint_id'] = blueprint_id
 
-        # get deployment_plugins_to_install ans workflow_plugins_to_install
-        # from the deployment's blueprint plan
         deployment_plugins_to_install = \
             deployment_plan['deployment_plugins_to_install']
         workflow_plugins_to_install = \
             deployment_plan['workflow_plugins_to_install']
 
-        nodes = blueprints_manager.prepare_deployment_nodes_for_storage(
-            blueprint_id,
-            deployment_id,
-            deployment_plan
-        )
-        return cls(deployment, nodes, deployment_plugins_to_install,
+        nodes = rm.prepare_deployment_nodes_for_storage(deployment_plan)
+        nodes_dict = dict()
+
+        for node in nodes:
+            node_dict = node.to_dict(suppress_error=True)
+            node_dict['deployment_id'] = deployment_id
+            nodes_dict[node.id] = node_dict
+        return cls(dep_dict, nodes_dict, deployment_plugins_to_install,
                    workflow_plugins_to_install)
-
-    @staticmethod
-    def _transform_nodes(nodes):
-        """ Transform nodes from a list of dicts to a dict
-
-        The dictionary keys are the node ids
-        [{node_id: id1, value: v1}, {node_id: id2, value: v2}]
-                                   |
-                                   v
-                 {id1: {value: v1}, id2: {value: v2}}
-        """
-        nodes_by_id = {node.id: node.to_dict() for node in nodes}
-        return nodes_by_id
 
     @staticmethod
     def _transform_plugins(plugins):
@@ -321,10 +304,7 @@ class StepExtractor(object):
         self._extract_steps_from_description(old[DESCRIPTION],
                                              new[DESCRIPTION])
 
-        self._extract_host_agent_plugins_steps(
-            old[NODES],
-            new[NODES]
-        )
+        self._extract_host_agent_plugins_steps(old[NODES], new[NODES])
 
         self._extract_central_deployment_agent_plugins_steps(
             old[DEPLOYMENT_PLUGINS_TO_INSTALL],
@@ -644,8 +624,7 @@ class StepExtractor(object):
             old_entities = old.get(entities_name, {})
 
             if entities_name == NODES:
-                self._extract_steps_from_nodes(
-                    new_entities, old_entities)
+                self._extract_steps_from_nodes(new_entities, old_entities)
 
             elif entities_name == OUTPUTS:
                 self._extract_steps_from_entities(

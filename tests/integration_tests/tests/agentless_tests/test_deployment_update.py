@@ -20,7 +20,7 @@ import tempfile
 from nose.tools import nottest
 
 from cloudify_rest_client.exceptions import CloudifyClientError
-from manager_rest.storage.models import Execution
+from manager_rest.storage.models_states import ExecutionState
 from manager_rest.deployment_update.constants import STATES
 
 from integration_tests import AgentlessTestCase
@@ -70,7 +70,7 @@ class DeploymentUpdateBase(AgentlessTestCase):
         return self._wait_for(self.client.executions.get,
                               execution.id,
                               'status',
-                              Execution.END_STATES,
+                              ExecutionState.END_STATES,
                               lambda x, y: x in y,
                               error_msg,
                               timeout)
