@@ -78,6 +78,8 @@ def setup_resources(api):
         'ClusterNodesId': 'cluster/nodes/<string:node_id>'
     }
 
+    # Set version endpoint as a non versioned endpoint
+    api.add_resource(resources.Version, '/api/version', endpoint='version')
     for resource, endpoint_suffix in resources_endpoints.iteritems():
         _set_versioned_urls(api, resource, endpoint_suffix)
 
