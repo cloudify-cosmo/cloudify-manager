@@ -170,7 +170,7 @@ If you work with `IntelliJ` or `PyCharm` IDE, you can debug the container's rest
   ```
 
 
-## Logs
+## Manager Logs
 
 To keep the manager logs after the tests has finished running, set the environment variable `CFY_LOGS_PATH`, to be the path the logs would be saved into:
 
@@ -190,3 +190,8 @@ To turn off logs saving, unset `CFY_LOGS_PATH`:
   ```
   export CFY_LOGS_PATH=
   ```
+
+
+## Framework Logs
+
+To keep the integration tests framework logs after the tests has finished running, make sure the directory `/var/log/cloudify` exists with editing permissions to everyone.  This will allow the integration tests framework to save its logs into a file in this directory.  The logs of different runs will be concatenated with separators between them, date, time and test name to identify the run.  You do not have to worry about disk space consumed by the log file, its size is limited to 5 MB.  Beyonf that size, the file would be splitted, with a maximum of 5 older files, after the main one (each file limited to 5 MB, so in total the logs cannot exceed 30 MB).
