@@ -23,18 +23,13 @@ from manager_rest.storage import user_datastore
 
 from .user_handler import unauthorized_user_handler
 
-try:
-    from cloudify_premium import ldap_authenticator
-except ImportError:
-    ldap_authenticator = None
-
-
 Authorization = namedtuple('Authorization', 'username password')
 
 
 class Authentication(object):
+
     def __init__(self):
-        self._ldappy = None
+        self._ldap_authenticator = None
 
     def authenticate(self, user, hashed_pass, auth):
         """Authenticate the user either against an LDAP server, or our
@@ -56,10 +51,10 @@ class Authentication(object):
             # inside the auth methods
             auth = Authorization(user.username, user.password)
 
-        if self._ldappy and ldap_authenticator:
+        if self.ldap_authenticator:
             logger.debug('Running authentication with LDAP')
-            user = ldap_authenticator.ldap_authenticate_and_update_user(user,
-                                                                        auth)
+            user = self.ldap_authenticator.ldap_authenticate_and_update_user(
+                user, auth)
         else:
             logger.debug('Running Basic HTTP authentication')
             user = self._basic_http_authenticate(user, hashed_pass)
@@ -83,6 +78,18 @@ class Authentication(object):
         # Reloading the user from the datastore, because the current user
         # object is detached from a session
         return user_datastore.get_user(user.username)
+
+    @property
+    def ldap_authenticator(self):
+        if not self._ldap_authenticator:
+            try:
+                from cloudify_premium import ldap_authenticator
+                if ldap_authenticator and \
+                        ldap_authenticator.is_ldap_configured():
+                    self._ldap_authenticator = ldap_authenticator
+            except ImportError:
+                pass
+        return self._ldap_authenticator
 
 
 authenticator = Authentication()
