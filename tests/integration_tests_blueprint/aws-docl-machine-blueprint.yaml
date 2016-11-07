@@ -8,7 +8,7 @@ description: >
 imports:
   - http://www.getcloudify.org/spec/cloudify/4.0m7/types.yaml
   - http://www.getcloudify.org/spec/fabric-plugin/1.4.2/plugin.yaml
-  - http://www.getcloudify.org/spec/aws-plugin/1.4.1/plugin.yaml
+  - http://www.getcloudify.org/spec/aws-plugin/1.4.3/plugin.yaml
   - docl-base-types.yaml
 
 inputs:
@@ -69,7 +69,7 @@ inputs:
     description: >
       Holds a set of dsl required resources
     default:
-      - {'source_path': 'http://www.getcloudify.org/spec/aws-plugin/1.4.1/plugin.yaml', 'destination_path': '/spec/aws-plugin/1.4.1/plugin.yaml'}
+      - {'source_path': 'http://www.getcloudify.org/spec/aws-plugin/1.4.3/plugin.yaml', 'destination_path': '/spec/aws-plugin/1.4.3/plugin.yaml'}
       - {'source_path': 'http://www.getcloudify.org/spec/fabric-plugin/1.4.2/plugin.yaml', 'destination_path': '/spec/fabric-plugin/1.4.2/plugin.yaml'}
       - {'source_path': 'http://www.getcloudify.org/spec/cloudify/4.0m7/types.yaml', 'destination_path': '/spec/cloudify/4.0m7/types.yaml'}
 
