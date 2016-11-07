@@ -42,7 +42,6 @@ from integration_tests.framework import utils, hello_world, docl, postgresql
 from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
 from cloudify_rest_client.executions import Execution
-from manager_rest.storage.storage_manager import get_storage_manager
 
 
 class BaseTestCase(unittest.TestCase):
@@ -150,6 +149,15 @@ class BaseTestCase(unittest.TestCase):
 
         """
         return docl.copy_file_to_manager(source=source, target=target)
+
+    @staticmethod
+    def restart_service(service_name):
+        """
+        restart service by name in the manager container
+
+        """
+        docl.execute('systemctl stop {0}'.format(service_name))
+        docl.execute('systemctl start {0}'.format(service_name))
 
     def get_plugin_data(self, plugin_name, deployment_id):
         """
@@ -359,13 +367,6 @@ class BaseTestCase(unittest.TestCase):
             return out == 'ok'
         except sh.ErrorReturnCode:
             return False
-
-    @staticmethod
-    def get_remote_storage_manager():
-        """Return the SQL storage manager connected to the remote manager
-        """
-        postgresql.setup_app()
-        return get_storage_manager()
 
 
 class AgentlessTestCase(BaseTestCase):
