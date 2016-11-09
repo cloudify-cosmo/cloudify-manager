@@ -41,6 +41,7 @@ from manager_rest.utils import mkdirs
 from integration_tests.framework import utils, hello_world, docl, postgresql
 from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
+
 from cloudify_rest_client.executions import Execution
 
 
@@ -374,12 +375,8 @@ class AgentlessTestCase(BaseTestCase):
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
-        test_utils.restore_provider_context()
+        postgresql.reset_storage()
         self.addCleanup(self._save_manager_logs_after_test)
-
-    def tearDown(self):
-        postgresql.reset_data()
-        super(AgentlessTestCase, self).tearDown()
 
 
 class BaseAgentTestCase(BaseTestCase):

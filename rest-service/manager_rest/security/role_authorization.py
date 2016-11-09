@@ -14,9 +14,9 @@
 #  * limitations under the License.
 
 
-from manager_rest.constants import VIEWER_ROLE, SUSPENDED_ROLE
+from manager_rest.constants import SUSPENDED_ROLE
 
-from .user_handler import unauthorized_user_handler
+from manager_rest.app_logging import raise_unauthorized_user_error
 
 
 class RoleAuthorization(object):
@@ -32,19 +32,14 @@ class RoleAuthorization(object):
         :param user: A valid user object
         :param request: A flask request
         """
+        # TODO: See if this is still relevant after the roles redesign
         self._role = user.role
         self._method = request.method
         self._endpoint = request.path
 
         if self._role == SUSPENDED_ROLE:
-            unauthorized_user_handler(
-                'User `{0}` is suspended'.format(user.username)
-            )
-
-        if self._role == VIEWER_ROLE and self._method != 'GET':
-            unauthorized_user_handler(
-                'User `{0}` only has read-only permissions on '
-                'resources'.format(user.username)
+            raise_unauthorized_user_error(
+                '{0} is suspended'.format(user)
             )
 
 

@@ -15,33 +15,31 @@
 
 from contextlib import contextmanager
 
+from flask import current_app
+
 from cloudify_rest_client.exceptions import UserUnauthorizedError
 
+from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import postgresql, utils
 
-from manager_rest.storage.models import Tenant
 from manager_rest.storage import user_datastore
-from manager_rest.constants import DEFAULT_TENANT_NAME
+from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.test.security_utils import get_test_users, add_users_to_db
 
 
 class TestSecuredRestBase(AgentlessTestCase):
     def setUp(self):
         super(TestSecuredRestBase, self).setUp()
-        postgresql.setup_app()
-        default_tenant = Tenant.query.filter_by(
-            name=DEFAULT_TENANT_NAME
-        ).first()
+
+        self.logger.info('Adding extra users to the DB')
+        default_tenant = current_app.config[CURRENT_TENANT_CONFIG]
         add_users_to_db(user_datastore, get_test_users(), default_tenant)
 
 
 class TestAuthenticationBase(TestSecuredRestBase):
-    test_client = None
-
     @contextmanager
     def _login_client(self, **kwargs):
-        self.logger.info('Logging in to  client with {0}'.format(str(kwargs)))
+        self.logger.info('Logging in to client with {0}'.format(str(kwargs)))
         client = self.client
         try:
             self.client = utils.create_rest_client(**kwargs)

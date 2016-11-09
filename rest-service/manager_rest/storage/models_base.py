@@ -17,8 +17,8 @@ import jsonpickle
 from dateutil import parser as date_parser
 
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.ext.hybrid import hybrid_property
 
-from manager_rest.utils import classproperty
 
 db = SQLAlchemy()
 
@@ -29,8 +29,15 @@ class SQLModelBase(db.Model):
     # SQLAlchemy syntax
     __abstract__ = True
 
-    # Indicates to the storage manager whether the table is a resource or not
+    # Does the class represent a resource (Blueprint, Deployment, etc.) or a
+    # management table (User, Tenant, etc.), as they are handled differently
     is_resource = False
+
+    # Can this resource be attached to tenants
+    top_level_tenant = False
+
+    # Does this resource have a unique creator
+    top_level_creator = False
 
     def to_dict(self, suppress_error=False):
         """Return a dict representation of the model
@@ -54,21 +61,25 @@ class SQLModelBase(db.Model):
     def to_json(self):
         return jsonpickle.encode(self.to_dict(), unpicklable=False)
 
-    @classproperty
-    def fields(cls):
+    @hybrid_property
+    def fields(self):
         """Return the list of field names for this table
 
         Mostly for backwards compatibility in the code (that uses `fields`)
         """
-        return cls.__table__.columns.keys()
+        return self.__table__.columns.keys()
 
-    def _get_unique_id(self):
+    def _get_identifier(self):
         """A method to allow classes to override the default representation
         """
         return 'id', self.id
 
+    @classmethod
+    def unique_id(cls):
+        return 'id'
+
     def __str__(self):
-        id_name, id_value = self._get_unique_id()
+        id_name, id_value = self._get_identifier()
         return '<{0} {1}=`{2}`>'.format(
             self.__class__.__name__,
             id_name,
@@ -80,56 +91,6 @@ class SQLModelBase(db.Model):
 
     def __unicode__(self):
         return str(self)
-
-
-class SQLResource(SQLModelBase):
-    """A class that represents SQL resource, and adds some functionality
-    related to joins and tenants
-    """
-    # SQLAlchemy syntax
-    __abstract__ = True
-
-    # Differentiates between resources (blueprints, nodes, etc.) and other
-    # table models (users, tenants, etc.)
-    is_resource = True
-
-    # Indicates whether the `id` column in this class should be unique
-    is_id_unique = True
-
-    # A list of columns that shouldn't be serialized
-    _private_fields = ['tenant_id', 'storage_id']
-
-    # A dictionary where the keys are names of instance properties the class
-    # has, which to the rest of the code are indistinguishable from regular
-    # SQLA columns [e.g. `blueprint_id`, `node_id`], but in fact are pointers
-    # to attributes of a one to many relationship the class has
-    # [e.g. `self.blueprint.id`, `self.node.id`], and the values are themselves
-    # dicts with two fields:
-    # - `models`: A list of models on which the query will need to join in
-    # order to have access to the above attributes. (e.g. [Node, Deployment])
-    # - `column`: The actual column on which actions would need to be performed
-    # [e.g. Node.id, Blueprint.id]
-    join_properties = {}
-
-    # Should be incremented for classes that "depend" on other classes (for
-    # example, Blueprint should be 1, Deployment 2, Node 3, and
-    # NodeInstance 4). This is necessary in order to be able to join on all
-    # those tables in the correct order, if multiple joins are necessary.
-    # Note that the order is actually *descending* - meaning 3 will be joined
-    # before 2, 2 before 1, etc.
-    join_order = 1
-
-    @classproperty
-    def fields(cls):
-        """Return the list of field names for this table
-
-        Mostly for backwards compatibility in the code (that uses `fields`)
-        """
-        fields = cls.__table__.columns.keys()
-        fields = [f for f in fields if f not in cls._private_fields]
-        properties = set(cls.join_properties.keys()) - set(cls._private_fields)
-        fields.extend(properties)
-        return fields
 
 
 class UTCDateTime(db.TypeDecorator):

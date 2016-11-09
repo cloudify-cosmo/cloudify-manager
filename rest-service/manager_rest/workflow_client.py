@@ -106,11 +106,7 @@ def get_workflow_client():
     """
     Get the current app's workflow client, create if necessary
     """
-    wf_client = current_app.config.get('workflow_client')
-    if not wf_client:
-        current_app.config['workflow_client'] = WorkflowClient()
-        wf_client = current_app.config.get('workflow_client')
-    return wf_client
+    return current_app.config.setdefault('workflow_client', WorkflowClient())
 
 
 def execute_task(task_queue, execution_id, execution_parameters):

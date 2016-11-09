@@ -74,7 +74,8 @@ def setup_resources(api):
         'UsersGroups': 'users/groups',
         'Cluster': 'cluster',
         'ClusterNodes': 'cluster/nodes',
-        'ClusterNodesId': 'cluster/nodes/<string:node_id>'
+        'ClusterNodesId': 'cluster/nodes/<string:node_id>',
+        'Permissions': 'permissions'
     }
 
     # Set version endpoint as a non versioned endpoint

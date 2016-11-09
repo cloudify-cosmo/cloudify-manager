@@ -28,6 +28,8 @@ from setuptools import archive_util
 from urllib2 import urlopen, URLError
 
 from flask import request
+from flask_restful import types
+from flask_restful.reqparse import RequestParser
 
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
@@ -140,7 +142,7 @@ class UploadedDataManager(object):
                 f.write(buffered_chunked)
 
     @staticmethod
-    def _save_file_content(archive_target_path, data_type, url_key):
+    def _save_file_content(archive_target_path, data_type):
         if 'blueprint_archive' in request.files:
             raise manager_exceptions.BadParametersError(
                 "Can't pass both a {0} URL via request body , multi-form"
@@ -212,7 +214,7 @@ class UploadedDataManager(object):
             self._save_file_from_chunks(archive_target_path, data_type)
         # handler receiving entire content through data
         elif request.data:
-            self._save_file_content(archive_target_path, url_key, data_type)
+            self._save_file_content(archive_target_path, data_type)
 
         # handle inputs from form-data (for both the blueprint and inputs
         # in body in form-data format)
@@ -274,14 +276,24 @@ class UploadedSnapshotsManager(UploadedDataManager):
     def _get_archive_type(self, archive_path):
         return 'zip'
 
+    @staticmethod
+    def _get_args():
+        args_parser = RequestParser()
+        args_parser.add_argument('private_resource',
+                                 type=types.boolean,
+                                 default=False)
+        return args_parser.parse_args()
+
     def _prepare_and_process_doc(self,
                                  data_id,
                                  file_server_root,
                                  archive_target_path,
                                  **kwargs):
+        args = self._get_args()
         return get_resource_manager().create_snapshot_model(
             data_id,
-            status=SnapshotState.UPLOADED
+            status=SnapshotState.UPLOADED,
+            private_resource=args.private_resource
         ), None
 
 
@@ -329,7 +341,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
 
         # add to deployment update manager (will also dsl_parse it)
         try:
-            cls._process_plugins(file_server_root, app_dir, deployment_id)
+            cls._process_plugins(file_server_root, app_dir)
             update = get_deployment_updates_manager().stage_deployment_update(
                     deployment_id,
                     app_dir,
@@ -401,7 +413,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         return application_dir, application_file_name
 
     @classmethod
-    def _process_plugins(cls, file_server_root, app_dir, deployment_id):
+    def _process_plugins(cls, file_server_root, app_dir):
         plugins_directory = os.path.join(file_server_root, app_dir, 'plugins')
         if not os.path.isdir(plugins_directory):
             return
@@ -488,12 +500,22 @@ class UploadedBlueprintsManager(UploadedDataManager):
             zipf.close()
 
     @classmethod
+    def _get_args(cls):
+        args_parser = RequestParser()
+        args_parser.add_argument('private_resource',
+                                 type=types.boolean,
+                                 default=False)
+        args_parser.add_argument('application_file_name', type=str, default='')
+        return args_parser.parse_args()
+
+    @classmethod
     def _prepare_and_submit_blueprint(cls, file_server_root,
                                       app_dir,
                                       blueprint_id):
 
+        args = cls._get_args()
         app_dir, app_file_name = cls._extract_application_file(
-            file_server_root, app_dir)
+            file_server_root, app_dir, args.application_file_name)
 
         # add to blueprints manager (will also dsl_parse it)
         try:
@@ -501,7 +523,9 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 app_dir,
                 app_file_name,
                 'file://{0}/'.format(file_server_root),
-                blueprint_id)
+                blueprint_id,
+                private_resource=args.private_resource
+            )
 
             # moving the app directory in the file server to be under a
             # directory named after the blueprint id
@@ -518,13 +542,16 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 'Invalid blueprint - {0}'.format(ex.message))
 
     @classmethod
-    def _extract_application_file(cls, file_server_root, application_dir):
+    def _extract_application_file(cls,
+                                  file_server_root,
+                                  application_dir,
+                                  application_file_name):
 
         full_application_dir = path.join(file_server_root, application_dir)
 
-        if 'application_file_name' in request.args:
+        if application_file_name:
             application_file_name = urllib.unquote(
-                request.args['application_file_name']).decode('utf-8')
+                application_file_name).decode('utf-8')
             application_file = path.join(full_application_dir,
                                          application_file_name)
             if not path.isfile(application_file):
@@ -560,6 +587,14 @@ class UploadedPluginsManager(UploadedDataManager):
     def _get_archive_type(self, archive_path):
         return 'tar.gz'
 
+    @staticmethod
+    def _get_args():
+        args_parser = RequestParser()
+        args_parser.add_argument('private_resource',
+                                 type=types.boolean,
+                                 default=False)
+        return args_parser.parse_args()
+
     def _prepare_and_process_doc(self,
                                  data_id,
                                  file_server_root,
@@ -567,7 +602,7 @@ class UploadedPluginsManager(UploadedDataManager):
                                  **kwargs):
         new_plugin = self._create_plugin_from_archive(data_id,
                                                       archive_target_path)
-
+        args = self._get_args()
         filter_by_name = {'package_name': new_plugin.package_name}
         sm = get_resource_manager().sm
         plugins = sm.list(Plugin, filters=filter_by_name)
@@ -581,7 +616,7 @@ class UploadedPluginsManager(UploadedDataManager):
                                        package_name=new_plugin.package_name,
                                        version=new_plugin.package_version))
         else:
-            sm.put(Plugin, new_plugin)
+            sm.put(new_plugin, args.private_resource)
 
         return new_plugin, new_plugin.archive_name
 
@@ -624,10 +659,10 @@ class UploadedPluginsManager(UploadedDataManager):
             except KeyError:
                 raise manager_exceptions. \
                     InvalidPluginError("'package.json' was not found under {0}"
-                                       .format(package_member))
+                                       .format(package_json_path))
             try:
                 package_json = tar.extractfile(package_member)
-            except (tarfile.ExtractError, tarfile.EnvironmentError) as e:
+            except (tarfile.ExtractError, EnvironmentError) as e:
                 raise manager_exceptions. \
                     InvalidPluginError(str(e))
             try:

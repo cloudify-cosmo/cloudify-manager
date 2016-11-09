@@ -396,7 +396,7 @@ class NodesTest(base_test.BaseServerTestCase):
             scaling_groups=None
         )
         node.node_instances.append(node_instance)
-        return self.sm.put(NodeInstance, node_instance)
+        return self.sm.put(node_instance)
 
     def _get_or_create_blueprint(self, blueprint_id):
         try:
@@ -408,7 +408,7 @@ class NodesTest(base_test.BaseServerTestCase):
                 main_file_name='',
                 plan={}
             )
-            return self.sm.put(Blueprint, blueprint)
+            return self.sm.put(blueprint)
 
     def _get_or_create_deployment(self, deployment_id, blueprint):
         try:
@@ -419,7 +419,7 @@ class NodesTest(base_test.BaseServerTestCase):
                 created_at=datetime.now()
             )
             blueprint.deployments.append(deployment)
-            return self.sm.put(Deployment, deployment)
+            return self.sm.put(deployment)
 
     def _get_or_create_node(self, node_id, deployment):
         try:
@@ -436,7 +436,7 @@ class NodesTest(base_test.BaseServerTestCase):
                 max_number_of_instances=1
             )
             deployment.nodes.append(node)
-            return self.sm.put(Node, node)
+            return self.sm.put(node)
 
     @attr(client_min_version=2.1,
           client_max_version=base_test.LATEST_API_VERSION)

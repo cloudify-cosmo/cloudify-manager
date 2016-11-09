@@ -33,9 +33,6 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         self.put_deployment(deployment_id=str(uuid.uuid4()),
                             blueprint_file_name='blueprint.yaml')
 
-    def initialize_provider_context(self):
-        self.client.manager.create_context('test', {'hello': 'world'})
-
     @attr(client_min_version=2,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_include_propagation_to_model(self):

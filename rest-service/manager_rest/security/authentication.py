@@ -21,7 +21,7 @@ from flask_security.utils import md5
 
 from manager_rest.storage import user_datastore
 
-from .user_handler import unauthorized_user_handler
+from manager_rest.app_logging import raise_unauthorized_user_error
 
 Authorization = namedtuple('Authorization', 'username password')
 
@@ -41,7 +41,7 @@ class Authentication(object):
         :return: The updated user object
         """
         if not user and not auth:
-            unauthorized_user_handler('No authentication info provided')
+            raise_unauthorized_user_error('No authentication info provided')
 
         logger = current_app.logger
         logger.debug('Running user authentication for {0}'.format(user))
@@ -72,8 +72,8 @@ class Authentication(object):
         :param hashed_pass: md5 hashed password, or None
         """
         if not user or md5(user.password) != hashed_pass:
-            unauthorized_user_handler('HTTP authentication failed '
-                                      'for {0}'.format(user))
+            raise_unauthorized_user_error('HTTP authentication failed '
+                                          'for {0}'.format(user))
 
         # Reloading the user from the datastore, because the current user
         # object is detached from a session

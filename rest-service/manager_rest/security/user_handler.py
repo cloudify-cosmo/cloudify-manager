@@ -16,20 +16,7 @@
 from flask import current_app
 from flask_security.utils import md5
 
-from manager_rest.utils import abort_error
 from manager_rest.storage import user_datastore
-from manager_rest.manager_exceptions import UnauthorizedError
-
-
-def unauthorized_user_handler(extra_info=None):
-    error = 'User unauthorized'
-    if extra_info:
-        error += ': {0}'.format(extra_info)
-    abort_error(
-        UnauthorizedError(error),
-        current_app.logger,
-        hide_server_message=True
-    )
 
 
 def user_loader(request):

@@ -13,3 +13,17 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
+
+from flask_restful import fields
+from flask_restful_swagger import swagger
+
+
+@swagger.model
+class ResourceID(object):
+
+    resource_fields = {
+        'resource_id': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.resource_id = kwargs.get('resource_id')

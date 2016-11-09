@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from manager_rest.constants import ADMIN_ROLE, USER_ROLE, SUSPENDED_ROLE
+
 
 def get_admin_user():
     return {
             'username': 'admin',
             'password': 'admin',
-            'role': 'administrator'
+            'role': ADMIN_ROLE
     }
 
 
@@ -27,27 +29,22 @@ def get_test_users():
         {
             'username': 'alice',
             'password': 'alice_password',
-            'role': 'administrator'
+            'role': ADMIN_ROLE
         },
         {
             'username': 'bob',
             'password': 'bob_password',
-            'role': 'default'
+            'role': USER_ROLE
         },
         {
             'username': 'clair',
             'password': 'clair_password',
-            'role': 'viewer'
+            'role': SUSPENDED_ROLE
         },
         {
             'username': 'dave',
             'password': 'dave_password',
-            'role': 'suspended'
-        },
-        {
-            'username': 'eve',
-            'password': 'eve_password',
-            'role': 'default'
+            'role': USER_ROLE
         }
     ]
     return test_users

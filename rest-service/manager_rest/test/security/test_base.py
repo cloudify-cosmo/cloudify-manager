@@ -23,8 +23,6 @@ from manager_rest.test.security_utils import get_test_users
 
 
 class SecurityTestBase(BaseServerTestCase):
-    test_client = None
-
     @staticmethod
     def _get_app(flask_app):
         # Overriding the base class' app, because otherwise a custom
@@ -33,11 +31,12 @@ class SecurityTestBase(BaseServerTestCase):
 
     @contextmanager
     def use_secured_client(self, headers=None, **kwargs):
+        client = self.client
         try:
-            self.test_client = self.get_secured_client(headers, **kwargs)
+            self.client = self.get_secured_client(headers, **kwargs)
             yield
         finally:
-            self.test_client = None
+            self.client = client
 
     def get_secured_client(self, headers=None, **kwargs):
         headers = headers or create_auth_header(**kwargs)
@@ -56,11 +55,11 @@ class SecurityTestBase(BaseServerTestCase):
 
     def _assert_user_authorized(self, headers=None, **kwargs):
         with self.use_secured_client(headers, **kwargs):
-            self.test_client.deployments.list()
+            self.client.deployments.list()
 
     def _assert_user_unauthorized(self, headers=None, **kwargs):
         with self.use_secured_client(headers, **kwargs):
             self.assertRaises(
                     UserUnauthorizedError,
-                    self.test_client.deployments.list
+                    self.client.deployments.list
                 )

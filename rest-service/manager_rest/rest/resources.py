@@ -19,9 +19,10 @@ import os
 import shutil
 
 from flask import request
-from flask_restful import reqparse
+from flask_restful import types
 from flask_security import current_user
 from flask_restful_swagger import swagger
+from flask_restful.reqparse import Argument
 
 from dsl_parser import utils as dsl_parser_utils
 
@@ -44,8 +45,8 @@ from .rest_decorators import (exceptions_handled,
                               insecure_rest_method)
 from .rest_utils import (make_streaming_response,
                          verify_and_convert_bool,
-                         verify_json_content_type,
-                         verify_parameter_in_request_body)
+                         get_json_and_verify_params,
+                         get_args_and_verify_arguments)
 
 
 class BlueprintsIdArchive(SecuredResource):
@@ -234,21 +235,21 @@ class Executions(SecuredResource):
     @marshal_with(responses.Execution)
     def get(self, _include=None, **kwargs):
         """List executions"""
-        deployment_id = request.args.get('deployment_id')
-        if deployment_id:
+        args = get_args_and_verify_arguments(
+            [Argument('deployment_id', type=str, required=False),
+             Argument('include_system_workflows', type=types.boolean,
+                      default=False)]
+        )
+        if args.deployment_id:
             get_storage_manager().get(
                 models.Deployment,
-                deployment_id,
+                args.deployment_id,
                 include=['id']
             )
-        is_include_system_workflows = verify_and_convert_bool(
-            'include_system_workflows',
-            request.args.get('include_system_workflows', 'false'))
-
         deployment_id_filter = ResourceManager.create_filters_dict(
-            deployment_id=deployment_id)
+            deployment_id=args.deployment_id)
         return get_resource_manager().list_executions(
-            is_include_system_workflows=is_include_system_workflows,
+            is_include_system_workflows=args.include_system_workflows,
             include=_include,
             filters=deployment_id_filter).items
 
@@ -256,21 +257,19 @@ class Executions(SecuredResource):
     @marshal_with(responses.Execution)
     def post(self, **kwargs):
         """Execute a workflow"""
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('deployment_id', request_json)
-        verify_parameter_in_request_body('workflow_id', request_json)
+        request_dict = get_json_and_verify_params({'deployment_id',
+                                                   'workflow_id'})
 
         allow_custom_parameters = verify_and_convert_bool(
             'allow_custom_parameters',
-            request_json.get('allow_custom_parameters', 'false'))
+            request_dict.get('allow_custom_parameters', 'false'))
         force = verify_and_convert_bool(
             'force',
-            request_json.get('force', 'false'))
+            request_dict.get('force', 'false'))
 
-        deployment_id = request.json['deployment_id']
-        workflow_id = request.json['workflow_id']
-        parameters = request.json.get('parameters', None)
+        deployment_id = request_dict['deployment_id']
+        workflow_id = request_dict['workflow_id']
+        parameters = request_dict.get('parameters', None)
 
         if parameters is not None and parameters.__class__ is not dict:
             raise manager_exceptions.BadParametersError(
@@ -327,10 +326,8 @@ class ExecutionsId(SecuredResource):
         """
         Apply execution action (cancel, force-cancel) by id
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('action', request_json)
-        action = request.json['action']
+        request_dict = get_json_and_verify_params({'action'})
+        action = request_dict['action']
 
         valid_actions = ['cancel', 'force-cancel']
 
@@ -371,14 +368,12 @@ class ExecutionsId(SecuredResource):
         """
         Update execution status by id
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('status', request_json)
+        request_dict = get_json_and_verify_params({'status'})
 
         return get_resource_manager().update_execution_status(
             execution_id,
-            request_json['status'],
-            request_json.get('error', '')
+            request_dict['status'],
+            request_dict.get('error', '')
         )
 
 
@@ -400,12 +395,6 @@ class Deployments(SecuredResource):
 
 
 class DeploymentsId(SecuredResource):
-
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('ignore_live_nodes', type=str,
-                                       default='false', location='args')
-
     @swagger.operation(
         responseClass=responses.Deployment,
         nickname="getById",
@@ -443,20 +432,22 @@ class DeploymentsId(SecuredResource):
         """
         Create a deployment
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('blueprint_id', request_json)
-        verify_parameter_in_request_body('inputs',
-                                         request_json,
-                                         param_type=dict,
-                                         optional=True)
-        blueprint_id = request.json['blueprint_id']
+        request_dict = get_json_and_verify_params({
+            'blueprint_id': {},
+            'inputs': {'optional': True, 'type': dict}
+        })
+        blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
+        args = get_args_and_verify_arguments(
+            [Argument('private_resource', type=types.boolean, default=False)]
+        )
         deployment = get_resource_manager().create_deployment(
             blueprint_id,
             deployment_id,
-            inputs=request_json.get('inputs', {}),
-            bypass_maintenance=bypass_maintenance)
+            inputs=request_dict.get('inputs', {}),
+            bypass_maintenance=bypass_maintenance,
+            private_resource=args.private_resource
+        )
         return deployment, 201
 
     @swagger.operation(
@@ -479,15 +470,14 @@ class DeploymentsId(SecuredResource):
         """
         Delete deployment by id
         """
-        args = self._args_parser.parse_args()
-
-        ignore_live_nodes = verify_and_convert_bool(
-            'ignore_live_nodes', args['ignore_live_nodes'])
+        args = get_args_and_verify_arguments(
+            [Argument('ignore_live_nodes', type=types.boolean, default=False)]
+        )
 
         bypass_maintenance = is_bypass_maintenance_mode()
 
         deployment = get_resource_manager().delete_deployment(
-            deployment_id, bypass_maintenance, ignore_live_nodes)
+            deployment_id, bypass_maintenance, args.ignore_live_nodes)
 
         # Delete deployment resources from file server
         deployment_folder = os.path.join(
@@ -501,13 +491,6 @@ class DeploymentsId(SecuredResource):
 
 
 class DeploymentModifications(SecuredResource):
-
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('deployment_id',
-                                       type=str,
-                                       required=False,
-                                       location='args')
 
     @swagger.operation(
         responseClass=responses.DeploymentModification,
@@ -527,20 +510,14 @@ class DeploymentModifications(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
     def post(self, **kwargs):
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('deployment_id', request_json)
-        deployment_id = request_json['deployment_id']
-        verify_parameter_in_request_body('context',
-                                         request_json,
-                                         param_type=dict,
-                                         optional=True)
-        context = request_json.get('context', {})
-        verify_parameter_in_request_body('nodes',
-                                         request_json,
-                                         param_type=dict,
-                                         optional=True)
-        nodes = request_json.get('nodes', {})
+        request_dict = get_json_and_verify_params({
+            'deployment_id': {},
+            'context': {'optional': True, 'type': dict},
+            'nodes': {'optional': True, 'type': dict}
+        })
+        deployment_id = request_dict['deployment_id']
+        context = request_dict.get('context', {})
+        nodes = request_dict.get('nodes', {})
         modification = get_resource_manager(). \
             start_deployment_modification(deployment_id, nodes, context)
         return modification, 201
@@ -560,10 +537,11 @@ class DeploymentModifications(SecuredResource):
     @exceptions_handled
     @marshal_with(responses.DeploymentModification)
     def get(self, _include=None, **kwargs):
-        args = self._args_parser.parse_args()
-        deployment_id = args.get('deployment_id')
+        args = get_args_and_verify_arguments(
+            [Argument('deployment_id', type=str, required=False)]
+        )
         deployment_id_filter = ResourceManager.create_filters_dict(
-            deployment_id=deployment_id)
+            deployment_id=args.deployment_id)
         return get_storage_manager().list(
             models.DeploymentModification,
             filters=deployment_id_filter,
@@ -618,17 +596,6 @@ class DeploymentModificationsIdRollback(SecuredResource):
 
 class Nodes(SecuredResource):
 
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('deployment_id',
-                                       type=str,
-                                       required=False,
-                                       location='args')
-        self._args_parser.add_argument('node_id',
-                                       type=str,
-                                       required=False,
-                                       location='args')
-
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.Node.__name__),
         nickname="listNodes",
@@ -646,7 +613,11 @@ class Nodes(SecuredResource):
         """
         List nodes
         """
-        args = self._args_parser.parse_args()
+        args = get_args_and_verify_arguments(
+            [Argument('deployment_id', type=str, required=False),
+             Argument('node_id', type=str, required=False)]
+        )
+
         deployment_id = args.get('deployment_id')
         node_id = args.get('node_id')
         if deployment_id and node_id:
@@ -669,17 +640,6 @@ class Nodes(SecuredResource):
 
 
 class NodeInstances(SecuredResource):
-
-    def __init__(self):
-        self._args_parser = reqparse.RequestParser()
-        self._args_parser.add_argument('deployment_id',
-                                       type=str,
-                                       required=False,
-                                       location='args')
-        self._args_parser.add_argument('node_name',
-                                       type=str,
-                                       required=False,
-                                       location='args')
 
     @swagger.operation(
         responseClass='List[{0}]'.format(responses.NodeInstance.__name__),
@@ -705,7 +665,10 @@ class NodeInstances(SecuredResource):
         """
         List node instances
         """
-        args = self._args_parser.parse_args()
+        args = get_args_and_verify_arguments(
+            [Argument('deployment_id', type=str, required=False),
+             Argument('node_name', type=str, required=False)]
+        )
         deployment_id = args.get('deployment_id')
         node_id = args.get('node_name')
         params_filter = ResourceManager.create_filters_dict(
@@ -793,7 +756,9 @@ class NodeInstancesId(SecuredResource):
     @marshal_with(responses.NodeInstance)
     def patch(self, node_instance_id, **kwargs):
         """Update node instance by id."""
-        verify_json_content_type()
+        request_dict = get_json_and_verify_params(
+            {'version': {'type': int}}
+        )
 
         if not isinstance(request.json, collections.Mapping):
             raise manager_exceptions.BadParametersError(
@@ -801,11 +766,9 @@ class NodeInstancesId(SecuredResource):
                 'field and optionally "runtimeProperties" and/or "state" '
                 'fields')
 
-        verify_parameter_in_request_body('version', request.json,
-                                         param_type=int)
         # Added for backwards compatibility with older client versions that
         # had version=0 by default
-        version = request.json['version'] or 1
+        version = request_dict['version'] or 1
 
         instance = get_storage_manager().get(
             models.NodeInstance,
@@ -813,11 +776,11 @@ class NodeInstancesId(SecuredResource):
             locking=True
         )
         # Only update if new values were included in the request
-        instance.runtime_properties = request.json.get(
+        instance.runtime_properties = request_dict.get(
             'runtime_properties',
             instance.runtime_properties
         )
-        instance.state = request.json.get('state', instance.state)
+        instance.state = request_dict.get('state', instance.state)
         instance.version = version + 1
         return get_storage_manager().update(instance)
 
@@ -845,8 +808,8 @@ class Events(SecuredResource):
         """
         List events for the provided Elasticsearch query
         """
-        verify_json_content_type()
-        return ManagerElasticsearch.search_events(body=request.json)
+        request_dict = get_json_and_verify_params()
+        return ManagerElasticsearch.search_events(body=request_dict)
 
     @swagger.operation(
         nickname='events',
@@ -910,10 +873,10 @@ class Search(SecuredResource):
         """
         Search using an Elasticsearch query
         """
-        verify_json_content_type()
+        request_dict = get_json_and_verify_params()
         return ManagerElasticsearch.search(
             index='cloudify_storage',
-            body=request.json)
+            body=request_dict)
 
 
 class Status(SecuredResource):
@@ -1007,18 +970,15 @@ class ProviderContext(SecuredResource):
         """
         Create provider context
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('context', request_json)
-        verify_parameter_in_request_body('name', request_json)
+        request_dict = get_json_and_verify_params({'context', 'name'})
+        args = get_args_and_verify_arguments(
+            [Argument('update', type=types.boolean, default=False)]
+        )
+        update = args['update']
         context = dict(
             id=PROVIDER_CONTEXT_ID,
-            name=request.json['name'],
-            context=request.json['context']
-        )
-        update = verify_and_convert_bool(
-            'update',
-            request.args.get('update', 'false')
+            name=request_dict['name'],
+            context=request_dict['context']
         )
 
         status_code = 200 if update else 201
@@ -1068,18 +1028,15 @@ class EvaluateFunctions(SecuredResource):
         """
         Evaluate intrinsic in payload
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('deployment_id', request_json)
-        verify_parameter_in_request_body('context', request_json,
-                                         optional=True,
-                                         param_type=dict)
-        verify_parameter_in_request_body('payload', request_json,
-                                         param_type=dict)
+        request_dict = get_json_and_verify_params({
+            'deployment_id': {},
+            'context': {'optional': True, 'type': dict},
+            'payload': {'type': dict}
+        })
 
-        deployment_id = request_json['deployment_id']
-        context = request_json.get('context', {})
-        payload = request_json.get('payload')
+        deployment_id = request_dict['deployment_id']
+        context = request_dict.get('context', {})
+        payload = request_dict.get('payload')
         processed_payload = get_resource_manager().evaluate_functions(
             deployment_id=deployment_id,
             context=context,

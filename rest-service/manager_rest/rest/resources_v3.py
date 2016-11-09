@@ -14,15 +14,14 @@
 #  * limitations under the License.
 #
 
-from flask import request
-
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
+from manager_rest.rest.responses_v3 import ResourceID
 from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.security.resource_permissions import PermissionsHandler
 
 from . import rest_decorators
-from .rest_utils import (verify_json_content_type,
-                         verify_parameter_in_request_body)
+from .rest_utils import get_json_and_verify_params
 
 try:
     from cloudify_premium import (TenantResponse,
@@ -78,12 +77,11 @@ class TenantUsers(SecuredMultiTenancyResource):
         """
         Add a user to a tenant
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('username', request_json)
-        verify_parameter_in_request_body('tenant_name', request_json)
-        return multi_tenancy.add_user_to_tenant(request_json['username'],
-                                                request_json['tenant_name'])
+        request_dict = get_json_and_verify_params({'tenant_name', 'username'})
+        return multi_tenancy.add_user_to_tenant(
+            request_dict['username'],
+            request_dict['tenant_name']
+        )
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
@@ -91,14 +89,11 @@ class TenantUsers(SecuredMultiTenancyResource):
         """
         Remove a user from a tenant
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('username', request_json)
-        verify_parameter_in_request_body('tenant_name', request_json)
-        user_name = request_json['username']
-        tenant_name = request_json['tenant_name']
-        return multi_tenancy.remove_user_from_tenant(user_name,
-                                                     tenant_name)
+        request_dict = get_json_and_verify_params({'tenant_name', 'username'})
+        return multi_tenancy.remove_user_from_tenant(
+            request_dict['username'],
+            request_dict['tenant_name']
+        )
 
 
 class TenantGroups(SecuredMultiTenancyResource):
@@ -108,12 +103,12 @@ class TenantGroups(SecuredMultiTenancyResource):
         """
         Add a group to a tenant
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('group_name', request_json)
-        verify_parameter_in_request_body('tenant_name', request_json)
-        return multi_tenancy.add_group_to_tenant(request_json['group_name'],
-                                                 request_json['tenant_name'])
+        request_dict = get_json_and_verify_params({'tenant_name',
+                                                   'group_name'})
+        return multi_tenancy.add_group_to_tenant(
+            request_dict['group_name'],
+            request_dict['tenant_name']
+        )
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
@@ -121,13 +116,11 @@ class TenantGroups(SecuredMultiTenancyResource):
         """
         Remove a group from a tenant
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('group_name', request_json)
-        verify_parameter_in_request_body('tenant_name', request_json)
+        request_dict = get_json_and_verify_params({'tenant_name',
+                                                   'group_name'})
         return multi_tenancy.remove_group_from_tenant(
-            request_json['group_name'],
-            request_json['tenant_name']
+            request_dict['group_name'],
+            request_dict['tenant_name']
         )
 
 
@@ -178,10 +171,12 @@ class Users(SecuredMultiTenancyResource):
         """
         List users
         """
-        return multi_tenancy.list_users(_include,
-                                        filters,
-                                        pagination,
-                                        sort)
+        return multi_tenancy.list_users(
+            _include,
+            filters,
+            pagination,
+            sort
+        )
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
@@ -189,15 +184,14 @@ class Users(SecuredMultiTenancyResource):
         """
         Create a user
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('username', request_json)
-        verify_parameter_in_request_body('password', request_json)
-        username = request_json['username']
-        password = request_json['password']
-        role_name = request_json.get('role')
-
-        return multi_tenancy.create_user(username, password, role_name)
+        request_dict = get_json_and_verify_params(
+            {'username', 'password', 'role'}
+        )
+        return multi_tenancy.create_user(
+            request_dict['username'],
+            request_dict['password'],
+            request_dict['role']
+        )
 
 
 class UsersId(SecuredMultiTenancyResource):
@@ -207,10 +201,9 @@ class UsersId(SecuredMultiTenancyResource):
         """
         Set password/role for a certain user
         """
-        verify_json_content_type()
-        request_json = request.json
-        password = request_json.get('password')
-        role_name = request_json.get('role')
+        request_dict = get_json_and_verify_params()
+        password = request_dict.get('password')
+        role_name = request_dict.get('role')
         if password:
             if role_name:
                 raise BadParametersError('Both `password` and `role` provided')
@@ -236,12 +229,11 @@ class UsersGroups(SecuredMultiTenancyResource):
         """
         Add a user to a group
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('username', request_json)
-        verify_parameter_in_request_body('group_name', request_json)
-        return multi_tenancy.add_user_to_group(request_json['username'],
-                                               request_json['group_name'])
+        request_dict = get_json_and_verify_params({'username', 'group_name'})
+        return multi_tenancy.add_user_to_group(
+            request_dict['username'],
+            request_dict['group_name']
+        )
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
@@ -249,13 +241,10 @@ class UsersGroups(SecuredMultiTenancyResource):
         """
         Remove a user from a group
         """
-        verify_json_content_type()
-        request_json = request.json
-        verify_parameter_in_request_body('username', request_json)
-        verify_parameter_in_request_body('group_name', request_json)
+        request_dict = get_json_and_verify_params({'username', 'group_name'})
         return multi_tenancy.remove_user_from_group(
-            request_json['username'],
-            request_json['group_name']
+            request_dict['username'],
+            request_dict['group_name']
         )
 
 
@@ -277,11 +266,8 @@ class Cluster(ClusterResourceBase):
 
         The created cluster will already have one node (the current manager).
         """
-        verify_json_content_type()
-        request_json = request.get_json()
-        verify_parameter_in_request_body('config', request_json)
-        config = request_json['config']
-        return cluster.start(config)
+        request_dict = get_json_and_verify_params({'config'})
+        return cluster.start(request_dict['config'])
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ClusterState)
@@ -291,11 +277,8 @@ class Cluster(ClusterResourceBase):
 
         Use this to change settings or promote a replica machine to master.
         """
-        verify_json_content_type()
-        request_json = request.get_json()
-        verify_parameter_in_request_body('config', request_json)
-        config = request_json['config']
-        return cluster.update_config(config)
+        request_dict = get_json_and_verify_params({'config'})
+        return cluster.update_config(request_dict['config'])
 
 
 class ClusterNodes(ClusterResourceBase):
@@ -326,11 +309,8 @@ class ClusterNodesId(ClusterResourceBase):
         """
         Join the current manager to the cluster.
         """
-        verify_json_content_type()
-        request_json = request.get_json()
-        verify_parameter_in_request_body('config', request_json)
-        config = request_json['config']
-        return cluster.join(config)
+        request_dict = get_json_and_verify_params({'config'})
+        return cluster.join(request_dict['config'])
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ClusterNode)
@@ -341,3 +321,30 @@ class ClusterNodesId(ClusterResourceBase):
         Use this when a node is permanently down.
         """
         return cluster.remove_node(node_id)
+
+
+class Permissions(SecuredResource):
+    @staticmethod
+    def _get_and_validate_params():
+        return get_json_and_verify_params({
+            'resource_type': {},
+            'resource_id': {},
+            'users': {'type': list},
+            'permission': {'optional': True}
+        })
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ResourceID)
+    def put(self):
+        """Add permissions to a resource
+        """
+        params = self._get_and_validate_params()
+        return PermissionsHandler.add_permissions(params)
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ResourceID)
+    def delete(self):
+        """Remove permissions from a resource
+        """
+        params = self._get_and_validate_params()
+        return PermissionsHandler.remove_permissions(params)
