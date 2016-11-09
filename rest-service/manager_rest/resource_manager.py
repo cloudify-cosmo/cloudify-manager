@@ -13,21 +13,23 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import uuid
-import traceback
 import os
-import itertools
+import uuid
 import shutil
+import traceback
+import itertools
 from copy import deepcopy
 from StringIO import StringIO
 
-from flask import current_app
 import celery.exceptions
+from flask import current_app
+from flask_security import current_user
 
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.storage.models_states import (SnapshotState,
                                                 ExecutionState,
                                                 DeploymentModificationState)
@@ -118,19 +120,23 @@ class ResourceManager(object):
 
     def create_snapshot_model(self,
                               snapshot_id,
-                              status=SnapshotState.CREATING):
+                              status=SnapshotState.CREATING,
+                              private_resource=False):
         now = utils.get_formatted_timestamp()
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
                                        status=status,
                                        error='')
-        return self.sm.put(models.Snapshot, new_snapshot)
+        return self.sm.put(new_snapshot, private_resource)
 
-    def create_snapshot(self, snapshot_id,
+    def create_snapshot(self,
+                        snapshot_id,
                         include_metrics,
                         include_credentials,
-                        bypass_maintenance):
-        self.create_snapshot_model(snapshot_id)
+                        bypass_maintenance,
+                        private_resource=False):
+        self.create_snapshot_model(snapshot_id,
+                                   private_resource=private_resource)
         try:
             _, execution = self._execute_system_workflow(
                 wf_id='create_snapshot',
@@ -144,7 +150,8 @@ class ResourceManager(object):
                 bypass_maintenance=bypass_maintenance
             )
         except manager_exceptions.ExistingRunningExecutionError:
-            self.sm.delete(models.Snapshot, snapshot_id)
+            snapshot = self.sm.get(models.Snapshot, snapshot_id)
+            self.sm.delete(snapshot)
             raise
 
         return execution
@@ -192,6 +199,7 @@ class ResourceManager(object):
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists.
         plugin = self.sm.get(models.Plugin, plugin_id)
+        self.assert_user_has_modify_permissions(plugin)
 
         # Uninstall (if applicable)
         if utils.plugin_installable_on_current_platform(plugin):
@@ -226,7 +234,7 @@ class ResourceManager(object):
                 timeout=300)
 
         # Remove from storage
-        self.sm.delete(models.Plugin, plugin.id)
+        self.sm.delete(plugin)
 
         # Remove from file system
         archive_path = utils.get_plugin_archive_path(plugin_id,
@@ -239,7 +247,8 @@ class ResourceManager(object):
                           application_dir,
                           application_file_name,
                           resources_base,
-                          blueprint_id):
+                          blueprint_id,
+                          private_resource=False):
         application_file = os.path.join(application_dir, application_file_name)
         dsl_location = '{0}{1}'.format(resources_base, application_file)
         try:
@@ -258,10 +267,11 @@ class ResourceManager(object):
             created_at=now,
             updated_at=now,
             main_file_name=application_file_name)
-        return self.sm.put(models.Blueprint, new_blueprint)
+        return self.sm.put(new_blueprint, private_resource)
 
     def delete_blueprint(self, blueprint_id):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
+        self.assert_user_has_modify_permissions(blueprint)
 
         if len(blueprint.deployments) > 0:
             raise manager_exceptions.DependentExistsError(
@@ -271,14 +281,15 @@ class ResourceManager(object):
                         ','.join([dep.id for dep
                                   in blueprint.deployments])))
 
-        return self.sm.delete(models.Blueprint, blueprint_id)
+        return self.sm.delete(blueprint)
 
     def delete_deployment(self,
                           deployment_id,
                           bypass_maintenance=None,
                           ignore_live_nodes=False):
         # Verify deployment exists.
-        self.sm.get(models.Deployment, deployment_id)
+        deployment = self.sm.get(models.Deployment, deployment_id)
+        self.assert_user_has_modify_permissions(deployment)
 
         # validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
@@ -319,7 +330,7 @@ class ResourceManager(object):
 
         self._delete_deployment_environment(deployment_id, bypass_maintenance)
         self._delete_deployment_logs(deployment_id, bypass_maintenance)
-        return self.sm.delete(models.Deployment, deployment_id)
+        return self.sm.delete(deployment)
 
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
@@ -357,7 +368,7 @@ class ResourceManager(object):
 
         if deployment:
             deployment.executions.append(new_execution)
-        self.sm.put(models.Execution, new_execution)
+        self.sm.put(new_execution)
 
         # executing the user workflow
         workflow_plugins = blueprint.plan[
@@ -445,7 +456,7 @@ class ResourceManager(object):
 
         if deployment:
             deployment.executions.append(execution)
-        self.sm.put(models.Execution, execution)
+        self.sm.put(execution)
 
         async_task = self.workflow_client.execute_system_workflow(
             wf_id=wf_id,
@@ -618,7 +629,7 @@ class ResourceManager(object):
 
         for node in nodes:
             deployment.nodes.append(node)
-            self.sm.put(models.Node, node)
+            self.sm.put(node)
 
     def _create_deployment_node_instances(self,
                                           deployment_id,
@@ -628,10 +639,14 @@ class ResourceManager(object):
             dsl_node_instances)
 
         for node_instance in node_instances:
-            self.sm.put(models.NodeInstance, node_instance)
+            self.sm.put(node_instance)
 
-    def create_deployment(self, blueprint_id, deployment_id, inputs=None,
-                          bypass_maintenance=None):
+    def create_deployment(self,
+                          blueprint_id,
+                          deployment_id,
+                          inputs=None,
+                          bypass_maintenance=None,
+                          private_resource=False):
 
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
@@ -647,7 +662,7 @@ class ResourceManager(object):
             deployment_id,
             deployment_plan)
         blueprint.deployments.append(new_deployment)
-        self.sm.put(models.Deployment, new_deployment)
+        self.sm.put(new_deployment, private_resource)
 
         self._create_deployment_nodes(deployment_id, deployment_plan)
 
@@ -665,6 +680,8 @@ class ResourceManager(object):
                                       modified_nodes,
                                       context):
         deployment = self.sm.get(models.Deployment, deployment_id)
+        self.assert_user_has_modify_permissions(deployment)
+
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
         existing_modifications = self.sm.list(
@@ -710,7 +727,7 @@ class ResourceManager(object):
             node_instances=node_instances_modification,
             context=context)
         deployment.modifications.append(modification)
-        self.sm.put(models.DeploymentModification, modification)
+        self.sm.put(modification)
 
         scaling_groups = deepcopy(deployment.scaling_groups)
         for node_id, modified_node in modified_nodes.items():
@@ -779,6 +796,7 @@ class ResourceManager(object):
                 ' {1} status.'.format(modification_id,
                                       modification.status))
         deployment = self.sm.get(models.Deployment, modification.deployment_id)
+        self.assert_user_has_modify_permissions(deployment)
 
         modified_nodes = modification.modified_nodes
         scaling_groups = deepcopy(deployment.scaling_groups)
@@ -795,18 +813,19 @@ class ResourceManager(object):
         self.sm.update(deployment)
 
         node_instances = modification.node_instances
-        for node_instance in node_instances['removed_and_related']:
-            if node_instance.get('modification') == 'removed':
-                self.sm.delete(models.NodeInstance, node_instance['id'])
+        for node_instance_dict in node_instances['removed_and_related']:
+            instance = self.sm.get(
+                models.NodeInstance,
+                node_instance_dict['id'],
+                locking=True
+            )
+            if node_instance_dict.get('modification') == 'removed':
+                self.sm.delete(instance)
             else:
                 removed_relationship_target_ids = set(
                     [rel['target_id']
-                     for rel in node_instance['relationships']])
-                instance = self.sm.get(
-                    models.NodeInstance,
-                    node_instance['id'],
-                    locking=True
-                )
+                     for rel in node_instance_dict['relationships']])
+
                 new_relationships = [rel for rel in instance.relationships
                                      if rel['target_id']
                                      not in removed_relationship_target_ids]
@@ -832,6 +851,8 @@ class ResourceManager(object):
                                         modification.status))
 
         deployment = self.sm.get(models.Deployment, modification.deployment_id)
+        self.assert_user_has_modify_permissions(deployment)
+
         deployment_id_filter = self.create_filters_dict(
             deployment_id=modification.deployment_id)
         node_instances = self.sm.list(
@@ -842,7 +863,7 @@ class ResourceManager(object):
         modified_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
         for instance in node_instances:
-            self.sm.delete(models.NodeInstance, instance.id)
+            self.sm.delete(instance)
         for instance_dict in modified_instances['before_modification']:
             self.add_node_instance_from_dict(instance_dict)
         nodes_num_instances = {
@@ -880,7 +901,7 @@ class ResourceManager(object):
         new_node_instance = models.NodeInstance(**instance_dict)
         node = self.get_node(deployment_id, node_id)
         node.node_instances.append(new_node_instance)
-        self.sm.put(models.NodeInstance, new_node_instance)
+        self.sm.put(new_node_instance)
 
         # Return the IDs to the dict for later use
         instance_dict['deployment_id'] = deployment_id
@@ -1226,14 +1247,26 @@ class ResourceManager(object):
             )
         return nodes[0]
 
+    @staticmethod
+    def assert_user_has_modify_permissions(resource):
+        """Assert that the current user has `owner` permissions on a given
+         resource, i.e. he's either the resource's creator, he is one of the
+         resource's owners or he's an admin.
+        """
+        if current_user.is_admin \
+                or resource.creator == current_user \
+                or current_user in resource.owners:
+            return
+
+        raise_unauthorized_user_error(
+            "{0} does not have permissions to "
+            "modify/delete {1}".format(current_user, resource)
+        )
+
 
 # What we need to access this manager in Flask
 def get_resource_manager():
     """
     Get the current app's resource manager, create if necessary
     """
-    manager = current_app.config.get('resource_manager')
-    if not manager:
-        current_app.config['resource_manager'] = ResourceManager()
-        manager = current_app.config.get('resource_manager')
-    return manager
+    return current_app.config.setdefault('resource_manager', ResourceManager())

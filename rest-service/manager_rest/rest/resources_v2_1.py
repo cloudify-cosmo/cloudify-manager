@@ -24,8 +24,8 @@ from manager_rest.deployment_update.constants import PHASES
 from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest import utils
-from manager_rest.storage import models
 from manager_rest.security import SecuredResource
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
@@ -39,7 +39,7 @@ from manager_rest.upload_manager import \
     UploadedBlueprintsDeploymentUpdateManager
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
-from .rest_utils import verify_and_convert_bool, verify_json_content_type
+from .rest_utils import verify_and_convert_bool, get_json_and_verify_params
 from . import resources, rest_decorators, responses_v2_1, resources_v2
 
 
@@ -136,9 +136,15 @@ class DeploymentUpdate(SecuredResource):
         :param phase: initiate or finalize
         :return: update response
         """
+        sm = get_storage_manager()
+        rm = get_resource_manager()
         if phase == PHASES.INITIAL:
+            deployment = sm.get(models.Deployment, id)
+            rm.assert_user_has_modify_permissions(deployment)
             return self._commit(id)
         elif phase == PHASES.FINAL:
+            deployment = sm.get(models.DeploymentUpdate, id).deployment
+            rm.assert_user_has_modify_permissions(deployment)
             return get_deployment_updates_manager().finalize_commit(id)
 
     @staticmethod
@@ -294,10 +300,9 @@ class PluginsId(resources_v2.PluginsId):
         """
         Delete plugin by ID
         """
-        verify_json_content_type()
-        request_json = request.json
+        request_dict = get_json_and_verify_params()
         force = verify_and_convert_bool(
-            'force', request_json.get('force', False)
+            'force', request_dict.get('force', False)
         )
         try:
             return get_resource_manager().remove_plugin(plugin_id=plugin_id,

@@ -16,112 +16,115 @@
 from .models_base import db
 
 
-#  region Helper functions
-
-def foreign_key(
-        parent_table,
-        id_col_name='storage_id',
-        nullable=False,
-        column_type=db.Integer
-):
+def foreign_key(foreign_key_column, nullable=False):
     """Return a ForeignKey object with the relevant
 
-    :param parent_table: SQL name of the parent table
-    :param id_col_name: Name of the parent table's ID column [default: `id`]
+    :param foreign_key_column: Unique id column in the parent table
     :param nullable: Should the column be allowed to remain empty
-    :param column_type: The type (integer/text/etc.) of the column
-    :return:
     """
     return db.Column(
-        column_type,
-        db.ForeignKey(
-            '{0}.{1}'.format(parent_table.__tablename__, id_col_name),
-            ondelete='CASCADE'
-        ),
+        db.ForeignKey(foreign_key_column, ondelete='CASCADE'),
         nullable=nullable
     )
 
 
-def one_to_many_relationship(
-        child_class_name,
-        column_name,
-        parent_class_name,
-        back_reference_name,
-        parent_id_name='storage_id'
-):
+def one_to_many_relationship(child_class,
+                             parent_class,
+                             foreign_key_column,
+                             backreference=None):
     """Return a one-to-many SQL relationship object
     Meant to be used from inside the *child* object
 
-    :param child_class_name: Class name of the child table
-    :param column_name: Name of the column pointing to the parent table
-    :param parent_class_name: Class name of the parent table
-    :param back_reference_name: The name to give to the reference to the child
-    :param parent_id_name: Name of the parent table's ID column [default: `id`]
-    :return:
+    :param parent_class: Class of the parent table
+    :param child_class: Class of the child table
+    :param foreign_key_column: The column of the foreign key
+    :param backreference: The name to give to the reference to the child
     """
+    backreference = backreference or child_class.__tablename__
     return db.relationship(
-        parent_class_name,
-        primaryjoin='{0}.{1} == {2}.{3}'.format(
-            child_class_name,
-            column_name,
-            parent_class_name,
-            parent_id_name
-        ),
+        parent_class,
+        primaryjoin=lambda: parent_class.storage_id == foreign_key_column,
         # The following line make sure that when the *parent* is
         # deleted, all its connected children are deleted as well
-        backref=db.backref(back_reference_name, cascade='all')
+        backref=db.backref(backreference, cascade='all')
     )
 
 
-def many_to_many_relationship(
-        other_table_class_name,
-        connecting_table,
-        back_reference_name
-):
+def many_to_many_relationship(current_class, other_class, table_prefix=None):
     """Return a many-to-many SQL relationship object
 
-    :param other_table_class_name: The name of the table we're connecting to
-    :param connecting_table: The secondary table used in the relationship
-    :param back_reference_name: The name to give to the reference to the
-    current table from the other table
-    :return:
+    Notes:
+    1. The backreference name is the current table's table name
+    2. This method creates a new helper table in the DB
+
+    :param current_class: The class of the table we're connecting from
+    :param other_class: The class of the table we're connecting to
+    :param table_prefix: Custom prefix for the helper table name and the
+    backreference name
     """
+    current_table_name = current_class.__tablename__
+    current_column_name = '{0}_id'.format(current_table_name[:-1])
+    current_foreign_key = '{0}.{1}'.format(
+        current_table_name,
+        current_class.unique_id()
+    )
+
+    other_table_name = other_class.__tablename__
+    other_column_name = '{0}_id'.format(other_table_name[:-1])
+    other_foreign_key = '{0}.{1}'.format(
+        other_table_name,
+        other_class.unique_id()
+    )
+
+    helper_table_name = '{0}_{1}'.format(
+        current_table_name,
+        other_table_name
+    )
+
+    backref_name = current_table_name
+    if table_prefix:
+        helper_table_name = '{0}_{1}'.format(table_prefix, helper_table_name)
+        backref_name = '{0}_{1}'.format(table_prefix, backref_name)
+
+    secondary_table = get_secondary_table(
+        helper_table_name,
+        current_column_name,
+        other_column_name,
+        current_foreign_key,
+        other_foreign_key
+    )
     return db.relationship(
-        other_table_class_name,
-        secondary=connecting_table,
-        backref=db.backref(back_reference_name, lazy='dynamic')
+        other_class,
+        secondary=secondary_table,
+        backref=db.backref(backref_name, lazy='dynamic')
     )
 
 
-#  endregion
+def get_secondary_table(helper_table_name,
+                        first_column_name,
+                        second_column_name,
+                        first_foreign_key,
+                        second_foreign_key):
+    """Create a helper table for a many-to-many relationship
 
-#  region Helper tables
-
-tenants_groups_table = db.Table(
-    'tenants_groups',
-    db.Column('group_id', db.Integer, db.ForeignKey('groups.id')),
-    db.Column('tenant_id', db.Integer, db.ForeignKey('tenants.id'))
-)
-
-
-roles_users_table = db.Table(
-    'roles_users',
-    db.Column('user_id', db.Integer, db.ForeignKey('users.id')),
-    db.Column('role_id', db.Integer, db.ForeignKey('roles.id'))
-)
-
-
-groups_users_table = db.Table(
-    'groups_users',
-    db.Column('user_id', db.Integer, db.ForeignKey('users.id')),
-    db.Column('group_id', db.Integer, db.ForeignKey('groups.id'))
-)
-
-
-tenants_users_table = db.Table(
-    'tenants_users',
-    db.Column('user_id', db.Integer, db.ForeignKey('users.id')),
-    db.Column('tenant_id', db.Integer, db.ForeignKey('tenants.id'))
-)
-
-#  endregion
+    :param helper_table_name: The name of the table
+    :param first_column_name: The name of the first column in the table
+    :param second_column_name: The name of the second column in the table
+    :param first_foreign_key: The string representing the first foreign key,
+    for example `blueprint.storage_id`, or `tenants.id`
+    :param second_foreign_key: The string representing the second foreign key
+    :return: A Table object
+    """
+    return db.Table(
+        helper_table_name,
+        db.Column(
+            first_column_name,
+            db.Integer,
+            db.ForeignKey(first_foreign_key)
+        ),
+        db.Column(
+            second_column_name,
+            db.Integer,
+            db.ForeignKey(second_foreign_key)
+        )
+    )

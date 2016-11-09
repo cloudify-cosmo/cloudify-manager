@@ -22,7 +22,9 @@ class SnapshotsTest(BaseServerTestCase):
             assert_almost_equal=self.assertAlmostEqual)
 
         try:
-            self.client.snapshots.upload(tmp_file_path, '0', progress_func)
+            self.client.snapshots.upload(tmp_file_path,
+                                         snapshot_id='0',
+                                         progress_callback=progress_func)
         finally:
             self.quiet_delete(tmp_file_path)
 

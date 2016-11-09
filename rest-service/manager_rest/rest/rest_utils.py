@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from flask import request, make_response
+from flask_restful.reqparse import RequestParser
 
 from contextlib import contextmanager
 
@@ -27,27 +28,44 @@ def skip_nested_marshalling():
     delattr(request, '__skip_marshalling')
 
 
-def verify_json_content_type():
+def get_json_and_verify_params(params=None):
+    params = params or []
     if request.content_type != 'application/json':
         raise manager_exceptions.UnsupportedContentTypeError(
             'Content type must be application/json')
 
+    request_dict = request.json
+    is_params_dict = isinstance(params, dict)
 
-def verify_parameter_in_request_body(param,
-                                     request_json,
-                                     param_type=None,
-                                     optional=False):
-    if param not in request_json:
-        if optional:
-            return
-        raise manager_exceptions.BadParametersError(
-            'Missing {0} in json request body'.format(param))
-    if param_type and not isinstance(request_json[param], param_type):
-        raise manager_exceptions.BadParametersError(
-            '{0} parameter is expected to be of type {1} but is of type '
-            '{2}'.format(param,
-                         param_type.__name__,
-                         type(request_json[param]).__name__))
+    def is_optional(param_name):
+        return is_params_dict and params[param_name].get('optional', False)
+
+    def check_type(param_name):
+        return is_params_dict and params[param_name].get('type', None)
+
+    for param in params:
+        if param not in request_dict:
+            if is_optional(param):
+                continue
+            raise manager_exceptions.BadParametersError(
+                'Missing {0} in json request body'.format(param))
+
+        param_type = check_type(param)
+        if param_type and not isinstance(request_dict[param], param_type):
+            raise manager_exceptions.BadParametersError(
+                '{0} parameter is expected to be of type {1} but is of type '
+                '{2}'.format(param,
+                             param_type.__name__,
+                             type(request_dict[param]).__name__))
+    return request_dict
+
+
+def get_args_and_verify_arguments(arguments):
+    request_parser = RequestParser()
+    for argument in arguments:
+        argument.location = 'args'
+        request_parser.args.append(argument)
+    return request_parser.parse_args()
 
 
 def verify_and_convert_bool(attribute_name, str_bool):

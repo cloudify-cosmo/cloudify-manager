@@ -21,7 +21,7 @@ from riemann_controller.config_constants import Constants
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.test_cases import BaseTestCase
-from integration_tests import riemann
+from integration_tests.framework import riemann
 from integration_tests.tests.utils import do_retries, do_retries_boolean
 from integration_tests.tests.utils import get_resource as resource
 

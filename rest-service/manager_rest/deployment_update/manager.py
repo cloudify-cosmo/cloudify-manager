@@ -138,7 +138,7 @@ class DeploymentUpdateManager(object):
             created_at=utils.get_formatted_timestamp()
         )
         deployment.deployment_updates.append(deployment_update)
-        self.sm.put(models.DeploymentUpdate, deployment_update)
+        self.sm.put(deployment_update)
         return deployment_update
 
     def create_deployment_update_step(self,
@@ -155,13 +155,14 @@ class DeploymentUpdateManager(object):
         :return:
         """
         step = models.DeploymentUpdateStep(
+            id=str(uuid.uuid4()),
             action=action,
             entity_type=entity_type,
             entity_id=entity_id,
         )
         deployment_update = self.get_deployment_update(deployment_update_id)
         deployment_update.steps.append(step)
-        return self.sm.put(models.DeploymentUpdateStep, step)
+        return self.sm.put(step)
 
     def extract_steps_from_deployment_update(self, deployment_update):
         supported_steps, unsupported_steps = \
@@ -500,7 +501,7 @@ class DeploymentUpdateManager(object):
         if deployment:
             deployment.executions.append(new_execution)
             new_execution.deployment_updates.append(deployment_update)
-        self.sm.put(models.Execution, new_execution)
+        self.sm.put(new_execution)
 
         # executing the user workflow
         workflow_plugins = \
@@ -523,9 +524,5 @@ def get_deployment_updates_manager():
     """
     Get the current app's deployment updates manager, create if necessary
     """
-    manager = current_app.config.get('deployment_updates_manager')
-    if not manager:
-        current_app.config['deployment_updates_manager'] = \
-            DeploymentUpdateManager()
-        manager = current_app.config.get('deployment_updates_manager')
-    return manager
+    return current_app.config.setdefault('deployment_updates_manager',
+                                         DeploymentUpdateManager())

@@ -31,10 +31,10 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                      description=None,
                                      plan={'name': 'my-bp'},
                                      main_file_name='aaa')
-        self.sm.put(models.Blueprint, blueprint)
+        self.sm.put(blueprint)
         blueprint_from_list = self.sm.list(models.Blueprint)[0]
         blueprint_restored = self.sm.get(models.Blueprint, 'blueprint-id')
-        bp_from_delete = self.sm.delete(models.Blueprint, 'blueprint-id')
+        bp_from_delete = self.sm.delete(blueprint_restored)
         self.assertEquals(blueprint.to_dict(), blueprint_from_list.to_dict())
         self.assertEquals(blueprint.to_dict(), blueprint_restored.to_dict())
         # in bp returned from delete operation only 'id' is guaranteed to
@@ -58,8 +58,8 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                              description=None,
                                              plan={'name': 'my-bp'},
                                              main_file_name='aaa')
-        self.sm.put(models.Blueprint, blueprint)
-        self.sm.put(models.Blueprint, another_blueprint)
+        self.sm.put(blueprint)
+        self.sm.put(another_blueprint)
 
         deployment1 = models.Deployment(id='dep-1',
                                         created_at=now,
@@ -74,7 +74,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         scaling_groups={},
                                         outputs={})
         blueprint.deployments.append(deployment1)
-        self.sm.put(models.Deployment, deployment1)
+        self.sm.put(deployment1)
 
         deployment2 = models.Deployment(id='dep-2',
                                         created_at=now,
@@ -89,7 +89,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         scaling_groups={},
                                         outputs={})
         blueprint.deployments.append(deployment2)
-        self.sm.put(models.Deployment, deployment2)
+        self.sm.put(deployment2)
 
         deployment3 = models.Deployment(id='dep-3',
                                         created_at=now,
@@ -104,7 +104,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         scaling_groups={},
                                         outputs={})
         another_blueprint.deployments.append(deployment3)
-        self.sm.put(models.Deployment, deployment3)
+        self.sm.put(deployment3)
 
         filters_bp = {'blueprint_id': 'blueprint-id'}
         blueprint_deployments = \
@@ -127,7 +127,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                      description=None,
                                      plan={'name': 'my-bp'},
                                      main_file_name='aaa')
-        self.sm.put(models.Blueprint, blueprint)
+        self.sm.put(blueprint)
 
         now2 = utils.get_formatted_timestamp()
         dep = models.Deployment(id='dep-id',
@@ -144,7 +144,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 outputs={})
 
         blueprint.deployments.append(dep)
-        self.sm.put(models.Deployment, dep)
+        self.sm.put(dep)
 
         serialized_dep = dep.to_dict()
         self.assertEquals(13, len(serialized_dep))
@@ -173,7 +173,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                      description=None,
                                      plan={'name': 'my-bp'},
                                      main_file_name='aaa')
-        self.sm.put(models.Blueprint, blueprint)
+        self.sm.put(blueprint)
 
         blueprint_restored = self.sm.get(
             models.Blueprint,

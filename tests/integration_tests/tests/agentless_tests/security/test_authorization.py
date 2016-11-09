@@ -14,10 +14,11 @@
 #    * limitations under the License.
 #
 
-from .security_base import TestAuthenticationBase
+from manager_rest.storage.models_states import ExecutionState
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from .security_base import TestAuthenticationBase
 from integration_tests.tests.utils import get_resource as resource
 
 RUNNING_EXECUTIONS_MESSAGE = 'There are running executions for this deployment'
@@ -29,10 +30,8 @@ class AuthorizationTest(TestAuthenticationBase):
     admin_password = 'alice_password'
     default_username = 'bob'
     default_password = 'bob_password'
-    viewer_username = 'clair'
-    viewer_password = 'clair_password'
-    suspended_username = 'dave'
-    suspended_password = 'dave_password'
+    suspended_username = 'clair'
+    suspended_password = 'clair_password'
 
     blueprint1_id = 'blueprint1_id'
     blueprint2_id = 'blueprint2_id'
@@ -79,16 +78,18 @@ class AuthorizationTest(TestAuthenticationBase):
                                 password=self.default_password):
             self.client.blueprints.upload(blueprint_path, self.blueprint3_id)
 
-        # ...but viewers and suspended users should not
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
-            self._assert_unauthorized(self.client.blueprints.upload,
-                                      blueprint_path, blueprint_id='dummy_bp')
-
+        # ...but suspended users should not
         with self._login_client(username=self.suspended_username,
                                 password=self.suspended_password):
             self._assert_unauthorized(self.client.blueprints.upload,
                                       blueprint_path, blueprint_id='dummy_bp')
+
+    def _wait_for_deployment_executions(self, deployment_id):
+        executions = self.client.executions.list(deployment_id=deployment_id)
+        executions = [e for e in executions
+                      if e.status not in ExecutionState.END_STATES]
+        if executions:
+            self.wait_for_execution_to_end(executions[0])
 
     def _assert_list_blueprint(self):
         def _list_and_assert():
@@ -98,18 +99,13 @@ class AuthorizationTest(TestAuthenticationBase):
                                  self.blueprint3_id):
                 self.assertIn(blueprint_id, bp_ids)
 
-        # admins, default users and viewers should be able to list
-        # blueprints...
+        # admins and default users should be able to list blueprints...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
             _list_and_assert()
 
         with self._login_client(username=self.default_username,
                                 password=self.default_password):
-            _list_and_assert()
-
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
             _list_and_assert()
 
         # ...but suspended users should not
@@ -118,17 +114,13 @@ class AuthorizationTest(TestAuthenticationBase):
             self._assert_unauthorized(self.client.blueprints.list)
 
     def _assert_get_blueprint(self):
-        # admins, default users and viewers should be able to get blueprints...
+        # admins and default users should be able to get blueprints...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
             self.client.blueprints.get(self.blueprint1_id)
 
         with self._login_client(username=self.default_username,
                                 password=self.default_password):
-            self.client.blueprints.get(self.blueprint1_id)
-
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
             self.client.blueprints.get(self.blueprint1_id)
 
         # ...but suspended users should not
@@ -147,12 +139,7 @@ class AuthorizationTest(TestAuthenticationBase):
                                 password=self.default_password):
             self.client.blueprints.delete(self.blueprint3_id)
 
-        # ...but viewers and suspended users should not
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
-            self._assert_unauthorized(self.client.blueprints.delete,
-                                      'dummy_bp')
-
+        # ...but suspended users should not
         with self._login_client(username=self.suspended_username,
                                 password=self.suspended_password):
             self._assert_unauthorized(self.client.blueprints.delete,
@@ -172,13 +159,7 @@ class AuthorizationTest(TestAuthenticationBase):
             self.client.deployments.create(blueprint_id=self.blueprint1_id,
                                            deployment_id=self.deployment3_id)
 
-        # ...but viewers and suspended users should not
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
-            self._assert_unauthorized(self.client.deployments.create,
-                                      blueprint_id=self.blueprint1_id,
-                                      deployment_id='dummy_dp')
-
+        # ...but suspended users should not
         with self._login_client(username=self.suspended_username,
                                 password=self.suspended_password):
             self._assert_unauthorized(self.client.deployments.create,
@@ -193,7 +174,7 @@ class AuthorizationTest(TestAuthenticationBase):
                                   self.deployment3_id):
                 self.assertIn(deployment_id, dep_ids)
 
-        # admins, default users and viewers should be able to list
+        # admins and default users should be able to list
         # deployments...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
@@ -201,10 +182,6 @@ class AuthorizationTest(TestAuthenticationBase):
 
         with self._login_client(username=self.default_username,
                                 password=self.default_password):
-            _list_and_assert()
-
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
             _list_and_assert()
 
         # ...but suspended users should not
@@ -216,18 +193,15 @@ class AuthorizationTest(TestAuthenticationBase):
         # admins and default users should be able to delete deployments...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
+            self._wait_for_deployment_executions(self.deployment2_id)
             self.client.deployments.delete(self.deployment2_id)
 
         with self._login_client(username=self.default_username,
                                 password=self.default_password):
+            self._wait_for_deployment_executions(self.deployment3_id)
             self.client.deployments.delete(self.deployment3_id)
 
-        # ...but viewers and suspended users should not
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
-            self._assert_unauthorized(self.client.deployments.delete,
-                                      'dummy_dp')
-
+        # ...but suspended users should not
         with self._login_client(username=self.suspended_username,
                                 password=self.suspended_password):
             self._assert_unauthorized(self.client.deployments.delete,
@@ -239,30 +213,26 @@ class AuthorizationTest(TestAuthenticationBase):
         # admins and default users should be able to start executions...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
-            self.client.executions.start(workflow, self.deployment1_id)
+            self.client.executions.start(self.deployment1_id, workflow)
 
         with self._login_client(username=self.default_username,
                                 password=self.default_password):
-            self.client.executions.start(workflow, self.deployment1_id)
+            self._wait_for_deployment_executions(self.deployment1_id)
+            self.client.executions.start(self.deployment1_id, workflow)
 
-        # ...but viewers and suspended users should not
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
-            self._assert_unauthorized(self.client.executions.start, workflow,
-                                      deployment_id='dummy_dp')
-
+        # ...but suspended users should not
         with self._login_client(username=self.suspended_username,
                                 password=self.suspended_password):
-            self._assert_unauthorized(self.client.executions.start, workflow,
-                                      deployment_id='dummy_dp')
+            self._assert_unauthorized(self.client.executions.start, 'dummy_dp',
+                                      workflow)
 
     def _assert_list_executions(self, execution_ids):
         def _list_and_assert():
-            ex_ids = [ex.id for ex in self.client.deployments.list()]
+            ex_ids = [ex.id for ex in self.client.executions.list()]
             for execution_id in execution_ids:
                 self.assertIn(execution_id, ex_ids)
 
-        # admins, default users and viewers should be able so
+        # admins and default users should be able so
         # list executions...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
@@ -272,10 +242,6 @@ class AuthorizationTest(TestAuthenticationBase):
                                 password=self.default_password):
             _list_and_assert()
 
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
-            _list_and_assert()
-
         # ...but suspended users should not
         with self._login_client(username=self.suspended_username,
                                 password=self.suspended_password):
@@ -283,20 +249,16 @@ class AuthorizationTest(TestAuthenticationBase):
 
     def _assert_get_execution(self, execution_id):
         def _get_and_assert():
-            output = self.client.executions.get(execution_id)
-            self.assertIn(execution_id, output)
+            execution = self.client.executions.get(execution_id)
+            self.assertEqual(execution_id, execution.id)
 
-        # admins, default users and viewers should be able to get executions...
+        # admins and default users should be able to get executions...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
             _get_and_assert()
 
         with self._login_client(username=self.default_username,
                                 password=self.default_password):
-            _get_and_assert()
-
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
             _get_and_assert()
 
         # ...but suspended users should not
@@ -322,11 +284,7 @@ class AuthorizationTest(TestAuthenticationBase):
                                 password=self.default_password):
             _cancel_and_assert()
 
-        # ...but viewers and suspended users should not
-        with self._login_client(username=self.viewer_username,
-                                password=self.viewer_password):
-            self._assert_unauthorized(self.client.executions.cancel,
-                                      execution_id)
+        # ...but suspended users should not
 
         with self._login_client(username=self.suspended_username,
                                 password=self.suspended_password):
@@ -336,4 +294,4 @@ class AuthorizationTest(TestAuthenticationBase):
     def _assert_unauthorized(self, method, *args, **kwargs):
         with self.assertRaises(CloudifyClientError) as cm:
             method(*args, **kwargs)
-            self.assertIn('401: User unauthorized', str(cm.exception))
+        self.assertIn('401: User unauthorized', str(cm.exception))

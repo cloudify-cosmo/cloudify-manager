@@ -62,7 +62,7 @@ class AuthenticationTests(SecurityTestBase):
     def test_valid_token_authentication(self):
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
-            token = self.test_client.tokens.get()
+            token = self.client.tokens.get()
         self._assert_user_authorized(token=token.value)
 
     def test_invalid_token_authentication(self):
@@ -71,7 +71,7 @@ class AuthenticationTests(SecurityTestBase):
     def test_secured_manager_blueprints_upload(self):
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
-            self.test_client.blueprints.upload(
+            self.client.blueprints.upload(
                 self.get_mock_blueprint_path(),
                 'bp-id'
             )
@@ -81,6 +81,6 @@ class AuthenticationTests(SecurityTestBase):
     def test_requested_by_secured(self):
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
-            self.test_client.maintenance_mode.activate()
-            response = self.test_client.maintenance_mode.status()
+            self.client.maintenance_mode.activate()
+            response = self.client.maintenance_mode.status()
         self.assertEqual(response.requested_by, 'alice')

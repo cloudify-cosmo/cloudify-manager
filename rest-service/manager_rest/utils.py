@@ -30,7 +30,7 @@ import wagon.utils
 from flask_restful import abort
 
 from manager_rest import config
-from manager_rest.constants import ALL_ROLES, SYSTEM_ADMIN_ROLE
+from manager_rest.constants import ALL_ROLES, ADMIN_ROLE
 
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
@@ -146,12 +146,19 @@ class classproperty(object):
     And use it like this:
     print A.foo  # 3
 
+    Note that when called with an instance object (owner_self, which will be
+    set to None if called from the class level), __get__ is applied to the
+    instance instead of the class. This is for cases where different behavior
+    is expected from instances and classes
     """
     def __init__(self, get_func):
         self.get_func = get_func
 
     def __get__(self, owner_self, owner_cls):
-        return self.get_func(owner_cls)
+        if owner_self:
+            return self.get_func(owner_self)
+        else:
+            return self.get_func(owner_cls)
 
 
 def create_auth_header(username=None, password=None, token=None):
@@ -179,7 +186,7 @@ def create_security_roles_and_admin_user(user_datastore,
     for role in ALL_ROLES:
         user_datastore.create_role(name=role)
 
-    admin_role = user_datastore.find_role(SYSTEM_ADMIN_ROLE)
+    admin_role = user_datastore.find_role(ADMIN_ROLE)
     user_obj = user_datastore.create_user(
         username=admin_username,
         password=admin_password,

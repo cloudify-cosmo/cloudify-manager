@@ -20,7 +20,6 @@ import shutil
 from uuid import uuid4
 
 from flask import request
-
 from flask_restful_swagger import swagger
 
 from manager_rest import config
@@ -98,15 +97,18 @@ class SnapshotsId(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(responses_v2.Execution)
     def put(self, snapshot_id):
-        rest_utils.verify_json_content_type()
-        request_json = request.json
+        request_dict = rest_utils.get_json_and_verify_params()
         include_metrics = rest_utils.verify_and_convert_bool(
             'include_metrics',
-            request_json.get('include_metrics', 'false')
+            request_dict.get('include_metrics', 'false')
         )
         include_credentials = rest_utils.verify_and_convert_bool(
             'include_credentials',
-            request_json.get('include_credentials', 'true')
+            request_dict.get('include_credentials', 'true')
+        )
+        private_resource = rest_utils.verify_and_convert_bool(
+            'private_resource',
+            request_dict.get('private_resource', 'false')
         )
         bypass_maintenance = is_bypass_maintenance_mode()
 
@@ -114,7 +116,8 @@ class SnapshotsId(SecuredResource):
             snapshot_id,
             include_metrics,
             include_credentials,
-            bypass_maintenance
+            bypass_maintenance,
+            private_resource=private_resource
         )
         return execution, 201
 
@@ -126,23 +129,24 @@ class SnapshotsId(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(responses_v2.Snapshot)
     def delete(self, snapshot_id):
-        snapshot = get_storage_manager().delete(models.Snapshot, snapshot_id)
+        sm = get_storage_manager()
+        snapshot = sm.get(models.Snapshot, snapshot_id)
+        get_resource_manager().assert_user_has_modify_permissions(snapshot)
+        sm.delete(snapshot)
         path = _get_snapshot_path(snapshot_id)
         shutil.rmtree(path, ignore_errors=True)
         return snapshot, 200
 
     @rest_decorators.exceptions_handled
     def patch(self, snapshot_id):
+        """Update snapshot status by id
         """
-        Update snapshot status by id
-        """
-        rest_utils.verify_json_content_type()
-        request_json = request.json
-        rest_utils.verify_parameter_in_request_body('status', request_json)
-
+        request_dict = rest_utils.get_json_and_verify_params({'status'})
         snapshot = get_storage_manager().get(models.Snapshot, snapshot_id)
-        snapshot.status = request_json['status']
-        snapshot.error = request_json.get('error', '')
+        get_resource_manager().assert_user_has_modify_permissions(snapshot)
+
+        snapshot.status = request_dict['status']
+        snapshot.error = request_dict.get('error', '')
         get_storage_manager().update(snapshot)
 
 
@@ -218,23 +222,20 @@ class SnapshotsIdRestore(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(responses_v2.Snapshot)
     def post(self, snapshot_id):
-        rest_utils.verify_json_content_type()
-        request_json = request.json
-        rest_utils.verify_parameter_in_request_body(
-            'recreate_deployments_envs',
-            request_json
+        request_dict = rest_utils.get_json_and_verify_params(
+            {'recreate_deployments_envs'}
         )
         recreate_deployments_envs = rest_utils.verify_and_convert_bool(
             'recreate_deployments_envs',
-            request_json['recreate_deployments_envs']
+            request_dict['recreate_deployments_envs']
         )
         bypass_maintenance = is_bypass_maintenance_mode()
         force = rest_utils.verify_and_convert_bool(
             'force',
-            request_json['force']
+            request_dict['force']
         )
         default_timeout_sec = 300
-        request_timeout = request_json.get('timeout', default_timeout_sec)
+        request_timeout = request_dict.get('timeout', default_timeout_sec)
         timeout = rest_utils.convert_to_int(request_timeout)
         execution = get_resource_manager().restore_snapshot(
             snapshot_id,

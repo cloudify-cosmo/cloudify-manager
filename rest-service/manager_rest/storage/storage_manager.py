@@ -20,10 +20,11 @@ from flask_security import current_user
 
 from manager_rest import manager_exceptions
 from manager_rest.storage.models_base import db
+from manager_rest.constants import CURRENT_TENANT_CONFIG
 
-from sqlalchemy.sql.elements import Label
-from sqlite3 import DatabaseError as SQLiteDBError
+from sqlalchemy import or_ as sql_or
 from sqlalchemy.exc import SQLAlchemyError
+from sqlite3 import DatabaseError as SQLiteDBError
 
 try:
     from psycopg2 import DatabaseError as Psycopg2DBError
@@ -47,30 +48,51 @@ class SQLStorageManager(object):
                 'SQL Storage error: {0}'.format(str(e))
             )
 
-    @staticmethod
-    def _get_base_query(model_class, include, joins):
+    def _get_base_query(self, model_class, include, joins):
         """Create the initial query from the model class and included columns
 
         :param model_class: SQL DB table class
         :param include: A (possibly empty) list of columns to include in
         the query
-        :param joins: A (possibly empty) list of models on which the query
-        should join
         :return: An SQLAlchemy AppenderQuery object
         """
-
         # If only some columns are included, query through the session object
         if include:
+            # Make sure that attributes come before association proxies
+            include.sort(key=lambda x: x.is_clause_element)
             query = db.session.query(*include)
         else:
             # If all columns should be returned, query directly from the model
             query = model_class.query
 
-        # Add any joins that might be necessary
-        for join_model in joins:
-            query = query.join(join_model)
+        if not self._skip_joining(joins, include):
+            for join_table in joins:
+                query = query.join(join_table)
 
         return query
+
+    @staticmethod
+    def _skip_joining(joins, include):
+        """Dealing with an edge case where the only included column comes from
+        an other table. In this case, we mustn't join on the same table again
+
+        :param joins: A list of tables on which we're trying to join
+        :param include: The list of
+        :return: True if we need to skip joining
+        """
+        if not joins:
+            return True
+        join_table_names = [t.__tablename__ for t in joins]
+
+        if len(include) != 1:
+            return False
+
+        column = include[0]
+        if column.is_clause_element:
+            table_name = column.element.table.name
+        else:
+            table_name = column.class_.__tablename__
+        return table_name in join_table_names
 
     @staticmethod
     def _sort_query(query, sort=None):
@@ -88,8 +110,7 @@ class SQLStorageManager(object):
                 query = query.order_by(column)
         return query
 
-    @staticmethod
-    def _filter_query(query, filters):
+    def _filter_query(self, query, model_class, filters):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -98,8 +119,14 @@ class SQLStorageManager(object):
         of such values)
         :return: An SQLAlchemy AppenderQuery object
         """
+        query = self._add_tenant_filter(query, model_class)
+        query = self._add_permissions_filter(query, model_class)
+        query = self._add_value_filter(query, filters)
+        return query
+
+    @staticmethod
+    def _add_value_filter(query, filters):
         for column, value in filters.iteritems():
-            # If there are multiple values, use `in_`, otherwise, use `eq`
             if isinstance(value, (list, tuple)):
                 query = query.filter(column.in_(value))
             else:
@@ -108,20 +135,15 @@ class SQLStorageManager(object):
         return query
 
     @staticmethod
-    def _filter_by_tenant(query, model_class):
-        """
-        Filter by the tenant ID associated with `model_class` (either
+    def _add_tenant_filter(query, model_class):
+        """Filter by the tenant ID associated with `model_class` (either
         directly via a relationship with the tenants table, or via an
         ancestor who has such a relationship)
         """
         # System administrators should see all resources, regardless of tenant.
         # Queries of elements that aren't resources (tenants, users, etc.),
-        # or resources that are independent of tenants (e.g. provider context)
         # shouldn't be filtered as well
-        if current_user.is_sys_admin() or \
-                not model_class.is_resource or \
-                ('tenant_id' not in model_class.join_properties and
-                 not hasattr(model_class, 'tenant_id')):
+        if current_user.is_admin or not model_class.is_resource:
             return query
 
         # Other users should only see resources for which they were granted
@@ -130,14 +152,76 @@ class SQLStorageManager(object):
         current_app.logger.debug('Filtering tenants for {0}'
                                  ''.format(model_class))
 
-        if 'tenant_id' in model_class.join_properties:
-            tenant_column = model_class.join_properties['tenant_id']['column']
-        else:
-            tenant_column = model_class.tenant_id
-
         # Filter by the `tenant_id` column
-        query = query.filter(tenant_column.in_(tenant_ids))
-        return query
+        clauses = [model_class.tenant_id == t_id for t_id in tenant_ids]
+        return query.filter(sql_or(*clauses))
+
+    @staticmethod
+    def _add_permissions_filter(query, model_class):
+        """Filter by the users present in either the `viewers` or `owners`
+        lists
+        """
+        # System administrators should see all resources, regardless of tenant.
+        # Queries of elements that aren't resources (tenants, users, etc.),
+        # shouldn't be filtered as well
+        if current_user.is_admin or not model_class.is_resource:
+            return query
+
+        # Only get resources where the current user appears in `viewers` or
+        # `owners` *or* where the `viewers` list is empty (meaning that this
+        # resource is public) *or* where the current user is the creator
+        user_filter = sql_or(
+            sql_or(
+                model_class.viewers.any(id=current_user.id),
+                model_class.owners.any(id=current_user.id)
+            ),
+            # ~ means `not` - i.e. all resources that don't have any viewers
+            ~model_class.viewers.any(),
+            model_class.creator == current_user
+        )
+        return query.filter(user_filter)
+
+    @staticmethod
+    def _get_joins(model_class, columns):
+        """Get a list of all the tables on which we need to join
+
+        :param columns: A set of all columns involved in the query
+        """
+        joins = []  # Using a list instead of a set because order is important
+        for column_name in columns:
+            column = getattr(model_class, column_name)
+            while not column.is_attribute:
+                column = column.remote_attr
+                if column.is_attribute:
+                    join_class = column.class_
+                else:
+                    join_class = column.local_attr.class_
+
+                # Don't add the same class more than once
+                if join_class not in joins:
+                    joins.append(join_class)
+        return joins
+
+    def _get_joins_and_converted_columns(self,
+                                         model_class,
+                                         include,
+                                         filters,
+                                         sort):
+        """Get a list of tables on which we need to join and the converted
+        `include`, `filters` and `sort` arguments (converted to actual SQLA
+        column/label objects instead of column names)
+        """
+        include = include or []
+        filters = filters or dict()
+        sort = sort or OrderedDict()
+
+        all_columns = set(include) | set(filters.keys()) | set(sort.keys())
+        joins = self._get_joins(model_class, all_columns)
+
+        include, filters, sort = self._get_columns_from_field_names(
+            model_class, include, filters, sort
+        )
+        return include, filters, sort, joins
 
     def _get_query(self,
                    model_class,
@@ -157,18 +241,12 @@ class SQLStorageManager(object):
         columns
         """
 
-        include = include or []
-        filters = filters or dict()
-        sort = sort or OrderedDict()
-
-        joins = self._get_join_models_list(model_class, include, filters, sort)
-        include, filters, sort = self._get_columns_from_field_names(
+        include, filters, sort, joins = self._get_joins_and_converted_columns(
             model_class, include, filters, sort
         )
 
         query = self._get_base_query(model_class, include, joins)
-        query = self._filter_by_tenant(query, model_class)
-        query = self._filter_query(query, filters)
+        query = self._filter_query(query, model_class, filters)
         query = self._sort_query(query, sort)
         return query
 
@@ -180,16 +258,7 @@ class SQLStorageManager(object):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
-        all_includes = [self._get_column(model_class, c) for c in include]
-        include = []
-        # Columns that are inferred from properties (Labels) should be included
-        # last for the following joins to work properly
-        for col in all_includes:
-            if isinstance(col, Label):
-                include.append(col)
-            else:
-                include.insert(0, col)
-
+        include = [self._get_column(model_class, c) for c in include]
         filters = {self._get_column(model_class, c): filters[c]
                    for c in filters}
         sort = OrderedDict((self._get_column(model_class, c), sort[c])
@@ -197,55 +266,22 @@ class SQLStorageManager(object):
 
         return include, filters, sort
 
-    def _get_join_models_list(self, model_class, include, filters, sort):
-        """Return a list of models on which the query should be joined, as
-        inferred from the include, filter and sort column names
-        """
-        if not model_class.is_resource:
-            return []
-
-        all_column_names = include + filters.keys() + sort.keys()
-        join_columns = {column_name for column_name in all_column_names
-                        if self._is_join_column(model_class, column_name)}
-
-        # If the only columns included are the columns on which we would
-        # normally join, there isn't actually a need to join, as the FROM
-        # clause in the query will be generated from the relevant models anyway
-        if include == list(join_columns):
-            return []
-
-        # Initializing a set, because the same model can appear in several
-        # join lists
-        join_models = set()
-        for column_name in join_columns:
-            join_models.update(
-                model_class.join_properties[column_name]['models']
-            )
-        # Sort the models by their correct join order
-        join_models = sorted(join_models,
-                             key=lambda model: model.join_order, reverse=True)
-
-        return join_models
-
     @staticmethod
-    def _is_join_column(model_class, column_name):
-        """Return False if the column name corresponds to a regular SQLA
-        column that `model_class` has.
-        Return True if the column that should be used is a join column (see
-        SQLModelBase for an explanation)
-        """
-        return model_class.is_resource and \
-            column_name in model_class.join_properties
-
-    def _get_column(self, model_class, column_name):
+    def _get_column(model_class, column_name):
         """Return the column on which an action (filtering, sorting, etc.)
         would need to be performed. Can be either an attribute of the class,
-        or needs to be inferred from the class' `join_properties` property
+        or an association proxy linked to a relationship the class has
         """
-        if self._is_join_column(model_class, column_name):
-            return model_class.join_properties[column_name]['column']
+        column = getattr(model_class, column_name)
+        if column.is_attribute:
+            return column
         else:
-            return getattr(model_class, column_name)
+            # We need to get to the underlying attribute, so we move on to the
+            # next remote_attr until we reach one
+            while not column.remote_attr.is_attribute:
+                column = column.remote_attr
+            # Put a label on the remote attribute with the name of the column
+            return column.remote_attr.label(column_name)
 
     @staticmethod
     def _paginate(query, pagination):
@@ -269,22 +305,19 @@ class SQLStorageManager(object):
             results = query.all()
             return results, len(results), 0, 0
 
-    def _validate_unique_resource_id_per_tenant(self, model_class, instance):
+    def _validate_unique_resource_id_per_tenant(self, instance):
         """Assert that only a single resource exists with a given id in a
         given tenant
         """
         # Only relevant for resources that have unique IDs and are connected
         # to a tenant
-        if not model_class.is_resource or \
-                not hasattr(model_class, 'tenant') or \
-                not model_class.is_id_unique:
+        if not instance.is_resource or not instance.is_id_unique:
             return
 
-        tenant_id = _get_current_tenant_id()
-        filters = {'id': instance.id, 'tenant_id': tenant_id}
+        filters = {'id': instance.id, 'tenant_id': self.current_tenant.id}
 
         # There should be only one instance with this id on this tenant
-        if len(self.list(model_class, filters=filters)) != 1:
+        if len(self.list(instance.__class__, filters=filters)) != 1:
             # Delete the newly added instance, and raise an error
             db.session.delete(instance)
             self._safe_commit()
@@ -293,20 +326,37 @@ class SQLStorageManager(object):
                 '{0} with ID `{1}` already exists on tenant `{2}`'.format(
                     instance.__class__.__name__,
                     instance.id,
-                    tenant_id
+                    self.current_tenant
                 )
             )
+
+    def _associate_users_and_tenants(self, instance, private_resource):
+        """Associate, if necessary, the instance with the current tenant/user
+        """
+        if instance.top_level_tenant:
+            instance.tenant = self.current_tenant
+        if instance.top_level_creator:
+            instance.creator = current_user
+
+            # If it's a private resource, the creator is the only viewer/owner
+            if private_resource:
+                instance.owners = [current_user]
+                instance.viewers = [current_user]
 
     @staticmethod
     def _load_properties(instance):
         """A helper method used to overcome a problem where the properties
         that rely on joins aren't being loaded automatically
         """
-        if instance.is_resource:
-            for prop in instance.join_properties:
-                if prop == 'tenant_id':
-                    continue
-                getattr(instance, prop)
+        if instance.is_resource and instance.is_derived:
+            for proxy in instance.proxies:
+                getattr(instance, proxy)
+
+    @property
+    def current_tenant(self):
+        """Return the tenant with which the user accessed the app
+        """
+        return current_app.config[CURRENT_TENANT_CONFIG]
 
     def get(self,
             model_class,
@@ -344,39 +394,24 @@ class SQLStorageManager(object):
 
         return ListResult(items=results, metadata={'pagination': pagination})
 
-    def put(self, model_class, instance):
+    def put(self, instance, private_resource=False):
         """Create a `model_class` instance from a serializable `model` object
 
-        :param model_class: SQL DB table class
-        :param instance: A dict with relevant kwargs, or an instance of a class
-        that has a `to_dict` method, and whose attributes match the columns
-        of `model_class` (might also my just an instance of `model_class`)
-        :return: An instance of `model_class`
+        :param instance: An instance of the SQLModelBase class (or some class
+        derived from it)
+        :param private_resource: If set to True, the resource's `viewers` list
+        will be populated by the creating user only
+        :return: The same instance, with the tenant set, if necessary
         """
-        if hasattr(instance, 'tenant_id'):
-            instance.tenant_id = _get_current_tenant_id()
+        self._associate_users_and_tenants(instance, private_resource)
         self.update(instance)
 
-        self._validate_unique_resource_id_per_tenant(model_class, instance)
+        self._validate_unique_resource_id_per_tenant(instance)
         return instance
 
-    def delete(self, model_class, element_id, filters=None):
-        """Delete a single result based on the model class and element ID
+    def delete(self, instance):
+        """Delete the passed instance
         """
-        try:
-            instance = self.get(
-                model_class,
-                element_id,
-                filters=filters
-            )
-        except manager_exceptions.NotFoundError:
-            raise manager_exceptions.NotFoundError(
-                'Could not delete {0} with ID `{1}` - element not found'
-                .format(
-                    model_class.__name__,
-                    element_id
-                )
-            )
         self._load_properties(instance)
         db.session.delete(instance)
         self._safe_commit()
@@ -406,15 +441,8 @@ class SQLStorageManager(object):
 def get_storage_manager():
     """Get the current Flask app's storage manager, create if necessary
     """
-    manager = current_app.config.get('storage_manager')
-    if not manager:
-        current_app.config['storage_manager'] = SQLStorageManager()
-        manager = current_app.config.get('storage_manager')
-    return manager
-
-
-def _get_current_tenant_id():
-    return current_app.config.get('tenant_id')
+    return current_app.config.setdefault('storage_manager',
+                                         SQLStorageManager())
 
 
 class ListResult(object):

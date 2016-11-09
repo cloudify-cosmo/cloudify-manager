@@ -25,29 +25,13 @@ from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
 from integration_tests.framework import utils, postgresql, docl
 from manager_rest.storage import get_storage_manager
-from manager_rest.storage.models import ProviderContext
 
-
-PROVIDER_CONTEXT = {
-    'cloudify': {
-        'workflows': {
-            'task_retries': 0,
-            'task_retry_interval': 0,
-            'subgraph_retries': 0
-        }
-    }
-}
-PROVIDER_NAME = 'integration_tests'
 
 logger = setup_logger('testenv.utils')
 
 
 def get_cfy():
     return utils.get_cfy()
-
-
-def delete_provider_context():
-    postgresql.run_query('DELETE from provider_context')
 
 
 def upload_mock_plugin(package_name, package_version):
@@ -85,15 +69,6 @@ def publish_event(queue, routing_key, event):
     finally:
         channel.close()
         connection.close()
-
-
-def restore_provider_context():
-    delete_provider_context()
-    sm = get_remote_storage_manager()
-    pc = ProviderContext(id='CONTEXT',
-                         name=PROVIDER_NAME,
-                         context=PROVIDER_CONTEXT)
-    sm.put(ProviderContext, pc)
 
 
 def create_rest_client(**kwargs):
@@ -227,5 +202,5 @@ def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
 def get_remote_storage_manager():
     """Return the SQL storage manager connected to the remote manager
     """
-    postgresql.setup_app()
+    postgresql.setup_flask_app()
     return get_storage_manager()

@@ -1,11 +1,11 @@
-########
+#########
 # Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#        http://www.apache.org/licenses/LICENSE-2.0
+#       http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,7 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from integration_tests.tests.test_cases import AgentTestCase      # noqa
-from integration_tests.tests.test_cases import BaseTestCase       # noqa
-from integration_tests.tests.test_cases import AgentlessTestCase  # noqa
-from integration_tests.tests.test_cases import ManagerTestCase    # noqa
+PROVIDER_CONTEXT = {
+    'cloudify': {
+        'workflows': {
+            'task_retries': 0,
+            'task_retry_interval': 0,
+            'subgraph_retries': 0
+        },
+        'cloudify_agent':
+            {
+                'broker_ip': ''
+            }
+    }
+}
+PROVIDER_NAME = 'integration_tests'

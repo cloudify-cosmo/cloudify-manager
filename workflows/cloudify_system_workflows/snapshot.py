@@ -78,11 +78,21 @@ _CLOUDIFY_DATA_TABLES = ['blueprints',
                          'plugins',
                          'executions',
                          'snapshots',
-                         'tenants_users',
-                         'roles_users',
-                         'groups_users',
+                         'owners_blueprints_users',
+                         'owners_deployments_users',
+                         'owners_executions_users',
+                         'owners_plugins_users',
+                         'owners_snapshots_users',
+                         'viewers_blueprints_users',
+                         'viewers_deployments_users',
+                         'viewers_executions_users',
+                         'viewers_plugins_users',
+                         'viewers_snapshots_users',
+                         'users_tenants',
+                         'users_roles',
+                         'users_groups',
                          'users',
-                         'tenants_groups',
+                         'groups_tenants',
                          'tenants',
                          'roles',
                          'groups',
@@ -408,9 +418,9 @@ def _restore_postgres(tempdir, config):
     record_creation_date = _get_restore_execution_date(postgres)
     add_execution = "INSERT INTO executions (id, created_at, " \
                     "is_system_workflow, " \
-                    "status, workflow_id, tenant_id) " \
+                    "status, workflow_id, tenant_id, creator_id) " \
                     "VALUES ('{0}', '{1}', 't', " \
-                    "'started', 'restore_snapshot', '1');"\
+                    "'started', 'restore_snapshot', '1', 1);"\
         .format(ctx.execution_id,
                 record_creation_date)
     postgres.append_dump(dump_file, update_admin)

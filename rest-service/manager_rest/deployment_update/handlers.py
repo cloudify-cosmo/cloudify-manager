@@ -483,11 +483,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                 dep_update.deployment_id,
                 removed_node_instance['node_id']
             )
-            self.sm.delete(
-                models.Node,
-                node.id,
-                filters={'storage_id': node.storage_id}
-            )
+            self.sm.delete(node)
 
 
 class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
@@ -676,7 +672,11 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                                     extended_node_instances)
 
         for removed_node_instance in removed_node_instances:
-            self.sm.delete(models.NodeInstance, removed_node_instance['id'])
+            node_instance = self.sm.get(
+                models.NodeInstance,
+                removed_node_instance['id']
+            )
+            self.sm.delete(node_instance)
 
     def _reduce_node_instances(self,
                                reduced_node_instances,

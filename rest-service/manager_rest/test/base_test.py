@@ -30,14 +30,11 @@ from wagon.wagon import Wagon
 from mock import MagicMock
 
 from manager_rest.storage.models import Tenant
-from manager_rest import utils, config, archiving
+from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
-from manager_rest.constants import DEFAULT_TENANT_NAME, PROVIDER_CONTEXT_ID
-from manager_rest.test.mocks import (MockHTTPClient,
-                                     CLIENT_API_VERSION,
-                                     build_query_string)
+from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
 from cloudify_rest_client import CloudifyClient
 
@@ -92,7 +89,8 @@ class TestClient(FlaskClient):
         kwargs['headers'] = kwargs.get('headers') or {}
         kwargs['headers'].update(utils.create_auth_header(
             username=admin['username'], password=admin['password']))
-        kwargs['headers']['tenant'] = DEFAULT_TENANT_NAME
+        kwargs['headers'][constants.CLOUDIFY_TENANT_HEADER] = \
+            constants.DEFAULT_TENANT_NAME
         return super(TestClient, self).open(*args, **kwargs)
 
 
@@ -203,11 +201,11 @@ class BaseServerTestCase(unittest.TestCase):
         self._setup_anonymous_user(server.app, server.user_datastore)
 
     def _init_default_tenant(self, db, app):
-        t = Tenant(name=DEFAULT_TENANT_NAME)
+        t = Tenant(name=constants.DEFAULT_TENANT_NAME)
         db.session.add(t)
         db.session.commit()
 
-        app.config['tenant_id'] = t.id
+        app.config[constants.CURRENT_TENANT_CONFIG] = t
         self.default_tenant = t
 
     def _set_flask_app_context(self, flask_app):
@@ -265,11 +263,11 @@ class BaseServerTestCase(unittest.TestCase):
 
     def initialize_provider_context(self):
         provider_context = models.ProviderContext(
-            id=PROVIDER_CONTEXT_ID,
+            id=constants.PROVIDER_CONTEXT_ID,
             name=self.id(),
             context={'cloudify': {}}
         )
-        self.sm.put(models.ProviderContext, provider_context)
+        self.sm.put(provider_context)
 
     def create_configuration(self):
         test_config = config.Config()
@@ -295,7 +293,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 20
         test_config.maintenance_folder = self.maintenance_mode_dir
-        test_config.default_tenant_name = DEFAULT_TENANT_NAME
+        test_config.default_tenant_name = constants.DEFAULT_TENANT_NAME
         return test_config
 
     def _version_url(self, url):
@@ -520,7 +518,7 @@ class BaseServerTestCase(unittest.TestCase):
                                      description=None,
                                      plan={'name': 'my-bp'},
                                      main_file_name='aaa')
-        return self.sm.put(models.Blueprint, blueprint)
+        return self.sm.put(blueprint)
 
     def _add_deployment(self, blueprint, deployment_id=None):
         if not deployment_id:
@@ -540,7 +538,7 @@ class BaseServerTestCase(unittest.TestCase):
                                        scaling_groups={},
                                        outputs={})
         blueprint.deployments.append(deployment)
-        return self.sm.put(models.Deployment, deployment)
+        return self.sm.put(deployment)
 
     def _add_execution_with_id(self, execution_id):
         blueprint = self._add_blueprint()
@@ -560,7 +558,7 @@ class BaseServerTestCase(unittest.TestCase):
             parameters=dict(),
             is_system_workflow=False)
         deployment.executions.append(execution)
-        return self.sm.put(models.Execution, execution)
+        return self.sm.put(execution)
 
     def _add_deployment_update(self, deployment, execution,
                                deployment_update_id=None):
@@ -580,4 +578,4 @@ class BaseServerTestCase(unittest.TestCase):
         deployment.deployment_updates.append(deployment_update)
         if execution:
             execution.deployment_updates.append(deployment_update)
-        return self.sm.put(models.DeploymentUpdate, deployment_update)
+        return self.sm.put(deployment_update)
