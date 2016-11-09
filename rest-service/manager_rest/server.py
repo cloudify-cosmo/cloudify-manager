@@ -81,11 +81,12 @@ class CloudifyFlaskApp(Flask):
         cfy_config = config.instance
 
         self.config['SQLALCHEMY_DATABASE_URI'] = \
-            '{0}://{1}:{2}@{3}/{4}'.format(
+            '{0}://{1}:{2}@{3}:{4}/{5}'.format(
                 SQL_DIALECT,
                 cfy_config.postgresql_username,
                 cfy_config.postgresql_password,
                 cfy_config.postgresql_host,
+                cfy_config.postgresql_port,
                 cfy_config.postgresql_db_name
             )
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

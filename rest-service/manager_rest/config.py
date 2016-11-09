@@ -24,6 +24,7 @@ class Config(object):
         self.db_port = 9200
         self.postgresql_db_name = None
         self.postgresql_host = None
+        self.postgresql_port = 5432
         self.postgresql_username = None
         self.postgresql_password = None
         self.postgresql_bin_path = None
