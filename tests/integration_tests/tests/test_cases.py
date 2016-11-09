@@ -70,7 +70,7 @@ class BaseTestCase(unittest.TestCase):
     def _save_manager_logs_after_test(self, purge=True):
         self.logger.debug('_save_manager_logs_after_test started')
         logs_dir = os.environ.get('CFY_LOGS_PATH')
-        test_path = self.id().split('.')[1:]
+        test_path = self.id().split('.')[-2:]
         if not logs_dir:
             self.logger.debug('not saving manager logs')
             return
@@ -111,8 +111,8 @@ class BaseTestCase(unittest.TestCase):
             self.logger = cloudify.utils.setup_logger(self._testMethodName)
             self.logger.debug('Framework logs are not saved into a file. '
                               'To allow logs saving, make sure the directory '
-                              '/var/log/cloudify '
-                              'exists with Permissions to edit.')
+                              '{0} exists with Permissions to edit.'.format(
+                                                                    logs_path))
             return
 
         self.logger = cloudify.utils.setup_logger(self._testMethodName,

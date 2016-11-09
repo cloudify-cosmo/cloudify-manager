@@ -35,6 +35,7 @@ setup(
         'sh==1.11',
         'pg8000==1.10.6',
         'influxdb==0.1.13',
+        'tinys3==0.1.12',
         'docl',
     ],
     entry_points={
