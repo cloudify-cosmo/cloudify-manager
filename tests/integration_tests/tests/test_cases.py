@@ -74,6 +74,11 @@ class BaseTestCase(unittest.TestCase):
         if not logs_dir:
             self.logger.debug('not saving manager logs')
             return
+        if os.environ.get('SKIP_LOG_SAVE_ON_SUCCESS') \
+                and sys.exc_info() == (None, None, None):
+            self.logger.info('Not saving manager logs for successful test:  '
+                             '{0}'.format(test_path[-1]))
+            return
 
         self.logger.info(
             'Saving manager logs for test:  {0}'.format(test_path[-1]))
