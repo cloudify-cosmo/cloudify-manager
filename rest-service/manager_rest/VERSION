@@ -1,6 +1,4 @@
 {
-  "date": "", 
-  "commit": "", 
-  "version": "4.0.0-m7",
-  "build": "85"
+  "edition": "premium", 
+  "version": "4.0.0-m7"
 }
