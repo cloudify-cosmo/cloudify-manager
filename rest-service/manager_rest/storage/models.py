@@ -648,4 +648,5 @@ class Plugin(SQLResource):
 
 # endregion
 
+
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)

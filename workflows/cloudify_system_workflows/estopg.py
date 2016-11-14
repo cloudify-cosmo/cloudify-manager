@@ -250,6 +250,7 @@ class EsToPg(object):
                 raise RuntimeError(msg)
         return proc
 
+
 if __name__ == "__main__":
     es_dump_path = sys.argv[1]
     if not os.path.isfile(es_dump_path):

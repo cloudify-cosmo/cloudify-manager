@@ -148,6 +148,7 @@ def _detect_debug_environment():
         raise Exception('Failed to connect to debug server, {0}: {1}'.
                         format(type(e).__name__, str(e)))
 
+
 app = CloudifyFlaskApp()
 
 

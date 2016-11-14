@@ -48,9 +48,10 @@ def _set_local_dir(target_dir, logs_dir, build):
 
 
 def _upload_to_s3(s3_uri, local_dir):
-    subprocess.check_call([
-        'aws', 's3', 'sync', local_dir, s3_uri, '--content-type', 'text/plain'
-    ])
+    with open(os.devnull, 'w') as null_out:
+        subprocess.check_call(['aws', 's3', 'sync', local_dir, s3_uri,
+                               '--content-type', 'text/plain'],
+                              stdout=null_out)
 
 
 def main(s3_uri, logs_dir, build):

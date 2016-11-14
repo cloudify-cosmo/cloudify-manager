@@ -47,4 +47,5 @@ class RoleAuthorization(object):
                 'resources'.format(user.username)
             )
 
+
 role_authorizer = RoleAuthorization()

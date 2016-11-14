@@ -84,4 +84,5 @@ class Authentication(object):
         # object is detached from a session
         return user_datastore.get_user(user.username)
 
+
 authenticator = Authentication()
