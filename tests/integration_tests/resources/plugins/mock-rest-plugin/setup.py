@@ -33,6 +33,7 @@ class InstallCommand(install):
         if not self.do_not_fail:
             raise RuntimeError('No one asked me not to fail, so I did')
 
+
 setup(
     name='mock-rest-plugin',
     version='4.0a7',

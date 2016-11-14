@@ -57,8 +57,9 @@ def _docl_proxy(quiet=False):
         result = result.bake(_err_to_out=True,
                              _out=lambda l: sys.stdout.write(l),
                              _tee=True)
-
     return result
+
+
 _docl = proxy_tools.Proxy(_docl_proxy)
 _quiet_docl = proxy_tools.Proxy(partial(_docl_proxy, quiet=True))
 

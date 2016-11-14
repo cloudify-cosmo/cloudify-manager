@@ -29,6 +29,7 @@ def run_test():
             'details': str(e)
         }
 
+
 out = run_test()
 with open(env['result_path'], 'w') as f:
     json.dump(out, f)
