@@ -45,15 +45,14 @@ function create_resources_tar() {
 
 
 CORE_TAG_NAME="4.0m7"
-#curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/premium-restserivce-package/common/provision.sh -o ./common-provision.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export PREMIUM=$3
-echo "PREMIUM=$PREMIUM"
 
+echo "PREMIUM=$PREMIUM"
 if [ "$PREMIUM" == "true" ]; then
     export AWS_S3_PATH=$AWS_S3_PATH"/"$PREMIUM_FOLDER
 fi
