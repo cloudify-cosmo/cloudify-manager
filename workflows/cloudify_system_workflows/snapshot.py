@@ -64,6 +64,10 @@ _INFLUXDB_RESTORE_CMD = ('cat {0} | while read -r line; do curl -X POST '
                          'series?u=root&p=root" ;done')
 _STORAGE_INDEX_NAME = 'cloudify_storage'
 _EVENTS_INDEX_NAME = 'cloudify_events'
+
+# in restore snapshot we don't delete provider_context,
+# or admin credentials that been created during bootstrap.
+# tables order is important for deletion.
 _CLOUDIFY_DATA_TABLES = ['blueprints',
                          'deployment_modifications',
                          'deployment_update_steps',
@@ -71,7 +75,18 @@ _CLOUDIFY_DATA_TABLES = ['blueprints',
                          'deployments',
                          'node_instances',
                          'nodes',
-                         'plugins']
+                         'plugins',
+                         'executions',
+                         'snapshots',
+                         'tenants_users',
+                         'roles_users',
+                         'groups_users',
+                         'users',
+                         'tenants_groups',
+                         'tenants',
+                         'roles',
+                         'groups',
+                         ]
 
 
 @workflow(system_wide=True)
@@ -106,6 +121,7 @@ def restore(snapshot_id, recreate_deployments_envs, config, force, timeout,
         snapshot_path = os.path.join(snapshots_dir,
                                      snapshot_id,
                                      '{0}.zip'.format(snapshot_id))
+        ctx.logger.debug('going to extract zip: {0}'.format(snapshot_path))
         with zipfile.ZipFile(snapshot_path, 'r') as zipf:
             zipf.extractall(tempdir)
         with open(os.path.join(tempdir, _METADATA_FILE), 'r') as f:
@@ -357,9 +373,26 @@ def _assert_clean_postgres(log_warning=False):
 def _clean_db_queries():
     delete_data_tables = ["DELETE FROM {0};".format(table)
                           for table in _CLOUDIFY_DATA_TABLES]
-    delete_old_executions = ["DELETE FROM executions "
-                             "WHERE id != '{0}';".format(ctx.execution_id)]
-    return delete_data_tables + delete_old_executions
+    return delete_data_tables
+
+
+def _get_admin_credentials(postgres):
+    response = postgres.run_query("SELECT username, password "
+                                  "FROM users WHERE id=1")
+    username, password = response['all'][0]
+    if not response:
+        raise NonRecoverableError('Illegal state - missing admin user in db')
+    return username, password
+
+
+def _get_restore_execution_date(postgres):
+    response = postgres.run_query("SELECT created_at "
+                                  "FROM executions "
+                                  "WHERE id='{0}'".format(ctx.execution_id))
+    if not response:
+        raise NonRecoverableError('Illegal state - missing execution date '
+                                  'for current execution')
+    return response['all'][0][0]
 
 
 def _restore_postgres(tempdir, config):
@@ -368,6 +401,20 @@ def _restore_postgres(tempdir, config):
     queries = _clean_db_queries()
     dump_file = os.path.join(tempdir, _POSTGRES_DUMP_FILENAME)
     dump_file = postgres.prepend_dump(dump_file, queries)
+    username, password = _get_admin_credentials(postgres)
+    update_admin = "UPDATE users " \
+                   "SET username='{0}', password='{1}' " \
+                   "WHERE id=1;".format(username, password)
+    record_creation_date = _get_restore_execution_date(postgres)
+    add_execution = "INSERT INTO executions (id, created_at, " \
+                    "is_system_workflow, " \
+                    "status, workflow_id, tenant_id) " \
+                    "VALUES ('{0}', '{1}', 't', " \
+                    "'started', 'restore_snapshot', '1');"\
+        .format(ctx.execution_id,
+                record_creation_date)
+    postgres.append_dump(dump_file, update_admin)
+    postgres.append_dump(dump_file, add_execution)
     postgres.restore(dump_file)
     ctx.logger.debug('Postgres restored')
 
@@ -495,8 +542,10 @@ def _restore_credentials(tempdir, config):
 def _agent_key_path_in_db(config, node_id, deployment_id):
     postgres = Postgres(config)
     get_node_data = "SELECT properties FROM nodes " \
-                    "WHERE id = '{0}' " \
-                    "AND deployment_id = '{1}';" \
+                    "JOIN deployments on " \
+                    "nodes.deployment_storage_id = deployments.storage_id " \
+                    "WHERE nodes.id = '{0}' " \
+                    "AND deployments.id = '{1}';" \
                     "".format(node_id, deployment_id)
     result = postgres.run_query(get_node_data)
     pickled_buffer = result['all'][0][0]
