@@ -58,13 +58,16 @@ class TestSnapshot(AgentlessTestCase):
 
     def _upload_and_restore_snapshot(self, snapshot_path):
         snapshot_id = '0'
+        self.logger.debug('uploading snapshot: {0}'.format(snapshot_path))
         self.client.snapshots.upload(snapshot_path, snapshot_id)
         response = self.client.snapshots.list()
         self.assertEqual(1, len(response), 'expecting 1 snapshot results,'
                                            ' got {0}'.format(len(response)))
         snapshot = response[0]
+        self.logger.debug('first snapshot: {0}'.format(snapshot))
         self.assertEquals(snapshot['id'], snapshot_id)
         self.assertEquals(snapshot['status'], 'uploaded')
+        self.logger.debug('going to restore snapshot...')
         execution = self.client.snapshots.restore(snapshot_id)
         execution = self.wait_for_execution_to_end(
                 execution,
