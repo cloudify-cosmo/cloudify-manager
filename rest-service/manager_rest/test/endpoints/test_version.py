@@ -23,5 +23,9 @@ from manager_rest.test import base_test
 class VersionTestCase(base_test.BaseServerTestCase):
 
     def test_get_version(self):
+        version_dict = get_version_data()
+        version_dict['build'] = ''
+        version_dict['date'] = ''
+        version_dict['commit'] = ''
         self.assertDictEqual(self.client.manager.get_version(),
-                             get_version_data())
+                             version_dict)
