@@ -277,10 +277,8 @@ class ProviderContext(object):
 class Version(object):
 
     resource_fields = {
+        'edition': fields.String,
         'version': fields.String,
-        'build': fields.String,
-        'date': fields.String,
-        'commit': fields.String,
     }
 
     def __init__(self, **kwargs):
