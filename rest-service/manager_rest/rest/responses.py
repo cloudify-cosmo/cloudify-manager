@@ -282,10 +282,8 @@ class Version(object):
     }
 
     def __init__(self, **kwargs):
+        self.edition = kwargs.get('edition')
         self.version = kwargs.get('version')
-        self.build = kwargs.get('build')
-        self.date = kwargs.get('date')
-        self.commit = kwargs.get('commit')
 
 
 @swagger.model
