@@ -1,6 +1,4 @@
 {
-  "date": "", 
-  "commit": "", 
-  "version": "4.0.0-m8",
-  "build": "85"
+  "edition": "community",
+  "version": "4.0.0-m8"
 }
