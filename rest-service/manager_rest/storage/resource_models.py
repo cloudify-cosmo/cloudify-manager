@@ -13,10 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask_restful import fields as flask_fields
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
+from manager_rest.utils import classproperty
+from manager_rest.rest.responses import Workflow
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 
 from .models_base import db, UTCDateTime
@@ -35,6 +38,11 @@ from .models_states import (DeploymentModificationState,
 
 class Blueprint(TopLevelResource):
     __tablename__ = 'blueprints'
+
+    skipped_fields = dict(
+        TopLevelResource.skipped_fields,
+        v1=['main_file_name', 'description']
+    )
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     main_file_name = db.Column(db.Text, nullable=False)
@@ -76,7 +84,12 @@ class Plugin(TopLevelResource):
 class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin):
     __tablename__ = 'deployments'
 
-    proxies = ['blueprint_id']
+    skipped_fields = dict(
+        TopLevelResource.skipped_fields,
+        v1=['scaling_groups'],
+        v2=['scaling_groups']
+    )
+    proxies = {'blueprint_id': flask_fields.String}
     _private_fields = DerivedResource._private_fields + ['blueprint_fk']
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
@@ -108,11 +121,37 @@ class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin):
     blueprint_id = association_proxy('blueprint', 'id')
     tenant_id = association_proxy('blueprint', 'tenant_id')
 
+    @classproperty
+    def resource_fields(self):
+        fields = super(Deployment, self).resource_fields
+        fields['workflows'] = flask_fields.List(
+            flask_fields.Nested(Workflow.resource_fields)
+        )
+        return fields
+
+    def to_response(self):
+        dep_dict = super(Deployment, self).to_response()
+        dep_dict['workflows'] = self._list_workflows(self.workflows)
+        return dep_dict
+
+    @staticmethod
+    def _list_workflows(deployment_workflows):
+        if deployment_workflows is None:
+            return None
+
+        return [Workflow(name=wf_name,
+                         created_at=None,
+                         parameters=wf.get('parameters', dict()))
+                for wf_name, wf in deployment_workflows.iteritems()]
+
 
 class Execution(TopLevelMixin, DerivedResource):
     __tablename__ = 'executions'
 
-    proxies = ['blueprint_id', 'deployment_id']
+    proxies = {
+        'blueprint_id': flask_fields.String,
+        'deployment_id': flask_fields.String
+    }
     _private_fields = DerivedResource._private_fields + ['deployment_fk']
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
@@ -154,7 +193,11 @@ class Execution(TopLevelMixin, DerivedResource):
 class DeploymentUpdate(DerivedResource, DerivedMixin):
     __tablename__ = 'deployment_updates'
 
-    proxies = ['execution_id', 'deployment_id']
+    proxies = {
+        'execution_id': flask_fields.String,
+        'deployment_id': flask_fields.String,
+        'steps': flask_fields.Raw,
+    }
     _private_fields = DerivedResource._private_fields + ['execution_fk']
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
@@ -189,8 +232,8 @@ class DeploymentUpdate(DerivedResource, DerivedMixin):
     execution_id = association_proxy('execution', 'id')
     tenant_id = association_proxy('deployment', 'tenant_id')
 
-    def to_dict(self, suppress_error=False):
-        dep_update_dict = super(DeploymentUpdate, self).to_dict(suppress_error)
+    def to_response(self):
+        dep_update_dict = super(DeploymentUpdate, self).to_response()
         # Taking care of the fact the DeploymentSteps are objects
         dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
         return dep_update_dict
@@ -199,9 +242,9 @@ class DeploymentUpdate(DerivedResource, DerivedMixin):
 class DeploymentUpdateStep(DerivedResource, DerivedMixin):
     __tablename__ = 'deployment_update_steps'
 
+    proxies = {'deployment_update_id': flask_fields.String}
     _private_fields = \
         DerivedResource._private_fields + ['deployment_update_fk']
-    proxies = ['deployment_update_id']
 
     action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
     entity_id = db.Column(db.Text, nullable=False)
@@ -231,7 +274,7 @@ class DeploymentUpdateStep(DerivedResource, DerivedMixin):
 class DeploymentModification(DerivedResource, DerivedMixin):
     __tablename__ = 'deployment_modifications'
 
-    proxies = ['deployment_id']
+    proxies = {'deployment_id': flask_fields.String}
     _private_fields = DerivedResource._private_fields + ['deployment_fk']
 
     context = db.Column(db.PickleType)
@@ -269,7 +312,15 @@ class Node(DerivedResource, DerivedMixin):
     __tablename__ = 'nodes'
 
     is_id_unique = False
-    proxies = ['blueprint_id', 'deployment_id']
+    skipped_fields = dict(
+        TopLevelResource.skipped_fields,
+        v1=['max_number_of_instances', 'min_number_of_instances'],
+        v2=['max_number_of_instances', 'min_number_of_instances']
+    )
+    proxies = {
+        'blueprint_id': flask_fields.String,
+        'deployment_id': flask_fields.String
+    }
     _private_fields = DerivedResource._private_fields + ['deployment_fk']
 
     deploy_number_of_instances = db.Column(db.Integer, nullable=False)
@@ -310,7 +361,15 @@ class Node(DerivedResource, DerivedMixin):
 class NodeInstance(DerivedResource, DerivedMixin):
     __tablename__ = 'node_instances'
 
-    proxies = ['node_id', 'deployment_id']
+    skipped_fields = dict(
+        TopLevelResource.skipped_fields,
+        v1=['scaling_groups'],
+        v2=['scaling_groups']
+    )
+    proxies = {
+        'node_id': flask_fields.String,
+        'deployment_id': flask_fields.String
+    }
     _private_fields = DerivedResource._private_fields + ['node_fk']
 
     # TODO: This probably should be a foreign key, but there's no guarantee

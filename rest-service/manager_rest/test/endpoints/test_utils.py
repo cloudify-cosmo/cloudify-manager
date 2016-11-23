@@ -46,7 +46,9 @@ class TestUtils(base_test.BaseServerTestCase):
         def create_plugin(supported_platform=None,
                           distribution=None,
                           distribution_release=None):
-            mock_data = {k: 'stub' for k in models.Plugin.fields}
+            mock_data = {k: 'stub' for k in models.Plugin.resource_fields}
+            mock_data.pop('tenant_name')
+            mock_data.pop('permission')
             if supported_platform:
                 mock_data['supported_platform'] = supported_platform
             if distribution:

@@ -516,7 +516,7 @@ class AuthorizationTests(SecurityTestBase):
         self.assertEqual(expected_blueprint_id, node['blueprint_id'])
         self.assertEqual(expected_deployment_id, node['deployment_id'])
         self.assertEqual(expected_node_type, node['type'])
-        self.assertEqual(str(expected_num_of_instances),
+        self.assertEqual(expected_num_of_instances,
                          node['number_of_instances'])
 
     def _assert_node_instance(self, node_instance, expected_node_id,

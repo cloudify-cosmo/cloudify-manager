@@ -65,7 +65,8 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.client.deployments.list(**filter_fields)
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
-            self.assert_bad_parameter_error(models.Deployment.fields, e)
+            self.assert_bad_parameter_error(models.Deployment.resource_fields,
+                                            e)
 
     def test_deployments_list_no_filters(self):
         items = self.client.deployments.list().items
@@ -110,7 +111,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.client.nodes.list(**filter_fields)
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
-            self.assert_bad_parameter_error(models.Node.fields, e)
+            self.assert_bad_parameter_error(models.Node.resource_fields, e)
 
     def test_executions_list_with_filters(self):
         filter_params = {'deployment_id': self.first_deployment_id,
@@ -156,7 +157,8 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.client.executions.list(**filter_fields)
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
-            self.assert_bad_parameter_error(models.Execution.fields, e)
+            self.assert_bad_parameter_error(models.Execution.resource_fields,
+                                            e)
 
     def test_node_instances_list_no_filters(self):
         response = self.client.node_instances.list()
@@ -189,7 +191,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
             self.assert_bad_parameter_error(
-                models.NodeInstance.fields, e)
+                models.NodeInstance.resource_fields, e)
 
     # special parameter 'node_name' is converted to 'node_id' on the server
     def test_node_instances_list_with_node_name_filter(self):
@@ -251,7 +253,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
             self.assert_bad_parameter_error(
-                models.DeploymentModification.fields, e)
+                models.DeploymentModification.resource_fields, e)
 
     def test_blueprints_list_with_filters(self):
         filter_params = {'id': self.first_blueprint_id}
@@ -289,7 +291,8 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.client.blueprints.list(**filter_fields)
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
-            self.assert_bad_parameter_error(models.Blueprint.fields, e)
+            self.assert_bad_parameter_error(models.Blueprint.resource_fields,
+                                            e)
 
     def test_plugins_list_with_filters(self):
         self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
@@ -311,7 +314,7 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.client.plugins.list(**filter_fields)
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
-            self.assert_bad_parameter_error(models.Plugin.fields, e)
+            self.assert_bad_parameter_error(models.Plugin.resource_fields, e)
 
     def test_plugins_list_no_filters(self):
         first_plugin_response = self.upload_plugin(TEST_PACKAGE_NAME,
@@ -387,4 +390,4 @@ class ResourceListFiltersTestCase(BaseListTest):
             self.fail('Expecting \'CloudifyClientError\' to be raised')
         except CloudifyClientError as e:
             self.assert_bad_parameter_error(
-                    models.Snapshot.fields, e)
+                    models.Snapshot.resource_fields, e)

@@ -13,7 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from sqlalchemy.ext.hybrid import hybrid_property
+from flask_security import current_user
+from flask_restful import fields as flask_fields
+
+from manager_rest.utils import classproperty
+from manager_rest.constants import (OWNER_PERMISSION,
+                                    VIEWER_PERMISSION,
+                                    CREATOR_PERMISSION)
 
 from .mixins import TopLevelMixin
 from .models_base import db, SQLModelBase
@@ -36,15 +42,27 @@ class SQLResourceBase(SQLModelBase):
     # A list of columns that shouldn't be serialized
     _private_fields = ['tenant_id', 'storage_id', 'creator_id']
 
-    @hybrid_property
-    def fields(self):
+    _extra_fields = {
+        'permission': flask_fields.String,
+        'tenant_name': flask_fields.String
+    }
+
+    # Lists of fields to skip when using older versions of the client
+    skipped_fields = {'v1': [], 'v2': [], 'v2.1': []}
+
+    @classproperty
+    def resource_fields(cls):
         """Return the list of field names for this table
 
         Mostly for backwards compatibility in the code (that uses `fields`)
         """
-        fields = super(SQLResourceBase, self).fields
-        fields = [f for f in fields if f not in self._private_fields]
-        return fields
+        _fields = super(SQLResourceBase, cls).resource_fields
+
+        # Filter out private fields and add extra fields (that aren't columns)
+        _fields = {f: _fields[f] for f in _fields
+                   if f not in cls._private_fields}
+        _fields.update(SQLResourceBase._extra_fields)
+        return _fields
 
     @classmethod
     def unique_id(cls):
@@ -53,6 +71,29 @@ class SQLResourceBase(SQLModelBase):
     # Some must-have columns for all resources
     storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
+
+    @property
+    def permission(self):
+        if self.creator == current_user:
+            return CREATOR_PERMISSION
+        if current_user in self.owners:
+            return OWNER_PERMISSION
+        if current_user in self.viewers:
+            return VIEWER_PERMISSION
+        return ''
+
+    @property
+    def tenant_name(self):
+        return self.tenant.name
+
+    def to_dict(self, suppress_error=False):
+        result_dict = super(SQLResourceBase, self).to_dict(suppress_error)
+
+        # Getting rid of the extra fields as these are only necessary for rest
+        # responses
+        for field in self._extra_fields:
+            result_dict.pop(field)
+        return result_dict
 
 
 class TopLevelResource(TopLevelMixin, SQLResourceBase):
@@ -68,16 +109,16 @@ class DerivedResource(SQLResourceBase):
 
     is_derived = True
 
-    # A list of names of attributes that are SQLA association proxies
-    proxies = []
+    # A mapping of names of attributes that are SQLA association proxies to
+    # their `flask.fields` types
+    proxies = {}
 
-    @hybrid_property
-    def fields(self):
+    @classproperty
+    def resource_fields(cls):
         """Return the list of field names for this table
 
         Mostly for backwards compatibility in the code (that uses `fields`)
         """
-        fields = super(DerivedResource, self).fields
-        properties = set(self.proxies) - set(self._private_fields)
-        fields.extend(properties)
-        return fields
+        _fields = super(DerivedResource, cls).resource_fields
+        _fields.update(cls.proxies)
+        return _fields

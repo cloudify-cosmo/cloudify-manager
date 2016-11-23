@@ -36,7 +36,7 @@ from manager_rest.storage import (models,
                                   ManagerElasticsearch)
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.utils import create_filter_params_list_description
-from . import resources, responses_v2, rest_decorators, rest_utils
+from . import resources, rest_decorators, rest_utils
 
 
 def _get_snapshot_path(snapshot_id):
@@ -50,13 +50,13 @@ def _get_snapshot_path(snapshot_id):
 class Snapshots(SecuredResource):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses_v2.Snapshot.__name__),
+        responseClass='List[{0}]'.format(models.Snapshot.__name__),
         nickname='list',
         notes='Returns a list of existing snapshots.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Snapshot)
-    @rest_decorators.create_filters(models.Snapshot.fields)
+    @rest_decorators.marshal_with(models.Snapshot)
+    @rest_decorators.create_filters(models.Snapshot.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
@@ -73,12 +73,12 @@ class Snapshots(SecuredResource):
 class SnapshotsId(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses_v2.Snapshot,
+        responseClass=models.Snapshot,
         nickname='getById',
         notes='Returns a snapshot by its id.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Snapshot)
+    @rest_decorators.marshal_with(models.Snapshot)
     def get(self, snapshot_id, _include=None, **kwargs):
         return get_storage_manager().get(
             models.Snapshot,
@@ -87,7 +87,7 @@ class SnapshotsId(SecuredResource):
         )
 
     @swagger.operation(
-        responseClass=responses_v2.Snapshot,
+        responseClass=models.Snapshot,
         nickname='createSnapshot',
         notes='Create a new snapshot of the manager.',
         consumes=[
@@ -95,7 +95,7 @@ class SnapshotsId(SecuredResource):
         ]
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Execution)
+    @rest_decorators.marshal_with(models.Execution)
     def put(self, snapshot_id):
         request_dict = rest_utils.get_json_and_verify_params()
         include_metrics = rest_utils.verify_and_convert_bool(
@@ -122,12 +122,12 @@ class SnapshotsId(SecuredResource):
         return execution, 201
 
     @swagger.operation(
-        responseClass=responses_v2.Snapshot,
+        responseClass=models.Snapshot,
         nickname='deleteSnapshot',
         notes='Delete existing snapshot.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Snapshot)
+    @rest_decorators.marshal_with(models.Snapshot)
     def delete(self, snapshot_id):
         sm = get_storage_manager()
         snapshot = sm.get(models.Snapshot, snapshot_id)
@@ -153,7 +153,7 @@ class SnapshotsId(SecuredResource):
 class SnapshotsIdArchive(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses_v2.Snapshot,
+        responseClass=models.Snapshot,
         nickname='uploadSnapshot',
         notes='Submitted snapshot should be an archive.'
               'Archive format has to be zip.'
@@ -178,7 +178,7 @@ class SnapshotsIdArchive(SecuredResource):
         ]
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Snapshot)
+    @rest_decorators.marshal_with(models.Snapshot)
     def put(self, snapshot_id):
         return UploadedSnapshotsManager().receive_uploaded_data(snapshot_id)
 
@@ -215,12 +215,12 @@ class SnapshotsIdArchive(SecuredResource):
 
 class SnapshotsIdRestore(SecuredResource):
     @swagger.operation(
-        responseClass=responses_v2.Snapshot,
+        responseClass=models.Snapshot,
         nickname='restoreSnapshot',
         notes='Restore existing snapshot.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Snapshot)
+    @rest_decorators.marshal_with(models.Snapshot)
     def post(self, snapshot_id):
         request_dict = rest_utils.get_json_and_verify_params(
             {'recreate_deployments_envs'}
@@ -249,19 +249,19 @@ class SnapshotsIdRestore(SecuredResource):
 
 class Blueprints(resources.Blueprints):
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses_v2.BlueprintState.__name__),
+        responseClass='List[{0}]'.format(models.Blueprint.__name__),
         nickname="list",
         notes='Returns a list of submitted blueprints for the optionally '
               'provided filter parameters {0}'
-        .format(models.Blueprint.fields),
+        .format(models.Blueprint.resource_fields),
         parameters=create_filter_params_list_description(
-            models.Blueprint.fields,
+            models.Blueprint.resource_fields,
             'blueprints'
         )
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.BlueprintState)
-    @rest_decorators.create_filters(models.Blueprint.fields)
+    @rest_decorators.marshal_with(models.Blueprint)
+    @rest_decorators.create_filters(models.Blueprint.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None, sort=None,
@@ -281,12 +281,12 @@ class Blueprints(resources.Blueprints):
 class BlueprintsId(resources.BlueprintsId):
 
     @swagger.operation(
-        responseClass=responses_v2.BlueprintState,
+        responseClass=models.Blueprint,
         nickname="getById",
         notes="Returns a blueprint by its id."
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.BlueprintState)
+    @rest_decorators.marshal_with(models.Blueprint)
     def get(self, blueprint_id, _include=None, **kwargs):
         """
         Get blueprint by id
@@ -297,7 +297,7 @@ class BlueprintsId(resources.BlueprintsId):
                                                  **kwargs)
 
     @swagger.operation(
-        responseClass=responses_v2.BlueprintState,
+        responseClass=models.Blueprint,
         nickname="upload",
         notes="Submitted blueprint should be an archive "
               "containing the directory which contains the blueprint. "
@@ -332,7 +332,7 @@ class BlueprintsId(resources.BlueprintsId):
 
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.BlueprintState)
+    @rest_decorators.marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
         """
         Upload a blueprint (id specified)
@@ -342,12 +342,12 @@ class BlueprintsId(resources.BlueprintsId):
                                                  **kwargs)
 
     @swagger.operation(
-        responseClass=responses_v2.BlueprintState,
+        responseClass=models.Blueprint,
         nickname="deleteById",
         notes="deletes a blueprint by its id."
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.BlueprintState)
+    @rest_decorators.marshal_with(models.Blueprint)
     def delete(self, blueprint_id, **kwargs):
         """
         Delete blueprint by id
@@ -359,12 +359,12 @@ class BlueprintsId(resources.BlueprintsId):
 
 class Executions(resources.Executions):
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses_v2.Execution.__name__),
+        responseClass='List[{0}]'.format(models.Execution.__name__),
         nickname="list",
         notes='Returns a list of executions for the optionally provided filter'
-              ' parameters: {0}'.format(models.Execution.fields),
+              ' parameters: {0}'.format(models.Execution.resource_fields),
         parameters=create_filter_params_list_description(
-            models.Execution.fields, 'executions') + [
+            models.Execution.resource_fields, 'executions') + [
             {'name': '_include_system_workflows',
              'description': 'Include executions of system workflows',
              'required': False,
@@ -375,8 +375,8 @@ class Executions(resources.Executions):
         ]
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Execution)
-    @rest_decorators.create_filters(models.Execution.fields)
+    @rest_decorators.marshal_with(models.Execution)
+    @rest_decorators.create_filters(models.Execution.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
@@ -406,18 +406,19 @@ class Executions(resources.Executions):
 
 class Deployments(resources.Deployments):
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses_v2.Deployment.__name__),
+        responseClass='List[{0}]'.format(models.Deployment.__name__),
         nickname="list",
         notes='Returns a list existing deployments for the optionally provided'
-              ' filter parameters: {0}'.format(models.Deployment.fields),
+              ' filter parameters: '
+              '{0}'.format(models.Deployment.resource_fields),
         parameters=create_filter_params_list_description(
-            models.Deployment.fields,
+            models.Deployment.resource_fields,
             'deployments'
         )
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Deployment)
-    @rest_decorators.create_filters(models.Deployment.fields)
+    @rest_decorators.marshal_with(models.Deployment)
+    @rest_decorators.create_filters(models.Deployment.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None, sort=None,
@@ -437,19 +438,20 @@ class Deployments(resources.Deployments):
 class DeploymentModifications(resources.DeploymentModifications):
     @swagger.operation(
         responseClass='List[{0}]'.format(
-            responses_v2.DeploymentModification.__name__),
+            models.DeploymentModification.__name__),
         nickname="listDeploymentModifications",
         notes='Returns a list of deployment modifications for the optionally '
               'provided filter parameters: {0}'
-        .format(models.DeploymentModification.fields),
+        .format(models.DeploymentModification.resource_fields),
         parameters=create_filter_params_list_description(
-            models.DeploymentModification.fields,
+            models.DeploymentModification.resource_fields,
             'deployment modifications'
         )
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.DeploymentModification)
-    @rest_decorators.create_filters(models.DeploymentModification.fields)
+    @rest_decorators.marshal_with(models.DeploymentModification)
+    @rest_decorators.create_filters(
+        models.DeploymentModification.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
@@ -468,18 +470,18 @@ class DeploymentModifications(resources.DeploymentModifications):
 
 class Nodes(resources.Nodes):
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses_v2.Node.__name__),
+        responseClass='List[{0}]'.format(models.Node.__name__),
         nickname="listNodes",
         notes='Returns a nodes list for the optionally provided filter '
-              'parameters: {0}'.format(models.Node.fields),
+              'parameters: {0}'.format(models.Node.resource_fields),
         parameters=create_filter_params_list_description(
-            models.Node.fields,
+            models.Node.resource_fields,
             'nodes'
         )
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Node)
-    @rest_decorators.create_filters(models.Node.fields)
+    @rest_decorators.marshal_with(models.Node)
+    @rest_decorators.create_filters(models.Node.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
@@ -498,19 +500,19 @@ class Nodes(resources.Nodes):
 
 class NodeInstances(resources.NodeInstances):
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses_v2.NodeInstance.__name__),
+        responseClass='List[{0}]'.format(models.NodeInstance.__name__),
         nickname="listNodeInstances",
         notes='Returns a node instances list for the optionally provided '
               'filter parameters: {0}'
-        .format(models.NodeInstance.fields),
+        .format(models.NodeInstance.resource_fields),
         parameters=create_filter_params_list_description(
-            models.NodeInstance.fields,
+            models.NodeInstance.resource_fields,
             'node instances'
         )
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.NodeInstance)
-    @rest_decorators.create_filters(models.NodeInstance.fields)
+    @rest_decorators.marshal_with(models.NodeInstance)
+    @rest_decorators.create_filters(models.NodeInstance.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
@@ -529,18 +531,18 @@ class NodeInstances(resources.NodeInstances):
 
 class Plugins(SecuredResource):
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses_v2.NodeInstance.__name__),
+        responseClass='List[{0}]'.format(models.NodeInstance.__name__),
         nickname="listPlugins",
         notes='Returns a plugins list for the optionally provided '
-              'filter parameters: {0}'.format(models.Plugin.fields),
+              'filter parameters: {0}'.format(models.Plugin.resource_fields),
         parameters=create_filter_params_list_description(
-            models.Plugin.fields,
+            models.Plugin.resource_fields,
             'plugins'
         )
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Plugin)
-    @rest_decorators.create_filters(models.Plugin.fields)
+    @rest_decorators.marshal_with(models.Plugin)
+    @rest_decorators.create_filters(models.Plugin.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
@@ -557,7 +559,7 @@ class Plugins(SecuredResource):
         )
 
     @swagger.operation(
-        responseClass=responses_v2.Plugin,
+        responseClass=models.Plugin,
         nickname='upload',
         notes='Submitted plugin should be an archive containing the directory '
               ' which contains the plugin wheel. The supported archive type '
@@ -582,7 +584,7 @@ class Plugins(SecuredResource):
         consumes=["application/octet-stream"]
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Plugin)
+    @rest_decorators.marshal_with(models.Plugin)
     def post(self, **kwargs):
         """
         Upload a plugin
@@ -646,12 +648,12 @@ class PluginsArchive(SecuredResource):
 
 class PluginsId(SecuredResource):
     @swagger.operation(
-        responseClass=responses_v2.BlueprintState,
+        responseClass=models.Blueprint,
         nickname="getById",
         notes="Returns a plugin according to its ID."
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Plugin)
+    @rest_decorators.marshal_with(models.Plugin)
     def get(self, plugin_id, _include=None, **kwargs):
         """
         Returns plugin by ID
@@ -663,12 +665,12 @@ class PluginsId(SecuredResource):
         )
 
     @swagger.operation(
-        responseClass=responses_v2.Plugin,
+        responseClass=models.Plugin,
         nickname="deleteById",
         notes="deletes a plugin according to its ID."
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2.Plugin)
+    @rest_decorators.marshal_with(models.Plugin)
     def delete(self, plugin_id, **kwargs):
         """
         Delete plugin by ID

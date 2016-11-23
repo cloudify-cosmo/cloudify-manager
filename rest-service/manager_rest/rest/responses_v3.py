@@ -19,8 +19,11 @@ from flask_restful_swagger import swagger
 
 
 @swagger.model
-class ResourceID(object):
+class BaseResponse(object):
+    resource_fields = {}
 
+
+class ResourceID(BaseResponse):
     resource_fields = {
         'resource_id': fields.String
     }

@@ -16,11 +16,11 @@
 
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
-from manager_rest.rest.responses_v3 import ResourceID
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.security.resource_permissions import PermissionsHandler
 
 from . import rest_decorators
+from .responses_v3 import BaseResponse, ResourceID
 from .rest_utils import get_json_and_verify_params
 
 try:
@@ -33,7 +33,7 @@ try:
                                   ClusterNode)
 except ImportError:
     TenantResponse, GroupResponse, UserResponse, ClusterNode, ClusterState = \
-        (None, ) * 5
+        (BaseResponse, ) * 5
     SecuredMultiTenancyResource = SecuredResource
     ClusterResourceBase = SecuredResource
 
@@ -41,7 +41,7 @@ except ImportError:
 class Tenants(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(TenantResponse)
-    @rest_decorators.create_filters(models.Tenant.fields)
+    @rest_decorators.create_filters(models.Tenant.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
@@ -127,7 +127,7 @@ class TenantGroups(SecuredMultiTenancyResource):
 class UserGroups(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
-    @rest_decorators.create_filters(models.Group.fields)
+    @rest_decorators.create_filters(models.Group.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
@@ -163,7 +163,7 @@ class UserGroupsId(SecuredMultiTenancyResource):
 class Users(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
-    @rest_decorators.create_filters(models.User.fields)
+    @rest_decorators.create_filters(models.User.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,

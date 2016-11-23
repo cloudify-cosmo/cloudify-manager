@@ -40,12 +40,13 @@ from manager_rest.upload_manager import \
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from .rest_utils import verify_and_convert_bool, get_json_and_verify_params
-from . import resources, rest_decorators, responses_v2_1, resources_v2
+from .responses_v2_1 import MaintenanceMode as MaintenanceModeResponse
+from . import resources, rest_decorators, resources_v2
 
 
 class MaintenanceMode(SecuredResource):
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2_1.MaintenanceMode)
+    @rest_decorators.marshal_with(MaintenanceModeResponse)
     def get(self, **_):
         maintenance_file_path = get_maintenance_file_path()
         if os.path.isfile(maintenance_file_path):
@@ -67,7 +68,7 @@ class MaintenanceMode(SecuredResource):
 
 class MaintenanceModeAction(SecuredResource):
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2_1.MaintenanceMode)
+    @rest_decorators.marshal_with(MaintenanceModeResponse)
     def post(self, maintenance_action, **_):
         maintenance_file_path = get_maintenance_file_path()
 
@@ -113,7 +114,7 @@ class MaintenanceModeAction(SecuredResource):
 
 class DeploymentUpdate(SecuredResource):
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2_1.DeploymentUpdate)
+    @rest_decorators.marshal_with(models.DeploymentUpdate)
     def post(self, id, phase):
         """
         Provides support for two phases of deployment update. The phase is
@@ -190,15 +191,15 @@ class DeploymentUpdate(SecuredResource):
 
 class DeploymentUpdateId(SecuredResource):
     @swagger.operation(
-            responseClass=responses_v2_1.DeploymentUpdate,
+            responseClass=models.DeploymentUpdate,
             nickname="DeploymentUpdate",
             notes='Return a single deployment update',
             parameters=create_filter_params_list_description(
-                    models.DeploymentUpdate.fields, 'deployment update'
+                models.DeploymentUpdate.resource_fields, 'deployment update'
             )
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2_1.DeploymentUpdate)
+    @rest_decorators.marshal_with(models.DeploymentUpdate)
     def get(self, update_id):
         return \
             get_deployment_updates_manager().get_deployment_update(update_id)
@@ -207,17 +208,17 @@ class DeploymentUpdateId(SecuredResource):
 class DeploymentUpdates(SecuredResource):
     @swagger.operation(
             responseClass='List[{0}]'.format(
-                    responses_v2_1.DeploymentUpdate.__name__),
+                    models.DeploymentUpdate.__name__),
             nickname="listDeploymentUpdates",
             notes='Returns a list of deployment updates',
             parameters=create_filter_params_list_description(
-                    models.DeploymentUpdate.fields,
+                    models.DeploymentUpdate.resource_fields,
                     'deployment updates'
             )
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2_1.DeploymentUpdate)
-    @rest_decorators.create_filters(models.DeploymentUpdate.fields)
+    @rest_decorators.marshal_with(models.DeploymentUpdate)
+    @rest_decorators.create_filters(models.DeploymentUpdate.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
     def get(self, _include=None, filters=None, pagination=None,
@@ -236,7 +237,7 @@ class Deployments(resources_v2.Deployments):
 
     get = rest_decorators.override_marshal_with(
         resources_v2.Deployments.get,
-        responses_v2_1.Deployment
+        models.Deployment
     )
 
 
@@ -244,17 +245,17 @@ class DeploymentsId(resources.DeploymentsId):
 
     get = rest_decorators.override_marshal_with(
         resources.DeploymentsId.get,
-        responses_v2_1.Deployment
+        models.Deployment
     )
 
     put = rest_decorators.override_marshal_with(
         resources.DeploymentsId.put,
-        responses_v2_1.Deployment
+        models.Deployment
     )
 
     delete = rest_decorators.override_marshal_with(
         resources.DeploymentsId.delete,
-        responses_v2_1.Deployment
+        models.Deployment
     )
 
 
@@ -262,7 +263,7 @@ class Nodes(resources_v2.Nodes):
 
     get = rest_decorators.override_marshal_with(
         resources_v2.Nodes.get,
-        responses_v2_1.Node
+        models.Node
     )
 
 
@@ -270,7 +271,7 @@ class NodeInstances(resources_v2.NodeInstances):
 
     get = rest_decorators.override_marshal_with(
         resources_v2.NodeInstances.get,
-        responses_v2_1.NodeInstance
+        models.NodeInstance
     )
 
 
@@ -278,24 +279,24 @@ class NodeInstancesId(resources.NodeInstancesId):
 
     get = rest_decorators.override_marshal_with(
         resources.NodeInstancesId.get,
-        responses_v2_1.NodeInstance
+        models.NodeInstance
     )
 
     patch = rest_decorators.override_marshal_with(
         resources.NodeInstancesId.patch,
-        responses_v2_1.NodeInstance
+        models.NodeInstance
     )
 
 
 class PluginsId(resources_v2.PluginsId):
 
     @swagger.operation(
-        responseClass=responses_v2_1.Plugin,
+        responseClass=models.Plugin,
         nickname="deleteById",
         notes="deletes a plugin according to its ID."
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(responses_v2_1.Plugin)
+    @rest_decorators.marshal_with(models.Plugin)
     def delete(self, plugin_id, **kwargs):
         """
         Delete plugin by ID

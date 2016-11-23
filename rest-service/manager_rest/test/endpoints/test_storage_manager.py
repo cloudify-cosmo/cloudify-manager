@@ -146,17 +146,21 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         blueprint.deployments.append(dep)
         self.sm.put(dep)
 
-        serialized_dep = dep.to_dict()
-        self.assertEquals(13, len(serialized_dep))
+        serialized_dep = dep.to_response()
+        self.assertEquals(15, len(serialized_dep))
         self.assertEquals(dep.id, serialized_dep['id'])
         self.assertEquals(dep.created_at, serialized_dep['created_at'])
         self.assertEquals(dep.updated_at, serialized_dep['updated_at'])
         self.assertEquals(dep.blueprint_id, serialized_dep['blueprint_id'])
         self.assertEquals(dep.permalink, serialized_dep['permalink'])
+        self.assertEquals(dep.permission, serialized_dep['permission'])
+        self.assertEquals(dep.tenant.name, serialized_dep['tenant_name'])
         self.assertEquals(dep.description, None)
 
         # `blueprint_id` isn't a regular column, but a relationship
         serialized_dep.pop('blueprint_id')
+        serialized_dep.pop('permission')
+        serialized_dep.pop('tenant_name')
 
         deserialized_dep = models.Deployment(**serialized_dep)
         self.assertEquals(dep.id, deserialized_dep.id)
