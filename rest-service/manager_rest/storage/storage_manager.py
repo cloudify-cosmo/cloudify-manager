@@ -149,8 +149,6 @@ class SQLStorageManager(object):
         # Other users should only see resources for which they were granted
         # privileges via association with a tenant
         tenant_ids = [tenant.id for tenant in current_user.get_all_tenants()]
-        current_app.logger.debug('Filtering tenants for {0}'
-                                 ''.format(model_class))
 
         # Filter by the `tenant_id` column
         clauses = [model_class.tenant_id == t_id for t_id in tenant_ids]
@@ -323,9 +321,8 @@ class SQLStorageManager(object):
             self._safe_commit()
 
             raise manager_exceptions.ConflictError(
-                '{0} with ID `{1}` already exists on tenant `{2}`'.format(
-                    instance.__class__.__name__,
-                    instance.id,
+                '{0} already exists on {1}'.format(
+                    instance,
                     self.current_tenant
                 )
             )
@@ -344,13 +341,13 @@ class SQLStorageManager(object):
                 instance.viewers = [current_user]
 
     @staticmethod
-    def _load_properties(instance):
-        """A helper method used to overcome a problem where the properties
+    def _load_relationships(instance):
+        """A helper method used to overcome a problem where the relationships
         that rely on joins aren't being loaded automatically
         """
         if instance.is_resource and instance.is_derived:
-            for proxy in instance.proxies:
-                getattr(instance, proxy)
+            for rel in instance.__mapper__.relationships:
+                getattr(instance, rel.key)
 
     @property
     def current_tenant(self):
@@ -366,6 +363,9 @@ class SQLStorageManager(object):
             locking=False):
         """Return a single result based on the model class and element ID
         """
+        current_app.logger.debug(
+            'Get {0} with ID {1}'.format(model_class, element_id)
+        )
         filters = filters or {'id': element_id}
         query = self._get_query(model_class, include, filters)
         if locking:
@@ -377,6 +377,7 @@ class SQLStorageManager(object):
                 'Requested {0} with ID `{1}` was not found'
                 .format(model_class.__name__, element_id)
             )
+        current_app.logger.debug('Returning {0}'.format(result))
         return result
 
     def list(self,
@@ -387,11 +388,17 @@ class SQLStorageManager(object):
              sort=None):
         """Return a (possibly empty) list of `model_class` results
         """
+        if filters:
+            msg = 'List {0} with filter {1}'.format(model_class, filters)
+        else:
+            msg = 'List {0}'.format(model_class)
+        current_app.logger.debug(msg)
         query = self._get_query(model_class, include, filters, sort)
 
         results, total, size, offset = self._paginate(query, pagination)
         pagination = {'total': total, 'size': size, 'offset': offset}
 
+        current_app.logger.debug('Returning: {0}'.format(results))
         return ListResult(items=results, metadata={'pagination': pagination})
 
     def put(self, instance, private_resource=False):
@@ -412,7 +419,8 @@ class SQLStorageManager(object):
     def delete(self, instance):
         """Delete the passed instance
         """
-        self._load_properties(instance)
+        current_app.logger.debug('Delete {0}'.format(instance))
+        self._load_relationships(instance)
         db.session.delete(instance)
         self._safe_commit()
         return instance
@@ -423,6 +431,7 @@ class SQLStorageManager(object):
         :param instance: Instance to be updated in the DB
         :return: The updated instance
         """
+        current_app.logger.debug('Update {0}'.format(instance))
         db.session.add(instance)
         self._safe_commit()
         return instance
@@ -433,8 +442,9 @@ class SQLStorageManager(object):
         :param instance: Instance to be re-loaded from the DB
         :return: The refreshed instance
         """
+        current_app.logger.debug('Refresh {0}'.format(instance))
         db.session.refresh(instance)
-        self._load_properties(instance)
+        self._load_relationships(instance)
         return instance
 
 

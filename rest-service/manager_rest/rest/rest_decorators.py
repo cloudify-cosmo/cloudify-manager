@@ -58,7 +58,7 @@ def exceptions_handled(func):
 
 
 class marshal_with(object):
-    def __init__(self, response_class):
+    def __init__(self, response_class, include_fields=None, skip_fields=None):
         """
         :param response_class: response class to marshal result with.
          class must have a "resource_fields" class variable
@@ -67,22 +67,36 @@ class marshal_with(object):
             raise RuntimeError(
                 'Response class {0} does not contain a "resource_fields" '
                 'class variable'.format(type(response_class)))
+
+        if include_fields and skip_fields:
+            raise RuntimeError('Both `include_fields` and `skip_fields` '
+                               'passed to class {0}'.format(response_class))
+
         self.response_class = response_class
+
+        if include_fields:
+            fields = response_class.get_fields(include_fields)
+        else:
+            fields = response_class.resource_fields
+
+        if skip_fields:
+            fields = {k: v for k, v in fields.items() if k not in skip_fields}
+
+        self.fields = fields
 
     def __call__(self, f):
         @wraps(f)
         def wrapper(*args, **kwargs):
             if not self.response_class:
-                utils.abort_error(manager_exceptions.MissingPremiumPackage
-                                  (MISSING_PREMIUM_PACKAGE_MESSAGE),
-                                  current_app.logger,
-                                  hide_server_message=True)
+                self._premium_feature_abort()
 
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
 
             fields_to_include = self._get_fields_to_include(
-                self.response_class.resource_fields)
+                self.response_class,
+                self.fields
+            )
             if self._is_include_parameter_in_request():
                 # only pushing "_include" into kwargs when the request
                 # contained this parameter, to keep things cleaner (identical
@@ -110,15 +124,15 @@ class marshal_with(object):
 
     def wrap_with_response_object(self, data):
         if isinstance(data, dict):
-            return self.response_class(**data)
+            return data
         elif isinstance(data, list):
             return map(self.wrap_with_response_object, data)
         elif isinstance(data, SQLModelBase):
-            return self.wrap_with_response_object(data.to_dict())
+            return data.to_response()
         # Support for partial results from SQLAlchemy (i.e. only
         # certain columns, and not the whole model class)
         elif isinstance(data, sql_alchemy_collection):
-            return self.wrap_with_response_object(data._asdict())
+            return data._asdict()
         raise RuntimeError('Unexpected response data (type {0}) {1}'.format(
             type(data), data))
 
@@ -126,7 +140,11 @@ class marshal_with(object):
     def _is_include_parameter_in_request():
         return '_include' in request.args and request.args['_include']
 
-    def _get_fields_to_include(self, model_fields):
+    def _get_fields_to_include(self, response_class, model_fields):
+        skipped_fields = self._get_skipped_fields(response_class)
+        model_fields = {k: v for k, v in model_fields.iteritems()
+                        if k not in skipped_fields}
+
         if self._is_include_parameter_in_request():
             include = set(request.args['_include'].split(','))
             include_fields = {}
@@ -146,8 +164,29 @@ class marshal_with(object):
             return include_fields
         return model_fields
 
+    @staticmethod
+    def _get_api_version():
+        url = request.base_url
+        if 'api' not in url:
+            return None
+        version = url.split('/api/')[1]
+        return version.split('/')[0]
+
+    def _get_skipped_fields(self, response_class):
+        api_version = self._get_api_version()
+        if hasattr(response_class, 'skipped_fields'):
+            return response_class.skipped_fields.get(api_version, [])
+        return []
+
+    @staticmethod
+    def _premium_feature_abort():
+        utils.abort_error(manager_exceptions.MissingPremiumPackage
+                          (MISSING_PREMIUM_PACKAGE_MESSAGE),
+                          current_app.logger,
+                          hide_server_message=True)
 
 # endregion
+
 
 # region V2 decorators
 

@@ -445,11 +445,11 @@ class NodesTest(base_test.BaseServerTestCase):
             blueprint_file_name='deployment-creation-with-groups.yaml')
         node = self.client.nodes.get(deployment.id, 'vm')
         self.assertDictContainsSubset({
-            'number_of_instances': '2',
-            'min_number_of_instances': '2',
-            'max_number_of_instances': '2',
-            'planned_number_of_instances': '2',
-            'deploy_number_of_instances': '2',
+            'number_of_instances': 2,
+            'min_number_of_instances': 2,
+            'max_number_of_instances': 2,
+            'planned_number_of_instances': 2,
+            'deploy_number_of_instances': 2,
         }, node)
         instances = self.client.node_instances.list(deployment.id).items
         for instance in instances:

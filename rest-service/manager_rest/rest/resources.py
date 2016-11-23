@@ -99,12 +99,12 @@ class BlueprintsIdArchive(SecuredResource):
 class Blueprints(SecuredResource):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.BlueprintState.__name__),
+        responseClass='List[{0}]'.format(models.Blueprint.__name__),
         nickname="list",
         notes="Returns a list of uploaded blueprints."
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState)
+    @marshal_with(models.Blueprint)
     def get(self, _include=None, **kwargs):
         """
         List uploaded blueprints
@@ -117,12 +117,12 @@ class Blueprints(SecuredResource):
 class BlueprintsId(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses.BlueprintState,
+        responseClass=models.Blueprint,
         nickname="getById",
         notes="Returns a blueprint by its id."
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState)
+    @marshal_with(models.Blueprint)
     def get(self, blueprint_id, _include=None, **kwargs):
         """
         Get blueprint by id
@@ -134,7 +134,7 @@ class BlueprintsId(SecuredResource):
         )
 
     @swagger.operation(
-        responseClass=responses.BlueprintState,
+        responseClass=models.Blueprint,
         nickname="upload",
         notes="Submitted blueprint should be an archive "
               "containing the directory which contains the blueprint. "
@@ -169,7 +169,7 @@ class BlueprintsId(SecuredResource):
 
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState)
+    @marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
         """
         Upload a blueprint (id specified)
@@ -178,12 +178,12 @@ class BlueprintsId(SecuredResource):
             receive_uploaded_data(data_id=blueprint_id)
 
     @swagger.operation(
-        responseClass=responses.BlueprintState,
+        responseClass=models.Blueprint,
         nickname="deleteById",
         notes="deletes a blueprint by its id."
     )
     @exceptions_handled
-    @marshal_with(responses.BlueprintState)
+    @marshal_with(models.Blueprint)
     def delete(self, blueprint_id, **kwargs):
         """
         Delete blueprint by id
@@ -212,7 +212,7 @@ class BlueprintsId(SecuredResource):
 class Executions(SecuredResource):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Execution.__name__),
+        responseClass='List[{0}]'.format(models.Execution.__name__),
         nickname="list",
         notes="Returns a list of executions for the optionally provided "
               "deployment id.",
@@ -232,7 +232,7 @@ class Executions(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.Execution)
+    @marshal_with(models.Execution)
     def get(self, _include=None, **kwargs):
         """List executions"""
         args = get_args_and_verify_arguments(
@@ -254,7 +254,7 @@ class Executions(SecuredResource):
             filters=deployment_id_filter).items
 
     @exceptions_handled
-    @marshal_with(responses.Execution)
+    @marshal_with(models.Execution)
     def post(self, **kwargs):
         """Execute a workflow"""
         request_dict = get_json_and_verify_params({'deployment_id',
@@ -287,12 +287,12 @@ class Executions(SecuredResource):
 class ExecutionsId(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses.Execution,
+        responseClass=models.Execution,
         nickname="getById",
         notes="Returns the execution state by its id.",
     )
     @exceptions_handled
-    @marshal_with(responses.Execution)
+    @marshal_with(models.Execution)
     def get(self, execution_id, _include=None, **kwargs):
         """
         Get execution by id
@@ -304,7 +304,7 @@ class ExecutionsId(SecuredResource):
         )
 
     @swagger.operation(
-        responseClass=responses.Execution,
+        responseClass=models.Execution,
         nickname="modify_state",
         notes="Modifies a running execution state (currently, only cancel"
               " and force-cancel are supported)",
@@ -321,7 +321,7 @@ class ExecutionsId(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.Execution)
+    @marshal_with(models.Execution)
     def post(self, execution_id, **kwargs):
         """
         Apply execution action (cancel, force-cancel) by id
@@ -341,7 +341,7 @@ class ExecutionsId(SecuredResource):
                 execution_id, action == 'force-cancel')
 
     @swagger.operation(
-        responseClass=responses.Execution,
+        responseClass=models.Execution,
         nickname="updateExecutionStatus",
         notes="Updates the execution's status",
         parameters=[{'name': 'status',
@@ -363,7 +363,7 @@ class ExecutionsId(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.Execution)
+    @marshal_with(models.Execution)
     def patch(self, execution_id, **kwargs):
         """
         Update execution status by id
@@ -380,12 +380,12 @@ class ExecutionsId(SecuredResource):
 class Deployments(SecuredResource):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Deployment.__name__),
+        responseClass='List[{0}]'.format(models.Deployment.__name__),
         nickname="list",
         notes="Returns a list of existing deployments."
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment)
+    @marshal_with(models.Deployment)
     def get(self, _include=None, **kwargs):
         """
         List deployments
@@ -396,12 +396,12 @@ class Deployments(SecuredResource):
 
 class DeploymentsId(SecuredResource):
     @swagger.operation(
-        responseClass=responses.Deployment,
+        responseClass=models.Deployment,
         nickname="getById",
         notes="Returns a deployment by its id."
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment)
+    @marshal_with(models.Deployment)
     def get(self, deployment_id, _include=None, **kwargs):
         """
         Get deployment by id
@@ -413,7 +413,7 @@ class DeploymentsId(SecuredResource):
         )
 
     @swagger.operation(
-        responseClass=responses.Deployment,
+        responseClass=models.Deployment,
         nickname="createDeployment",
         notes="Created a new deployment of the given blueprint.",
         parameters=[{'name': 'body',
@@ -427,7 +427,7 @@ class DeploymentsId(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment)
+    @marshal_with(models.Deployment)
     def put(self, deployment_id, **kwargs):
         """
         Create a deployment
@@ -451,7 +451,7 @@ class DeploymentsId(SecuredResource):
         return deployment, 201
 
     @swagger.operation(
-        responseClass=responses.Deployment,
+        responseClass=models.Deployment,
         nickname="deleteById",
         notes="deletes a deployment by its id.",
         parameters=[{'name': 'ignore_live_nodes',
@@ -465,7 +465,7 @@ class DeploymentsId(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.Deployment)
+    @marshal_with(models.Deployment)
     def delete(self, deployment_id, **kwargs):
         """
         Delete deployment by id
@@ -493,7 +493,7 @@ class DeploymentsId(SecuredResource):
 class DeploymentModifications(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses.DeploymentModification,
+        responseClass=models.DeploymentModification,
         nickname="modifyDeployment",
         notes="Modify deployment.",
         parameters=[{'name': 'body',
@@ -508,7 +508,7 @@ class DeploymentModifications(SecuredResource):
         ]
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification)
+    @marshal_with(models.DeploymentModification)
     def post(self, **kwargs):
         request_dict = get_json_and_verify_params({
             'deployment_id': {},
@@ -524,7 +524,7 @@ class DeploymentModifications(SecuredResource):
 
     @swagger.operation(
         responseClass='List[{0}]'.format(
-            responses.DeploymentModification.__name__),
+            models.DeploymentModification.__name__),
         nickname="listDeploymentModifications",
         notes="List deployment modifications.",
         parameters=[{'name': 'deployment_id',
@@ -535,7 +535,7 @@ class DeploymentModifications(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification)
+    @marshal_with(models.DeploymentModification)
     def get(self, _include=None, **kwargs):
         args = get_args_and_verify_arguments(
             [Argument('deployment_id', type=str, required=False)]
@@ -552,12 +552,12 @@ class DeploymentModifications(SecuredResource):
 class DeploymentModificationsId(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses.DeploymentModification,
+        responseClass=models.DeploymentModification,
         nickname="getDeploymentModification",
         notes="Get deployment modification."
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification)
+    @marshal_with(models.DeploymentModification)
     def get(self, modification_id, _include=None, **kwargs):
         return get_storage_manager().get(
             models.DeploymentModification,
@@ -569,12 +569,12 @@ class DeploymentModificationsId(SecuredResource):
 class DeploymentModificationsIdFinish(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses.DeploymentModification,
+        responseClass=models.DeploymentModification,
         nickname="finishDeploymentModification",
         notes="Finish deployment modification."
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification)
+    @marshal_with(models.DeploymentModification)
     def post(self, modification_id, **kwargs):
         return get_resource_manager().finish_deployment_modification(
             modification_id)
@@ -583,12 +583,12 @@ class DeploymentModificationsIdFinish(SecuredResource):
 class DeploymentModificationsIdRollback(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses.DeploymentModification,
+        responseClass=models.DeploymentModification,
         nickname="rollbackDeploymentModification",
         notes="Rollback deployment modification."
     )
     @exceptions_handled
-    @marshal_with(responses.DeploymentModification)
+    @marshal_with(models.DeploymentModification)
     def post(self, modification_id, **kwargs):
         return get_resource_manager().rollback_deployment_modification(
             modification_id)
@@ -597,7 +597,7 @@ class DeploymentModificationsIdRollback(SecuredResource):
 class Nodes(SecuredResource):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.Node.__name__),
+        responseClass='List[{0}]'.format(models.Node.__name__),
         nickname="listNodes",
         notes="Returns nodes list according to the provided query parameters.",
         parameters=[{'name': 'deployment_id',
@@ -608,7 +608,7 @@ class Nodes(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.Node)
+    @marshal_with(models.Node)
     def get(self, _include=None, **kwargs):
         """
         List nodes
@@ -642,7 +642,7 @@ class Nodes(SecuredResource):
 class NodeInstances(SecuredResource):
 
     @swagger.operation(
-        responseClass='List[{0}]'.format(responses.NodeInstance.__name__),
+        responseClass='List[{0}]'.format(models.NodeInstance.__name__),
         nickname="listNodeInstances",
         notes="Returns node instances list according to the provided query"
               " parameters.",
@@ -660,7 +660,7 @@ class NodeInstances(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.NodeInstance)
+    @marshal_with(models.NodeInstance)
     def get(self, _include=None, **kwargs):
         """
         List node instances
@@ -683,7 +683,7 @@ class NodeInstances(SecuredResource):
 class NodeInstancesId(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses.Node,
+        responseClass=models.Node,
         nickname="getNodeInstance",
         notes="Returns node state/runtime properties "
               "according to the provided query parameters.",
@@ -703,7 +703,7 @@ class NodeInstancesId(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
-    @marshal_with(responses.NodeInstance)
+    @marshal_with(models.NodeInstance)
     def get(self, node_instance_id, _include=None, **kwargs):
         """
         Get node instance by id
@@ -715,7 +715,7 @@ class NodeInstancesId(SecuredResource):
         )
 
     @swagger.operation(
-        responseClass=responses.NodeInstance,
+        responseClass=models.NodeInstance,
         nickname="patchNodeState",
         notes="Update node instance. Expecting the request body to "
               "be a dictionary containing 'version' which is used for "
@@ -753,7 +753,7 @@ class NodeInstancesId(SecuredResource):
         consumes=["application/json"]
     )
     @exceptions_handled
-    @marshal_with(responses.NodeInstance)
+    @marshal_with(models.NodeInstance)
     def patch(self, node_instance_id, **kwargs):
         """Update node instance by id."""
         request_dict = get_json_and_verify_params(
@@ -935,12 +935,12 @@ class Status(SecuredResource):
 class ProviderContext(SecuredResource):
 
     @swagger.operation(
-        responseClass=responses.ProviderContext,
+        responseClass=models.ProviderContext,
         nickname="getContext",
         notes="Get the provider context"
     )
     @exceptions_handled
-    @marshal_with(responses.ProviderContext)
+    @marshal_with(models.ProviderContext)
     def get(self, **kwargs):
         """
         Get provider context

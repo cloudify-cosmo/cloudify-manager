@@ -16,11 +16,6 @@
 from flask_restful import fields
 from flask_restful_swagger import swagger
 
-from .responses import (Node as NodeV1,
-                        NodeInstance as NodeInstanceV1,
-                        Deployment as DeploymentV1)
-from .responses_v2 import Plugin  # noqa
-
 
 @swagger.model
 class MaintenanceMode(object):
@@ -38,76 +33,3 @@ class MaintenanceMode(object):
         self.activation_requested_at = kwargs.get('activation_requested_at')
         self.remaining_executions = kwargs.get('remaining_executions')
         self.requested_by = kwargs.get('requested_by')
-
-
-@swagger.model
-class DeploymentUpdateStep(object):
-    resource_fields = {
-        'id': fields.String,
-        'action': fields.String,
-        'entity_type': fields.String,
-        'entity_id': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.id = kwargs.get('id')
-        self.action = kwargs.get('action')
-        self.entity_type = kwargs.get('entity_type')
-        self.entity_id = kwargs.get('entity_id')
-
-
-@swagger.model
-class DeploymentUpdate(object):
-    resource_fields = {
-        'id': fields.String,
-        'deployment_id': fields.String,
-        'state': fields.String,
-        'steps': fields.Raw,
-        'execution_id': fields.String,
-        'created_at': fields.String
-    }
-
-    def __init__(self, **kwargs):
-        self.id = kwargs.get('id')
-        self.deployment_id = kwargs.get('deployment_id')
-        self.steps = kwargs.get('steps')
-        self.state = kwargs.get('state')
-        self.execution_id = kwargs.get('execution_id')
-        self.created_at = kwargs.get('created_at')
-
-
-class Deployment(DeploymentV1):
-
-    resource_fields = dict(DeploymentV1.resource_fields.items() + {
-        'scaling_groups': fields.Raw,
-    }.items())
-
-    def __init__(self, **kwargs):
-        super(Deployment, self).__init__(**kwargs)
-        self.scaling_groups = kwargs.get('scaling_groups')
-
-
-@swagger.model
-class Node(NodeV1):
-
-    resource_fields = dict(NodeV1.resource_fields.items() + {
-        'min_number_of_instances': fields.String,
-        'max_number_of_instances': fields.String,
-    }.items())
-
-    def __init__(self, **kwargs):
-        super(Node, self).__init__(**kwargs)
-        self.min_number_of_instances = kwargs.get('min_number_of_instances')
-        self.max_number_of_instances = kwargs.get('max_number_of_instances')
-
-
-@swagger.model
-class NodeInstance(NodeInstanceV1):
-
-    resource_fields = dict(NodeInstanceV1.resource_fields.items() + {
-        'scaling_groups': fields.Raw
-    }.items())
-
-    def __init__(self, **kwargs):
-        super(NodeInstance, self).__init__(**kwargs)
-        self.scaling_groups = kwargs.get('scaling_groups')

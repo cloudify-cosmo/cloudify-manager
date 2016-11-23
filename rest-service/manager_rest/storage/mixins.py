@@ -22,6 +22,9 @@ from .relationships import many_to_many_relationship, foreign_key
 
 
 class DerivedMixinBase(object):
+    def __init__(self, *args, **kwargs):
+        super(DerivedMixinBase, self).__init__(*args, **kwargs)
+
     @hybrid_property
     def parent(self):
         """Return the *instance* of the parent class via a relationship,
@@ -73,6 +76,9 @@ class DerivedCreatorMixin(DerivedMixinBase):
 
 
 class TopLevelCreatorMixin(object):
+    def __init__(self, *args, **kwargs):
+        super(TopLevelCreatorMixin, self).__init__(*args, **kwargs)
+
     # Overriding attribute from SQLModelBase
     top_level_creator = True
 
@@ -97,8 +103,10 @@ class TopLevelCreatorMixin(object):
 
 
 class TopLevelMixin(TopLevelTenantMixin, TopLevelCreatorMixin):
-    pass
+    def __init__(self, *args, **kwargs):
+        super(TopLevelMixin, self).__init__(*args, **kwargs)
 
 
 class DerivedMixin(DerivedTenantMixin, DerivedCreatorMixin):
-    pass
+    def __init__(self, *args, **kwargs):
+        super(DerivedMixin, self).__init__(*args, **kwargs)

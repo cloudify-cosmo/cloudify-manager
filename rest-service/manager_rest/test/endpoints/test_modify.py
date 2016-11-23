@@ -97,8 +97,11 @@ class ModifyTests(base_test.BaseServerTestCase):
             runtime_properties={'test': 'before_start'},
             version=1)
 
-        before_modification = self.list_items(self.client.node_instances.list,
-                                              deployment.id)
+        before_modification = self._get_items(
+            self.client.node_instances.list,
+            deployment_id=deployment.id,
+            fix_node_instances=True
+        )
         modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployment_modifications.start(
             deployment.id, nodes=modified_nodes, context=mock_context)
@@ -125,13 +128,13 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.assertEqual(modification.status,
                          DeploymentModification.STARTED)
 
-        before_end = self.list_items(self.client.node_instances.list,
-                                     deployment.id)
-
+        before_end = self._get_items(self.client.node_instances.list,
+                                     deployment_id=deployment.id,
+                                     fix_node_instances=True)
         end_func(modification_id)
-
-        after_end = self.list_items(self.client.node_instances.list,
-                                    deployment.id)
+        after_end = self._get_items(self.client.node_instances.list,
+                                    deployment_id=deployment.id,
+                                    fix_node_instances=True)
 
         node_assertions(**expected_end_node_counts)
 
@@ -149,20 +152,24 @@ class ModifyTests(base_test.BaseServerTestCase):
                 timedelta(seconds=5) <=
                 created_at <= ended_at <=
                 dateutil.parser.parse(utils.get_formatted_timestamp()))
-        all_modifications = self.list_items(
-            self.client.deployment_modifications.list)
-        dep_modifications = self.list_items(
+        all_modifications = self._get_items(
+            self.client.deployment_modifications.list
+        )
+        dep_modifications = self._get_items(
             self.client.deployment_modifications.list,
-            deployment_id=deployment.id)
-        for modifications in [all_modifications, dep_modifications]:
-            for m in modifications:
-                self._fix_modification(m)
+            deployment_id=deployment.id
+        )
+        for modification in all_modifications + dep_modifications:
+            self._fix_modification(modification)
         self.assertEqual(len(dep_modifications), 1)
         self.assertEqual(dep_modifications[0], modification)
         self.assertEqual(all_modifications, dep_modifications)
-        self.assertEqual([], self.list_items(
+        modifications_list = self._get_items(
             self.client.deployment_modifications.list,
-            deployment_id='i_really_should_not_exist'))
+            deployment_id='i_really_should_not_exist',
+            fix_node_instances=True
+        )
+        self.assertEqual([], modifications_list)
         self._assert_instances_equal(
             modification.node_instances.before_modification,
             before_modification)
@@ -200,12 +207,21 @@ class ModifyTests(base_test.BaseServerTestCase):
                 for node_instance in node_instances:
                     node_instance.pop('scaling_groups', None)
 
-    @staticmethod
-    def list_items(list_func, *args, **kwargs):
+    def _get_items(self, list_func, fix_node_instances=False, *args, **kwargs):
         if CLIENT_API_VERSION != 'v1':
-            return list_func(*args, **kwargs).items
+            items = list_func(*args, **kwargs).items
         else:
-            return list_func(*args, **kwargs)
+            items = list_func(*args, **kwargs)
+        if fix_node_instances:
+            self._fix_node_instances(items)
+        return items
+
+    @staticmethod
+    def _fix_node_instances(node_instances):
+        if CLIENT_API_VERSION >= 3:
+            for node_instance in node_instances:
+                node_instance.pop('permission', None)
+                node_instance.pop('tenant_name', None)
 
     def test_no_concurrent_modifications(self):
         blueprint_id, _, _, deployment = self.put_deployment(
@@ -447,8 +463,7 @@ class ModifyTests(base_test.BaseServerTestCase):
                    for index in [1, 2, 4, 5]})
         self.client.deployment_modifications.finish(modification.id)
 
-        node6 = self.list_items(self.client.node_instances.list,
-                                node_id='node6')[0]
+        node6 = self.client.node_instances.list(node_id='node6')[0]
         expected = [
             ('node1', 'connected_to'),
             ('node1', 'connected_to'),
