@@ -28,7 +28,6 @@ class WorkflowsAPITest(AgentlessTestCase):
         super(WorkflowsAPITest, self).setUp()
         self.do_get = True
         self.configure(retries=2, interval=1)
-        self.addCleanup(test_utils.restore_provider_context)
 
     def configure(self, retries, interval):
         test_utils.delete_provider_context()

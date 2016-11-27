@@ -27,7 +27,6 @@ class TaskRetriesTest(AgentlessTestCase):
     def setUp(self):
         super(TaskRetriesTest, self).setUp()
         test_utils.delete_provider_context()
-        self.addCleanup(test_utils.restore_provider_context)
         self.events = []
 
     def configure(self, retries, retry_interval):
