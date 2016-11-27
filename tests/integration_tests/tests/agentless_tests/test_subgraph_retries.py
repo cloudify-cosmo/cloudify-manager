@@ -25,7 +25,6 @@ class TaskRetriesTest(AgentlessTestCase):
     def setUp(self):
         super(TaskRetriesTest, self).setUp()
         test_utils.delete_provider_context()
-        self.addCleanup(test_utils.restore_provider_context)
 
     def test_subgraph_retries_provider_config_config(self):
         context = {'cloudify': {'workflows': {

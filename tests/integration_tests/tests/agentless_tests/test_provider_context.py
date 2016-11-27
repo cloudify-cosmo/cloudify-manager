@@ -18,7 +18,7 @@ import copy
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import postgresql
+from integration_tests.tests.utils import delete_provider_context
 from integration_tests.tests.constants import PROVIDER_NAME, PROVIDER_CONTEXT
 
 
@@ -51,7 +51,7 @@ class TestProviderContext(AgentlessTestCase):
         self.assertEqual(new_context, context['context'])
 
     def test_update_non_existent_provider_context(self):
-        postgresql.run_query('DELETE from provider_context')
+        delete_provider_context()
         try:
             self.client.manager.update_context(
                 PROVIDER_NAME,

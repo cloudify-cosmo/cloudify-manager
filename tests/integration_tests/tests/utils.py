@@ -204,3 +204,7 @@ def get_remote_storage_manager():
     """
     postgresql.setup_flask_app()
     return get_storage_manager()
+
+
+def delete_provider_context():
+    postgresql.run_query('DELETE from provider_context')
