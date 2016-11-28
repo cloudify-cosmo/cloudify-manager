@@ -39,8 +39,8 @@ class Tenant(SQLModelBase):
     def _get_identifier(self):
         return 'name', self.name
 
-    def to_dict(self, suppress_error=False):
-        tenant_dict = super(Tenant, self).to_dict(suppress_error)
+    def to_response(self):
+        tenant_dict = super(Tenant, self).to_response()
         all_groups_names = [group.name for group in self.groups.all()]
         all_users_names = [user.username for user in self.users.all()]
         tenant_dict['groups'] = all_groups_names
@@ -61,8 +61,8 @@ class Group(SQLModelBase):
     def tenants(cls):
         return many_to_many_relationship(cls, Tenant)
 
-    def to_dict(self, suppress_error=False):
-        group_dict = super(Group, self).to_dict(suppress_error)
+    def to_response(self):
+        group_dict = super(Group, self).to_response()
         group_dict['tenants'] = [tenant.name for tenant in self.tenants]
         group_dict['users'] = [user.username for user in self.users]
         return group_dict
@@ -122,8 +122,8 @@ class User(SQLModelBase, UserMixin):
 
         return list(set(tenant_list))
 
-    def to_dict(self, suppress_error=False):
-        user_dict = super(User, self).to_dict(suppress_error)
+    def to_response(self):
+        user_dict = super(User, self).to_response()
         all_tenants = [tenant.name for tenant in self.get_all_tenants()]
         user_dict['tenants'] = all_tenants
         user_dict['groups'] = [group.name for group in self.groups]

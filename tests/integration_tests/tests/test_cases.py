@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import json
-
 import datetime
 import yaml
 import tarfile
@@ -26,8 +25,8 @@ import time
 import uuid
 import tempfile
 import unittest
-
 import sh
+
 import nose.tools
 
 import cloudify.utils

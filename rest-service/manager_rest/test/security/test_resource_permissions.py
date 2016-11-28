@@ -28,7 +28,7 @@ from .test_base import SecurityTestBase
 
 @attr(client_min_version=3, client_max_version=LATEST_API_VERSION)
 class ResourcePermissionTests(SecurityTestBase):
-    NOT_FOUND_MSG = '404: Requested {0} with ID `{1}` was not found'
+    NOT_FOUND_MSG = '404: Requested `{0}` with ID `{1}` was not found'
     UNAUTHORIZED_MSG = "{0} does not have permissions to modify/delete {1}"
 
     def _upload_blueprint(self, private=False):

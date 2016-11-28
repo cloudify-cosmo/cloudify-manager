@@ -14,8 +14,6 @@
 # limitations under the License.
 
 import logging
-from flask import Flask
-from flask_security import Security
 from contextlib import closing
 
 import pg8000
@@ -30,7 +28,9 @@ from cloudify.utils import setup_logger
 
 from manager_rest.storage import db, user_datastore
 from manager_rest.storage.models import Tenant, ProviderContext
-from manager_rest.utils import create_security_roles_and_admin_user
+from manager_rest.utils import (create_security_roles_and_admin_user,
+                                setup_flask_app as _setup_flask_app,
+                                get_postgres_conf)
 from manager_rest.constants import (DEFAULT_TENANT_NAME,
                                     CURRENT_TENANT_CONFIG,
                                     PROVIDER_CONTEXT_ID)
@@ -48,31 +48,24 @@ app = None
 def setup_flask_app():
     global app
     if not app:
-        conf = utils.get_postgres_client_details()
-        app = Flask(__name__)
-        app.config['SQLALCHEMY_DATABASE_URI'] = \
-            'postgresql+pg8000://{0}:{1}@{2}/{3}'.format(
-                conf.username,
-                conf.password,
-                conf.host,
-                conf.db_name
-            )
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
-
-        # Setup the mock app with the DB and Security
-        Security(app=app, datastore=user_datastore)
-        db.init_app(app)
-        app.app_context().push()
+        manager_ip = utils.get_manager_ip()
+        app = _setup_flask_app(
+            db,
+            user_datastore,
+            manager_ip=manager_ip,
+            driver='pg8000'
+        )
 
 
 def run_query(query, db_name=None):
-    conf = utils.get_postgres_client_details()
+    conf = get_postgres_conf()
+    manager_ip = utils.get_manager_ip()
+
     db_name = db_name or conf.db_name
     with closing(pg8000.connect(database=db_name,
                                 user=conf.username,
                                 password=conf.password,
-                                host=conf.host)) as con:
+                                host=manager_ip)) as con:
         con.autocommit = True
         logger.info('Trying to execute SQL query: ' + query)
         with closing(con.cursor()) as cur:

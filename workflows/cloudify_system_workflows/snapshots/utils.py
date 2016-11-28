@@ -19,7 +19,11 @@ import shlex
 import shutil
 import subprocess
 
+from elasticsearch import Elasticsearch
+
 from cloudify.workflows import ctx
+from cloudify.utils import ManagerVersion
+from cloudify.constants import COMPUTE_NODE_TYPE
 
 
 class DictToAttributes(object):
@@ -38,7 +42,9 @@ class DictToAttributes(object):
             return self._dict
 
 
-def copy_data(archive_root, config, to_archive=True):
+def copy_files_between_manager_and_snapshot(archive_root,
+                                            config,
+                                            to_archive=True):
     """
     Copy files/dirs between snapshot/manager and manager/snapshot.
 
@@ -47,7 +53,7 @@ def copy_data(archive_root, config, to_archive=True):
     :param to_archive: If True then copying is from manager to snapshot,
         otherwise from snapshot to manager.
     """
-    ctx.logger.info('Copying data..')
+    ctx.logger.info('Copying files/directories...')
 
     # Files/dirs with constant relative/absolute paths,
     # where first path is path in manager, second is path in snapshot.
@@ -140,3 +146,16 @@ def run(command, ignore_failures=False, redirect_output_path=None):
                 command_str, proc.aggr_stderr)
             raise RuntimeError(msg)
     return proc
+
+
+def get_es_client(config):
+    return Elasticsearch(hosts=[{'host': config.db_address,
+                                 'port': int(config.db_port)}])
+
+
+def get_manager_version(client):
+    return ManagerVersion(client.manager.get_version()['version'])
+
+
+def is_compute(node):
+    return COMPUTE_NODE_TYPE in node.type_hierarchy

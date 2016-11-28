@@ -65,5 +65,5 @@ class ProviderContextTestCase(base_test.BaseServerTestCase):
             self.assertEqual(e.status_code, 404)
             self.assertEqual(
                 e.message,
-                "Requested ProviderContext with ID `CONTEXT` was not found"
+                'Requested `ProviderContext` with ID `CONTEXT` was not found'
             )

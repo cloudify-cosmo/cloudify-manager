@@ -19,29 +19,28 @@ import json
 import shlex
 import logging
 import subprocess
-
-from flask import Flask
 from shutil import move
 
-from manager_rest.storage.sql_models import db
-from manager_rest.storage.storage_manager import get_storage_manager
+from flask import _request_ctx_stack as flask_global_stack
+
+from manager_rest.utils import setup_flask_app
+from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest.storage import (db,
+                                  models,
+                                  user_datastore,
+                                  get_storage_manager)
 
 format_str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format=format_str)
 logger = logging.getLogger('estopg')
 
 COMPUTE_NODE_TYPE = 'cloudify.nodes.Compute'
-TYPES_TO_RESTORE = ['blueprint',
-                    'deployment',
-                    'execution',
-                    'node',
-                    'node_instance',
-                    'plugin']
 
 
 class EsToPg(object):
     def __init__(self, es_data_path):
-        self._storage_manager = self._setup_server()
+        self._app = self._setup_flask_app()
+        self._storage_manager = get_storage_manager()
         self._blueprints_path = '{0}.blueprints'.format(es_data_path)
         self._deployments_path = '{0}.deployments'.format(es_data_path)
         self._deployments_ex_path = '{0}.deployments_ex'.format(es_data_path)
@@ -51,72 +50,122 @@ class EsToPg(object):
         self._executions_path = '{0}.executions'.format(es_data_path)
         self._events_path = '{0}.events'.format(es_data_path)
 
+    def _setup_flask_app(self):
+        app = setup_flask_app(db, user_datastore)
+        self._set_current_user(app)
+        self._set_default_tenant(app)
+        return app
+
     @staticmethod
-    def _setup_server():
-        logger.debug('Connecting to PG db..')
-        app = Flask(__name__)
-        db_uri = 'postgresql://cloudify:cloudify@localhost/cloudify_db'
-        app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
-        app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        db.init_app(app)
-        app.app_context().push()
-        return get_storage_manager()
+    def _set_default_tenant(app):
+        """Set the default tenant as the current tenant in the flask app
+
+        :return: The default tenant
+        """
+        default_tenant = models.Tenant.query.filter_by(id=1).first()
+        app.config[CURRENT_TENANT_CONFIG] = default_tenant
+
+    @staticmethod
+    def _set_current_user(app):
+        """Set the admin as the current user in the flask app
+
+        :return: The admin user
+        """
+        admin = models.User.query.filter_by(id=1).first()
+        # This line is necessary for the `reload_user` method - we add the
+        # admin user to the flask stack
+        flask_global_stack.push(admin)
+        # And then load him as the active user
+        app.extensions['security'].login_manager.reload_user(admin)
 
     def restore_es(self, es_data_path):
         logger.debug('Restoring elastic search..')
         self._split_dump(es_data_path)
+        self._restore_blueprints()
+        self._restore_deployments()
+        self._restore_deployment_updates_and_modifications()
+        self._restore_nodes()
+        self._restore_node_instances()
+        self._restore_executions()
+        self._restore_plugins()
+        logger.debug('Restoring elastic search completed..')
 
+    @staticmethod
+    def _get_elem(line):
+        elem = json.loads(line)
+        return elem['_source']
+
+    def _restore_blueprints(self):
         for line in open(self._blueprints_path, 'r'):
-            elem = json.loads(line)
-            node_data = elem['_source']
-            self._update_blueprint(node_data)
-            self._storage_manager.put_blueprint(node_data)
+            elem = self._get_elem(line)
+            blueprint = models.Blueprint(**elem)
+            self._storage_manager.put(blueprint)
 
+    def _restore_deployments(self):
         for line in open(self._deployments_path, 'r'):
-            elem = json.loads(line)
-            node_data = elem['_source']
-            self._update_deployment(node_data)
-            self._storage_manager.put_deployment(node_data)
+            dep_dict = self._get_elem(line)
+            blueprint = self._update_deployment(dep_dict)
+            deployment = models.Deployment(**dep_dict)
+            deployment.blueprint = blueprint
+            self._storage_manager.put(deployment)
 
+    def _restore_deployment_updates_and_modifications(self):
         for line in open(self._deployments_ex_path, 'r'):
             elem = json.loads(line)
             node_data = elem['_source']
             node_type = elem['_type']
             self._update_deployment(node_data)
             if node_type == 'deployment_updates':
-                self._storage_manager.put_deployment_updates(node_data)
+                dep_update = models.DeploymentUpdate(**node_data)
+                self._storage_manager.put(dep_update)
                 if 'steps' in node_data:
                     steps = node_data['steps']
                     for step in steps:
-                        self._storage_manager.put_deployment_update_step(step)
+                        dep_step = models.DeploymentUpdateStep(**step)
+                        self._storage_manager.put(dep_step)
             elif node_type == 'deployment_modifications':
-                self._storage_manager.put_deployment_modification(node_data)
+                dep_modification = models.DeploymentModification(**node_data)
+                self._storage_manager.put(dep_modification)
             else:
                 logger.warning('Unknown node type: {0}'.format(node_type))
 
+    def _restore_nodes(self):
         for line in open(self._nodes_path, 'r'):
-            elem = json.loads(line)
-            node_data = elem['_source']
-            self._update_node(node_data)
-            self._storage_manager.put_node(node_data)
+            node_dict = self._get_elem(line)
+            deployment = self._update_node(node_dict)
+            node = models.Node(**node_dict)
+            node.deployment = deployment
+            self._storage_manager.put(node)
 
+    def _restore_node_instances(self):
         for line in open(self._node_instances_path, 'r'):
-            elem = json.loads(line)
-            node_data = elem['_source']
-            self._update_node_instance(node_data)
-            self._storage_manager.put_node_instance(node_data)
+            node_instance_dict = self._get_elem(line)
+            node = self._update_node_instance(node_instance_dict)
+            node_instance = models.NodeInstance(**node_instance_dict)
+            node_instance.node = node
+            self._storage_manager.put(node_instance)
 
+    def _restore_executions(self):
         for line in open(self._executions_path, 'r'):
-            elem = json.loads(line)
-            node_data = elem['_source']
-            self._storage_manager.put_execution(node_data)
+            execution_dict = self._get_elem(line)
+            deployment = self._update_execution(execution_dict)
+            execution = models.Execution(**execution_dict)
+            if deployment:
+                execution.deployment = deployment
+            self._storage_manager.put(execution)
 
+    def _restore_plugins(self):
         for line in open(self._plugins_path, 'r'):
             elem = json.loads(line)
-            node_data = elem['_source']
-            self._storage_manager.put_plugin(node_data)
+            plugin = models.Plugin(**elem['_source'])
+            self._storage_manager.put(plugin)
 
-        logger.debug('Restoring elastic search completed..')
+    def _get_node(self, node_id, deployment_id):
+        nodes = self._storage_manager.list(
+            models.Node,
+            filters={'deployment_id': deployment_id, 'id': node_id}
+        )
+        return nodes[0]
 
     def _split_dump(self, es_data_path):
         logger.debug('Splitting elastic search dump file..')
@@ -161,15 +210,11 @@ class EsToPg(object):
                 continue
         for index, dump_file in dump_files.items():
             dump_file.close()
-        self._move(es_data_path, '{0}.backup'.format(es_data_path))
-        self._move(self._events_path, es_data_path)
+        move(es_data_path, '{0}.backup'.format(es_data_path))
+        move(self._events_path, es_data_path)
 
-    def _update_blueprint(self, node_data):
-        node_data.setdefault('description', '')
-        node_data.setdefault('main_file_name', '')
-
-    def _update_deployment(self, node_data):
-        workflows = node_data['workflows']
+    def _update_deployment(self, dep_dict):
+        workflows = dep_dict['workflows']
         workflows.setdefault('install_new_agents', {
             'operation': 'cloudify.plugins.workflows.install_new_agents',
             'parameters': {
@@ -185,18 +230,22 @@ class EsToPg(object):
             },
             'plugin': 'default_workflows'
         })
-        node_data.setdefault('scaling_groups', {})
-        node_data.setdefault('description', None)
+        dep_dict.setdefault('scaling_groups', {})
+        blueprint_id = dep_dict.pop('blueprint_id')
+        return self._storage_manager.get(models.Blueprint, blueprint_id)
 
-    def _update_node_instance(self, node_data):
-        node_data.setdefault('scaling_groups', [])
+    def _update_node_instance(self, node_instance_dict):
+        node_instance_dict.setdefault('scaling_groups', [])
+        deployment_id = node_instance_dict.pop('deployment_id')
+        node_id = node_instance_dict.pop('node_id')
+        return self._get_node(node_id, deployment_id)
 
-    def _update_node(self, node_data):
-        node_data.setdefault('min_number_of_instances', 0)
-        node_data.setdefault('max_number_of_instances', -1)
-        type_hierarchy = node_data.get('type_hierarchy', [])
+    def _update_node(self, node_dict):
+        node_dict.setdefault('min_number_of_instances', 0)
+        node_dict.setdefault('max_number_of_instances', -1)
+        type_hierarchy = node_dict.get('type_hierarchy', [])
         if COMPUTE_NODE_TYPE in type_hierarchy:
-            plugins = node_data.setdefault('plugins', [])
+            plugins = node_dict.setdefault('plugins', [])
             if not any(p['name'] == 'agent' for p in plugins):
                 plugins.append({
                     'source': None,
@@ -205,7 +254,7 @@ class EsToPg(object):
                     'install': False,
                     'install_arguments': None
                 })
-            operations = node_data['operations']
+            operations = node_dict['operations']
             create_amqp_op = 'cloudify.interfaces.cloudify_agent.create_amqp'
             create_agent = 'cloudify_agent.operations.create_agent_amqp'
             validate_amqp = 'cloudify.interfaces.cloudify_agent.validate_amqp'
@@ -218,8 +267,20 @@ class EsToPg(object):
                                 validate_amqp,
                                 {'validate_agent_timeout': 20},
                                 validate_agent)
+        node_dict.pop('blueprint_id')
+        deployment_id = node_dict.pop('deployment_id')
+        return self._storage_manager.get(models.Deployment, deployment_id)
 
-    def _add_operation(self, operations, op_name, inputs, implementation):
+    def _update_execution(self, execution_dict):
+        execution_dict.pop('blueprint_id')
+        deployment_id = execution_dict.pop('deployment_id', None)
+        if deployment_id:
+            return self._storage_manager.get(models.Deployment, deployment_id)
+        else:
+            return None
+
+    @staticmethod
+    def _add_operation(operations, op_name, inputs, implementation):
         if op_name not in operations:
             operations[op_name] = {
                 'inputs': inputs,
@@ -230,9 +291,6 @@ class EsToPg(object):
                 'executor': 'central_deployment_agent',
                 'operation': implementation
             }
-
-    def _move(self, source, destination):
-        move(source, destination)
 
     def _run(self, command, ignore_failures=False):
         if isinstance(command, str):

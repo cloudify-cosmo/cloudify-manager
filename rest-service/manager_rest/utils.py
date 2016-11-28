@@ -24,10 +24,13 @@ import errno
 import platform
 from datetime import datetime
 from os import path, makedirs
+from collections import namedtuple
 from base64 import urlsafe_b64encode
 
 import wagon.utils
+from flask import Flask
 from flask_restful import abort
+from flask_security import Security
 
 from manager_rest import config
 from manager_rest.constants import ALL_ROLES, ADMIN_ROLE
@@ -194,3 +197,48 @@ def create_security_roles_and_admin_user(user_datastore,
     )
     user_obj.tenants.append(default_tenant)
     user_datastore.commit()
+
+
+def setup_flask_app(db, user_datastore, manager_ip='localhost', driver=''):
+    """Setup a functioning flask app, when working outside the rest-service
+
+    :param db: An SQLAlchemy object
+    :param user_datastore: An SQLAlchemy datastore object
+    :param manager_ip: The IP of the manager
+    :param driver: SQLA driver for postgres (e.g. pg8000)
+    :return: A Flask app
+    """
+    app = Flask(__name__)
+    db_uri = get_postgres_db_uri(manager_ip, driver)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
+    Security(app=app, datastore=user_datastore)
+    db.init_app(app)
+    app.app_context().push()
+    return app
+
+
+def get_postgres_db_uri(manager_ip, driver):
+    """Get a valid SQLA DB URI
+    """
+    dialect = 'postgres+{0}'.format(driver) if driver else 'postgres'
+    conf = get_postgres_conf()
+    return '{dialect}://{username}:{password}@{host}/{db_name}'.format(
+        dialect=dialect,
+        username=conf.username,
+        password=conf.password,
+        host=manager_ip,
+        db_name=conf.db_name
+    )
+
+
+def get_postgres_conf():
+    """Return a namedtuple with info used to connect to cloudify's PG DB
+    """
+    conf = namedtuple('PGConf', 'username password db_name')
+    return conf(
+        username='cloudify',
+        password='cloudify',
+        db_name='cloudify_db'
+    )
