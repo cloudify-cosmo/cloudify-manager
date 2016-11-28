@@ -94,28 +94,30 @@ class ResourceManager(object):
 
         return True
 
-    def _get_conf_for_snapshots_wf(self):
+    @staticmethod
+    def _get_conf_for_snapshots_wf():
+        config_instance = config.instance
         return {
-            'file_server_root': config.instance.file_server_root,
+            'file_server_root': config_instance.file_server_root,
             'file_server_snapshots_folder':
-                config.instance.file_server_snapshots_folder,
+                config_instance.file_server_snapshots_folder,
             'file_server_blueprints_folder':
-                config.instance.file_server_blueprints_folder,
+                config_instance.file_server_blueprints_folder,
             'file_server_deployments_folder':
-                config.instance.file_server_deployments_folder,
+                config_instance.file_server_deployments_folder,
             'file_server_uploaded_blueprints_folder':
-                config.instance.file_server_uploaded_blueprints_folder,
-            'db_address': config.instance.db_address,
-            'db_port': config.instance.db_port,
+                config_instance.file_server_uploaded_blueprints_folder,
+            'db_address': config_instance.db_address,
+            'db_port': config_instance.db_port,
             'created_status': SnapshotState.CREATED,
             'failed_status': SnapshotState.FAILED,
             'file_server_uploaded_plugins_folder':
-                config.instance.file_server_uploaded_plugins_folder,
-            'postgresql_bin_path': config.instance.postgresql_bin_path,
-            'postgresql_username': config.instance.postgresql_username,
-            'postgresql_password': config.instance.postgresql_password,
-            'postgresql_db_name': config.instance.postgresql_db_name,
-            'postgresql_host': config.instance.postgresql_host
+                config_instance.file_server_uploaded_plugins_folder,
+            'postgresql_bin_path': config_instance.postgresql_bin_path,
+            'postgresql_username': config_instance.postgresql_username,
+            'postgresql_password': config_instance.postgresql_password,
+            'postgresql_db_name': config_instance.postgresql_db_name,
+            'postgresql_host': config_instance.postgresql_host
         }
 
     def create_snapshot_model(self,
@@ -162,8 +164,8 @@ class ResourceManager(object):
                          bypass_maintenance,
                          timeout):
         # Throws error if no snapshot found
-        snap = self.sm.get(models.Snapshot, snapshot_id)
-        if snap.status == SnapshotState.FAILED:
+        snapshot = self.sm.get(models.Snapshot, snapshot_id)
+        if snapshot.status == SnapshotState.FAILED:
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be restored'
             )

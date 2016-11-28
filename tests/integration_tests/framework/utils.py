@@ -23,7 +23,6 @@ import tempfile
 import shutil
 
 from functools import wraps
-from collections import namedtuple
 from multiprocessing import Process
 
 import influxdb
@@ -117,14 +116,6 @@ def create_rest_client(**kwargs):
             headers=headers,
             trust_all=trust_all,
             cert=cert_path)
-
-
-def get_postgres_client_details():
-    details = namedtuple('PGDetails', 'db_name username password host')
-    return details('cloudify_db',
-                   'cloudify',
-                   'cloudify',
-                   get_manager_ip())
 
 
 def create_influxdb_client():

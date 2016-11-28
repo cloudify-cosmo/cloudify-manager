@@ -273,14 +273,16 @@ class ModifyTests(base_test.BaseServerTestCase):
         with self.assertRaises(exceptions.CloudifyClientError) as scope:
             self.client.deployment_modifications.finish('what')
         self.assertEqual(scope.exception.status_code, 404)
-        self.assertRegexpMatches(str(scope.exception),
-                                 'Requested DeploymentModification.*not found')
+        self.assertEqual(str(scope.exception),
+                         '404: Requested `DeploymentModification` '
+                         'with ID `what` was not found')
 
         with self.assertRaises(exceptions.CloudifyClientError) as scope:
             self.client.deployment_modifications.rollback('what')
         self.assertEqual(scope.exception.status_code, 404)
-        self.assertRegexpMatches(str(scope.exception),
-                                 'Requested DeploymentModification.*not found')
+        self.assertEqual(str(scope.exception),
+                         '404: Requested `DeploymentModification` '
+                         'with ID `what` was not found')
 
     def test_modify_add_instance(self):
         _, _, _, deployment = self.put_deployment(

@@ -345,7 +345,7 @@ class SQLStorageManager(object):
         """A helper method used to overcome a problem where the relationships
         that rely on joins aren't being loaded automatically
         """
-        if instance.is_resource and instance.is_derived:
+        if instance.is_resource:
             for rel in instance.__mapper__.relationships:
                 getattr(instance, rel.key)
 
@@ -364,7 +364,7 @@ class SQLStorageManager(object):
         """Return a single result based on the model class and element ID
         """
         current_app.logger.debug(
-            'Get {0} with ID {1}'.format(model_class, element_id)
+            'Get `{0}` with ID `{1}`'.format(model_class.__name__, element_id)
         )
         filters = filters or {'id': element_id}
         query = self._get_query(model_class, include, filters)
@@ -374,7 +374,7 @@ class SQLStorageManager(object):
 
         if not result:
             raise manager_exceptions.NotFoundError(
-                'Requested {0} with ID `{1}` was not found'
+                'Requested `{0}` with ID `{1}` was not found'
                 .format(model_class.__name__, element_id)
             )
         current_app.logger.debug('Returning {0}'.format(result))
@@ -389,9 +389,10 @@ class SQLStorageManager(object):
         """Return a (possibly empty) list of `model_class` results
         """
         if filters:
-            msg = 'List {0} with filter {1}'.format(model_class, filters)
+            msg = 'List `{0}` with filter {1}'.format(model_class.__name__,
+                                                      filters)
         else:
-            msg = 'List {0}'.format(model_class)
+            msg = 'List `{0}`'.format(model_class.__name__)
         current_app.logger.debug(msg)
         query = self._get_query(model_class, include, filters, sort)
 
@@ -411,7 +412,8 @@ class SQLStorageManager(object):
         :return: The same instance, with the tenant set, if necessary
         """
         self._associate_users_and_tenants(instance, private_resource)
-        self.update(instance)
+        current_app.logger.debug('Put {0}'.format(instance))
+        self.update(instance, log=False)
 
         self._validate_unique_resource_id_per_tenant(instance)
         return instance
@@ -425,13 +427,15 @@ class SQLStorageManager(object):
         self._safe_commit()
         return instance
 
-    def update(self, instance):
+    def update(self, instance, log=True):
         """Add `instance` to the DB session, and attempt to commit
 
         :param instance: Instance to be updated in the DB
+        :param log: Should the update message be logged
         :return: The updated instance
         """
-        current_app.logger.debug('Update {0}'.format(instance))
+        if log:
+            current_app.logger.debug('Update {0}'.format(instance))
         db.session.add(instance)
         self._safe_commit()
         return instance
