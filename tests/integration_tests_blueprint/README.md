@@ -13,7 +13,7 @@ Execution of the blueprint is done by using the Cloudify CLI and requires config
 * Execute the following commands to execute the blueprint:
 ```
 cd cloudify-manager
-cfy use local
+cfy profiles use local
 cfy install tests/integration_tests_blueprint/os-docl-machine-blueprint.yaml -i tests/integration_tests_blueprint/os-inputs.yaml --install-plugins
 ```
 To uninstall the blueprint, run the following:
