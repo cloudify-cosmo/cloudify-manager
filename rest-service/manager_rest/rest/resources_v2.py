@@ -223,7 +223,7 @@ class SnapshotsIdRestore(SecuredResource):
     @rest_decorators.marshal_with(models.Snapshot)
     def post(self, snapshot_id):
         request_dict = rest_utils.get_json_and_verify_params(
-            {'recreate_deployments_envs'}
+            {'recreate_deployments_envs', 'tenant_name'}
         )
         recreate_deployments_envs = rest_utils.verify_and_convert_bool(
             'recreate_deployments_envs',
@@ -234,6 +234,7 @@ class SnapshotsIdRestore(SecuredResource):
             'force',
             request_dict['force']
         )
+        tenant_name = request_dict['tenant_name']
         default_timeout_sec = 300
         request_timeout = request_dict.get('timeout', default_timeout_sec)
         timeout = rest_utils.convert_to_int(request_timeout)
@@ -242,7 +243,8 @@ class SnapshotsIdRestore(SecuredResource):
             recreate_deployments_envs,
             force,
             bypass_maintenance,
-            timeout
+            timeout,
+            tenant_name
         )
         return execution, 200
 
@@ -648,7 +650,7 @@ class PluginsArchive(SecuredResource):
 
 class PluginsId(SecuredResource):
     @swagger.operation(
-        responseClass=models.Blueprint,
+        responseClass=models.Plugin,
         nickname="getById",
         notes="Returns a plugin according to its ID."
     )

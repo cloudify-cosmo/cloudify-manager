@@ -36,7 +36,12 @@ def create(snapshot_id, config, **kwargs):
 
 
 @workflow(system_wide=True)
-def restore(snapshot_id, recreate_deployments_envs, config, force, timeout,
+def restore(snapshot_id,
+            recreate_deployments_envs,
+            config,
+            force,
+            timeout,
+            tenant_name,
             **kwargs):
     ctx.logger.info('Restoring snapshot `{0}`'.format(snapshot_id))
     ctx.logger.debug('Restoring snapshot config: {0}'.format(config))
@@ -46,7 +51,8 @@ def restore(snapshot_id, recreate_deployments_envs, config, force, timeout,
         snapshot_id,
         recreate_deployments_envs,
         force,
-        timeout
+        timeout,
+        tenant_name
     )
     restore_snapshot.restore()
 

@@ -18,6 +18,7 @@ import time
 import json
 import tempfile
 import requests
+from collections import Counter
 
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
@@ -28,6 +29,7 @@ SNAPSHOTS = 'http://cloudify-tests-files.s3-eu-west-1.amazonaws.com/snapshots/'
 
 
 class TestSnapshot(AgentlessTestCase):
+    SNAPSHOT_ID = '0'
 
     def test_4_0_0_snapshot_with_deployment(self):
         snapshot_path = self._get_snapshot('snap_4.0.0.zip')
@@ -45,9 +47,10 @@ class TestSnapshot(AgentlessTestCase):
             num_of_executions=1
         )
 
-    def test_3_4_1_snapshot_with_deployment(self):
-        snapshot_path = self._get_snapshot('snap_3.4.1.zip')
-        self._upload_and_restore_snapshot(snapshot_path)
+    def test_3_4_0_snapshot_with_deployment(self):
+        snapshot_path = self._get_snapshot('snap_3.4.0.zip')
+        tenant_name = 'tenant'
+        self._upload_and_restore_snapshot(snapshot_path, tenant_name)
 
         # Now make sure all the resources really exist in the DB
         self._assert_snapshot_restored(
@@ -63,8 +66,35 @@ class TestSnapshot(AgentlessTestCase):
             num_of_workflows=7,
             num_of_inputs=3,
             num_of_outputs=1,
-            num_of_executions=7
+            num_of_executions=7,
+            tenant_name=tenant_name
         )
+
+    def test_3_3_1_snapshot_with_plugin(self):
+        snapshot_path = self._get_snapshot('snap_3.3.1_with_plugin.zip')
+        tenant_name = 'tenant'
+        self._upload_and_restore_snapshot(snapshot_path, tenant_name)
+
+        # Now make sure all the resources really exist in the DB
+        self._assert_snapshot_restored(
+            blueprint_id='hello-world-app',
+            deployment_id='hello-world-app',
+            node_ids=['security_group', 'vm', 'http_web_server', 'virtual_ip'],
+            node_instance_ids=[
+                'http_web_server_6dc13',
+                'security_group_cc528',
+                'virtual_ip_56b22',
+                'vm_2d90e'
+            ],
+            num_of_workflows=6,
+            num_of_inputs=4,
+            num_of_outputs=1,
+            num_of_executions=1,
+            num_of_events=97,
+            tenant_name=tenant_name
+        )
+
+        self._assert_3_3_1_plugins_restored()
 
     def _assert_snapshot_restored(self,
                                   blueprint_id,
@@ -74,33 +104,47 @@ class TestSnapshot(AgentlessTestCase):
                                   num_of_workflows,
                                   num_of_inputs,
                                   num_of_outputs,
-                                  num_of_executions):
+                                  num_of_executions,
+                                  num_of_events=4,
+                                  tenant_name='default_tenant'):
         self.client.blueprints.get(blueprint_id)
         self._assert_deployment_restored(
             blueprint_id=blueprint_id,
             deployment_id=deployment_id,
             num_of_workflows=num_of_workflows,
             num_of_inputs=num_of_inputs,
-            num_of_outputs=num_of_outputs
+            num_of_outputs=num_of_outputs,
+            tenant_name=tenant_name
         )
 
         execution_id = self._assert_execution_restored(
             deployment_id,
             num_of_executions
         )
-        self._assert_events_restored(execution_id)
+        self._assert_events_restored(execution_id, num_of_events)
 
         for node_id in node_ids:
             self.client.nodes.get(deployment_id, node_id)
         for node_instance_id in node_instance_ids:
             self.client.node_instances.get(node_instance_id)
 
+    def _assert_3_3_1_plugins_restored(self):
+        plugins = self.client.plugins.list()
+        self.assertEqual(len(plugins), 8)
+        package_names = [plugin.package_name for plugin in plugins]
+        package_name_counts = Counter(package_names)
+        self.assertEqual(package_name_counts['cloudify-openstack-plugin'], 1)
+        self.assertEqual(package_name_counts['cloudify-fabric-plugin'], 1)
+        self.assertEqual(package_name_counts['cloudify-script-plugin'], 1)
+        self.assertEqual(package_name_counts['cloudify-diamond-plugin'], 5)
+
     def _assert_deployment_restored(self,
                                     blueprint_id,
                                     deployment_id,
                                     num_of_workflows,
                                     num_of_inputs,
-                                    num_of_outputs):
+                                    num_of_outputs,
+                                    tenant_name):
         deployments = self.client.deployments.list()
         self.assertEqual(1, len(deployments))
         deployment = deployments[0]
@@ -108,7 +152,7 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(len(deployment.workflows), num_of_workflows)
         self.assertEqual(deployment.blueprint_id, blueprint_id)
         self.assertEqual(deployment['permission'], 'creator')
-        self.assertEqual(deployment['tenant_name'], 'default_tenant')
+        self.assertEqual(deployment['tenant_name'], tenant_name)
         self.assertEqual(len(deployment.inputs), num_of_inputs)
         self.assertEqual(len(deployment.outputs), num_of_outputs)
 
@@ -125,9 +169,10 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(len(executions), 1)
         return executions[0].id
 
-    def _assert_events_restored(self, execution_id):
+    def _assert_events_restored(self, execution_id, num_of_events):
         output = self.cfy.events.list(execution_id=execution_id)
-        self.assertIn('Total events: 4', output)
+        expected_output = 'Total events: {0}'.format(num_of_events)
+        self.assertIn(expected_output, output)
 
     def _get_snapshot(self, name):
         snapshot_url = os.path.join(SNAPSHOTS, name)
@@ -140,23 +185,30 @@ class TestSnapshot(AgentlessTestCase):
                 f.write(chunk)
         return destination
 
-    def _upload_and_restore_snapshot(self, snapshot_path):
-        snapshot_id = '0'
-        self.logger.debug('uploading snapshot: {0}'.format(snapshot_path))
-        self.client.snapshots.upload(snapshot_path, snapshot_id)
-        response = self.client.snapshots.list()
-        self.assertEqual(1, len(response), 'expecting 1 snapshot results,'
-                                           ' got {0}'.format(len(response)))
-        snapshot = response[0]
-        self.logger.debug('first snapshot: {0}'.format(snapshot))
-        self.assertEquals(snapshot['id'], snapshot_id)
-        self.assertEquals(snapshot['status'], 'uploaded')
-        self.logger.debug('going to restore snapshot...')
-        execution = self.client.snapshots.restore(snapshot_id)
+    def _upload_and_restore_snapshot(self, snapshot_path, tenant_name=None):
+        """Upload the snapshot and launch the restore workflow
+        """
+        self._upload_and_validate_snapshot(snapshot_path)
+        self.logger.debug('Restoring snapshot...')
+        execution = self.client.snapshots.restore(
+            self.SNAPSHOT_ID,
+            tenant_name=tenant_name
+        )
         execution = self._wait_for_execution_to_end(execution)
         if execution.status == Execution.FAILED:
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(Execution.TERMINATED, execution.status)
+
+    def _upload_and_validate_snapshot(self, snapshot_path):
+        self.logger.debug('Uploading snapshot: {0}'.format(snapshot_path))
+        self.client.snapshots.upload(snapshot_path, self.SNAPSHOT_ID)
+        response = self.client.snapshots.list()
+        self.assertEqual(1, len(response), 'expecting 1 snapshot results,'
+                                           ' got {0}'.format(len(response)))
+        snapshot = response[0]
+        self.logger.debug('Retrieved snapshot: {0}'.format(snapshot))
+        self.assertEquals(snapshot['id'], self.SNAPSHOT_ID)
+        self.assertEquals(snapshot['status'], 'uploaded')
 
     def _wait_for_execution_to_end(self, execution, timeout_seconds=30):
         """Can't use the `wait_for_execution_to_end` in the class because

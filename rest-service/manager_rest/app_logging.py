@@ -9,11 +9,10 @@ from manager_rest.utils import abort_error
 from manager_rest.manager_exceptions import UnauthorizedError
 
 
-def setup_logger(logger, logger_name):
+def setup_logger(logger):
     """Setup the Flask app's logger
 
     :param logger: Flask app's logger
-    :param logger_name: Name of the logger
     """
     cfy_config = config.instance
 
@@ -28,7 +27,7 @@ def setup_logger(logger, logger_name):
     ]
 
     _setup_python_logger(
-        logger_name=logger_name,
+        logger=logger,
         logger_level=cfy_config.rest_service_log_level,
         handlers=additional_log_handlers,
         remove_existing_handlers=False
@@ -100,13 +99,13 @@ def _headers_pretty_print(headers):
 
 
 def _setup_python_logger(
-        logger_name,
+        logger,
         logger_level=logging.DEBUG,
         handlers=None,
         remove_existing_handlers=True
 ):
     """
-    :param logger_name: Name of the logger.
+    :param logger: The flask app logger
     :param logger_level: Level for the logger (not for specific handler).
     :param handlers: An optional list of handlers (formatter will be
                      overridden); If None, only a StreamHandler for
@@ -116,8 +115,6 @@ def _setup_python_logger(
     :return: A logger instance.
     :rtype: Logger
     """
-
-    logger = logging.getLogger(logger_name)
 
     if remove_existing_handlers:
         for handler in logger.handlers:
