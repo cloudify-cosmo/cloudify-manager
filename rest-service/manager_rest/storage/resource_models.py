@@ -75,7 +75,6 @@ class Plugin(TopLevelResource):
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
     wheels = db.Column(db.PickleType, nullable=False)
 
-
 # endregion
 
 

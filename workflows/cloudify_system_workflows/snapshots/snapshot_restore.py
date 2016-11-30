@@ -41,30 +41,32 @@ from .constants import METADATA_FILENAME, M_VERSION
 
 
 class SnapshotRestore(object):
-    _4_0_0_VERSION = ManagerVersion('4.0.0')
+    _V_4_0_0 = ManagerVersion('4.0.0')
 
     def __init__(self,
                  config,
                  snapshot_id,
                  recreate_deployments_envs,
                  force,
-                 timeout):
+                 timeout,
+                 tenant_name):
         self._config = utils.DictToAttributes(config)
         self._snapshot_id = snapshot_id
         self._recreate_deployments_envs = recreate_deployments_envs
         self._force = force
         self._timeout = timeout
+        self._tenant_name = tenant_name
 
         self._tempdir = None
         self._client = get_rest_client()
 
     def restore(self):
-        self._assert_empty_db()
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
         try:
             metadata = self._extract_snapshot_archive(snapshot_path)
             snapshot_version = self._get_snapshot_version(metadata)
+            self._assert_db_empty(snapshot_version)
             existing_plugins = self._get_existing_plugin_names()
             existing_dep_envs = self._get_existing_dep_envs()
             es = utils.get_es_client(self._config)
@@ -92,11 +94,14 @@ class SnapshotRestore(object):
 
     def _restore_db(self, es, postgres, snapshot_version):
         ctx.logger.info('Restoring database')
-        if snapshot_version >= self._4_0_0_VERSION:
+        if snapshot_version >= self._V_4_0_0:
             postgres.restore(self._tempdir)
         else:
             postgres.create_clean_db()
-            ElasticSearch.restore_db_from_pre_4_version(self._tempdir)
+            ElasticSearch.restore_db_from_pre_4_version(
+                self._tempdir,
+                self._tenant_name
+            )
             es.indices.flush()
 
     def _extract_snapshot_archive(self, snapshot_path):
@@ -112,19 +117,25 @@ class SnapshotRestore(object):
             metadata = json.load(f)
         return metadata
 
-    def _assert_empty_db(self):
+    def _assert_db_empty(self, snapshot_version):
         """Make sure no blueprints exist on the manager (no blueprints implies
         no deployments/executions corresponding to deployments)
         If there are blueprints then log a warning if `force` was passed in the
         restore command, or raise an error if not
+        Only applies to restores from snapshot of version 4.0.0 and higher -
+        older snapshots are validated elsewhere
         """
-        if self._client.blueprints.list().items:
+        if snapshot_version >= self._V_4_0_0 and \
+                self._client.blueprints.list().items:
             if self._force:
                 ctx.logger.warning(
-                    "Forcing snapshot restoration on a dirty manager.")
+                    "Forcing snapshot restoration on a non-empty manager. "
+                    "Existing data will be deleted")
             else:
                 raise NonRecoverableError(
-                    "Snapshot restoration on a dirty manager is not permitted."
+                    "Snapshot restoration on a non-empty manager is not "
+                    "permitted. Pass the --force flag to force the restore "
+                    "and delete existing data from the manager"
                 )
 
     def _get_snapshot_path(self):
@@ -152,17 +163,41 @@ class SnapshotRestore(object):
         snapshot_version = ManagerVersion(metadata[M_VERSION])
         ctx.logger.info('Manager version = {0}, snapshot version = {1}'.format(
             str(manager_version), str(snapshot_version)))
+        self._validate_snapshot_version(snapshot_version, manager_version)
+        return snapshot_version
+
+    def _validate_snapshot_version(self, snapshot_version, manager_version):
+        """Validate three incorrect cases:
+        1. The snapshot's version is bigger than the manager's version
+        2. Restoring from manager of version 4.0.0 or later, and provided a
+        tenant name
+        3. Restoring from manager of version prior to 4.0.0 and didn't
+        provide a tenant name
+        """
         if snapshot_version > manager_version:
             raise NonRecoverableError(
                 'Cannot restore a newer manager\'s snapshot on this manager '
                 '[{0} > {1}]'.format(str(snapshot_version),
                                      str(manager_version)))
-        return snapshot_version
-
-    @staticmethod
-    def _version_at_least(version_a, version_b):
-        return version_a.equals(ManagerVersion(version_b)) \
-               or version_a.greater_than(ManagerVersion(version_b))
+        if self._tenant_name and snapshot_version >= self._V_4_0_0:
+            raise NonRecoverableError(
+                'Tenant name `{0}` passed when restoring snapshot of version '
+                '{1}. Tenant name should only be passed when restoring '
+                'versions prior to {2}'.format(
+                    self._tenant_name,
+                    snapshot_version,
+                    self._V_4_0_0
+                )
+            )
+        if not self._tenant_name and snapshot_version < self._V_4_0_0:
+            raise NonRecoverableError(
+                'Tenant name was not provided when restoring a snapshot of '
+                'version {0}. Tenant name must be provided when restoring '
+                'versions prior to {1}'.format(
+                    snapshot_version,
+                    self._V_4_0_0
+                )
+            )
 
     def _get_existing_plugin_names(self):
         ctx.logger.debug('Collecting existing plugins')

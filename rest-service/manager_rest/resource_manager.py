@@ -158,11 +158,13 @@ class ResourceManager(object):
 
         return execution
 
-    def restore_snapshot(self, snapshot_id,
+    def restore_snapshot(self,
+                         snapshot_id,
                          recreate_deployments_envs,
                          force,
                          bypass_maintenance,
-                         timeout):
+                         timeout,
+                         tenant_name):
         # Throws error if no snapshot found
         snapshot = self.sm.get(models.Snapshot, snapshot_id)
         if snapshot.status == SnapshotState.FAILED:
@@ -177,7 +179,8 @@ class ResourceManager(object):
                 'recreate_deployments_envs': recreate_deployments_envs,
                 'config': self._get_conf_for_snapshots_wf(),
                 'force': force,
-                'timeout': timeout
+                'timeout': timeout,
+                'tenant_name': tenant_name
             },
             bypass_maintenance=bypass_maintenance
         )

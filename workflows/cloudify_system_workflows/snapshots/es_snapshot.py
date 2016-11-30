@@ -30,13 +30,14 @@ class ElasticSearch(object):
     _EVENTS_INDEX_NAME = 'cloudify_events'
 
     @staticmethod
-    def restore_db_from_pre_4_version(tempdir):
+    def restore_db_from_pre_4_version(tempdir, tenant_name):
         ctx.logger.info('Restoring DB from version prior to 4 (Elastic)')
         python_bin = '/opt/manager/env/bin/python'
         dir_path = os.path.dirname(os.path.realpath(__file__))
         script_path = os.path.join(dir_path, 'estopg.py')
         es_dump_path = os.path.join(tempdir, 'es_data')
-        result = utils.run([python_bin, script_path, es_dump_path])
+        command = [python_bin, script_path, es_dump_path, tenant_name]
+        result = utils.run(command)
         if result and hasattr(result, 'aggr_stdout'):
             ctx.logger.debug('Process result: \n{0}'
                              .format(result.aggr_stdout))

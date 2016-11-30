@@ -151,8 +151,6 @@ class BaseServerTestCase(unittest.TestCase):
         self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
         fd, self.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
         os.close(fd)
-        fd, self.sqlite_db_file = tempfile.mkstemp(prefix='sqlite-db-')
-        os.close(fd)
         self.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
         fd, self.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
         os.close(fd)
@@ -254,7 +252,6 @@ class BaseServerTestCase(unittest.TestCase):
 
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)
-        self.quiet_delete(self.sqlite_db_file)
         self.quiet_delete(self.tmp_conf_file)
         self.quiet_delete_directory(self.maintenance_mode_dir)
         if self.file_server:
@@ -272,7 +269,7 @@ class BaseServerTestCase(unittest.TestCase):
     def create_configuration(self):
         test_config = config.Config()
         test_config.test_mode = True
-        test_config.postgresql_db_name = self.sqlite_db_file
+        test_config.postgresql_db_name = ':memory:'
         test_config.postgresql_host = ''
         test_config.postgresql_username = ''
         test_config.postgresql_password = ''

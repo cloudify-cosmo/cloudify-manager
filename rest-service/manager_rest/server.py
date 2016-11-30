@@ -47,7 +47,7 @@ class CloudifyFlaskApp(Flask):
             config.instance.load_configuration()
 
         # These two need to be called after the configuration was loaded
-        setup_logger(self.logger, 'manager_rest')
+        setup_logger(self.logger)
         configure_ldap() if configure_ldap else None
 
         self.before_request(log_request)
