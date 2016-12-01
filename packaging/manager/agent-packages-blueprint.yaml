@@ -1,7 +1,7 @@
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/ga-RELEASE/Ubuntu-trusty-agent_3.4.0-ga-b400.tar.gz
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/ga-RELEASE/Ubuntu-precise-agent_3.4.0-ga-b400.tar.gz
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/ga-RELEASE/centos-Core-agent_3.4.0-ga-b400.tar.gz
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/ga-RELEASE/centos-Final-agent_3.4.0-ga-b400.tar.gz
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/ga-RELEASE/redhat-Maipo-agent_3.4.0-ga-b400.tar.gz
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/ga-RELEASE/redhat-Santiago-agent_3.4.0-ga-b400.tar.gz
-http://repository.cloudifysource.org/org/cloudify3/3.4.0/ga-RELEASE/cloudify-windows-agent_3.4.0-ga-b400.exe
+http://repository.cloudifysource.org/org/cloudify3/3.4.1/sp-RELEASE/Ubuntu-trusty-agent_3.4.1-sp-b410.tar.gz
+http://repository.cloudifysource.org/org/cloudify3/3.4.1/sp-RELEASE/Ubuntu-precise-agent_3.4.1-sp-b410.tar.gz
+http://repository.cloudifysource.org/org/cloudify3/3.4.1/sp-RELEASE/centos-Core-agent_3.4.1-sp-b410.tar.gz
+http://repository.cloudifysource.org/org/cloudify3/3.4.1/sp-RELEASE/centos-Final-agent_3.4.1-sp-b410.tar.gz
+http://repository.cloudifysource.org/org/cloudify3/3.4.1/sp-RELEASE/redhat-Maipo-agent_3.4.1-sp-b410.tar.gz
+http://repository.cloudifysource.org/org/cloudify3/3.4.1/sp-RELEASE/redhat-Santiago-agent_3.4.1-sp-b410.tar.gz
+http://repository.cloudifysource.org/org/cloudify3/3.4.1/sp-RELEASE/cloudify-windows-agent_3.4.1-sp-b410.exe
