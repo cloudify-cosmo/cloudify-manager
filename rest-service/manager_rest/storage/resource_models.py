@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from flask_restful import fields as flask_fields
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -188,6 +189,95 @@ class Execution(TopLevelMixin, DerivedResource):
             id_value,
             self.status
         )
+
+
+class Event(DerivedResource, DerivedMixin):
+
+    """Execution events."""
+
+    __tablename__ = 'events'
+
+    proxies = {
+        'execution_id': flask_fields.String
+    }
+
+    timestamp = db.Column(UTCDateTime, nullable=False, index=True)
+    execution_fk = foreign_key(Execution.storage_id, nullable=True)
+    event_type = db.Column(db.Text)
+    message = db.Column(db.Text)
+    # pre-computed tsvector data to speedup full-text searches
+    message_vector = db.Column(TSVECTOR)
+    message_code = db.Column(db.Text)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            # Full-text search index
+            db.Index(
+                'ix_events_message_vector',
+                'message_vector',
+                postgresql_using='gin',
+            ),
+        )
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls.execution_fk)
+
+    execution_id = association_proxy('execution', 'id')
+
+    @hybrid_property
+    def parent(self):
+        return self.execution
+
+    @parent.expression
+    def parent(cls):
+        return Execution
+
+
+class Log(DerivedResource, DerivedMixin):
+
+    """Execution logs."""
+
+    __tablename__ = 'logs'
+
+    proxies = {
+        'execution_id': flask_fields.String
+    }
+
+    timestamp = db.Column(UTCDateTime, nullable=False, index=True)
+    execution_fk = foreign_key(Execution.storage_id, nullable=True)
+    logger = db.Column(db.Text)
+    level = db.Column(db.Text)
+    message = db.Column(db.Text)
+    # pre-computed tsvector data to speedup full-text searches
+    message_vector = db.Column(TSVECTOR)
+    message_code = db.Column(db.Text)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (
+            # Full-text search index
+            db.Index(
+                'ix_logs_message_vector',
+                'message_vector',
+                postgresql_using='gin',
+            ),
+        )
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls.execution_fk)
+
+    execution_id = association_proxy('execution', 'id')
+
+    @hybrid_property
+    def parent(self):
+        return self.execution
+
+    @parent.expression
+    def parent(cls):
+        return Execution
 
 
 class DeploymentUpdate(DerivedResource, DerivedMixin):
