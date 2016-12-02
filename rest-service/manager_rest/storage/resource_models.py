@@ -14,7 +14,6 @@
 #  * limitations under the License.
 
 from flask_restful import fields as flask_fields
-from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -26,10 +25,13 @@ from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from .models_base import db, UTCDateTime
 from .relationships import foreign_key, one_to_many_relationship
 from .resource_models_base import TopLevelResource, DerivedResource
-from .mixins import (TopLevelMixin,
-                     DerivedMixin,
-                     DerivedTenantMixin,
-                     TopLevelCreatorMixin)
+from .mixins import (
+    DerivedMixin,
+    DerivedTenantMixin,
+    MessageMixin,
+    TopLevelCreatorMixin,
+    TopLevelMixin,
+)
 from .models_states import (DeploymentModificationState,
                             SnapshotState,
                             ExecutionState)
@@ -191,7 +193,7 @@ class Execution(TopLevelMixin, DerivedResource):
         )
 
 
-class Event(DerivedResource, DerivedMixin):
+class Event(DerivedResource, DerivedMixin, MessageMixin):
 
     """Execution events."""
 
@@ -204,21 +206,7 @@ class Event(DerivedResource, DerivedMixin):
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
     execution_fk = foreign_key(Execution.storage_id, nullable=True)
     event_type = db.Column(db.Text)
-    message = db.Column(db.Text)
-    # pre-computed tsvector data to speedup full-text searches
-    message_vector = db.Column(TSVECTOR)
     message_code = db.Column(db.Text)
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            # Full-text search index
-            db.Index(
-                'ix_events_message_vector',
-                'message_vector',
-                postgresql_using='gin',
-            ),
-        )
 
     @declared_attr
     def execution(cls):
@@ -235,7 +223,7 @@ class Event(DerivedResource, DerivedMixin):
         return Execution
 
 
-class Log(DerivedResource, DerivedMixin):
+class Log(DerivedResource, DerivedMixin, MessageMixin):
 
     """Execution logs."""
 
@@ -249,21 +237,7 @@ class Log(DerivedResource, DerivedMixin):
     execution_fk = foreign_key(Execution.storage_id, nullable=True)
     logger = db.Column(db.Text)
     level = db.Column(db.Text)
-    message = db.Column(db.Text)
-    # pre-computed tsvector data to speedup full-text searches
-    message_vector = db.Column(TSVECTOR)
     message_code = db.Column(db.Text)
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            # Full-text search index
-            db.Index(
-                'ix_logs_message_vector',
-                'message_vector',
-                postgresql_using='gin',
-            ),
-        )
 
     @declared_attr
     def execution(cls):
