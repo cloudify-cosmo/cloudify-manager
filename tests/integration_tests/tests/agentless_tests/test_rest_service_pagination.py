@@ -20,11 +20,18 @@ from functools import partial
 
 from wagon.wagon import Wagon
 
+from manager_rest import config
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 class TestRestServiceListPagination(AgentlessTestCase):
+    @classmethod
+    def setup_class(cls):
+        super(TestRestServiceListPagination, cls).setUpClass()
+        config.instance.max_results = 9
+        TestRestServiceListPagination._update_config({'max_results': 9})
 
     def test_blueprints_pagination(self):
         for i in range(10):
@@ -81,15 +88,32 @@ class TestRestServiceListPagination(AgentlessTestCase):
         self._test_pagination(self.client.plugins.list)
 
     def _test_pagination(self, list_func):
-        all_results = list_func(_sort=['id']).items
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'Response size',
+                                list_func)
+
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'Invalid pagination size',
+                                list_func,
+                                _offset=0,
+                                _size=20)
+
+        all_results = list_func(_sort=['id'],
+                                _offset=0,
+                                _size=9).items
         num_all = len(all_results)
+        self.assertGreaterEqual(num_all, 9)
+        total = 10
+
         # sanity
-        self.assertGreaterEqual(num_all, 10)
         for offset in range(num_all + 1):
-            for size in range(num_all + 1):
+            # inside loop range should take into consideration
+            # the fact that `all_results` is not the all results,
+            # we used pagination..
+            for size in range(num_all + 1 - offset):
                 response = list_func(_offset=offset, _size=size, _sort=['id'])
-                self.assertEqual(response.metadata.pagination.total, num_all)
+                self.assertEqual(response.metadata.pagination.total, total)
                 self.assertEqual(response.metadata.pagination.offset, offset)
                 self.assertEqual(response.metadata.pagination.size, size)
                 self.assertEqual(response.items,
-                                 all_results[offset:offset + size])
+                                 all_results[offset: offset + size])

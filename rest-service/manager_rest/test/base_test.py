@@ -47,6 +47,7 @@ FILE_SERVER_RESOURCES_URI = '/resources'
 LATEST_API_VERSION = 3  # to be used by max_client_version test attribute
 
 
+# todo: do we need it?
 @nottest
 def test_config(**kwargs):
     """
@@ -63,6 +64,7 @@ def test_config(**kwargs):
     return _test_config_decorator
 
 
+# todo: do we need it?
 @nottest
 def inject_test_config(f):
     """

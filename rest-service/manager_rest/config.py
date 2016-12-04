@@ -58,6 +58,7 @@ class Config(object):
         self.insecure_endpoints_disabled = True
         self.broker_ssl_cert_path = None
         self.agent_rest_cert_path = None
+        self.max_results = 100
 
         self.warnings = []
 

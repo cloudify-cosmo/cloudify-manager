@@ -18,7 +18,7 @@ from collections import OrderedDict
 from flask import current_app
 from flask_security import current_user
 
-from manager_rest import manager_exceptions
+from manager_rest import manager_exceptions, config
 from manager_rest.storage.models_base import db
 from manager_rest.constants import CURRENT_TENANT_CONFIG
 
@@ -293,15 +293,47 @@ class SQLStorageManager(object):
         - `size` [default: 0]
         - `offset` [default: 0]
         """
+
         if pagination:
             size = pagination.get('size', 0)
+            SQLStorageManager._validate_pagination(size)
             offset = pagination.get('offset', 0)
             total = query.order_by(None).count()  # Fastest way to count
             results = query.limit(size).offset(offset).all()
             return results, total, size, offset
         else:
+            total = query.order_by(None).count()
+            SQLStorageManager._validate_returned_size(total)
             results = query.all()
             return results, len(results), 0, 0
+
+    @staticmethod
+    def _validate_pagination(pagination_size):
+        if pagination_size < 0:
+            raise manager_exceptions.IllegalActionError(
+                'Invalid pagination size: {0}.'.format(
+                    pagination_size
+                )
+            )
+
+        if pagination_size > config.instance.max_results:
+            raise manager_exceptions.IllegalActionError(
+                'Invalid pagination size: {0}. Max allowed: {1}'.format(
+                    pagination_size,
+                    config.instance.max_results
+                )
+            )
+
+    @staticmethod
+    def _validate_returned_size(size):
+        if size > config.instance.max_results:
+            raise manager_exceptions.IllegalActionError(
+                'Response size ({0}) bigger than max allowed ({1}), '
+                'please use pagination.'.format(
+                    size,
+                    config.instance.max_results
+                )
+            )
 
     def _validate_unique_resource_id_per_tenant(self, instance):
         """Assert that only a single resource exists with a given id in a

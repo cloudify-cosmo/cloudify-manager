@@ -24,8 +24,8 @@ import errno
 import platform
 from datetime import datetime
 from os import path, makedirs
-from collections import namedtuple
 from base64 import urlsafe_b64encode
+from collections import namedtuple
 
 import wagon.utils
 from flask import Flask
@@ -222,7 +222,7 @@ def setup_flask_app(db, user_datastore, manager_ip='localhost', driver=''):
 def get_postgres_db_uri(manager_ip, driver):
     """Get a valid SQLA DB URI
     """
-    dialect = 'postgres+{0}'.format(driver) if driver else 'postgres'
+    dialect = 'postgresql+{0}'.format(driver) if driver else 'postgres'
     conf = get_postgres_conf()
     return '{dialect}://{username}:{password}@{host}/{db_name}'.format(
         dialect=dialect,
