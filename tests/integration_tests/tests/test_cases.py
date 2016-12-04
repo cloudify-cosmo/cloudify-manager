@@ -60,6 +60,17 @@ class BaseTestCase(unittest.TestCase):
         self._set_tests_framework_logger()
         self.client = None
 
+    @classmethod
+    def _update_config(cls, new_config):
+        config_file_location = '/opt/manager/cloudify-rest.conf'
+        config = yaml.load(cls.read_manager_file(config_file_location))
+        config.update(new_config)
+        with tempfile.NamedTemporaryFile() as f:
+            yaml.dump(config, f)
+            f.flush()
+            cls.copy_file_to_manager(f.name, config_file_location)
+        cls.restart_service('cloudify-restservice')
+
     def _setup_running_manager_attributes(self):
         self.client = test_utils.create_rest_client()
 
