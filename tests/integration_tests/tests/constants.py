@@ -22,8 +22,10 @@ PROVIDER_CONTEXT = {
         },
         'cloudify_agent':
             {
-                'broker_ip': ''
-            }
+                'broker_ip': '',
+                'broker_user': 'cloudify',
+                'broker_pass': 'c10udify'
+            },
     }
 }
 PROVIDER_NAME = 'integration_tests'

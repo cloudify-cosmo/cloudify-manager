@@ -73,7 +73,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         groups={},
                                         scaling_groups={},
                                         outputs={})
-        blueprint.deployments.append(deployment1)
+        deployment1.blueprint = blueprint
         self.sm.put(deployment1)
 
         deployment2 = models.Deployment(id='dep-2',
@@ -88,7 +88,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         groups={},
                                         scaling_groups={},
                                         outputs={})
-        blueprint.deployments.append(deployment2)
+        deployment2.blueprint = blueprint
         self.sm.put(deployment2)
 
         deployment3 = models.Deployment(id='dep-3',
@@ -103,7 +103,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                         groups={},
                                         scaling_groups={},
                                         outputs={})
-        another_blueprint.deployments.append(deployment3)
+        deployment3.blueprint = another_blueprint
         self.sm.put(deployment3)
 
         filters_bp = {'blueprint_id': 'blueprint-id'}
@@ -143,7 +143,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
                                 scaling_groups={},
                                 outputs={})
 
-        blueprint.deployments.append(dep)
+        dep.blueprint = blueprint
         self.sm.put(dep)
 
         serialized_dep = dep.to_response()

@@ -536,7 +536,7 @@ class BaseServerTestCase(unittest.TestCase):
                                        groups={},
                                        scaling_groups={},
                                        outputs={})
-        blueprint.deployments.append(deployment)
+        deployment.blueprint = blueprint
         return self.sm.put(deployment)
 
     def _add_execution_with_id(self, execution_id):
@@ -556,7 +556,7 @@ class BaseServerTestCase(unittest.TestCase):
             error='',
             parameters=dict(),
             is_system_workflow=False)
-        deployment.executions.append(execution)
+        execution.deployment = deployment
         return self.sm.put(execution)
 
     def _add_deployment_update(self, deployment, execution,
@@ -574,7 +574,7 @@ class BaseServerTestCase(unittest.TestCase):
             deployment_update_deployment=None,
             modified_entity_ids=None,
             created_at=now)
-        deployment.deployment_updates.append(deployment_update)
+        deployment_update.deployment = deployment
         if execution:
-            execution.deployment_updates.append(deployment_update)
+            deployment_update.execution = execution
         return self.sm.put(deployment_update)

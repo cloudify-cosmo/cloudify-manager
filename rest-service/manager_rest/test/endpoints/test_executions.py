@@ -72,7 +72,7 @@ class ExecutionsTestCase(BaseServerTestCase):
             parameters=dict(),
             is_system_workflow=True)
         deployment = self.sm.get(models.Deployment, deployment_id)
-        deployment.executions.append(system_wf_execution)
+        system_wf_execution.deployment = deployment
         self.sm.put(system_wf_execution)
 
         # listing only non-system workflow executions
