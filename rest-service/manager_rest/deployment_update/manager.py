@@ -137,7 +137,7 @@ class DeploymentUpdateManager(object):
             deployment_plan=prepared_plan,
             created_at=utils.get_formatted_timestamp()
         )
-        deployment.deployment_updates.append(deployment_update)
+        deployment_update.deployment = deployment
         self.sm.put(deployment_update)
         return deployment_update
 
@@ -161,7 +161,7 @@ class DeploymentUpdateManager(object):
             entity_id=entity_id,
         )
         deployment_update = self.get_deployment_update(deployment_update_id)
-        deployment_update.steps.append(step)
+        step.deployment_update = deployment_update
         return self.sm.put(step)
 
     def extract_steps_from_deployment_update(self, deployment_update):
@@ -260,7 +260,7 @@ class DeploymentUpdateManager(object):
             skip_uninstall=skip_uninstall,
             workflow_id=workflow_id)
 
-        execution.deployment_updates.append(dep_update)
+        dep_update.execution = execution
         dep_update.state = STATES.EXECUTING_WORKFLOW
         self.sm.update(dep_update)
 
@@ -499,8 +499,8 @@ class DeploymentUpdateManager(object):
             is_system_workflow=False)
 
         if deployment:
-            deployment.executions.append(new_execution)
-            new_execution.deployment_updates.append(deployment_update)
+            new_execution.deployment = deployment
+            deployment_update.execution = new_execution
         self.sm.put(new_execution)
 
         # executing the user workflow

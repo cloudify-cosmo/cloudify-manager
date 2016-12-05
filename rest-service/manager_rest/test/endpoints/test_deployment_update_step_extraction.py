@@ -60,7 +60,7 @@ class StepExtractorTestCase(base_test.BaseServerTestCase):
         stub_deployment_update = models.DeploymentUpdate(
             deployment_plan=None,
             id='deployment_update_id')
-        stub_deployment.deployment_updates.append(stub_deployment_update)
+        stub_deployment_update.deployment = stub_deployment
 
         self.step_extractor = StepExtractor(
             deployment_update=stub_deployment_update)

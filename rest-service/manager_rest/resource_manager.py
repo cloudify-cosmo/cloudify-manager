@@ -372,7 +372,7 @@ class ResourceManager(object):
             is_system_workflow=False)
 
         if deployment:
-            deployment.executions.append(new_execution)
+            new_execution.deployment = deployment
         self.sm.put(new_execution)
 
         # executing the user workflow
@@ -460,7 +460,7 @@ class ResourceManager(object):
             is_system_workflow=is_system_workflow)
 
         if deployment:
-            deployment.executions.append(execution)
+            execution.deployment = deployment
         self.sm.put(execution)
 
         async_task = self.workflow_client.execute_system_workflow(
@@ -620,7 +620,7 @@ class ResourceManager(object):
                 version=None,
                 scaling_groups=scaling_groups
             )
-            node.node_instances.append(instance)
+            instance.node = node
             node_instances.append(instance)
 
         return node_instances
@@ -633,7 +633,7 @@ class ResourceManager(object):
         deployment = self.sm.get(models.Deployment, deployment_id)
 
         for node in nodes:
-            deployment.nodes.append(node)
+            node.deployment = deployment
             self.sm.put(node)
 
     def _create_deployment_node_instances(self,
@@ -666,7 +666,7 @@ class ResourceManager(object):
         new_deployment = self.prepare_deployment_for_storage(
             deployment_id,
             deployment_plan)
-        blueprint.deployments.append(new_deployment)
+        new_deployment.blueprint = blueprint
         self.sm.put(new_deployment, private_resource)
 
         self._create_deployment_nodes(deployment_id, deployment_plan)
@@ -731,7 +731,7 @@ class ResourceManager(object):
             modified_nodes=modified_nodes,
             node_instances=node_instances_modification,
             context=context)
-        deployment.modifications.append(modification)
+        modification.deployment = deployment
         self.sm.put(modification)
 
         scaling_groups = deepcopy(deployment.scaling_groups)
@@ -905,7 +905,7 @@ class ResourceManager(object):
         # Link the node instance object to to the node, and add it to the DB
         new_node_instance = models.NodeInstance(**instance_dict)
         node = self.get_node(deployment_id, node_id)
-        node.node_instances.append(new_node_instance)
+        new_node_instance.node = node
         self.sm.put(new_node_instance)
 
         # Return the IDs to the dict for later use
