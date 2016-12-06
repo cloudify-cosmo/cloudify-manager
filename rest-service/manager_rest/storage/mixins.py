@@ -13,7 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -111,22 +110,3 @@ class TopLevelMixin(TopLevelTenantMixin, TopLevelCreatorMixin):
 class DerivedMixin(DerivedTenantMixin, DerivedCreatorMixin):
     def __init__(self, *args, **kwargs):
         super(DerivedMixin, self).__init__(*args, **kwargs)
-
-
-class MessageMixin(object):
-    """Message field that is indexed using a postgresql GIN index."""
-
-    message = db.Column(db.Text)
-    # pre-computed tsvector data to speedup full-text searches
-    message_vector = db.Column(TSVECTOR)
-
-    @declared_attr
-    def __table_args__(cls):
-        return (
-            # Full-text search index
-            db.Index(
-                'ix_{}_message_vector'.format(cls.__tablename__),
-                'message_vector',
-                postgresql_using='gin',
-            ),
-        )

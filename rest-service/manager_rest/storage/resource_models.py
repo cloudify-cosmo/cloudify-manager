@@ -28,7 +28,6 @@ from .resource_models_base import TopLevelResource, DerivedResource
 from .mixins import (
     DerivedMixin,
     DerivedTenantMixin,
-    MessageMixin,
     TopLevelCreatorMixin,
     TopLevelMixin,
 )
@@ -193,7 +192,7 @@ class Execution(TopLevelMixin, DerivedResource):
         )
 
 
-class Event(DerivedResource, DerivedMixin, MessageMixin):
+class Event(DerivedResource, DerivedMixin):
 
     """Execution events."""
 
@@ -205,8 +204,10 @@ class Event(DerivedResource, DerivedMixin, MessageMixin):
 
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
     execution_fk = foreign_key(Execution.storage_id, nullable=True)
-    event_type = db.Column(db.Text)
+    message = db.Column(db.Text)
     message_code = db.Column(db.Text)
+
+    event_type = db.Column(db.Text)
 
     @declared_attr
     def execution(cls):
@@ -223,7 +224,7 @@ class Event(DerivedResource, DerivedMixin, MessageMixin):
         return Execution
 
 
-class Log(DerivedResource, DerivedMixin, MessageMixin):
+class Log(DerivedResource, DerivedMixin):
 
     """Execution logs."""
 
@@ -235,9 +236,11 @@ class Log(DerivedResource, DerivedMixin, MessageMixin):
 
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
     execution_fk = foreign_key(Execution.storage_id, nullable=True)
+    message = db.Column(db.Text)
+    message_code = db.Column(db.Text)
+
     logger = db.Column(db.Text)
     level = db.Column(db.Text)
-    message_code = db.Column(db.Text)
 
     @declared_attr
     def execution(cls):
