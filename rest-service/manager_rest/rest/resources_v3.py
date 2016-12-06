@@ -150,15 +150,19 @@ class UserGroups(SecuredMultiTenancyResource):
             pagination,
             sort)
 
-
-class UserGroupsId(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
-    def post(self, group_name, multi_tenancy):
+    def post(self, multi_tenancy):
         """
         Create a group
         """
-        return multi_tenancy.create_group(group_name)
+        request_dict = get_json_and_verify_params()
+        group_name = request_dict['group_name']
+        ldap_group_dn = request_dict.get('ldap_group_dn')
+        return multi_tenancy.create_group(group_name, ldap_group_dn)
+
+
+class UserGroupsId(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)

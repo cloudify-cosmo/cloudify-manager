@@ -53,6 +53,7 @@ class Group(SQLModelBase):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
+    ldap_dn = db.Column(db.Text, unique=True, nullable=True, index=True)
 
     def _get_identifier(self):
         return 'name', self.name
