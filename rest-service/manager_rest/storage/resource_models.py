@@ -25,10 +25,12 @@ from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from .models_base import db, UTCDateTime
 from .relationships import foreign_key, one_to_many_relationship
 from .resource_models_base import TopLevelResource, DerivedResource
-from .mixins import (TopLevelMixin,
-                     DerivedMixin,
-                     DerivedTenantMixin,
-                     TopLevelCreatorMixin)
+from .mixins import (
+    DerivedMixin,
+    DerivedTenantMixin,
+    TopLevelCreatorMixin,
+    TopLevelMixin,
+)
 from .models_states import (DeploymentModificationState,
                             SnapshotState,
                             ExecutionState)
@@ -187,6 +189,71 @@ class Execution(TopLevelMixin, DerivedResource):
             id_value,
             self.status
         )
+
+
+class Event(DerivedResource, DerivedMixin):
+
+    """Execution events."""
+
+    __tablename__ = 'events'
+
+    proxies = {
+        'execution_id': flask_fields.String
+    }
+
+    timestamp = db.Column(UTCDateTime, nullable=False, index=True)
+    execution_fk = foreign_key(Execution.storage_id, nullable=False)
+    message = db.Column(db.Text)
+    message_code = db.Column(db.Text)
+
+    event_type = db.Column(db.Text)
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls.execution_fk)
+
+    execution_id = association_proxy('execution', 'id')
+
+    @hybrid_property
+    def parent(self):
+        return self.execution
+
+    @parent.expression
+    def parent(cls):
+        return Execution
+
+
+class Log(DerivedResource, DerivedMixin):
+
+    """Execution logs."""
+
+    __tablename__ = 'logs'
+
+    proxies = {
+        'execution_id': flask_fields.String
+    }
+
+    timestamp = db.Column(UTCDateTime, nullable=False, index=True)
+    execution_fk = foreign_key(Execution.storage_id, nullable=False)
+    message = db.Column(db.Text)
+    message_code = db.Column(db.Text)
+
+    logger = db.Column(db.Text)
+    level = db.Column(db.Text)
+
+    @declared_attr
+    def execution(cls):
+        return one_to_many_relationship(cls, Execution, cls.execution_fk)
+
+    execution_id = association_proxy('execution', 'id')
+
+    @hybrid_property
+    def parent(self):
+        return self.execution
+
+    @parent.expression
+    def parent(cls):
+        return Execution
 
 
 class DeploymentUpdate(DerivedResource, DerivedMixin):
