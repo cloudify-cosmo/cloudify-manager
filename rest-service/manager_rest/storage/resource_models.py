@@ -203,7 +203,7 @@ class Event(DerivedResource, DerivedMixin):
     }
 
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
-    execution_fk = foreign_key(Execution.storage_id, nullable=True)
+    execution_fk = foreign_key(Execution.storage_id, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
 
@@ -235,7 +235,7 @@ class Log(DerivedResource, DerivedMixin):
     }
 
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
-    execution_fk = foreign_key(Execution.storage_id, nullable=True)
+    execution_fk = foreign_key(Execution.storage_id, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
 
