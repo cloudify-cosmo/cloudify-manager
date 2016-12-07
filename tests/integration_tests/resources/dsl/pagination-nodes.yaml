@@ -22,5 +22,3 @@ node_templates:
     type: cloudify.nodes.Root
   node9:
     type: cloudify.nodes.Root
-  node10:
-    type: cloudify.nodes.Root
