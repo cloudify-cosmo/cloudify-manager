@@ -39,7 +39,7 @@ function create_resources_tar() {
     if [ "$PREMIUM" == "true" ]; then
         premium="-premium"
     fi
-    tar -cvzf /tmp/cloudify${premium}-manager-resources_${version}-${prerelease}-b${build}.tar.gz cloudify-manager-resources
+    tar -cvzf /tmp/cloudify${premium}-manager-resources_${version}-${prerelease}.tar.gz cloudify-manager-resources
     rm -rf /tmp/cloudify-manager-resources
 }
 
