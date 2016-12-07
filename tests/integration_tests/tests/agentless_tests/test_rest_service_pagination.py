@@ -25,13 +25,21 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+MAX_RESULT_FOR_TESTING = 9
+
 
 class TestRestServiceListPagination(AgentlessTestCase):
     @classmethod
     def setup_class(cls):
         super(TestRestServiceListPagination, cls).setUpClass()
-        config.instance.max_results = 9
-        TestRestServiceListPagination._update_config({'max_results': 9})
+        TestRestServiceListPagination._update_config(
+            {'max_results': MAX_RESULT_FOR_TESTING})
+
+    @classmethod
+    def teardown_class(cls):
+        super(TestRestServiceListPagination, cls).setUpClass()
+        TestRestServiceListPagination._update_config(
+            {'max_results': config.instance.max_results})
 
     def test_blueprints_pagination(self):
         for i in range(10):
@@ -46,7 +54,9 @@ class TestRestServiceListPagination(AgentlessTestCase):
 
     def test_deployment_modifications_pagination(self):
         deployment = self.deploy(resource('dsl/pagination.yaml'))
-        for i in range(2, 12):
+        # since we have set max_results to 9 for this test,
+        # we can't add more than 9 modification to the modifications history
+        for i in range(1, 11):
             modification = self.client.deployment_modifications.start(
                 deployment_id=deployment.id,
                 nodes={'node': {'instances': i}})
@@ -60,20 +70,26 @@ class TestRestServiceListPagination(AgentlessTestCase):
         for i in range(5):
             self.execute_workflow('install', deployment.id)
             self.execute_workflow('uninstall', deployment.id)
+        total_executions = 11  # create_deployment_environment + 5 install/un
         self._test_pagination(partial(self.client.executions.list,
-                                      deployment_id=deployment.id))
+                                      deployment_id=deployment.id),
+                              total=total_executions)
 
     def test_nodes_pagination(self):
         deployment = self.deploy(resource('dsl/pagination-nodes.yaml'))
+        num_of_nodes = 9
         self._test_pagination(partial(self.client.nodes.list,
-                                      deployment_id=deployment.id))
+                                      deployment_id=deployment.id),
+                              total=num_of_nodes)
 
     def test_node_instances_pagination(self):
         deployment = self.deploy(
                 resource('dsl/pagination-node-instances.yaml'))
-        self._test_pagination(partial(
+        partial_obj = partial(
             self.client.node_instances.list,
-                              deployment_id=deployment.id))
+            deployment_id=deployment.id)
+        num_of_nodes_instances = 9
+        self._test_pagination(partial_obj, total=num_of_nodes_instances)
 
     def test_plugins_pagination(self):
         for i in range(1, 11):
@@ -87,23 +103,24 @@ class TestRestServiceListPagination(AgentlessTestCase):
             shutil.rmtree(tmpdir)
         self._test_pagination(self.client.plugins.list)
 
-    def _test_pagination(self, list_func):
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'Response size',
-                                list_func)
+    def _test_pagination(self, list_func, total=10):
+        if total > MAX_RESULT_FOR_TESTING:
+            self.assertRaisesRegexp(CloudifyClientError,
+                                    'Response size',
+                                    list_func)
 
-        self.assertRaisesRegexp(CloudifyClientError,
-                                'Invalid pagination size',
-                                list_func,
-                                _offset=0,
-                                _size=20)
+            too_big_pagination = MAX_RESULT_FOR_TESTING + 1
+            self.assertRaisesRegexp(CloudifyClientError,
+                                    'Invalid pagination size',
+                                    list_func,
+                                    _offset=0,
+                                    _size=too_big_pagination)
 
         all_results = list_func(_sort=['id'],
                                 _offset=0,
-                                _size=9).items
+                                _size=MAX_RESULT_FOR_TESTING).items
         num_all = len(all_results)
-        self.assertGreaterEqual(num_all, 9)
-        total = 10
+        self.assertLessEqual(num_all, MAX_RESULT_FOR_TESTING)
 
         # sanity
         for offset in range(num_all + 1):

@@ -298,7 +298,9 @@ class ResourceManager(object):
 
         # validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
-            deployment_id=deployment_id)
+            deployment_id=deployment_id,
+            status=ExecutionState.ACTIVE_STATES
+        )
         executions = self.sm.list(
             models.Execution,
             filters=deplyment_id_filter
@@ -1085,7 +1087,8 @@ class ResourceManager(object):
     def _verify_deployment_environment_created_successfully(self,
                                                             deployment_id):
         deployment_id_filter = self.create_filters_dict(
-            deployment_id=deployment_id)
+            deployment_id=deployment_id,
+            workflow_id='create_deployment_environment')
         env_creation = next(
             (execution for execution in
              self.sm.list(models.Execution, filters=deployment_id_filter)
@@ -1200,7 +1203,8 @@ class ResourceManager(object):
 
         def _get_running_executions(deployment_id=None, include_system=True):
             deployment_id_filter = self.create_filters_dict(
-                deployment_id=deployment_id)
+                deployment_id=deployment_id,
+                status=ExecutionState.ACTIVE_STATES)
             executions = self.list_executions(
                 filters=deployment_id_filter,
                 is_include_system_workflows=include_system).items
