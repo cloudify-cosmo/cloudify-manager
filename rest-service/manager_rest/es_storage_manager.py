@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import logging
 
 import elasticsearch.exceptions
 from elasticsearch import Elasticsearch
@@ -50,6 +51,19 @@ MUTATE_PARAMS = {
     'refresh': True
 }
 
+try:
+    logging.basicConfig(filename='/var/log/cloudify/es_storage_manager.log',
+                        level=logging.DEBUG,
+                        format='%(asctime)s - %(name)s - %(message)s')
+except:
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s - %(name)s - %(message)s')
+logger = logging.getLogger(__name__)
+logging.getLogger('manager-rest').setLevel(logging.ERROR)
+logging.getLogger('gunicorn.access').setLevel(logging.ERROR)
+logging.getLogger('elasticsearch').setLevel(logging.ERROR)
+logging.getLogger('urllib3').setLevel(logging.ERROR)
+
 
 class ESStorageManager(object):
 
@@ -67,9 +81,11 @@ class ESStorageManager(object):
 
     def _list_docs(self, doc_type, model_class, body=None, fields=None):
         include = list(fields) if fields else True
+        es_params = {'max_raw_size_mb': config.instance().max_results_mb}
         result = self._connection.search(index=STORAGE_INDEX_NAME,
                                          doc_type=doc_type,
                                          body=body,
+                                         params=es_params,
                                          _source=include)
         docs = ManagerElasticsearch.extract_search_result_values(result)
 
@@ -79,6 +95,7 @@ class ESStorageManager(object):
                 doc['version'] = None
         items = [self._fill_missing_fields_and_deserialize(doc, model_class)
                  for doc in docs]
+
         metadata = ManagerElasticsearch.build_list_result_metadata(body,
                                                                    result)
         return ListResult(items, metadata)

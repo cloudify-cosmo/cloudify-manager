@@ -16,9 +16,8 @@ import re
 import elasticsearch
 from flask import current_app
 
-from manager_rest import config
+from manager_rest import config, manager_exceptions
 
-DEFAULT_SEARCH_SIZE = 10000
 EVENTS_INDICES_PATTERN = 'logstash-*'
 
 RESERVED_CHARS_REGEX = '([\(\)\{\}\+\-\=\>\<\!\[\]\^\"\~\*\?\:\\/]|&&|\|\|\s)'
@@ -104,12 +103,15 @@ class ManagerElasticsearch:
                                               "ignore_unmapped": True}}, sort)
 
         if pagination:
+            pagination_size = pagination.get('size',
+                                             config.instance().max_results)
+            ManagerElasticsearch._validate_pagination(pagination_size)
             if not skip_size:
-                body['size'] = pagination.get('size', DEFAULT_SEARCH_SIZE)
+                body['size'] = pagination_size
             if 'offset' in pagination:
                 body['from'] = pagination['offset']
         elif not skip_size:
-            body['size'] = DEFAULT_SEARCH_SIZE
+            body['size'] = config.instance().max_results
         if filters:
             filter_conditions = []
             for key, val_list in filters.iteritems():
@@ -147,6 +149,16 @@ class ManagerElasticsearch:
                 }
             }
         return body
+
+    @staticmethod
+    def _validate_pagination(pagination_size):
+        if pagination_size < 0:
+            raise manager_exceptions.BadParametersError(
+                "Invalid pagination: {0}".format(pagination_size))
+        if pagination_size > config.instance().max_results:
+            raise manager_exceptions.BadParametersError(
+                "Invalid pagination: {0}, max allowed: {1}"
+                "".format(pagination_size, config.instance().max_results))
 
     @staticmethod
     def get_connection():

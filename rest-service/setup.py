@@ -38,7 +38,7 @@ setup(
         'requests==2.7.0',
         'gunicorn==18.0',
         'PyYAML==3.10',
-        'elasticsearch==1.6.0',
+        'elasticsearch==1.6.0.1',
         'celery==3.1.17',
         'flask-securest==0.8',
         'psutil==3.3.0',
