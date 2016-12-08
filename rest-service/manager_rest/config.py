@@ -52,6 +52,8 @@ class Config(object):
         self._security_authentication_providers = []
         self._security_authorization_provider = None
         self._insecure_endpoints_disabled = False
+        self.max_results = 1000
+        self.max_results_mb = 30
 
     @property
     def db_address(self):

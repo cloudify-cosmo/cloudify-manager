@@ -33,6 +33,7 @@ class PluginInstaller(object):
     def uninstall(self, plugins):
         pass
 
+
 VIRTUALENV = sys.prefix
 
 
