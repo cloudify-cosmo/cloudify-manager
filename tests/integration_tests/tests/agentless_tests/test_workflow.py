@@ -26,7 +26,6 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
-from integration_tests.framework import riemann
 from integration_tests.framework.utils import timeout
 from integration_tests.tests.utils import (
     get_resource,
@@ -519,11 +518,11 @@ class BasicWorkflowsTest(AgentlessTestCase):
         dsl_path = get_resource('dsl/with_policies1.yaml')
         deployment, _ = self.deploy_application(dsl_path)
 
-        self.assertTrue(riemann.is_riemann_core_up(deployment.id))
+        self.assertTrue(self.is_riemann_core_up(deployment.id))
 
         self.undeploy_application(deployment.id, is_delete_deployment=True)
 
-        self.assertFalse(riemann.is_riemann_core_up(deployment.id))
+        self.assertFalse(self.is_riemann_core_up(deployment.id))
 
     def test_riemann_core_not_started_without_policies(self):
         """A riemann core isn't started if there's no policies defined
@@ -531,8 +530,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
         dsl_path = get_resource('dsl/without_policies.yaml')
         deployment, _ = self.deploy_application(dsl_path)
 
-        self.assertFalse(riemann.is_riemann_core_up(deployment.id))
+        self.assertFalse(self.is_riemann_core_up(deployment.id))
 
         self.undeploy_application(deployment.id, is_delete_deployment=True)
 
-        self.assertFalse(riemann.is_riemann_core_up(deployment.id))
+        self.assertFalse(self.is_riemann_core_up(deployment.id))

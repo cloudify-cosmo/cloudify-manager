@@ -61,5 +61,5 @@ class TestProviderContext(AgentlessTestCase):
             self.assertEqual(e.status_code, 404)
             self.assertEqual(
                 e.message,
-                u'Requested ProviderContext with ID `CONTEXT` was not found'
+                u'Requested `ProviderContext` with ID `CONTEXT` was not found'
             )
