@@ -1,6 +1,7 @@
 from os import environ as env
 import json
 
+from base64 import urlsafe_b64encode
 from cloudify_rest_client.client import CloudifyClient
 
 
@@ -8,7 +9,7 @@ def run_test():
     try:
         manager_ip = env['manager_ip']
         url_version_postfix = env['url_version_postfix']
-        rest_client = CloudifyClient(host=manager_ip)
+        rest_client = _get_rest_client(manager_ip)
         rest_client_url = rest_client._client.url
         expected_rest_client_url = 'http://{0}:80{1}'.format(
             manager_ip, url_version_postfix)
@@ -28,6 +29,15 @@ def run_test():
             'failed': True,
             'details': str(e)
         }
+
+
+def _get_rest_client(manager_ip):
+    creds = '{0}:{1}'.format(env['manager_user'], env['manager_password'])
+    headers = {
+        'Authorization': 'Basic {0}'.format(urlsafe_b64encode(creds)),
+        'Tenant': env['manager_tenant']
+    }
+    return CloudifyClient(host=manager_ip, headers=headers)
 
 
 out = run_test()

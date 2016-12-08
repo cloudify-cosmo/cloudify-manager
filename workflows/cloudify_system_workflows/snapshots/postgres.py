@@ -29,7 +29,7 @@ class Postgres(object):
     with Postgres(config) as postgres:
         postgres.restore()
     """
-    _TRUNCATE_QUERY = "DELETE FROM {0} CASCADE;"
+    _TRUNCATE_QUERY = "TRUNCATE {0} CASCADE;"
     _POSTGRES_DUMP_FILENAME = 'pg_data'
     _TABLES_TO_KEEP = ['provider_context', 'roles']
     _TABLES_TO_RESTORE = ['users', 'tenants']

@@ -50,14 +50,13 @@ class EsToPg(object):
 
     def _get_storage_manager(self, tenant_name):
         app = setup_flask_app(db, user_datastore)
-        self._set_current_user(app)
+        admin = self._set_current_user(app)
         storage_manager = get_storage_manager()
-        self._set_tenant(app, tenant_name, storage_manager)
+        self._set_tenant(app, tenant_name, storage_manager, admin)
         return storage_manager
 
-    def _set_tenant(self, app, tenant_name, storage_manager):
+    def _set_tenant(self, app, tenant_name, storage_manager, admin_user):
         """Set the tenant to be used as the current tenant in the flask app
-
         """
         tenant = models.Tenant.query.filter_by(name=tenant_name).first()
         if not tenant:
@@ -66,22 +65,26 @@ class EsToPg(object):
                 'creating it'.format(tenant_name)
             )
             tenant = models.Tenant(name=tenant_name)
+            tenant.users.append(admin_user)
             storage_manager.put(tenant)
-        self._assert_tenant_empty(tenant)
+        self._assert_tenant_empty(tenant, admin_user)
         app.config[CURRENT_TENANT_CONFIG] = tenant
 
     @staticmethod
-    def _assert_tenant_empty(tenant):
+    def _assert_tenant_empty(tenant, admin_user):
         """Make sure the tenant doesn't have any resources attached to it,
         prior to restoring the DB into it
         """
+        # tenant.users and tenant.groups are backreferences, so they act a
+        # little different from regular many-to-many relationships, and need
+        # to be cast into lists for proper equality comparisons
         if tenant.blueprints \
                 or tenant.snapshots \
                 or tenant.plugins \
-                or tenant.users \
-                or tenant.groups:
+                or list(tenant.users) != [admin_user] \
+                or list(tenant.groups) != []:
             raise Exception(
-                'Attempted to restore into a non empty {0}'.format(tenant)
+                'Attempted to restore into a non empty {0}:'.format(tenant)
             )
 
     @staticmethod
@@ -96,6 +99,7 @@ class EsToPg(object):
         flask_global_stack.push(admin)
         # And then load him as the active user
         app.extensions['security'].login_manager.reload_user(admin)
+        return admin
 
     def restore_es(self):
         logger.debug('Restoring elastic search..')
