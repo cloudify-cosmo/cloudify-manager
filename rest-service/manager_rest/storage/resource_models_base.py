@@ -50,6 +50,19 @@ class SQLResourceBase(SQLModelBase):
     # Lists of fields to skip when using older versions of the client
     skipped_fields = {'v1': [], 'v2': [], 'v2.1': []}
 
+    # Some must-have columns for all resources
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    @classmethod
+    def storage_id_column(cls):
+        return 'storage_id'
+
+    id = db.Column(db.Text, index=True)
+
+    @classmethod
+    def user_id_column(cls):
+        return 'id'
+
     @classproperty
     def resource_fields(cls):
         """Return the list of field names for this table
@@ -63,14 +76,6 @@ class SQLResourceBase(SQLModelBase):
                    if f not in cls._private_fields}
         _fields.update(SQLResourceBase._extra_fields)
         return _fields
-
-    @classmethod
-    def unique_id(cls):
-        return 'storage_id'
-
-    # Some must-have columns for all resources
-    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    id = db.Column(db.Text, index=True)
 
     @property
     def permission(self):

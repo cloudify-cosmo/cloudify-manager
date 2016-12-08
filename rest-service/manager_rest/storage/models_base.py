@@ -19,6 +19,8 @@ from dateutil import parser as date_parser
 
 from flask_sqlalchemy import SQLAlchemy
 
+from aria.storage import structure
+
 from manager_rest.utils import classproperty
 
 db = SQLAlchemy()
@@ -47,7 +49,7 @@ class UTCDateTime(db.TypeDecorator):
             return value
 
 
-class SQLModelBase(db.Model):
+class SQLModelBase(db.Model, structure.ModelBase):
     """Abstract base class for all SQL models that allows [de]serialization
     """
     # SQLAlchemy syntax
@@ -70,7 +72,9 @@ class SQLModelBase(db.Model):
         'PickleType': flask_fields.Raw,
         'UTCDateTime': flask_fields.String,
         'Enum': flask_fields.String,
-        'Boolean': flask_fields.Boolean
+        'Boolean': flask_fields.Boolean,
+        'Dict': flask_fields.Raw,
+        'List': flask_fields.Raw
     }
 
     def to_dict(self, suppress_error=False):
@@ -123,21 +127,3 @@ class SQLModelBase(db.Model):
         """
         fields = cls.resource_fields
         return {k: v for k, v in fields.iteritems() if k in field_list}
-
-    @classmethod
-    def unique_id(cls):
-        return 'id'
-
-    def __str__(self):
-        id_name, id_value = self._get_identifier()
-        return '<{0} {1}=`{2}`>'.format(
-            self.__class__.__name__,
-            id_name,
-            id_value
-        )
-
-    def __repr__(self):
-        return str(self)
-
-    def __unicode__(self):
-        return str(self)

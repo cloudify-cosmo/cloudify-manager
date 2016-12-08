@@ -392,7 +392,7 @@ class NodesTest(base_test.BaseServerTestCase):
             state='',
             version=version,
             relationships=None,
-            host_id=None,
+            host_fk=None,
             scaling_groups=None
         )
         node_instance.node = node

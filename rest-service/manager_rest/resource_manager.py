@@ -569,6 +569,7 @@ class ResourceManager(object):
 
     def prepare_deployment_nodes_for_storage(self,
                                              deployment_plan,
+                                             deployment,
                                              node_ids=None):
         """
         create deployment nodes in storage based on a provided blueprint
@@ -586,7 +587,13 @@ class ResourceManager(object):
         nodes = []
         for raw_node in raw_nodes:
             scalable = raw_node['capabilities']['scalable']['properties']
+            host_list = self.sm.list(models.Node,
+                                     filters={
+                                         'deployment_id': deployment.id,
+                                         'id': raw_node.get('host_id')
+                                     })
             nodes.append(models.Node(
+                deployment=deployment,
                 id=raw_node['name'],
                 type=raw_node['type'],
                 type_hierarchy=raw_node['type_hierarchy'],
@@ -595,7 +602,7 @@ class ResourceManager(object):
                 deploy_number_of_instances=scalable['default_instances'],
                 min_number_of_instances=scalable['min_instances'],
                 max_number_of_instances=scalable['max_instances'],
-                host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
+                host_fk=host_list[0].storage_id if host_list else None,
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],
                 plugins=raw_node['plugins'],
@@ -612,10 +619,14 @@ class ResourceManager(object):
             instance_id = node_instance['id']
             scaling_groups = node_instance.get('scaling_groups', [])
             relationships = node_instance.get('relationships', [])
-            host_id = node_instance.get('host_id')
+            host_list = self.sm.list(models.NodeInstance,
+                                     filters={
+                                         'deployment_id': deployment_id,
+                                         'id': node_instance.get('host_id')
+                                     })
             instance = models.NodeInstance(
                 id=instance_id,
-                host_id=host_id,
+                host_fk=host_list[0].storage_id if host_list else None,
                 relationships=relationships,
                 state='uninitialized',
                 runtime_properties={},
@@ -631,12 +642,15 @@ class ResourceManager(object):
                                  deployment_id,
                                  plan,
                                  node_ids=None):
-        nodes = self.prepare_deployment_nodes_for_storage(plan, node_ids)
         deployment = self.sm.get(models.Deployment, deployment_id)
 
+        nodes = self.prepare_deployment_nodes_for_storage(plan, deployment, node_ids)
+
         for node in nodes:
-            node.deployment = deployment
             self.sm.put(node)
+            if node.host is None:
+                node.host_fk = node.storage_id
+            self.sm.update(node)
 
     def _create_deployment_node_instances(self,
                                           deployment_id,
@@ -647,6 +661,9 @@ class ResourceManager(object):
 
         for node_instance in node_instances:
             self.sm.put(node_instance)
+            if node_instance.host is None:
+                node_instance.host_fk = node_instance.storage_id
+            self.sm.update(node_instance)
 
     def create_deployment(self,
                           blueprint_id,

@@ -149,12 +149,18 @@ def task_state():
     return Execution.TERMINATED
 
 
+def finalize_execution_status(execution):
+    execution.status = Execution.STARTED
+    execution.status = task_state()
+    return execution.status
+
+
 class MockCeleryClient(object):
 
     def execute_task(self, task_queue, task_id=None, kwargs=None):
         sm = get_storage_manager()
         execution = sm.get(models.Execution, task_id)
-        execution.status = task_state()
+        finalize_execution_status(execution)
         execution.error = ''
         sm.update(execution)
         return MockAsyncResult(task_id)

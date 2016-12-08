@@ -61,4 +61,5 @@ setup(
     license='LICENSE',
     description='Cloudify manager rest service',
     zip_safe=False,
-    install_requires=install_requires)
+    install_requires=install_requires,
+)

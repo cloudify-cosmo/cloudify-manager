@@ -344,7 +344,10 @@ class SQLStorageManager(object):
         if not instance.is_resource or not instance.is_id_unique:
             return
 
-        filters = {'id': instance.id, 'tenant_id': self.current_tenant.id}
+        filters = {
+            'id': getattr(instance, instance.user_id_column()),
+            # 'tenant_id': self.current_tenant.id
+        }
 
         # There should be only one instance with this id on this tenant
         if len(self.list(instance.__class__, filters=filters)) != 1:
