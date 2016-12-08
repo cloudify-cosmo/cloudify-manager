@@ -35,7 +35,9 @@ export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
 echo "PREMIUM=$PREMIUM"
-if [ "$PREMIUM" == "true" ]; then
+if [ "$
+
+PREMIUM" == "true" ]; then
     export AWS_S3_PATH=$AWS_S3_PATH"/"$PREMIUM_FOLDER
 fi
 echo "AWS_S3_PATH=$AWS_S3_PATH"

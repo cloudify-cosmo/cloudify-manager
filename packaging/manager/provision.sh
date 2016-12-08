@@ -16,29 +16,27 @@ function create_resources_tar() {
     local prerelease=$2
     local build=$3
 
-    curl -L https://github.com/cloudify-cosmo/cloudify-versions/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/cloudify-versions.tar.gz
+    curl -L https://github.com/cloudify-cosmo/${REPO_NAME}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/cloudify-versions.tar.gz
     tar -zxvf /vagrant/cloudify-versions.tar.gz -C /vagrant
 
     echo "Creating resource directory..."
     mkdir -p /tmp/cloudify-manager-resources/agents
     cd /tmp
     pushd /tmp/cloudify-manager-resources
-        if [ "$PREMIUM" == "true" ]; then
-            sed -i "s|cloudify-rest-service|$PREMIUM_FOLDER\/cloudify-rest-service|g" /vagrant/cloudify-versions-$CORE_TAG_NAME/packages-urls/manager-packages-blueprint.yaml
-        fi
         echo "Downloading manager component packages..."
-        download_resources '/vagrant/cloudify-versions-'$CORE_TAG_NAME'/packages-urls/manager-packages-blueprint.yaml'
+        download_resources '/vagrant/${REPO_NAME}-'${CORE_TAG_NAME}'/packages-urls/manager-packages-blueprint.yaml'
         pushd agents
             echo "Downloading agent packages..."
-            download_resources '/vagrant/cloudify-versions-'$CORE_TAG_NAME'/packages-urls/agent-packages-blueprint.yaml'
+            download_resources '/vagrant/${REPO_NAME}-'${CORE_TAG_NAME}'/packages-urls/agent-packages-blueprint.yaml'
         popd
     popd
 
     echo "Generating resources archive..."
     # deleting as the current upload function finds more than one file
-    if [ "$PREMIUM" == "true" ]; then
-        premium="-premium"
-    fi
+    #if [ "$
+    " == "true" ]; then
+    #    premium="-premium"
+    #fi
     tar -cvzf /tmp/cloudify${premium}-manager-resources_${version}-${prerelease}.tar.gz cloudify-manager-resources
     rm -rf /tmp/cloudify-manager-resources
 }
@@ -50,12 +48,7 @@ source common-provision.sh
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
-export PREMIUM=$3
 
-echo "PREMIUM=$PREMIUM"
-if [ "$PREMIUM" == "true" ]; then
-    export AWS_S3_PATH=$AWS_S3_PATH"/"$PREMIUM_FOLDER
-fi
 echo "AWS_S3_PATH=$AWS_S3_PATH"
 
 install_common_prereqs &&
