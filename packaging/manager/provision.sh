@@ -16,7 +16,7 @@ function create_resources_tar() {
     local prerelease=$2
     local build=$3
 
-    curl -L https://github.com/cloudify-cosmo/${REPO_NAME}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/cloudify-versions.tar.gz
+    curl -L https://github.com/cloudify-cosmo/${REPO}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/cloudify-versions.tar.gz
     tar -zxvf /vagrant/cloudify-versions.tar.gz -C /vagrant
 
     echo "Creating resource directory..."
@@ -32,22 +32,22 @@ function create_resources_tar() {
     popd
 
     echo "Generating resources archive..."
-    # deleting as the current upload function finds more than one file
-    #if [ "$
-    " == "true" ]; then
-    #    premium="-premium"
-    #fi
-    tar -cvzf /tmp/cloudify${premium}-manager-resources_${version}-${prerelease}.tar.gz cloudify-manager-resources
+
+    tar -cvzf /tmp/cloudify-manager-resources_${version}-${prerelease}.tar.gz cloudify-manager-resources
     rm -rf /tmp/cloudify-manager-resources
 }
 
 
 CORE_TAG_NAME="4.0m9"
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
-source common-provision.sh
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
+export REPO=$3
+
+curl https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/packages-urls/provision.sh -o ./common-params.sh &&
+source common-params.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/new-versioning/common/provision.sh -o ./common-provision.sh &&
+source common-provision.sh
 
 echo "AWS_S3_PATH=$AWS_S3_PATH"
 
