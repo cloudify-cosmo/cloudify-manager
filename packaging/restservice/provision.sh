@@ -23,8 +23,10 @@ function build_rpm() {
     # sudo mv *.rpm $(ls *.rpm | sed 's|_|-|g')
 }
 
-# VERSION/PRERELEASE/BUILD are exported to follow with our standard of exposing them as env vars. They are not used.
+# VERSION/PRERELEASE are exported to follow with our standard of exposing them as env vars. They are not used.
 CORE_TAG_NAME="4.0m9"
+curl https://raw.githubusercontent.com/cloudify-cosmo/$REPO/$CORE_TAG_NAME/common/provision.sh -o ./common-params.sh &&
+source common-params.sh &&
 curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
 
@@ -34,15 +36,8 @@ export PREMIUM=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
-echo "PREMIUM=$PREMIUM"
-if [ "$
 
-PREMIUM" == "true" ]; then
-    export AWS_S3_PATH=$AWS_S3_PATH"/"$PREMIUM_FOLDER
-fi
-echo "AWS_S3_PATH=$AWS_S3_PATH"
-
-install_common_prereqs &&
+install_common_prereqs
 build_rpm &&
 cd /tmp/x86_64 && create_md5 "rpm" &&
 [ -z ${AWS_ACCESS_KEY} ] || upload_to_s3 "rpm" && upload_to_s3 "md5"
