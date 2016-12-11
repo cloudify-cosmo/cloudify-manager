@@ -16,7 +16,7 @@ function create_resources_tar() {
     local prerelease=$2
     local build=$3
 
-    curl -L -u $GITHUB_USERNAME:GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/cloudify-versions.tar.gz
+    curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/cloudify-versions.tar.gz
     tar -zxvf /vagrant/cloudify-versions.tar.gz -C /vagrant
 
     echo "Creating resource directory..."
@@ -46,7 +46,7 @@ export REPO=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
-curl -u $GITHUB_USERNAME:GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/packages-urls/provision.sh -o ./common-params.sh &&
+curl -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/packages-urls/provision.sh -o ./common-params.sh &&
 source common-params.sh &&
 curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/new-versioning/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
