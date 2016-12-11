@@ -36,6 +36,7 @@ export REPO=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
+echo "REPO=$REPO"
 
 install_common_prereqs &&
 build_rpm &&
