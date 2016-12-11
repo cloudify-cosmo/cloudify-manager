@@ -16,7 +16,7 @@ function create_resources_tar() {
     local prerelease=$2
     local build=$3
 
-    curl -L https://github.com/cloudify-cosmo/${REPO}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/cloudify-versions.tar.gz
+    curl -L -u $GITHUB_USERNAME:GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/cloudify-versions.tar.gz
     tar -zxvf /vagrant/cloudify-versions.tar.gz -C /vagrant
 
     echo "Creating resource directory..."
