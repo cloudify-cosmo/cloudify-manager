@@ -11,8 +11,7 @@ function build_rpm() {
         --define "PRERELEASE $PRERELEASE" \
         --define "BUILD $BUILD" \
         --define "CORE_TAG_NAME $CORE_TAG_NAME" \
-        --define "PREMIUM $PREMIUM" \
-        --define "PREMIUM_FOLDER $PREMIUM_FOLDER" \
+        --define "REPO $REPO" \
         --define "GITHUB_USERNAME $GITHUB_USERNAME" \
         --define "GITHUB_PASSWORD $GITHUB_PASSWORD"
 
@@ -33,7 +32,7 @@ source common-provision.sh
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
-export PREMIUM=$3
+export REPO=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
