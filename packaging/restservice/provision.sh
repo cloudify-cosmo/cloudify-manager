@@ -24,11 +24,6 @@ function build_rpm() {
 
 # VERSION/PRERELEASE are exported to follow with our standard of exposing them as env vars. They are not used.
 CORE_TAG_NAME="4.0m9"
-echo "REPO=$REPO"
-curl https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/packages-urls/provision.sh -o ./common-params.sh &&
-source common-params.sh &&
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/new-versioning/common/provision.sh -o ./common-provision.sh &&
-source common-provision.sh
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
@@ -37,6 +32,13 @@ export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
 echo "REPO=$REPO"
+
+curl https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/packages-urls/provision.sh -o ./common-params.sh &&
+source common-params.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/new-versioning/common/provision.sh -o ./common-provision.sh &&
+source common-provision.sh
+
+
 
 install_common_prereqs &&
 build_rpm &&
