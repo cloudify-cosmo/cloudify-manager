@@ -17,7 +17,8 @@ function create_resources_tar() {
     local repo=$3
     local build=$4
 
-    curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/${REPO}.tar.gz
+    #curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/${REPO}.tar.gz
+    curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/new-versioning.tar.gz > /vagrant/${REPO}.tar.gz
     tar -zxvf /vagrant/${REPO}.tar.gz -C /vagrant
 
     echo "Creating resource directory..."
