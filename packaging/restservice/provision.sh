@@ -37,7 +37,7 @@ export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
 
-install_common_prereqs
+install_common_prereqs &&
 build_rpm &&
 cd /tmp/x86_64 && create_md5 "rpm" &&
 [ -z ${AWS_ACCESS_KEY} ] || upload_to_s3 "rpm" && upload_to_s3 "md5"
