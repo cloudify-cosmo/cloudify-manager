@@ -25,7 +25,7 @@ function build_rpm() {
 
 # VERSION/PRERELEASE are exported to follow with our standard of exposing them as env vars. They are not used.
 CORE_TAG_NAME="4.0m9"
-curl https://raw.githubusercontent.com/cloudify-cosmo/$REPO/$CORE_TAG_NAME/common/provision.sh -o ./common-params.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/common/provision.sh -o ./common-params.sh &&
 source common-params.sh &&
 curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
