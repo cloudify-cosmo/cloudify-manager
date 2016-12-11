@@ -27,7 +27,7 @@ function build_rpm() {
 CORE_TAG_NAME="4.0m9"
 curl https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/common/provision.sh -o ./common-params.sh &&
 source common-params.sh &&
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/new-versioning/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
 
 AWS_ACCESS_KEY_ID=$1
