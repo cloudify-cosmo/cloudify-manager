@@ -43,8 +43,10 @@ CORE_TAG_NAME="4.0m9"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export REPO=$3
+export GITHUB_USERNAME=$4
+export GITHUB_PASSWORD=$5
 
-curl https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/packages-urls/provision.sh -o ./common-params.sh &&
+curl -u $GITHUB_USERNAME:GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/packages-urls/provision.sh -o ./common-params.sh &&
 source common-params.sh &&
 curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/new-versioning/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh

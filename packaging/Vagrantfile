@@ -120,7 +120,7 @@ Vagrant.configure('2') do |config|
     end
     mgr.vm.provision "shell" do |s|
       s.path = "manager/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{REPO}"
+      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}""
       s.privileged = false
     end
   end
