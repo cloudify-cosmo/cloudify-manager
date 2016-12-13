@@ -15,28 +15,42 @@
 #
 
 import os
-import sys
 import shutil
+import sys
+
+from datetime import datetime
 from uuid import uuid4
 
 from flask import request
 from flask_restful_swagger import swagger
+from sqlalchemy import text
 
-from manager_rest import config
-from manager_rest import manager_exceptions
-from manager_rest import utils
-from manager_rest.security import SecuredResource
-from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import SnapshotState
-from manager_rest.upload_manager import (UploadedSnapshotsManager,
-                                         UploadedPluginsManager)
-from manager_rest.storage import (models,
-                                  ListResult,
-                                  get_storage_manager,
-                                  ManagerElasticsearch)
+from manager_rest import (
+    config,
+    manager_exceptions,
+    utils,
+)
 from manager_rest.maintenance import is_bypass_maintenance_mode
+from manager_rest.resource_manager import get_resource_manager
+from manager_rest.rest import (
+    resources,
+    rest_decorators,
+    rest_utils,
+)
+from manager_rest.security import SecuredResource
+from manager_rest.storage.models_base import db
+from manager_rest.storage.models_states import SnapshotState
+from manager_rest.upload_manager import (
+    UploadedPluginsManager,
+    UploadedSnapshotsManager,
+)
+from manager_rest.storage import (
+    ListResult,
+    ManagerElasticsearch,
+    get_storage_manager,
+    models,
+)
 from manager_rest.utils import create_filter_params_list_description
-from . import resources, rest_decorators, rest_utils
 
 
 def _get_snapshot_path(snapshot_id):
