@@ -21,7 +21,11 @@ import sys
 from datetime import datetime
 from uuid import uuid4
 
-from flask import request
+from flask import (
+    abort,
+    current_app,
+    request,
+)
 from flask_restful_swagger import swagger
 from sqlalchemy import text
 
@@ -731,15 +735,6 @@ class Events(resources.Events):
                                range_filters=range_filters,
                                wildcards=wildcards)
 
-    @staticmethod
-    def list_events(query, include=None):
-        result = ManagerElasticsearch.search_events(body=query,
-                                                    include=include)
-        events = ManagerElasticsearch.extract_search_result_values(result)
-        metadata = ManagerElasticsearch.build_list_result_metadata(query,
-                                                                   result)
-        return ListResult(events, metadata)
-
     @swagger.operation(
         responseclass='List[Event]',
         nickname="list events",
@@ -754,14 +749,128 @@ class Events(resources.Events):
     @rest_decorators.sortable
     def get(self, _include=None, filters=None,
             pagination=None, sort=None, range_filters=None, **kwargs):
-        """
-        List events
-        """
-        query = self._build_query(filters=filters,
-                                  pagination=pagination,
-                                  sort=sort,
-                                  range_filters=range_filters)
-        return self.list_events(query, include=_include)
+        """List events using PosgreSQL as backend."""
+        if _include is not None:
+            current_app.logger.error(
+                'Projections with `_include` parameter are not supported')
+            return abort(400)
+
+        engine = db.engine
+
+        if 'cloudify_event' not in filters['type']:
+            current_app.logger.error(
+                'At least `type=cloudify_event` filter is expected')
+            return abort(400)
+
+        raw_query = [
+            """
+            SELECT
+                timestamp,
+                (
+                    SELECT id
+                    FROM deployments
+                    WHERE storage_id = events.deployment_fk
+                ) AS deployment_id,
+                events.message,
+                events.message_code,
+                events.event_type,
+                NULL as logger,
+                NULL as level,
+                'cloudify_event' as type
+            FROM
+                events,
+                executions
+            WHERE
+                events.execution_fk = executions.storage_id AND
+                executions.id = :execution_id
+            """
+        ]
+        if 'cloudify_log' in filters['type']:
+            raw_query.append(
+                """
+                UNION
+                SELECT
+                    timestamp,
+                    (
+                        SELECT id
+                        FROM deployments
+                        WHERE storage_id = logs.deployment_fk
+                    ) AS deployment_id,
+                    logs.message,
+                    NULL AS message_code,
+                    NULL AS event_type,
+                    logs.logger,
+                    logs.level,
+                    'cloudify_log' as type
+                FROM
+                    logs,
+                    executions
+                WHERE
+                    logs.execution_fk = executions.storage_id AND
+                    executions.id = :execution_id
+                """
+            )
+
+        if '@timestamp' not in sort or sort['@timestamp'] != 'asc':
+            current_app.logger.error(
+                'Sorting by `timestamp` is expected')
+            return abort(400)
+        raw_query.append('ORDER BY timestamp ASC')
+
+        if 'size' not in pagination:
+            current_app.logger.error(
+                'Expected `size` pagination parameter')
+            return abort(400)
+
+        if 'offset' not in pagination:
+            current_app.logger.error(
+                'Expected `offset` pagination parameter')
+            return abort(400)
+        raw_query.append(
+            'LIMIT :limit '
+            'OFFSET :offset'
+        )
+        query = text(' '.join(raw_query))
+        current_app.logger.error(str(query))
+        params = {
+            'execution_id': filters['execution_id'][0],
+            'limit': pagination['size'],
+            'offset': pagination['offset'],
+        }
+
+        def serialize(result):
+            """Serialize result."""
+            result = dict(result.items())
+
+            result['message'] = {
+                'text': result['message']
+            }
+            result['context'] = {
+                'deployment_id': result['deployment_id']
+            }
+            del result['deployment_id']
+            if result['type'] == 'cloudify_event':
+                result['message']['arguments'] = None
+                del result['logger']
+                del result['level']
+            elif result['type'] == 'cloudify_log':
+                result['level'] = 'info'
+                del result['event_type']
+
+            for key, value in result.items():
+                if isinstance(value, datetime):
+                    result[key] = '{}Z'.format(value.isoformat()[:-3])
+            return result
+
+        results = [
+            serialize(result)
+            for result in engine.execute(query, params)
+        ]
+
+        metadata = {
+            'pagination': pagination
+        }
+        return ListResult(results, metadata)
 
     @rest_decorators.exceptions_handled
     def post(self):
