@@ -868,7 +868,7 @@ class Events(resources.Events):
         ]
 
         metadata = {
-            'pagination': pagination
+            'pagination': dict(pagination, total=0)
         }
         return ListResult(results, metadata)
 
