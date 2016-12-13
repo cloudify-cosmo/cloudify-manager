@@ -20,12 +20,18 @@ function generate_checksum() {
 }
 
 CORE_TAG_NAME="4.0m9"
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
-source common-provision.sh
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
+export REPO=$3
+export GITHUB_USERNAME=$4
+export GITHUB_PASSWORD=$5
 export AWS_S3_PATH="org/cloudify3/components"
+
+curl -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/$REPO/new-versioning/packages-urls/provision.sh -o ./common-params.sh &&
+source common-params.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/new-versioning/common/provision.sh -o ./common-provision.sh &&
+source common-provision.sh
 
 install_common_prereqs &&
 build_rpm &&

@@ -48,7 +48,7 @@ Vagrant.configure('2') do |config|
     end
     curator.vm.provision "shell" do |s|
       s.path = "elasticsearch_curator/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
+      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
       s.privileged = false
     end
   end
@@ -96,7 +96,7 @@ Vagrant.configure('2') do |config|
     end
     mgmtworker.vm.provision "shell" do |s|
       s.path = "mgmtworker/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP}"
+      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
       s.privileged = false
     end
   end
