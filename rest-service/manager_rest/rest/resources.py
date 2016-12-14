@@ -1018,22 +1018,8 @@ class Events(SecuredResource):
                 event[key] = '{}Z'.format(value.isoformat()[:-3])
         return event
 
-    @swagger.operation(
-        nickname='events',
-        notes='Returns a list of events for the provided ElasticSearch query. '
-              'The response format is as ElasticSearch response format.',
-        parameters=[{'name': 'body',
-                     'description': 'ElasticSearch query.',
-                     'required': True,
-                     'allowMultiple': False,
-                     'dataType': 'string',
-                     'paramType': 'body'}],
-        consumes=['application/json']
-    )
-    @exceptions_handled
-    @insecure_rest_method
-    def get(self, **kwargs):
-        """List events using a SQL backend."""
+    def _query_events(self):
+        """Query events using a SQL backend."""
         request_dict = get_json_and_verify_params()
 
         es_query = request_dict['query']['bool']
@@ -1085,6 +1071,24 @@ class Events(SecuredResource):
         }
 
         return results
+
+    @swagger.operation(
+        nickname='events',
+        notes='Returns a list of events for the provided ElasticSearch query. '
+              'The response format is as ElasticSearch response format.',
+        parameters=[{'name': 'body',
+                     'description': 'ElasticSearch query.',
+                     'required': True,
+                     'allowMultiple': False,
+                     'dataType': 'string',
+                     'paramType': 'body'}],
+        consumes=['application/json']
+    )
+    @exceptions_handled
+    @insecure_rest_method
+    def get(self, **kwargs):
+        """List events using a SQL backend."""
+        return self._query_events()
 
     @swagger.operation(
         nickname='events',
