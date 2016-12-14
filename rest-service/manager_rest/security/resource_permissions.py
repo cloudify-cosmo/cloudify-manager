@@ -78,7 +78,6 @@ class PermissionsHandler(object):
                 users_list.append(user)
             elif not add_permissions and user in users_list:
                 users_list.remove(user)
-            sm.update(user)
 
         sm.update(resource)
 

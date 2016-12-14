@@ -69,6 +69,14 @@ class TenantsId(SecuredMultiTenancyResource):
         """
         return multi_tenancy.get_tenant(tenant_name)
 
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(TenantResponse)
+    def delete(self, tenant_name, multi_tenancy):
+        """
+        Delete a tenant
+        """
+        return multi_tenancy.delete_tenant(tenant_name)
+
 
 class TenantUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
@@ -159,6 +167,14 @@ class UserGroupsId(SecuredMultiTenancyResource):
         """
         return multi_tenancy.get_group(group_name)
 
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(GroupResponse)
+    def delete(self, group_name, multi_tenancy):
+        """
+        Delete a user group
+        """
+        return multi_tenancy.delete_group(group_name)
+
 
 class Users(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
@@ -220,6 +236,14 @@ class UsersId(SecuredMultiTenancyResource):
         Get details for a single user
         """
         return multi_tenancy.get_user(username)
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
+    def delete(self, username, multi_tenancy):
+        """
+        Delete a user
+        """
+        return multi_tenancy.delete_user(username)
 
 
 class UsersGroups(SecuredMultiTenancyResource):
