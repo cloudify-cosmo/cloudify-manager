@@ -26,9 +26,9 @@ from flask import (
     request,
 )
 from flask_restful import types
-from flask_security import current_user
-from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
+from flask_restful_swagger import swagger
+from flask_security import current_user
 
 from sqlalchemy import text
 
