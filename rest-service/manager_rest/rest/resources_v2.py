@@ -823,6 +823,30 @@ class Events(resources.Events):
         query = text(' '.join(raw_query))
         return query
 
+    def _serialize_result(self, result):
+        """Serialize a given result to match elasticsearch values."""
+        result = dict(result.items())
+
+        result['message'] = {
+            'text': result['message']
+        }
+        result['context'] = {
+            'deployment_id': result['deployment_id']
+        }
+        del result['deployment_id']
+        if result['type'] == 'cloudify_event':
+            result['message']['arguments'] = None
+            del result['logger']
+            del result['level']
+        elif result['type'] == 'cloudify_log':
+            result['level'] = 'info'
+            del result['event_type']
+
+        for key, value in result.items():
+            if isinstance(value, datetime):
+                result[key] = '{}Z'.format(value.isoformat()[:-3])
+        return result
+
     @swagger.operation(
         responseclass='List[Event]',
         nickname="list events",
@@ -852,32 +876,8 @@ class Events(resources.Events):
         select_query = self._build_select_query(
             _include, filters, pagination, sort)
 
-        def serialize(result):
-            """Serialize result."""
-            result = dict(result.items())
-
-            result['message'] = {
-                'text': result['message']
-            }
-            result['context'] = {
-                'deployment_id': result['deployment_id']
-            }
-            del result['deployment_id']
-            if result['type'] == 'cloudify_event':
-                result['message']['arguments'] = None
-                del result['logger']
-                del result['level']
-            elif result['type'] == 'cloudify_log':
-                result['level'] = 'info'
-                del result['event_type']
-
-            for key, value in result.items():
-                if isinstance(value, datetime):
-                    result[key] = '{}Z'.format(value.isoformat()[:-3])
-            return result
-
         results = [
-            serialize(result)
+            self._serialize_result(result)
             for result in engine.execute(select_query, params)
         ]
 
