@@ -50,7 +50,6 @@ from manager_rest.upload_manager import (
 )
 from manager_rest.storage import (
     ListResult,
-    ManagerElasticsearch,
     get_storage_manager,
     models,
 )
