@@ -701,61 +701,12 @@ class PluginsId(SecuredResource):
 
 class Events(resources.Events):
 
-    @staticmethod
-    def _build_query(filters=None, pagination=None, sort=None,
-                     range_filters=None):
-
-        ctx_fields = [
-            'blueprint_id',
-            'deployment_id',
-            'execution_id',
-            'node_id',
-            'node_instance_id',
-            'workflow_id'
-        ]
-
-        # append 'context.' prefix to context fields in all constructs
-        query_constructs = \
-            [filters, pagination, sort, range_filters]
-        for ctx_field in ctx_fields:
-            for construct in query_constructs:
-                if construct and ctx_field in construct:
-                    construct['context.{0}'.format(ctx_field)] = \
-                        construct.pop(ctx_field)
-
-        # TODO: monkey patching a wildcard with a filter, should be refactored
-        wildcards = dict()
-        if filters and 'message.text' in filters:
-            wildcards['message.text'] = filters.pop('message.text')[0]
-
-        return ManagerElasticsearch.\
-            build_request_body(filters=filters,
-                               pagination=pagination,
-                               sort=sort,
-                               range_filters=range_filters,
-                               wildcards=wildcards)
-
-    @swagger.operation(
-        responseclass='List[Event]',
-        nickname="list events",
-        notes='Returns a list of events for optionally provided filters'
-    )
-    @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_events
-    @rest_decorators.create_filters()
-    @rest_decorators.paginate
-    @rest_decorators.rangeable
-    @rest_decorators.projection
-    @rest_decorators.sortable
-    def get(self, _include=None, filters=None,
-            pagination=None, sort=None, range_filters=None, **kwargs):
-        """List events using PosgreSQL as backend."""
+    def _build_select_query(self, _include, filters, pagination, sort):
+        """Build query used to list events for a given execution."""
         if _include is not None:
             current_app.logger.error(
                 'Projections with `_include` parameter are not supported')
             return abort(400)
-
-        engine = db.engine
 
         if 'cloudify_event' not in filters['type']:
             current_app.logger.error(
@@ -831,12 +782,75 @@ class Events(resources.Events):
             'OFFSET :offset'
         )
         query = text(' '.join(raw_query))
-        current_app.logger.error(str(query))
+        return query
+
+    def _build_count_query(self, filters):
+        """Build query used to count events for a given execution."""
+        if 'cloudify_event' not in filters['type']:
+            current_app.logger.error(
+                'At least `type=cloudify_event` filter is expected')
+            return abort(400)
+
+        raw_query = [
+            """
+            SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM
+                        events,
+                        executions
+                    WHERE
+                        events.execution_fk = executions.storage_id AND
+                        executions.id = :execution_id
+                )
+            """
+        ]
+        if 'cloudify_log' in filters['type']:
+            raw_query.append(
+                """
+                +
+                (
+                    SELECT COUNT(*)
+                    FROM
+                        logs,
+                        executions
+                    WHERE
+                        logs.execution_fk = executions.storage_id AND
+                        executions.id = :execution_id
+                )
+                """
+            )
+        query = text(' '.join(raw_query))
+        return query
+
+    @swagger.operation(
+        responseclass='List[Event]',
+        nickname="list events",
+        notes='Returns a list of events for optionally provided filters'
+    )
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_events
+    @rest_decorators.create_filters()
+    @rest_decorators.paginate
+    @rest_decorators.rangeable
+    @rest_decorators.projection
+    @rest_decorators.sortable
+    def get(self, _include=None, filters=None,
+            pagination=None, sort=None, range_filters=None, **kwargs):
+        """List events using PosgreSQL as backend."""
+        engine = db.engine
+
         params = {
             'execution_id': filters['execution_id'][0],
             'limit': pagination['size'],
             'offset': pagination['offset'],
         }
+
+        count_query = self._build_count_query(filters)
+        total = engine.execute(count_query, params).scalar()
+
+        select_query = self._build_select_query(
+            _include, filters, pagination, sort)
 
         def serialize(result):
             """Serialize result."""
@@ -864,11 +878,11 @@ class Events(resources.Events):
 
         results = [
             serialize(result)
-            for result in engine.execute(query, params)
+            for result in engine.execute(select_query, params)
         ]
 
         metadata = {
-            'pagination': dict(pagination, total=0)
+            'pagination': dict(pagination, total=total)
         }
         return ListResult(results, metadata)
 
