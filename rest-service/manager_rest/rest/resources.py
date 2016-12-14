@@ -18,17 +18,26 @@ import collections
 import os
 import shutil
 
-from flask import request
+from datetime import datetime
+
+from flask import (
+    abort,
+    current_app,
+    request,
+)
 from flask_restful import types
 from flask_security import current_user
 from flask_restful_swagger import swagger
 from flask_restful.reqparse import Argument
+
+from sqlalchemy import text
 
 from dsl_parser import utils as dsl_parser_utils
 
 from manager_rest.security import SecuredResource
 from manager_rest.constants import PROVIDER_CONTEXT_ID, SUPPORTED_ARCHIVE_TYPES
 from manager_rest.maintenance import is_bypass_maintenance_mode
+from manager_rest.storage.models_base import db
 from manager_rest.upload_manager import UploadedBlueprintsManager
 from manager_rest import (config,
                           manager_exceptions,
@@ -803,13 +812,151 @@ class DeploymentsIdOutputs(SecuredResource):
 
 class Events(SecuredResource):
 
-    @staticmethod
-    def _query_events():
-        """
-        List events for the provided Elasticsearch query
-        """
-        request_dict = get_json_and_verify_params()
-        return ManagerElasticsearch.search_events(body=request_dict)
+    def _build_select_query(self, _include, filters, pagination, sort):
+        """Build query used to list events for a given execution."""
+        if _include is not None:
+            current_app.logger.error(
+                'Projections with `_include` parameter are not supported')
+            return abort(400)
+
+        if 'cloudify_event' not in filters['type']:
+            current_app.logger.error(
+                'At least `type=cloudify_event` filter is expected')
+            return abort(400)
+
+        raw_query = [
+            """
+            SELECT
+                timestamp,
+                (
+                    SELECT id
+                    FROM deployments
+                    WHERE storage_id = events.deployment_fk
+                ) AS deployment_id,
+                events.message,
+                events.message_code,
+                events.event_type,
+                NULL as logger,
+                NULL as level,
+                'cloudify_event' as type
+            FROM
+                events,
+                executions
+            WHERE
+                events.execution_fk = executions.storage_id AND
+                executions.id = :execution_id
+            """
+        ]
+        if 'cloudify_log' in filters['type']:
+            raw_query.append(
+                """
+                UNION
+                SELECT
+                    timestamp,
+                    (
+                        SELECT id
+                        FROM deployments
+                        WHERE storage_id = logs.deployment_fk
+                    ) AS deployment_id,
+                    logs.message,
+                    NULL AS message_code,
+                    NULL AS event_type,
+                    logs.logger,
+                    logs.level,
+                    'cloudify_log' as type
+                FROM
+                    logs,
+                    executions
+                WHERE
+                    logs.execution_fk = executions.storage_id AND
+                    executions.id = :execution_id
+                """
+            )
+
+        if '@timestamp' not in sort or sort['@timestamp'] != 'asc':
+            current_app.logger.error(
+                'Sorting by `timestamp` is expected')
+            return abort(400)
+        raw_query.append('ORDER BY timestamp ASC')
+
+        if 'size' not in pagination:
+            current_app.logger.error(
+                'Expected `size` pagination parameter')
+            return abort(400)
+
+        if 'offset' not in pagination:
+            current_app.logger.error(
+                'Expected `offset` pagination parameter')
+            return abort(400)
+        raw_query.append(
+            'LIMIT :limit '
+            'OFFSET :offset'
+        )
+        query = text(' '.join(raw_query))
+        return query
+
+    def _build_count_query(self, filters):
+        """Build query used to count events for a given execution."""
+        if 'cloudify_event' not in filters['type']:
+            current_app.logger.error(
+                'At least `type=cloudify_event` filter is expected')
+            return abort(400)
+
+        raw_query = [
+            """
+            SELECT
+                (
+                    SELECT COUNT(*)
+                    FROM
+                        events,
+                        executions
+                    WHERE
+                        events.execution_fk = executions.storage_id AND
+                        executions.id = :execution_id
+                )
+            """
+        ]
+        if 'cloudify_log' in filters['type']:
+            raw_query.append(
+                """
+                +
+                (
+                    SELECT COUNT(*)
+                    FROM
+                        logs,
+                        executions
+                    WHERE
+                        logs.execution_fk = executions.storage_id AND
+                        executions.id = :execution_id
+                )
+                """
+            )
+        query = text(' '.join(raw_query))
+        return query
+
+    def _map_event_to_es(self, event):
+        """Serialize event as if it was returned by elasticsearch."""
+        event = dict(event.items())
+
+        event['message'] = {
+            'text': event['message']
+        }
+        event['context'] = {
+            'deployment_id': event['deployment_id']
+        }
+        del event['deployment_id']
+        if event['type'] == 'cloudify_event':
+            event['message']['arguments'] = None
+            del event['logger']
+            del event['level']
+        elif event['type'] == 'cloudify_log':
+            event['level'] = 'info'
+            del event['event_type']
+
+        for key, value in event.items():
+            if isinstance(value, datetime):
+                event[key] = '{}Z'.format(value.isoformat()[:-3])
+        return event
 
     @swagger.operation(
         nickname='events',
@@ -826,10 +973,59 @@ class Events(SecuredResource):
     @exceptions_handled
     @insecure_rest_method
     def get(self, **kwargs):
-        """
-        List events for the provided Elasticsearch query
-        """
-        return self._query_events()
+        """List events using a SQL backend."""
+        engine = db.engine
+        request_dict = get_json_and_verify_params()
+
+        es_query = request_dict['query']['bool']
+
+        _include = None
+        # This is a trick based on the elasticsearch query pattern
+        # - when only a filter is used it's in a 'must' section
+        # - when multiple filters are used they're in a 'should' section
+        if 'should' in es_query:
+            filters = {'type': ['cloudify_event', 'cloudify_log']}
+        else:
+            filters = {'type': ['cloudify_event']}
+        pagination = {
+            'size': request_dict['size'],
+            'offset': request_dict['from'],
+        }
+        sort = {
+            field: value['order']
+            for es_sort in request_dict['sort']
+            for field, value in es_sort.items()
+        }
+
+        params = {
+            'execution_id': (
+                es_query['must'][0]['match']['context.execution_id']),
+            'limit': request_dict['size'],
+            'offset': request_dict['from'],
+        }
+
+        count_query = self._build_count_query(filters)
+        total = engine.execute(count_query, params).scalar()
+
+        select_query = self._build_select_query(
+            _include, filters, pagination, sort)
+
+        events = [
+            self._map_event_to_es(event)
+            for event in engine.execute(select_query, params)
+        ]
+
+        results = {
+            'hits': {
+                'hits': [
+                    {'_source': event}
+                    for event in events
+                ],
+                'total': total,
+            },
+        }
+
+        return results
 
     @swagger.operation(
         nickname='events',
