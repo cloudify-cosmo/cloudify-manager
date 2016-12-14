@@ -812,9 +812,42 @@ class DeploymentsIdOutputs(SecuredResource):
 
 class Events(SecuredResource):
 
+    """Events resource.
+
+    Throgh the events endpoint a user can retrieve both events and logs as
+    stored in the SQL database.
+
+    """
+
     @staticmethod
     def _build_select_query(_include, filters, pagination, sort):
-        """Build query used to list events for a given execution."""
+        """Build query used to list events for a given execution.
+
+        :param _include:
+            Projection used to get records from database (not currently used)
+        :type _include: list(str)
+        :param filters:
+            Filter selection. It's used to decide if events:
+                {'type': ['cloudify_event']}
+            or both events and logs should be returned:
+                {'type': ['cloudify_event', 'cloudify_log']}
+        :type filters: dict(str, str)
+        :param pagination:
+            Parameters used to limit results returned in a single query.
+            Expected values `size` and `offset` are mapped into SQL as `LIMIT`
+            and `OFFSET`.
+        :type pagination: dict(str, int)
+        :param sort:
+            Result sorting order. The only allowed and expected value is to
+            sort by timestamp in ascending order:
+                {'timestamp': 'asc'}
+        :type sort: dict(str, str)
+        :returns:
+            A SQL query that returns the events found that match the conditions
+            passed as arguments.
+        :rtype: :class:`sqlalchemy.sql.elements.TextClause`
+
+        """
         if _include is not None:
             current_app.logger.error(
                 'Projections with `_include` parameter are not supported')
@@ -898,7 +931,20 @@ class Events(SecuredResource):
 
     @staticmethod
     def _build_count_query(filters):
-        """Build query used to count events for a given execution."""
+        """Build query used to count events for a given execution.
+
+        :param filters:
+            Filter selection. It's used to decide if events:
+                {'type': ['cloudify_event']}
+            or both events and logs should be returned:
+                {'type': ['cloudify_event', 'cloudify_log']}
+        :type filters: dict(str, str)
+        :returns:
+            A SQL query that returns the number of events found that match the
+            conditions passed as arguments.
+        :rtype: :class:`sqlalchemy.sql.elements.TextClause`
+
+        """
         if 'cloudify_event' not in filters['type']:
             current_app.logger.error(
                 'At least `type=cloudify_event` filter is expected')
@@ -937,9 +983,20 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _map_event_to_es(event):
-        """Serialize event as if it was returned by elasticsearch."""
-        event = dict(event.items())
+    def _map_event_to_es(sql_event):
+        """Restructure event data as if it was returned by elasticsearch.
+
+        This restructuration is needed because the API in the past used
+        elasticsearch as the backend and the client implementation still
+        expects data that has the same shape as elasticsearch would return.
+
+        :param sql_event: Event data returned when SQL query was executed
+        :type sql_event: :class:`sqlalchemy.engine.result.RowProxy`
+        :returns: Event as would have returned by elasticsearch
+        :rtype: dict(str)
+
+        """
+        event = dict(sql_event.items())
 
         event['message'] = {
             'text': event['message']
