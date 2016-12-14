@@ -904,19 +904,37 @@ class Events(resources.Events):
     @rest_decorators.sortable
     def delete(self, filters=None, pagination=None, sort=None,
                range_filters=None, **kwargs):
-        """Delete events/logs connected to a certain Deployment ID
-        """
-        query = self._build_query(filters=filters,
-                                  pagination=pagination,
-                                  sort=sort,
-                                  range_filters=range_filters)
-        events = ManagerElasticsearch.search_events(body=query)
-        metadata = ManagerElasticsearch.build_list_result_metadata(query,
-                                                                   events)
-        ManagerElasticsearch.delete_events(events)
+        """Delete events/logs connected to a certain Deployment ID."""
+        if 'cloudify_event' not in filters['type']:
+            current_app.logger.error(
+                'At least `type=cloudify_event` filter is expected')
+            return abort(400)
+
+        raw_query = [
+            """
+            DELETE
+            FROM events
+            WHERE
+                events.deployment_fk = (
+                    SELECT storage_id
+                    FROM deployments
+                    WHERE id = :deployment_id
+                )
+            """
+        ]
+
+        query = text(' '.join(raw_query))
+        params = {
+            'deployment_id': filters['deployment_id'][0],
+        }
+        engine = db.engine
+        result = engine.execute(query, params)
+        total = result.rowcount
+
+        metadata = {
+            'pagination': dict(pagination, total=total)
+        }
 
         # We don't really want to return all of the deleted events, so it's a
-        # bit of a hack to only return the number of events to delete - if any
-        # of the events weren't deleted, we'd have gotten an error from the
-        # method above
-        return ListResult([events['hits']['total']], metadata)
+        # bit of a hack to return an empty list
+        return ListResult([], metadata)
