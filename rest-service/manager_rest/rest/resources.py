@@ -812,7 +812,8 @@ class DeploymentsIdOutputs(SecuredResource):
 
 class Events(SecuredResource):
 
-    def _build_select_query(self, _include, filters, pagination, sort):
+    @staticmethod
+    def _build_select_query(_include, filters, pagination, sort):
         """Build query used to list events for a given execution."""
         if _include is not None:
             current_app.logger.error(
@@ -895,7 +896,8 @@ class Events(SecuredResource):
         query = text(' '.join(raw_query))
         return query
 
-    def _build_count_query(self, filters):
+    @staticmethod
+    def _build_count_query(filters):
         """Build query used to count events for a given execution."""
         if 'cloudify_event' not in filters['type']:
             current_app.logger.error(
@@ -934,7 +936,8 @@ class Events(SecuredResource):
         query = text(' '.join(raw_query))
         return query
 
-    def _map_event_to_es(self, event):
+    @staticmethod
+    def _map_event_to_es(event):
         """Serialize event as if it was returned by elasticsearch."""
         event = dict(event.items())
 
