@@ -1034,7 +1034,6 @@ class Events(SecuredResource):
     @insecure_rest_method
     def get(self, **kwargs):
         """List events using a SQL backend."""
-        engine = db.engine
         request_dict = get_json_and_verify_params()
 
         es_query = request_dict['query']['bool']
@@ -1065,14 +1064,14 @@ class Events(SecuredResource):
         }
 
         count_query = self._build_count_query(filters)
-        total = engine.execute(count_query, params).scalar()
+        total = db.engine.execute(count_query, params).scalar()
 
         select_query = self._build_select_query(
             _include, filters, pagination, sort)
 
         events = [
             self._map_event_to_es(event)
-            for event in engine.execute(select_query, params)
+            for event in db.engine.execute(select_query, params)
         ]
 
         results = {
