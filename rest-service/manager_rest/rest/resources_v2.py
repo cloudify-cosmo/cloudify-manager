@@ -715,7 +715,42 @@ class Events(resources.Events):
     @rest_decorators.sortable
     def get(self, _include=None, filters=None,
             pagination=None, sort=None, range_filters=None, **kwargs):
-        """List events using PosgreSQL as backend."""
+        """List events using a SQL backend.
+
+        :param _include:
+            Projection used to get records from database (not currently used)
+        :type _include: list(str)
+        :param filters:
+            Filter selection.
+
+            It's used to decide if events:
+                {'type': ['cloudify_event']}
+            or both events and logs should be returned:
+                {'type': ['cloudify_event', 'cloudify_log']}
+
+            Also it's used to get only events for a particular execution:
+                {'execution_id': '<some uuid>'}
+        :type filters: dict(str, str)
+        :param pagination:
+            Parameters used to limit results returned in a single query.
+            Expected values `size` and `offset` are mapped into SQL as `LIMIT`
+            and `OFFSET`.
+        :type pagination: dict(str, int)
+        :param sort:
+            Result sorting order. The only allowed and expected value is to
+            sort by timestamp in ascending order:
+                {'timestamp': 'asc'}
+        :type sort: dict(str, str)
+        :returns: Events that match the conditions passed as arguments
+        :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
+        :param range_filters:
+            Apparently was used to select a timestamp interval. It's not
+            currently used.
+        :type range_filters: dict(str)
+        :returns: Events found in the SQL backend
+        :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
+
+        """
         engine = db.engine
 
         params = {

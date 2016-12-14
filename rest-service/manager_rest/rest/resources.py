@@ -1019,7 +1019,14 @@ class Events(SecuredResource):
         return event
 
     def _query_events(self):
-        """Query events using a SQL backend."""
+        """Query events using a SQL backend.
+
+        :returns:
+            Results using a format that resembles the one used by elasticsearch
+            (more information about the format in :meth:`.._map_event_to_es`)
+        :rtype: dict(str)
+
+        """
         request_dict = get_json_and_verify_params()
 
         es_query = request_dict['query']['bool']
