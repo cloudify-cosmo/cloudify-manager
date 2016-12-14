@@ -41,8 +41,8 @@ class Tenant(SQLModelBase):
 
     def to_response(self):
         tenant_dict = super(Tenant, self).to_response()
-        all_groups_names = [group.name for group in self.groups.all()]
-        all_users_names = [user.username for user in self.users.all()]
+        all_groups_names = [group.name for group in self.groups]
+        all_users_names = [user.username for user in self.users]
         tenant_dict['groups'] = all_groups_names
         tenant_dict['users'] = all_users_names
         return tenant_dict
