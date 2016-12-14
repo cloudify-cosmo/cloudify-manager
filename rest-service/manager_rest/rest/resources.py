@@ -1094,7 +1094,12 @@ class Events(SecuredResource):
     @exceptions_handled
     @insecure_rest_method
     def get(self, **kwargs):
-        """List events using a SQL backend."""
+        """List events using a SQL backend.
+
+        :returns: Events found in the SQL backend
+        :rtype: dict(str)
+
+        """
         return self._query_events()
 
     @swagger.operation(

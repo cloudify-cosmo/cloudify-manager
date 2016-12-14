@@ -700,6 +700,13 @@ class PluginsId(SecuredResource):
 
 class Events(resources.Events):
 
+    """Events resource.
+
+    Through the events endpoint a user can retrieve both events and logs as
+    stored in the SQL database.
+
+    """
+
     @swagger.operation(
         responseclass='List[Event]',
         nickname="list events",
