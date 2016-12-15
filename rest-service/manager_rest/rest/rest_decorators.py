@@ -21,17 +21,11 @@ from flask_restful.utils import unpack
 from flask import request, current_app
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 
-
 from manager_rest import utils, config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
 
 from .responses_v2 import ListResponse
 from .rest_utils import skip_nested_marshalling
-
-
-MISSING_PREMIUM_PACKAGE_MESSAGE = 'This feature exists only in the premium' \
-                                  ' edition of Cloudify.\n' \
-                                  'Please contact sales for additional info.'
 
 
 # region V1 decorators
@@ -87,9 +81,6 @@ class marshal_with(object):
     def __call__(self, f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            if not self.response_class:
-                self._premium_feature_abort()
-
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
 
@@ -177,13 +168,6 @@ class marshal_with(object):
         if hasattr(response_class, 'skipped_fields'):
             return response_class.skipped_fields.get(api_version, [])
         return []
-
-    @staticmethod
-    def _premium_feature_abort():
-        utils.abort_error(manager_exceptions.MissingPremiumPackage
-                          (MISSING_PREMIUM_PACKAGE_MESSAGE),
-                          current_app.logger,
-                          hide_server_message=True)
 
 # endregion
 
