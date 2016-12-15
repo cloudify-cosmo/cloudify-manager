@@ -15,7 +15,8 @@
 #
 
 from manager_rest.storage import models
-from manager_rest.security import SecuredResource
+from manager_rest.security import (SecuredResource,
+                                   MissingPremiumFeatureResource)
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.security.resource_permissions import PermissionsHandler
 
@@ -34,8 +35,8 @@ try:
 except ImportError:
     TenantResponse, GroupResponse, UserResponse, ClusterNode, ClusterState = \
         (BaseResponse, ) * 5
-    SecuredMultiTenancyResource = SecuredResource
-    ClusterResourceBase = SecuredResource
+    SecuredMultiTenancyResource = MissingPremiumFeatureResource
+    ClusterResourceBase = MissingPremiumFeatureResource
 
 
 class Tenants(SecuredMultiTenancyResource):
