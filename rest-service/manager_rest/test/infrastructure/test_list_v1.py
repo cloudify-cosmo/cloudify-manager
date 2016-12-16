@@ -37,15 +37,6 @@ class TestResourceListV1(BaseListTest):
         self.sec_blueprint_id = 'test1_blueprint'
         self.sec_deployment_id = 'test1_deployment'
 
-    def _mock_es_search(self, *args, **kwargs):
-        result = {
-            'hits': {
-                'total': 10,
-                'hits': [{'_source': {k: k}} for k in range(1, 6)]
-            }
-        }
-        return result
-
     def test_insecure_endpoints_disabled_by_default(self):
         try:
             self.client.events.get(execution_id='111')
@@ -53,7 +44,6 @@ class TestResourceListV1(BaseListTest):
             self.assertEquals(405, e.status_code)
 
     def test_insecure_endpoints_enabled(self):
-        ManagerElasticsearch.search_events = self._mock_es_search
         from manager_rest.config import instance
         try:
             instance.insecure_endpoints_disabled = False
@@ -62,10 +52,9 @@ class TestResourceListV1(BaseListTest):
             # restore original value
             instance.insecure_endpoints_disabled = True
 
-        self.assertEqual(
-            result,
-            ([{u'1': 1}, {u'2': 2}, {u'3': 3}, {u'4': 4}, {u'5': 5}], 10)
-        )
+        # Since there are not events in the test database
+        # an empty result is returned
+        self.assertEqual(result, ([], 0))
 
     def test_blueprints_list_no_params(self):
         response = self.client.blueprints.list()
