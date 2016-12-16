@@ -26,10 +26,6 @@ class EventsTest(base_test.BaseServerTestCase):
         response = self.post('/events', {})
         self.assertEqual(405, response.status_code)
 
-    def test_build_query_no_args(self):
-        # make sure nothing crashes...
-        Events._build_query()
-
     def test_list_events(self):
         response = self.client.events.list(
             execution_id='<execution_id>',
@@ -57,43 +53,6 @@ class EventsTest(base_test.BaseServerTestCase):
         ManagerElasticsearch.delete_events = staticmethod(delete_events)
         response = self.client.events.delete('dep_id', include_logs=True)
         self.assertEqual(response.items, [5])
-
-    def test_build_query(self):
-        self.maxDiff = None
-        filters, pagination, sort, range_filters = self._get_build_query_args()
-        query = Events._build_query(filters=filters,
-                                    sort=sort,
-                                    pagination=pagination,
-                                    range_filters=range_filters)
-        expected_query = self._get_expected_query()
-        # match the order of conditions list in both queries
-        # to overcome order differences in comparison
-        self._sort_query_conditions_list(expected_query)
-        self._sort_query_conditions_list(query)
-
-        self.assertDictEqual(expected_query, query)
-
-    def _get_build_query_args(self):
-
-        filters = {
-            'blueprint_id': ['some_blueprint'],
-            'deployment_id': ['some_deployment'],
-            'type': ['cloudify_event', 'cloudify_logs']
-        }
-        pagination = {
-            'size': 5,
-            'offset': 3
-        }
-        sort = {
-            '@timestamp': 'desc'
-        }
-        range_filters = {
-            '@timestamp': {
-                'from': '2015-01-01T15:00:0',
-                'to': '2016-12-31T01:00:0'
-            }
-        }
-        return filters, pagination, sort, range_filters
 
     def _mock_es_search(self, *args, **kwargs):
         result = {
