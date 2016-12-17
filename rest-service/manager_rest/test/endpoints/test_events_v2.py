@@ -29,7 +29,7 @@ class EventsTest(base_test.BaseServerTestCase):
     def test_list_events(self):
         response = self.client.events.list(
             execution_id='<execution_id>',
-            sort='@timestamp',
+            _sort='@timestamp',
             _size=100,
             _offset=0,
         )
