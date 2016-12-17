@@ -54,15 +54,6 @@ class EventsTest(base_test.BaseServerTestCase):
         response = self.client.events.delete('dep_id', include_logs=True)
         self.assertEqual(response.items, [5])
 
-    def _mock_es_search(self, *args, **kwargs):
-        result = {
-            'hits': {
-                'total': 10,
-                'hits': [{'_source': {k: k}} for k in range(1, 6)]
-            }
-        }
-        return result
-
     def _mock_es_search_delete(self, *args, **kwargs):
         expected_must_list = [
             {
