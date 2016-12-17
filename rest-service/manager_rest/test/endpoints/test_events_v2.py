@@ -15,8 +15,6 @@
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
-from manager_rest.rest.resources_v2 import Events
-from manager_rest.storage import ManagerElasticsearch
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
@@ -27,7 +25,7 @@ class EventsTest(base_test.BaseServerTestCase):
         self.assertEqual(405, response.status_code)
 
     def test_list_events(self):
-        response = self.client.events.list(
+        self.client.events.list(
             execution_id='<execution_id>',
             _sort='@timestamp',
             _size=100,
@@ -35,8 +33,8 @@ class EventsTest(base_test.BaseServerTestCase):
         )
 
         # TBD: Add events to the database to check results
-        total = 0
-        hits = []
+        # total = 0
+        # hits = []
         # self.assertEquals(total, response.metadata.pagination.total)
         # self.assertEquals(len(hits), len(response.items))
 
