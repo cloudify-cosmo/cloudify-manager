@@ -53,7 +53,8 @@ class MockHTTPClient(HTTPClient):
                    sort=None,
                    expected_status_code=200,
                    stream=False,
-                   versioned_url=True):
+                   versioned_url=True,
+                   timeout=None):
         if CLIENT_API_VERSION == 'v1':
             # in v1, HTTPClient won't append the version part of the URL
             # on its own, so it's done here instead
@@ -66,10 +67,11 @@ class MockHTTPClient(HTTPClient):
             params=params,
             headers=headers,
             expected_status_code=expected_status_code,
-            stream=stream)
+            stream=stream
+        )
 
     def _do_request(self, requests_method, request_url, body, params, headers,
-                    expected_status_code, stream, verify):
+                    expected_status_code, stream, verify, timeout=None):
         if 'get' in requests_method.__name__:
             response = self.app.get(request_url,
                                     headers=headers,
