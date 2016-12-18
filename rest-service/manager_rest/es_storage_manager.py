@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import psutil
 import logging
 
 import elasticsearch.exceptions
@@ -79,7 +80,18 @@ class ESStorageManager(object):
                 hosts=[{'host': self.es_host, 'port': self.es_port}])
         return self._es_connection
 
+    def _validate_available_memory(self):
+        memory_status = psutil.virtual_memory()
+        available_mb = memory_status.available / 1024 / 1024
+        min_available_memory_mb = config.instance().min_available_memory_mb
+        if available_mb < min_available_memory_mb:
+            raise manager_exceptions.InsufficientMemoryError(
+                'Insufficient memory in manager, '
+                'needed: {0}mb, available: {1}mb'
+                ''.format(min_available_memory_mb, available_mb))
+
     def _list_docs(self, doc_type, model_class, body=None, fields=None):
+        self._validate_available_memory()
         include = list(fields) if fields else True
         es_params = {'max_raw_size_mb': config.instance().max_results_mb}
         result = self._connection.search(index=STORAGE_INDEX_NAME,
