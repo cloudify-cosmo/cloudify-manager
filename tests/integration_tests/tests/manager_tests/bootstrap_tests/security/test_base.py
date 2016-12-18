@@ -23,10 +23,7 @@ from manager_rest.test.security_utils import get_test_users
 
 from integration_tests import ManagerTestCase
 from integration_tests.framework import constants, utils
-from integration_tests.tests import utils as test_utils
 
-SECURITY_PROP_PATH = ('node_types.cloudify\.nodes\.MyCloudifyManager.'
-                      'properties.security.default.userstore.users')
 REST_PLUGIN_PATH = 'node_templates.rest_service.properties.plugins'
 USERDATA_PATH = 'node_templates.manager_host.properties.parameters.user_data'
 
@@ -36,15 +33,20 @@ class TestSecuredRestBase(ManagerTestCase):
     def bootstrap_secured_manager(self):
         self.bootstrap(inputs=self.get_manager_blueprint_inputs(),
                        modify_blueprint_func=self._update_manager_blueprint)
+        self._add_test_users()
+
+    def _add_test_users(self):
+        for user in get_test_users():
+            self.client.users.create(
+                user['username'],
+                user['password'],
+                user['role']
+            )
 
     def _update_manager_blueprint(self, patcher, manager_blueprint_dir):
         for key, value in self.get_manager_blueprint_override().items():
             patcher.set_value(key, value)
         self.handle_ssl_files(manager_blueprint_dir)
-        test_manager_types_path = os.path.join(manager_blueprint_dir,
-                                               'types/manager-types.yaml')
-        with test_utils.patch_yaml(test_manager_types_path) as patch:
-            patch.append_value(SECURITY_PROP_PATH, get_test_users())
         self.set_env_vars()
 
     def handle_ssl_files(self, manager_blueprint_dir):
