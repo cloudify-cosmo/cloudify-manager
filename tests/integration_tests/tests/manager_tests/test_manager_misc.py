@@ -13,16 +13,13 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import sh
 import os
 import tarfile
 import tempfile
 from contextlib import closing
 
-import requests
-import sh
-
 from integration_tests import ManagerTestCase
-from integration_tests.tests import utils as test_utils
 
 
 class MiscManagerTest(ManagerTestCase):
@@ -69,60 +66,6 @@ class MiscManagerTest(ManagerTestCase):
         self.cfy.ssh(command='echo {0} > {1}'.format(content, remote_path))
         self.assertEqual(content, self.read_manager_file(remote_path))
 
-    def test_no_es_clustering(self):
-        """Tests that when bootstrapping we don't cluster two elasticsearch
-        nodes.
-
-        This test mainly covers the use case where a user bootstraps two
-        managers on the same network.
-
-        The test runs two nodes on the same machine. If they're not clustered,
-        two nodes on different servers will definitely not be clustered.
-        """
-        with self.env.update_config(additional_exposed_ports=[9201]):
-            self.run_manager()
-            self.logger.info('Duplicating elasticsearch config...')
-            self.execute_on_manager('mkdir /etc/es_test')
-            self.execute_on_manager('cp /etc/elasticsearch/elasticsearch.yml '
-                                    '/etc/es_test/es.yml')
-
-            self.logger.info('Replacing ES REST port for second node...')
-            sed_cmd = ('sed -i -e "s/http.port: 9200/http.port: 9201/" '
-                       '/etc/es_test/es.yml')
-            self.execute_on_manager(sed_cmd)
-
-            self.logger.info('Running second node...')
-            es_cmd = ('/usr/share/elasticsearch/bin/elasticsearch '
-                      '-Des.pidfile=/var/run/elasticsearch/es_test.pid '
-                      '-Des.default.path.home=/usr/share/elasticsearch '
-                      '-Des.default.path.logs=/var/log/elasticsearch '
-                      '-Des.default.path.data=/var/lib/elasticsearch '
-                      '-Des.default.config=/etc/es_test/es.yml '
-                      '-Des.default.path.conf=/etc/es_test')
-            with tempfile.NamedTemporaryFile() as f:
-                f.write('nohup {0} >& /dev/null < /dev/null &'.format(es_cmd))
-                f.flush()
-                self.copy_file_to_manager(f.name, '/etc/es_test/run.sh')
-            self.execute_on_manager('bash /etc/es_test/run.sh')
-
-            node1_url = 'http://{0}:9200/_nodes'.format(
-                    self.get_manager_ip())
-            node2_url = 'http://{0}:9201/_nodes'.format(
-                    self.get_manager_ip())
-
-            def get_node_count_impl(url):
-                return len(requests.get(url).json()['nodes'])
-
-            def get_node_count(url):
-                return test_utils.do_retries(
-                        get_node_count_impl, url=url,
-                        timeout_seconds=60)
-
-            self.logger.info(
-                'Verifying that both nodes are running but not clustered...')
-            self.assertEqual(get_node_count(node1_url), 1)
-            self.assertEqual(get_node_count(node2_url), 1)
-
     def test_logrotation(self):
         """Tests logrotation configuration on the manager.
 
@@ -165,10 +108,12 @@ class MiscManagerTest(ManagerTestCase):
         for rotation in range(1, 9):
             for log_file in test_log_files:
                 full_log_path = os.path.join(logs_dir, log_file)
-                self.logger.info('fallocating 101M in {0}...'.format(
+                self.logger.info('Allocating 101M in {0}...'.format(
                     full_log_path))
                 self.execute_on_manager(
-                    'fallocate -l 101M {0}'.format(full_log_path))
+                    # Allocate 101 blocks of 1024Kb each (101M in total)
+                    'dd if=/dev/zero of={0} bs=1024k count=101'
+                    .format(full_log_path))
                 self.logger.info('Running cron.hourly to apply rotation...')
                 self.execute_on_manager('run-parts /etc/cron.hourly')
                 rotated_log_path = '{0}.{1}'.format(full_log_path, rotation)

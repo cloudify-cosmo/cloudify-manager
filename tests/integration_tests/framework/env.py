@@ -34,8 +34,13 @@ logger = cloudify.utils.setup_logger('TESTENV')
 cloudify.utils.setup_logger('cloudify.rest_client', logging.INFO)
 
 # Silencing 3rd party logs
-for logger_name in ('sh', 'pika', 'requests.packages.urllib3.connectionpool'):
-    cloudify.utils.setup_logger(logger_name, logging.WARNING)
+third_party_logs = {
+    'sh': logging.WARNING,
+    'pika.adapters.base_connection': logging.CRITICAL,
+    'requests': logging.WARNING
+}
+for logger_name, logger_level in third_party_logs.iteritems():
+    cloudify.utils.setup_logger(logger_name, logger_level)
 
 instance = None
 

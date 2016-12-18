@@ -85,7 +85,7 @@ class SnapshotRestore(object):
             shutil.rmtree(self._tempdir)
 
     def _restore_files_to_manager(self):
-        ctx.logger.info('Restoring config from the archive to the manager')
+        ctx.logger.info('Restoring files from the archive to the manager')
         utils.copy_files_between_manager_and_snapshot(
             self._tempdir,
             self._config,

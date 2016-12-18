@@ -50,6 +50,7 @@ class SnapshotCreate(object):
         try:
             manager_version = utils.get_manager_version(self._client)
 
+            self._dump_files()
             self._dump_elasticsearch_events(metadata)
             self._dump_postgres()
             self._dump_influxdb()
@@ -74,8 +75,8 @@ class SnapshotCreate(object):
             error=error
         )
 
-    def _dump_config(self):
-        ctx.logger.info('Dumping config to the archive from the manager')
+    def _dump_files(self):
+        ctx.logger.info('Dumping files to the archive from the manager')
         utils.copy_files_between_manager_and_snapshot(
             self._tempdir,
             self._config,
