@@ -24,6 +24,15 @@ class ManagerException(Exception):
         self.error_code = error_code
 
 
+class InsufficientMemoryError(ManagerException):
+    INSUFFICIENT_MEMORY_ERROR_CODE = 'insufficient_memory_error'
+
+    def __init__(self, *args, **kwargs):
+        super(InsufficientMemoryError, self).__init__(
+            400, InsufficientMemoryError.INSUFFICIENT_MEMORY_ERROR_CODE,
+            *args, **kwargs)
+
+
 class ConflictError(ManagerException):
     CONFLICT_ERROR_CODE = 'conflict_error'
 

@@ -54,6 +54,7 @@ class Config(object):
         self._insecure_endpoints_disabled = False
         self.max_results = 1000
         self.max_results_mb = 30
+        self.min_available_memory_mb = 512
 
     @property
     def db_address(self):
