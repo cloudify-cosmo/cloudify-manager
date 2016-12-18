@@ -50,7 +50,7 @@ class UTCDateTime(db.TypeDecorator):
 
 
 class SQLModelBase(db.Model, structure.ModelBase):
-    """Abstract base class for all SQL models that allows [de]serialization
+    """Abstract base class for all SQL resource_models.py that allows [de]serialization
     """
     # SQLAlchemy syntax
     __abstract__ = True

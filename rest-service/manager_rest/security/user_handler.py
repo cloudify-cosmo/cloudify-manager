@@ -26,7 +26,7 @@ def user_loader(request):
     Having this function makes sure that this will work:
     > from flask_security import current_user
     > current_user
-    <manager_rest.storage.models.User object at 0x50d9d10>
+    <manager_rest.storage.resource_models.py.User object at 0x50d9d10>
 
     :param request: flask's request
     :return: A user object, or None if not found

@@ -121,3 +121,5 @@ def generate_progress_func(total_size, assert_equal,
         iteration[0] += 1
 
     return print_progress
+
+

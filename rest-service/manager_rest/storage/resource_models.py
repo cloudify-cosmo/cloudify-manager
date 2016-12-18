@@ -31,9 +31,6 @@ from .mixins import (
     TopLevelCreatorMixin,
     TopLevelMixin,
 )
-from .models_states import (DeploymentModificationState,
-                            SnapshotState,
-                            ExecutionState)
 
 
 from aria.storage import (
@@ -59,8 +56,16 @@ class Blueprint(TopLevelResource, base.BlueprintBase):
 class Snapshot(TopLevelResource):
     __tablename__ = 'snapshots'
 
+    CREATED = 'created'
+    FAILED = 'failed'
+    CREATING = 'creating'
+    UPLOADED = 'uploaded'
+
+    STATES = [CREATED, FAILED, CREATING, UPLOADED]
+    END_STATES = [CREATED, FAILED, UPLOADED]
+
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
-    status = db.Column(db.Enum(*SnapshotState.STATES, name='snapshot_status'))
+    status = db.Column(db.Enum(*STATES, name='snapshot_status'))
     error = db.Column(db.Text)
 
 
@@ -94,7 +99,7 @@ class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin, base
         v2=['scaling_groups']
     )
     proxies = {'blueprint_id': flask_fields.String}
-    _private_fields = DerivedResource._private_fields + ['blueprint_id']
+    _private_fields = DerivedResource._private_fields + base.DeploymentBase._private_fields
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     updated_at = db.Column(UTCDateTime)
@@ -140,7 +145,7 @@ class Execution(TopLevelMixin, DerivedResource, base.ExecutionBase):
         'blueprint_id': flask_fields.String,
         'deployment_id': flask_fields.String
     }
-    _private_fields = DerivedResource._private_fields + ['deployment_id']
+    _private_fields = DerivedResource._private_fields + base.ExecutionBase._private_fields
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     started_at = db.Column(UTCDateTime, nullable=True, index=True)
@@ -236,7 +241,7 @@ class DeploymentUpdate(DerivedResource, DerivedMixin, base.DeploymentUpdateBase)
         'deployment_id': flask_fields.String,
         'steps': flask_fields.Raw,
     }
-    _private_fields = DerivedResource._private_fields + ['execution_id']
+    _private_fields = DerivedResource._private_fields + base.DeploymentUpdateBase._private_fields
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
 
@@ -261,7 +266,8 @@ class DeploymentUpdateStep(DerivedResource, DerivedMixin, base.DeploymentUpdateS
     __tablename__ = 'deployment_update_steps'
 
     proxies = {'deployment_update_id': flask_fields.String}
-    _private_fields = DerivedResource._private_fields + ['deployment_update_id']
+    _private_fields = \
+        DerivedResource._private_fields + base.DeploymentUpdateStepBase._private_fields
 
     @hybrid_property
     def parent(self):
@@ -278,7 +284,8 @@ class DeploymentModification(DerivedResource, DerivedMixin, base.DeploymentModif
     __tablename__ = 'deployment_modifications'
 
     proxies = {'deployment_id': flask_fields.String}
-    _private_fields = DerivedResource._private_fields + ['deployment_id']
+    _private_fields = \
+        DerivedResource._private_fields + base.DeploymentModificationBase._private_fields
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     ended_at = db.Column(UTCDateTime, index=True)
@@ -308,7 +315,7 @@ class Node(DerivedResource, DerivedMixin, base.NodeBase):
         'deployment_id': flask_fields.String,
         'host_id': flask_fields.String,
     }
-    _private_fields = DerivedResource._private_fields + ['deployment_id']
+    _private_fields = DerivedResource._private_fields + base.NodeBase._private_fields
 
     @hybrid_property
     def parent(self):
@@ -335,7 +342,7 @@ class NodeInstance(DerivedResource, DerivedMixin, base.NodeInstanceBase):
         'deployment_id': flask_fields.String,
         'host_id': flask_fields.String,
     }
-    _private_fields = DerivedResource._private_fields + base.NodeInstanceBase._private_fields + ['node_id']
+    _private_fields = DerivedResource._private_fields + base.NodeInstanceBase._private_fields
 
     @hybrid_property
     def parent(self):
@@ -355,9 +362,7 @@ class Task(DerivedResource, DerivedMixin, base.TaskBase):
     __tablename__ = 'tasks'
 
     proxies = {'deployment_id': flask_fields.String}
-    _private_fields = DerivedResource._private_fields + ['node_instance_id',
-                                                         'relationship_instance_id',
-                                                         'execution_id']
+    _private_fields = DerivedResource._private_fields + base.TaskBase._private_fields
 
     @hybrid_property
     def parent(self):

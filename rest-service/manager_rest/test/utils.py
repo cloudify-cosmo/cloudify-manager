@@ -14,7 +14,12 @@
 #  * limitations under the License.
 
 import tarfile
+from contextlib import GeneratorContextManager
+from functools import partial
+from functools import wraps
 from os import path, getcwd
+
+from manager_rest.storage import models
 
 
 def get_resource(resource):
@@ -59,3 +64,40 @@ def tar_file(file_to_tar, destination_dir, tar_name=''):
     with tarfile.open(tar_path, "w:gz") as tar:
         tar.add(file_to_tar, arcname=tar_name)
     return tar_path
+
+
+class validate_execution_transitions(object):
+
+    def __init__(self):
+        self._original_valid_transition = models.Execution.VALID_TRANSITIONS.copy()
+
+    @staticmethod
+    def _enter(new_transition):
+        new_transition = new_transition or {k: set(models.Execution.STATES) - set(k)
+                                            for k in models.Execution.STATES}
+        models.Execution.VALID_TRANSITIONS.clear()
+        models.Execution.VALID_TRANSITIONS.update(new_transition)
+
+    def __enter__(self, new_transition=None):
+        self._enter(new_transition)
+
+    def _exit(self):
+        models.Execution.VALID_TRANSITIONS.clear()
+        models.Execution.VALID_TRANSITIONS.update(self._original_valid_transition)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._exit()
+
+    def __call__(self, func=None, new_transition=None, **kwargs):
+        if func is None:
+            return partial(self.__call__,
+                           func=self.__call__,
+                           new_transition=new_transition,
+                           **kwargs)
+
+        @wraps(func)
+        def _wrapper(*args, **kwargs):
+            self._enter(new_transition)
+            func(*args, **kwargs)
+            self._exit()
+        return _wrapper

@@ -22,7 +22,6 @@ from cloudify_rest_client.exceptions import UserUnauthorizedError
 
 from manager_rest.storage import models
 from manager_rest.test.base_test import LATEST_API_VERSION
-from manager_rest.storage.models_states import ExecutionState
 
 from .test_base import SecurityTestBase
 
@@ -541,9 +540,9 @@ class AuthorizationTests(SecurityTestBase):
 
     def _reset_execution_status_in_db(self, execution_id):
         execution = self.sm.get(models.Execution, execution_id)
-        execution.status = ExecutionState.STARTED
+        execution.status = models.Execution.STARTED
         execution.error = ''
         self.sm.update(execution)
         updated_execution = self.admin_client.executions.get(
             execution_id=execution_id)
-        self.assertEqual(ExecutionState.STARTED, updated_execution['status'])
+        self.assertEqual(models.Execution.STARTED, updated_execution['status'])

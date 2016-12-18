@@ -53,7 +53,8 @@ class MockHTTPClient(HTTPClient):
                    sort=None,
                    expected_status_code=200,
                    stream=False,
-                   versioned_url=True):
+                   versioned_url=True,
+                   **kwargs):
         if CLIENT_API_VERSION == 'v1':
             # in v1, HTTPClient won't append the version part of the URL
             # on its own, so it's done here instead
@@ -69,7 +70,7 @@ class MockHTTPClient(HTTPClient):
             stream=stream)
 
     def _do_request(self, requests_method, request_url, body, params, headers,
-                    expected_status_code, stream, verify):
+                    expected_status_code, stream, verify, **kwargs):
         if 'get' in requests_method.__name__:
             response = self.app.get(request_url,
                                     headers=headers,
@@ -149,18 +150,13 @@ def task_state():
     return Execution.TERMINATED
 
 
-def finalize_execution_status(execution):
-    execution.status = Execution.STARTED
-    execution.status = task_state()
-    return execution.status
-
-
 class MockCeleryClient(object):
 
     def execute_task(self, task_queue, task_id=None, kwargs=None):
         sm = get_storage_manager()
         execution = sm.get(models.Execution, task_id)
-        finalize_execution_status(execution)
+        execution.status = execution.STARTED
+        execution.status = task_state()
         execution.error = ''
         sm.update(execution)
         return MockAsyncResult(task_id)

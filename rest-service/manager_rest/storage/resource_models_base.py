@@ -33,7 +33,7 @@ class SQLResourceBase(SQLModelBase):
     __abstract__ = True
 
     # Differentiates between resources (blueprints, nodes, etc.) and other
-    # table models (users, tenants, etc.)
+    # table resource_models.py (users, tenants, etc.)
     is_resource = True
 
     # Indicates whether the `id` column in this class should be unique

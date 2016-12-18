@@ -29,10 +29,9 @@ from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
 from mock import MagicMock
 
-from manager_rest.storage.models import Tenant
+from manager_rest.storage.models import Tenant, Execution
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
-from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
 from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
@@ -502,7 +501,7 @@ class BaseServerTestCase(unittest.TestCase):
                     format(execution.workflow_id, execution.deployment_id))
 
             execution = client.executions.get(execution.id)
-            if execution.status in ExecutionState.END_STATES:
+            if execution.status in Execution.END_STATES:
                 break
             time.sleep(3)
 
@@ -550,7 +549,7 @@ class BaseServerTestCase(unittest.TestCase):
             execution_id = 'execution-{0}'.format(unique_str)
         execution = models.Execution(
             id=execution_id,
-            status=ExecutionState.TERMINATED,
+            status=Execution.TERMINATED,
             workflow_id='',
             created_at=utils.get_formatted_timestamp(),
             error='',

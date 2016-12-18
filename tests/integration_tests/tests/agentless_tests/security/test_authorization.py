@@ -14,9 +14,8 @@
 #    * limitations under the License.
 #
 
-from manager_rest.storage.models_states import ExecutionState
-
 from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest.storage import models
 
 from .security_base import TestAuthenticationBase
 from integration_tests.tests.utils import get_resource as resource
@@ -87,7 +86,7 @@ class AuthorizationTest(TestAuthenticationBase):
     def _wait_for_deployment_executions(self, deployment_id):
         executions = self.client.executions.list(deployment_id=deployment_id)
         executions = [e for e in executions
-                      if e.status not in ExecutionState.END_STATES]
+                      if e.status not in models.Execution.END_STATES]
         if executions:
             self.wait_for_execution_to_end(executions[0])
 
