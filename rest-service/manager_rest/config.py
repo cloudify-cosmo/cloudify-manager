@@ -59,6 +59,7 @@ class Config(object):
         self.broker_ssl_cert_path = None
         self.agent_rest_cert_path = None
         self.max_results = 1000
+        self.min_available_memory_mb = 256
 
         self.warnings = []
 
