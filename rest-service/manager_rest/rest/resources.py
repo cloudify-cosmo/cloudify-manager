@@ -853,6 +853,10 @@ class Events(SecuredResource):
                 'Projections with `_include` parameter are not supported')
             return abort(400)
 
+        if not isinstance(filters, dict) or 'type' not in filters:
+            current_app.logger.error('Filter by type is expected')
+            return abort(400)
+
         if 'cloudify_event' not in filters['type']:
             current_app.logger.error(
                 'At least `type=cloudify_event` filter is expected')
@@ -907,11 +911,18 @@ class Events(SecuredResource):
                 """
             )
 
-        if '@timestamp' not in sort or sort['@timestamp'] != 'asc':
+        if (not isinstance(sort, dict) or
+                '@timestamp' not in sort or
+                sort['@timestamp'] != 'asc'):
             current_app.logger.error(
-                'Sorting by `timestamp` is expected')
+                'Sorting ascending by `timestamp` is expected')
             return abort(400)
         raw_query.append('ORDER BY timestamp ASC')
+
+        if not isinstance(pagination, dict):
+            current_app.logger.error(
+                'Expected `pagination` parameter')
+            return abort(400)
 
         if 'size' not in pagination:
             current_app.logger.error(
@@ -922,6 +933,7 @@ class Events(SecuredResource):
             current_app.logger.error(
                 'Expected `offset` pagination parameter')
             return abort(400)
+
         raw_query.append(
             'LIMIT :limit '
             'OFFSET :offset'
