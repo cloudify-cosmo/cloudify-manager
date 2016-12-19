@@ -23,6 +23,7 @@ from flask_security import current_user
 from manager_rest import manager_exceptions, config
 from manager_rest.storage.models_base import db
 from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest.storage.models import Tenant
 
 from sqlalchemy import or_ as sql_or
 from sqlalchemy.exc import SQLAlchemyError
@@ -112,7 +113,7 @@ class SQLStorageManager(object):
                 query = query.order_by(column)
         return query
 
-    def _filter_query(self, query, model_class, filters):
+    def _filter_query(self, query, model_class, filters, tenants_filter):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -121,7 +122,9 @@ class SQLStorageManager(object):
         of such values)
         :return: An SQLAlchemy AppenderQuery object
         """
-        query = self._add_tenant_filter(query, model_class)
+        query = self._add_tenant_filter(query,
+                                        model_class,
+                                        tenants_filter)
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
         return query
@@ -136,25 +139,55 @@ class SQLStorageManager(object):
 
         return query
 
-    @staticmethod
-    def _add_tenant_filter(query, model_class):
+    def _add_tenant_filter(self, query, model_class, tenants_filter):
         """Filter by the tenant ID associated with `model_class` (either
         directly via a relationship with the tenants table, or via an
         ancestor who has such a relationship)
         """
+        # No tenant filters on models that are not defied as resources such
+        # as Users/Groups
+        if not model_class.is_resource:
+            tenants = []
         # System administrators should see all resources, regardless of tenant.
         # Queries of elements that aren't resources (tenants, users, etc.),
         # shouldn't be filtered as well
-        if current_user.is_admin or not model_class.is_resource:
-            return query
-
+        elif current_user.is_admin:
+            tenants = self._get_tenants_by_filter(tenants_filter)
         # Other users should only see resources for which they were granted
         # privileges via association with a tenant
-        tenant_ids = [tenant.id for tenant in current_user.get_all_tenants()]
+        elif tenants_filter:
+            tenants = self._get_user_tenants_by_filter(tenants_filter)
+        else:
+            tenants = current_user.get_all_tenants()
 
-        # Filter by the `tenant_id` column
-        clauses = [model_class.tenant_id == t_id for t_id in tenant_ids]
+        # Filter by the `tenant_id` column. If tenant's list is empty, clauses
+        # will not have effect on the query.
+        clauses = [model_class.tenant_id == tenant.id for tenant in tenants]
         return query.filter(sql_or(*clauses))
+
+    def _get_user_tenants_by_filter(self, tenants_filter):
+        user_tenants = current_user.get_all_tenants()
+        user_tenant_names = [tenant.name for tenant in user_tenants]
+        # Check if invalid filters that are not associated with the user
+        # were passed
+        diff = [t_name for t_name in tenants_filter if t_name not
+                in user_tenant_names]
+        if diff:
+            raise manager_exceptions.NotFoundError(
+                'One or more tenant(s) do not exist or are not associated '
+                'with the current user [{0}]'.format(', '.join(diff)))
+        return [tenant for tenant in user_tenants if tenant.name
+                in tenants_filter]
+
+    def _get_tenants_by_filter(self, tenants_filter):
+        tenants = []
+        for filter_name in tenants_filter:
+            tenant = self.get(Tenant,
+                              filter_name,
+                              include=['id'],
+                              filters={'name': filter_name})
+            tenants.append(tenant)
+        return tenants
 
     @staticmethod
     def _add_permissions_filter(query, model_class):
@@ -212,7 +245,6 @@ class SQLStorageManager(object):
         column/label objects instead of column names)
         """
         include = include or []
-        filters = filters or dict()
         sort = sort or OrderedDict()
 
         all_columns = set(include) | set(filters.keys()) | set(sort.keys())
@@ -240,13 +272,15 @@ class SQLStorageManager(object):
         :return: A sorted and filtered query with only the relevant
         columns
         """
-
+        filters = filters or dict()
+        # The tenant may not necessarily be defined as a model property
+        tenants_filter = filters.pop('tenant_name', [])
         include, filters, sort, joins = self._get_joins_and_converted_columns(
             model_class, include, filters, sort
         )
 
         query = self._get_base_query(model_class, include, joins)
-        query = self._filter_query(query, model_class, filters)
+        query = self._filter_query(query, model_class, filters, tenants_filter)
         query = self._sort_query(query, sort)
         return query
 
