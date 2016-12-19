@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import psutil
+
 from collections import OrderedDict
 
 from flask import current_app
@@ -412,6 +414,18 @@ class SQLStorageManager(object):
         current_app.logger.debug('Returning {0}'.format(result))
         return result
 
+    def _validate_available_memory(self):
+        """Validate minimal available memory in manager
+        """
+        memory_status = psutil.virtual_memory()
+        available_mb = memory_status.available / 1024 / 1024
+        min_available_memory_mb = config.instance().min_available_memory_mb
+        if available_mb < min_available_memory_mb:
+            raise manager_exceptions.InsufficientMemoryError(
+                'Insufficient memory in manager, '
+                'needed: {0}mb, available: {1}mb'
+                ''.format(min_available_memory_mb, available_mb))
+
     def list(self,
              model_class,
              include=None,
@@ -420,6 +434,7 @@ class SQLStorageManager(object):
              sort=None):
         """Return a (possibly empty) list of `model_class` results
         """
+        self._validate_available_memory()
         if filters:
             msg = 'List `{0}` with filter {1}'.format(model_class.__name__,
                                                       filters)
