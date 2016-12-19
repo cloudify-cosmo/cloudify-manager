@@ -957,6 +957,10 @@ class Events(SecuredResource):
         :rtype: :class:`sqlalchemy.sql.elements.TextClause`
 
         """
+        if not isinstance(filters, dict) or 'type' not in filters:
+            current_app.logger.error('Filter by type is expected')
+            return abort(400)
+
         if 'cloudify_event' not in filters['type']:
             current_app.logger.error(
                 'At least `type=cloudify_event` filter is expected')

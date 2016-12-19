@@ -135,3 +135,54 @@ class BuildSelectQueryTest(TestCase):
         del params['pagination']['offset']
         with self.assertRaises(BadRequest):
             Events._build_select_query(**params)
+
+
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class BuildCountQueryTest(TestCase):
+
+    """Event count query."""
+
+    def setUp(self):
+        """Patch flask application.
+
+        The application is only used to write to logs, so it can be patched for
+        unit testing.
+
+        """
+        patcher = patch('manager_rest.rest.resources.current_app')
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_from_events(self):
+        """Query against events table."""
+        filters = {'type': ['cloudify_event']}
+        query = str(Events._build_count_query(filters))
+        match = re.search(r'FROM\s+events', query)
+        self.assertTrue(match)
+
+    def test_from_logs(self):
+        """Query against both events and logs tables."""
+        filters = {'type': ['cloudify_event', 'cloudify_log']}
+        query = str(Events._build_count_query(filters))
+        events_match = re.search(r'FROM\s+events', query)
+        self.assertTrue(events_match)
+        logs_match = re.search(r'FROM\s+logs', query)
+        self.assertTrue(logs_match)
+
+    def test_filter_required(self):
+        """Filter parameter is expected to be dictionary."""
+        filters = None
+        with self.assertRaises(BadRequest):
+            Events._build_count_query(filters)
+
+    def test_filter_type_required(self):
+        """Filter by type is expected."""
+        filters = {}
+        with self.assertRaises(BadRequest):
+            Events._build_count_query(filters)
+
+    def test_filter_type_event(self):
+        """Filter is set at least to cloudify_event."""
+        filters = {'type': ['cloudify_log']}
+        with self.assertRaises(BadRequest):
+            Events._build_count_query(filters)
