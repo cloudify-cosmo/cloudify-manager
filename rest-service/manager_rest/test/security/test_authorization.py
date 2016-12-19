@@ -24,6 +24,7 @@ from manager_rest.storage import models
 from manager_rest.test.base_test import LATEST_API_VERSION
 
 from .test_base import SecurityTestBase
+from ..utils import validate_execution_transitions
 
 RUNNING_EXECUTIONS_MESSAGE = 'There are running executions for this deployment'
 UNAUTHORIZED_ERROR_MESSAGE = '401: User unauthorized'
@@ -66,6 +67,7 @@ class AuthorizationTests(SecurityTestBase):
         self._test_get_deployments()
         self._test_delete_deployments()
 
+    @validate_execution_transitions()
     def test_execution_operations(self):
         # setup
         self.admin_client.blueprints.upload(

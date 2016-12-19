@@ -73,7 +73,7 @@ class validate_execution_transitions(object):
 
     @staticmethod
     def _enter(new_transition):
-        new_transition = new_transition or {k: set(models.Execution.STATES) - set(k)
+        new_transition = new_transition or {k: set(models.Execution.STATES + [None]) - set(k)
                                             for k in models.Execution.STATES}
         models.Execution.VALID_TRANSITIONS.clear()
         models.Execution.VALID_TRANSITIONS.update(new_transition)

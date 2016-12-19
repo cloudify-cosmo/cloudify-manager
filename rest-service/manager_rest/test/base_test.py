@@ -405,8 +405,7 @@ class BaseServerTestCase(unittest.TestCase):
                            archive_func=archiving.make_targzfile,
                            blueprint_dir='mock_blueprint'):
 
-        resource_path = self._version_url(
-            '/blueprints/{1}'.format(CLIENT_API_VERSION, blueprint_id))
+        resource_path = self._version_url('/blueprints/{0}'.format(blueprint_id))
 
         result = [
             resource_path,

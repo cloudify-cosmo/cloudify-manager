@@ -920,14 +920,19 @@ class ResourceManager(object):
         node_id = instance_dict.pop('node_id')
 
         # Link the node instance object to to the node, and add it to the DB
-        new_node_instance = models.NodeInstance(**instance_dict)
+        host_id = instance_dict.pop('host_id')
+        hosts = self.sm.list(models.NodeInstance, filters={'id': host_id})
+        new_node_instance = models.NodeInstance(host=hosts[0] if hosts else None, **instance_dict)
         node = self.get_node(deployment_id, node_id)
         new_node_instance.node = node
+        if new_node_instance.host is None:
+            new_node_instance.host = new_node_instance
         self.sm.put(new_node_instance)
 
         # Return the IDs to the dict for later use
         instance_dict['deployment_id'] = deployment_id
         instance_dict['node_id'] = node_id
+        instance_dict['host_id'] = host_id
 
     def evaluate_deployment_outputs(self, deployment_id):
         deployment = self.sm.get(
