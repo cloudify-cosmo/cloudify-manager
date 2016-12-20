@@ -15,6 +15,7 @@
 import re
 
 from copy import deepcopy
+from datetime import datetime
 from unittest import TestCase
 
 from mock import patch
@@ -186,3 +187,65 @@ class BuildCountQueryTest(TestCase):
         filters = {'type': ['cloudify_log']}
         with self.assertRaises(BadRequest):
             Events._build_count_query(filters)
+
+
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class MapEventToEsTest(TestCase):
+
+    """Map event information to elasticsearch format."""
+
+    def test_map_event(self):
+        """Map event as returned by SQL query to elasticsearch style output."""
+        sql_event = {
+            'deployment_id': '<deployment_id>',
+            'event_type': '<event_type>',
+            'level': None,
+            'timestamp': datetime(2016, 12, 9),
+            'message': '<message>',
+            'message_code': None,
+            'type': u'cloudify_event',
+            'logger': None,
+        }
+        expected_es_event = {
+            'context': {
+                'deployment_id': '<deployment_id>',
+            },
+            'event_type': '<event_type>',
+            'timestamp': '2016-12-09T00:00Z',
+            'message': {
+                'arguments': None,
+                'text': '<message>',
+            },
+            'message_code': None,
+            'type': 'cloudify_event',
+        }
+
+        es_event = Events._map_event_to_es(sql_event)
+        self.assertDictEqual(es_event, expected_es_event)
+
+    def test_map_log(self):
+        """Map log as returned by SQL query to elasticsearch style output."""
+        sql_log = {
+            'deployment_id': '<deployment_id>',
+            'event_type': None,
+            'level': '<level>',
+            'timestamp': datetime(2016, 12, 9),
+            'message': '<message>',
+            'message_code': None,
+            'type': 'cloudify_log',
+            'logger': '<logger>',
+        }
+        expected_es_log = {
+            'context': {
+                'deployment_id': '<deployment_id>',
+            },
+            'level': '<level>',
+            'timestamp': '2016-12-09T00:00Z',
+            'message': {'text': '<message>'},
+            'message_code': None,
+            'type': 'cloudify_log',
+            'logger': '<logger>',
+        }
+
+        es_log = Events._map_event_to_es(sql_log)
+        self.assertDictEqual(es_log, expected_es_log)

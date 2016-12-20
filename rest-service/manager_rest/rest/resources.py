@@ -1026,7 +1026,6 @@ class Events(SecuredResource):
             del event['logger']
             del event['level']
         elif event['type'] == 'cloudify_log':
-            event['level'] = 'info'
             del event['event_type']
 
         for key, value in event.items():
