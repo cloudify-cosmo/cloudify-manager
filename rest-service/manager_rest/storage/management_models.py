@@ -16,7 +16,10 @@
 from sqlalchemy.ext.declarative import declared_attr
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
-from manager_rest.constants import ADMIN_ROLE, USER_ROLE, SUSPENDED_ROLE
+from manager_rest.constants import (ADMIN_ROLE,
+                                    USER_ROLE,
+                                    SUSPENDED_ROLE,
+                                    BOOTSTRAP_ADMIN_ID)
 
 from .models_base import db, SQLModelBase, UTCDateTime
 from .relationships import many_to_many_relationship
@@ -146,6 +149,10 @@ class User(SQLModelBase, UserMixin):
     @property
     def is_suspended(self):
         return self.role == SUSPENDED_ROLE
+
+    @property
+    def is_bootstrap_admin(self):
+        return self.id == BOOTSTRAP_ADMIN_ID
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
