@@ -171,6 +171,13 @@ class ResourceManager(object):
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be restored'
             )
+        # If tenant_name is None, we're restoring a v4 snapshot
+        if not tenant_name and not current_user.is_bootstrap_admin:
+            raise manager_exceptions.UnauthorizedError(
+                '{0} is not authorized to restore v4 '
+                'snapshots. Only the bootstrap admin is allowed to '
+                'perform this action'.format(current_user)
+            )
         _, execution = self._execute_system_workflow(
             wf_id='restore_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.restore',

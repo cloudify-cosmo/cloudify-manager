@@ -92,7 +92,7 @@ class Postgres(object):
         username, password = self._get_admin_credentials()
         return "UPDATE users " \
                "SET username='{0}', password='{1}' " \
-               "WHERE id=1;" \
+               "WHERE id=0;" \
                .format(username, password)
 
     def _get_execution_restore_query(self):
@@ -104,7 +104,7 @@ class Postgres(object):
                "is_system_workflow, " \
                "status, workflow_id, tenant_id, creator_id) " \
                "VALUES ('{0}', '{1}', 't', " \
-               "'started', 'restore_snapshot', '1', 1);"\
+               "'started', 'restore_snapshot', '1', 0);"\
             .format(ctx.execution_id, record_creation_date)
 
     def create_clean_db(self):
@@ -116,9 +116,9 @@ class Postgres(object):
         queries.append(self._get_execution_restore_query())
         # Make the admin user actually has the admin role
         queries.append("INSERT INTO users_roles (user_id, role_id)"
-                       "VALUES (1, 1);")
+                       "VALUES (0, 1);")
         queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                       "VALUES (1, 1);")
+                       "VALUES (0, 1);")
         for query in queries:
             self.run_query(query)
 
@@ -248,12 +248,12 @@ class Postgres(object):
 
     def _add_preserve_defaults_queries(self, queries):
         """Replace regular truncate queries for users/tenants with ones that
-        preserve the default user/tenant (id=1)
+        preserve the default user (id=0)/tenant (id=1)
         Used when restoring old snapshots that will not have those entities
         :param queries: List of truncate queries
         """
         queries.remove(self._TRUNCATE_QUERY.format('users'))
-        queries.append('DELETE FROM users CASCADE WHERE id != 1;')
+        queries.append('DELETE FROM users CASCADE WHERE id != 0;')
         queries.remove(self._TRUNCATE_QUERY.format('tenants'))
         queries.append('DELETE FROM tenants CASCADE WHERE id != 1;')
 
@@ -267,12 +267,11 @@ class Postgres(object):
 
     def _get_admin_credentials(self):
         response = self.run_query("SELECT username, password "
-                                  "FROM users WHERE id=1")
-        username, password = response['all'][0]
+                                  "FROM users WHERE id=0")
         if not response:
             raise NonRecoverableError('Illegal state - '
                                       'missing admin user in db')
-        return username, password
+        return response['all'][0]
 
     def _get_restore_execution_date(self):
         response = self.run_query("SELECT created_at "
