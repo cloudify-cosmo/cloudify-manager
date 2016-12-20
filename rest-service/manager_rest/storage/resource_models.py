@@ -39,9 +39,7 @@ from aria.storage import (
 # region Top Level Resources
 
 
-class Blueprint(TopLevelResource, base.BlueprintBase):
-    __tablename__ = 'blueprints'
-
+class Blueprint(base.BlueprintBase, TopLevelResource):
     skipped_fields = dict(
         TopLevelResource.skipped_fields,
         v1=['main_file_name', 'description']
@@ -51,11 +49,9 @@ class Blueprint(TopLevelResource, base.BlueprintBase):
     updated_at = db.Column(UTCDateTime, index=True)
 
     # old style id support
-    blueprint_name = None
-
     @declared_attr
     def blueprint_id(cls):
-        return association_proxy('blueprint', cls.user_id_column())
+        return association_proxy('blueprint', cls.name_column_name())
 
 
 class Snapshot(TopLevelResource):
@@ -74,29 +70,15 @@ class Snapshot(TopLevelResource):
     error = db.Column(db.Text)
 
 
-class Plugin(TopLevelResource):
-    __tablename__ = 'plugins'
-
-    archive_name = db.Column(db.Text, nullable=False, index=True)
-    distribution = db.Column(db.Text)
-    distribution_release = db.Column(db.Text)
-    distribution_version = db.Column(db.Text)
-    excluded_wheels = db.Column(db.PickleType)
-    package_name = db.Column(db.Text, nullable=False, index=True)
-    package_source = db.Column(db.Text)
-    package_version = db.Column(db.Text)
-    supported_platform = db.Column(db.PickleType)
-    supported_py_versions = db.Column(db.PickleType)
+class Plugin(base.PluginBase, TopLevelResource):
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
-    wheels = db.Column(db.PickleType, nullable=False)
 
 # endregion
 
 
 # region Derived Resources
 
-class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin, base.DeploymentBase):
-    __tablename__ = 'deployments'
+class Deployment(base.DeploymentBase, TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin):
 
     skipped_fields = dict(
         TopLevelResource.skipped_fields,
@@ -121,7 +103,7 @@ class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin, base
 
     @declared_attr
     def blueprint_id(cls):
-        return association_proxy('blueprint', cls.user_id_column())
+        return association_proxy('blueprint', cls.name_column_name())
 
     @classproperty
     def resource_fields(self):
@@ -147,8 +129,7 @@ class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin, base
                 for wf_name, wf in deployment_workflows.iteritems()]
 
 
-class Execution(TopLevelMixin, DerivedResource, base.ExecutionBase):
-    __tablename__ = 'executions'
+class Execution(base.ExecutionBase, TopLevelMixin, DerivedResource):
 
     proxies = {
         'blueprint_id': flask_fields.String,
@@ -169,12 +150,12 @@ class Execution(TopLevelMixin, DerivedResource, base.ExecutionBase):
     def parent(cls):
         return Deployment
 
-    def __str__(self):
-        id_name, id_value = self._get_identifier()
+    def __repr__(self):
+        id_name = self.name_column_name()
         return '<{0} {1}=`{2}` (status={3})>'.format(
             self.__class__.__name__,
             id_name,
-            id_value,
+            getattr(self, id_name),
             self.status
         )
 
@@ -185,7 +166,7 @@ class Execution(TopLevelMixin, DerivedResource, base.ExecutionBase):
 
     @declared_attr
     def deployment_id(cls):
-        return association_proxy('deployment', cls.user_id_column())
+        return association_proxy('deployment', cls.name_column_name())
 
 
 class Event(DerivedResource, DerivedMixin):
@@ -255,8 +236,7 @@ class Log(DerivedResource, DerivedMixin):
         return Execution
 
 
-class DeploymentUpdate(DerivedResource, DerivedMixin, base.DeploymentUpdateBase):
-    __tablename__ = 'deployment_updates'
+class DeploymentUpdate(base.DeploymentUpdateBase, DerivedResource, DerivedMixin):
 
     proxies = {
         'execution_id': flask_fields.String,
@@ -280,15 +260,15 @@ class DeploymentUpdate(DerivedResource, DerivedMixin, base.DeploymentUpdateBase)
     # old style id support
     @declared_attr
     def execution_id(cls):
-        return association_proxy('execution', cls.user_id_column())
+        return association_proxy('execution', cls.name_column_name())
 
     @declared_attr
     def deployment_id(cls):
-        return association_proxy('deployment', cls.user_id_column())
+        return association_proxy('deployment', cls.name_column_name())
 
     @declared_attr
     def blueprint_id(cls):
-        return association_proxy('deployment', 'blueprint_{0}'.format(cls.user_id_column()))
+        return association_proxy('deployment', 'blueprint_{0}'.format(cls.name_column_name()))
 
     def to_response(self):
         dep_update_dict = super(DeploymentUpdate, self).to_response()
@@ -297,8 +277,7 @@ class DeploymentUpdate(DerivedResource, DerivedMixin, base.DeploymentUpdateBase)
         return dep_update_dict
 
 
-class DeploymentUpdateStep(DerivedResource, DerivedMixin, base.DeploymentUpdateStepBase):
-    __tablename__ = 'deployment_update_steps'
+class DeploymentUpdateStep(base.DeploymentUpdateStepBase, DerivedResource, DerivedMixin):
 
     proxies = {'deployment_update_id': flask_fields.String}
     _private_fields = \
@@ -317,11 +296,10 @@ class DeploymentUpdateStep(DerivedResource, DerivedMixin, base.DeploymentUpdateS
     # old style id support
     @declared_attr
     def deployment_update_id(cls):
-        return association_proxy('deployment_update', cls.user_id_column())
+        return association_proxy('deployment_update', cls.name_column_name())
 
 
-class DeploymentModification(DerivedResource, DerivedMixin, base.DeploymentModificationBase):
-    __tablename__ = 'deployment_modifications'
+class DeploymentModification(base.DeploymentModificationBase, DerivedResource, DerivedMixin):
 
     proxies = {'deployment_id': flask_fields.String}
     _private_fields = \
@@ -343,11 +321,10 @@ class DeploymentModification(DerivedResource, DerivedMixin, base.DeploymentModif
     # old style id support
     @declared_attr
     def deployment_id(cls):
-        return association_proxy('deployment', cls.user_id_column())
+        return association_proxy('deployment', cls.name_column_name())
 
 
-class Node(DerivedResource, DerivedMixin, base.NodeBase):
-    __tablename__ = 'nodes'
+class Node(base.NodeBase, DerivedResource, DerivedMixin):
 
     is_id_unique = False
     skipped_fields = dict(
@@ -376,19 +353,18 @@ class Node(DerivedResource, DerivedMixin, base.NodeBase):
     # old style id support
     @declared_attr
     def host_id(cls):
-        return association_proxy('host', cls.user_id_column())
+        return association_proxy('host', cls.name_column_name())
 
     @declared_attr
     def deployment_id(cls):
-        return association_proxy('deployment', cls.user_id_column())
+        return association_proxy('deployment', cls.name_column_name())
 
     @declared_attr
     def blueprint_id(cls):
-        return association_proxy('deployment', 'blueprint_{0}'.format(cls.user_id_column()))
+        return association_proxy('deployment', 'blueprint_{0}'.format(cls.name_column_name()))
 
 
-class NodeInstance(DerivedResource, DerivedMixin, base.NodeInstanceBase):
-    __tablename__ = 'node_instances'
+class NodeInstance(base.NodeInstanceBase, DerivedResource, DerivedMixin):
 
     skipped_fields = dict(
         TopLevelResource.skipped_fields,
@@ -415,7 +391,7 @@ class NodeInstance(DerivedResource, DerivedMixin, base.NodeInstanceBase):
     # old style id support
     @declared_attr
     def node_id(cls):
-        return association_proxy('node', cls.user_id_column())
+        return association_proxy('node', cls.name_column_name())
 
     @declared_attr
     def deployment_id(cls):
@@ -423,14 +399,12 @@ class NodeInstance(DerivedResource, DerivedMixin, base.NodeInstanceBase):
 
     @declared_attr
     def host_id(cls):
-        return association_proxy('host', cls.user_id_column())
+        return association_proxy('host', cls.name_column_name())
 
     relationships = db.Column(aria_types.List)
 
 
-class Task(DerivedResource, DerivedMixin, base.TaskBase):
-
-    __tablename__ = 'tasks'
+class Task(base.TaskBase, DerivedResource, DerivedMixin):
 
     proxies = {'deployment_id': flask_fields.String}
     _private_fields = DerivedResource._private_fields + base.TaskBase._private_fields
@@ -446,7 +420,7 @@ class Task(DerivedResource, DerivedMixin, base.TaskBase):
     # old style id support
     @declared_attr
     def execution_id(cls):
-        return association_proxy('execution', cls.user_id_column())
+        return association_proxy('execution', cls.name_column_name())
 
     relationship_instance_fk = None
     relationship_instance_name = None

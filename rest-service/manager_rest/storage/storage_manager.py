@@ -345,7 +345,7 @@ class SQLStorageManager(object):
             return
 
         filters = {
-            'id': getattr(instance, instance.user_id_column()),
+            'id': getattr(instance, instance.name_column_name()),
             # 'tenant_id': self.current_tenant.id
         }
 

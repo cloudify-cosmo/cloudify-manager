@@ -49,9 +49,18 @@ class UTCDateTime(db.TypeDecorator):
             return value
 
 
-class SQLModelBase(db.Model, structure.ModelBase):
+class SQLModelBase(db.Model, structure.ModelMixin):
     """Abstract base class for all SQL resource_models.py that allows [de]serialization
     """
+
+    @classmethod
+    def name_column_name(cls):
+        return 'name'
+
+    @classmethod
+    def id_column_name(cls):
+        return 'id'
+
     # SQLAlchemy syntax
     __abstract__ = True
 
@@ -113,12 +122,6 @@ class SQLModelBase(db.Model, structure.ModelBase):
             type_name = column_obj.type.__class__.__name__
             fields_dict[field_name] = self._sql_to_flask_type_map[type_name]
         return fields_dict
-
-    def _get_identifier(self):
-        """A helper method that allows classes to override if in order to
-        change the default string representation
-        """
-        return 'id', self.id
 
     @classmethod
     def get_fields(cls, field_list):

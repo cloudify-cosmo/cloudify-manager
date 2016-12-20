@@ -32,6 +32,18 @@ class SQLResourceBase(SQLModelBase):
     # SQLAlchemy syntax
     __abstract__ = True
 
+    # Some must-have columns for all resources
+    @classmethod
+    def id_column_name(cls):
+        return 'storage_id'
+
+    @classmethod
+    def name_column_name(cls):
+        return 'id'
+
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
     # Differentiates between resources (blueprints, nodes, etc.) and other
     # table resource_models.py (users, tenants, etc.)
     is_resource = True
@@ -49,19 +61,6 @@ class SQLResourceBase(SQLModelBase):
 
     # Lists of fields to skip when using older versions of the client
     skipped_fields = {'v1': [], 'v2': [], 'v2.1': []}
-
-    # Some must-have columns for all resources
-    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-
-    @classmethod
-    def storage_id_column(cls):
-        return 'storage_id'
-
-    id = db.Column(db.Text, index=True)
-
-    @classmethod
-    def user_id_column(cls):
-        return 'id'
 
     @classproperty
     def resource_fields(cls):
