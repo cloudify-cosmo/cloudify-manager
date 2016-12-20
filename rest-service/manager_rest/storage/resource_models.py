@@ -72,6 +72,7 @@ class Snapshot(TopLevelResource):
 
 class Plugin(base.PluginBase, TopLevelResource):
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
+    excluded_wheels = db.Column(aria_types.List)
 
 # endregion
 
@@ -349,6 +350,7 @@ class Node(base.NodeBase, DerivedResource, DerivedMixin):
 
     tenant_id = association_proxy('deployment', 'tenant_id')
     relationships = db.Column(aria_types.List)
+    plugins_to_install = db.Column(aria_types.List)
 
     # old style id support
     @declared_attr
