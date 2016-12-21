@@ -32,8 +32,8 @@ from flask_security import current_user
 
 from sqlalchemy import (
     bindparam,
+    func,
     literal_column,
-    text,
 )
 
 from dsl_parser import utils as dsl_parser_utils
@@ -969,36 +969,29 @@ class Events(SecuredResource):
                 'At least `type=cloudify_event` filter is expected')
             return abort(400)
 
-        raw_query = [
-            """
-            SELECT
-                (
-                    SELECT COUNT(*)
-                    FROM
-                        events,
-                        executions
-                    WHERE
-                        events.execution_fk = executions.storage_id AND
-                        executions.id = :execution_id
-                )
-            """
-        ]
-        if 'cloudify_log' in filters['type']:
-            raw_query.append(
-                """
-                +
-                (
-                    SELECT COUNT(*)
-                    FROM
-                        logs,
-                        executions
-                    WHERE
-                        logs.execution_fk = executions.storage_id AND
-                        executions.id = :execution_id
-                )
-                """
+        events_query = (
+            db.session.query(func.count('*').label('count'))
+            .filter(
+                Event.execution_fk == Execution.storage_id,
+                Execution.id == bindparam('execution_id'),
             )
-        query = text(' '.join(raw_query))
+        )
+
+        if 'cloudify_log' in filters['type']:
+            logs_query = (
+                db.session.query(func.count('*').label('count'))
+                .filter(
+                    Log.execution_fk == Execution.storage_id,
+                    Execution.id == bindparam('execution_id'),
+                )
+            )
+            query = db.session.query(
+                events_query.subquery().c.count +
+                logs_query.subquery().c.count
+            )
+        else:
+            query = db.session.query(events_query.subquery().c.count)
+
         return query
 
     @staticmethod

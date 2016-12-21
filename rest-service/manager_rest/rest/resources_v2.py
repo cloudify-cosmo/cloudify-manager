@@ -756,8 +756,6 @@ class Events(resources.Events):
         :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
 
         """
-        engine = db.engine
-
         params = {
             'execution_id': filters['execution_id'][0],
             'limit': pagination['size'],
@@ -765,7 +763,7 @@ class Events(resources.Events):
         }
 
         count_query = self._build_count_query(filters)
-        total = engine.execute(count_query, params).scalar()
+        total = count_query.params(**params).scalar()
 
         select_query = self._build_select_query(
             _include, filters, pagination, sort)
