@@ -1073,7 +1073,7 @@ class Events(SecuredResource):
         }
 
         count_query = self._build_count_query(filters)
-        total = db.engine.execute(count_query, params).scalar()
+        total = count_query.params(**params).scalar()
 
         select_query = self._build_select_query(
             _include, filters, pagination, sort)
