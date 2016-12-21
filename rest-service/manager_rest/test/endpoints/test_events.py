@@ -14,16 +14,49 @@
 
 import re
 
+from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime
 from unittest import TestCase
 
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from mock import patch
 from nose.plugins.attrib import attr
 from werkzeug.exceptions import BadRequest
 
 from manager_rest.rest.resources import Events
 from manager_rest.test import base_test
+
+
+EventResultTuple = namedtuple(
+    'EventResult',
+    [
+        'deployment_id',
+        'event_type',
+        'level',
+        'timestamp',
+        'message',
+        'message_code',
+        'type',
+        'logger',
+    ],
+)
+
+
+class EventResult(EventResultTuple):
+
+    """Event result.
+
+    This is a data structure similar to:
+    :class:`sqlalchemy.util._collections.result`
+    so that it can be used for testing
+
+    """
+
+    def keys(self):
+        """Return event fields."""
+        return self._fields
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -54,25 +87,25 @@ class BuildSelectQueryTest(TestCase):
         unit testing.
 
         """
-        patcher = patch('manager_rest.rest.resources.current_app')
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        current_app_patcher = patch('manager_rest.rest.resources.current_app')
+        current_app_patcher.start()
+        self.addCleanup(current_app_patcher.stop)
+
+        db_patcher = patch('manager_rest.rest.resources.db')
+        self.db = db_patcher.start()
+        self.addCleanup(db_patcher.stop)
 
     def test_from_events(self):
         """Query against events table."""
-        query = str(Events._build_select_query(**self.DEFAULT_PARAMS))
-        match = re.search(r'FROM\s+events', query)
-        self.assertTrue(match)
+        query = Events._build_select_query(**self.DEFAULT_PARAMS)
+        self.assertFalse(self.db.session.query().filter().union.called)
 
     def test_from_logs(self):
         """Query against both events and logs tables."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters']['type'].append('cloudify_log')
-        query = str(Events._build_select_query(**params))
-        events_match = re.search(r'FROM\s+events', query)
-        self.assertTrue(events_match)
-        logs_match = re.search(r'FROM\s+logs', query)
-        self.assertTrue(logs_match)
+        Events._build_select_query(**params)
+        self.assertTrue(self.db.session.query().filter().union.called)
 
     def test_include_set_to_none(self):
         """Include parameter is expected to be set to None."""
@@ -196,16 +229,16 @@ class MapEventToEsTest(TestCase):
 
     def test_map_event(self):
         """Map event as returned by SQL query to elasticsearch style output."""
-        sql_event = {
-            'deployment_id': '<deployment_id>',
-            'event_type': '<event_type>',
-            'level': None,
-            'timestamp': datetime(2016, 12, 9),
-            'message': '<message>',
-            'message_code': None,
-            'type': u'cloudify_event',
-            'logger': None,
-        }
+        sql_event = EventResult(
+            deployment_id='<deployment_id>',
+            event_type='<event_type>',
+            level=None,
+            timestamp=datetime(2016, 12, 9),
+            message='<message>',
+            message_code=None,
+            type='cloudify_event',
+            logger=None,
+        )
         expected_es_event = {
             'context': {
                 'deployment_id': '<deployment_id>',
@@ -225,16 +258,16 @@ class MapEventToEsTest(TestCase):
 
     def test_map_log(self):
         """Map log as returned by SQL query to elasticsearch style output."""
-        sql_log = {
-            'deployment_id': '<deployment_id>',
-            'event_type': None,
-            'level': '<level>',
-            'timestamp': datetime(2016, 12, 9),
-            'message': '<message>',
-            'message_code': None,
-            'type': 'cloudify_log',
-            'logger': '<logger>',
-        }
+        sql_log = EventResult(
+            deployment_id='<deployment_id>',
+            event_type=None,
+            level='<level>',
+            timestamp=datetime(2016, 12, 9),
+            message='<message>',
+            message_code=None,
+            type='cloudify_log',
+            logger='<logger>',
+        )
         expected_es_log = {
             'context': {
                 'deployment_id': '<deployment_id>',

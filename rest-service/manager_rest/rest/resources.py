@@ -1006,7 +1006,7 @@ class Events(SecuredResource):
         expects data that has the same shape as elasticsearch would return.
 
         :param sql_event: Event data returned when SQL query was executed
-        :type sql_event: :class:`sqlalchemy.engine.result.RowProxy`
+        :type sql_event: :class:`sqlalchemy.util._collections.result`
         :returns: Event as would have returned by elasticsearch
         :rtype: dict(str)
 
