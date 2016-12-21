@@ -30,7 +30,11 @@ from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 from flask_security import current_user
 
-from sqlalchemy import text
+from sqlalchemy import (
+    bindparam,
+    literal_column,
+    text,
+)
 
 from dsl_parser import utils as dsl_parser_utils
 
@@ -38,6 +42,12 @@ from manager_rest.security import SecuredResource
 from manager_rest.constants import PROVIDER_CONTEXT_ID, SUPPORTED_ARCHIVE_TYPES
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.storage.models_base import db
+from manager_rest.storage.resource_models import (
+    Deployment,
+    Execution,
+    Event,
+    Log,
+)
 from manager_rest.upload_manager import UploadedBlueprintsManager
 from manager_rest import (config,
                           manager_exceptions,
@@ -862,53 +872,43 @@ class Events(SecuredResource):
                 'At least `type=cloudify_event` filter is expected')
             return abort(400)
 
-        raw_query = [
-            """
-            SELECT
-                timestamp,
-                (
-                    SELECT id
-                    FROM deployments
-                    WHERE storage_id = events.deployment_fk
-                ) AS deployment_id,
-                events.message,
-                events.message_code,
-                events.event_type,
-                NULL as logger,
-                NULL as level,
-                'cloudify_event' as type
-            FROM
-                events,
-                executions
-            WHERE
-                events.execution_fk = executions.storage_id AND
-                executions.id = :execution_id
-            """
-        ]
+        query = (
+            db.session.query(
+                Event.timestamp.label('timestamp'),
+                db.session.query(Deployment.id.label('deployment_id'))
+                    .filter(Deployment.storage_id == Event.deployment_fk)
+                    .subquery('deployment'),
+                Event.message,
+                Event.message_code,
+                Event.event_type,
+                literal_column('NULL').label('logger'),
+                literal_column('NULL').label('level'),
+                literal_column("'cloudify_event'").label('type'),
+            )
+            .filter(
+                Event.execution_fk == Execution.storage_id,
+                Execution.id == bindparam('execution_id'),
+            )
+        )
+
         if 'cloudify_log' in filters['type']:
-            raw_query.append(
-                """
-                UNION
-                SELECT
-                    timestamp,
-                    (
-                        SELECT id
-                        FROM deployments
-                        WHERE storage_id = logs.deployment_fk
-                    ) AS deployment_id,
-                    logs.message,
-                    NULL AS message_code,
-                    NULL AS event_type,
-                    logs.logger,
-                    logs.level,
-                    'cloudify_log' as type
-                FROM
-                    logs,
-                    executions
-                WHERE
-                    logs.execution_fk = executions.storage_id AND
-                    executions.id = :execution_id
-                """
+            query = query.union(
+                db.session.query(
+                    Log.timestamp.label('timestamp'),
+                    db.session.query(Deployment.id.label('deployment_id'))
+                        .filter(Deployment.storage_id == Log.deployment_fk)
+                        .subquery('deployment'),
+                    Log.message,
+                    literal_column('NULL').label('message_code'),
+                    literal_column('NULL').label('event_type'),
+                    Log.logger,
+                    Log.level,
+                    literal_column("'cloudify_log'").label('type'),
+                )
+                .filter(
+                    Log.execution_fk == Execution.storage_id,
+                    Execution.id == bindparam('execution_id'),
+                )
             )
 
         if (not isinstance(sort, dict) or
@@ -917,7 +917,7 @@ class Events(SecuredResource):
             current_app.logger.error(
                 'Sorting ascending by `timestamp` is expected')
             return abort(400)
-        raw_query.append('ORDER BY timestamp ASC')
+        query = query.order_by('timestamp')
 
         if not isinstance(pagination, dict):
             current_app.logger.error(
@@ -929,16 +929,15 @@ class Events(SecuredResource):
                 'Expected `size` pagination parameter')
             return abort(400)
 
+        query = query.limit(bindparam('limit'))
+
         if 'offset' not in pagination:
             current_app.logger.error(
                 'Expected `offset` pagination parameter')
             return abort(400)
 
-        raw_query.append(
-            'LIMIT :limit '
-            'OFFSET :offset'
-        )
-        query = text(' '.join(raw_query))
+        query = query.offset(bindparam('offset'))
+
         return query
 
     @staticmethod
@@ -1012,7 +1011,10 @@ class Events(SecuredResource):
         :rtype: dict(str)
 
         """
-        event = dict(sql_event.items())
+        event = {
+            attr: getattr(sql_event, attr)
+            for attr in sql_event.keys()
+        }
 
         event['message'] = {
             'text': event['message']
@@ -1079,7 +1081,7 @@ class Events(SecuredResource):
 
         events = [
             self._map_event_to_es(event)
-            for event in db.engine.execute(select_query, params)
+            for event in select_query.params(**params).all()
         ]
 
         results = {

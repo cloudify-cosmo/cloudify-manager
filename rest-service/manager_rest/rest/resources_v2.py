@@ -772,7 +772,7 @@ class Events(resources.Events):
 
         results = [
             self._map_event_to_es(event)
-            for event in engine.execute(select_query, params)
+            for event in select_query.params(**params).all()
         ]
 
         metadata = {
