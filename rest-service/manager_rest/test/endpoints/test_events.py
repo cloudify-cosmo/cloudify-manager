@@ -19,8 +19,6 @@ from copy import deepcopy
 from datetime import datetime
 from unittest import TestCase
 
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from mock import patch
 from nose.plugins.attrib import attr
 from werkzeug.exceptions import BadRequest
@@ -97,7 +95,7 @@ class BuildSelectQueryTest(TestCase):
 
     def test_from_events(self):
         """Query against events table."""
-        query = Events._build_select_query(**self.DEFAULT_PARAMS)
+        Events._build_select_query(**self.DEFAULT_PARAMS)
         self.assertFalse(self.db.session.query().filter().union.called)
 
     def test_from_logs(self):

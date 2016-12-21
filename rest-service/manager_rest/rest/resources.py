@@ -875,9 +875,11 @@ class Events(SecuredResource):
         query = (
             db.session.query(
                 Event.timestamp.label('timestamp'),
-                db.session.query(Deployment.id.label('deployment_id'))
+                (
+                    db.session.query(Deployment.id.label('deployment_id'))
                     .filter(Deployment.storage_id == Event.deployment_fk)
-                    .subquery('deployment'),
+                    .subquery('deployment')
+                ),
                 Event.message,
                 Event.message_code,
                 Event.event_type,
@@ -895,9 +897,11 @@ class Events(SecuredResource):
             query = query.union(
                 db.session.query(
                     Log.timestamp.label('timestamp'),
-                    db.session.query(Deployment.id.label('deployment_id'))
+                    (
+                        db.session.query(Deployment.id.label('deployment_id'))
                         .filter(Deployment.storage_id == Log.deployment_fk)
-                        .subquery('deployment'),
+                        .subquery('deployment')
+                    ),
                     Log.message,
                     literal_column('NULL').label('message_code'),
                     literal_column('NULL').label('event_type'),
