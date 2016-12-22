@@ -26,7 +26,10 @@ from flask import (
     request,
 )
 from flask_restful_swagger import swagger
-from sqlalchemy import text
+from sqlalchemy import (
+    bindparam,
+    text,
+)
 
 from manager_rest import (
     config,
@@ -42,6 +45,11 @@ from manager_rest.rest import (
 )
 from manager_rest.security import SecuredResource
 from manager_rest.storage.models_base import db
+from manager_rest.storage.resource_models import (
+    Deployment,
+    Event,
+    Log,
+)
 from manager_rest.storage.models_states import SnapshotState
 from manager_rest.upload_manager import (
     UploadedPluginsManager,
@@ -797,31 +805,37 @@ class Events(resources.Events):
     def delete(self, filters=None, pagination=None, sort=None,
                range_filters=None, **kwargs):
         """Delete events/logs connected to a certain Deployment ID."""
+        if not isinstance(filters, dict) or 'type' not in filters:
+            current_app.logger.error('Filter by type is expected')
+            return abort(400)
+
         if 'cloudify_event' not in filters['type']:
             current_app.logger.error(
                 'At least `type=cloudify_event` filter is expected')
             return abort(400)
 
-        raw_query = [
-            """
-            DELETE
-            FROM events
-            WHERE
-                events.deployment_fk = (
-                    SELECT storage_id
-                    FROM deployments
-                    WHERE id = :deployment_id
-                )
-            """
-        ]
-
-        query = text(' '.join(raw_query))
+        deployment_query = (
+            db.session.query(Deployment.storage_id)
+            .filter(Deployment.id == bindparam('deployment_id'))
+        )
         params = {
             'deployment_id': filters['deployment_id'][0],
         }
-        engine = db.engine
-        result = engine.execute(query, params)
-        total = result.rowcount
+
+        event_query = (
+            db.session.query(Event)
+            .filter(Event.deployment_fk == deployment_query.as_scalar())
+        )
+        total = event_query.count().params(*params).scalar()
+        event_query.params(*params).delete()
+
+        if 'cloudify_log' in filters['type']:
+            log_query = (
+                db.session.query(Log)
+                .filter(Event.deployment_fk == deployment_query.as_scalar())
+            )
+            total += log_query.count().params(*params).scalar()
+            log_query.params(*params).delete()
 
         metadata = {
             'pagination': dict(pagination, total=total)
