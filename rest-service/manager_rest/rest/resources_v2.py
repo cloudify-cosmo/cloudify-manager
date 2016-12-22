@@ -823,16 +823,16 @@ class Events(resources.Events):
             db.session.query(Event)
             .filter(Event.deployment_fk == deployment_query.as_scalar())
         )
-        total = event_query.count().params(*params).scalar()
-        event_query.params(*params).delete()
+        total = event_query.params(**params).count()
+        event_query.params(**params).delete('fetch')
 
         if 'cloudify_log' in filters['type']:
             log_query = (
                 db.session.query(Log)
-                .filter(Event.deployment_fk == deployment_query.as_scalar())
+                .filter(Log.deployment_fk == deployment_query.as_scalar())
             )
-            total += log_query.count().params(*params).scalar()
-            log_query.params(*params).delete()
+            total += log_query.params(**params).count()
+            log_query.params(**params).delete('fetch')
 
         metadata = {
             'pagination': dict(pagination, total=total)
