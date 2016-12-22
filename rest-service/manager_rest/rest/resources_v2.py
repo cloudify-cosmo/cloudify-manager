@@ -26,10 +26,7 @@ from flask import (
     request,
 )
 from flask_restful_swagger import swagger
-from sqlalchemy import (
-    bindparam,
-    text,
-)
+from sqlalchemy import bindparam
 
 from manager_rest import (
     config,
