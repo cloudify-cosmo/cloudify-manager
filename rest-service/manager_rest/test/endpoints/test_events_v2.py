@@ -25,7 +25,7 @@ class EventsTest(base_test.BaseServerTestCase):
         self.assertEqual(405, response.status_code)
 
     def test_list_events(self):
-        self.client.events.list(
+        response = self.client.events.list(
             execution_id='<execution_id>',
             _sort='@timestamp',
             _size=100,
@@ -33,10 +33,10 @@ class EventsTest(base_test.BaseServerTestCase):
         )
 
         # TBD: Add events to the database to check results
-        # total = 0
-        # hits = []
-        # self.assertEquals(total, response.metadata.pagination.total)
-        # self.assertEquals(len(hits), len(response.items))
+        total = 0
+        hits = []
+        self.assertEquals(total, response.metadata.pagination.total)
+        self.assertEquals(len(hits), len(response.items))
 
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
