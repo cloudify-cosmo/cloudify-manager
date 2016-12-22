@@ -12,8 +12,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import re
-
 from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime
@@ -192,14 +190,14 @@ class BuildCountQueryTest(TestCase):
     def test_from_events(self):
         """Query against events table."""
         filters = {'type': ['cloudify_event']}
-        query = Events._build_count_query(filters)
+        Events._build_count_query(filters)
         self.assertEqual(
             self.db.session.query().filter().subquery.call_count, 1)
 
     def test_from_logs(self):
         """Query against both events and logs tables."""
         filters = {'type': ['cloudify_event', 'cloudify_log']}
-        query = Events._build_count_query(filters)
+        Events._build_count_query(filters)
         self.assertEqual(
             self.db.session.query().filter().subquery.call_count, 2)
 
