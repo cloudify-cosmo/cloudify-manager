@@ -22,6 +22,10 @@ from collections import Counter
 
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
+
+from manager_rest.storage.models_states import ExecutionState
+from manager_rest.constants import ADMIN_ROLE, DEFAULT_TENANT_NAME
+
 from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -31,16 +35,65 @@ SNAPSHOTS = 'http://cloudify-tests-files.s3-eu-west-1.amazonaws.com/snapshots/'
 class TestSnapshot(AgentlessTestCase):
     SNAPSHOT_ID = '0'
 
+    def test_v_4_snapshot_restore_validation(self):
+        snapshot = self._get_snapshot('snap_4.0.0.zip')
+        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
+        self._try_restore_snapshot(
+            snapshot_id=self.SNAPSHOT_ID,
+            error_msg='Tenant name should only be passed when '
+            'restoring versions prior to 4.0.0',
+            tenant_name='tenant'
+        )
+
+        username = 'username'
+        password = 'password'
+        self.client.users.create(username, password, role=ADMIN_ROLE)
+        self.client.tenants.add_user(username, DEFAULT_TENANT_NAME)
+        admin_client = utils.create_rest_client(username=username,
+                                                password=password)
+        self._try_restore_snapshot(
+            snapshot_id=self.SNAPSHOT_ID,
+            error_msg='Only the bootstrap admin is allowed '
+                      'to perform this action',
+            tenant_name=None,
+            client=admin_client
+        )
+
+    def test_v_3_snapshot_restore_validation(self):
+        snapshot = self._get_snapshot('snap_3.4.0.zip')
+        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
+        self.client.tenants.create('tenant')
+        self._try_restore_snapshot(
+            snapshot_id=self.SNAPSHOT_ID,
+            error_msg='Tenant `tenant` already exists on the manager',
+            tenant_name='tenant'
+        )
+
+    def _try_restore_snapshot(self,
+                              snapshot_id,
+                              error_msg,
+                              tenant_name=None,
+                              client=None):
+        client = client or self.client
+        execution = client.snapshots.restore(snapshot_id,
+                                             tenant_name=tenant_name)
+        try:
+            self.wait_for_execution_to_end(execution)
+        except RuntimeError, e:
+            self.assertIn(error_msg, str(e))
+        execution = client.executions.get(execution.id)
+        self.assertEqual(execution.status, ExecutionState.FAILED)
+
     def test_4_0_0_snapshot_with_deployment(self):
         snapshot_path = self._get_snapshot('snap_4.0.0.zip')
         self._upload_and_restore_snapshot(snapshot_path)
 
         # Now make sure all the resources really exist in the DB
         self._assert_snapshot_restored(
-            blueprint_id='blueprint',
+            blueprint_id='bp',
             deployment_id='dep',
             node_ids=['http_web_server', 'vm'],
-            node_instance_ids=['http_web_server_o0lqdi', 'vm_vvjuj8'],
+            node_instance_ids=['http_web_server_mgr0fc', 'vm_9xgf6c'],
             num_of_workflows=8,
             num_of_inputs=4,
             num_of_outputs=1,
@@ -51,8 +104,10 @@ class TestSnapshot(AgentlessTestCase):
         snapshot_path = self._get_snapshot('snap_3.4.0.zip')
         tenant_name = 'tenant'
         self._upload_and_restore_snapshot(snapshot_path, tenant_name)
-
         # Now make sure all the resources really exist in the DB
+        self._assert_3_4_0_snapshot_restored(tenant_name)
+
+    def _assert_3_4_0_snapshot_restored(self, tenant_name):
         self._assert_snapshot_restored(
             blueprint_id='nodecellar',
             deployment_id='nodecellar',
@@ -76,6 +131,10 @@ class TestSnapshot(AgentlessTestCase):
         self._upload_and_restore_snapshot(snapshot_path, tenant_name)
 
         # Now make sure all the resources really exist in the DB
+        self._assert_3_3_1_snapshot_restored(tenant_name)
+        self._assert_3_3_1_plugins_restored()
+
+    def _assert_3_3_1_snapshot_restored(self, tenant_name):
         self._assert_snapshot_restored(
             blueprint_id='hello-world-app',
             deployment_id='hello-world-app',
@@ -94,7 +153,26 @@ class TestSnapshot(AgentlessTestCase):
             tenant_name=tenant_name
         )
 
-        self._assert_3_3_1_plugins_restored()
+    def test_restore_2_snapshots(self):
+        tenant_1_name = 'tenant_1'
+        tenant_2_name = 'tenant_2'
+        snapshot_1_id = 'snapshot_1'
+        snapshot_2_id = 'snapshot_2'
+        snapshot_1_path = self._get_snapshot('snap_3.4.0.zip')
+        snapshot_2_path = self._get_snapshot('snap_3.3.1_with_plugin.zip')
+        self._upload_and_restore_snapshot(
+            snapshot_1_path,
+            tenant_1_name,
+            snapshot_1_id
+        )
+        self._upload_and_restore_snapshot(
+            snapshot_2_path,
+            tenant_2_name,
+            snapshot_2_id
+        )
+
+        self._assert_3_4_0_snapshot_restored(tenant_1_name)
+        self._assert_3_3_1_snapshot_restored(tenant_2_name)
 
     def _assert_snapshot_restored(self,
                                   blueprint_id,
@@ -145,9 +223,7 @@ class TestSnapshot(AgentlessTestCase):
                                     num_of_inputs,
                                     num_of_outputs,
                                     tenant_name):
-        deployments = self.client.deployments.list()
-        self.assertEqual(1, len(deployments))
-        deployment = deployments[0]
+        deployment = self.client.deployments.get(deployment_id)
         self.assertEqual(deployment.id, deployment_id)
         self.assertEqual(len(deployment.workflows), num_of_workflows)
         self.assertEqual(deployment.blueprint_id, blueprint_id)
@@ -185,13 +261,17 @@ class TestSnapshot(AgentlessTestCase):
                 f.write(chunk)
         return destination
 
-    def _upload_and_restore_snapshot(self, snapshot_path, tenant_name=None):
+    def _upload_and_restore_snapshot(self,
+                                     snapshot_path,
+                                     tenant_name=None,
+                                     snapshot_id=None):
         """Upload the snapshot and launch the restore workflow
         """
-        self._upload_and_validate_snapshot(snapshot_path)
+        snapshot_id = snapshot_id or self.SNAPSHOT_ID
+        self._upload_and_validate_snapshot(snapshot_path, snapshot_id)
         self.logger.debug('Restoring snapshot...')
         execution = self.client.snapshots.restore(
-            self.SNAPSHOT_ID,
+            snapshot_id,
             tenant_name=tenant_name
         )
         execution = self._wait_for_execution_to_end(execution)
@@ -199,16 +279,14 @@ class TestSnapshot(AgentlessTestCase):
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(Execution.TERMINATED, execution.status)
 
-    def _upload_and_validate_snapshot(self, snapshot_path):
+    def _upload_and_validate_snapshot(self, snapshot_path, snapshot_id):
         self.logger.debug('Uploading snapshot: {0}'.format(snapshot_path))
-        self.client.snapshots.upload(snapshot_path, self.SNAPSHOT_ID)
-        response = self.client.snapshots.list()
-        self.assertEqual(1, len(response), 'expecting 1 snapshot results,'
-                                           ' got {0}'.format(len(response)))
-        snapshot = response[0]
+        self.client.snapshots.upload(snapshot_path, snapshot_id)
+        snapshot = self.client.snapshots.get(snapshot_id)
         self.logger.debug('Retrieved snapshot: {0}'.format(snapshot))
-        self.assertEquals(snapshot['id'], self.SNAPSHOT_ID)
+        self.assertEquals(snapshot['id'], snapshot_id)
         self.assertEquals(snapshot['status'], 'uploaded')
+        self.logger.info('Snapshot uploaded and validated')
 
     def _wait_for_execution_to_end(self, execution, timeout_seconds=30):
         """Can't use the `wait_for_execution_to_end` in the class because

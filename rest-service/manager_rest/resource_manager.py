@@ -28,6 +28,7 @@ from flask_security import current_user
 from dsl_parser import constants, functions, tasks
 from dsl_parser import exceptions as parser_exceptions
 
+from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.storage.models_states import (SnapshotState,
@@ -117,7 +118,8 @@ class ResourceManager(object):
             'postgresql_username': config_instance.postgresql_username,
             'postgresql_password': config_instance.postgresql_password,
             'postgresql_db_name': config_instance.postgresql_db_name,
-            'postgresql_host': config_instance.postgresql_host
+            'postgresql_host': config_instance.postgresql_host,
+            'default_tenant_name': DEFAULT_TENANT_NAME
         }
 
     def create_snapshot_model(self,
@@ -171,12 +173,10 @@ class ResourceManager(object):
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be restored'
             )
-        # If tenant_name is None, we're restoring a v4 snapshot
-        if not tenant_name and not current_user.is_bootstrap_admin:
+        if not current_user.is_admin:
             raise manager_exceptions.UnauthorizedError(
-                '{0} is not authorized to restore v4 '
-                'snapshots. Only the bootstrap admin is allowed to '
-                'perform this action'.format(current_user)
+                '{0} is not admin. Only admins are allowed to restore '
+                'snapshots'.format(current_user)
             )
         _, execution = self._execute_system_workflow(
             wf_id='restore_snapshot',
@@ -187,7 +187,9 @@ class ResourceManager(object):
                 'config': self._get_conf_for_snapshots_wf(),
                 'force': force,
                 'timeout': timeout,
-                'tenant_name': tenant_name
+                'tenant_name': tenant_name,
+                'premium_enabled': current_app.premium_enabled,
+                'user_is_bootstrap_admin': current_user.is_bootstrap_admin
             },
             bypass_maintenance=bypass_maintenance
         )
