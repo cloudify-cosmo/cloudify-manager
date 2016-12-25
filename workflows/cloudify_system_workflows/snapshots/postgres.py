@@ -77,15 +77,6 @@ class Postgres(object):
                                          .format(ctx.execution_id)
         self._append_dump(dump_file, delete_current_execution_query)
 
-    def _get_provider_context_restore_query(self):
-        result = self.run_query("SELECT id, name, context "
-                                "FROM provider_context")
-        result = result['all'][0]
-        return "INSERT INTO provider_context " \
-               "(id, name, context) " \
-               "VALUES ('{0}', '{1}', {2});"\
-            .format(result[0], result[1], psycopg2.Binary(result[2]))
-
     def _get_admin_user_update_query(self):
         """Return a query that updates the admin user in the DB
         """
@@ -107,7 +98,7 @@ class Postgres(object):
                "'started', 'restore_snapshot', '1', 0);"\
             .format(ctx.execution_id, record_creation_date)
 
-    def create_clean_db(self):
+    def clean_db(self):
         """Run a series of queries that recreate the schema and restore the
         admin user, the provider context and the current execution
         """

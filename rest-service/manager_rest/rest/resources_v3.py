@@ -261,7 +261,7 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         """
         Add a user to a group
         """
-        if current_app.ldap_configured:
+        if current_app.is_ldap_configured:
             raise MethodNotAllowedError(
                 'Explicit group to user association is not permitted when '
                 'using LDAP. Group association to users is done automatically'

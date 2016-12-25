@@ -42,6 +42,8 @@ def restore(snapshot_id,
             force,
             timeout,
             tenant_name,
+            premium_enabled,
+            user_is_bootstrap_admin,
             **kwargs):
     ctx.logger.info('Restoring snapshot `{0}`'.format(snapshot_id))
     ctx.logger.debug('Restoring snapshot config: {0}'.format(config))
@@ -52,7 +54,9 @@ def restore(snapshot_id,
         recreate_deployments_envs,
         force,
         timeout,
-        tenant_name
+        tenant_name,
+        premium_enabled,
+        user_is_bootstrap_admin
     )
     restore_snapshot.restore()
 
