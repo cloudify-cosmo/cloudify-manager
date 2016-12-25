@@ -391,7 +391,6 @@ class NodesTest(base_test.BaseServerTestCase):
             runtime_properties=runtime_properties,
             state='',
             version=version,
-            relationships=None,
             host_fk=None,
             scaling_groups=None
         )

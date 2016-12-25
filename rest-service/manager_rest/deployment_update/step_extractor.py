@@ -180,7 +180,7 @@ class DeploymentPlan(dict):
         workflow_plugins_to_install = \
             deployment_plan['workflow_plugins_to_install']
 
-        nodes = rm.prepare_deployment_nodes_for_storage(deployment_plan, deployment)
+        nodes, _ = rm.prepare_deployment_nodes_for_storage(deployment_plan, deployment)
         nodes_dict = dict()
 
         for node in nodes:
