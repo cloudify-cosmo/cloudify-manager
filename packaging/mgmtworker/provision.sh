@@ -21,7 +21,7 @@ function build_rpm() {
 
 
 # VERSION/PRERELEASE/BUILD are exported to follow with our standard of exposing them as env vars. They are not used.
-CORE_TAG_NAME="4.0m9"
+export CORE_TAG_NAME="4.0m9"
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2

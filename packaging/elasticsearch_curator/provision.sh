@@ -19,7 +19,7 @@ function generate_checksum() {
     cd /tmp/x86_64 && md5sum=$(md5sum *.rpm) && echo $md5sum | sudo tee ${md5sum##* }.md5
 }
 
-CORE_TAG_NAME="4.0m9"
+export CORE_TAG_NAME="4.0m9"
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
