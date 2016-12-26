@@ -1,6 +1,7 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
-https://github.com/apache/incubator-ariatosca/archive/ARIA-39-Genericize-storage-models.zip
+https://github.com/apache/incubator-ariatosca/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-aria-extensions/archive/master.zip
 
 
 # test dependencies
