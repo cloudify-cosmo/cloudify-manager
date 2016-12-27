@@ -48,7 +48,10 @@ class CloudifyFlaskApp(Flask):
 
         # These two need to be called after the configuration was loaded
         setup_logger(self.logger)
-        configure_ldap() if configure_ldap else None
+        if configure_ldap:
+            self.ldap_configured = configure_ldap()
+        else:
+            self.ldap_configured = False
 
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)

@@ -17,8 +17,11 @@
 from manager_rest.storage import models
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
-from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.manager_exceptions import (BadParametersError,
+                                             MethodNotAllowedError)
 from manager_rest.security.resource_permissions import PermissionsHandler
+
+from flask import current_app
 
 from . import rest_decorators
 from .responses_v3 import BaseResponse, ResourceID
@@ -258,6 +261,11 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         """
         Add a user to a group
         """
+        if current_app.ldap_configured:
+            raise MethodNotAllowedError(
+                'Explicit group to user association is not permitted when '
+                'using LDAP. Group association to users is done automatically'
+                ' according to the groups associated with the user in LDAP.')
         request_dict = get_json_and_verify_params({'username', 'group_name'})
         return multi_tenancy.add_user_to_group(
             request_dict['username'],
