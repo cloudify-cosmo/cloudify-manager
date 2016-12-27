@@ -251,9 +251,9 @@ class UsersId(SecuredMultiTenancyResource):
         return multi_tenancy.delete_user(username)
 
 
-class UsersGroups(SecuredMultiTenancyResource):
+class UserGroupsUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(UserResponse)
+    @rest_decorators.marshal_with(GroupResponse)
     def put(self, multi_tenancy):
         """
         Add a user to a group
@@ -265,7 +265,7 @@ class UsersGroups(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(UserResponse)
+    @rest_decorators.marshal_with(GroupResponse)
     def delete(self, multi_tenancy):
         """
         Remove a user from a group
