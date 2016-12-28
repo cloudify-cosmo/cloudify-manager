@@ -19,6 +19,8 @@ from dateutil import parser as date_parser
 
 from flask_sqlalchemy import SQLAlchemy
 
+from aria.storage import structure
+
 from manager_rest.utils import classproperty
 
 db = SQLAlchemy()
@@ -47,9 +49,27 @@ class UTCDateTime(db.TypeDecorator):
             return value
 
 
-class SQLModelBase(db.Model):
-    """Abstract base class for all SQL models that allows [de]serialization
+class SQLModelBase(db.Model, structure.ModelMixin):
+    """Abstract base class for all SQL resource_models.py
+    that allows [de]serialization
     """
+
+    @classmethod
+    def name_column_name(cls):
+        """
+        The user facing identifier name
+        :return:
+        """
+        return 'name'
+
+    @classmethod
+    def id_column_name(cls):
+        """
+        The unique storage facing identifier name
+        :return:
+        """
+        return 'id'
+
     # SQLAlchemy syntax
     __abstract__ = True
 
@@ -70,7 +90,9 @@ class SQLModelBase(db.Model):
         'PickleType': flask_fields.Raw,
         'UTCDateTime': flask_fields.String,
         'Enum': flask_fields.String,
-        'Boolean': flask_fields.Boolean
+        'Boolean': flask_fields.Boolean,
+        'Dict': flask_fields.Raw,
+        'List': flask_fields.Raw
     }
 
     def to_dict(self, suppress_error=False):
@@ -110,12 +132,6 @@ class SQLModelBase(db.Model):
             fields_dict[field_name] = self._sql_to_flask_type_map[type_name]
         return fields_dict
 
-    def _get_identifier(self):
-        """A helper method that allows classes to override if in order to
-        change the default string representation
-        """
-        return 'id', self.id
-
     @classmethod
     def get_fields(cls, field_list):
         """Return a subset of the available fields for this model according to
@@ -123,15 +139,3 @@ class SQLModelBase(db.Model):
         """
         fields = cls.resource_fields
         return {k: v for k, v in fields.iteritems() if k in field_list}
-
-    @classmethod
-    def unique_id(cls):
-        return 'id'
-
-    def __repr__(self):
-        id_name, id_value = self._get_identifier()
-        return '<{0} {1}=`{2}`>'.format(
-            self.__class__.__name__,
-            id_name,
-            id_value
-        )

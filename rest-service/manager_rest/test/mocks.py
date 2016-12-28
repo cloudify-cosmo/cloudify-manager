@@ -54,7 +54,8 @@ class MockHTTPClient(HTTPClient):
                    expected_status_code=200,
                    stream=False,
                    versioned_url=True,
-                   timeout=None):
+                   timeout=None,
+                   **kwargs):
         if CLIENT_API_VERSION == 'v1':
             # in v1, HTTPClient won't append the version part of the URL
             # on its own, so it's done here instead
@@ -156,6 +157,7 @@ class MockCeleryClient(object):
     def execute_task(self, task_queue, task_id=None, kwargs=None):
         sm = get_storage_manager()
         execution = sm.get(models.Execution, task_id)
+        execution.status = execution.STARTED
         execution.status = task_state()
         execution.error = ''
         sm.update(execution)

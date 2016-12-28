@@ -31,9 +31,6 @@ from dsl_parser import exceptions as parser_exceptions
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.app_logging import raise_unauthorized_user_error
-from manager_rest.storage.models_states import (SnapshotState,
-                                                ExecutionState,
-                                                DeploymentModificationState)
 
 from . import utils
 from . import config
@@ -78,18 +75,18 @@ class ResourceManager(object):
         return self.sm.update(execution)
 
     def _validate_execution_update(self, current_status, future_status):
-        if current_status in ExecutionState.END_STATES:
+        if current_status in models.Execution.END_STATES:
             return False
 
-        invalid_cancel_statuses = ExecutionState.ACTIVE_STATES + [
-            ExecutionState.TERMINATED]
-        if all((current_status == ExecutionState.CANCELLING,
+        invalid_cancel_statuses = models.Execution.ACTIVE_STATES + [
+            models.Execution.TERMINATED]
+        if all((current_status == models.Execution.CANCELLING,
                 future_status in invalid_cancel_statuses)):
             return False
 
         invalid_force_cancel_statuses = invalid_cancel_statuses + [
-            ExecutionState.CANCELLING]
-        if all((current_status == ExecutionState.FORCE_CANCELLING,
+            models.Execution.CANCELLING]
+        if all((current_status == models.Execution.FORCE_CANCELLING,
                 future_status in invalid_force_cancel_statuses)):
             return False
 
@@ -110,8 +107,8 @@ class ResourceManager(object):
                 config_instance.file_server_uploaded_blueprints_folder,
             'db_address': config_instance.db_address,
             'db_port': config_instance.db_port,
-            'created_status': SnapshotState.CREATED,
-            'failed_status': SnapshotState.FAILED,
+            'created_status': models.Snapshot.CREATED,
+            'failed_status': models.Snapshot.FAILED,
             'file_server_uploaded_plugins_folder':
                 config_instance.file_server_uploaded_plugins_folder,
             'postgresql_bin_path': config_instance.postgresql_bin_path,
@@ -124,7 +121,7 @@ class ResourceManager(object):
 
     def create_snapshot_model(self,
                               snapshot_id,
-                              status=SnapshotState.CREATING,
+                              status=models.Snapshot.CREATING,
                               private_resource=False):
         now = utils.get_formatted_timestamp()
         new_snapshot = models.Snapshot(id=snapshot_id,
@@ -169,7 +166,7 @@ class ResourceManager(object):
                          tenant_name):
         # Throws error if no snapshot found
         snapshot = self.sm.get(models.Snapshot, snapshot_id)
-        if snapshot.status == SnapshotState.FAILED:
+        if snapshot.status == models.Snapshot.FAILED:
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be restored'
             )
@@ -308,14 +305,14 @@ class ResourceManager(object):
         # validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id,
-            status=ExecutionState.ACTIVE_STATES
+            status=models.Execution.ACTIVE_STATES
         )
         executions = self.sm.list(
             models.Execution,
             filters=deplyment_id_filter
         )
-        if any(execution.status not in ExecutionState.END_STATES for
-           execution in executions):
+        if any(execution.status not in models.Execution.END_STATES for
+               execution in executions):
             raise manager_exceptions.DependentExistsError(
                 "Can't delete deployment {0} - There are running "
                 "executions for this deployment. Running executions ids: {1}"
@@ -323,7 +320,7 @@ class ResourceManager(object):
                     deployment_id,
                     ','.join([execution.id for execution in
                               executions if execution.status not
-                              in ExecutionState.END_STATES])))
+                              in models.Execution.END_STATES])))
 
         if not ignore_live_nodes:
             deplyment_id_filter = self.create_filters_dict(
@@ -374,7 +371,7 @@ class ResourceManager(object):
 
         new_execution = models.Execution(
             id=execution_id,
-            status=ExecutionState.PENDING,
+            status=models.Execution.PENDING,
             created_at=utils.get_formatted_timestamp(),
             workflow_id=workflow_id,
             error='',
@@ -403,7 +400,7 @@ class ResourceManager(object):
 
     def _check_for_any_active_executions(self):
         filters = {
-            'status': ExecutionState.ACTIVE_STATES
+            'status': models.Execution.ACTIVE_STATES
         }
         executions = [
             e.id
@@ -420,7 +417,7 @@ class ResourceManager(object):
 
     def _check_for_active_system_wide_execution(self):
         filters = {
-            'status': ExecutionState.ACTIVE_STATES
+            'status': models.Execution.ACTIVE_STATES
         }
         for e in self.list_executions(is_include_system_workflows=True,
                                       filters=filters).items:
@@ -462,7 +459,7 @@ class ResourceManager(object):
 
         execution = models.Execution(
             id=execution_id,
-            status=ExecutionState.PENDING,
+            status=models.Execution.PENDING,
             created_at=created_at or utils.get_formatted_timestamp(),
             workflow_id=wf_id,
             error='',
@@ -507,7 +504,7 @@ class ResourceManager(object):
                 current_app.logger.error(log_error_msg)
                 raise manager_exceptions.ExecutionFailure(error_msg)
             self.sm.refresh(execution)  # Reload the status form the DB
-            if execution.status != ExecutionState.TERMINATED:
+            if execution.status != models.Execution.TERMINATED:
                 raise manager_exceptions.ExecutionFailure(
                     'Failed executing the {0} system workflow: '
                     'Execution did not complete successfully.'.format(wf_id))
@@ -528,23 +525,24 @@ class ResourceManager(object):
 
         Note that in either case, the execution is not yet cancelled upon
         returning from the method. Instead, it'll be in a 'cancelling' or
-        'force_cancelling' status (as can be seen in models.Execution). Once
-        the execution is truly stopped, it'll be in 'cancelled' status (unless
-        force was not used and the executed workflow doesn't support
-        graceful termination, in which case it might simply continue
-        regardless and end up with a 'terminated' status)
+        'force_cancelling' status (as can be seen in
+        resource_models.py.Execution). Once the execution is truly stopped,
+        it'll be in 'cancelled' status (unless force was not used and the
+        executed workflow doesn't support graceful termination, in which
+        case it might simply continue regardless and end up with a
+        'terminated' status)
 
         :param execution_id: The execution id
         :param force: A boolean describing whether to force cancellation
         :return: The updated execution object
-        :rtype: models.Execution
+        :rtype: resource_models.py.Execution
         :raises manager_exceptions.IllegalActionError
         """
 
         execution = self.sm.get(models.Execution, execution_id)
-        if execution.status not in (ExecutionState.PENDING,
-                                    ExecutionState.STARTED) and \
-                (not force or execution.status != ExecutionState.CANCELLING):
+        if execution.status not in (models.Execution.PENDING,
+                                    models.Execution.STARTED) and \
+                (not force or execution.status != models.Execution.CANCELLING):
             raise manager_exceptions.IllegalActionError(
                 "Can't {0}cancel execution {1} because it's in status {2}"
                 .format(
@@ -552,8 +550,8 @@ class ResourceManager(object):
                     execution_id,
                     execution.status))
 
-        new_status = ExecutionState.CANCELLING if not force \
-            else ExecutionState.FORCE_CANCELLING
+        new_status = models.Execution.CANCELLING if not force \
+            else models.Execution.FORCE_CANCELLING
         execution.status = new_status
         execution.error = ''
         return self.sm.update(execution)
@@ -578,6 +576,7 @@ class ResourceManager(object):
 
     def prepare_deployment_nodes_for_storage(self,
                                              deployment_plan,
+                                             deployment,
                                              node_ids=None):
         """
         create deployment nodes in storage based on a provided blueprint
@@ -595,7 +594,11 @@ class ResourceManager(object):
         nodes = []
         for raw_node in raw_nodes:
             scalable = raw_node['capabilities']['scalable']['properties']
+            host = self.get_node(deployment.id, raw_node.get('host_id'),
+                                 nullable=True)
+
             nodes.append(models.Node(
+                deployment=deployment,
                 id=raw_node['name'],
                 type=raw_node['type'],
                 type_hierarchy=raw_node['type_hierarchy'],
@@ -604,7 +607,7 @@ class ResourceManager(object):
                 deploy_number_of_instances=scalable['default_instances'],
                 min_number_of_instances=scalable['min_instances'],
                 max_number_of_instances=scalable['max_instances'],
-                host_id=raw_node['host_id'] if 'host_id' in raw_node else None,
+                host=host,
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],
                 plugins=raw_node['plugins'],
@@ -621,10 +624,11 @@ class ResourceManager(object):
             instance_id = node_instance['id']
             scaling_groups = node_instance.get('scaling_groups', [])
             relationships = node_instance.get('relationships', [])
-            host_id = node_instance.get('host_id')
+            host = self.get_node_instance(node_instance.get('host_id'),
+                                          nullable=True)
             instance = models.NodeInstance(
                 id=instance_id,
-                host_id=host_id,
+                host=host,
                 relationships=relationships,
                 state='uninitialized',
                 runtime_properties={},
@@ -640,11 +644,14 @@ class ResourceManager(object):
                                  deployment_id,
                                  plan,
                                  node_ids=None):
-        nodes = self.prepare_deployment_nodes_for_storage(plan, node_ids)
         deployment = self.sm.get(models.Deployment, deployment_id)
 
+        nodes = self.prepare_deployment_nodes_for_storage(
+            plan, deployment, node_ids)
+
         for node in nodes:
-            node.deployment = deployment
+            if node.host is None:
+                node.host = node
             self.sm.put(node)
 
     def _create_deployment_node_instances(self,
@@ -655,6 +662,8 @@ class ResourceManager(object):
             dsl_node_instances)
 
         for node_instance in node_instances:
+            if node_instance.host is None:
+                node_instance.host = node_instance
             self.sm.put(node_instance)
 
     def create_deployment(self,
@@ -707,7 +716,7 @@ class ResourceManager(object):
         )
         active_modifications = [
             m.id for m in existing_modifications
-            if m.status == DeploymentModificationState.STARTED]
+            if m.status == models.DeploymentModification.STARTED]
         if active_modifications:
             raise \
                 manager_exceptions.ExistingStartedDeploymentModificationError(
@@ -738,7 +747,7 @@ class ResourceManager(object):
             id=modification_id,
             created_at=now,
             ended_at=None,
-            status=DeploymentModificationState.STARTED,
+            status=models.DeploymentModification.STARTED,
             modified_nodes=modified_nodes,
             node_instances=node_instances_modification,
             context=context)
@@ -806,7 +815,7 @@ class ResourceManager(object):
             modification_id
         )
 
-        if modification.status in DeploymentModificationState.END_STATES:
+        if modification.status in models.DeploymentModification.END_STATES:
             raise manager_exceptions.DeploymentModificationAlreadyEndedError(
                 'Cannot finish deployment modification: {0}. It is already in'
                 ' {1} status.'.format(modification_id,
@@ -849,7 +858,7 @@ class ResourceManager(object):
                 instance.version += 1
                 self.sm.update(instance)
 
-        modification.status = DeploymentModificationState.FINISHED
+        modification.status = models.DeploymentModification.FINISHED
         modification.ended_at = utils.get_formatted_timestamp()
         self.sm.update(modification)
         return modification
@@ -860,7 +869,7 @@ class ResourceManager(object):
             modification_id
         )
 
-        if modification.status in DeploymentModificationState.END_STATES:
+        if modification.status in models.DeploymentModification.END_STATES:
             raise manager_exceptions.DeploymentModificationAlreadyEndedError(
                 'Cannot rollback deployment modification: {0}. It is already '
                 'in {1} status.'.format(modification_id,
@@ -902,7 +911,7 @@ class ResourceManager(object):
                 self.sm.update(node)
         self.sm.update(deployment)
 
-        modification.status = DeploymentModificationState.ROLLEDBACK
+        modification.status = models.DeploymentModification.ROLLEDBACK
         modification.ended_at = utils.get_formatted_timestamp()
         modification.node_instances = modified_instances
         self.sm.update(modification)
@@ -914,14 +923,21 @@ class ResourceManager(object):
         node_id = instance_dict.pop('node_id')
 
         # Link the node instance object to to the node, and add it to the DB
+        host_id = instance_dict.pop('host_id')
+        host = self.get_node_instance(host_id, nullable=True)
+        if host:
+            instance_dict['host'] = host
         new_node_instance = models.NodeInstance(**instance_dict)
         node = self.get_node(deployment_id, node_id)
         new_node_instance.node = node
+        if new_node_instance.host is None:
+            new_node_instance.host = new_node_instance
         self.sm.put(new_node_instance)
 
         # Return the IDs to the dict for later use
         instance_dict['deployment_id'] = deployment_id
         instance_dict['node_id'] = node_id
+        instance_dict['host_id'] = host_id
 
     def evaluate_deployment_outputs(self, deployment_id):
         deployment = self.sm.get(
@@ -1109,26 +1125,26 @@ class ResourceManager(object):
                                ' execution for deployment {0}'.format(
                                    deployment_id))
         status = env_creation.status
-        if status == ExecutionState.TERMINATED:
+        if status == models.Execution.TERMINATED:
             return
-        elif status == ExecutionState.PENDING:
+        elif status == models.Execution.PENDING:
             raise manager_exceptions \
                 .DeploymentEnvironmentCreationPendingError(
                     'Deployment environment creation is still pending, '
                     'try again in a minute')
-        elif status == ExecutionState.STARTED:
+        elif status == models.Execution.STARTED:
             raise manager_exceptions\
                 .DeploymentEnvironmentCreationInProgressError(
                     'Deployment environment creation is still in progress, '
                     'try again in a minute')
-        elif status == ExecutionState.FAILED:
+        elif status == models.Execution.FAILED:
             raise RuntimeError(
                 "Can't launch executions since environment creation for "
                 "deployment {0} has failed: {1}".format(
                     deployment_id, env_creation.error))
         elif status in (
-            ExecutionState.CANCELLED, ExecutionState.CANCELLING,
-                ExecutionState.FORCE_CANCELLING):
+                models.Execution.CANCELLED, models.Execution.CANCELLING,
+                models.Execution.FORCE_CANCELLING):
             raise RuntimeError(
                 "Can't launch executions since the environment creation for "
                 "deployment {0} has been cancelled [status={1}]".format(
@@ -1213,13 +1229,13 @@ class ResourceManager(object):
         def _get_running_executions(deployment_id=None, include_system=True):
             deployment_id_filter = self.create_filters_dict(
                 deployment_id=deployment_id,
-                status=ExecutionState.ACTIVE_STATES)
+                status=models.Execution.ACTIVE_STATES)
             executions = self.list_executions(
                 filters=deployment_id_filter,
                 is_include_system_workflows=include_system).items
             return [e.id for e in executions if
                     self.sm.get(models.Execution, e.id).status
-                    not in ExecutionState.END_STATES]
+                    not in models.Execution.END_STATES]
 
         # validate no execution is currently in progress
         if not force:
@@ -1251,7 +1267,7 @@ class ResourceManager(object):
 
         app_context.update_parser_context(context_dict['context'])
 
-    def get_node(self, deployment_id, node_id):
+    def get_node(self, deployment_id, node_id, nullable=False):
         """Return the single node associated with a given ID and Dep ID
         """
         nodes = self.sm.list(
@@ -1259,11 +1275,29 @@ class ResourceManager(object):
             filters={'deployment_id': deployment_id, 'id': node_id}
         )
         if not nodes:
-            raise manager_exceptions.NotFoundError(
-                'Requested Node with ID `{0}` on Deployment `{1}` '
-                'was not found'.format(node_id, deployment_id)
-            )
+            if not nullable:
+                raise manager_exceptions.NotFoundError(
+                    'Requested Node with ID `{0}` on Deployment `{1}` '
+                    'was not found'.format(node_id, deployment_id)
+                )
+            else:
+                return None
+
         return nodes[0]
+
+    def get_node_instance(self, node_instance_id, nullable=False):
+        node_instances = self.sm.list(models.NodeInstance,
+                                      filters={'id': node_instance_id})
+        if not node_instances:
+            if not nullable:
+                raise manager_exceptions.NotFoundError(
+                    'Requested Node Instance with ID `{0}` was not found'
+                    .format(node_instance_id)
+                )
+            else:
+                return None
+
+        return node_instances[0]
 
     @staticmethod
     def assert_user_has_modify_permissions(resource):

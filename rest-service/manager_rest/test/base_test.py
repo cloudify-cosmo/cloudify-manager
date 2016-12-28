@@ -29,10 +29,9 @@ from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
 from mock import MagicMock
 
-from manager_rest.storage.models import Tenant
+from manager_rest.storage.models import Execution
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
-from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
 from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
@@ -97,7 +96,92 @@ class TestClient(FlaskClient):
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
-class BaseServerTestCase(unittest.TestCase):
+class BaseStorageTestCase(unittest.TestCase):
+    def setUp(self):
+        self._create_temp_files_and_folders()
+        self.server = self._set_config_path_and_get_server_module()
+        self._create_config_and_reset_app(self.server)
+        self._set_flask_app_context(self.server.app)
+        self.sm = get_storage_manager()
+
+    def _create_temp_files_and_folders(self):
+        self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
+        fd, self.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
+        os.close(fd)
+        self.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
+        fd, self.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
+        os.close(fd)
+
+    def _set_config_path_and_get_server_module(self):
+        """Workaround for setting the rest service log path, since it's
+        needed when 'server' module is imported.
+        right after the import the log path is set normally like the rest
+        of the variables (used in the reset_state)
+        """
+        with open(self.tmp_conf_file, 'w') as f:
+            json.dump({'rest_service_log_path': self.rest_service_log,
+                       'rest_service_log_file_size_MB': 1,
+                       'rest_service_log_files_backup_count': 1,
+                       'rest_service_log_level': 'DEBUG'},
+                      f)
+        os.environ['MANAGER_REST_CONFIG_PATH'] = self.tmp_conf_file
+        try:
+            from manager_rest import server
+        finally:
+            del(os.environ['MANAGER_REST_CONFIG_PATH'])
+        return server
+
+    def _set_flask_app_context(self, flask_app):
+        flask_app_context = flask_app.test_request_context()
+        flask_app_context.push()
+        self.addCleanup(flask_app_context.pop)
+
+    def _init_default_tenant(self, db, app):
+        t = models.Tenant(name=constants.DEFAULT_TENANT_NAME)
+        db.session.add(t)
+        db.session.commit()
+
+        app.config[constants.CURRENT_TENANT_CONFIG] = t
+        self.default_tenant = t
+
+    def _init_admin_user(self, user_datastore):
+        """Add users and roles for the test
+
+        :param user_datastore: SQLAlchemyDataUserstore
+        """
+        admin_user = get_admin_user()
+        utils.create_security_roles_and_admin_user(
+            user_datastore,
+            admin_username=admin_user['username'],
+            admin_password=admin_user['password'],
+            default_tenant=self.default_tenant
+        )
+
+    def _create_configuration(self):
+        test_config = config.Config()
+        test_config.test_mode = True
+        test_config.postgresql_db_name = ':memory:'
+        test_config.postgresql_host = ''
+        test_config.postgresql_username = ''
+        test_config.postgresql_password = ''
+        test_config.default_tenant_name = constants.DEFAULT_TENANT_NAME
+        test_config.rest_service_log_level = 'DEBUG'
+        test_config.rest_service_log_path = self.rest_service_log
+        test_config.rest_service_log_file_size_MB = 100,
+        test_config.rest_service_log_files_backup_count = 20
+        return test_config
+
+    def _create_config_and_reset_app(self, server):
+        """Create config, and reset Flask app
+        :type server: module
+        """
+        self.server_configuration = self._create_configuration()
+        server.SQL_DIALECT = 'sqlite'
+        server.reset_app(self.server_configuration)
+
+
+@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
+class BaseServerTestCase(BaseStorageTestCase):
 
     def __init__(self, *args, **kwargs):
         super(BaseServerTestCase, self).__init__(*args, **kwargs)
@@ -149,38 +233,10 @@ class BaseServerTestCase(unittest.TestCase):
         self.sm = get_storage_manager()
         self.initialize_provider_context()
 
-    def _create_temp_files_and_folders(self):
-        self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
-        fd, self.rest_service_log = tempfile.mkstemp(prefix='rest-log-')
-        os.close(fd)
-        self.maintenance_mode_dir = tempfile.mkdtemp(prefix='maintenance-')
-        fd, self.tmp_conf_file = tempfile.mkstemp(prefix='conf-file-')
-        os.close(fd)
-
     def _init_file_server(self):
         self.file_server = FileServer(self.tmpdir)
         self.file_server.start()
         self.addCleanup(self.cleanup)
-
-    def _set_config_path_and_get_server_module(self):
-        """Workaround for setting the rest service log path, since it's
-        needed when 'server' module is imported.
-        right after the import the log path is set normally like the rest
-        of the variables (used in the reset_state)
-        """
-
-        with open(self.tmp_conf_file, 'w') as f:
-            json.dump({'rest_service_log_path': self.rest_service_log,
-                       'rest_service_log_file_size_MB': 1,
-                       'rest_service_log_files_backup_count': 1,
-                       'rest_service_log_level': 'DEBUG'},
-                      f)
-        os.environ['MANAGER_REST_CONFIG_PATH'] = self.tmp_conf_file
-        try:
-            from manager_rest import server
-        finally:
-            del(os.environ['MANAGER_REST_CONFIG_PATH'])
-        return server
 
     def _create_config_and_reset_app(self, server):
         """Create config, and reset Flask app
@@ -199,19 +255,6 @@ class BaseServerTestCase(unittest.TestCase):
         self.app = self._get_app(server.app)
         self._handle_default_db_config(server)
         self._setup_anonymous_user(server.app, server.user_datastore)
-
-    def _init_default_tenant(self, db, app):
-        t = Tenant(name=constants.DEFAULT_TENANT_NAME)
-        db.session.add(t)
-        db.session.commit()
-
-        app.config[constants.CURRENT_TENANT_CONFIG] = t
-        self.default_tenant = t
-
-    def _set_flask_app_context(self, flask_app):
-        flask_app_context = flask_app.test_request_context()
-        flask_app_context.push()
-        self.addCleanup(flask_app_context.pop)
 
     def _handle_default_db_config(self, server):
         server.db.create_all()
@@ -239,19 +282,6 @@ class BaseServerTestCase(unittest.TestCase):
         login_manager = flask_app.extensions['security'].login_manager
         login_manager.anonymous_user = MagicMock(return_value=admin_user)
 
-    def _init_admin_user(self, user_datastore):
-        """Add users and roles for the test
-
-        :param user_datastore: SQLAlchemyDataUserstore
-        """
-        admin_user = get_admin_user()
-        utils.create_security_roles_and_admin_user(
-            user_datastore,
-            admin_username=admin_user['username'],
-            admin_password=admin_user['password'],
-            default_tenant=self.default_tenant
-        )
-
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)
         self.quiet_delete(self.tmp_conf_file)
@@ -269,15 +299,10 @@ class BaseServerTestCase(unittest.TestCase):
         self.sm.put(provider_context)
 
     def create_configuration(self):
-        test_config = config.Config()
-        test_config.test_mode = True
-        test_config.postgresql_db_name = ':memory:'
-        test_config.postgresql_host = ''
-        test_config.postgresql_username = ''
-        test_config.postgresql_password = ''
+        test_config = super(BaseServerTestCase, self)._create_configuration()
         test_config.file_server_root = self.tmpdir
-        test_config.file_server_base_uri = 'http://localhost:{0}'.format(
-            FILE_SERVER_PORT)
+        test_config.file_server_base_uri = \
+            'http://localhost:{0}'.format(FILE_SERVER_PORT)
         test_config.file_server_blueprints_folder = \
             FILE_SERVER_BLUEPRINTS_FOLDER
         test_config.file_server_deployments_folder = \
@@ -287,12 +312,7 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.file_server_snapshots_folder = \
             FILE_SERVER_SNAPSHOTS_FOLDER
         test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
-        test_config.rest_service_log_level = 'DEBUG'
-        test_config.rest_service_log_path = self.rest_service_log
-        test_config.rest_service_log_file_size_MB = 100,
-        test_config.rest_service_log_files_backup_count = 20
         test_config.maintenance_folder = self.maintenance_mode_dir
-        test_config.default_tenant_name = constants.DEFAULT_TENANT_NAME
         return test_config
 
     def _version_url(self, url):
@@ -406,8 +426,8 @@ class BaseServerTestCase(unittest.TestCase):
                            archive_func=archiving.make_targzfile,
                            blueprint_dir='mock_blueprint'):
 
-        resource_path = self._version_url(
-            '/blueprints/{1}'.format(CLIENT_API_VERSION, blueprint_id))
+        resource_path = self._version_url('/blueprints/{0}'
+                                          .format(blueprint_id))
 
         result = [
             resource_path,
@@ -502,7 +522,7 @@ class BaseServerTestCase(unittest.TestCase):
                     format(execution.workflow_id, execution.deployment_id))
 
             execution = client.executions.get(execution.id)
-            if execution.status in ExecutionState.END_STATES:
+            if execution.status in Execution.END_STATES:
                 break
             time.sleep(3)
 
@@ -550,7 +570,7 @@ class BaseServerTestCase(unittest.TestCase):
             execution_id = 'execution-{0}'.format(unique_str)
         execution = models.Execution(
             id=execution_id,
-            status=ExecutionState.TERMINATED,
+            status=Execution.TERMINATED,
             workflow_id='',
             created_at=utils.get_formatted_timestamp(),
             error='',

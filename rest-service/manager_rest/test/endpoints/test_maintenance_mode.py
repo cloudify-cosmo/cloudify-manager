@@ -23,11 +23,13 @@ from manager_rest import utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.test.base_test import BaseServerTestCase
-from manager_rest.storage.models_states import ExecutionState
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_DEACTIVATED,
                                     MAINTENANCE_MODE_STATUS_FILE)
+
+
+from ..utils import skip_execution_transition_validation
 
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
@@ -47,6 +49,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         response = self.client.maintenance_mode.status()
         self.assertEqual(MAINTENANCE_MODE_ACTIVATED, response.status)
 
+    @skip_execution_transition_validation()
     def test_any_cmd_activates_maintenance_mode(self):
         execution = self._start_maintenance_transition_mode(
             bp_id='bp1',
@@ -122,6 +125,7 @@ class MaintenanceModeTest(BaseServerTestCase):
             self.assertEqual(304, e.status_code)
         self.assertIn('already on', e.message)
 
+    @skip_execution_transition_validation()
     def test_transition_to_active(self):
         execution = self._start_maintenance_transition_mode()
         response = self.client.maintenance_mode.status()
@@ -130,6 +134,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         response = self.client.maintenance_mode.status()
         self.assertEqual(response.status, MAINTENANCE_MODE_ACTIVATED)
 
+    @skip_execution_transition_validation()
     def test_deployment_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
         self.client.blueprints.upload(
@@ -140,6 +145,7 @@ class MaintenanceModeTest(BaseServerTestCase):
                           blueprint_id='b1',
                           deployment_id='d1')
 
+    @skip_execution_transition_validation()
     def test_deployment_modification_denial_maintenance_transition_mode(self):
         self.put_deployment('d1', blueprint_id='b2')
         self._start_maintenance_transition_mode()
@@ -148,6 +154,7 @@ class MaintenanceModeTest(BaseServerTestCase):
                           deployment_id='d1',
                           nodes={})
 
+    @skip_execution_transition_validation()
     def test_snapshot_creation_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
@@ -156,12 +163,14 @@ class MaintenanceModeTest(BaseServerTestCase):
                           include_metrics=False,
                           include_credentials=False)
 
+    @skip_execution_transition_validation()
     def test_snapshot_restoration_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
         self.assertRaises(exceptions.MaintenanceModeActivatingError,
                           self.client.snapshots.restore,
                           snapshot_id='s1')
 
+    @skip_execution_transition_validation()
     def test_executions_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
         self.client.blueprints.upload(
@@ -172,6 +181,7 @@ class MaintenanceModeTest(BaseServerTestCase):
                           deployment_id='d1',
                           workflow_id='install')
 
+    @skip_execution_transition_validation()
     def test_request_approval_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
         try:
@@ -191,6 +201,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         response = self.client.maintenance_mode.status()
         self.assertFalse(response.remaining_executions)
 
+    @skip_execution_transition_validation()
     def test_execution_amount_maintenance_activating(self):
         execution = self._start_maintenance_transition_mode()
         response = self.client.maintenance_mode.status()
@@ -201,7 +212,7 @@ class MaintenanceModeTest(BaseServerTestCase):
                          response.remaining_executions[0]['deployment_id'])
         self.assertEqual(execution.workflow_id,
                          response.remaining_executions[0]['workflow_id'])
-        self.assertEqual(ExecutionState.STARTED,
+        self.assertEqual(models.Execution.STARTED,
                          response.remaining_executions[0]['status'])
 
     def test_trigger_time_maintenance_activated(self):
@@ -214,6 +225,7 @@ class MaintenanceModeTest(BaseServerTestCase):
         response = self.client.maintenance_mode.status()
         self.assertFalse(response.activated_at)
 
+    @skip_execution_transition_validation()
     def test_trigger_time_maintenance_activating(self):
         self._start_maintenance_transition_mode()
         response = self.client.maintenance_mode.status()
@@ -248,21 +260,25 @@ class MaintenanceModeTest(BaseServerTestCase):
         self.assertRaises(exceptions.MaintenanceModeActiveError,
                           self.client.blueprints.list)
 
+    @skip_execution_transition_validation()
     def test_running_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode()
 
+    @skip_execution_transition_validation()
     def test_pending_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.PENDING)
+                models.Execution.PENDING)
 
+    @skip_execution_transition_validation()
     def test_cancelling_execution_maintenance_activating_error_raised(self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.CANCELLING)
+                models.Execution.CANCELLING)
 
+    @skip_execution_transition_validation()
     def test_force_cancelling_execution_maintenance_activating_error_raised(
             self):
         self._test_different_execution_status_in_activating_mode(
-                ExecutionState.FORCE_CANCELLING)
+                models.Execution.FORCE_CANCELLING)
 
     def _test_different_execution_status_in_activating_mode(
             self,
@@ -285,7 +301,7 @@ class MaintenanceModeTest(BaseServerTestCase):
             self,
             bp_id='transition_blueprint',
             dep_id='transition_deployment',
-            execution_status=ExecutionState.STARTED):
+            execution_status=models.Execution.STARTED):
         (blueprint_id, deployment_id, blueprint_response,
          deployment_response) = self.put_deployment(
                 blueprint_id=bp_id,
@@ -308,7 +324,8 @@ class MaintenanceModeTest(BaseServerTestCase):
         self.sm.update(execution)
 
     def _terminate_execution(self, execution_id):
-        self._update_execution_status(execution_id, ExecutionState.TERMINATED)
+        self._update_execution_status(execution_id,
+                                      models.Execution.TERMINATED)
 
     def _activate_and_deactivate_maintenance_mode(self):
         self._activate_maintenance_mode()

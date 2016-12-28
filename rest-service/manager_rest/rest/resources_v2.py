@@ -44,7 +44,6 @@ from manager_rest.storage.resource_models import (
     Event,
     Log,
 )
-from manager_rest.storage.models_states import SnapshotState
 from manager_rest.upload_manager import (
     UploadedPluginsManager,
     UploadedSnapshotsManager,
@@ -207,7 +206,7 @@ class SnapshotsIdArchive(SecuredResource):
     @rest_decorators.exceptions_handled
     def get(self, snapshot_id):
         snap = get_storage_manager().get(models.Snapshot, snapshot_id)
-        if snap.status == SnapshotState.FAILED:
+        if snap.status == models.Snapshot.FAILED:
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be downloaded'
             )
