@@ -32,6 +32,18 @@ class SQLResourceBase(SQLModelBase):
     # SQLAlchemy syntax
     __abstract__ = True
 
+    # Some must-have columns for all resources
+    @classmethod
+    def id_column_name(cls):
+        return 'storage_id'
+
+    @classmethod
+    def name_column_name(cls):
+        return 'id'
+
+    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id = db.Column(db.Text, index=True)
+
     # Differentiates between resources (blueprints, nodes, etc.) and other
     # table models (users, tenants, etc.)
     is_resource = True
@@ -63,14 +75,6 @@ class SQLResourceBase(SQLModelBase):
                    if f not in cls._private_fields}
         _fields.update(SQLResourceBase._extra_fields)
         return _fields
-
-    @classmethod
-    def unique_id(cls):
-        return 'storage_id'
-
-    # Some must-have columns for all resources
-    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    id = db.Column(db.Text, index=True)
 
     @property
     def permission(self):

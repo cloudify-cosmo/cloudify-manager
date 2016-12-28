@@ -23,7 +23,6 @@ from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest import app_context, config, manager_exceptions
 from manager_rest.storage import get_storage_manager, models
-from manager_rest.storage.models_states import ExecutionState
 import manager_rest.workflow_client as wf_client
 from manager_rest import utils
 from manager_rest.resource_manager import ResourceManager
@@ -295,7 +294,7 @@ class DeploymentUpdateManager(object):
             real_active_updates = \
                 [u for u in active_updates if u.execution_id is not None and
                  self.sm.get(models.Execution, u.execution_id).status not in
-                 ExecutionState.END_STATES]
+                 models.Execution.END_STATES]
 
             if real_active_updates:
                 raise manager_exceptions.ConflictError(
@@ -490,7 +489,7 @@ class DeploymentUpdateManager(object):
 
         new_execution = models.Execution(
             id=execution_id,
-            status=ExecutionState.PENDING,
+            status=models.Execution.PENDING,
             created_at=utils.get_formatted_timestamp(),
             workflow_id=workflow_id,
             error='',

@@ -55,6 +55,9 @@ class TestUtils(base_test.BaseServerTestCase):
                 mock_data['distribution'] = distribution
             if distribution_release:
                 mock_data['distribution_release'] = distribution_release
+            mock_data['supported_py_versions'] = None
+            mock_data['wheels'] = None
+            mock_data['excluded_wheels'] = None
             return models.Plugin(**mock_data)
 
         plugin = create_plugin()

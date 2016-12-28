@@ -39,9 +39,6 @@ class Tenant(SQLModelBase):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, index=True)
 
-    def _get_identifier(self):
-        return 'name', self.name
-
     def to_response(self):
         tenant_dict = super(Tenant, self).to_response()
         all_groups_names = [group.name for group in self.groups]
@@ -57,9 +54,6 @@ class Group(SQLModelBase):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
     ldap_dn = db.Column(db.Text, unique=True, nullable=True, index=True)
-
-    def _get_identifier(self):
-        return 'name', self.name
 
     @declared_attr
     def tenants(cls):
@@ -80,12 +74,13 @@ class Role(SQLModelBase, RoleMixin):
 
     description = db.Column(db.Text)
 
-    def _get_identifier(self):
-        return 'name', self.name
-
 
 class User(SQLModelBase, UserMixin):
     __tablename__ = 'users'
+
+    @classmethod
+    def name_column_name(cls):
+        return 'username'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(255), index=True, unique=True)
@@ -97,9 +92,6 @@ class User(SQLModelBase, UserMixin):
     last_login_at = db.Column(UTCDateTime, index=True)
     last_name = db.Column(db.String(255))
     password = db.Column(db.String(255))
-
-    def _get_identifier(self):
-        return 'username', self.username
 
     @declared_attr
     def roles(cls):

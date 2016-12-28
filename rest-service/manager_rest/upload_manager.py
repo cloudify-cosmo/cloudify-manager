@@ -34,8 +34,7 @@ from flask_restful.reqparse import RequestParser
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from manager_rest.archiving import get_archive_type
-from manager_rest.storage.models import Plugin
-from manager_rest.storage.models_states import SnapshotState
+from manager_rest.storage.models import Plugin, Snapshot
 from manager_rest import config, chunked, manager_exceptions
 from manager_rest.utils import mkdirs, get_formatted_timestamp
 from manager_rest.resource_manager import get_resource_manager
@@ -292,7 +291,7 @@ class UploadedSnapshotsManager(UploadedDataManager):
         args = self._get_args()
         return get_resource_manager().create_snapshot_model(
             data_id,
-            status=SnapshotState.UPLOADED,
+            status=Snapshot.UPLOADED,
             private_resource=args.private_resource
         ), None
 

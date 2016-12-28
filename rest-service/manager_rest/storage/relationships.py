@@ -28,28 +28,6 @@ def foreign_key(foreign_key_column, nullable=False):
     )
 
 
-def one_to_many_relationship(child_class,
-                             parent_class,
-                             foreign_key_column,
-                             backreference=None):
-    """Return a one-to-many SQL relationship object
-    Meant to be used from inside the *child* object
-
-    :param parent_class: Class of the parent table
-    :param child_class: Class of the child table
-    :param foreign_key_column: The column of the foreign key
-    :param backreference: The name to give to the reference to the child
-    """
-    backreference = backreference or child_class.__tablename__
-    return db.relationship(
-        parent_class,
-        primaryjoin=lambda: parent_class.storage_id == foreign_key_column,
-        # The following line make sure that when the *parent* is
-        # deleted, all its connected children are deleted as well
-        backref=db.backref(backreference, cascade='all')
-    )
-
-
 def many_to_many_relationship(current_class, other_class, table_prefix=None):
     """Return a many-to-many SQL relationship object
 
@@ -64,22 +42,13 @@ def many_to_many_relationship(current_class, other_class, table_prefix=None):
     """
     current_table_name = current_class.__tablename__
     current_column_name = '{0}_id'.format(current_table_name[:-1])
-    current_foreign_key = '{0}.{1}'.format(
-        current_table_name,
-        current_class.unique_id()
-    )
+    current_foreign_key = '{0}.id'.format(current_table_name)
 
     other_table_name = other_class.__tablename__
     other_column_name = '{0}_id'.format(other_table_name[:-1])
-    other_foreign_key = '{0}.{1}'.format(
-        other_table_name,
-        other_class.unique_id()
-    )
+    other_foreign_key = '{0}.id'.format(other_table_name)
 
-    helper_table_name = '{0}_{1}'.format(
-        current_table_name,
-        other_table_name
-    )
+    helper_table_name = '{0}_{1}'.format(current_table_name, other_table_name)
 
     backref_name = current_table_name
     if table_prefix:
@@ -111,7 +80,7 @@ def get_secondary_table(helper_table_name,
     :param first_column_name: The name of the first column in the table
     :param second_column_name: The name of the second column in the table
     :param first_foreign_key: The string representing the first foreign key,
-    for example `blueprint.storage_id`, or `tenants.id`
+    for example `blueprint.id`, or `tenants.id`
     :param second_foreign_key: The string representing the second foreign key
     :return: A Table object
     """
