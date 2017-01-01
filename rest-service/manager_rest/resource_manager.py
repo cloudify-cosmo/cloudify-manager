@@ -18,6 +18,7 @@ import uuid
 import shutil
 import traceback
 import itertools
+from collections import namedtuple
 from copy import deepcopy
 from StringIO import StringIO
 
@@ -583,6 +584,8 @@ class ResourceManager(object):
         :param deployment_plan: deployment_plan
         :param node_ids: optionally create only nodes with these ids
         """
+        node_host = namedtuple('node_host', 'node, host_id')
+
         node_ids = node_ids or []
         if not isinstance(node_ids, list):
             node_ids = [node_ids]
@@ -591,13 +594,11 @@ class ResourceManager(object):
         if node_ids:
             raw_nodes = \
                 [node for node in raw_nodes if node['id'] in node_ids]
-        nodes = []
+        nodes = {}
         for raw_node in raw_nodes:
             scalable = raw_node['capabilities']['scalable']['properties']
-            host = self.get_node(deployment.id, raw_node.get('host_id'),
-                                 nullable=True)
 
-            nodes.append(models.Node(
+            node = models.Node(
                 deployment=deployment,
                 id=raw_node['name'],
                 type=raw_node['type'],
@@ -607,28 +608,43 @@ class ResourceManager(object):
                 deploy_number_of_instances=scalable['default_instances'],
                 min_number_of_instances=scalable['min_instances'],
                 max_number_of_instances=scalable['max_instances'],
-                host=host,
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],
                 plugins=raw_node['plugins'],
                 plugins_to_install=raw_node.get('plugins_to_install'),
-                relationships=self._prepare_node_relationships(raw_node)))
-        return nodes
+                relationships=self._prepare_node_relationships(raw_node))
+
+            nodes[node.id] = node_host(node=node, host_id=raw_node.get('host_id'))
+
+        # Second pass for hosts
+        for node, host_id in nodes.values():
+            new_node = nodes.get(host_id)
+            host = new_node.node if new_node else \
+                self.get_node(deployment.id, host_id, nullable=True)
+            node.host = host or node
+
+        return [n.node for n in nodes.values()]
 
     def _prepare_deployment_node_instances_for_storage(self,
                                                        deployment_id,
                                                        dsl_node_instances):
-        node_instances = []
+        """
+        Returns a list of node instances ready to be inserted to the storage.
+        Note! each node instance might be missing its host.
+        :param deployment_id:
+        :param dsl_node_instances:
+        :return:
+        """
+        instance_host = namedtuple('instance_host', 'instance, host_id')
+
+        node_instances = {}
         for node_instance in dsl_node_instances:
             node = self.get_node(deployment_id, node_instance['node_id'])
             instance_id = node_instance['id']
             scaling_groups = node_instance.get('scaling_groups', [])
             relationships = node_instance.get('relationships', [])
-            host = self.get_node_instance(node_instance.get('host_id'),
-                                          nullable=True)
             instance = models.NodeInstance(
                 id=instance_id,
-                host=host,
                 relationships=relationships,
                 state='uninitialized',
                 runtime_properties={},
@@ -636,9 +652,18 @@ class ResourceManager(object):
                 scaling_groups=scaling_groups
             )
             instance.node = node
-            node_instances.append(instance)
+            node_instances[instance.id] = instance_host(
+                instance=instance,
+                host_id=node_instance.get('host_id'))
 
-        return node_instances
+        # Second pass for hosts
+        for node_instance, host_id in node_instances.values():
+            new_node_instance = node_instances.get(host_id)
+            host = new_node_instance.instance if new_node_instance else \
+                self.get_node_instance(host_id, nullable=True)
+            node_instance.host = host or node_instance
+
+        return [n.instance for n in node_instances.values()]
 
     def _create_deployment_nodes(self,
                                  deployment_id,
@@ -650,8 +675,6 @@ class ResourceManager(object):
             plan, deployment, node_ids)
 
         for node in nodes:
-            if node.host is None:
-                node.host = node
             self.sm.put(node)
 
     def _create_deployment_node_instances(self,
@@ -662,8 +685,6 @@ class ResourceManager(object):
             dsl_node_instances)
 
         for node_instance in node_instances:
-            if node_instance.host is None:
-                node_instance.host = node_instance
             self.sm.put(node_instance)
 
     def create_deployment(self,
@@ -838,6 +859,8 @@ class ResourceManager(object):
         self.sm.update(deployment)
 
         node_instances = modification.node_instances
+        removed_node_instances_ids = set(n['id'] for n in node_instances['removed_and_related']
+                                         if n.get('modification') == 'removed')
         for node_instance_dict in node_instances['removed_and_related']:
             instance = self.sm.get(
                 models.NodeInstance,
@@ -845,7 +868,11 @@ class ResourceManager(object):
                 locking=True
             )
             if node_instance_dict.get('modification') == 'removed':
-                self.sm.delete(instance)
+                # If a host node instance was already remove, there is no need to remove the
+                # contained node again
+                if node_instance_dict['host_id'] == node_instance_dict['id'] or \
+                        node_instance_dict['host_id'] not in removed_node_instances_ids:
+                    self.sm.delete(instance)
             else:
                 removed_relationship_target_ids = set(
                     [rel['target_id']
@@ -888,7 +915,8 @@ class ResourceManager(object):
         modified_instances['before_rollback'] = [
             instance.to_dict() for instance in node_instances]
         for instance in node_instances:
-            self.sm.delete(instance)
+            if instance.host not in node_instances or instance.host == instance:
+                self.sm.delete(instance)
         for instance_dict in modified_instances['before_modification']:
             self.add_node_instance_from_dict(instance_dict)
         nodes_num_instances = {
@@ -1322,3 +1350,7 @@ def get_resource_manager():
     Get the current app's resource manager, create if necessary
     """
     return current_app.config.setdefault('resource_manager', ResourceManager())
+
+# test_deployment_modification_add_compute_rollback
+# test_3_3_1_snapshot_with_plugin
+# integration_tests.tests.agentless_tests.test_deployment_update

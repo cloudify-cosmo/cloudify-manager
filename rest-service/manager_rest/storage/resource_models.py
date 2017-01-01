@@ -149,6 +149,8 @@ class Execution(base.ExecutionBase, TopLevelMixin, DerivedResource):
     ended_at = db.Column(UTCDateTime, nullable=True, index=True)
     workflow_id = db.Column(db.Text)
 
+    VALID_TRANSITIONS = {s: base.ExecutionBase.STATES for s in base.ExecutionBase.STATES}
+
     @hybrid_property
     def parent(self):
         return self.deployment
@@ -405,30 +407,31 @@ class NodeInstance(base.NodeInstanceBase, DerivedResource, DerivedMixin):
 
     relationships = db.Column(aria_types.List)
 
+# Temporary removed since the Inner Enum wasn't configured properly.
 
-class Task(base.TaskBase, DerivedResource, DerivedMixin):
-    """
-    This model is not yet used by cloudify but will be by the ARIA
-    workflow engine
-    """
-    proxies = {'deployment_id': flask_fields.String}
-    _private_fields = \
-        DerivedResource._private_fields + base.TaskBase._private_fields
-
-    @hybrid_property
-    def parent(self):
-        return self.execution
-
-    @parent.expression
-    def parent(cls):
-        return Execution
-
-    # old style id support
-    execution_id = association_proxy('execution',
-                                     Execution.name_column_name())
-
-    relationship_instance_fk = None
-    relationship_instance_name = None
-    relationship_instance = None
+# class Task(base.TaskBase, DerivedResource, DerivedMixin):
+#     """
+#     This model is not yet used by cloudify but will be by the ARIA
+#     workflow engine
+#     """
+#     proxies = {'deployment_id': flask_fields.String}
+#     _private_fields = \
+#         DerivedResource._private_fields + base.TaskBase._private_fields
+#
+#     @hybrid_property
+#     def parent(self):
+#         return self.execution
+#
+#     @parent.expression
+#     def parent(cls):
+#         return Execution
+#
+#     # old style id support
+#     execution_id = association_proxy('execution',
+#                                      Execution.name_column_name())
+#
+#     relationship_instance_fk = None
+#     relationship_instance_name = None
+#     relationship_instance = None
 
 # endregion

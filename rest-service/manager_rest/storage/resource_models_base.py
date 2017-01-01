@@ -100,11 +100,11 @@ class SQLResourceBase(SQLModelBase):
         return result_dict
 
     def __repr__(self):
-        id_name, id_value = self._get_identifier()
+        id_name = self.name_column_name()
         return '<{0} {1}=`{2}`; tenant=`{3}`>'.format(
             self.__class__.__name__,
             id_name,
-            id_value,
+            getattr(self, id_name),
             self.tenant_name
         )
 

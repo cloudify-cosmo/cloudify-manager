@@ -407,15 +407,14 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
         """handles updating new and extended nodes onto the storage.
 
         :param dep_update:
-        :return: a list of all of the nodes
-        (including the non add_node.modification nodes)
+        # :return: a list of all of the nodes
+        # (including the non add_node.modification nodes)
         """
         current_nodes = self.sm.list(
             models.Node,
             filters={'deployment_id': dep_update.deployment_id}
         )
-        nodes_dict = {node.id: deepcopy(node.to_dict())
-                      for node in current_nodes}
+        nodes_dict = {node.id: node.to_dict() for node in current_nodes}
         modified_entities = deployment_update_utils.ModifiedEntitiesDict()
 
         # Iterate over the steps of the deployment update and handle each
@@ -483,7 +482,9 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
                 dep_update.deployment_id,
                 removed_node_instance['node_id']
             )
-            self.sm.delete(node)
+            # Remove only if the node's host isn't scheduled for removal
+            if node.host == node or node.host.id not in removed_node_ids:
+                self.sm.delete(node)
 
 
 class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
@@ -671,12 +672,17 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
         self._reduce_node_instances(reduced_node_instances,
                                     extended_node_instances)
 
+        removed_node_instance_ids = (n['id'] for n in removed_node_instances)
+
         for removed_node_instance in removed_node_instances:
             node_instance = self.sm.get(
                 models.NodeInstance,
                 removed_node_instance['id']
             )
-            self.sm.delete(node_instance)
+            # Remove only if the node instance's host isn't scheduled for removal
+            if removed_node_instance['host_id'] not in removed_node_instance_ids or \
+                removed_node_instance['host_id'] == removed_node_instance['id']:
+                self.sm.delete(node_instance)
 
     def _reduce_node_instances(self,
                                reduced_node_instances,

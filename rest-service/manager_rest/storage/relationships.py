@@ -42,11 +42,13 @@ def many_to_many_relationship(current_class, other_class, table_prefix=None):
     """
     current_table_name = current_class.__tablename__
     current_column_name = '{0}_id'.format(current_table_name[:-1])
-    current_foreign_key = '{0}.id'.format(current_table_name)
+    current_foreign_key = '{0}.{1}'.format(current_table_name,
+                                           current_class.id_column_name())
 
     other_table_name = other_class.__tablename__
     other_column_name = '{0}_id'.format(other_table_name[:-1])
-    other_foreign_key = '{0}.id'.format(other_table_name)
+    other_foreign_key = '{0}.{1}'.format(other_table_name,
+                                         other_class.id_column_name())
 
     helper_table_name = '{0}_{1}'.format(current_table_name, other_table_name)
 

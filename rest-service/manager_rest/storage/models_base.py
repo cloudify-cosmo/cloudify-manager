@@ -102,18 +102,23 @@ class SQLModelBase(db.Model, structure.ModelMixin):
         it's unable to retrieve (e.g., if a relationship wasn't established
         yet, and so it's impossible to access a property through it)
         """
-        if suppress_error:
-            res = dict()
-            for field in self.resource_fields:
-                try:
-                    field_value = getattr(self, field)
-                except AttributeError:
+        res = dict()
+        for field in self.resource_fields:
+            try:
+                field_value = getattr(self, field)
+            except AttributeError:
+                # Can't simply call here `self.to_response()` because inheriting
+                # class might override it, but we always need the same code here
+                if suppress_error:
                     field_value = None
-                res[field] = field_value
-        else:
-            # Can't simply call here `self.to_response()` because inheriting
-            # class might override it, but we always need the same code here
-            res = {f: getattr(self, f) for f in self.resource_fields}
+                else:
+                    raise
+            if isinstance(field_value, list):
+                field_value = list(field_value)
+            elif isinstance(field_value, dict):
+                field_value = dict(field_value)
+            res[field] = field_value
+
         return res
 
     def to_json(self):
