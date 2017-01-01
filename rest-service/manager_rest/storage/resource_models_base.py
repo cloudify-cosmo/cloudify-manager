@@ -95,6 +95,15 @@ class SQLResourceBase(SQLModelBase):
             result_dict.pop(field)
         return result_dict
 
+    def __repr__(self):
+        id_name, id_value = self._get_identifier()
+        return '<{0} {1}=`{2}`; tenant=`{3}`>'.format(
+            self.__class__.__name__,
+            id_name,
+            id_value,
+            self.tenant_name
+        )
+
 
 class TopLevelResource(TopLevelMixin, SQLResourceBase):
     # SQLAlchemy syntax
