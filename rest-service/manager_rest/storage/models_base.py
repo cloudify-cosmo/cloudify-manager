@@ -128,16 +128,10 @@ class SQLModelBase(db.Model):
     def unique_id(cls):
         return 'id'
 
-    def __str__(self):
+    def __repr__(self):
         id_name, id_value = self._get_identifier()
         return '<{0} {1}=`{2}`>'.format(
             self.__class__.__name__,
             id_name,
             id_value
         )
-
-    def __repr__(self):
-        return str(self)
-
-    def __unicode__(self):
-        return str(self)
