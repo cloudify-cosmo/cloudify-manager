@@ -20,6 +20,7 @@ import traceback
 import itertools
 from copy import deepcopy
 from StringIO import StringIO
+from functools import partial
 
 import celery.exceptions
 from flask import current_app
@@ -589,13 +590,13 @@ class ResourceManager(object):
         if node_ids:
             raw_nodes = \
                 [node for node in raw_nodes if node['id'] in node_ids]
-        nodes = []
+        nodes, relationships = [], []
         for raw_node in raw_nodes:
             scalable = raw_node['capabilities']['scalable']['properties']
             host = self.get_node(deployment.id, raw_node.get('host_id'),
                                  nullable=True)
 
-            nodes.append(models.Node(
+            node = models.Node(
                 deployment=deployment,
                 id=raw_node['name'],
                 type=raw_node['type'],
@@ -609,25 +610,37 @@ class ResourceManager(object):
                 properties=raw_node['properties'],
                 operations=raw_node['operations'],
                 plugins=raw_node['plugins'],
-                plugins_to_install=raw_node.get('plugins_to_install'),
-                relationships=self._prepare_node_relationships(raw_node)))
-        return nodes
+                plugins_to_install=raw_node.get('plugins_to_install'))
+            nodes.append(node)
+            node_relationships = [models.Relationship(
+                target_node_fk=relationship['target_id'],
+                source_node=node,
+                type=relationship['type'],
+                source_interfaces=relationship['source_interfaces'],
+                source_operations=relationship['source_operations'],
+                target_interfaces=relationship['target_interfaces'],
+                target_operations=relationship['target_operations'],
+                type_hierarchy=relationship['type_hierarchy'],
+                properties=relationship['properties']
+            ) for relationship in raw_node['relationships']]
+
+            relationships.extend(node_relationships)
+
+        return nodes, relationships
 
     def _prepare_deployment_node_instances_for_storage(self,
                                                        deployment_id,
                                                        dsl_node_instances):
-        node_instances = []
+        node_instances, relationship_instances = [], []
         for node_instance in dsl_node_instances:
             node = self.get_node(deployment_id, node_instance['node_id'])
             instance_id = node_instance['id']
             scaling_groups = node_instance.get('scaling_groups', [])
-            relationships = node_instance.get('relationships', [])
             host = self.get_node_instance(node_instance.get('host_id'),
                                           nullable=True)
             instance = models.NodeInstance(
                 id=instance_id,
                 host=host,
-                relationships=relationships,
                 state='uninitialized',
                 runtime_properties={},
                 version=None,
@@ -636,7 +649,28 @@ class ResourceManager(object):
             instance.node = node
             node_instances.append(instance)
 
-        return node_instances
+            node_instances_relationships = [models.RelationshipInstance(
+                source_node_instance=instance,
+                target_node_instance_fk=relationship_instance['target_id'],
+                relationship=self._get_relationship_by_src_and_target(
+                    deployment_id,
+                    node,
+                    self.get_node(deployment_id, relationship_instance['target_name']))
+            )for relationship_instance in node_instance['relationships']]
+            relationship_instances.extend(node_instances_relationships)
+
+        return node_instances, relationship_instances
+
+    # TODO: this will need to be removed
+    def _get_relationship_by_src_and_target(self, deployment_id, source, target):
+        relationships = self.sm.list(models.Relationship,
+                                     filters={'deployment_id': deployment_id,
+                                              'source_name': source.id,
+                                              'target_name': target.id})
+        return relationships[0] if len(relationships) == 1 else None
+
+    def _get_relationship_by_src_and_target_instances(self, deployment_id, source, target):
+        return self._get_relationship_by_src_and_target(deployment_id, source.node, target.node)
 
     def _create_deployment_nodes(self,
                                  deployment_id,
@@ -644,7 +678,7 @@ class ResourceManager(object):
                                  node_ids=None):
         deployment = self.sm.get(models.Deployment, deployment_id)
 
-        nodes = self.prepare_deployment_nodes_for_storage(
+        nodes, relationships = self.prepare_deployment_nodes_for_storage(
             plan, deployment, node_ids)
 
         for node in nodes:
@@ -652,10 +686,15 @@ class ResourceManager(object):
                 node.host = node
             self.sm.put(node)
 
+        for relationship in relationships:
+            target_node = self.get_node(deployment_id, relationship.target_node_fk)
+            relationship.target_node_fk = target_node.storage_id
+            self.sm.put(relationship)
+
     def _create_deployment_node_instances(self,
                                           deployment_id,
                                           dsl_node_instances):
-        node_instances = self._prepare_deployment_node_instances_for_storage(
+        node_instances, relationships = self._prepare_deployment_node_instances_for_storage(
             deployment_id,
             dsl_node_instances)
 
@@ -663,6 +702,11 @@ class ResourceManager(object):
             if node_instance.host is None:
                 node_instance.host = node_instance
             self.sm.put(node_instance)
+        for relationship_instance in relationships:
+            target = self.sm.list(models.NodeInstance,
+                                  filters={'id': relationship_instance.target_node_instance_fk})[0]
+            relationship_instance.target_node_instance_fk = target.storage_id
+            self.sm.put(relationship_instance)
 
     def create_deployment(self,
                           blueprint_id,
@@ -766,46 +810,57 @@ class ResourceManager(object):
         self.sm.update(deployment)
 
         added_and_related = node_instances_modification['added_and_related']
-        added_node_instances = []
-        for node_instance in added_and_related:
-            if node_instance.get('modification') == 'added':
-                added_node_instances.append(node_instance)
-            else:
-                node = self.get_node(
-                    deployment_id=deployment_id,
-                    node_id=node_instance['node_id']
-                )
-                target_names = [r['target_id'] for r in node.relationships]
-                current = self.sm.get(models.NodeInstance, node_instance['id'])
-                current_relationship_groups = {
-                    target_name: list(group)
-                    for target_name, group in itertools.groupby(
-                        current.relationships,
-                        key=lambda r: r['target_name'])
-                }
-                new_relationship_groups = {
-                    target_name: list(group)
-                    for target_name, group in itertools.groupby(
-                        node_instance['relationships'],
-                        key=lambda r: r['target_name'])
-                }
-                new_relationships = []
-                for target_name in target_names:
-                    new_relationships += current_relationship_groups.get(
-                        target_name, [])
-                    new_relationships += new_relationship_groups.get(
-                        target_name, [])
-                instance = self.sm.get(
-                    models.NodeInstance,
-                    node_instance['id'],
-                    locking=True
-                )
-                instance.relationships = deepcopy(new_relationships)
-                instance.version += 1
-                self.sm.update(instance)
-        self._create_deployment_node_instances(deployment_id,
-                                               added_node_instances)
+
+        added_node_instances = (n for n in added_and_related if n.get('modification') == 'added')
+        self._create_deployment_node_instances(deployment_id, added_node_instances)
+
+        for node_instance in (n for n in added_and_related if n.get('modification') != 'added'):
+            node = self.get_node(
+                deployment_id=deployment_id,
+                node_id=node_instance['node_id']
+            )
+            target_names = [r['target_id'] for r in node.relationships]
+            current = self.sm.get(models.NodeInstance, node_instance['id'])
+            current_relationship_groups = {
+                target_name: list(group)
+                for target_name, group in itertools.groupby(
+                    current.relationships,
+                    key=lambda r: r['target_name'])
+            }
+            new_relationship_groups = {
+                target_name: list(group)
+                for target_name, group in itertools.groupby(
+                    node_instance['relationships'],
+                    key=lambda r: r['target_name'])
+            }
+            relationships = []
+            for target_name in target_names:
+                relationships.extend(current_relationship_groups.get(target_name, []))
+
+                raw_relationships = new_relationship_groups.get(target_name, [])
+                relationship_models = map(partial(self._create_relationship_instance_model,
+                                                  deployment_id,
+                                                  node_instance),
+                                          raw_relationships)
+                relationships.extend(relationship_models)
+
+            instance = self.sm.get(models.NodeInstance, node_instance['id'], locking=True)
+            instance.version += 1
+            instance.relationships[:] = relationships
+            self.sm.update(instance)
+
         return modification
+
+    def _create_relationship_instance_model(self, deployment_id, raw_node_instance, raw_relationship_instance):
+        source_node_instance = self.sm.get(models.NodeInstance, raw_node_instance['id'])
+        target_node_instance = self.sm.get(models.NodeInstance, raw_relationship_instance['target_id'])
+        relationship = self._get_relationship_by_src_and_target_instances(deployment_id,
+                                                                          source_node_instance,
+                                                                          target_node_instance)
+
+        return models.RelationshipInstance(source_node_instance=source_node_instance,
+                                           target_node_instance=target_node_instance,
+                                           relationship=relationship)
 
     def finish_deployment_modification(self, modification_id):
         modification = self.sm.get(
@@ -852,7 +907,7 @@ class ResourceManager(object):
                 new_relationships = [rel for rel in instance.relationships
                                      if rel['target_id']
                                      not in removed_relationship_target_ids]
-                instance.relationships = deepcopy(new_relationships)
+                instance.relationships[:] = new_relationships
                 instance.version += 1
                 self.sm.update(instance)
 
@@ -887,8 +942,7 @@ class ResourceManager(object):
             instance.to_dict() for instance in node_instances]
         for instance in node_instances:
             self.sm.delete(instance)
-        for instance_dict in modified_instances['before_modification']:
-            self.add_node_instance_from_dict(instance_dict)
+        self.add_node_instance_from_dict(modified_instances['before_modification'])
         nodes_num_instances = {
             node.id: node for node in self.sm.list(
                 models.Node,
@@ -915,16 +969,20 @@ class ResourceManager(object):
         self.sm.update(modification)
         return modification
 
-    def add_node_instance_from_dict(self, instance_dict):
-        # Remove the IDs from the dict - they don't have comparable columns
-        deployment_id = instance_dict.pop('deployment_id')
-        node_id = instance_dict.pop('node_id')
+    def add_node_instance_from_dict(self, instance_dicts):
+        intact_instance_dicts = deepcopy(instance_dicts)
+        for instance_dict in instance_dicts:
+
+            # Remove the IDs from the dict - they don't have comparable columns
+            deployment_id = instance_dict.pop('deployment_id')
+            node_id = instance_dict.pop('node_id')
 
         # Link the node instance object to to the node, and add it to the DB
         host_id = instance_dict.pop('host_id')
         host = self.get_node_instance(host_id, nullable=True)
         if host:
             instance_dict['host'] = host
+        relationships = instance_dict.pop('relationships')
         new_node_instance = models.NodeInstance(**instance_dict)
         node = self.get_node(deployment_id, node_id)
         new_node_instance.node = node
@@ -936,6 +994,15 @@ class ResourceManager(object):
         instance_dict['deployment_id'] = deployment_id
         instance_dict['node_id'] = node_id
         instance_dict['host_id'] = host_id
+        instance_dict['relationships'] = relationships
+
+        for instance_dict in intact_instance_dicts:
+            relationships = \
+                map(partial(self._create_relationship_instance_model, deployment_id, instance_dict),
+                    instance_dict['relationships'])
+            instance = self.sm.get(models.NodeInstance, instance_dict['id'])
+            instance.relationships[:] = relationships
+            self.sm.update(instance)
 
     def evaluate_deployment_outputs(self, deployment_id):
         deployment = self.sm.get(

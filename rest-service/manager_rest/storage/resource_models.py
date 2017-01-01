@@ -21,7 +21,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from manager_rest.utils import classproperty
 from manager_rest.rest.responses import Workflow
 
-from .models_base import db, UTCDateTime
+from .models_base import db, UTCDateTime, DummyDict
 from .resource_models_base import TopLevelResource, DerivedResource
 from .mixins import (
     DerivedMixin,
@@ -340,6 +340,7 @@ class Node(base.NodeBase, DerivedResource, DerivedMixin):
         'deployment_id': flask_fields.String,
         'blueprint_id': flask_fields.String,
         'host_id': flask_fields.String,
+        'relationships': flask_fields.Raw,
     }
     _private_fields = \
         DerivedResource._private_fields + base.NodeBase._private_fields
@@ -368,6 +369,48 @@ class Node(base.NodeBase, DerivedResource, DerivedMixin):
         'deployment',
         'blueprint_{0}'.format(Blueprint.name_column_name()))
 
+    @property
+    def relationships(self):
+        return self.outbound_relationships
+
+    def to_dict(self, suppress_error=False):
+        dep_dict = super(Node, self).to_dict(suppress_error=suppress_error)
+        dep_dict['relationships'] = [relationship.to_dict(suppress_error=suppress_error)
+                                     for relationship in self.relationships]
+        return dep_dict
+
+    def to_response(self):
+        dep_dict = super(Node, self).to_response()
+        if self.relationships:
+            dep_dict['relationships'] = [relationship.to_response()
+                                         for relationship in self.relationships]
+        return dep_dict
+
+
+class Relationship(base.RelationshipBase, DerivedResource, DerivedMixin, DummyDict):
+
+    proxies = {
+        'target_id': flask_fields.String,
+        'source_id': flask_fields.String,
+    }
+    tenant_id = association_proxy('source_node', 'tenant_id')
+
+    _private_fields = DerivedResource._private_fields + base.RelationshipBase._private_fields
+
+    is_id_unique = False
+
+    @hybrid_property
+    def parent(self):
+        return self.source_node
+
+    @parent.expression
+    def parent(cls):
+        return Node
+
+    target_id = association_proxy('target_node', Node.name_column_name())
+    source_id = association_proxy('source_node', Node.name_column_name())
+    deployment = association_proxy('source_node', 'deployment')
+
 
 class NodeInstance(base.NodeInstanceBase, DerivedResource, DerivedMixin):
 
@@ -380,6 +423,7 @@ class NodeInstance(base.NodeInstanceBase, DerivedResource, DerivedMixin):
         'node_id': flask_fields.String,
         'deployment_id': flask_fields.String,
         'host_id': flask_fields.String,
+        'relationships': flask_fields.Raw,
     }
     _private_fields = DerivedResource._private_fields + \
         base.NodeInstanceBase._private_fields
@@ -402,7 +446,70 @@ class NodeInstance(base.NodeInstanceBase, DerivedResource, DerivedMixin):
     def host_id(cls):
         return association_proxy('host', cls.name_column_name())
 
-    relationships = db.Column(aria_types.List)
+    @property
+    def relationships(self):
+        return self.outbound_relationship_instances
+
+    def to_dict(self, suppress_error=False):
+        dep_dict = super(NodeInstance, self).to_dict(suppress_error=suppress_error)
+        dep_dict['relationships'] = [relationship.to_dict()
+                                     for relationship in self.relationships]
+        return dep_dict
+
+    def to_response(self):
+        dep_dict = super(NodeInstance, self).to_response()
+        if self.relationships:
+            dep_dict['relationships'] = [relationship.to_dict()
+                                         for relationship in self.relationships]
+        return dep_dict
+
+
+class RelationshipInstance(base.RelationshipInstanceBase, DerivedResource, DerivedMixin, DummyDict):
+    proxies = {
+        'target_id': flask_fields.String,
+        'source_id': flask_fields.String,
+        'relationship_id': flask_fields.String,
+        'type': flask_fields.String
+    }
+    _private_fields = DerivedResource._private_fields + base.RelationshipInstanceBase._private_fields
+    tenant_id = association_proxy('source_node_instance', 'tenant_id')
+
+    is_id_unique = False
+
+    @hybrid_property
+    def parent(self):
+        return self.relationship
+
+    @parent.expression
+    def parent(cls):
+        return Relationship
+
+    target_id = association_proxy('target_node_instance',
+                                  NodeInstance.name_column_name())
+
+    @property
+    def target_name(cls):
+        return cls.target_node_name
+
+    source_id = association_proxy('source_node_instance',
+                                  NodeInstance.name_column_name())
+
+    @property
+    def source_name(cls):
+        return cls.source_node_name
+
+    type = association_proxy('relationship', 'type')
+
+    def to_dict(self, suppress_error=False):
+        relationship_instance_dict = \
+            super(RelationshipInstance, self).to_dict(suppress_error=suppress_error)
+        relationship_instance_dict['target_name'] = self.target_name
+        relationship_instance_dict['source_name'] = self.source_name
+
+        return relationship_instance_dict
+
+    relationship_id = association_proxy('relationship',
+                                        Relationship.name_column_name())
 
 
 class Task(base.TaskBase, DerivedResource, DerivedMixin):

@@ -15,7 +15,7 @@
 
 import psutil
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 
 from flask import current_app
 from flask_security import current_user
@@ -28,6 +28,12 @@ from manager_rest.storage.models import Tenant
 from sqlalchemy import or_ as sql_or
 from sqlalchemy.exc import SQLAlchemyError
 from sqlite3 import DatabaseError as SQLiteDBError
+
+from sqlalchemy.orm import aliased
+
+
+AliasedColumn = namedtuple('AliasedColumn', 'local_col, remote_col')
+
 
 try:
     from psycopg2 import DatabaseError as Psycopg2DBError
@@ -69,8 +75,9 @@ class SQLStorageManager(object):
             query = model_class.query
 
         if not self._skip_joining(joins, include):
-            for join_table in joins:
-                query = query.join(join_table)
+            for join_table, cols in joins.items():
+                for local_col, remote_col in cols:
+                    query = query.join(join_table, local_col == remote_col)
 
         return query
 
@@ -220,19 +227,29 @@ class SQLStorageManager(object):
 
         :param columns: A set of all columns involved in the query
         """
-        joins = []  # Using a list instead of a set because order is important
+        joins = OrderedDict()
         for column_name in columns:
             column = getattr(model_class, column_name)
             while not column.is_attribute:
+                expression = column.local_attr.expression
+                remote_key = expression.left.key
                 column = column.remote_attr
                 if column.is_attribute:
                     join_class = column.class_
                 else:
                     join_class = column.local_attr.class_
 
-                # Don't add the same class more than once
-                if join_class not in joins:
-                    joins.append(join_class)
+                aliased_join_class = aliased(join_class)
+                remote_col = getattr(aliased_join_class, remote_key)
+
+                local_col = expression.right
+                for alias in joins:
+                    if alias._aliased_insp.class_.__table__ == expression.right.table:
+                        local_col = getattr(alias, expression.right.key)
+
+                aliased_property = AliasedColumn(local_col=local_col, remote_col=remote_col)
+                joins.setdefault(aliased_join_class, [])
+                joins[aliased_join_class].append(aliased_property)
         return joins
 
     def _get_joins_and_converted_columns(self,
@@ -251,7 +268,7 @@ class SQLStorageManager(object):
         joins = self._get_joins(model_class, all_columns)
 
         include, filters, sort = self._get_columns_from_field_names(
-            model_class, include, filters, sort
+            model_class, include, filters, sort, joins
         )
         return include, filters, sort, joins
 
@@ -288,24 +305,26 @@ class SQLStorageManager(object):
                                       model_class,
                                       include,
                                       filters,
-                                      sort):
+                                      sort,
+                                      joins):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
         """
         include = [self._get_column(model_class, c) for c in include]
-        filters = {self._get_column(model_class, c): filters[c]
+        filters = {self._get_column(model_class, c, joins): filters[c]
                    for c in filters}
-        sort = OrderedDict((self._get_column(model_class, c), sort[c])
+        sort = OrderedDict((self._get_column(model_class, c, joins), sort[c])
                            for c in sort)
 
         return include, filters, sort
 
     @staticmethod
-    def _get_column(model_class, column_name):
+    def _get_column(model_class, column_name, joins=None):
         """Return the column on which an action (filtering, sorting, etc.)
         would need to be performed. Can be either an attribute of the class,
         or an association proxy linked to a relationship the class has
         """
+        joins = joins or {}
         column = getattr(model_class, column_name)
         if column.is_attribute:
             return column
@@ -315,7 +334,12 @@ class SQLStorageManager(object):
             while not column.remote_attr.is_attribute:
                 column = column.remote_attr
             # Put a label on the remote attribute with the name of the column
-            return column.remote_attr.label(column_name)
+            remote_attr = column.remote_attr
+            for alias, cols in joins.items():
+                if column.local_attr.expression.right.key in \
+                        (col.local_col.key for col in cols):
+                    remote_attr = getattr(alias, remote_attr.key)
+            return remote_attr.label(column_name)
 
     @staticmethod
     def _paginate(query, pagination):

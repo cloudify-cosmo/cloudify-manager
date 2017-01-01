@@ -49,6 +49,21 @@ class UTCDateTime(db.TypeDecorator):
             return value
 
 
+class DummyDict(object):
+
+    def __setitem__(self, key, value):
+        return setattr(self, key, value)
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def get(self, k, default=None):
+        try:
+            return self[k]
+        except KeyError:
+            return default
+
+
 class SQLModelBase(db.Model, structure.ModelMixin):
     """Abstract base class for all SQL resource_models.py
     that allows [de]serialization

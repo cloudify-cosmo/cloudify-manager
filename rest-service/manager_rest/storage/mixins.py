@@ -30,13 +30,13 @@ class DerivedMixinBase(object):
         """Return the *instance* of the parent class via a relationship,
         e.g. self.node, self.deployment (see parent.expression)
         """
-        raise NotImplemented
+        raise NotImplementedError()
 
     @parent.expression
     def parent(cls):
         """Return the parent *class*, e.g. Blueprint, Deployment
         """
-        raise NotImplemented
+        raise NotImplementedError()
 
 
 class TopLevelTenantMixin(object):

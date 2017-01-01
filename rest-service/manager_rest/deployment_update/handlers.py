@@ -1,4 +1,5 @@
 from copy import deepcopy
+from functools import partial
 
 import utils as deployment_update_utils
 from constants import ENTITY_TYPES, NODE_MOD_TYPES
@@ -104,19 +105,20 @@ class RelationshipHandler(ModifiableEntityHandlerBase):
         # Update source relationships and plugins
 
         # Extract the new relationship from the deployment update plan
-        new_relationship = \
-            ctx.raw_node[ctx.RELATIONSHIPS][ctx.relationship_index]
+        new_relationship = ctx.raw_node[ctx.RELATIONSHIPS][ctx.relationship_index]
 
         # Extract the current relationships and manipulate the relationships
         # size to support new relationships
-        raw_relationships = \
-            current_entities[ctx.raw_node_id][ctx.RELATIONSHIPS]
+        raw_relationships = current_entities[ctx.raw_node_id][ctx.RELATIONSHIPS]
         self._resize_relationships(raw_relationships, ctx.relationship_index)
         raw_relationships[ctx.relationship_index] = new_relationship
 
-        relationships = deepcopy(ctx.storage_node.relationships)
-        relationships.append(new_relationship)
-        ctx.storage_node.relationships = relationships
+        storage_relationship = models.Relationship(
+            source_node=ctx.storage_node,
+            target_node=ctx.storage_target_node,
+            **new_relationship
+        )
+        ctx.storage_node.relationships.append(storage_relationship)
         ctx.storage_node.plugins = ctx.raw_node[ctx.PLUGINS]
         self.sm.update(ctx.storage_node)
 
@@ -414,8 +416,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
             models.Node,
             filters={'deployment_id': dep_update.deployment_id}
         )
-        nodes_dict = {node.id: deepcopy(node.to_dict())
-                      for node in current_nodes}
+        nodes_dict = {node.id: node.to_dict() for node in current_nodes}
         modified_entities = deployment_update_utils.ModifiedEntitiesDict()
 
         # Iterate over the steps of the deployment update and handle each
@@ -592,14 +593,15 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                     node_instance['id'],
                     locking=True
                 )
-                relationships = deepcopy(instance.relationships)
 
                 node_instance['relationships'] = \
-                    sorted(node_instance['relationships'],
-                           key=lambda r: r.get('rel_index', 0))
+                        sorted(node_instance['relationships'], key=lambda r: r.get('rel_index', 0))
 
-                relationships.extend(node_instance['relationships'])
-                instance.relationships = relationships
+                model_relationships = map(partial(self._create_relationship_model,
+                                                  node_instance['id']),
+                                          node_instance['relationships'])
+
+                instance.relationships.extend(model_relationships)
                 instance.version = _handle_version(node_instance['version'])
                 self.sm.update(instance)
                 modified_raw_instances.append(node_instance)
@@ -611,6 +613,23 @@ class DeploymentUpdateNodeInstanceHandler(UpdateHandler):
                 NODE_MOD_TYPES.AFFECTED: modified_raw_instances,
                 NODE_MOD_TYPES.RELATED: modify_related_raw_instances
             }
+
+    def _create_relationship_model(self, node_instance_id, raw_relationship_instance):
+        source_node_instance = self.sm.get(models.NodeInstance, node_instance_id)
+        target_node_instance = self.sm.get(models.NodeInstance,
+                                           raw_relationship_instance['target_id'])
+        for relationship in self.sm.list(models.Relationship):
+            if relationship['source_id'] == source_node_instance.node.id and relationship['target_id'] == target_node_instance.node.id:
+                break
+
+        # TODO: fix the join. the above for loop shouldn't exist.
+        # relationship = self.sm.list(models.Relationship, filters={
+        #     'source_id': source_node_instance.node.id,
+        #     'target_id': target_node_instance.node.id
+        # })
+        return models.RelationshipInstance(source_node_instance=source_node_instance,
+                                           target_node_instance=target_node_instance,
+                                           relationship=relationship)
 
     def _handle_removing_relationship_instance(self, instances, *_):
         """Handles removing a relationship to a node instance
