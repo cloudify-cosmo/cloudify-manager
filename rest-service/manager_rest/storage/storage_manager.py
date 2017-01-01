@@ -112,7 +112,7 @@ class SQLStorageManager(object):
                 query = query.order_by(column)
         return query
 
-    def _filter_query(self, query, model_class, filters):
+    def _filter_query(self, query, model_class, filters, all_tenants):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -121,7 +121,7 @@ class SQLStorageManager(object):
         of such values)
         :return: An SQLAlchemy AppenderQuery object
         """
-        query = self._add_tenant_filter(query, model_class)
+        query = self._add_tenant_filter(query, model_class, all_tenants)
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
         return query
@@ -136,7 +136,7 @@ class SQLStorageManager(object):
 
         return query
 
-    def _add_tenant_filter(self, query, model_class):
+    def _add_tenant_filter(self, query, model_class, all_tenants):
         """Filter by the tenant ID associated with `model_class` (either
         directly via a relationship with the tenants table, or via an
         ancestor who has such a relationship)
@@ -145,9 +145,12 @@ class SQLStorageManager(object):
         if not model_class.is_resource:
             return query
 
-        # TODO: Will be replaced soon in a future commit by an if/else
-        # statement
-        tenants = [self.current_tenant]
+        if current_user.is_admin and all_tenants:
+            tenants = []
+        elif all_tenants:
+            tenants = current_user.get_all_tenants()
+        else:
+            tenants = [self.current_tenant]
 
         # Filter by the `tenant_id` column. If tenant's list is empty, clauses
         # will not have effect on the query.
@@ -225,7 +228,8 @@ class SQLStorageManager(object):
                    model_class,
                    include=None,
                    filters=None,
-                   sort=None):
+                   sort=None,
+                   all_tenants=None):
         """Get an SQL query object based on the params passed
 
         :param model_class: SQL DB table class
@@ -243,7 +247,7 @@ class SQLStorageManager(object):
         )
 
         query = self._get_base_query(model_class, include, joins)
-        query = self._filter_query(query, model_class, filters)
+        query = self._filter_query(query, model_class, filters, all_tenants)
         query = self._sort_query(query, sort)
         return query
 
@@ -429,7 +433,8 @@ class SQLStorageManager(object):
              include=None,
              filters=None,
              pagination=None,
-             sort=None):
+             sort=None,
+             all_tenants=None):
         """Return a (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
@@ -438,8 +443,13 @@ class SQLStorageManager(object):
                                                       filters)
         else:
             msg = 'List `{0}`'.format(model_class.__name__)
+
         current_app.logger.debug(msg)
-        query = self._get_query(model_class, include, filters, sort)
+        query = self._get_query(model_class,
+                                include,
+                                filters,
+                                sort,
+                                all_tenants)
 
         results, total, size, offset = self._paginate(query, pagination)
         pagination = {'total': total, 'size': size, 'offset': offset}

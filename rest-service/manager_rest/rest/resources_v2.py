@@ -77,14 +77,16 @@ class Snapshots(SecuredResource):
     @rest_decorators.create_filters(models.Snapshot.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
+    @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+            sort=None, all_tenants=None, **kwargs):
         return get_storage_manager().list(
             models.Snapshot,
             include=_include,
             filters=filters,
             pagination=pagination,
-            sort=sort
+            sort=sort,
+            all_tenants=all_tenants
         )
 
 
@@ -284,8 +286,9 @@ class Blueprints(resources.Blueprints):
     @rest_decorators.create_filters(models.Blueprint.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
+    @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            **kwargs):
+            all_tenants=None, **kwargs):
         """
         List uploaded blueprints
         """
@@ -294,7 +297,8 @@ class Blueprints(resources.Blueprints):
             include=_include,
             filters=filters,
             pagination=pagination,
-            sort=sort
+            sort=sort,
+            all_tenants=all_tenants
         )
 
 
@@ -441,8 +445,9 @@ class Deployments(resources.Deployments):
     @rest_decorators.create_filters(models.Deployment.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
+    @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            **kwargs):
+            all_tenants=None, **kwargs):
         """
         List deployments
         """
@@ -451,7 +456,8 @@ class Deployments(resources.Deployments):
             include=_include,
             filters=filters,
             pagination=pagination,
-            sort=sort
+            sort=sort,
+            all_tenants=all_tenants
         )
 
 
@@ -504,8 +510,9 @@ class Nodes(resources.Nodes):
     @rest_decorators.create_filters(models.Node.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
+    @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+            sort=None, all_tenants=None, **kwargs):
         """
         List nodes
         """
@@ -514,7 +521,8 @@ class Nodes(resources.Nodes):
             include=_include,
             pagination=pagination,
             filters=filters,
-            sort=sort
+            sort=sort,
+            all_tenants=all_tenants
         )
 
 
@@ -535,8 +543,9 @@ class NodeInstances(resources.NodeInstances):
     @rest_decorators.create_filters(models.NodeInstance.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
+    @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+            sort=None, all_tenants=None, **kwargs):
         """
         List node instances
         """
@@ -545,7 +554,8 @@ class NodeInstances(resources.NodeInstances):
             include=_include,
             filters=filters,
             pagination=pagination,
-            sort=sort
+            sort=sort,
+            all_tenants=all_tenants
         )
 
 
@@ -565,8 +575,9 @@ class Plugins(SecuredResource):
     @rest_decorators.create_filters(models.Plugin.resource_fields)
     @rest_decorators.paginate
     @rest_decorators.sortable
+    @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+            sort=None, all_tenants=None, **kwargs):
         """
         List uploaded plugins
         """
@@ -575,7 +586,8 @@ class Plugins(SecuredResource):
             include=_include,
             filters=filters,
             pagination=pagination,
-            sort=sort
+            sort=sort,
+            all_tenants=all_tenants
         )
 
     @swagger.operation(

@@ -38,7 +38,8 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
     def test_include_propagation_to_model(self):
         self._test_include_propagation_to_model(
             [Blueprint],
-            dict(include=[u'id'], filters={}, pagination={}, sort={})
+            dict(include=[u'id'], filters={}, pagination={}, sort={},
+                 all_tenants=False)
         )
 
     @attr(client_min_version=1, client_max_version=1)
