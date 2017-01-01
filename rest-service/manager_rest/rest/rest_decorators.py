@@ -226,6 +226,16 @@ def sortable(func):
     return create_sort_params
 
 
+def all_tenants(func):
+    """
+    Decorator for enabling sort
+    """
+    def is_all_tenants(*args, **kw):
+        all_tenants_flag = bool(request.args.get("_all_tenants"))
+        return func(all_tenants=all_tenants_flag, *args, **kw)
+    return is_all_tenants
+
+
 def marshal_events(func):
     """
     Decorator for marshalling raw event responses
