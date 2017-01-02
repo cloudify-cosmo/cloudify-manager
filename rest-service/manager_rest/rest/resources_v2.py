@@ -757,6 +757,18 @@ class Events(resources.Events):
         :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
 
         """
+        if 'execution_id' not in filters:
+            raise manager_exceptions.BadParametersError(
+                'Expected execution_id parameter')
+
+        if 'size' not in pagination:
+            raise manager_exceptions.BadParametersError(
+                'Expected _size parameter')
+
+        if 'offset' not in pagination:
+            raise manager_exceptions.BadParametersError(
+                'Expected _offset parameter')
+
         params = {
             'execution_id': filters['execution_id'][0],
             'limit': pagination['size'],
