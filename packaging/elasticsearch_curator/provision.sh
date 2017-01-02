@@ -19,7 +19,7 @@ function generate_checksum() {
     cd /tmp/x86_64 && md5sum=$(md5sum *.rpm) && echo $md5sum | sudo tee ${md5sum##* }.md5
 }
 
-export CORE_TAG_NAME="4.0m9"
+export CORE_TAG_NAME="4.0m11"
 
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
@@ -29,7 +29,7 @@ export GITHUB_PASSWORD=$5
 export AWS_S3_PATH="org/cloudify3/components"
 
 if [ $REPO == "cloudify-versions" ];then
-    REPO_TAG="new-versioning"
+    REPO_TAG="master"
 else
     REPO_TAG=$CORE_TAG_NAME
 fi
