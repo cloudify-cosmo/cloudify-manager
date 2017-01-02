@@ -20,11 +20,7 @@ import shutil
 
 from datetime import datetime
 
-from flask import (
-    abort,
-    current_app,
-    request,
-)
+from flask import request
 from flask_restful import types
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
@@ -859,18 +855,16 @@ class Events(SecuredResource):
 
         """
         if _include is not None:
-            current_app.logger.error(
+            raise manager_exceptions.BadParametersError(
                 'Projections with `_include` parameter are not supported')
-            return abort(400)
 
         if not isinstance(filters, dict) or 'type' not in filters:
-            current_app.logger.error('Filter by type is expected')
-            return abort(400)
+            raise manager_exceptions.BadParametersError(
+                'Filter by type is expected')
 
         if 'cloudify_event' not in filters['type']:
-            current_app.logger.error(
+            raise manager_exceptions.BadParametersError(
                 'At least `type=cloudify_event` filter is expected')
-            return abort(400)
 
         query = (
             db.session.query(
@@ -920,27 +914,23 @@ class Events(SecuredResource):
         if (not isinstance(sort, dict) or
                 '@timestamp' not in sort or
                 sort['@timestamp'] != 'asc'):
-            current_app.logger.error(
+            raise manager_exceptions.BadParametersError(
                 'Sorting ascending by `timestamp` is expected')
-            return abort(400)
         query = query.order_by('timestamp')
 
         if not isinstance(pagination, dict):
-            current_app.logger.error(
+            raise manager_exceptions.BadParametersError(
                 'Expected `pagination` parameter')
-            return abort(400)
 
         if 'size' not in pagination:
-            current_app.logger.error(
+            raise manager_exceptions.BadParametersError(
                 'Expected `size` pagination parameter')
-            return abort(400)
 
         query = query.limit(bindparam('limit'))
 
         if 'offset' not in pagination:
-            current_app.logger.error(
+            raise manager_exceptions.BadParametersError(
                 'Expected `offset` pagination parameter')
-            return abort(400)
 
         query = query.offset(bindparam('offset'))
 
@@ -963,13 +953,12 @@ class Events(SecuredResource):
 
         """
         if not isinstance(filters, dict) or 'type' not in filters:
-            current_app.logger.error('Filter by type is expected')
-            return abort(400)
+            raise manager_exceptions.BadParametersError(
+                'Filter by type is expected')
 
         if 'cloudify_event' not in filters['type']:
-            current_app.logger.error(
+            raise manager_exceptions.BadParametersError(
                 'At least `type=cloudify_event` filter is expected')
-            return abort(400)
 
         events_query = (
             db.session.query(func.count('*').label('count'))

@@ -20,11 +20,7 @@ import sys
 
 from uuid import uuid4
 
-from flask import (
-    abort,
-    current_app,
-    request,
-)
+from flask import request
 from flask_restful_swagger import swagger
 from sqlalchemy import bindparam
 
@@ -803,13 +799,12 @@ class Events(resources.Events):
                range_filters=None, **kwargs):
         """Delete events/logs connected to a certain Deployment ID."""
         if not isinstance(filters, dict) or 'type' not in filters:
-            current_app.logger.error('Filter by type is expected')
-            return abort(400)
+            raise manager_exceptions.BadParametersError(
+                'Filter by type is expected')
 
         if 'cloudify_event' not in filters['type']:
-            current_app.logger.error(
+            raise manager_exceptions.BadParametersError(
                 'At least `type=cloudify_event` filter is expected')
-            return abort(400)
 
         deployment_query = (
             db.session.query(Deployment.storage_id)

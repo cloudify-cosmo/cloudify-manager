@@ -21,6 +21,7 @@ from mock import patch
 from nose.plugins.attrib import attr
 from werkzeug.exceptions import BadRequest
 
+from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources import Events
 from manager_rest.test import base_test
 
@@ -60,7 +61,7 @@ class BuildSelectQueryTest(TestCase):
 
     """Event retrieval query."""
 
-    # Parametesr passed ot the _build_select_query_method
+    # Parameters passed ot the _build_select_query_method
     # Each tests overwrites different fields as needed.
     DEFAULT_PARAMS = {
         '_include': None,
@@ -83,10 +84,6 @@ class BuildSelectQueryTest(TestCase):
         unit testing.
 
         """
-        current_app_patcher = patch('manager_rest.rest.resources.current_app')
-        current_app_patcher.start()
-        self.addCleanup(current_app_patcher.stop)
-
         db_patcher = patch('manager_rest.rest.resources.db')
         self.db = db_patcher.start()
         self.addCleanup(db_patcher.stop)
@@ -107,63 +104,63 @@ class BuildSelectQueryTest(TestCase):
         """Include parameter is expected to be set to None."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['_include'] = '<invalid>'
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters'] = None
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
     def test_filter_type_required(self):
         """Filter by type is expected."""
         params = deepcopy(self.DEFAULT_PARAMS)
         del params['filters']['type']
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
     def test_filter_type_event(self):
         """Filter is set at least to cloudify_event."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters'] = {'type': ['cloudify_log']}
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
     def test_sort_required(self):
         """Sort parameter is expected to be a dictionary."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['sort'] = None
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
     def test_sort_by_timestamp_required(self):
         """Ordering by timestamp expected."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['sort'] = {'<field>': 'asc'}
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
     def test_pagination_required(self):
         """Pagination is expected to be a dictionary."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['pagination'] = None
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
     def test_pagination_size_required(self):
         """Size pagination parameter is expected."""
         params = deepcopy(self.DEFAULT_PARAMS)
         del params['pagination']['size']
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
     def test_pagination_offset_required(self):
         """Offset pagination parameter is expected."""
         params = deepcopy(self.DEFAULT_PARAMS)
         del params['pagination']['offset']
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
 
@@ -179,10 +176,6 @@ class BuildCountQueryTest(TestCase):
         unit testing.
 
         """
-        patcher = patch('manager_rest.rest.resources.current_app')
-        patcher.start()
-        self.addCleanup(patcher.stop)
-
         db_patcher = patch('manager_rest.rest.resources.db')
         self.db = db_patcher.start()
         self.addCleanup(db_patcher.stop)
@@ -204,19 +197,19 @@ class BuildCountQueryTest(TestCase):
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
         filters = None
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_count_query(filters)
 
     def test_filter_type_required(self):
         """Filter by type is expected."""
         filters = {}
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_count_query(filters)
 
     def test_filter_type_event(self):
         """Filter is set at least to cloudify_event."""
         filters = {'type': ['cloudify_log']}
-        with self.assertRaises(BadRequest):
+        with self.assertRaises(BadParametersError):
             Events._build_count_query(filters)
 
 
