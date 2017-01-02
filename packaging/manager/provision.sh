@@ -17,8 +17,7 @@ function create_resources_tar() {
     local repo=$3
     local build=$4
 
-    #curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${CORE_TAG_NAME}.tar.gz > /vagrant/${REPO}.tar.gz
-    curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/new-versioning.tar.gz > /vagrant/${REPO}.tar.gz
+    curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${REPO_TAG}.tar.gz > /vagrant/${REPO}.tar.gz
     tar -zxvf /vagrant/${REPO}.tar.gz -C /vagrant
 
     echo "Creating resource directory..."
@@ -26,12 +25,10 @@ function create_resources_tar() {
     cd /tmp
     pushd /tmp/cloudify-manager-resources
         echo "Downloading manager component packages..."
-        #download_resources '/vagrant/'${REPO}'-'${CORE_TAG_NAME}'/packages-urls/manager-packages-blueprint.yaml'
-        download_resources '/vagrant/'${REPO}'-new-versioning/packages-urls/manager-packages-blueprint.yaml'
+        download_resources '/vagrant/'${REPO}'-'${REPO_TAG}'/packages-urls/manager-packages.yaml'
         pushd agents
             echo "Downloading agent packages..."
-            #download_resources '/vagrant/'${REPO}'-'${CORE_TAG_NAME}'/packages-urls/agent-packages-blueprint.yaml'
-            download_resources '/vagrant/'${REPO}'-new-versioning/packages-urls/agent-packages-blueprint.yaml'
+            download_resources '/vagrant/'${REPO}'-'${REPO_TAG}'/packages-urls/agent-packages.yaml'
         popd
     popd
 
@@ -51,7 +48,7 @@ export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
 if [ $REPO == "cloudify-versions" ];then
-    REPO_TAG="master"
+    REPO_TAG="new-versioning"
 else
     REPO_TAG=$CORE_TAG_NAME
 fi

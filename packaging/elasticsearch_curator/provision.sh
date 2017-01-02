@@ -29,7 +29,7 @@ export GITHUB_PASSWORD=$5
 export AWS_S3_PATH="org/cloudify3/components"
 
 if [ $REPO == "cloudify-versions" ];then
-    REPO_TAG="master"
+    REPO_TAG="new-versioning"
 else
     REPO_TAG=$CORE_TAG_NAME
 fi
