@@ -28,7 +28,7 @@ export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 export AWS_S3_PATH="org/cloudify3/components"
 
-if [ $REPO == "cloudify-versins" ];then
+if [ $REPO == "cloudify-versions" ];then
     REPO_TAG="master"
 else
     REPO_TAG=$CORE_TAG_NAME

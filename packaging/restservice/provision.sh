@@ -31,7 +31,7 @@ export REPO=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
-if [ $REPO == "cloudify-versins" ];then
+if [ $REPO == "cloudify-versions" ];then
     REPO_TAG="master"
 else
     REPO_TAG=$CORE_TAG_NAME
