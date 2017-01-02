@@ -19,7 +19,6 @@ from unittest import TestCase
 
 from mock import patch
 from nose.plugins.attrib import attr
-from werkzeug.exceptions import BadRequest
 
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources import Events
