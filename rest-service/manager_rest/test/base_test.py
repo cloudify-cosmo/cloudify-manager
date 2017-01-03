@@ -99,9 +99,6 @@ class TestClient(FlaskClient):
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
 class BaseServerTestCase(unittest.TestCase):
 
-    def __init__(self, *args, **kwargs):
-        super(BaseServerTestCase, self).__init__(*args, **kwargs)
-
     def create_client(self, headers=None):
         client = CloudifyClient(host='localhost',
                                 headers=headers)

@@ -22,16 +22,15 @@ class TenantAuthorization(object):
             CLOUDIFY_TENANT_HEADER,
             config.instance.default_tenant_name
         )
-        try:
-            tenant = get_storage_manager().get(
-                Tenant,
-                tenant_name,
-                filters={'name': tenant_name}
-            )
-        except NotFoundError:
+        tenants = get_storage_manager().list(
+            Tenant,
+            filters={'name': tenant_name}
+        )
+        if not tenants:
             raise_unauthorized_user_error(
                 'Provided tenant name unknown: {0}'.format(tenant_name)
             )
+        tenant = tenants[0]
 
         logger.debug('User attempting to connect with {0}'.format(tenant))
         if tenant not in user.get_all_tenants() \
