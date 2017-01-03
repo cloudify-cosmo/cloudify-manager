@@ -37,8 +37,7 @@ from cloudify.utils import setup_logger
 from cloudify_cli import env as cli_env
 from cloudify_rest_client import CloudifyClient
 from manager_rest.utils import create_auth_header
-from cloudify_cli.constants import (CLOUDIFY_BASE_DIRECTORY_NAME,
-                                    CLOUDIFY_TENANT_HEADER)
+from cloudify_cli.constants import CLOUDIFY_BASE_DIRECTORY_NAME
 
 
 logger = setup_logger('testenv.utils')
@@ -106,8 +105,7 @@ def create_rest_client(**kwargs):
     cert_path = kwargs.get('cert_path', cli_env.get_ssl_cert())
     trust_all = kwargs.get('trust_all', cli_env.get_ssl_trust_all())
 
-    headers = create_auth_header(username, password, token)
-    headers[CLOUDIFY_TENANT_HEADER] = tenant
+    headers = create_auth_header(username, password, token, tenant)
 
     return CloudifyClient(
             host=get_manager_ip(),
