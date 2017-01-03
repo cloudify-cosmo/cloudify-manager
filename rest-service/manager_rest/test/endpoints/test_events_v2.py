@@ -43,4 +43,4 @@ class EventsTest(base_test.BaseServerTestCase):
     def test_delete_events(self):
         response = self.client.events.delete(
             '<deployment_id>', include_logs=True)
-        self.assertEqual(response.items, [])
+        self.assertEqual(response.items, [0])
