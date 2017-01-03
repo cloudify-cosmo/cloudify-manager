@@ -16,7 +16,10 @@
 from sqlalchemy.ext.declarative import declared_attr
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
-from manager_rest.constants import ADMIN_ROLE, USER_ROLE, SUSPENDED_ROLE
+from manager_rest.constants import (ADMIN_ROLE,
+                                    USER_ROLE,
+                                    SUSPENDED_ROLE,
+                                    BOOTSTRAP_ADMIN_ID)
 
 from .models_base import db, SQLModelBase, UTCDateTime
 from .relationships import many_to_many_relationship
@@ -41,8 +44,8 @@ class Tenant(SQLModelBase):
 
     def to_response(self):
         tenant_dict = super(Tenant, self).to_response()
-        all_groups_names = [group.name for group in self.groups.all()]
-        all_users_names = [user.username for user in self.users.all()]
+        all_groups_names = [group.name for group in self.groups]
+        all_users_names = [user.username for user in self.users]
         tenant_dict['groups'] = all_groups_names
         tenant_dict['users'] = all_users_names
         return tenant_dict
@@ -53,6 +56,7 @@ class Group(SQLModelBase):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, nullable=False, index=True)
+    ldap_dn = db.Column(db.Text, unique=True, nullable=True, index=True)
 
     def _get_identifier(self):
         return 'name', self.name
@@ -145,6 +149,10 @@ class User(SQLModelBase, UserMixin):
     @property
     def is_suspended(self):
         return self.role == SUSPENDED_ROLE
+
+    @property
+    def is_bootstrap_admin(self):
+        return self.id == BOOTSTRAP_ADMIN_ID
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)

@@ -15,9 +15,13 @@
 #
 
 from manager_rest.storage import models
-from manager_rest.security import SecuredResource
-from manager_rest.manager_exceptions import BadParametersError
+from manager_rest.security import (SecuredResource,
+                                   MissingPremiumFeatureResource)
+from manager_rest.manager_exceptions import (BadParametersError,
+                                             MethodNotAllowedError)
 from manager_rest.security.resource_permissions import PermissionsHandler
+
+from flask import current_app
 
 from . import rest_decorators
 from .responses_v3 import BaseResponse, ResourceID
@@ -34,8 +38,8 @@ try:
 except ImportError:
     TenantResponse, GroupResponse, UserResponse, ClusterNode, ClusterState = \
         (BaseResponse, ) * 5
-    SecuredMultiTenancyResource = SecuredResource
-    ClusterResourceBase = SecuredResource
+    SecuredMultiTenancyResource = MissingPremiumFeatureResource
+    ClusterResourceBase = MissingPremiumFeatureResource
 
 
 class Tenants(SecuredMultiTenancyResource):
@@ -68,6 +72,14 @@ class TenantsId(SecuredMultiTenancyResource):
         Get details for a single tenant
         """
         return multi_tenancy.get_tenant(tenant_name)
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(TenantResponse)
+    def delete(self, tenant_name, multi_tenancy):
+        """
+        Delete a tenant
+        """
+        return multi_tenancy.delete_tenant(tenant_name)
 
 
 class TenantUsers(SecuredMultiTenancyResource):
@@ -141,15 +153,19 @@ class UserGroups(SecuredMultiTenancyResource):
             pagination,
             sort)
 
-
-class UserGroupsId(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
-    def post(self, group_name, multi_tenancy):
+    def post(self, multi_tenancy):
         """
         Create a group
         """
-        return multi_tenancy.create_group(group_name)
+        request_dict = get_json_and_verify_params()
+        group_name = request_dict['group_name']
+        ldap_group_dn = request_dict.get('ldap_group_dn')
+        return multi_tenancy.create_group(group_name, ldap_group_dn)
+
+
+class UserGroupsId(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
@@ -158,6 +174,14 @@ class UserGroupsId(SecuredMultiTenancyResource):
         Get info for a single group
         """
         return multi_tenancy.get_group(group_name)
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(GroupResponse)
+    def delete(self, group_name, multi_tenancy):
+        """
+        Delete a user group
+        """
+        return multi_tenancy.delete_group(group_name)
 
 
 class Users(SecuredMultiTenancyResource):
@@ -221,14 +245,27 @@ class UsersId(SecuredMultiTenancyResource):
         """
         return multi_tenancy.get_user(username)
 
-
-class UsersGroups(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
+    def delete(self, username, multi_tenancy):
+        """
+        Delete a user
+        """
+        return multi_tenancy.delete_user(username)
+
+
+class UserGroupsUsers(SecuredMultiTenancyResource):
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(GroupResponse)
     def put(self, multi_tenancy):
         """
         Add a user to a group
         """
+        if current_app.is_ldap_configured:
+            raise MethodNotAllowedError(
+                'Explicit group to user association is not permitted when '
+                'using LDAP. Group association to users is done automatically'
+                ' according to the groups associated with the user in LDAP.')
         request_dict = get_json_and_verify_params({'username', 'group_name'})
         return multi_tenancy.add_user_to_group(
             request_dict['username'],
@@ -236,7 +273,7 @@ class UsersGroups(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(UserResponse)
+    @rest_decorators.marshal_with(GroupResponse)
     def delete(self, multi_tenancy):
         """
         Remove a user from a group

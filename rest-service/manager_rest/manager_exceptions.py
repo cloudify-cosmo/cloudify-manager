@@ -24,6 +24,15 @@ class ManagerException(Exception):
         self.error_code = error_code
 
 
+class InsufficientMemoryError(ManagerException):
+    INSUFFICIENT_MEMORY_ERROR_CODE = 'insufficient_memory_error'
+
+    def __init__(self, *args, **kwargs):
+        super(InsufficientMemoryError, self).__init__(
+            503, InsufficientMemoryError.INSUFFICIENT_MEMORY_ERROR_CODE,
+            *args, **kwargs)
+
+
 class MissingPremiumPackage(ManagerException):
     MISSING_PREMIUM_ERROR_CODE = 'missing_premium_package_error'
 

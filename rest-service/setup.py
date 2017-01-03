@@ -26,7 +26,7 @@ install_requires = [
     'flask-sqlalchemy==2.1',
     'flask-security==1.7.5',
     'supervise==1.1.1',
-    'cloudify-dsl-parser==4.0a9',
+    'cloudify-dsl-parser==4.0a11',
     'requests==2.7.0',
     'gunicorn==18.0',
     'PyYAML==3.10',
@@ -35,7 +35,8 @@ install_requires = [
     'psutil==3.3.0',
     'jsonpickle==0.9.2',
     'wagon==0.3.2',
-    'python-dateutil==2.5.3'
+    'python-dateutil==2.5.3',
+    'cloudify-aria-extensions'
 ]
 
 
@@ -49,7 +50,7 @@ if os.environ.get('REST_SERVICE_BUILD'):
 
 setup(
     name='cloudify-rest-service',
-    version='4.0a9',
+    version='4.0a11',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=['manager_rest',

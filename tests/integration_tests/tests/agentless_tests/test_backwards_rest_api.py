@@ -18,6 +18,7 @@ import json
 import os
 import subprocess
 
+from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -41,6 +42,9 @@ class RestApiBackwardsCompatibilityTest(AgentlessTestCase):
             'python_script_path': python_script_path,
             'client_version': client_version,
             'manager_ip': self.get_manager_ip(),
+            'manager_user': utils.get_manager_username(),
+            'manager_password': utils.get_manager_password(),
+            'manager_tenant': utils.get_manager_tenant(),
             'url_version_postfix': url_version_postfix,
             'result_path': result_path
         })

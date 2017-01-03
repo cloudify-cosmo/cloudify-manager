@@ -43,7 +43,7 @@ class TestPlugins(AgentlessTestCase):
             self.client.plugins.get('DUMMY_PLUGIN_ID')
         except CloudifyClientError as e:
             self.assertEquals(
-                u'Requested Plugin with ID `DUMMY_PLUGIN_ID` was not found',
+                u'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
                 e.message
             )
             self.assertEquals(404, e.status_code)
@@ -71,7 +71,7 @@ class TestPlugins(AgentlessTestCase):
             self.client.plugins.delete('DUMMY_PLUGIN_ID')
         except CloudifyClientError as e:
             self.assertEquals(
-                u'Requested Plugin with ID `DUMMY_PLUGIN_ID` was not found',
+                u'Requested `Plugin` with ID `DUMMY_PLUGIN_ID` was not found',
                 e.message
             )
             self.assertEquals(404, e.status_code)

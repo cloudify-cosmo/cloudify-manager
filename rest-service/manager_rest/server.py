@@ -33,8 +33,10 @@ from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
 
 try:
     from cloudify_premium import configure_ldap
+    premium_enabled = True
 except ImportError:
     configure_ldap = None
+    premium_enabled = False
 
 SQL_DIALECT = 'postgresql'
 
@@ -48,7 +50,11 @@ class CloudifyFlaskApp(Flask):
 
         # These two need to be called after the configuration was loaded
         setup_logger(self.logger)
-        configure_ldap() if configure_ldap else None
+        self.premium_enabled = premium_enabled
+        if self.premium_enabled:
+            self.is_ldap_configured = configure_ldap() is not None
+        else:
+            self.is_ldap_configured = False
 
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)

@@ -17,12 +17,13 @@ import os
 import sys
 import json
 import logging
+import argparse
 from shutil import move
 
 from flask import _request_ctx_stack as flask_global_stack
 
 from manager_rest.utils import setup_flask_app
-from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest.constants import CURRENT_TENANT_CONFIG, DEFAULT_TENANT_NAME
 from manager_rest.storage import (db,
                                   models,
                                   user_datastore,
@@ -36,53 +37,47 @@ COMPUTE_NODE_TYPE = 'cloudify.nodes.Compute'
 
 
 class EsToPg(object):
-    def __init__(self, es_data_path, tenant_name):
+    def __init__(self, es_dump_path, tenant_name):
         self._storage_manager = self._get_storage_manager(tenant_name)
-        self._es_data_path = es_data_path
-        self._blueprints_path = '{0}.blueprints'.format(es_data_path)
-        self._deployments_path = '{0}.deployments'.format(es_data_path)
-        self._deployments_ex_path = '{0}.deployments_ex'.format(es_data_path)
-        self._nodes_path = '{0}.nodes'.format(es_data_path)
-        self._node_instances_path = '{0}.node_instances'.format(es_data_path)
-        self._plugins_path = '{0}.plugins'.format(es_data_path)
-        self._executions_path = '{0}.executions'.format(es_data_path)
-        self._events_path = '{0}.events'.format(es_data_path)
+        self._es_dump_path = es_dump_path
+        self._blueprints_path = '{0}.blueprints'.format(es_dump_path)
+        self._deployments_path = '{0}.deployments'.format(es_dump_path)
+        self._deployments_ex_path = '{0}.deployments_ex'.format(es_dump_path)
+        self._nodes_path = '{0}.nodes'.format(es_dump_path)
+        self._node_instances_path = '{0}.node_instances'.format(es_dump_path)
+        self._plugins_path = '{0}.plugins'.format(es_dump_path)
+        self._executions_path = '{0}.executions'.format(es_dump_path)
+        self._events_path = '{0}.events'.format(es_dump_path)
 
     def _get_storage_manager(self, tenant_name):
         app = setup_flask_app(db, user_datastore)
-        self._set_current_user(app)
+        admin = self._set_current_user(app)
         storage_manager = get_storage_manager()
-        self._set_tenant(app, tenant_name, storage_manager)
+        tenant = self._get_or_create_tenant(tenant_name)
+        self._set_tenant_in_app(tenant, app, storage_manager, admin)
         return storage_manager
 
-    def _set_tenant(self, app, tenant_name, storage_manager):
-        """Set the tenant to be used as the current tenant in the flask app
-
+    @staticmethod
+    def _set_tenant_in_app(tenant, app, storage_manager, admin_user):
+        """Create a new tenant with `tenant_name`, and set it as the current
+        tenant in the flask app
         """
-        tenant = models.Tenant.query.filter_by(name=tenant_name).first()
-        if not tenant:
-            logger.info(
-                'Tenant with name `{0}` was not found; '
-                'creating it'.format(tenant_name)
-            )
-            tenant = models.Tenant(name=tenant_name)
-            storage_manager.put(tenant)
-        self._assert_tenant_empty(tenant)
+        tenant.users.append(admin_user)
+        storage_manager.put(tenant)
         app.config[CURRENT_TENANT_CONFIG] = tenant
 
     @staticmethod
-    def _assert_tenant_empty(tenant):
-        """Make sure the tenant doesn't have any resources attached to it,
-        prior to restoring the DB into it
+    def _get_or_create_tenant(tenant_name):
+        """Get the default tenant if using community edition, or
         """
-        if tenant.blueprints \
-                or tenant.snapshots \
-                or tenant.plugins \
-                or tenant.users \
-                or tenant.groups:
-            raise Exception(
-                'Attempted to restore into a non empty {0}'.format(tenant)
-            )
+        tenant = models.Tenant.query.filter_by(name=tenant_name).first()
+        if tenant_name != DEFAULT_TENANT_NAME:
+            assert not tenant, 'Attempted to restore into an ' \
+                               'existing {0}:'.format(tenant)
+            tenant = models.Tenant(name=tenant_name)
+        else:
+            assert tenant.name == DEFAULT_TENANT_NAME
+        return tenant
 
     @staticmethod
     def _set_current_user(app):
@@ -90,12 +85,13 @@ class EsToPg(object):
 
         :return: The admin user
         """
-        admin = models.User.query.filter_by(id=1).first()
+        admin = models.User.query.filter_by(id=0).first()
         # This line is necessary for the `reload_user` method - we add the
         # admin user to the flask stack
         flask_global_stack.push(admin)
         # And then load him as the active user
         app.extensions['security'].login_manager.reload_user(admin)
+        return admin
 
     def restore_es(self):
         logger.debug('Restoring elastic search..')
@@ -197,7 +193,7 @@ class EsToPg(object):
         dump_files['executions'] = open(self._executions_path, 'w')
         dump_files['plugins'] = open(self._plugins_path, 'w')
         dump_files['events'] = open(self._events_path, 'w')
-        for line in open(self._es_data_path, 'r'):
+        for line in open(self._es_dump_path, 'r'):
             try:
                 elem = json.loads(line)
                 assert '_type' in elem, 'missing _type'
@@ -229,8 +225,8 @@ class EsToPg(object):
                 continue
         for index, dump_file in dump_files.items():
             dump_file.close()
-        move(self._es_data_path, '{0}.backup'.format(self._es_data_path))
-        move(self._events_path, self._es_data_path)
+        move(self._es_dump_path, '{0}.backup'.format(self._es_dump_path))
+        move(self._events_path, self._es_dump_path)
 
     def _update_deployment(self, dep_dict):
         workflows = dep_dict['workflows']
@@ -313,13 +309,13 @@ class EsToPg(object):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise Exception('Missing parameters: {0}'.format(sys.argv))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('es_dump_path', type=str)
+    parser.add_argument('tenant_name', type=str)
+    args = parser.parse_args()
 
-    es_dump_path = sys.argv[1]
-    if not os.path.isfile(es_dump_path):
-        raise Exception('Missing es dump file: {0}'.format(es_dump_path))
+    if not os.path.isfile(args.es_dump_path):
+        raise Exception('Missing es dump file: {0}'.format(args.es_dump_path))
 
-    restore_tenant_name = sys.argv[2]
-    es_to_pg = EsToPg(es_dump_path, restore_tenant_name)
+    es_to_pg = EsToPg(args.es_dump_path, args.tenant_name)
     es_to_pg.restore_es()

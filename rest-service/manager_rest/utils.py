@@ -33,7 +33,7 @@ from flask_restful import abort
 from flask_security import Security
 
 from manager_rest import config
-from manager_rest.constants import ALL_ROLES, ADMIN_ROLE
+from manager_rest.constants import ALL_ROLES, ADMIN_ROLE, BOOTSTRAP_ADMIN_ID
 
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
@@ -191,6 +191,7 @@ def create_security_roles_and_admin_user(user_datastore,
 
     admin_role = user_datastore.find_role(ADMIN_ROLE)
     user_obj = user_datastore.create_user(
+        id=BOOTSTRAP_ADMIN_ID,
         username=admin_username,
         password=admin_password,
         roles=[admin_role]

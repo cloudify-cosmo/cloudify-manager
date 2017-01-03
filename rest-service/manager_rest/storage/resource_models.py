@@ -181,12 +181,13 @@ class Execution(TopLevelMixin, DerivedResource):
     def parent(cls):
         return Deployment
 
-    def __str__(self):
+    def __repr__(self):
         id_name, id_value = self._get_identifier()
-        return '<{0} {1}=`{2}` (status={3})>'.format(
+        return '<{0} {1}=`{2}`; tenant=`{3}` (status={4})>'.format(
             self.__class__.__name__,
             id_name,
             id_value,
+            self.tenant_name,
             self.status
         )
 

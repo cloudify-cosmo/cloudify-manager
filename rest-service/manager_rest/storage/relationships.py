@@ -96,7 +96,7 @@ def many_to_many_relationship(current_class, other_class, table_prefix=None):
     return db.relationship(
         other_class,
         secondary=secondary_table,
-        backref=db.backref(backref_name, lazy='dynamic')
+        backref=db.backref(backref_name)
     )
 
 
