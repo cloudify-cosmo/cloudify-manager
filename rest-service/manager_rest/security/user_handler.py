@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 from flask import current_app
-from flask_security.utils import md5
+from itsdangerous import BadSignature, SignatureExpired
 
 from manager_rest.storage import user_datastore
 
@@ -31,47 +31,45 @@ def user_loader(request):
     :param request: flask's request
     :return: A user object, or None if not found
     """
-    user, _ = get_user_and_hashed_pass(request)
+    if request.authorization:
+        user = get_user_from_auth(request.authorization)
+    else:
+        token = get_token_from_request(request)
+        _, _, user, _ = get_token_status(token)
     return user
 
 
-def _get_user_from_token(token):
-    """Return a tuple with a user object (or None) and its hashed pass
-    using an authentication token
-
-    :param token: A token generated from a user object
-    """
-    # Retrieve the default serializer used by flask_security
-    serializer = current_app.extensions['security'].remember_token_serializer
-    try:
-        # The serializer can through exceptions if the token is incorrect,
-        # and we want to handle it gracefully
-        result = serializer.loads(token)
-    except Exception:
-        result = None
-
-    # The result should be a list with two elements - the ID of the user and...
-    if not result or not isinstance(result, list) or len(result) != 2:
-        return None, None
-    return user_datastore.get_user(int(result[0])), result[1]
+def get_user_from_auth(auth):
+    return user_datastore.get_user(auth.username)
 
 
-def get_user_and_hashed_pass(request):
-    """Similar to the `user_loader`, except it also return the hashed_pass
-
-    :param request: flask's request
-    :return: Return a tuple with a user object (or None) and its hashed pass
-    """
-    auth = request.authorization
-    if auth:
-        user = user_datastore.get_user(auth.username)
-        hashed_pass = md5(auth.password)
-    else:
-        token_auth_header = current_app.config[
+def get_token_from_request(request):
+    token_auth_header = current_app.config[
             'SECURITY_TOKEN_AUTHENTICATION_HEADER']
-        token = request.headers.get(token_auth_header)
-        if not token:
-            return None, None
-        user, hashed_pass = _get_user_from_token(token)
+    return request.headers.get(token_auth_header)
 
-    return user, hashed_pass
+
+def get_token_status(token):
+    """Mimic flask_security.utils.get_token_status with some changes
+
+    :param token: The token to decrypt
+    :return: A tuple: (expired, invalid, user, data)
+    """
+    security = current_app.extensions['security']
+    serializer = security.remember_token_serializer
+    max_age = security.token_max_age
+
+    user, data = None, None
+    expired, invalid = False, False
+
+    try:
+        data = serializer.loads(token, max_age=max_age)
+    except SignatureExpired:
+        expired = True
+    except (BadSignature, TypeError, ValueError):
+        invalid = True
+
+    if data:
+        user = user_datastore.find_user(id=data[0])
+
+    return expired, invalid, user, data

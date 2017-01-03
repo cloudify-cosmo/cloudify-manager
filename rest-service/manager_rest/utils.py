@@ -31,9 +31,13 @@ import wagon.utils
 from flask import Flask
 from flask_restful import abort
 from flask_security import Security
+from flask_security.utils import encrypt_password
 
 from manager_rest import config
-from manager_rest.constants import ALL_ROLES, ADMIN_ROLE, BOOTSTRAP_ADMIN_ID
+from manager_rest.constants import (ALL_ROLES,
+                                    ADMIN_ROLE,
+                                    BOOTSTRAP_ADMIN_ID,
+                                    CLOUDIFY_TENANT_HEADER)
 
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
@@ -164,19 +168,20 @@ class classproperty(object):
             return self.get_func(owner_cls)
 
 
-def create_auth_header(username=None, password=None, token=None):
+def create_auth_header(username=None, password=None, token=None, tenant=None):
     """Create a valid authentication header either from username/password or
     a token if any were provided; return an empty dict otherwise
     """
-    header = {}
+    headers = {}
     if username and password:
         credentials = '{0}:{1}'.format(username, password)
-        header = {CLOUDIFY_AUTH_HEADER:
-                  BASIC_AUTH_PREFIX + urlsafe_b64encode(credentials)}
+        headers = {CLOUDIFY_AUTH_HEADER:
+                   BASIC_AUTH_PREFIX + urlsafe_b64encode(credentials)}
     elif token:
-        header = {CLOUDIFY_AUTH_TOKEN_HEADER: token}
-
-    return header
+        headers = {CLOUDIFY_AUTH_TOKEN_HEADER: token}
+    if tenant:
+        headers[CLOUDIFY_TENANT_HEADER] = tenant
+    return headers
 
 
 def create_security_roles_and_admin_user(user_datastore,
@@ -193,7 +198,7 @@ def create_security_roles_and_admin_user(user_datastore,
     user_obj = user_datastore.create_user(
         id=BOOTSTRAP_ADMIN_ID,
         username=admin_username,
-        password=admin_password,
+        password=encrypt_password(admin_password),
         roles=[admin_role]
     )
     user_obj.tenants.append(default_tenant)
@@ -213,7 +218,7 @@ def setup_flask_app(db, user_datastore, manager_ip='localhost', driver=''):
     db_uri = get_postgres_db_uri(manager_ip, driver)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
+    set_flask_security_config(app)
     Security(app=app, datastore=user_datastore)
     db.init_app(app)
     app.app_context().push()
@@ -243,3 +248,19 @@ def get_postgres_conf():
         password='cloudify',
         db_name='cloudify_db'
     )
+
+
+def set_flask_security_config(app):
+    """Set all necessary Flask-Security configurations
+
+    :param app: Flask app object
+    """
+    # Make sure that it's possible to get users from the datastore
+    # by username and not just by email (the default behavior)
+    app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
+    app.config['SECURITY_PASSWORD_HASH'] = 'pbkdf2_sha256'
+    app.config['SECURITY_TOKEN_MAX_AGE'] = 36000  # 10 hours
+
+    # TODO: Move the secret key and the salt to config/envvar
+    app.config['SECURITY_PASSWORD_SALT'] = 'abckjshd0-dsi;dlksP0980!*'
+    app.config['SECRET_KEY'] = 'secret_key_as;ldk34!@##;lKSDLK'

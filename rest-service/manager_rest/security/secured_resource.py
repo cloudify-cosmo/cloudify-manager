@@ -23,16 +23,13 @@ from manager_rest.manager_exceptions import MissingPremiumPackage
 
 from .authentication import authenticator
 from .role_authorization import role_authorizer
-from .user_handler import get_user_and_hashed_pass
 from .tenant_authorization import tenant_authorizer
 
 
 def authenticate_and_authorize(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        auth = request.authorization
-        user, hashed_pass = get_user_and_hashed_pass(request)
-        user = authenticator.authenticate(user, hashed_pass, auth)
+        user = authenticator.authenticate(request)
         role_authorizer.authorize(user, request)
         tenant_authorizer.authorize(user, request)
 

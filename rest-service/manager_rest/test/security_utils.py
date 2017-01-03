@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from flask_security.utils import encrypt_password
+
 from manager_rest.constants import ADMIN_ROLE, USER_ROLE, SUSPENDED_ROLE
 
 
@@ -55,7 +57,7 @@ def add_users_to_db(user_datastore, user_list, default_tenant):
         role = user_datastore.find_role(user['role'])
         user_obj = user_datastore.create_user(
             username=user['username'],
-            password=user['password'],
+            password=encrypt_password(user['password']),
             roles=[role]
         )
         user_obj.tenants.append(default_tenant)

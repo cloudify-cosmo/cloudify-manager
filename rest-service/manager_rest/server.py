@@ -25,6 +25,7 @@ from flask_security import Security
 
 from manager_rest import config
 from manager_rest.storage import db, user_datastore
+from manager_rest.utils import set_flask_security_config
 from manager_rest.security.user_handler import user_loader
 from manager_rest.maintenance import maintenance_mode_handler
 from manager_rest.rest.endpoint_mapper import setup_resources
@@ -52,9 +53,9 @@ class CloudifyFlaskApp(Flask):
         setup_logger(self.logger)
         self.premium_enabled = premium_enabled
         if self.premium_enabled:
-            self.is_ldap_configured = configure_ldap() is not None
+            self.ldap = configure_ldap()
         else:
-            self.is_ldap_configured = False
+            self.ldap = None
 
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)
@@ -69,16 +70,15 @@ class CloudifyFlaskApp(Flask):
     def _set_flask_security(self):
         """Set Flask-Security specific configurations and init the extension
         """
-        # Make sure that it's possible to get users from the datastore
-        # by username and not just by email (the default behavior)
-        self.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
-        self.config['SECRET_KEY'] = 'secret_key_as;ldk34!@##;lKSDLK'
-
+        set_flask_security_config(self)
         Security(app=self, datastore=user_datastore)
 
         # Get the login manager and set our own callback to be the user getter
         login_manager = self.extensions['security'].login_manager
         login_manager.request_loader(user_loader)
+
+        self.token_serializer = self.extensions[
+            'security'].remember_token_serializer
 
     def _set_sql_alchemy(self):
         """Set SQLAlchemy specific configurations, init the db object and create
