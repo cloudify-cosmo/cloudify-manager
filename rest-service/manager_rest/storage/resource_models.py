@@ -203,18 +203,11 @@ class Event(DerivedResource, DerivedMixin):
     }
 
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
-    deployment_fk = foreign_key(Deployment.storage_id, nullable=False)
     execution_fk = foreign_key(Execution.storage_id, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
 
     event_type = db.Column(db.Text)
-
-    @declared_attr
-    def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_fk)
-
-    deployment_id = association_proxy('deployment', 'id')
 
     @declared_attr
     def execution(cls):
@@ -242,19 +235,12 @@ class Log(DerivedResource, DerivedMixin):
     }
 
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
-    deployment_fk = foreign_key(Deployment.storage_id, nullable=False)
     execution_fk = foreign_key(Execution.storage_id, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
 
     logger = db.Column(db.Text)
     level = db.Column(db.Text)
-
-    @declared_attr
-    def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_fk)
-
-    deployment_id = association_proxy('deployment', 'id')
 
     @declared_attr
     def execution(cls):
