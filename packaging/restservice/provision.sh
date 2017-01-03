@@ -11,8 +11,7 @@ function build_rpm() {
         --define "PRERELEASE $PRERELEASE" \
         --define "BUILD $BUILD" \
         --define "CORE_TAG_NAME $CORE_TAG_NAME" \
-        --define "PREMIUM $PREMIUM" \
-        --define "PREMIUM_FOLDER $PREMIUM_FOLDER" \
+        --define "REPO $REPO" \
         --define "GITHUB_USERNAME $GITHUB_USERNAME" \
         --define "GITHUB_PASSWORD $GITHUB_PASSWORD"
 
@@ -23,22 +22,26 @@ function build_rpm() {
     # sudo mv *.rpm $(ls *.rpm | sed 's|_|-|g')
 }
 
-# VERSION/PRERELEASE/BUILD are exported to follow with our standard of exposing them as env vars. They are not used.
-CORE_TAG_NAME="4.0m11"
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/$CORE_TAG_NAME/common/provision.sh -o ./common-provision.sh &&
-source common-provision.sh
 
+# VERSION/PRERELEASE are exported to follow with our standard of exposing them as env vars. They are not used.
+export CORE_TAG_NAME="4.0m11"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
-export PREMIUM=$3
+export REPO=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
-echo "PREMIUM=$PREMIUM"
-if [ "$PREMIUM" == "true" ]; then
-    export AWS_S3_PATH=$AWS_S3_PATH"/"$PREMIUM_FOLDER
+if [ $REPO == "cloudify-versions" ];then
+    REPO_TAG="master"
+else
+    REPO_TAG=$CORE_TAG_NAME
 fi
-echo "AWS_S3_PATH=$AWS_S3_PATH"
+
+curl -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/${REPO}/${REPO_TAG}/packages-urls/common_build_env.sh -o ./common_build_env.sh &&
+source common_build_env.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${REPO_TAG}/common/provision.sh -o ./common-provision.sh &&
+source common-provision.sh
+
 
 install_common_prereqs &&
 build_rpm &&
