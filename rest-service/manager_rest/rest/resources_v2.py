@@ -40,6 +40,7 @@ from manager_rest.security import SecuredResource
 from manager_rest.storage.models_base import db
 from manager_rest.storage.resource_models import (
     Deployment,
+    Execution,
     Event,
     Log,
 )
@@ -818,33 +819,39 @@ class Events(resources.Events):
             raise manager_exceptions.BadParametersError(
                 'At least `type=cloudify_event` filter is expected')
 
-        deployment_query = (
-            db.session.query(Deployment.storage_id)
-            .filter(Deployment.id == bindparam('deployment_id'))
+        executions_query = (
+            db.session.query(Execution.storage_id)
+            .filter(
+                Execution.deployment_fk == Deployment.storage_id,
+                Deployment.id == bindparam('deployment_id'),
+            )
         )
         params = {
             'deployment_id': filters['deployment_id'][0],
         }
 
-        event_query = (
+        delete_event_query = (
             db.session.query(Event)
-            .filter(Event.deployment_fk == deployment_query.as_scalar())
+            .filter(Event.execution_fk.in_(executions_query))
+            .params(**params)
         )
-        total = event_query.params(**params).count()
-        event_query.params(**params).delete('fetch')
+        total = delete_event_query.delete('fetch')
 
         if 'cloudify_log' in filters['type']:
-            log_query = (
+            delete_log_query = (
                 db.session.query(Log)
-                .filter(Log.deployment_fk == deployment_query.as_scalar())
+                .filter(Log.execution_fk.in_(executions_query))
+                .params(**params)
             )
-            total += log_query.params(**params).count()
-            log_query.params(**params).delete('fetch')
+            total += delete_log_query.delete('fetch')
 
         metadata = {
             'pagination': dict(pagination, total=total)
         }
 
-        # We don't really want to return all of the deleted events, so it's a
-        # bit of a hack to return an empty list
-        return ListResult([], metadata)
+        # Commit bulk row deletions to database
+        db.session.commit()
+
+        # We don't really want to return all of the deleted events,
+        # so it's a bit of a hack to return the deleted element count.
+        return ListResult([total], metadata)
