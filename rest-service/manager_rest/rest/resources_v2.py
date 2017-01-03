@@ -835,7 +835,7 @@ class Events(resources.Events):
             .filter(Event.execution_fk.in_(executions_query))
             .params(**params)
         )
-        total = delete_event_query.delete('fetch')
+        total = delete_event_query.delete(synchronize_session=False)
 
         if 'cloudify_log' in filters['type']:
             delete_log_query = (
