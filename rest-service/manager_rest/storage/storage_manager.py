@@ -275,7 +275,7 @@ class SQLModelManager(sql_mapi.SQLAlchemyModelAPI):
             'Get `{0}` with ID `{1}`'.format(self.model_cls.__name__, element_id)
         )
         try:
-            result = super(SQLModelManager, self).get_by_name(element_id, include=include)
+            result = super(SQLModelManager, self).get(element_id, include=include)
         except exceptions.StorageError as e:
             raise manager_exceptions.NotFoundError(e)
         current_app.logger.debug('Returning {0}'.format(result))

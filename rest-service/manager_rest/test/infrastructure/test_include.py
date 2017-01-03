@@ -55,7 +55,7 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         # fields at the end of the request, but also propagates to the Model
         # section, for more efficient storage queries
         with mock.patch('manager_rest.storage.storage_manager'
-                        '.SQLModelManager.list') as sm_list_bp:
+                        '.SQLStorageManager.list') as sm_list_bp:
             mock_meta = {'pagination': {'total': 0,
                                         'size': 0,
                                         'offset': 0}}

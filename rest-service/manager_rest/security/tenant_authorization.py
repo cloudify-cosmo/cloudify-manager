@@ -22,8 +22,7 @@ class TenantAuthorization(object):
             CLOUDIFY_TENANT_HEADER,
             config.instance.default_tenant_name
         )
-        tenants = get_storage_manager().list(
-            Tenant,
+        tenants = get_storage_manager().tenant.list(
             filters={'name': tenant_name}
         )
         if not tenants:
