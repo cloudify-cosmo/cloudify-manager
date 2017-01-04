@@ -15,28 +15,46 @@
 #
 
 import os
-import sys
 import shutil
+import sys
+
 from uuid import uuid4
 
 from flask import request
 from flask_restful_swagger import swagger
+from sqlalchemy import bindparam
 
-from manager_rest import config
-from manager_rest import manager_exceptions
-from manager_rest import utils
-from manager_rest.security import SecuredResource
-from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import SnapshotState
-from manager_rest.upload_manager import (UploadedSnapshotsManager,
-                                         UploadedPluginsManager)
-from manager_rest.storage import (models,
-                                  ListResult,
-                                  get_storage_manager,
-                                  ManagerElasticsearch)
+from manager_rest import (
+    config,
+    manager_exceptions,
+    utils,
+)
 from manager_rest.maintenance import is_bypass_maintenance_mode
+from manager_rest.resource_manager import get_resource_manager
+from manager_rest.rest import (
+    resources,
+    rest_decorators,
+    rest_utils,
+)
+from manager_rest.security import SecuredResource
+from manager_rest.storage.models_base import db
+from manager_rest.storage.resource_models import (
+    Deployment,
+    Execution,
+    Event,
+    Log,
+)
+from manager_rest.storage.models_states import SnapshotState
+from manager_rest.upload_manager import (
+    UploadedPluginsManager,
+    UploadedSnapshotsManager,
+)
+from manager_rest.storage import (
+    ListResult,
+    get_storage_manager,
+    models,
+)
 from manager_rest.utils import create_filter_params_list_description
-from . import resources, rest_decorators, rest_utils
 
 
 def _get_snapshot_path(snapshot_id):
@@ -683,48 +701,12 @@ class PluginsId(SecuredResource):
 
 class Events(resources.Events):
 
-    @staticmethod
-    def _build_query(filters=None, pagination=None, sort=None,
-                     range_filters=None):
+    """Events resource.
 
-        ctx_fields = [
-            'blueprint_id',
-            'deployment_id',
-            'execution_id',
-            'node_id',
-            'node_instance_id',
-            'workflow_id'
-        ]
+    Through the events endpoint a user can retrieve both events and logs as
+    stored in the SQL database.
 
-        # append 'context.' prefix to context fields in all constructs
-        query_constructs = \
-            [filters, pagination, sort, range_filters]
-        for ctx_field in ctx_fields:
-            for construct in query_constructs:
-                if construct and ctx_field in construct:
-                    construct['context.{0}'.format(ctx_field)] = \
-                        construct.pop(ctx_field)
-
-        # TODO: monkey patching a wildcard with a filter, should be refactored
-        wildcards = dict()
-        if filters and 'message.text' in filters:
-            wildcards['message.text'] = filters.pop('message.text')[0]
-
-        return ManagerElasticsearch.\
-            build_request_body(filters=filters,
-                               pagination=pagination,
-                               sort=sort,
-                               range_filters=range_filters,
-                               wildcards=wildcards)
-
-    @staticmethod
-    def list_events(query, include=None):
-        result = ManagerElasticsearch.search_events(body=query,
-                                                    include=include)
-        events = ManagerElasticsearch.extract_search_result_values(result)
-        metadata = ManagerElasticsearch.build_list_result_metadata(query,
-                                                                   result)
-        return ListResult(events, metadata)
+    """
 
     @swagger.operation(
         responseclass='List[Event]',
@@ -740,14 +722,75 @@ class Events(resources.Events):
     @rest_decorators.sortable
     def get(self, _include=None, filters=None,
             pagination=None, sort=None, range_filters=None, **kwargs):
+        """List events using a SQL backend.
+
+        :param _include:
+            Projection used to get records from database (not currently used)
+        :type _include: list(str)
+        :param filters:
+            Filter selection.
+
+            It's used to decide if events:
+                {'type': ['cloudify_event']}
+            or both events and logs should be returned:
+                {'type': ['cloudify_event', 'cloudify_log']}
+
+            Also it's used to get only events for a particular execution:
+                {'execution_id': '<some uuid>'}
+        :type filters: dict(str, str)
+        :param pagination:
+            Parameters used to limit results returned in a single query.
+            Expected values `size` and `offset` are mapped into SQL as `LIMIT`
+            and `OFFSET`.
+        :type pagination: dict(str, int)
+        :param sort:
+            Result sorting order. The only allowed and expected value is to
+            sort by timestamp in ascending order:
+                {'timestamp': 'asc'}
+        :type sort: dict(str, str)
+        :returns: Events that match the conditions passed as arguments
+        :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
+        :param range_filters:
+            Apparently was used to select a timestamp interval. It's not
+            currently used.
+        :type range_filters: dict(str)
+        :returns: Events found in the SQL backend
+        :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
+
         """
-        List events
-        """
-        query = self._build_query(filters=filters,
-                                  pagination=pagination,
-                                  sort=sort,
-                                  range_filters=range_filters)
-        return self.list_events(query, include=_include)
+        if 'execution_id' not in filters:
+            raise manager_exceptions.BadParametersError(
+                'Expected execution_id parameter')
+
+        if 'size' not in pagination:
+            raise manager_exceptions.BadParametersError(
+                'Expected _size parameter')
+
+        if 'offset' not in pagination:
+            raise manager_exceptions.BadParametersError(
+                'Expected _offset parameter')
+
+        params = {
+            'execution_id': filters['execution_id'][0],
+            'limit': pagination['size'],
+            'offset': pagination['offset'],
+        }
+
+        count_query = self._build_count_query(filters)
+        total = count_query.params(**params).scalar()
+
+        select_query = self._build_select_query(
+            _include, filters, pagination, sort)
+
+        results = [
+            self._map_event_to_es(event)
+            for event in select_query.params(**params).all()
+        ]
+
+        metadata = {
+            'pagination': dict(pagination, total=total)
+        }
+        return ListResult(results, metadata)
 
     @rest_decorators.exceptions_handled
     def post(self):
@@ -767,19 +810,48 @@ class Events(resources.Events):
     @rest_decorators.sortable
     def delete(self, filters=None, pagination=None, sort=None,
                range_filters=None, **kwargs):
-        """Delete events/logs connected to a certain Deployment ID
-        """
-        query = self._build_query(filters=filters,
-                                  pagination=pagination,
-                                  sort=sort,
-                                  range_filters=range_filters)
-        events = ManagerElasticsearch.search_events(body=query)
-        metadata = ManagerElasticsearch.build_list_result_metadata(query,
-                                                                   events)
-        ManagerElasticsearch.delete_events(events)
+        """Delete events/logs connected to a certain Deployment ID."""
+        if not isinstance(filters, dict) or 'type' not in filters:
+            raise manager_exceptions.BadParametersError(
+                'Filter by type is expected')
 
-        # We don't really want to return all of the deleted events, so it's a
-        # bit of a hack to only return the number of events to delete - if any
-        # of the events weren't deleted, we'd have gotten an error from the
-        # method above
-        return ListResult([events['hits']['total']], metadata)
+        if 'cloudify_event' not in filters['type']:
+            raise manager_exceptions.BadParametersError(
+                'At least `type=cloudify_event` filter is expected')
+
+        executions_query = (
+            db.session.query(Execution.storage_id)
+            .filter(
+                Execution.deployment_fk == Deployment.storage_id,
+                Deployment.id == bindparam('deployment_id'),
+            )
+        )
+        params = {
+            'deployment_id': filters['deployment_id'][0],
+        }
+
+        delete_event_query = (
+            db.session.query(Event)
+            .filter(Event.execution_fk.in_(executions_query))
+            .params(**params)
+        )
+        total = delete_event_query.delete(synchronize_session=False)
+
+        if 'cloudify_log' in filters['type']:
+            delete_log_query = (
+                db.session.query(Log)
+                .filter(Log.execution_fk.in_(executions_query))
+                .params(**params)
+            )
+            total += delete_log_query.delete('fetch')
+
+        metadata = {
+            'pagination': dict(pagination, total=total)
+        }
+
+        # Commit bulk row deletions to database
+        db.session.commit()
+
+        # We don't really want to return all of the deleted events,
+        # so it's a bit of a hack to return the deleted element count.
+        return ListResult([total], metadata)
