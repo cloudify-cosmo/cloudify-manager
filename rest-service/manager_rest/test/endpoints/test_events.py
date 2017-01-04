@@ -83,7 +83,7 @@ class BuildSelectQueryTest(TestCase):
         unit testing.
 
         """
-        db_patcher = patch('manager_rest.rest.resources.db')
+        db_patcher = patch('manager_rest.rest.resources.events.db')
         self.db = db_patcher.start()
         self.addCleanup(db_patcher.stop)
 
@@ -175,7 +175,7 @@ class BuildCountQueryTest(TestCase):
         unit testing.
 
         """
-        db_patcher = patch('manager_rest.rest.resources.db')
+        db_patcher = patch('manager_rest.rest.resources.events.db')
         self.db = db_patcher.start()
         self.addCleanup(db_patcher.stop)
 
