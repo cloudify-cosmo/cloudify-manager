@@ -319,6 +319,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
         config = self.server_configuration
         deployment_folder = os.path.join(config.file_server_root,
                                          config.file_server_deployments_folder,
+                                         'default_tenant',
                                          deployment_id)
         try:
             os.makedirs(deployment_folder)

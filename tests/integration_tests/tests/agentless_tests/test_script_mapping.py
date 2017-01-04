@@ -41,8 +41,8 @@ class TestScriptMapping(AgentlessTestCase):
         with open(workflow_script_path, 'r') as f:
             workflow_script_content = f.read()
 
-        deployment_folder = ('/opt/manager/resources/deployments/{0}'
-                             .format(deployment.id))
+        deployment_folder = ('/opt/manager/resources/deployments/{0}/{1}'
+                             .format('default_tenant', deployment.id))
         workflow_folder = os.path.join(deployment_folder, 'scripts/workflows')
         try:
             self.execute_on_manager('mkdir -p {0}'.format(workflow_folder))

@@ -21,6 +21,7 @@ from flask import current_app
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
+from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest import app_context, config, manager_exceptions
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.storage.models_states import ExecutionState
@@ -98,9 +99,11 @@ class DeploymentUpdateManager(object):
         file_server_base_url = \
             '{0}/'.format(config.instance.file_server_base_uri)
 
-        blueprint_resource_dir = os.path.join(file_server_base_url,
-                                              'blueprints',
-                                              blueprint_id)
+        blueprint_resource_dir = os.path.join(
+            file_server_base_url,
+            'blueprints',
+            current_app.config[CURRENT_TENANT_CONFIG].name,
+            blueprint_id)
 
         app_path = os.path.join(file_server_base_url, app_dir, app_blueprint)
 
