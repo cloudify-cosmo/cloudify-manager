@@ -65,6 +65,7 @@ class SnapshotRestore(object):
         self._user_is_bootstrap_admin = user_is_bootstrap_admin
 
         self._tempdir = None
+        self._snapshot_version = None
         self._client = get_rest_client()
 
     def restore(self):
@@ -72,15 +73,15 @@ class SnapshotRestore(object):
         snapshot_path = self._get_snapshot_path()
         try:
             metadata = self._extract_snapshot_archive(snapshot_path)
-            snapshot_version = ManagerVersion(metadata[M_VERSION])
-            self._validate_snapshot(snapshot_version)
+            self._snapshot_version = ManagerVersion(metadata[M_VERSION])
+            self._validate_snapshot()
 
             existing_plugins = self._get_existing_plugin_names()
             existing_dep_envs = self._get_existing_dep_envs()
             es = utils.get_es_client(self._config)
 
             with Postgres(self._config) as postgres:
-                self._restore_db(es, postgres, snapshot_version)
+                self._restore_db(es, postgres)
                 self._restore_files_to_manager()
                 self._restore_events(es, metadata)
                 self._restore_plugins(existing_plugins)
@@ -92,10 +93,10 @@ class SnapshotRestore(object):
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
 
-    def _validate_snapshot(self, snapshot_version):
+    def _validate_snapshot(self):
         manager_version = utils.get_manager_version(self._client)
         validator = SnapshotRestoreValidator(
-            snapshot_version,
+            self._snapshot_version,
             manager_version,
             self._premium_enabled,
             self._user_is_bootstrap_admin,
@@ -106,16 +107,19 @@ class SnapshotRestore(object):
         validator.validate()
 
     def _restore_files_to_manager(self):
+        new_tenant = self._tenant_name \
+            if self._snapshot_version < V_4_0_0 else ''
         ctx.logger.info('Restoring files from the archive to the manager')
         utils.copy_files_between_manager_and_snapshot(
             self._tempdir,
             self._config,
-            to_archive=False
+            to_archive=False,
+            new_tenant=new_tenant
         )
 
-    def _restore_db(self, es, postgres, snapshot_version):
+    def _restore_db(self, es, postgres):
         ctx.logger.info('Restoring database')
-        if snapshot_version >= V_4_0_0:
+        if self._snapshot_version >= V_4_0_0:
             postgres.restore(self._tempdir)
         else:
             if self._should_clean_old_db_for_3_x_snapshot():

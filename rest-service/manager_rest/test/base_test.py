@@ -394,7 +394,8 @@ class BaseServerTestCase(unittest.TestCase):
 
     def check_if_resource_on_fileserver(self, blueprint_id, resource_path):
         return self._check_if_resource_on_fileserver(
-            FILE_SERVER_BLUEPRINTS_FOLDER, blueprint_id, resource_path)
+            os.path.join(FILE_SERVER_BLUEPRINTS_FOLDER, 'default_tenant'),
+            blueprint_id, resource_path)
 
     def get_blueprint_path(self, blueprint_dir_name):
         return os.path.join(os.path.dirname(

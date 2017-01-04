@@ -466,7 +466,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
 
         deployment_dir_path = os.path.join(
-                '/opt/mgmtworker/work/deployments', deployment.id)
+                '/opt/mgmtworker/work/deployments/default_tenant',
+                deployment.id)
 
         self.execute_on_manager('test -d {0}'.format(deployment_dir_path))
 

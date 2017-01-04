@@ -34,7 +34,8 @@ class DeploymentResourceTest(AgentlessTestCase):
         deployment_id = blueprint_id
         blueprint_path = resource('dsl/deployment_resource.yaml')
         deployment_folder_on_manager = \
-            '/opt/manager/resources/deployments/{0}'.format(deployment_id)
+            '/opt/manager/resources/deployments/default_tenant/{0}'.format(
+                deployment_id)
         full_resource_path = os.path.join(deployment_folder_on_manager,
                                           RESOURCE_PATH)
         self.execute_on_manager('mkdir -p {0}/resources'.format(

@@ -41,6 +41,7 @@ def _merge_deployment_and_workflow_plugins(deployment_plugins,
                 continue
             added_plugins.add(plugin['name'])
             result.append(plugin)
+
     for plugins in (deployment_plugins, workflow_plugins):
         add_plugins(plugins)
     return result
@@ -77,6 +78,7 @@ def generate_create_dep_tasks_graph(ctx,
         ctx.send_event('Creating deployment work directory'),
         ctx.local_task(_create_deployment_workdir,
                        kwargs={'deployment_id': ctx.deployment.id,
+                               'tenant': ctx.tenant_name,
                                'logger': ctx.logger}))
 
     return graph
@@ -122,6 +124,7 @@ def delete(ctx,
         ctx.send_event('Deleting deployment work directory'),
         ctx.local_task(_delete_deployment_workdir,
                        kwargs={'deployment_id': ctx.deployment.id,
+                               'tenant': ctx.tenant_name,
                                'logger': ctx.logger}))
 
     for task in graph.tasks_iter():
@@ -148,52 +151,54 @@ def delete_logs(ctx, deployment_id):
                     f.truncate()
             except IOError:
                 ctx.logger.warn(
-                        'Failed truncating {0}.'.format(log_file_path,
-                                                        exc_info=True))
+                    'Failed truncating {0}.'.format(log_file_path,
+                                                    exc_info=True))
         for rotated_log_file_path in glob.glob('{0}.*'.format(
                 log_file_path)):
             try:
                 os.remove(rotated_log_file_path)
             except IOError:
                 ctx.logger.exception(
-                        'Failed removing rotated log file {0}.'.format(
-                                rotated_log_file_path, exc_info=True))
+                    'Failed removing rotated log file {0}.'.format(
+                        rotated_log_file_path, exc_info=True))
 
 
 def _ignore_task_on_fail_and_send_event(task, ctx):
     def failure_handler(tsk):
         ctx.send_event('Ignoring task {0} failure'.format(tsk.name))
         return workflow_tasks.HandlerResult.ignore()
+
     task.on_failure = failure_handler
 
 
 @workflow_context.task_config(send_task_events=False)
-def _create_deployment_workdir(deployment_id, logger):
-    deployment_workdir = _workdir(deployment_id)
+def _create_deployment_workdir(deployment_id, logger, tenant):
+    deployment_workdir = _workdir(deployment_id, tenant)
     try:
         os.makedirs(deployment_workdir)
     except os.error as e:
         if e.errno == errno.EEXIST:
-            logger.error(
-                'Failed creating directory {0}. Current directory content: {1}'
-                .format(deployment_workdir, os.listdir(deployment_workdir)))
+            logger.error('Failed creating directory {0}. '
+                         'Current directory content: {1}'.format(
+                            deployment_workdir,
+                            os.listdir(deployment_workdir)))
         raise
 
 
 @workflow_context.task_config(send_task_events=False)
-def _delete_deployment_workdir(deployment_id, logger):
-    deployment_workdir = _workdir(deployment_id)
+def _delete_deployment_workdir(deployment_id, logger, tenant):
+    deployment_workdir = _workdir(deployment_id, tenant)
     if not os.path.exists(deployment_workdir):
         return
     try:
-        shutil.rmtree(_workdir(deployment_id))
+        shutil.rmtree(_workdir(deployment_id, tenant))
     except os.error:
-        logger.warning(
-            'Failed deleting directory {0}. Current directory content: {1}'
-            .format(deployment_workdir, os.listdir(deployment_workdir),
-                    exc_info=True))
+        logger.warning('Failed deleting directory {0}. '
+                       'Current directory content: {1}'.format(
+                            deployment_workdir,
+                            os.listdir(deployment_workdir), exc_info=True))
 
 
-def _workdir(deployment_id):
+def _workdir(deployment_id, tenant):
     base_workdir = os.environ['CELERY_WORK_DIR']
-    return os.path.join(base_workdir, 'deployments', deployment_id)
+    return os.path.join(base_workdir, 'deployments', tenant, deployment_id)

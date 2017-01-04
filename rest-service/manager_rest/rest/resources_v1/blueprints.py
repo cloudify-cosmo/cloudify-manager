@@ -17,10 +17,12 @@
 import os
 import shutil
 
+from flask import current_app
 from flask_restful_swagger import swagger
 
 from manager_rest import config
-from manager_rest.constants import SUPPORTED_ARCHIVE_TYPES
+from manager_rest.constants import (
+    SUPPORTED_ARCHIVE_TYPES, CURRENT_TENANT_CONFIG)
 from manager_rest.security import SecuredResource
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
@@ -58,6 +60,7 @@ class BlueprintsIdArchive(SecuredResource):
             local_path = os.path.join(
                 config.instance.file_server_root,
                 config.instance.file_server_uploaded_blueprints_folder,
+                current_app.config[CURRENT_TENANT_CONFIG].name,
                 blueprint_id,
                 '{0}.{1}'.format(blueprint_id, arc_type))
 
@@ -68,9 +71,10 @@ class BlueprintsIdArchive(SecuredResource):
             raise RuntimeError("Could not find blueprint's archive; "
                                "Blueprint ID: {0}".format(blueprint_id))
 
-        blueprint_path = '{0}/{1}/{2}/{2}.{3}'.format(
+        blueprint_path = '{0}/{1}/{2}/{3}/{3}.{4}'.format(
             config.instance.file_server_resources_uri,
             config.instance.file_server_uploaded_blueprints_folder,
+            current_app.config[CURRENT_TENANT_CONFIG].name,
             blueprint_id,
             archive_type)
 
@@ -184,11 +188,13 @@ class BlueprintsId(SecuredResource):
         blueprint_folder = os.path.join(
             config.instance.file_server_root,
             config.instance.file_server_blueprints_folder,
+            current_app.config[CURRENT_TENANT_CONFIG].name,
             blueprint.id)
         shutil.rmtree(blueprint_folder)
         uploaded_blueprint_folder = os.path.join(
             config.instance.file_server_root,
             config.instance.file_server_uploaded_blueprints_folder,
+            current_app.config[CURRENT_TENANT_CONFIG].name,
             blueprint.id)
         shutil.rmtree(uploaded_blueprint_folder)
 

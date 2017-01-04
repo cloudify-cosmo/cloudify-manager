@@ -44,7 +44,8 @@ class DictToAttributes(object):
 
 def copy_files_between_manager_and_snapshot(archive_root,
                                             config,
-                                            to_archive=True):
+                                            to_archive=True,
+                                            new_tenant=''):
     """
     Copy files/dirs between snapshot/manager and manager/snapshot.
 
@@ -52,6 +53,9 @@ def copy_files_between_manager_and_snapshot(archive_root,
     :param config: Config of manager.
     :param to_archive: If True then copying is from manager to snapshot,
         otherwise from snapshot to manager.
+    :param new_tenant: a tenant to which the snapshot is restored.
+        Relevant only in the case of restoring a snapshot from a manager
+        of a version older than 4.0.0
     """
     ctx.logger.info('Copying files/directories...')
 
@@ -61,9 +65,15 @@ def copy_files_between_manager_and_snapshot(archive_root,
     # in manager) and snapshot archive (path in snapshot). If paths are
     # absolute then should point to proper data in manager/snapshot archive
     data_to_copy = [
-        (config.file_server_blueprints_folder, 'blueprints'),
-        (config.file_server_deployments_folder, 'deployments'),
-        (config.file_server_uploaded_blueprints_folder, 'uploaded-blueprints'),
+        (os.path.join(
+            config.file_server_blueprints_folder, new_tenant),
+         'blueprints'),
+        (os.path.join(
+            config.file_server_deployments_folder, new_tenant),
+         'deployments'),
+        (os.path.join(
+            config.file_server_uploaded_blueprints_folder, new_tenant),
+         'uploaded-blueprints'),
         (config.file_server_uploaded_plugins_folder, 'plugins')
     ]
 
