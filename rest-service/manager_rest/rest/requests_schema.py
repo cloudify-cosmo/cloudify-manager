@@ -18,17 +18,6 @@ from flask_restful_swagger import swagger
 
 
 @swagger.model
-class ExecutionRequest(object):
-
-    resource_fields = {
-        'workflow_id': fields.String,
-        'parameters': fields.Raw,
-        'allow_custom_parameters': fields.Boolean,
-        'force': fields.Boolean
-    }
-
-
-@swagger.model
 class DeploymentRequest(object):
 
     resource_fields = {

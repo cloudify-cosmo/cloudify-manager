@@ -24,7 +24,7 @@ from manager_rest.security.resource_permissions import PermissionsHandler
 from flask import current_app
 
 from . import rest_decorators
-from .responses_v3 import BaseResponse, ResourceID
+from .responses import BaseResponse, ResourceID
 from .rest_utils import get_json_and_verify_params
 
 try:

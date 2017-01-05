@@ -40,7 +40,7 @@ from manager_rest.upload_manager import \
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from .rest_utils import verify_and_convert_bool, get_json_and_verify_params
-from .responses_v2_1 import MaintenanceMode as MaintenanceModeResponse
+from .responses import MaintenanceMode as MaintenanceModeResponse
 from . import resources_v1, rest_decorators, resources_v2
 
 

@@ -24,7 +24,7 @@ from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 from manager_rest import utils, config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
 
-from .responses_v2 import ListResponse
+from .responses import ListResponse
 from .rest_utils import skip_nested_marshalling
 
 

@@ -123,3 +123,46 @@ class Tokens(object):
 
     def __init__(self, **kwargs):
         self.value = kwargs.get('value')
+
+
+@swagger.model
+class BaseResponse(object):
+    resource_fields = {}
+
+
+class ResourceID(BaseResponse):
+    resource_fields = {
+        'resource_id': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.resource_id = kwargs.get('resource_id')
+
+
+@swagger.model
+class MaintenanceMode(object):
+    resource_fields = {
+        'status': fields.String,
+        'activated_at': fields.String,
+        'activation_requested_at': fields.String,
+        'remaining_executions': fields.Raw,
+        'requested_by': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.status = kwargs.get('status')
+        self.activated_at = kwargs.get('activated_at')
+        self.activation_requested_at = kwargs.get('activation_requested_at')
+        self.remaining_executions = kwargs.get('remaining_executions')
+        self.requested_by = kwargs.get('requested_by')
+
+
+@swagger.model
+class ListResponse(object):
+    resource_fields = {
+        'metadata': fields.Raw,
+        'items': fields.List(fields.Raw)}
+
+    def __init__(self, **kwargs):
+        self.metadata = kwargs.get('metadata')
+        self.items = kwargs.get('items')
