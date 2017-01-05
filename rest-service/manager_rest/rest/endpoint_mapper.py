@@ -12,9 +12,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from . import swagger, resources, resources_v2, resources_v2_1, resources_v3
+from . import swagger, resources_v1, resources_v2, resources_v2_1, resources_v3
 
-SUPPORTED_API_VERSIONS = [('v1', resources),
+SUPPORTED_API_VERSIONS = [('v1', resources_v1),
                           ('v2', resources_v2),
                           ('v2.1', resources_v2_1),
                           ('v3', resources_v3)]
@@ -78,7 +78,7 @@ def setup_resources(api):
     }
 
     # Set version endpoint as a non versioned endpoint
-    api.add_resource(resources.Version, '/api/version', endpoint='version')
+    api.add_resource(resources_v1.Version, '/api/version', endpoint='version')
     for resource, endpoint_suffix in resources_endpoints.iteritems():
         _set_versioned_urls(api, resource, endpoint_suffix)
 

@@ -32,7 +32,7 @@ from manager_rest import (
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
-    resources,
+    resources_v1,
     rest_decorators,
     rest_utils,
 )
@@ -267,7 +267,7 @@ class SnapshotsIdRestore(SecuredResource):
         return execution, 200
 
 
-class Blueprints(resources.Blueprints):
+class Blueprints(resources_v1.Blueprints):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.Blueprint.__name__),
         nickname="list",
@@ -298,7 +298,7 @@ class Blueprints(resources.Blueprints):
         )
 
 
-class BlueprintsId(resources.BlueprintsId):
+class BlueprintsId(resources_v1.BlueprintsId):
 
     @swagger.operation(
         responseClass=models.Blueprint,
@@ -377,7 +377,7 @@ class BlueprintsId(resources.BlueprintsId):
                 blueprint_id=blueprint_id, **kwargs)
 
 
-class Executions(resources.Executions):
+class Executions(resources_v1.Executions):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.Execution.__name__),
         nickname="list",
@@ -424,7 +424,7 @@ class Executions(resources.Executions):
         )
 
 
-class Deployments(resources.Deployments):
+class Deployments(resources_v1.Deployments):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.Deployment.__name__),
         nickname="list",
@@ -455,7 +455,7 @@ class Deployments(resources.Deployments):
         )
 
 
-class DeploymentModifications(resources.DeploymentModifications):
+class DeploymentModifications(resources_v1.DeploymentModifications):
     @swagger.operation(
         responseClass='List[{0}]'.format(
             models.DeploymentModification.__name__),
@@ -488,7 +488,7 @@ class DeploymentModifications(resources.DeploymentModifications):
         )
 
 
-class Nodes(resources.Nodes):
+class Nodes(resources_v1.Nodes):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.Node.__name__),
         nickname="listNodes",
@@ -518,7 +518,7 @@ class Nodes(resources.Nodes):
         )
 
 
-class NodeInstances(resources.NodeInstances):
+class NodeInstances(resources_v1.NodeInstances):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.NodeInstance.__name__),
         nickname="listNodeInstances",
@@ -699,7 +699,7 @@ class PluginsId(SecuredResource):
                                                     force=False)
 
 
-class Events(resources.Events):
+class Events(resources_v1.Events):
 
     """Events resource.
 

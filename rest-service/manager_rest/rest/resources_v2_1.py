@@ -41,7 +41,7 @@ from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from .rest_utils import verify_and_convert_bool, get_json_and_verify_params
 from .responses_v2_1 import MaintenanceMode as MaintenanceModeResponse
-from . import resources, rest_decorators, resources_v2
+from . import resources_v1, rest_decorators, resources_v2
 
 
 class MaintenanceMode(SecuredResource):
@@ -241,20 +241,20 @@ class Deployments(resources_v2.Deployments):
     )
 
 
-class DeploymentsId(resources.DeploymentsId):
+class DeploymentsId(resources_v1.DeploymentsId):
 
     get = rest_decorators.override_marshal_with(
-        resources.DeploymentsId.get,
+        resources_v1.DeploymentsId.get,
         models.Deployment
     )
 
     put = rest_decorators.override_marshal_with(
-        resources.DeploymentsId.put,
+        resources_v1.DeploymentsId.put,
         models.Deployment
     )
 
     delete = rest_decorators.override_marshal_with(
-        resources.DeploymentsId.delete,
+        resources_v1.DeploymentsId.delete,
         models.Deployment
     )
 
@@ -275,15 +275,15 @@ class NodeInstances(resources_v2.NodeInstances):
     )
 
 
-class NodeInstancesId(resources.NodeInstancesId):
+class NodeInstancesId(resources_v1.NodeInstancesId):
 
     get = rest_decorators.override_marshal_with(
-        resources.NodeInstancesId.get,
+        resources_v1.NodeInstancesId.get,
         models.NodeInstance
     )
 
     patch = rest_decorators.override_marshal_with(
-        resources.NodeInstancesId.patch,
+        resources_v1.NodeInstancesId.patch,
         models.NodeInstance
     )
 

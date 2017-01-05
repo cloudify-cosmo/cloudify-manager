@@ -21,7 +21,7 @@ from mock import patch
 from nose.plugins.attrib import attr
 
 from manager_rest.manager_exceptions import BadParametersError
-from manager_rest.rest.resources import Events
+from manager_rest.rest.resources_v1 import Events
 from manager_rest.test import base_test
 
 
@@ -83,7 +83,7 @@ class BuildSelectQueryTest(TestCase):
         unit testing.
 
         """
-        db_patcher = patch('manager_rest.rest.resources.db')
+        db_patcher = patch('manager_rest.rest.resources_v1.events.db')
         self.db = db_patcher.start()
         self.addCleanup(db_patcher.stop)
 
@@ -175,7 +175,7 @@ class BuildCountQueryTest(TestCase):
         unit testing.
 
         """
-        db_patcher = patch('manager_rest.rest.resources.db')
+        db_patcher = patch('manager_rest.rest.resources_v1.events.db')
         self.db = db_patcher.start()
         self.addCleanup(db_patcher.stop)
 
