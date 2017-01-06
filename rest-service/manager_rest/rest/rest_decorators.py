@@ -328,17 +328,6 @@ def paginate(func):
     @wraps(func)
     def verify_and_create_pagination_params(*args, **kw):
         """Validate pagination parameters and pass them to wrapped function."""
-        # offset = request.args.get('_offset')
-        # size = request.args.get('_size')
-        # pagination_params = {}
-        # if offset:
-            # pagination_params['offset'] = int(offset)
-        # if size:
-            # pagination_params['size'] = int(size)
-        # import ipdb; ipdb.set_trace()
-        # result = func(pagination=pagination_params, *args, **kw)
-        # return ListResponse(items=result.items, metadata=result.metadata)
-
         pagination_params = dicttoolz.keymap(
             # Drop leading underscore from keys
             lambda key: key.lstrip('_'),
