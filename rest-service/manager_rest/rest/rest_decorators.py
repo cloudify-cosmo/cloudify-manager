@@ -259,7 +259,7 @@ def sortable(func):
 
     @wraps(func)
     def create_sort_params(*args, **kw):
-        """Validate sor tparameters and pass them to the wrapped function."""
+        """Validate sort parameters and pass them to the wrapped function."""
         # maintain order of sort fields
         sort_params = OrderedDict([
             (
