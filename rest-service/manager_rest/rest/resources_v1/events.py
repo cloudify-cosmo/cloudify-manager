@@ -249,7 +249,7 @@ class Events(SecuredResource):
         else:
             filters = {'type': ['cloudify_event']}
         pagination = {
-            'size': request_dict['size'],
+            'size': request_dict.get('size', DEFAULT_SEARCH_SIZE),
             'offset': request_dict['from'],
         }
         sort = {
@@ -261,8 +261,8 @@ class Events(SecuredResource):
         params = {
             'execution_id': (
                 es_query['must'][0]['match']['context.execution_id']),
-            'limit': request_dict['size'] or DEFAULT_SEARCH_SIZE,
-            'offset': request_dict['from'],
+            'limit': pagination['size'],
+            'offset': pagination['from'],
         }
 
         count_query = self._build_count_query(filters)

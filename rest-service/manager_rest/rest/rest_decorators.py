@@ -28,7 +28,6 @@ from voluptuous import (
     Match,
     REMOVE_EXTRA,
     Range,
-    Required,
     Schema,
 )
 
@@ -300,8 +299,8 @@ def paginate(func):
     function.
 
     The `paginate` parameter is a dictionary whose keys are `size` and `offset`
-    (note that the leading underscore is dropped) and their values are positive
-    integers being `0` their default.
+    (note that the leading underscore is dropped) if a values was passed in a
+    request header. Otherwise, the dictionary will be empty.
 
     A `voluptuous.error.Invalid` exception will be raised if any of the request
     parameters has an invalid value.
@@ -312,12 +311,12 @@ def paginate(func):
     """
     schema = Schema(
         {
-            Required('_size', default=0): All(
+            '_size': All(
                 Coerce(int),
                 Range(min=0),
                 msg='`_size` is expected to be a positive integer',
             ),
-            Required('_offset', default=0): All(
+            '_offset': All(
                 Coerce(int),
                 Range(min=0),
                 msg='`_offset` is expected to be a positive integer',
@@ -329,6 +328,17 @@ def paginate(func):
     @wraps(func)
     def verify_and_create_pagination_params(*args, **kw):
         """Validate pagination parameters and pass them to wrapped function."""
+        # offset = request.args.get('_offset')
+        # size = request.args.get('_size')
+        # pagination_params = {}
+        # if offset:
+            # pagination_params['offset'] = int(offset)
+        # if size:
+            # pagination_params['size'] = int(size)
+        # import ipdb; ipdb.set_trace()
+        # result = func(pagination=pagination_params, *args, **kw)
+        # return ListResponse(items=result.items, metadata=result.metadata)
+
         pagination_params = dicttoolz.keymap(
             # Drop leading underscore from keys
             lambda key: key.lstrip('_'),

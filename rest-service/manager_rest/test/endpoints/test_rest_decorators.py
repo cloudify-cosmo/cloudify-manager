@@ -36,8 +36,7 @@ class PaginateTest(TestCase):
     def test_defaults(self):
         """Size and offset set to zero by default."""
         def verify(pagination):
-            self.assertEqual(pagination['size'], 0)
-            self.assertEqual(pagination['offset'], 0)
+            self.assertDictEqual(pagination, {})
             return Mock()
 
         with patch('manager_rest.rest.rest_decorators.request') as request:
