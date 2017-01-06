@@ -127,38 +127,10 @@ class BuildSelectQueryTest(TestCase):
         with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
-    def test_sort_required(self):
-        """Sort parameter is expected to be a dictionary."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['sort'] = None
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
     def test_sort_by_timestamp_required(self):
         """Ordering by timestamp expected."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['sort'] = {'<field>': 'asc'}
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
-    def test_pagination_required(self):
-        """Pagination is expected to be a dictionary."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['pagination'] = None
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
-    def test_pagination_size_required(self):
-        """Size pagination parameter is expected."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        del params['pagination']['size']
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
-    def test_pagination_offset_required(self):
-        """Offset pagination parameter is expected."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        del params['pagination']['offset']
         with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
