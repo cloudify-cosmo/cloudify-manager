@@ -262,7 +262,7 @@ class Events(SecuredResource):
             'execution_id': (
                 es_query['must'][0]['match']['context.execution_id']),
             'limit': pagination['size'],
-            'offset': pagination['from'],
+            'offset': pagination['offset'],
         }
 
         count_query = self._build_count_query(filters)
