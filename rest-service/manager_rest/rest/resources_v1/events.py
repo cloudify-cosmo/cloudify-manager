@@ -31,6 +31,7 @@ from manager_rest.rest.rest_decorators import (
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
 from manager_rest.storage.models_base import db
+from manager_rest.storage.manager_elasticsearch import DEFAULT_SEARCH_SIZE
 from manager_rest.storage.resource_models import (
     Deployment,
     Execution,
@@ -260,7 +261,7 @@ class Events(SecuredResource):
         params = {
             'execution_id': (
                 es_query['must'][0]['match']['context.execution_id']),
-            'limit': request_dict['size'],
+            'limit': request_dict['size'] or DEFAULT_SEARCH_SIZE,
             'offset': request_dict['from'],
         }
 
