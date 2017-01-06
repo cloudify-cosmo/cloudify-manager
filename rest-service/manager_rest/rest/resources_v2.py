@@ -774,14 +774,6 @@ class Events(resources_v1.Events):
             raise manager_exceptions.BadParametersError(
                 'Expected execution_id parameter')
 
-        if 'size' not in pagination:
-            raise manager_exceptions.BadParametersError(
-                'Expected _size parameter')
-
-        if 'offset' not in pagination:
-            raise manager_exceptions.BadParametersError(
-                'Expected _offset parameter')
-
         params = {
             'execution_id': filters['execution_id'][0],
             'limit': pagination['size'],

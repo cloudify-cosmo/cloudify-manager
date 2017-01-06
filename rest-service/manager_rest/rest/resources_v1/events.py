@@ -126,28 +126,16 @@ class Events(SecuredResource):
                 )
             )
 
-        if (not isinstance(sort, dict) or
-                '@timestamp' not in sort or
-                sort['@timestamp'] != 'asc'):
+        if '@timestamp' not in sort or sort['@timestamp'] != 'asc':
             raise manager_exceptions.BadParametersError(
                 'Sorting ascending by `timestamp` is expected')
-        query = query.order_by('timestamp')
 
-        if not isinstance(pagination, dict):
-            raise manager_exceptions.BadParametersError(
-                'Expected `pagination` parameter')
-
-        if 'size' not in pagination:
-            raise manager_exceptions.BadParametersError(
-                'Expected `size` pagination parameter')
-
-        query = query.limit(bindparam('limit'))
-
-        if 'offset' not in pagination:
-            raise manager_exceptions.BadParametersError(
-                'Expected `offset` pagination parameter')
-
-        query = query.offset(bindparam('offset'))
+        query = (
+            query
+            .order_by('timestamp')
+            .limit(bindparam('limit'))
+            .offset(bindparam('offset'))
+        )
 
         return query
 
