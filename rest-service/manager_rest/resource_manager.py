@@ -38,15 +38,14 @@ from manager_rest.storage.models_states import (SnapshotState,
 from . import utils
 from . import config
 from . import app_context
+from . import workflow_executor
 from . import manager_exceptions
-from . import workflow_client as wf_client
 
 
 class ResourceManager(object):
 
     def __init__(self):
         self.sm = get_storage_manager()
-        self.workflow_client = wf_client.get_workflow_client()
 
     def list_executions(self, include=None, is_include_system_workflows=False,
                         filters=None, pagination=None, sort=None):
@@ -389,7 +388,7 @@ class ResourceManager(object):
         # executing the user workflow
         workflow_plugins = blueprint.plan[
             constants.WORKFLOW_PLUGINS_TO_INSTALL]
-        self.workflow_client.execute_workflow(
+        workflow_executor.execute_workflow(
             workflow_id,
             workflow,
             workflow_plugins=workflow_plugins,
@@ -474,7 +473,7 @@ class ResourceManager(object):
             execution.deployment = deployment
         self.sm.put(execution)
 
-        async_task = self.workflow_client.execute_system_workflow(
+        async_task = workflow_executor.execute_system_workflow(
             wf_id=wf_id,
             task_id=execution_id,
             task_mapping=task_mapping,

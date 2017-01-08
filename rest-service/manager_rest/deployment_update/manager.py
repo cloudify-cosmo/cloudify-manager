@@ -24,7 +24,7 @@ from dsl_parser import exceptions as parser_exceptions
 from manager_rest import app_context, config, manager_exceptions
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.storage.models_states import ExecutionState
-import manager_rest.workflow_client as wf_client
+from manager_rest import workflow_executor
 from manager_rest import utils
 from manager_rest.resource_manager import ResourceManager
 from manager_rest.deployment_update import step_extractor
@@ -46,7 +46,6 @@ class DeploymentUpdateManager(object):
 
     def __init__(self):
         self.sm = get_storage_manager()
-        self.workflow_client = wf_client.get_workflow_client()
         self._node_handler = DeploymentUpdateNodeHandler()
         self._node_instance_handler = DeploymentUpdateNodeInstanceHandler()
         self._deployment_handler = DeploymentUpdateDeploymentHandler()
@@ -507,7 +506,7 @@ class DeploymentUpdateManager(object):
         workflow_plugins = \
             deployment_update.deployment_plan[
                 constants.WORKFLOW_PLUGINS_TO_INSTALL]
-        self.workflow_client.execute_workflow(
+        workflow_executor.execute_workflow(
             workflow_id,
             workflow,
             workflow_plugins=workflow_plugins,
