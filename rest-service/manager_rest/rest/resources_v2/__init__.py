@@ -26,6 +26,8 @@ from .deployments import ( # noqa
 
 from .executions import Executions # noqa
 
+from .events import Events # noqa
+
 from .nodes import ( # noqa
     Nodes,
     NodeInstances,
