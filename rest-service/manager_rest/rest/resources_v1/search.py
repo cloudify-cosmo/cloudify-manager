@@ -16,13 +16,12 @@
 
 from flask_restful_swagger import swagger
 
+from manager_rest import manager_exceptions
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     insecure_rest_method,
 )
-from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
-from manager_rest.storage import ManagerElasticsearch
 
 
 class Search(SecuredResource):
@@ -43,10 +42,6 @@ class Search(SecuredResource):
     @exceptions_handled
     @insecure_rest_method
     def post(self, **kwargs):
-        """
-        Search using an Elasticsearch query
-        """
-        request_dict = get_json_and_verify_params()
-        return ManagerElasticsearch.search(
-            index='cloudify_storage',
-            body=request_dict)
+        """Search using an Elasticsearch query."""
+        raise manager_exceptions.MethodNotAllowedError(
+            'Event search using elasticsearch queries is not longer supported')
