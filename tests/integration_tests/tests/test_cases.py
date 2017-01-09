@@ -26,6 +26,7 @@ import uuid
 import tempfile
 import unittest
 import sh
+from contextlib import contextmanager
 
 import nose.tools
 
@@ -42,6 +43,7 @@ from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
 
 from cloudify_rest_client.executions import Execution
+from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
 
 class BaseTestCase(unittest.TestCase):
@@ -378,6 +380,15 @@ class BaseTestCase(unittest.TestCase):
             return out == 'ok'
         except sh.ErrorReturnCode:
             return False
+
+    @contextmanager
+    def client_using_tenant(self, client, tenant_name):
+        curr_tenant = client._client.headers.get(CLOUDIFY_TENANT_HEADER)
+        try:
+            client._client.headers[CLOUDIFY_TENANT_HEADER] = tenant_name
+            yield
+        finally:
+            client._client.headers[CLOUDIFY_TENANT_HEADER] = curr_tenant
 
 
 class AgentlessTestCase(BaseTestCase):
