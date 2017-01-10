@@ -35,6 +35,7 @@ from manager_rest.test.security_utils import get_admin_user
 from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
 from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
+from manager_rest.constants import CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME
 
 from cloudify_rest_client import CloudifyClient
 
@@ -101,6 +102,16 @@ class BaseServerTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(BaseServerTestCase, self).__init__(*args, **kwargs)
+
+    def create_client_with_tenant(self,
+                                  username,
+                                  password,
+                                  tenant=DEFAULT_TENANT_NAME):
+        headers = utils.create_auth_header(username=username,
+                                           password=password)
+
+        headers[CLOUDIFY_TENANT_HEADER] = tenant
+        return self.create_client(headers=headers)
 
     def create_client(self, headers=None):
         client = CloudifyClient(host='localhost',
