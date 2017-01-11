@@ -44,4 +44,4 @@ class Search(SecuredResource):
     def post(self, **kwargs):
         """Search using an Elasticsearch query."""
         raise manager_exceptions.MethodNotAllowedError(
-            'Event search using elasticsearch queries is not longer supported')
+            'Event search using elasticsearch queries is no longer supported')
