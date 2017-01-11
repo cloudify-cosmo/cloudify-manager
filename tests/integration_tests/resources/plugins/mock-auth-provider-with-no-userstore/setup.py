@@ -18,6 +18,6 @@ from setuptools import setup
 
 setup(
     name='mock-auth-provider-with-no-userstore',
-    version='4.0a11',
+    version='4.0a12',
     packages=['mock_auth_provider_with_no_userstore'],
 )
