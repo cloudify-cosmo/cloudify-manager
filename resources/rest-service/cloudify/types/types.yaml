@@ -208,7 +208,7 @@ node_types:
 
   # A Linux container with or without docker
   cloudify.nodes.Container:
-    derived_from: cloudify.nodes.Compute
+    derived_from: cloudify.nodes.Root
 
   # A tier in a topology
   cloudify.nodes.Tier:
