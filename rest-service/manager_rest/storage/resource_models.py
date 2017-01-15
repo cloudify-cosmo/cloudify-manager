@@ -24,13 +24,12 @@ from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 
 from .models_base import db, UTCDateTime
 from .relationships import foreign_key, one_to_many_relationship
-from .resource_models_base import TopLevelResource, DerivedResource
-from .mixins import (
-    DerivedMixin,
-    DerivedTenantMixin,
-    TopLevelCreatorMixin,
-    TopLevelMixin,
-)
+from .resource_models_base import (TopLevelResource,
+                                   DerivedResource,
+                                   SQLResourceBase)
+from .mixins import (DerivedTenantMixin,
+                     TopLevelCreatorMixin,
+                     TopLevelMixin)
 from .models_states import (DeploymentModificationState,
                             SnapshotState,
                             ExecutionState)
@@ -82,7 +81,7 @@ class Plugin(TopLevelResource):
 
 # region Derived Resources
 
-class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin):
+class Deployment(TopLevelCreatorMixin, DerivedTenantMixin, SQLResourceBase):
     __tablename__ = 'deployments'
 
     skipped_fields = dict(
@@ -90,8 +89,6 @@ class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin):
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
-    proxies = {'blueprint_id': flask_fields.String}
-    _private_fields = DerivedResource._private_fields + ['blueprint_fk']
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     description = db.Column(db.Text)
@@ -105,11 +102,11 @@ class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin):
     updated_at = db.Column(UTCDateTime)
     workflows = db.Column(db.PickleType(comparator=lambda *a: False))
 
-    blueprint_fk = foreign_key(Blueprint.storage_id)
+    _blueprint_fk = foreign_key(Blueprint._storage_id)
 
     @declared_attr
     def blueprint(cls):
-        return one_to_many_relationship(cls, Blueprint, cls.blueprint_fk)
+        return one_to_many_relationship(cls, Blueprint, cls._blueprint_fk)
 
     @hybrid_property
     def parent(self):
@@ -120,11 +117,11 @@ class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin):
         return Blueprint
 
     blueprint_id = association_proxy('blueprint', 'id')
-    tenant_id = association_proxy('blueprint', 'tenant_id')
+    _tenant_id = association_proxy('blueprint', '_tenant_id')
 
     @classproperty
-    def resource_fields(self):
-        fields = super(Deployment, self).resource_fields
+    def response_fields(cls):
+        fields = super(Deployment, cls).response_fields
         fields['workflows'] = flask_fields.List(
             flask_fields.Nested(Workflow.resource_fields)
         )
@@ -146,14 +143,8 @@ class Deployment(TopLevelCreatorMixin, DerivedResource, DerivedTenantMixin):
                 for wf_name, wf in deployment_workflows.iteritems()]
 
 
-class Execution(TopLevelMixin, DerivedResource):
+class Execution(TopLevelMixin, SQLResourceBase):
     __tablename__ = 'executions'
-
-    proxies = {
-        'blueprint_id': flask_fields.String,
-        'deployment_id': flask_fields.String
-    }
-    _private_fields = DerivedResource._private_fields + ['deployment_fk']
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     error = db.Column(db.Text)
@@ -164,11 +155,11 @@ class Execution(TopLevelMixin, DerivedResource):
     )
     workflow_id = db.Column(db.Text, nullable=False)
 
-    deployment_fk = foreign_key(Deployment.storage_id, nullable=True)
+    _deployment_fk = foreign_key(Deployment._storage_id, nullable=True)
 
     @declared_attr
     def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_fk)
+        return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
 
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
@@ -192,26 +183,22 @@ class Execution(TopLevelMixin, DerivedResource):
         )
 
 
-class Event(DerivedResource, DerivedMixin):
+class Event(DerivedResource):
 
     """Execution events."""
 
     __tablename__ = 'events'
 
-    proxies = {
-        'execution_id': flask_fields.String
-    }
-
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
-    execution_fk = foreign_key(Execution.storage_id, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
-
     event_type = db.Column(db.Text)
+
+    _execution_fk = foreign_key(Execution._storage_id, nullable=False)
 
     @declared_attr
     def execution(cls):
-        return one_to_many_relationship(cls, Execution, cls.execution_fk)
+        return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
 
@@ -224,27 +211,24 @@ class Event(DerivedResource, DerivedMixin):
         return Execution
 
 
-class Log(DerivedResource, DerivedMixin):
+class Log(DerivedResource):
 
     """Execution logs."""
 
     __tablename__ = 'logs'
 
-    proxies = {
-        'execution_id': flask_fields.String
-    }
-
     timestamp = db.Column(UTCDateTime, nullable=False, index=True)
-    execution_fk = foreign_key(Execution.storage_id, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
 
     logger = db.Column(db.Text)
     level = db.Column(db.Text)
 
+    _execution_fk = foreign_key(Execution._storage_id, nullable=False)
+
     @declared_attr
     def execution(cls):
-        return one_to_many_relationship(cls, Execution, cls.execution_fk)
+        return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
 
@@ -257,15 +241,8 @@ class Log(DerivedResource, DerivedMixin):
         return Execution
 
 
-class DeploymentUpdate(DerivedResource, DerivedMixin):
+class DeploymentUpdate(DerivedResource):
     __tablename__ = 'deployment_updates'
-
-    proxies = {
-        'execution_id': flask_fields.String,
-        'deployment_id': flask_fields.String,
-        'steps': flask_fields.Raw,
-    }
-    _private_fields = DerivedResource._private_fields + ['execution_fk']
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     deployment_plan = db.Column(db.PickleType)
@@ -275,17 +252,16 @@ class DeploymentUpdate(DerivedResource, DerivedMixin):
     modified_entity_ids = db.Column(db.PickleType)
     state = db.Column(db.Text)
 
-    execution_fk = foreign_key(Execution.storage_id, nullable=True)
+    _execution_fk = foreign_key(Execution._storage_id, nullable=True)
+    _deployment_fk = foreign_key(Deployment._storage_id)
 
     @declared_attr
     def execution(cls):
-        return one_to_many_relationship(cls, Execution, cls.execution_fk)
-
-    deployment_fk = foreign_key(Deployment.storage_id)
+        return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     @declared_attr
     def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_fk)
+        return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
 
     @hybrid_property
     def parent(self):
@@ -297,7 +273,15 @@ class DeploymentUpdate(DerivedResource, DerivedMixin):
 
     deployment_id = association_proxy('deployment', 'id')
     execution_id = association_proxy('execution', 'id')
-    tenant_id = association_proxy('deployment', 'tenant_id')
+    _tenant_id = association_proxy('deployment', '_tenant_id')
+
+    @classproperty
+    def response_fields(cls):
+        fields = super(DeploymentUpdate, cls).response_fields
+        fields['steps'] = flask_fields.List(
+            flask_fields.Nested(DeploymentUpdateStep.response_fields)
+        )
+        return fields
 
     def to_response(self):
         dep_update_dict = super(DeploymentUpdate, self).to_response()
@@ -306,24 +290,20 @@ class DeploymentUpdate(DerivedResource, DerivedMixin):
         return dep_update_dict
 
 
-class DeploymentUpdateStep(DerivedResource, DerivedMixin):
+class DeploymentUpdateStep(DerivedResource):
     __tablename__ = 'deployment_update_steps'
-
-    proxies = {'deployment_update_id': flask_fields.String}
-    _private_fields = \
-        DerivedResource._private_fields + ['deployment_update_fk']
 
     action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
     entity_id = db.Column(db.Text, nullable=False)
     entity_type = db.Column(db.Enum(*ENTITY_TYPES, name='entity_type'))
 
-    deployment_update_fk = foreign_key(DeploymentUpdate.storage_id)
+    _deployment_update_fk = foreign_key(DeploymentUpdate._storage_id)
 
     @declared_attr
     def deployment_update(cls):
         return one_to_many_relationship(cls,
                                         DeploymentUpdate,
-                                        cls.deployment_update_fk,
+                                        cls._deployment_update_fk,
                                         backreference='steps')
 
     @hybrid_property
@@ -335,14 +315,11 @@ class DeploymentUpdateStep(DerivedResource, DerivedMixin):
         return DeploymentUpdate
 
     deployment_update_id = association_proxy('deployment_update', 'id')
-    tenant_id = association_proxy('deployment_update', 'tenant_id')
+    _tenant_id = association_proxy('deployment_update', '_tenant_id')
 
 
-class DeploymentModification(DerivedResource, DerivedMixin):
+class DeploymentModification(DerivedResource):
     __tablename__ = 'deployment_modifications'
-
-    proxies = {'deployment_id': flask_fields.String}
-    _private_fields = DerivedResource._private_fields + ['deployment_fk']
 
     context = db.Column(db.PickleType)
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
@@ -354,13 +331,13 @@ class DeploymentModification(DerivedResource, DerivedMixin):
         name='deployment_modification_status'
     ))
 
-    deployment_fk = foreign_key(Deployment.storage_id)
+    _deployment_fk = foreign_key(Deployment._storage_id)
 
     @declared_attr
     def deployment(cls):
         return one_to_many_relationship(cls,
                                         Deployment,
-                                        cls.deployment_fk,
+                                        cls._deployment_fk,
                                         backreference='modifications')
 
     @hybrid_property
@@ -372,10 +349,10 @@ class DeploymentModification(DerivedResource, DerivedMixin):
         return Deployment
 
     deployment_id = association_proxy('deployment', 'id')
-    tenant_id = association_proxy('deployment', 'tenant_id')
+    _tenant_id = association_proxy('deployment', '_tenant_id')
 
 
-class Node(DerivedResource, DerivedMixin):
+class Node(DerivedResource):
     __tablename__ = 'nodes'
 
     is_id_unique = False
@@ -384,11 +361,6 @@ class Node(DerivedResource, DerivedMixin):
         v1=['max_number_of_instances', 'min_number_of_instances'],
         v2=['max_number_of_instances', 'min_number_of_instances']
     )
-    proxies = {
-        'blueprint_id': flask_fields.String,
-        'deployment_id': flask_fields.String
-    }
-    _private_fields = DerivedResource._private_fields + ['deployment_fk']
 
     deploy_number_of_instances = db.Column(db.Integer, nullable=False)
     # TODO: This probably should be a foreign key, but there's no guarantee
@@ -406,11 +378,11 @@ class Node(DerivedResource, DerivedMixin):
     type = db.Column(db.Text, nullable=False, index=True)
     type_hierarchy = db.Column(db.PickleType)
 
-    deployment_fk = foreign_key(Deployment.storage_id)
+    _deployment_fk = foreign_key(Deployment._storage_id)
 
     @declared_attr
     def deployment(cls):
-        return one_to_many_relationship(cls, Deployment, cls.deployment_fk)
+        return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
 
     @hybrid_property
     def parent(self):
@@ -422,10 +394,10 @@ class Node(DerivedResource, DerivedMixin):
 
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
-    tenant_id = association_proxy('deployment', 'tenant_id')
+    _tenant_id = association_proxy('deployment', '_tenant_id')
 
 
-class NodeInstance(DerivedResource, DerivedMixin):
+class NodeInstance(DerivedResource):
     __tablename__ = 'node_instances'
 
     skipped_fields = dict(
@@ -433,11 +405,6 @@ class NodeInstance(DerivedResource, DerivedMixin):
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
-    proxies = {
-        'node_id': flask_fields.String,
-        'deployment_id': flask_fields.String
-    }
-    _private_fields = DerivedResource._private_fields + ['node_fk']
 
     # TODO: This probably should be a foreign key, but there's no guarantee
     # in the code, currently, that the host will be created beforehand
@@ -448,11 +415,11 @@ class NodeInstance(DerivedResource, DerivedMixin):
     state = db.Column(db.Text, nullable=False)
     version = db.Column(db.Integer, default=1)
 
-    node_fk = foreign_key(Node.storage_id)
+    _node_fk = foreign_key(Node._storage_id)
 
     @declared_attr
     def node(cls):
-        return one_to_many_relationship(cls, Node, cls.node_fk)
+        return one_to_many_relationship(cls, Node, cls._node_fk)
 
     @hybrid_property
     def parent(self):
@@ -464,6 +431,6 @@ class NodeInstance(DerivedResource, DerivedMixin):
 
     node_id = association_proxy('node', 'id')
     deployment_id = association_proxy('node', 'deployment_id')
-    tenant_id = association_proxy('node', 'tenant_id')
+    _tenant_id = association_proxy('node', '_tenant_id')
 
 # endregion

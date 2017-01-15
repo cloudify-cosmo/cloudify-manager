@@ -153,19 +153,12 @@ class classproperty(object):
     And use it like this:
     print A.foo  # 3
 
-    Note that when called with an instance object (owner_self, which will be
-    set to None if called from the class level), __get__ is applied to the
-    instance instead of the class. This is for cases where different behavior
-    is expected from instances and classes
     """
     def __init__(self, get_func):
         self.get_func = get_func
 
-    def __get__(self, owner_self, owner_cls):
-        if owner_self:
-            return self.get_func(owner_self)
-        else:
-            return self.get_func(owner_cls)
+    def __get__(self, _, owner_cls):
+        return self.get_func(owner_cls)
 
 
 def create_auth_header(username=None, password=None, token=None, tenant=None):

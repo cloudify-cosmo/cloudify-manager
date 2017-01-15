@@ -45,9 +45,9 @@ except ImportError:
 class Tenants(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(TenantResponse)
-    @rest_decorators.create_filters(models.Tenant.resource_fields)
+    @rest_decorators.create_filters(models.Tenant)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.Tenant)
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -139,9 +139,9 @@ class TenantGroups(SecuredMultiTenancyResource):
 class UserGroups(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
-    @rest_decorators.create_filters(models.Group.resource_fields)
+    @rest_decorators.create_filters(models.Group)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.Group)
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -187,9 +187,9 @@ class UserGroupsId(SecuredMultiTenancyResource):
 class Users(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
-    @rest_decorators.create_filters(models.User.resource_fields)
+    @rest_decorators.create_filters(models.User)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.User)
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """

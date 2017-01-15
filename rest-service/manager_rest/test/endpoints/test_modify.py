@@ -221,7 +221,6 @@ class ModifyTests(base_test.BaseServerTestCase):
         if CLIENT_API_VERSION >= 3:
             for node_instance in node_instances:
                 node_instance.pop('permission', None)
-                node_instance.pop('tenant_name', None)
 
     def test_no_concurrent_modifications(self):
         blueprint_id, _, _, deployment = self.put_deployment(

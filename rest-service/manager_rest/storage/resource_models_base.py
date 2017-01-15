@@ -15,14 +15,15 @@
 
 from flask_security import current_user
 from flask_restful import fields as flask_fields
+from sqlalchemy.ext.associationproxy import association_proxy
 
 from manager_rest.utils import classproperty
 from manager_rest.constants import (OWNER_PERMISSION,
                                     VIEWER_PERMISSION,
                                     CREATOR_PERMISSION)
 
-from .mixins import TopLevelMixin
 from .models_base import db, SQLModelBase
+from .mixins import TopLevelMixin, DerivedMixin
 
 
 class SQLResourceBase(SQLModelBase):
@@ -39,38 +40,25 @@ class SQLResourceBase(SQLModelBase):
     # Indicates whether the `id` column in this class should be unique
     is_id_unique = True
 
-    # A list of columns that shouldn't be serialized
-    _private_fields = ['tenant_id', 'storage_id', 'creator_id']
-
-    _extra_fields = {
-        'permission': flask_fields.String,
-        'tenant_name': flask_fields.String
-    }
+    _extra_fields = {'permission': flask_fields.String}
 
     # Lists of fields to skip when using older versions of the client
     skipped_fields = {'v1': [], 'v2': [], 'v2.1': []}
 
     @classproperty
-    def resource_fields(cls):
-        """Return the list of field names for this table
-
-        Mostly for backwards compatibility in the code (that uses `fields`)
-        """
-        _fields = super(SQLResourceBase, cls).resource_fields
-
-        # Filter out private fields and add extra fields (that aren't columns)
-        _fields = {f: _fields[f] for f in _fields
-                   if f not in cls._private_fields}
-        _fields.update(SQLResourceBase._extra_fields)
-        return _fields
+    def response_fields(cls):
+        fields = cls.resource_fields
+        fields.update(cls._extra_fields)
+        return fields
 
     @classmethod
     def unique_id(cls):
-        return 'storage_id'
+        return '_storage_id'
 
     # Some must-have columns for all resources
-    storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
+    tenant_name = association_proxy('tenant', 'name')
 
     @property
     def permission(self):
@@ -82,18 +70,8 @@ class SQLResourceBase(SQLModelBase):
             return VIEWER_PERMISSION
         return ''
 
-    @property
-    def tenant_name(self):
-        return self.tenant.name
-
-    def to_dict(self, suppress_error=False):
-        result_dict = super(SQLResourceBase, self).to_dict(suppress_error)
-
-        # Getting rid of the extra fields as these are only necessary for rest
-        # responses
-        for field in self._extra_fields:
-            result_dict.pop(field)
-        return result_dict
+    def to_response(self):
+        return {f: getattr(self, f) for f in self.response_fields}
 
     def __repr__(self):
         id_name, id_value = self._get_identifier()
@@ -109,25 +87,7 @@ class TopLevelResource(TopLevelMixin, SQLResourceBase):
     # SQLAlchemy syntax
     __abstract__ = True
 
-    is_derived = False
 
-
-class DerivedResource(SQLResourceBase):
+class DerivedResource(DerivedMixin, SQLResourceBase):
     # SQLAlchemy syntax
     __abstract__ = True
-
-    is_derived = True
-
-    # A mapping of names of attributes that are SQLA association proxies to
-    # their `flask.fields` types
-    proxies = {}
-
-    @classproperty
-    def resource_fields(cls):
-        """Return the list of field names for this table
-
-        Mostly for backwards compatibility in the code (that uses `fields`)
-        """
-        _fields = super(DerivedResource, cls).resource_fields
-        _fields.update(cls.proxies)
-        return _fields

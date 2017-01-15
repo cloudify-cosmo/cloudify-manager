@@ -13,11 +13,11 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import jsonpickle
-from flask_restful import fields as flask_fields
 from dateutil import parser as date_parser
 
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy, inspect
+from flask_restful import fields as flask_fields
+from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
 
 from manager_rest.utils import classproperty
 
@@ -94,35 +94,53 @@ class SQLModelBase(db.Model):
             res = {f: getattr(self, f) for f in self.resource_fields}
         return res
 
-    def to_json(self):
-        return jsonpickle.encode(self.to_dict(), unpicklable=False)
-
     def to_response(self):
         return {f: getattr(self, f) for f in self.resource_fields}
 
     @classproperty
-    def resource_fields(self):
-        """Return the list of field names for this table
+    def resource_fields(cls):
+        """Return a mapping of available field names and their corresponding
+        flask types
         """
-        fields_dict = dict()
-        for field_name, column_obj in self.__table__.columns.items():
-            type_name = column_obj.type.__class__.__name__
-            fields_dict[field_name] = self._sql_to_flask_type_map[type_name]
-        return fields_dict
+        fields = dict()
+        columns = inspect(cls).columns
+        columns_dict = {col.name: col.type for col in columns
+                        if not col.name.startswith('_')}
+        columns_dict.update(cls._get_association_proxies())
+        for field_name, field_type in columns_dict.iteritems():
+            field_type_name = field_type.__class__.__name__
+            fields[field_name] = cls._sql_to_flask_type_map[field_type_name]
+        return fields
+
+    @classmethod
+    def _get_association_proxies(cls):
+        """Return a dictionary with all association proxy names as keys, and
+        their types (TEXT, DateTime, etc.) as values
+       """
+        all_descs = inspect(cls).all_orm_descriptors
+        attrs_dict = dict()
+
+        # The descriptor needs to be invoked once (using __get__) in order
+        # to have access to its attributes (e.g. `remote_attr`)
+        proxies = {name: desc.__get__(None, cls)
+                   for name, desc in all_descs.items()
+                   if desc.extension_type is ASSOCIATION_PROXY
+                   and not name.startswith('_')}
+
+        for proxy_name, proxy in proxies.iteritems():
+            # Get the underlying attribute in case of multiple assoc. proxies
+            while not proxy.remote_attr.is_attribute:
+                proxy = proxy.remote_attr
+
+            # Get the type of the remote attribute
+            attrs_dict[proxy_name] = proxy.remote_attr.expression.type
+        return attrs_dict
 
     def _get_identifier(self):
         """A helper method that allows classes to override if in order to
         change the default string representation
         """
         return 'id', self.id
-
-    @classmethod
-    def get_fields(cls, field_list):
-        """Return a subset of the available fields for this model according to
-        the fields list passed
-        """
-        fields = cls.resource_fields
-        return {k: v for k, v in fields.iteritems() if k in field_list}
 
     @classmethod
     def unique_id(cls):

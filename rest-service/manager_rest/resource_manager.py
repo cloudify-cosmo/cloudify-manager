@@ -911,6 +911,7 @@ class ResourceManager(object):
         # Remove the IDs from the dict - they don't have comparable columns
         deployment_id = instance_dict.pop('deployment_id')
         node_id = instance_dict.pop('node_id')
+        tenant_name = instance_dict.pop('tenant_name')
 
         # Link the node instance object to to the node, and add it to the DB
         new_node_instance = models.NodeInstance(**instance_dict)
@@ -921,6 +922,7 @@ class ResourceManager(object):
         # Return the IDs to the dict for later use
         instance_dict['deployment_id'] = deployment_id
         instance_dict['node_id'] = node_id
+        instance_dict['tenant_name'] = tenant_name
 
     def evaluate_deployment_outputs(self, deployment_id):
         deployment = self.sm.get(

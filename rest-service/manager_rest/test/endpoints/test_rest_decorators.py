@@ -17,7 +17,7 @@
 from unittest import TestCase
 
 
-from mock import Mock, patch
+from mock import Mock, patch, MagicMock
 from nose.plugins.attrib import attr
 from voluptuous import Invalid
 
@@ -82,7 +82,7 @@ class SortableTest(TestCase):
 
         with patch('manager_rest.rest.rest_decorators.request') as request:
             request.args.getlist.return_value = []
-            sortable(verify)()
+            sortable()(verify)()
 
     def test_sort_order(self):
         """Prefix can be used to set sort order."""
@@ -97,16 +97,17 @@ class SortableTest(TestCase):
             )
             return Mock()
 
+        sort_mock = MagicMock()
+        sort_mock.resource_fields = ['a', 'b', 'c']
+
         with patch('manager_rest.rest.rest_decorators.request') as request:
             request.args.getlist.return_value = ['a', '+b', '-c']
-            sortable(verify)()
+            sortable(sort_mock)(verify)()
 
     def test_invalid(self):
         """Exception raised when invalid value is passed."""
-        def verify(sort):
-            return Mock()
 
         with patch('manager_rest.rest.rest_decorators.request') as request:
             request.args.getlist.return_value = [None]
             with self.assertRaises(Invalid):
-                sortable(verify)()
+                sortable()(Mock)()
