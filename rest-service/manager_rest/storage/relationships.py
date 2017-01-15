@@ -43,7 +43,7 @@ def one_to_many_relationship(child_class,
     backreference = backreference or child_class.__tablename__
     return db.relationship(
         parent_class,
-        primaryjoin=lambda: parent_class.storage_id == foreign_key_column,
+        primaryjoin=lambda: parent_class._storage_id == foreign_key_column,
         # The following line make sure that when the *parent* is
         # deleted, all its connected children are deleted as well
         backref=db.backref(backreference, cascade='all')
@@ -111,7 +111,7 @@ def get_secondary_table(helper_table_name,
     :param first_column_name: The name of the first column in the table
     :param second_column_name: The name of the second column in the table
     :param first_foreign_key: The string representing the first foreign key,
-    for example `blueprint.storage_id`, or `tenants.id`
+    for example `blueprint._storage_id`, or `tenants.id`
     :param second_foreign_key: The string representing the second foreign key
     :return: A Table object
     """

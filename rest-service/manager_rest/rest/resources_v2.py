@@ -75,9 +75,9 @@ class Snapshots(SecuredResource):
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Snapshot)
-    @rest_decorators.create_filters(models.Snapshot.resource_fields)
+    @rest_decorators.create_filters(models.Snapshot)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.Snapshot)
     @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, all_tenants=None, **kwargs):
@@ -276,17 +276,17 @@ class Blueprints(resources_v1.Blueprints):
         nickname="list",
         notes='Returns a list of submitted blueprints for the optionally '
               'provided filter parameters {0}'
-        .format(models.Blueprint.resource_fields),
+        .format(models.Blueprint),
         parameters=create_filter_params_list_description(
-            models.Blueprint.resource_fields,
+            models.Blueprint.response_fields,
             'blueprints'
         )
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Blueprint)
-    @rest_decorators.create_filters(models.Blueprint.resource_fields)
+    @rest_decorators.create_filters(models.Blueprint)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.Blueprint)
     @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None, sort=None,
             all_tenants=None, **kwargs):
@@ -387,9 +387,9 @@ class Executions(resources_v1.Executions):
         responseClass='List[{0}]'.format(models.Execution.__name__),
         nickname="list",
         notes='Returns a list of executions for the optionally provided filter'
-              ' parameters: {0}'.format(models.Execution.resource_fields),
+              ' parameters: {0}'.format(models.Execution),
         parameters=create_filter_params_list_description(
-            models.Execution.resource_fields, 'executions') + [
+            models.Execution.response_fields, 'executions') + [
             {'name': '_include_system_workflows',
              'description': 'Include executions of system workflows',
              'required': False,
@@ -401,9 +401,9 @@ class Executions(resources_v1.Executions):
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Execution)
-    @rest_decorators.create_filters(models.Execution.resource_fields)
+    @rest_decorators.create_filters(models.Execution)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.Execution)
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -435,17 +435,17 @@ class Deployments(resources_v1.Deployments):
         nickname="list",
         notes='Returns a list existing deployments for the optionally provided'
               ' filter parameters: '
-              '{0}'.format(models.Deployment.resource_fields),
+              '{0}'.format(models.Deployment),
         parameters=create_filter_params_list_description(
-            models.Deployment.resource_fields,
+            models.Deployment.response_fields,
             'deployments'
         )
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Deployment)
-    @rest_decorators.create_filters(models.Deployment.resource_fields)
+    @rest_decorators.create_filters(models.Deployment)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.Deployment)
     @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None, sort=None,
             all_tenants=None, **kwargs):
@@ -469,18 +469,17 @@ class DeploymentModifications(resources_v1.DeploymentModifications):
         nickname="listDeploymentModifications",
         notes='Returns a list of deployment modifications for the optionally '
               'provided filter parameters: {0}'
-        .format(models.DeploymentModification.resource_fields),
+        .format(models.DeploymentModification),
         parameters=create_filter_params_list_description(
-            models.DeploymentModification.resource_fields,
+            models.DeploymentModification.response_fields,
             'deployment modifications'
         )
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.DeploymentModification)
-    @rest_decorators.create_filters(
-        models.DeploymentModification.resource_fields)
+    @rest_decorators.create_filters(models.DeploymentModification)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.DeploymentModification)
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
@@ -500,17 +499,17 @@ class Nodes(resources_v1.Nodes):
         responseClass='List[{0}]'.format(models.Node.__name__),
         nickname="listNodes",
         notes='Returns a nodes list for the optionally provided filter '
-              'parameters: {0}'.format(models.Node.resource_fields),
+              'parameters: {0}'.format(models.Node),
         parameters=create_filter_params_list_description(
-            models.Node.resource_fields,
+            models.Node.response_fields,
             'nodes'
         )
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Node)
-    @rest_decorators.create_filters(models.Node.resource_fields)
+    @rest_decorators.create_filters(models.Node)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.Node)
     @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, all_tenants=None, **kwargs):
@@ -533,17 +532,17 @@ class NodeInstances(resources_v1.NodeInstances):
         nickname="listNodeInstances",
         notes='Returns a node instances list for the optionally provided '
               'filter parameters: {0}'
-        .format(models.NodeInstance.resource_fields),
+        .format(models.NodeInstance),
         parameters=create_filter_params_list_description(
-            models.NodeInstance.resource_fields,
+            models.NodeInstance.response_fields,
             'node instances'
         )
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.NodeInstance)
-    @rest_decorators.create_filters(models.NodeInstance.resource_fields)
+    @rest_decorators.create_filters(models.NodeInstance)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.NodeInstance)
     @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, all_tenants=None, **kwargs):
@@ -565,17 +564,17 @@ class Plugins(SecuredResource):
         responseClass='List[{0}]'.format(models.NodeInstance.__name__),
         nickname="listPlugins",
         notes='Returns a plugins list for the optionally provided '
-              'filter parameters: {0}'.format(models.Plugin.resource_fields),
+              'filter parameters: {0}'.format(models.Plugin),
         parameters=create_filter_params_list_description(
-            models.Plugin.resource_fields,
+            models.Plugin.response_fields,
             'plugins'
         )
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Plugin)
-    @rest_decorators.create_filters(models.Plugin.resource_fields)
+    @rest_decorators.create_filters(models.Plugin)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.Plugin)
     @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, all_tenants=None, **kwargs):
@@ -732,7 +731,7 @@ class Events(resources_v1.Events):
     @rest_decorators.paginate
     @rest_decorators.rangeable
     @rest_decorators.projection
-    @rest_decorators.sortable
+    @rest_decorators.sortable()
     def get(self, _include=None, filters=None,
             pagination=None, sort=None, range_filters=None, **kwargs):
         """List events using a SQL backend.
@@ -812,7 +811,7 @@ class Events(resources_v1.Events):
     @rest_decorators.paginate
     @rest_decorators.rangeable
     @rest_decorators.projection
-    @rest_decorators.sortable
+    @rest_decorators.sortable()
     def delete(self, filters=None, pagination=None, sort=None,
                range_filters=None, **kwargs):
         """Delete events/logs connected to a certain Deployment ID."""
@@ -825,9 +824,9 @@ class Events(resources_v1.Events):
                 'At least `type=cloudify_event` filter is expected')
 
         executions_query = (
-            db.session.query(Execution.storage_id)
+            db.session.query(Execution._storage_id)
             .filter(
-                Execution.deployment_fk == Deployment.storage_id,
+                Execution._deployment_fk == Deployment._storage_id,
                 Deployment.id == bindparam('deployment_id'),
             )
         )
@@ -837,7 +836,7 @@ class Events(resources_v1.Events):
 
         delete_event_query = (
             db.session.query(Event)
-            .filter(Event.execution_fk.in_(executions_query))
+            .filter(Event._execution_fk.in_(executions_query))
             .params(**params)
         )
         total = delete_event_query.delete(synchronize_session=False)
@@ -845,7 +844,7 @@ class Events(resources_v1.Events):
         if 'cloudify_log' in filters['type']:
             delete_log_query = (
                 db.session.query(Log)
-                .filter(Log.execution_fk.in_(executions_query))
+                .filter(Log._execution_fk.in_(executions_query))
                 .params(**params)
             )
             total += delete_log_query.delete('fetch')

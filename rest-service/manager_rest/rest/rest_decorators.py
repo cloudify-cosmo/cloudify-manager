@@ -37,6 +37,32 @@ from manager_rest.storage.models_base import SQLModelBase
 from .responses_v2 import ListResponse
 from .rest_utils import skip_nested_marshalling
 
+INCLUDE = 'Include'
+SORT = 'Sort'
+FILTER = 'Filter'
+
+
+def _validate_fields(valid_fields, fields_to_check, action):
+    """Assert that `fields_to_check` is a subset of `valid_fields`
+
+    :param valid_fields: A list/dict of valid fields
+    :param fields_to_check: A list/dict of fields to check
+    :param action: The action being performed (Sort/Include/Filter)
+    """
+    error_type = {INCLUDE: manager_exceptions.NoSuchIncludeFieldError,
+                  SORT: manager_exceptions.BadParametersError,
+                  FILTER: manager_exceptions.BadParametersError}
+    unknowns = [k for k in fields_to_check if k not in valid_fields]
+    if unknowns:
+        raise error_type[action](
+            '{action} keys \'{key_names}\' do not exist. Allowed '
+            'keys are: {fields}'
+            .format(
+                action=action,
+                key_names=unknowns,
+                fields=list(valid_fields))
+        )
+
 
 # region V1 decorators
 
@@ -67,31 +93,21 @@ def exceptions_handled(func):
 
 
 class marshal_with(object):
-    def __init__(self, response_class, include_fields=None, skip_fields=None):
+    def __init__(self, response_class):
         """
         :param response_class: response class to marshal result with.
          class must have a "resource_fields" class variable
         """
-        if response_class and not hasattr(response_class, 'resource_fields'):
+        if hasattr(response_class, 'response_fields'):
+            self._fields = response_class.response_fields
+        elif hasattr(response_class, 'resource_fields'):
+            self._fields = response_class.resource_fields
+        else:
             raise RuntimeError(
                 'Response class {0} does not contain a "resource_fields" '
                 'class variable'.format(type(response_class)))
 
-        if include_fields and skip_fields:
-            raise RuntimeError('Both `include_fields` and `skip_fields` '
-                               'passed to class {0}'.format(response_class))
-
         self.response_class = response_class
-
-        if include_fields:
-            fields = response_class.get_fields(include_fields)
-        else:
-            fields = response_class.resource_fields
-
-        if skip_fields:
-            fields = {k: v for k, v in fields.items() if k not in skip_fields}
-
-        self.fields = fields
 
     def __call__(self, f):
         @wraps(f)
@@ -99,10 +115,7 @@ class marshal_with(object):
             if hasattr(request, '__skip_marshalling'):
                 return f(*args, **kwargs)
 
-            fields_to_include = self._get_fields_to_include(
-                self.response_class,
-                self.fields
-            )
+            fields_to_include = self._get_fields_to_include()
             if self._is_include_parameter_in_request():
                 # only pushing "_include" into kwargs when the request
                 # contained this parameter, to keep things cleaner (identical
@@ -146,27 +159,16 @@ class marshal_with(object):
     def _is_include_parameter_in_request():
         return '_include' in request.args and request.args['_include']
 
-    def _get_fields_to_include(self, response_class, model_fields):
-        skipped_fields = self._get_skipped_fields(response_class)
-        model_fields = {k: v for k, v in model_fields.iteritems()
+    def _get_fields_to_include(self):
+        skipped_fields = self._get_skipped_fields()
+        model_fields = {k: v for k, v in self._fields.iteritems()
                         if k not in skipped_fields}
 
         if self._is_include_parameter_in_request():
             include = set(request.args['_include'].split(','))
-            include_fields = {}
-            illegal_fields = None
-            for field in include:
-                if field not in model_fields:
-                    if not illegal_fields:
-                        illegal_fields = []
-                    illegal_fields.append(field)
-                    continue
-                include_fields[field] = model_fields[field]
-            if illegal_fields:
-                raise manager_exceptions.NoSuchIncludeFieldError(
-                    'Illegal include fields: [{}] - available fields: '
-                    '[{}]'.format(', '.join(illegal_fields),
-                                  ', '.join(model_fields.keys())))
+            _validate_fields(model_fields, include, INCLUDE)
+            include_fields = {k: v for k, v in model_fields.iteritems()
+                              if k in include}
             return include_fields
         return model_fields
 
@@ -178,10 +180,10 @@ class marshal_with(object):
         version = url.split('/api/')[1]
         return version.split('/')[0]
 
-    def _get_skipped_fields(self, response_class):
+    def _get_skipped_fields(self):
         api_version = self._get_api_version()
-        if hasattr(response_class, 'skipped_fields'):
-            return response_class.skipped_fields.get(api_version, [])
+        if hasattr(self.response_class, 'skipped_fields'):
+            return self.response_class.skipped_fields.get(api_version, [])
         return []
 
 # endregion
@@ -225,7 +227,7 @@ def rangeable(func):
     return create_range_params
 
 
-def sortable(func):
+def sortable(response_class=None):
     """Decorator for enabling sort.
 
     This decorator looks into the request for one or more `_sort` parameters
@@ -240,8 +242,8 @@ def sortable(func):
 
     A `voluptuous.error.Invalid` exception will be raised if any of the request
     parameters has an invalid value.
-
     """
+    fields = response_class.resource_fields if response_class else {}
 
     schema = Schema(
         [
@@ -257,19 +259,24 @@ def sortable(func):
         extra=REMOVE_EXTRA,
     )
 
-    @wraps(func)
-    def create_sort_params(*args, **kw):
-        """Validate sort parameters and pass them to the wrapped function."""
-        # maintain order of sort fields
-        sort_params = OrderedDict([
-            (
-                param.lstrip('+-'),
-                'desc' if param[0] == '-' else 'asc',
-            )
-            for param in schema(request.args.getlist('_sort'))
-        ])
-        return func(sort=sort_params, *args, **kw)
-    return create_sort_params
+    def sortable_dec(func):
+        @wraps(func)
+        def create_sort_params(*args, **kw):
+            """Validate sort parameters and pass them to the wrapped function.
+            """
+            # maintain order of sort fields
+            sort_params = OrderedDict([
+                (
+                    param.lstrip('+-'),
+                    'desc' if param[0] == '-' else 'asc',
+                )
+                for param in schema(request.args.getlist('_sort'))
+            ])
+            if fields:
+                _validate_fields(fields, sort_params, SORT)
+            return func(sort=sort_params, *args, **kw)
+        return create_sort_params
+    return sortable_dec
 
 
 def all_tenants(func):
@@ -339,13 +346,15 @@ def paginate(func):
     return verify_and_create_pagination_params
 
 
-def create_filters(fields=None):
+def create_filters(response_class=None):
     """
     Decorator for extracting filter parameters from the request arguments and
     optionally verifying their validity according to the provided fields.
-    :param fields: a set of valid filter fields.
+    :param response_class: The response class to be marshalled with
     :return: a Decorator for creating and validating the accepted fields.
     """
+    fields = response_class.resource_fields if response_class else {}
+
     def create_filters_dec(f):
         def some_func(*args, **kw):
             request_args = request.args.to_dict(flat=False)
@@ -353,12 +362,7 @@ def create_filters(fields=None):
             filters = {k: v for k, v in
                        request_args.iteritems() if not k.startswith('_')}
             if fields:
-                unknowns = [k for k in filters.iterkeys() if k not in fields]
-                if unknowns:
-                    raise manager_exceptions.BadParametersError(
-                        'Filter keys \'{key_names}\' do not exist. Allowed '
-                        'filters are: {fields}'
-                        .format(key_names=unknowns, fields=list(fields)))
+                _validate_fields(fields, filters.iterkeys(), FILTER)
             return f(filters=filters, *args, **kw)
         return some_func
     return create_filters_dec

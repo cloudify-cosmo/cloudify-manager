@@ -179,7 +179,7 @@ class Credentials(object):
         deployment_id, node_id = dep_node_id.split('_')
         return "SELECT properties FROM nodes " \
                "JOIN deployments on " \
-               "nodes.deployment_fk = deployments.storage_id " \
+               "nodes._deployment_fk = deployments._storage_id " \
                "WHERE nodes.id = '{0}' " \
                "AND deployments.id = '{1}';" \
                "".format(node_id, deployment_id)

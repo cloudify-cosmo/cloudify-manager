@@ -44,7 +44,7 @@ class TopLevelTenantMixin(object):
     top_level_tenant = True
 
     @declared_attr
-    def tenant_id(cls):
+    def _tenant_id(cls):
         return foreign_key(Tenant.id)
 
     @declared_attr
@@ -52,7 +52,7 @@ class TopLevelTenantMixin(object):
         return db.relationship(
             Tenant,
             backref=cls.__tablename__,
-            primaryjoin=lambda: Tenant.id == cls.tenant_id)
+            primaryjoin=lambda: Tenant.id == cls._tenant_id)
 
 
 class DerivedTenantMixin(DerivedMixinBase):
@@ -83,7 +83,7 @@ class TopLevelCreatorMixin(object):
     top_level_creator = True
 
     @declared_attr
-    def creator_id(cls):
+    def _creator_id(cls):
         return foreign_key(User.id)
 
     @declared_attr
@@ -91,7 +91,7 @@ class TopLevelCreatorMixin(object):
         return db.relationship(
             User,
             backref=cls.__tablename__,
-            primaryjoin=lambda: User.id == cls.creator_id)
+            primaryjoin=lambda: User.id == cls._creator_id)
 
     @declared_attr
     def viewers(cls):

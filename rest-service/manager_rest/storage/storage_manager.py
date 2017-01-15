@@ -154,7 +154,7 @@ class SQLStorageManager(object):
 
         # Filter by the `tenant_id` column. If tenant's list is empty, clauses
         # will not have effect on the query.
-        clauses = [model_class.tenant_id == tenant.id for tenant in tenants]
+        clauses = [model_class._tenant_id == tenant.id for tenant in tenants]
         return query.filter(sql_or(*clauses))
 
     @staticmethod
@@ -347,7 +347,7 @@ class SQLStorageManager(object):
         if not instance.is_resource or not instance.is_id_unique:
             return
 
-        filters = {'id': instance.id, 'tenant_id': self.current_tenant.id}
+        filters = {'id': instance.id, '_tenant_id': self.current_tenant.id}
 
         # There should be only one instance with this id on this tenant
         if len(self.list(instance.__class__, filters=filters)) != 1:

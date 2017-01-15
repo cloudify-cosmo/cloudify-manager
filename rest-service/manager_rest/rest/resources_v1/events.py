@@ -102,8 +102,8 @@ class Events(SecuredResource):
                 literal_column("'cloudify_event'").label('type'),
             )
             .filter(
-                Event.execution_fk == Execution.storage_id,
-                Execution.deployment_fk == Deployment.storage_id,
+                Event._execution_fk == Execution._storage_id,
+                Execution._deployment_fk == Deployment._storage_id,
                 Execution.id == bindparam('execution_id'),
             )
         )
@@ -121,8 +121,8 @@ class Events(SecuredResource):
                     literal_column("'cloudify_log'").label('type'),
                 )
                 .filter(
-                    Log.execution_fk == Execution.storage_id,
-                    Execution.deployment_fk == Deployment.storage_id,
+                    Log._execution_fk == Execution._storage_id,
+                    Execution._deployment_fk == Deployment._storage_id,
                     Execution.id == bindparam('execution_id'),
                 )
             )
@@ -167,7 +167,7 @@ class Events(SecuredResource):
         events_query = (
             db.session.query(func.count('*').label('count'))
             .filter(
-                Event.execution_fk == Execution.storage_id,
+                Event._execution_fk == Execution._storage_id,
                 Execution.id == bindparam('execution_id'),
             )
         )
@@ -176,7 +176,7 @@ class Events(SecuredResource):
             logs_query = (
                 db.session.query(func.count('*').label('count'))
                 .filter(
-                    Log.execution_fk == Execution.storage_id,
+                    Log._execution_fk == Execution._storage_id,
                     Execution.id == bindparam('execution_id'),
                 )
             )

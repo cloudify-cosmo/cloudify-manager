@@ -195,7 +195,7 @@ class DeploymentUpdateId(SecuredResource):
             nickname="DeploymentUpdate",
             notes='Return a single deployment update',
             parameters=create_filter_params_list_description(
-                models.DeploymentUpdate.resource_fields, 'deployment update'
+                models.DeploymentUpdate.response_fields, 'deployment update'
             )
     )
     @rest_decorators.exceptions_handled
@@ -212,15 +212,15 @@ class DeploymentUpdates(SecuredResource):
             nickname="listDeploymentUpdates",
             notes='Returns a list of deployment updates',
             parameters=create_filter_params_list_description(
-                    models.DeploymentUpdate.resource_fields,
+                    models.DeploymentUpdate.response_fields,
                     'deployment updates'
             )
     )
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.DeploymentUpdate)
-    @rest_decorators.create_filters(models.DeploymentUpdate.resource_fields)
+    @rest_decorators.create_filters(models.DeploymentUpdate)
     @rest_decorators.paginate
-    @rest_decorators.sortable
+    @rest_decorators.sortable(models.DeploymentUpdate)
     def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
