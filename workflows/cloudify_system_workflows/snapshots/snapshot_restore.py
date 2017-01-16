@@ -253,6 +253,8 @@ class SnapshotRestore(object):
         :param existing_dep_envs: A list of deployment ID of environments that
         existed prior to the restore
         """
+        if not self._recreate_deployments_envs:
+            return
         ctx.logger.info('Restoring deployment environments')
         for deployment_id, dep_ctx in ctx.deployments_contexts.iteritems():
             if deployment_id in existing_dep_envs:
