@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import subprocess
 
 from flask import request, make_response
 from flask_restful.reqparse import RequestParser
@@ -19,6 +20,7 @@ from flask_restful.reqparse import RequestParser
 from contextlib import contextmanager
 
 from manager_rest import manager_exceptions
+from manager_rest.constants import REST_SERVICE_NAME
 
 
 @contextmanager
@@ -98,3 +100,9 @@ def make_streaming_response(res_id, res_path, content_length, archive_type):
     response.headers['X-Accel-Redirect'] = res_path
     response.headers['X-Accel-Buffering'] = 'yes'
     return response
+
+
+def set_restart_task(delay=1):
+    cmd = 'sleep {0}; sudo systemctl restart {1}'\
+        .format(delay, REST_SERVICE_NAME)
+    subprocess.Popen(cmd, shell=True)
