@@ -173,6 +173,14 @@ class BaseTestCase(unittest.TestCase):
         docl.execute('systemctl stop {0}'.format(service_name))
         docl.execute('systemctl start {0}'.format(service_name))
 
+    @staticmethod
+    def get_docker_host():
+        """
+        returns the host IP
+
+        """
+        return docl.docker_host()
+
     def get_plugin_data(self, plugin_name, deployment_id):
         """
         Retrieve the plugin state for a certain deployment.

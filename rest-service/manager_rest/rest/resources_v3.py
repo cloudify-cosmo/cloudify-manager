@@ -15,24 +15,27 @@
 #
 
 from manager_rest import config
-from manager_rest.storage import models
 from manager_rest.app_logging import raise_unauthorized_user_error
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
 from manager_rest.manager_exceptions import (BadParametersError,
-                                             MethodNotAllowedError)
+                                             MethodNotAllowedError,
+                                             UnauthorizedError)
 from manager_rest.security.resource_permissions import PermissionsHandler
 
+from flask_security import current_user
 from flask import current_app, request
 
 from . import rest_decorators
 from ..constants import CURRENT_TENANT_CONFIG
 from .responses_v3 import BaseResponse, ResourceID
-from .rest_utils import get_json_and_verify_params
+from .rest_utils import get_json_and_verify_params, set_restart_task
 
 try:
     from cloudify_premium import (TenantResponse,
                                   GroupResponse,
+                                  LdapResponse,
                                   UserResponse,
                                   SecuredMultiTenancyResource,
                                   ClusterResourceBase,
@@ -40,8 +43,8 @@ try:
                                   ClusterNode,
                                   SecuredMultiTenancyResourceSkipTenantAuth)
 except ImportError:
-    TenantResponse, GroupResponse, UserResponse, ClusterNode, ClusterState = \
-        (BaseResponse, ) * 5
+    TenantResponse, GroupResponse, UserResponse, ClusterNode, LdapResponse,\
+        ClusterState = (BaseResponse, ) * 6
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
     ClusterResourceBase = MissingPremiumFeatureResource
     SecuredMultiTenancyResourceSkipTenantAuth = MissingPremiumFeatureResource
@@ -429,3 +432,67 @@ class FileServerAuth(SecuredResource):
 
         # verified successfully
         return {}
+
+
+class LdapAuthentication(SecuredResource):
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(LdapResponse)
+    def post(self):
+        ldap_config = self._validate_set_ldap_request()
+
+        from cloudify_premium.multi_tenancy.ldap_authentication \
+            import LdapAuthentication
+
+        # update current configuration
+        for key, value in ldap_config.iteritems():
+            setattr(config.instance, key, value)
+
+        # assert LDAP configuration is valid.
+        authenticator = LdapAuthentication()
+        authenticator.configure_ldap()
+        try:
+            authenticator.authenticate_user(ldap_config.get('ldap_username'),
+                                            ldap_config.get('ldap_password'))
+        except UnauthorizedError:
+            # reload previous configuration.
+            config.instance.load_configuration()
+            raise BadParametersError(
+                'Failed setting LDAP authenticator: Invalid parameters '
+                'provided.')
+
+        config.reset(config.instance, write=True)
+
+        # Restart the rest service so that each the LDAP configuration
+        # be loaded to all flask processes.
+        set_restart_task()
+
+        ldap_config.pop('ldap_password')
+        return ldap_config
+
+    @staticmethod
+    def _validate_set_ldap_request():
+        if not current_user.is_admin:
+            raise UnauthorizedError('User is not authorized to set LDAP '
+                                    'configuration.')
+        if not _only_admin_in_manager():
+            raise MethodNotAllowedError('LDAP Configuration may be set only on'
+                                        ' a clean manager.')
+        if not current_app.premium_enabled:
+            raise MethodNotAllowedError('LDAP is only supported in the '
+                                        'Cloudify premium edition.')
+        ldap_config = get_json_and_verify_params({'ldap_server',
+                                                  'ldap_username',
+                                                  'ldap_password',
+                                                  'ldap_domain',
+                                                  'ldap_is_active_directory',
+                                                  'ldap_dn_extra'})
+        return ldap_config
+
+
+def _only_admin_in_manager():
+    """
+    True if no users other than the admin user exists.
+    :return:
+    """
+    users = get_storage_manager().list(models.User)
+    return len(users) == 1

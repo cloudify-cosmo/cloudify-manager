@@ -88,6 +88,12 @@ class Config(object):
 instance = Config()
 
 
-def reset(configuration=None):
+def reset(configuration=None, write=False):
     global instance
     instance = configuration
+    if write:
+        with open(os.environ['MANAGER_REST_CONFIG_PATH'], 'w') as f:
+            if instance:
+                yaml.safe_dump(instance.__dict__, f, default_flow_style=False)
+            else:
+                yaml.safe_dump({}, f)

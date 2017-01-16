@@ -149,6 +149,7 @@ class BaseServerTestCase(unittest.TestCase):
                     client.tenants.api = mock_http_client
                     client.user_groups.api = mock_http_client
                     client.users.api = mock_http_client
+                    client.ldap.api = mock_http_client
 
         return client
 
