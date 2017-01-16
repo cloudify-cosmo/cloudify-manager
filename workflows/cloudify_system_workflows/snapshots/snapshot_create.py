@@ -27,7 +27,6 @@ from .agents import Agents
 from .influxdb import InfluxDB
 from .postgres import Postgres
 from .credentials import Credentials
-from .es_snapshot import ElasticSearch
 
 
 class SnapshotCreate(object):
@@ -51,7 +50,6 @@ class SnapshotCreate(object):
             manager_version = utils.get_manager_version(self._client)
 
             self._dump_files()
-            self._dump_elasticsearch_events(metadata)
             self._dump_postgres()
             self._dump_influxdb()
             self._dump_credentials()
@@ -81,15 +79,6 @@ class SnapshotCreate(object):
             self._tempdir,
             self._config,
             to_archive=True
-        )
-
-    def _dump_elasticsearch_events(self, metadata):
-        ctx.logger.info('Dumping elasticsearch data')
-        es = utils.get_es_client(self._config)
-        ElasticSearch().dump_logs_and_events(
-            self._tempdir,
-            es,
-            metadata
         )
 
     def _dump_postgres(self):

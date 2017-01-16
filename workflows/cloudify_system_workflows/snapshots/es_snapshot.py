@@ -90,19 +90,6 @@ class ElasticSearch(object):
             # Snapshot has events in ES but the manager does not
             return self._cloudify_events_to_logstash(tempdir)
 
-    def dump_logs_and_events(self, tempdir, es, metadata):
-        has_cloudify_events = es.indices.exists(index=self._EVENTS_INDEX_NAME)
-        event_scan = elasticsearch_helpers.scan(
-            es,
-            index=self._EVENTS_INDEX_NAME if
-            has_cloudify_events else 'logstash-*'
-        )
-
-        with open(os.path.join(tempdir, self._ELASTICSEARCH), 'w') as f:
-            for item in event_scan:
-                f.write(json.dumps(item) + os.linesep)
-        metadata[M_HAS_CLOUDIFY_EVENTS] = has_cloudify_events
-
     @staticmethod
     def _manager_has_cloudify_events(es):
         return es.indices.exists(index=ElasticSearch._EVENTS_INDEX_NAME)
