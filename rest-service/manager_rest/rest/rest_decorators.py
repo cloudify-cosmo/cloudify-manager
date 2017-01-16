@@ -22,6 +22,7 @@ from flask import request, current_app
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 
 from manager_rest import utils, config, manager_exceptions
+from manager_rest.rest.rest_utils import verify_and_convert_bool
 from manager_rest.storage.models_base import SQLModelBase
 
 from .responses_v2 import ListResponse
@@ -231,7 +232,8 @@ def all_tenants(func):
     Decorator for enabling sort
     """
     def is_all_tenants(*args, **kw):
-        all_tenants_flag = bool(request.args.get("_all_tenants"))
+        all_tenants_flag = verify_and_convert_bool(
+            'all_tenants', request.args.get('_all_tenants', False))
         return func(all_tenants=all_tenants_flag, *args, **kw)
     return is_all_tenants
 
