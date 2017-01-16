@@ -31,6 +31,7 @@ from manager_rest.rest.rest_decorators import (
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
 from manager_rest.storage.models_base import db
+from manager_rest.storage.manager_elasticsearch import DEFAULT_SEARCH_SIZE
 from manager_rest.storage.resource_models import (
     Deployment,
     Execution,
@@ -126,28 +127,16 @@ class Events(SecuredResource):
                 )
             )
 
-        if (not isinstance(sort, dict) or
-                '@timestamp' not in sort or
-                sort['@timestamp'] != 'asc'):
+        if '@timestamp' not in sort or sort['@timestamp'] != 'asc':
             raise manager_exceptions.BadParametersError(
                 'Sorting ascending by `timestamp` is expected')
-        query = query.order_by('timestamp')
 
-        if not isinstance(pagination, dict):
-            raise manager_exceptions.BadParametersError(
-                'Expected `pagination` parameter')
-
-        if 'size' not in pagination:
-            raise manager_exceptions.BadParametersError(
-                'Expected `size` pagination parameter')
-
-        query = query.limit(bindparam('limit'))
-
-        if 'offset' not in pagination:
-            raise manager_exceptions.BadParametersError(
-                'Expected `offset` pagination parameter')
-
-        query = query.offset(bindparam('offset'))
+        query = (
+            query
+            .order_by('timestamp')
+            .limit(bindparam('limit'))
+            .offset(bindparam('offset'))
+        )
 
         return query
 
@@ -260,7 +249,7 @@ class Events(SecuredResource):
         else:
             filters = {'type': ['cloudify_event']}
         pagination = {
-            'size': request_dict['size'],
+            'size': request_dict.get('size', DEFAULT_SEARCH_SIZE),
             'offset': request_dict['from'],
         }
         sort = {
@@ -272,8 +261,8 @@ class Events(SecuredResource):
         params = {
             'execution_id': (
                 es_query['must'][0]['match']['context.execution_id']),
-            'limit': request_dict['size'],
-            'offset': request_dict['from'],
+            'limit': pagination['size'],
+            'offset': pagination['offset'],
         }
 
         count_query = self._build_count_query(filters)

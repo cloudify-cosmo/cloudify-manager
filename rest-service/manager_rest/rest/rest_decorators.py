@@ -20,6 +20,16 @@ from flask_restful import marshal
 from flask_restful.utils import unpack
 from flask import request, current_app
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
+from toolz import dicttoolz
+from voluptuous import (
+    All,
+    Coerce,
+    Invalid,
+    Match,
+    REMOVE_EXTRA,
+    Range,
+    Schema,
+)
 
 from manager_rest import utils, config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
@@ -45,7 +55,12 @@ def exceptions_handled(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            return func(*args, **kwargs)
+            try:
+                return func(*args, **kwargs)
+            except Invalid as e:
+                # Re-raise voluptuous validation errors
+                # to handle them properly in the outer try/excep block
+                raise manager_exceptions.BadParametersError(e.error_message)
         except manager_exceptions.ManagerException as e:
             utils.abort_error(e, current_app.logger)
     return wrapper
@@ -211,17 +226,48 @@ def rangeable(func):
 
 
 def sortable(func):
+    """Decorator for enabling sort.
+
+    This decorator looks into the request for one or more `_sort` parameters
+    and maps them into a dictionary in which keys are column names and the
+    values are the ordering (either `asc` for ascending or `desc` descending).
+    The parameter values are expected to be strings with the column name
+    prefixed with either `+` or `-` to set the ordering (being `+` the default
+    in absence of any prefix).
+
+    Once the request parameters have been transformed into the dictionary
+    object it's passed as the `sort` parameter to the decorated function.
+
+    A `voluptuous.error.Invalid` exception will be raised if any of the request
+    parameters has an invalid value.
+
     """
-    Decorator for enabling sort
-    """
+
+    schema = Schema(
+        [
+            Match(
+                # `@` allowed for compatibility with elasticsearch fields
+                r'[+-]?[\w@]+',
+                msg=(
+                    '`_sort` parameter should be a column name '
+                    'optionally prefixed with +/-'
+                ),
+            ),
+        ],
+        extra=REMOVE_EXTRA,
+    )
+
+    @wraps(func)
     def create_sort_params(*args, **kw):
-        sort_args = request.args.getlist("_sort")
+        """Validate sort parameters and pass them to the wrapped function."""
         # maintain order of sort fields
-        sort_params = OrderedDict()
-        for sort_arg in sort_args:
-            field = sort_arg.lstrip('-+')
-            order = "desc" if sort_arg[0] == '-' else "asc"
-            sort_params.update({field: order})
+        sort_params = OrderedDict([
+            (
+                param.lstrip('+-'),
+                'desc' if param[0] == '-' else 'asc',
+            )
+            for param in schema(request.args.getlist('_sort'))
+        ])
         return func(sort=sort_params, *args, **kw)
     return create_sort_params
 
@@ -246,19 +292,48 @@ def marshal_events(func):
 
 
 def paginate(func):
-    """
-    Decorator for adding pagination
-    """
-    def verify_and_create_pagination_params(*args, **kw):
-        offset = request.args.get('_offset')
-        size = request.args.get('_size')
-        pagination_params = {}
-        if offset:
-            pagination_params['offset'] = int(offset)
-        if size:
-            pagination_params['size'] = int(size)
-        result = func(pagination=pagination_params, *args, **kw)
+    """Decorator for adding pagination.
 
+    This decorator looks into the request for the `_size` and `_offset`
+    parameters and passes them as the `paginate` parameter to the decorated
+    function.
+
+    The `paginate` parameter is a dictionary whose keys are `size` and `offset`
+    (note that the leading underscore is dropped) if a values was passed in a
+    request header. Otherwise, the dictionary will be empty.
+
+    A `voluptuous.error.Invalid` exception will be raised if any of the request
+    parameters has an invalid value.
+
+    :param func: Function to be decorated
+    :type func: callable
+
+    """
+    schema = Schema(
+        {
+            '_size': All(
+                Coerce(int),
+                Range(min=0),
+                msg='`_size` is expected to be a positive integer',
+            ),
+            '_offset': All(
+                Coerce(int),
+                Range(min=0),
+                msg='`_offset` is expected to be a positive integer',
+            ),
+        },
+        extra=REMOVE_EXTRA,
+    )
+
+    @wraps(func)
+    def verify_and_create_pagination_params(*args, **kw):
+        """Validate pagination parameters and pass them to wrapped function."""
+        pagination_params = dicttoolz.keymap(
+            # Drop leading underscore from keys
+            lambda key: key.lstrip('_'),
+            schema(request.args),
+        )
+        result = func(pagination=pagination_params, *args, **kw)
         return ListResponse(items=result.items, metadata=result.metadata)
 
     return verify_and_create_pagination_params
