@@ -19,7 +19,8 @@ from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 from manager_rest.constants import (ADMIN_ROLE,
                                     USER_ROLE,
                                     SUSPENDED_ROLE,
-                                    BOOTSTRAP_ADMIN_ID)
+                                    BOOTSTRAP_ADMIN_ID,
+                                    DEFAULT_TENANT_ID)
 
 from .models_base import db, SQLModelBase, UTCDateTime
 from .relationships import many_to_many_relationship
@@ -49,6 +50,10 @@ class Tenant(SQLModelBase):
         tenant_dict['groups'] = all_groups_names
         tenant_dict['users'] = all_users_names
         return tenant_dict
+
+    @property
+    def is_default_tenant(self):
+        return self.id == DEFAULT_TENANT_ID
 
 
 class Group(SQLModelBase):

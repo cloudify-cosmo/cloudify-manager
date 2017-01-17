@@ -15,7 +15,12 @@
 
 from flask_security.utils import encrypt_password
 
-from manager_rest.constants import ADMIN_ROLE, USER_ROLE, SUSPENDED_ROLE
+from manager_rest.storage.models import Tenant
+from manager_rest.storage import user_datastore
+from manager_rest.constants import (ADMIN_ROLE,
+                                    USER_ROLE,
+                                    SUSPENDED_ROLE,
+                                    DEFAULT_TENANT_ID)
 
 
 def get_admin_user():
@@ -52,7 +57,8 @@ def get_test_users():
     return test_users
 
 
-def add_users_to_db(user_datastore, user_list, default_tenant):
+def add_users_to_db(user_list):
+    default_tenant = Tenant.query.get(DEFAULT_TENANT_ID)
     for user in user_list:
         role = user_datastore.find_role(user['role'])
         user_obj = user_datastore.create_user(

@@ -22,6 +22,8 @@ import sh
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+from manager_rest.constants import DEFAULT_TENANT_NAME
+
 
 RESOURCE_PATH = 'resources/resource.txt'
 RESOURCE_CONTENT = 'this is a deployment resource'
@@ -34,8 +36,8 @@ class DeploymentResourceTest(AgentlessTestCase):
         deployment_id = blueprint_id
         blueprint_path = resource('dsl/deployment_resource.yaml')
         deployment_folder_on_manager = \
-            '/opt/manager/resources/deployments/default_tenant/{0}'.format(
-                deployment_id)
+            '/opt/manager/resources/deployments/{0}/{1}'.format(
+                DEFAULT_TENANT_NAME, deployment_id)
         full_resource_path = os.path.join(deployment_folder_on_manager,
                                           RESOURCE_PATH)
         self.execute_on_manager('mkdir -p {0}/resources'.format(

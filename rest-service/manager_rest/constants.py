@@ -31,6 +31,7 @@ CURRENT_TENANT_CONFIG = 'current_tenant'
 DEFAULT_TENANT_NAME = 'default_tenant'
 
 BOOTSTRAP_ADMIN_ID = 0
+DEFAULT_TENANT_ID = 0
 
 ADMIN_ROLE = 'administrator'
 USER_ROLE = 'user'

@@ -184,7 +184,7 @@ class TestSnapshot(AgentlessTestCase):
                                   num_of_outputs,
                                   num_of_executions,
                                   num_of_events=4,
-                                  tenant_name='default_tenant'):
+                                  tenant_name=DEFAULT_TENANT_NAME):
         self.client.blueprints.get(blueprint_id)
         self._assert_deployment_restored(
             blueprint_id=blueprint_id,

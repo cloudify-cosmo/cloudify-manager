@@ -33,6 +33,8 @@ from integration_tests.tests.utils import (
     verify_deployment_environment_creation_complete
 )
 
+from manager_rest.constants import DEFAULT_TENANT_NAME
+
 
 class BasicWorkflowsTest(AgentlessTestCase):
     def test_execute_operation(self):
@@ -466,8 +468,10 @@ class BasicWorkflowsTest(AgentlessTestCase):
         deployment, _ = self.deploy_application(dsl_path)
 
         deployment_dir_path = os.path.join(
-                '/opt/mgmtworker/work/deployments/default_tenant',
-                deployment.id)
+            '/opt/mgmtworker/work/deployments',
+            DEFAULT_TENANT_NAME,
+            deployment.id
+        )
 
         self.execute_on_manager('test -d {0}'.format(deployment_dir_path))
 
