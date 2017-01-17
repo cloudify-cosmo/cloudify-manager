@@ -48,6 +48,9 @@ class Authentication(object):
                 raise_unauthorized_user_error('No authentication '
                                               'info provided')
             user = self._authenticate_token(token)
+
+        user.last_login_at = datetime.now()
+        user_datastore.commit()
         return user
 
     def _authenticate_password(self, user, auth):
@@ -94,8 +97,6 @@ class Authentication(object):
                 'Authentication failed for {0}'.format(user)
             )
 
-        user.last_login_at = datetime.now()
-        user_datastore.commit()
         return user
 
     @staticmethod
