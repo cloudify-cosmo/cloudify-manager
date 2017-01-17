@@ -24,6 +24,10 @@ from manager_rest.constants import DEFAULT_TENANT_NAME, CLOUDIFY_TENANT_HEADER
 
 
 class SecurityTestBase(BaseServerTestCase):
+    def setUp(self):
+        super(SecurityTestBase, self).setUp()
+        add_users_to_db(get_test_users())
+
     @staticmethod
     def _get_app(flask_app):
         # Overriding the base class' app, because otherwise a custom
@@ -43,10 +47,6 @@ class SecurityTestBase(BaseServerTestCase):
         headers = headers or create_auth_header(**kwargs)
         headers.setdefault(CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME)
         return self.create_client(headers)
-
-    def _init_admin_user(self, user_datastore):
-        super(SecurityTestBase, self)._init_admin_user(user_datastore)
-        add_users_to_db(user_datastore, get_test_users(), self.default_tenant)
 
     def _assert_user_authorized(self, headers=None, **kwargs):
         with self.use_secured_client(headers, **kwargs):

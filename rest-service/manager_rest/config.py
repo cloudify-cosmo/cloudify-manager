@@ -27,7 +27,6 @@ class Config(object):
         self.postgresql_username = None
         self.postgresql_password = None
         self.postgresql_bin_path = None
-        self.default_tenant_name = None
         self.amqp_address = 'localhost'
         self.amqp_username = 'guest'
         self.amqp_password = 'guest'

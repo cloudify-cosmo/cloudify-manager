@@ -22,12 +22,9 @@ from shutil import move
 
 from flask import _request_ctx_stack as flask_global_stack
 
-from manager_rest.utils import setup_flask_app
+from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import CURRENT_TENANT_CONFIG, DEFAULT_TENANT_NAME
-from manager_rest.storage import (db,
-                                  models,
-                                  user_datastore,
-                                  get_storage_manager)
+from manager_rest.storage import models, get_storage_manager
 
 format_str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format=format_str)
@@ -50,7 +47,7 @@ class EsToPg(object):
         self._events_path = '{0}.events'.format(es_dump_path)
 
     def _get_storage_manager(self, tenant_name):
-        app = setup_flask_app(db, user_datastore)
+        app = setup_flask_app()
         admin = self._set_current_user(app)
         storage_manager = get_storage_manager()
         tenant = self._get_or_create_tenant(tenant_name)

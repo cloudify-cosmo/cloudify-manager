@@ -29,15 +29,18 @@ from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
 from mock import MagicMock
 
-from manager_rest.storage.models import Tenant
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
-from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME
+from manager_rest.storage.storage_utils import \
+    create_default_user_tenant_and_roles
 
 from cloudify_rest_client import CloudifyClient
+
+from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
+
 
 FILE_SERVER_PORT = 53229
 FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
@@ -211,14 +214,6 @@ class BaseServerTestCase(unittest.TestCase):
         self._handle_default_db_config(server)
         self._setup_anonymous_user(server.app, server.user_datastore)
 
-    def _init_default_tenant(self, db, app):
-        t = Tenant(name=constants.DEFAULT_TENANT_NAME)
-        db.session.add(t)
-        db.session.commit()
-
-        app.config[constants.CURRENT_TENANT_CONFIG] = t
-        self.default_tenant = t
-
     def _set_flask_app_context(self, flask_app):
         flask_app_context = flask_app.test_request_context()
         flask_app_context.push()
@@ -226,8 +221,12 @@ class BaseServerTestCase(unittest.TestCase):
 
     def _handle_default_db_config(self, server):
         server.db.create_all()
-        self._init_default_tenant(server.db, server.app)
-        self._init_admin_user(server.user_datastore)
+        admin_user = get_admin_user()
+        default_tenant = create_default_user_tenant_and_roles(
+            admin_username=admin_user['username'],
+            admin_password=admin_user['password'],
+        )
+        server.app.config[constants.CURRENT_TENANT_CONFIG] = default_tenant
 
     @staticmethod
     def _get_app(flask_app):
@@ -249,19 +248,6 @@ class BaseServerTestCase(unittest.TestCase):
         admin_user = user_datastore.get_user(get_admin_user()['username'])
         login_manager = flask_app.extensions['security'].login_manager
         login_manager.anonymous_user = MagicMock(return_value=admin_user)
-
-    def _init_admin_user(self, user_datastore):
-        """Add users and roles for the test
-
-        :param user_datastore: SQLAlchemyDataUserstore
-        """
-        admin_user = get_admin_user()
-        utils.create_security_roles_and_admin_user(
-            user_datastore,
-            admin_username=admin_user['username'],
-            admin_password=admin_user['password'],
-            default_tenant=self.default_tenant
-        )
 
     def cleanup(self):
         self.quiet_delete(self.rest_service_log)
@@ -303,7 +289,6 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 20
         test_config.maintenance_folder = self.maintenance_mode_dir
-        test_config.default_tenant_name = constants.DEFAULT_TENANT_NAME
         return test_config
 
     def _version_url(self, url):
@@ -394,7 +379,7 @@ class BaseServerTestCase(unittest.TestCase):
 
     def check_if_resource_on_fileserver(self, blueprint_id, resource_path):
         return self._check_if_resource_on_fileserver(
-            os.path.join(FILE_SERVER_BLUEPRINTS_FOLDER, 'default_tenant'),
+            os.path.join(FILE_SERVER_BLUEPRINTS_FOLDER, DEFAULT_TENANT_NAME),
             blueprint_id, resource_path)
 
     def get_blueprint_path(self, blueprint_dir_name):

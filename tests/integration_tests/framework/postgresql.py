@@ -26,14 +26,14 @@ from sqlalchemy.schema import (MetaData,
 
 from cloudify.utils import setup_logger
 
-from manager_rest.storage import db, user_datastore
-from manager_rest.storage.models import Tenant, ProviderContext
-from manager_rest.utils import (create_security_roles_and_admin_user,
-                                setup_flask_app as _setup_flask_app,
-                                get_postgres_conf)
-from manager_rest.constants import (DEFAULT_TENANT_NAME,
-                                    CURRENT_TENANT_CONFIG,
-                                    PROVIDER_CONTEXT_ID)
+from manager_rest.storage import db
+from manager_rest.storage.models import ProviderContext
+from manager_rest.flask_utils import (get_postgres_conf,
+                                      setup_flask_app as _setup_flask_app)
+from manager_rest.storage.storage_utils import \
+    create_default_user_tenant_and_roles
+
+from manager_rest.constants import CURRENT_TENANT_CONFIG, PROVIDER_CONTEXT_ID
 
 from integration_tests.framework import utils
 from integration_tests.tests.constants import PROVIDER_CONTEXT, PROVIDER_NAME
@@ -42,19 +42,9 @@ logger = setup_logger('postgresql', logging.INFO)
 setup_logger('postgresql.trace', logging.INFO)
 
 
-app = None
-
-
 def setup_flask_app():
-    global app
-    if not app:
-        manager_ip = utils.get_manager_ip()
-        app = _setup_flask_app(
-            db,
-            user_datastore,
-            manager_ip=manager_ip,
-            driver='pg8000'
-        )
+    manager_ip = utils.get_manager_ip()
+    return _setup_flask_app(manager_ip=manager_ip, driver='pg8000')
 
 
 def run_query(query, db_name=None):
@@ -81,26 +71,27 @@ def run_query(query, db_name=None):
 
 def reset_storage():
     logger.info('Resetting PostgreSQL DB')
-    setup_flask_app()
+    app = setup_flask_app()
 
     # Rebuild the DB
     _safe_drop_all()
     db.create_all()
 
     # Add default tenant, admin user and provider context
-    _add_defaults()
+    _add_defaults(app)
 
     # Clear the connection
+    close_session(app)
+
+
+def close_session(app):
     db.session.remove()
     db.get_engine(app).dispose()
 
 
-def _add_defaults():
+def _add_defaults(app):
     """Add default tenant, admin user and provider context to the DB
     """
-    default_tenant = Tenant(name=DEFAULT_TENANT_NAME)
-    db.session.add(default_tenant)
-
     provider_context = ProviderContext(
         id=PROVIDER_CONTEXT_ID,
         name=PROVIDER_NAME,
@@ -108,11 +99,9 @@ def _add_defaults():
     )
     db.session.add(provider_context)
 
-    create_security_roles_and_admin_user(
-        user_datastore,
+    default_tenant = create_default_user_tenant_and_roles(
         admin_username=utils.get_manager_username(),
         admin_password=utils.get_manager_password(),
-        default_tenant=default_tenant
     )
     app.config[CURRENT_TENANT_CONFIG] = default_tenant
 

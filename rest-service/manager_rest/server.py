@@ -25,7 +25,7 @@ from flask_security import Security
 
 from manager_rest import config
 from manager_rest.storage import db, user_datastore
-from manager_rest.utils import set_flask_security_config
+from manager_rest.flask_utils import set_flask_security_config
 from manager_rest.security.user_handler import user_loader
 from manager_rest.maintenance import maintenance_mode_handler
 from manager_rest.rest.endpoint_mapper import setup_resources

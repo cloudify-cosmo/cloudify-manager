@@ -14,31 +14,22 @@
 #  * limitations under the License.
 
 
-import json
-import os
-import sys
-import shutil
-import traceback
 import StringIO
 import errno
+import json
+import os
 import platform
+import shutil
+import sys
+import traceback
+from base64 import urlsafe_b64encode
 from datetime import datetime
 from os import path, makedirs
-from base64 import urlsafe_b64encode
-from collections import namedtuple
 
 import wagon.utils
-from flask import Flask
 from flask_restful import abort
-from flask_security import Security
-from flask_security.utils import encrypt_password
 
-from manager_rest import config
-from manager_rest.constants import (ALL_ROLES,
-                                    ADMIN_ROLE,
-                                    BOOTSTRAP_ADMIN_ID,
-                                    CLOUDIFY_TENANT_HEADER)
-
+from manager_rest import config, constants
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
@@ -173,87 +164,5 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
     elif token:
         headers = {CLOUDIFY_AUTH_TOKEN_HEADER: token}
     if tenant:
-        headers[CLOUDIFY_TENANT_HEADER] = tenant
+        headers[constants.CLOUDIFY_TENANT_HEADER] = tenant
     return headers
-
-
-def create_security_roles_and_admin_user(user_datastore,
-                                         admin_username,
-                                         admin_password,
-                                         default_tenant):
-    """
-    Create security roles and an admin user
-    """
-    for role in ALL_ROLES:
-        user_datastore.create_role(name=role)
-
-    admin_role = user_datastore.find_role(ADMIN_ROLE)
-    user_obj = user_datastore.create_user(
-        id=BOOTSTRAP_ADMIN_ID,
-        username=admin_username,
-        password=encrypt_password(admin_password),
-        roles=[admin_role]
-    )
-    user_obj.tenants.append(default_tenant)
-    user_datastore.commit()
-
-
-def setup_flask_app(db, user_datastore, manager_ip='localhost', driver=''):
-    """Setup a functioning flask app, when working outside the rest-service
-
-    :param db: An SQLAlchemy object
-    :param user_datastore: An SQLAlchemy datastore object
-    :param manager_ip: The IP of the manager
-    :param driver: SQLA driver for postgres (e.g. pg8000)
-    :return: A Flask app
-    """
-    app = Flask(__name__)
-    db_uri = get_postgres_db_uri(manager_ip, driver)
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    set_flask_security_config(app)
-    Security(app=app, datastore=user_datastore)
-    db.init_app(app)
-    app.app_context().push()
-    return app
-
-
-def get_postgres_db_uri(manager_ip, driver):
-    """Get a valid SQLA DB URI
-    """
-    dialect = 'postgresql+{0}'.format(driver) if driver else 'postgres'
-    conf = get_postgres_conf()
-    return '{dialect}://{username}:{password}@{host}/{db_name}'.format(
-        dialect=dialect,
-        username=conf.username,
-        password=conf.password,
-        host=manager_ip,
-        db_name=conf.db_name
-    )
-
-
-def get_postgres_conf():
-    """Return a namedtuple with info used to connect to cloudify's PG DB
-    """
-    conf = namedtuple('PGConf', 'username password db_name')
-    return conf(
-        username='cloudify',
-        password='cloudify',
-        db_name='cloudify_db'
-    )
-
-
-def set_flask_security_config(app):
-    """Set all necessary Flask-Security configurations
-
-    :param app: Flask app object
-    """
-    # Make sure that it's possible to get users from the datastore
-    # by username and not just by email (the default behavior)
-    app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
-    app.config['SECURITY_PASSWORD_HASH'] = 'pbkdf2_sha256'
-    app.config['SECURITY_TOKEN_MAX_AGE'] = 36000  # 10 hours
-
-    # TODO: Move the secret key and the salt to config/envvar
-    app.config['SECURITY_PASSWORD_SALT'] = 'abckjshd0-dsi;dlksP0980!*'
-    app.config['SECRET_KEY'] = 'secret_key_as;ldk34!@##;lKSDLK'

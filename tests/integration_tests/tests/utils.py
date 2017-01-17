@@ -24,7 +24,6 @@ from contextlib import contextmanager
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
 from integration_tests.framework import utils, postgresql, docl
-from manager_rest.storage import get_storage_manager
 
 
 logger = setup_logger('testenv.utils')
@@ -197,13 +196,6 @@ def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
                            is_json=is_json,
                            default_flow_style=default_flow_style) as patch:
         yield patch
-
-
-def get_remote_storage_manager():
-    """Return the SQL storage manager connected to the remote manager
-    """
-    postgresql.setup_flask_app()
-    return get_storage_manager()
 
 
 def delete_provider_context():

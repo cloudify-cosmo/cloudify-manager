@@ -95,7 +95,7 @@ class Postgres(object):
                "is_system_workflow, " \
                "status, workflow_id, tenant_id, creator_id) " \
                "VALUES ('{0}', '{1}', 't', " \
-               "'started', 'restore_snapshot', '1', 0);"\
+               "'started', 'restore_snapshot', 0, 0);"\
             .format(ctx.execution_id, record_creation_date)
 
     def clean_db(self):
@@ -109,7 +109,7 @@ class Postgres(object):
         queries.append("INSERT INTO users_roles (user_id, role_id)"
                        "VALUES (0, 1);")
         queries.append("INSERT INTO users_tenants (user_id, tenant_id)"
-                       "VALUES (0, 1);")
+                       "VALUES (0, 0);")
         for query in queries:
             self.run_query(query)
 
@@ -239,14 +239,14 @@ class Postgres(object):
 
     def _add_preserve_defaults_queries(self, queries):
         """Replace regular truncate queries for users/tenants with ones that
-        preserve the default user (id=0)/tenant (id=1)
+        preserve the default user (id=0)/tenant (id=0)
         Used when restoring old snapshots that will not have those entities
         :param queries: List of truncate queries
         """
         queries.remove(self._TRUNCATE_QUERY.format('users'))
         queries.append('DELETE FROM users CASCADE WHERE id != 0;')
         queries.remove(self._TRUNCATE_QUERY.format('tenants'))
-        queries.append('DELETE FROM tenants CASCADE WHERE id != 1;')
+        queries.append('DELETE FROM tenants CASCADE WHERE id != 0;')
 
     def _get_all_tables(self):
         result = self.run_query("SELECT tablename "
