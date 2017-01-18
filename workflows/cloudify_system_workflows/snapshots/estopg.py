@@ -82,7 +82,7 @@ class EsToPg(object):
 
         :return: The admin user
         """
-        admin = models.User.query.filter_by(id=0).first()
+        admin = models.User.query.get(0)
         # This line is necessary for the `reload_user` method - we add the
         # admin user to the flask stack
         flask_global_stack.push(admin)

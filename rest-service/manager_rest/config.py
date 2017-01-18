@@ -51,14 +51,12 @@ class Config(object):
         self.rest_service_log_file_size_MB = None
         self.rest_service_log_files_backup_count = None
         self.test_mode = False
-        self.security_enabled = True
-        self.security_ssl = {'enabled': False}
-        self.security_userstore = {}
         self.insecure_endpoints_disabled = True
-        self.broker_ssl_cert_path = None
-        self.agent_rest_cert_path = None
         self.max_results = 1000
         self.min_available_memory_mb = 256
+
+        self.security_hash_salt = None
+        self.security_secret_key = None
 
         self.warnings = []
 

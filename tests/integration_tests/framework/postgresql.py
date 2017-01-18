@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import yaml
 import logging
 from contextlib import closing
 
@@ -36,15 +37,29 @@ from manager_rest.storage.storage_utils import \
 from manager_rest.constants import CURRENT_TENANT_CONFIG, PROVIDER_CONTEXT_ID
 
 from integration_tests.framework import utils
+from integration_tests.framework.docl import read_file as read_manager_file
 from integration_tests.tests.constants import PROVIDER_CONTEXT, PROVIDER_NAME
 
 logger = setup_logger('postgresql', logging.INFO)
 setup_logger('postgresql.trace', logging.INFO)
 
 
+security_config = None
+
+
 def setup_flask_app():
+    global security_config
+    if not security_config:
+        conf_file_str = read_manager_file('/opt/manager/rest-security.conf')
+        security_config = yaml.load(conf_file_str)
+
     manager_ip = utils.get_manager_ip()
-    return _setup_flask_app(manager_ip=manager_ip, driver='pg8000')
+    return _setup_flask_app(
+        manager_ip=manager_ip,
+        driver='pg8000',
+        hash_salt=security_config['hash_salt'],
+        secret_key=security_config['secret_key']
+    )
 
 
 def run_query(query, db_name=None):

@@ -132,7 +132,7 @@ class TestSnapshot(AgentlessTestCase):
 
         # Now make sure all the resources really exist in the DB
         self._assert_3_3_1_snapshot_restored(tenant_name)
-        self._assert_3_3_1_plugins_restored()
+        self._assert_3_3_1_plugins_restored(tenant_name)
 
     def _assert_3_3_1_snapshot_restored(self, tenant_name):
         self._assert_snapshot_restored(
@@ -185,7 +185,8 @@ class TestSnapshot(AgentlessTestCase):
                                   num_of_executions,
                                   num_of_events=4,
                                   tenant_name=DEFAULT_TENANT_NAME):
-        self.client.blueprints.get(blueprint_id)
+        with self.client_using_tenant(self.client, tenant_name):
+            self.client.blueprints.get(blueprint_id)
         self._assert_deployment_restored(
             blueprint_id=blueprint_id,
             deployment_id=deployment_id,
@@ -197,17 +198,20 @@ class TestSnapshot(AgentlessTestCase):
 
         execution_id = self._assert_execution_restored(
             deployment_id,
-            num_of_executions
+            num_of_executions,
+            tenant_name
         )
-        self._assert_events_restored(execution_id, num_of_events)
+        self._assert_events_restored(execution_id, num_of_events, tenant_name)
 
-        for node_id in node_ids:
-            self.client.nodes.get(deployment_id, node_id)
-        for node_instance_id in node_instance_ids:
-            self.client.node_instances.get(node_instance_id)
+        with self.client_using_tenant(self.client, tenant_name):
+            for node_id in node_ids:
+                self.client.nodes.get(deployment_id, node_id)
+            for node_instance_id in node_instance_ids:
+                self.client.node_instances.get(node_instance_id)
 
-    def _assert_3_3_1_plugins_restored(self):
-        plugins = self.client.plugins.list()
+    def _assert_3_3_1_plugins_restored(self, tenant_name):
+        with self.client_using_tenant(self.client, tenant_name):
+            plugins = self.client.plugins.list()
         self.assertEqual(len(plugins), 8)
         package_names = [plugin.package_name for plugin in plugins]
         package_name_counts = Counter(package_names)
@@ -223,7 +227,8 @@ class TestSnapshot(AgentlessTestCase):
                                     num_of_inputs,
                                     num_of_outputs,
                                     tenant_name):
-        deployment = self.client.deployments.get(deployment_id)
+        with self.client_using_tenant(self.client, tenant_name):
+            deployment = self.client.deployments.get(deployment_id)
         self.assertEqual(deployment.id, deployment_id)
         self.assertEqual(len(deployment.workflows), num_of_workflows)
         self.assertEqual(deployment.blueprint_id, blueprint_id)
@@ -234,19 +239,30 @@ class TestSnapshot(AgentlessTestCase):
 
     def _assert_execution_restored(self,
                                    deployment_id,
-                                   num_of_executions):
+                                   num_of_executions,
+                                   tenant_name):
         def condition(execution):
             return execution.workflow_id == 'create_deployment_environment'
 
-        executions = self.client.executions.list(deployment_id=deployment_id)
+        with self.client_using_tenant(self.client, tenant_name):
+            executions = self.client.executions.list(
+                deployment_id=deployment_id
+            )
+
         self.assertEqual(len(executions), num_of_executions)
         executions = [execution for execution
                       in executions if condition(execution)]
         self.assertEqual(len(executions), 1)
         return executions[0].id
 
-    def _assert_events_restored(self, execution_id, num_of_events):
-        output = self.cfy.events.list(execution_id=execution_id)
+    def _assert_events_restored(self,
+                                execution_id,
+                                num_of_events,
+                                tenant_name):
+        output = self.cfy.events.list(
+            execution_id=execution_id,
+            tenant_name=tenant_name
+        )
         expected_output = 'Total events: {0}'.format(num_of_events)
         self.assertIn(expected_output, output)
 
