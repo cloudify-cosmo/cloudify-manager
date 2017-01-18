@@ -14,16 +14,16 @@
 #    * limitations under the License.
 
 import os
-import tempfile
 import shutil
+import tempfile
 from functools import partial
 
-from wagon.wagon import Wagon
+import wagon
 
 from manager_rest import config
 from integration_tests import AgentlessTestCase
-from integration_tests.tests.utils import get_resource as resource
 from cloudify_rest_client.exceptions import CloudifyClientError
+from integration_tests.tests.utils import get_resource as resource
 
 MAX_RESULT_FOR_TESTING = 9
 
@@ -84,7 +84,7 @@ class TestRestServiceListPagination(AgentlessTestCase):
 
     def test_node_instances_pagination(self):
         deployment = self.deploy(
-                resource('dsl/pagination-node-instances.yaml'))
+            resource('dsl/pagination-node-instances.yaml'))
         partial_obj = partial(
             self.client.node_instances.list,
             deployment_id=deployment.id)
@@ -97,8 +97,10 @@ class TestRestServiceListPagination(AgentlessTestCase):
             with open(os.path.join(tmpdir, 'setup.py'), 'w') as f:
                 f.write('from setuptools import setup\n')
                 f.write('setup(name="some-package", version={0})'.format(i))
-            wagon = Wagon(tmpdir)
-            plugin_path = wagon.create(archive_destination_dir=tmpdir)
+            plugin_path = wagon.create(
+                source=tmpdir,
+                archive_destination_dir=tmpdir,
+                archive_format='tar.gz')
             self.client.plugins.upload(plugin_path)
             shutil.rmtree(tmpdir)
         self._test_pagination(self.client.plugins.list)

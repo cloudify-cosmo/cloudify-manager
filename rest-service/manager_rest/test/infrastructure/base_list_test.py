@@ -12,13 +12,13 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-import tempfile
 import os
 import shutil
+import tempfile
+
+import wagon
 
 from manager_rest.test.base_test import BaseServerTestCase
-
-from wagon.wagon import Wagon
 
 
 class BaseListTest(BaseServerTestCase):
@@ -54,8 +54,10 @@ class BaseListTest(BaseServerTestCase):
             with open(os.path.join(tmpdir, 'setup.py'), 'w') as f:
                 f.write('from setuptools import setup\n')
                 f.write('setup(name="some-package", version={0})'.format(i))
-            wagon = Wagon(tmpdir)
-            plugin_path = wagon.create(archive_destination_dir=tmpdir)
+            plugin_path = wagon.create(
+                source=tmpdir,
+                archive_destination_dir=tmpdir,
+                archive_format='tar.gz')
             self.post_file('/plugins', plugin_path)
             shutil.rmtree(tmpdir)
 

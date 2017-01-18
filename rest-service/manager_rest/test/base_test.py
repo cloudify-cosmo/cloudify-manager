@@ -23,10 +23,11 @@ import uuid
 import os
 import shutil
 
-from flask.testing import FlaskClient
-from nose.plugins.attrib import attr
-from wagon.wagon import Wagon
+import wagon
 from mock import MagicMock
+from nose.tools import nottest
+from nose.plugins.attrib import attr
+from flask.testing import FlaskClient
 
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
@@ -48,10 +49,45 @@ FILE_SERVER_PORT = 53229
 LATEST_API_VERSION = 3  # to be used by max_client_version test attribute
 
 
+# todo: do we need it?
+@nottest
+def test_config(**kwargs):
+    """
+    decorator-generator that can be used on test functions to set
+    key-value pairs that may later be injected into functions using the
+    "inject_test_config" decorator
+    :param kwargs: key-value pairs to be stored on the function object
+    :return: a decorator for a test function, which stores with the test's
+     config on the test function's object under the "test_config" attribute
+    """
+    def _test_config_decorator(test_func):
+        test_func.test_config = kwargs
+        return test_func
+    return _test_config_decorator
+
+
+# todo: do we need it?
+@nottest
+def inject_test_config(f):
+    """
+    Decorator for injecting "test_config" into a test obj method.
+    also see the "test_config" decorator
+    :param f: a test obj method to be injected with the "test_config" parameter
+    :return: the method augmented with the "test_config" parameter
+    """
+    def _wrapper(test_obj, *args, **kwargs):
+        test_func = getattr(test_obj, test_obj.id().split('.')[-1])
+        if hasattr(test_func, 'test_config'):
+            kwargs['test_config'] = test_func.test_config
+        return f(test_obj, *args, **kwargs)
+    return _wrapper
+
+
 class TestClient(FlaskClient):
     """A helper class that overrides flask's default testing.FlaskClient
     class for the purpose of adding authorization headers to all rest calls
     """
+
     def open(self, *args, **kwargs):
         kwargs = kwargs or {}
         admin = get_admin_user()
@@ -147,7 +183,6 @@ class BaseServerTestCase(unittest.TestCase):
         right after the import the log path is set normally like the rest
         of the variables (used in the reset_state)
         """
-
         with open(self.tmp_conf_file, 'w') as f:
             json.dump({'rest_service_log_path': self.rest_service_log,
                        'rest_service_log_file_size_MB': 1,
@@ -412,9 +447,11 @@ class BaseServerTestCase(unittest.TestCase):
 
     def create_wheel(self, package_name, package_version):
         module_src = '{0}=={1}'.format(package_name, package_version)
-        wagon_client = Wagon(module_src)
-        return wagon_client.create(
-            archive_destination_dir=tempfile.gettempdir(), force=True)
+        return wagon.create(
+            source=module_src,
+            archive_destination_dir=tempfile.gettempdir(),
+            force=True,
+            archive_format='tar.gz')
 
     def wait_for_url(self, url, timeout=5):
         end = time.time() + timeout

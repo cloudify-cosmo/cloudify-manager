@@ -74,7 +74,7 @@ class TestUtils(base_test.BaseServerTestCase):
             return platform
 
         with patch('platform.linux_distribution', mock_linux_dist):
-            with patch('wagon.utils.get_platform', mock_get_platform):
+            with patch('wagon.get_platform', mock_get_platform):
                 plugin = create_plugin(supported_platform=platform)
                 self.assertFalse(
                     plugin_installable_on_current_platform(plugin))
