@@ -289,6 +289,8 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.rest_service_log_file_size_MB = 100,
         test_config.rest_service_log_files_backup_count = 20
         test_config.maintenance_folder = self.maintenance_mode_dir
+        test_config.security_hash_salt = 'hash_salt'
+        test_config.security_secret_key = 'secret_key'
         return test_config
 
     def _version_url(self, url):

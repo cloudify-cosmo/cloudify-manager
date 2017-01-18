@@ -18,21 +18,27 @@ from collections import namedtuple
 from flask import Flask
 from flask_security import Security
 
+from manager_rest import config
 from manager_rest.storage import user_datastore, db
 
 
-def setup_flask_app(manager_ip='localhost', driver=''):
+def setup_flask_app(manager_ip='localhost',
+                    driver='',
+                    hash_salt=None,
+                    secret_key=None):
     """Setup a functioning flask app, when working outside the rest-service
 
     :param manager_ip: The IP of the manager
     :param driver: SQLA driver for postgres (e.g. pg8000)
+    :param hash_salt: The salt to be used when creating user passwords
+    :param secret_key: Secret key used when hashing flask tokens
     :return: A Flask app
     """
     app = Flask(__name__)
     db_uri = _get_postgres_db_uri(manager_ip, driver)
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    set_flask_security_config(app)
+    set_flask_security_config(app, hash_salt, secret_key)
     Security(app=app, datastore=user_datastore)
     db.init_app(app)
     app.app_context().push()
@@ -64,17 +70,21 @@ def get_postgres_conf():
     )
 
 
-def set_flask_security_config(app):
+def set_flask_security_config(app, hash_salt=None, secret_key=None):
     """Set all necessary Flask-Security configurations
 
     :param app: Flask app object
+    :param hash_salt: The salt to be used when creating user passwords
+    :param secret_key: Secret key used when hashing flask tokens
     """
+    hash_salt = hash_salt or config.instance.security_hash_salt
+    secret_key = secret_key or config.instance.security_secret_key
+
     # Make sure that it's possible to get users from the datastore
     # by username and not just by email (the default behavior)
     app.config['SECURITY_USER_IDENTITY_ATTRIBUTES'] = 'username, email'
     app.config['SECURITY_PASSWORD_HASH'] = 'pbkdf2_sha256'
     app.config['SECURITY_TOKEN_MAX_AGE'] = 36000  # 10 hours
 
-    # TODO: Move the secret key and the salt to config/envvar
-    app.config['SECURITY_PASSWORD_SALT'] = 'abckjshd0-dsi;dlksP0980!*'
-    app.config['SECRET_KEY'] = 'secret_key_as;ldk34!@##;lKSDLK'
+    app.config['SECURITY_PASSWORD_SALT'] = hash_salt
+    app.config['SECRET_KEY'] = secret_key

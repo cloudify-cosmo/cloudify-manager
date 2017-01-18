@@ -19,6 +19,7 @@ import shutil
 import zipfile
 import platform
 import tempfile
+from contextlib import contextmanager
 
 from wagon import wagon
 
@@ -67,6 +68,7 @@ class SnapshotRestore(object):
         self._tempdir = None
         self._snapshot_version = None
         self._client = get_rest_client()
+        self._tenant_client = self._get_tenant_client()
 
     def restore(self):
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
@@ -144,7 +146,7 @@ class SnapshotRestore(object):
         """
         return not self._premium_enabled and \
             self._force and \
-            self._client.blueprints.list().items
+            self._client.blueprints.list(_all_tenants=True).items
 
     def _extract_snapshot_archive(self, snapshot_path):
         """Extract the snapshot archive to a temp folder
@@ -244,7 +246,24 @@ class SnapshotRestore(object):
 
     def _restore_agents(self):
         ctx.logger.info('Restoring cloudify agent data')
-        Agents().restore(self._tempdir, self._client)
+        Agents().restore(self._tempdir, self._tenant_client)
+
+    def _get_tenant_client(self):
+        with self._update_tenant_in_ctx():
+            return get_rest_client()
+
+    @contextmanager
+    def _update_tenant_in_ctx(self):
+        """Temporarily change the tenant in the current context to be the
+        tenant passed in the restore command
+        """
+        curr_tenant = ctx.tenant_name
+        tenant_name = self._tenant_name if self._tenant_name else curr_tenant
+        try:
+            ctx._context['tenant_name'] = tenant_name
+            yield
+        finally:
+            ctx._context['tenant_name'] = curr_tenant
 
     def _restore_deployment_envs(self, existing_dep_envs):
         """Restore any deployment environments on the manager that didn't
@@ -256,12 +275,16 @@ class SnapshotRestore(object):
         if not self._recreate_deployments_envs:
             return
         ctx.logger.info('Restoring deployment environments')
-        for deployment_id, dep_ctx in ctx.deployments_contexts.iteritems():
+        with self._update_tenant_in_ctx():
+            deployments_contexts = ctx.deployments_contexts
+
+        for deployment_id, dep_ctx in deployments_contexts.iteritems():
             if deployment_id in existing_dep_envs:
                 continue
             with dep_ctx:
-                dep = self._client.deployments.get(deployment_id)
-                blueprint = self._client.blueprints.get(dep_ctx.blueprint.id)
+                dep = self._tenant_client.deployments.get(deployment_id)
+                blueprint = self._tenant_client.blueprints.get(
+                    dep_ctx.blueprint.id)
                 tasks_graph = self._get_tasks_graph(dep_ctx, blueprint, dep)
                 tasks_graph.execute()
                 ctx.logger.debug('Successfully created deployment environment '
@@ -374,7 +397,7 @@ class SnapshotRestoreValidator(object):
             pass
 
     def _assert_clean_db(self):
-        if self._client.blueprints.list().items:
+        if self._client.blueprints.list(_all_tenants=True).items:
             if self._force:
                 ctx.logger.warning(
                     "Forcing snapshot restoration on a non-empty manager. "
