@@ -24,7 +24,7 @@ from manager_rest.storage.models_base import db
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import CURRENT_TENANT_CONFIG
 
-from sqlalchemy import or_ as sql_or
+from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlite3 import DatabaseError as SQLiteDBError
 
@@ -126,15 +126,44 @@ class SQLStorageManager(object):
         query = self._add_value_filter(query, filters)
         return query
 
-    @staticmethod
-    def _add_value_filter(query, filters):
+    def _add_value_filter(self, query, filters):
         for column, value in filters.iteritems():
+            column, value = self._update_case_insensitive(column, value)
             if isinstance(value, (list, tuple)):
                 query = query.filter(column.in_(value))
             else:
                 query = query.filter(column == value)
 
         return query
+
+    @staticmethod
+    def _update_case_insensitive(column, value):
+        """Check if the column in question should be case insensitive, and
+        if so, make sure the column (and the value) will be converted to lower
+        case
+
+        :return: The updated column and value in a (c, v) tuple
+        """
+        is_case_insensitive = getattr(column, 'is_ci', False)
+        if not is_case_insensitive:
+            return column, value
+
+        # Adding a label to preserve the column name
+        column = func.lower(column).label(column.key)
+        try:
+            if isinstance(value, (list, tuple)):
+                value = [v.lower() for v in value]
+            else:
+                value = value.lower()
+        except AttributeError:
+            raise manager_exceptions.BadParametersError(
+                'Incorrect param passed to column `{0}`: {1}. '
+                'Param type should be string'.format(
+                    column.name, value
+                )
+            )
+
+        return column, value
 
     def _add_tenant_filter(self, query, model_class, all_tenants):
         """Filter by the tenant ID associated with `model_class` (either

@@ -13,11 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import yaml
 import logging
 from contextlib import closing
 
 import pg8000
+from cloudify.utils import setup_logger
+from integration_tests.framework import utils
+from manager_rest.flask_utils import get_postgres_conf
+from manager_rest.storage import db
 from sqlalchemy.engine import reflection
 from sqlalchemy.schema import (MetaData,
                                Table,
@@ -25,41 +28,8 @@ from sqlalchemy.schema import (MetaData,
                                ForeignKeyConstraint,
                                DropConstraint)
 
-from cloudify.utils import setup_logger
-
-from manager_rest.storage import db
-from manager_rest.storage.models import ProviderContext
-from manager_rest.flask_utils import (get_postgres_conf,
-                                      setup_flask_app as _setup_flask_app)
-from manager_rest.storage.storage_utils import \
-    create_default_user_tenant_and_roles
-
-from manager_rest.constants import CURRENT_TENANT_CONFIG, PROVIDER_CONTEXT_ID
-
-from integration_tests.framework import utils
-from integration_tests.framework.docl import read_file as read_manager_file
-from integration_tests.tests.constants import PROVIDER_CONTEXT, PROVIDER_NAME
-
 logger = setup_logger('postgresql', logging.INFO)
 setup_logger('postgresql.trace', logging.INFO)
-
-
-security_config = None
-
-
-def setup_flask_app():
-    global security_config
-    if not security_config:
-        conf_file_str = read_manager_file('/opt/manager/rest-security.conf')
-        security_config = yaml.load(conf_file_str)
-
-    manager_ip = utils.get_manager_ip()
-    return _setup_flask_app(
-        manager_ip=manager_ip,
-        driver='pg8000',
-        hash_salt=security_config['hash_salt'],
-        secret_key=security_config['secret_key']
-    )
 
 
 def run_query(query, db_name=None):
@@ -84,44 +54,7 @@ def run_query(query, db_name=None):
             return {'status': status_message, 'all': fetchall}
 
 
-def reset_storage():
-    logger.info('Resetting PostgreSQL DB')
-    app = setup_flask_app()
-
-    # Rebuild the DB
-    _safe_drop_all()
-    db.create_all()
-
-    # Add default tenant, admin user and provider context
-    _add_defaults(app)
-
-    # Clear the connection
-    close_session(app)
-
-
-def close_session(app):
-    db.session.remove()
-    db.get_engine(app).dispose()
-
-
-def _add_defaults(app):
-    """Add default tenant, admin user and provider context to the DB
-    """
-    provider_context = ProviderContext(
-        id=PROVIDER_CONTEXT_ID,
-        name=PROVIDER_NAME,
-        context=PROVIDER_CONTEXT
-    )
-    db.session.add(provider_context)
-
-    default_tenant = create_default_user_tenant_and_roles(
-        admin_username=utils.get_manager_username(),
-        admin_password=utils.get_manager_password(),
-    )
-    app.config[CURRENT_TENANT_CONFIG] = default_tenant
-
-
-def _safe_drop_all():
+def safe_drop_all():
     """Creates a single transaction that *always* drops all tables, regardless
     of relationships and foreign key constraints (as opposed to `db.drop_all`)
     """

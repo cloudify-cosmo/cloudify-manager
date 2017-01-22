@@ -20,8 +20,6 @@ import logging
 import argparse
 from shutil import move
 
-from flask import _request_ctx_stack as flask_global_stack
-
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import CURRENT_TENANT_CONFIG, DEFAULT_TENANT_NAME
 from manager_rest.storage import models, get_storage_manager
@@ -83,10 +81,11 @@ class EsToPg(object):
         :return: The admin user
         """
         admin = models.User.query.get(0)
-        # This line is necessary for the `reload_user` method - we add the
-        # admin user to the flask stack
-        flask_global_stack.push(admin)
-        # And then load him as the active user
+        # This line is necessary for the `reload_user` method - we add a mock
+        # request context to the flask stack
+        app.test_request_context().push()
+
+        # And then load the admin as the currently active user
         app.extensions['security'].login_manager.reload_user(admin)
         return admin
 

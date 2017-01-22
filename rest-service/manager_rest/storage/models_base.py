@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from collections import OrderedDict
 from dateutil import parser as date_parser
 
 from flask_sqlalchemy import SQLAlchemy, inspect
@@ -45,6 +46,12 @@ class UTCDateTime(db.TypeDecorator):
             return date_parser.parse(value)
         else:
             return value
+
+
+class CIColumn(db.Column):
+    """A column for case insensitive string fields
+    """
+    is_ci = True
 
 
 class SQLModelBase(db.Model):
@@ -136,20 +143,21 @@ class SQLModelBase(db.Model):
             attrs_dict[proxy_name] = proxy.remote_attr.expression.type
         return attrs_dict
 
-    def _get_identifier(self):
+    def _get_identifier_dict(self):
         """A helper method that allows classes to override if in order to
         change the default string representation
         """
-        return 'id', self.id
+        return OrderedDict({'id': self.id})
 
     @classmethod
     def unique_id(cls):
         return 'id'
 
     def __repr__(self):
-        id_name, id_value = self._get_identifier()
-        return '<{0} {1}=`{2}`>'.format(
-            self.__class__.__name__,
-            id_name,
-            id_value
-        )
+        """Return a representation of the class, based on the ordered dict of
+        identifiers returned by `_get_identifier_dict`
+        """
+        id_dict = self._get_identifier_dict()
+        class_name = self.__class__.__name__
+        _repr = ' '.join('{0}=`{1}`'.format(k, v) for k, v in id_dict.items())
+        return '<{0} {1}>'.format(class_name, _repr)

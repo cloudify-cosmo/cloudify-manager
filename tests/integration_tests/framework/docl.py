@@ -66,7 +66,11 @@ _quiet_docl = proxy_tools.Proxy(partial(_docl_proxy, quiet=True))
 
 def _docl_home():
     from integration_tests.framework import env
-    return os.path.join(env.instance.test_working_dir, 'docl')
+    if env.instance:
+        return os.path.join(env.instance.test_working_dir, 'docl')
+    else:
+        # When working outside of the tests framework
+        return os.path.expanduser('~/.docl')
 
 
 def _load_docl_config():

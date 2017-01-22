@@ -73,14 +73,10 @@ class SQLResourceBase(SQLModelBase):
     def to_response(self):
         return {f: getattr(self, f) for f in self.response_fields}
 
-    def __repr__(self):
-        id_name, id_value = self._get_identifier()
-        return '<{0} {1}=`{2}`; tenant=`{3}`>'.format(
-            self.__class__.__name__,
-            id_name,
-            id_value,
-            self.tenant_name
-        )
+    def _get_identifier_dict(self):
+        id_dict = super(SQLResourceBase, self)._get_identifier_dict()
+        id_dict['tenant'] = self.tenant_name
+        return id_dict
 
 
 class TopLevelResource(TopLevelMixin, SQLResourceBase):

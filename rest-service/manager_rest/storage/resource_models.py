@@ -172,15 +172,10 @@ class Execution(TopLevelMixin, SQLResourceBase):
     def parent(cls):
         return Deployment
 
-    def __repr__(self):
-        id_name, id_value = self._get_identifier()
-        return '<{0} {1}=`{2}`; tenant=`{3}` (status={4})>'.format(
-            self.__class__.__name__,
-            id_name,
-            id_value,
-            self.tenant_name,
-            self.status
-        )
+    def _get_identifier_dict(self):
+        id_dict = super(Execution, self)._get_identifier_dict()
+        id_dict['status'] = self.status
+        return id_dict
 
 
 class Event(DerivedResource):
