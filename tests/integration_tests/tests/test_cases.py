@@ -38,7 +38,8 @@ from logging.handlers import RotatingFileHandler
 
 from manager_rest.utils import mkdirs
 
-from integration_tests.framework import utils, hello_world, docl, postgresql
+from integration_tests.framework import utils, hello_world, docl
+from integration_tests.framework.flask_utils import reset_storage
 from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
 
@@ -396,7 +397,7 @@ class AgentlessTestCase(BaseTestCase):
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
-        postgresql.reset_storage()
+        reset_storage()
         self.addCleanup(self._save_manager_logs_after_test)
 
 

@@ -19,8 +19,8 @@ from cloudify_rest_client.exceptions import UserUnauthorizedError
 
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
-from integration_tests.framework.postgresql import (setup_flask_app,
-                                                    close_session)
+from integration_tests.framework import flask_utils
+
 
 from manager_rest.test.security_utils import get_test_users, add_users_to_db
 
@@ -31,11 +31,12 @@ class TestSecuredRestBase(AgentlessTestCase):
 
         self.logger.info('Adding extra users to the DB')
         # Need to call it again, as the session is closed in `reset_storage`
-        app = setup_flask_app()
+        app = flask_utils.setup_flask_app()
+        flask_utils.load_user(app)
         add_users_to_db(get_test_users())
 
         # Need to close the DB session,
-        self.addCleanup(close_session, app)
+        self.addCleanup(flask_utils.close_session, app)
 
 
 class TestAuthenticationBase(TestSecuredRestBase):

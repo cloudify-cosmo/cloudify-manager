@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from collections import OrderedDict
+
 from sqlalchemy.ext.declarative import declared_attr
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
@@ -22,8 +24,8 @@ from manager_rest.constants import (ADMIN_ROLE,
                                     BOOTSTRAP_ADMIN_ID,
                                     DEFAULT_TENANT_ID)
 
-from .models_base import db, SQLModelBase, UTCDateTime
 from .relationships import many_to_many_relationship
+from .models_base import db, SQLModelBase, UTCDateTime, CIColumn
 
 
 class ProviderContext(SQLModelBase):
@@ -40,8 +42,8 @@ class Tenant(SQLModelBase):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, index=True)
 
-    def _get_identifier(self):
-        return 'name', self.name
+    def _get_identifier_dict(self):
+        return OrderedDict({'name': self.name})
 
     def to_response(self):
         tenant_dict = super(Tenant, self).to_response()
@@ -60,11 +62,14 @@ class Group(SQLModelBase):
     __tablename__ = 'groups'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.Text, unique=True, nullable=False, index=True)
-    ldap_dn = db.Column(db.Text, unique=True, nullable=True, index=True)
+    name = CIColumn(db.Text, unique=True, nullable=False, index=True)
+    ldap_dn = CIColumn(db.Text, unique=True, nullable=True, index=True)
 
-    def _get_identifier(self):
-        return 'name', self.name
+    def _get_identifier_dict(self):
+        id_dict = OrderedDict({'name': self.name})
+        if self.ldap_dn:
+            id_dict['ldap_dn'] = self.ldap_dn
+        return id_dict
 
     @declared_attr
     def tenants(cls):
@@ -85,15 +90,15 @@ class Role(SQLModelBase, RoleMixin):
 
     description = db.Column(db.Text)
 
-    def _get_identifier(self):
-        return 'name', self.name
+    def _get_identifier_dict(self):
+        return OrderedDict({'name': self.name})
 
 
 class User(SQLModelBase, UserMixin):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(255), index=True, unique=True)
+    username = CIColumn(db.String(255), index=True, unique=True)
 
     active = db.Column(db.Boolean)
     created_at = db.Column(UTCDateTime)
@@ -103,8 +108,8 @@ class User(SQLModelBase, UserMixin):
     last_name = db.Column(db.String(255))
     password = db.Column(db.String(255))
 
-    def _get_identifier(self):
-        return 'username', self.username
+    def _get_identifier_dict(self):
+        return OrderedDict({'username': self.username})
 
     @declared_attr
     def roles(cls):
