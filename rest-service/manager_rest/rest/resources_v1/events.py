@@ -107,7 +107,6 @@ class Events(SecuredResource):
             .filter(
                 Event._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
-                Execution.id == bindparam('execution_id'),
             )
         )
 
@@ -128,9 +127,11 @@ class Events(SecuredResource):
                 .filter(
                     Log._execution_fk == Execution._storage_id,
                     Execution._deployment_fk == Deployment._storage_id,
-                    Execution.id == bindparam('execution_id'),
                 )
             )
+
+        if 'execution_id' in filters:
+            query = query.filter(Execution.id == bindparam('execution_id'))
 
         if '@timestamp' not in sort or sort['@timestamp'] != 'asc':
             raise manager_exceptions.BadParametersError(
@@ -173,18 +174,23 @@ class Events(SecuredResource):
             db.session.query(func.count('*').label('count'))
             .filter(
                 Event._execution_fk == Execution._storage_id,
-                Execution.id == bindparam('execution_id'),
             )
         )
+
+        if 'execution_id' in filters:
+            events_query.filter(Execution.id == bindparam('execution_id'))
 
         if 'cloudify_log' in filters['type']:
             logs_query = (
                 db.session.query(func.count('*').label('count'))
                 .filter(
                     Log._execution_fk == Execution._storage_id,
-                    Execution.id == bindparam('execution_id'),
                 )
             )
+            if 'execution_id' in filters:
+                logs_query = logs_query.filter(
+                    Execution.id == bindparam('execution_id'))
+
             query = db.session.query(
                 events_query.subquery().c.count +
                 logs_query.subquery().c.count
