@@ -38,4 +38,5 @@ class Tokens(SecuredResource):
         """
         Get authentication token
         """
-        return dict(value=current_user.get_auth_token())
+        token = current_user.get_auth_token()
+        return dict(value=token, role=current_user.role)
