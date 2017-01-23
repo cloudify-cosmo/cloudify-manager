@@ -16,6 +16,7 @@
 from nose.plugins.attrib import attr
 from base64 import urlsafe_b64encode
 
+from manager_rest.constants import ADMIN_ROLE, USER_ROLE
 from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.utils import BASIC_AUTH_PREFIX, CLOUDIFY_AUTH_HEADER
 
@@ -67,6 +68,19 @@ class AuthenticationTests(SecurityTestBase):
 
     def test_invalid_token_authentication(self):
         self._assert_user_unauthorized(token='wrong token')
+
+    @attr(client_min_version=3,
+          client_max_version=LATEST_API_VERSION)
+    def test_token_returns_role(self):
+        with self.use_secured_client(username='alice',
+                                     password='alice_password'):
+            token = self.client.tokens.get()
+        self.assertEqual(token.role, ADMIN_ROLE)
+
+        with self.use_secured_client(username='bob',
+                                     password='bob_password'):
+            token = self.client.tokens.get()
+        self.assertEqual(token.role, USER_ROLE)
 
     def test_secured_manager_blueprints_upload(self):
         with self.use_secured_client(username='alice',
