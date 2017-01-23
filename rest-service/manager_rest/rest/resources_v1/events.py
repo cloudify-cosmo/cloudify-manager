@@ -18,7 +18,9 @@ from datetime import datetime
 
 from flask_restful_swagger import swagger
 from sqlalchemy import (
+    asc,
     bindparam,
+    desc,
     func,
     literal_column,
 )
@@ -133,13 +135,12 @@ class Events(SecuredResource):
         if 'execution_id' in filters:
             query = query.filter(Execution.id == bindparam('execution_id'))
 
-        if '@timestamp' not in sort or sort['@timestamp'] != 'asc':
-            raise manager_exceptions.BadParametersError(
-                'Sorting ascending by `timestamp` is expected')
+        if '@timestamp' in sort:
+            order_func = asc if sort['@timestamp'] == 'asc' else desc
+            query.order_by(order_func('timestamp'))
 
         query = (
             query
-            .order_by('timestamp')
             .limit(bindparam('limit'))
             .offset(bindparam('offset'))
         )
