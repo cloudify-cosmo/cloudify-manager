@@ -37,7 +37,6 @@ from manager_rest.rest import (
     rest_utils,
 )
 from manager_rest.security import SecuredResource
-from manager_rest.storage.manager_elasticsearch import DEFAULT_SEARCH_SIZE
 from manager_rest.storage.models_base import db
 from manager_rest.storage.resource_models import (
     Deployment,
@@ -776,7 +775,7 @@ class Events(resources_v1.Events):
 
         params = {
             'execution_id': filters['execution_id'][0],
-            'limit': pagination.get('size', DEFAULT_SEARCH_SIZE),
+            'limit': pagination.get('size', self.DEFAULT_SEARCH_SIZE),
             'offset': pagination.get('offset', 0),
         }
 
