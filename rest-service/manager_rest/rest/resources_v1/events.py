@@ -31,7 +31,6 @@ from manager_rest.rest.rest_decorators import (
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
 from manager_rest.storage.models_base import db
-from manager_rest.storage.manager_elasticsearch import DEFAULT_SEARCH_SIZE
 from manager_rest.storage.resource_models import (
     Deployment,
     Execution,
@@ -48,6 +47,8 @@ class Events(SecuredResource):
     stored in the SQL database.
 
     """
+
+    DEFAULT_SEARCH_SIZE = 10000
 
     @staticmethod
     def _build_select_query(_include, filters, pagination, sort):
@@ -249,7 +250,7 @@ class Events(SecuredResource):
         else:
             filters = {'type': ['cloudify_event']}
         pagination = {
-            'size': request_dict.get('size', DEFAULT_SEARCH_SIZE),
+            'size': request_dict.get('size', self.DEFAULT_SEARCH_SIZE),
             'offset': request_dict['from'],
         }
         sort = {

@@ -18,4 +18,3 @@ from .models_base import db                                 # NOQA
 from .models import user_datastore                          # NOQA
 from .storage_manager import ListResult                     # NOQA
 from .storage_manager import get_storage_manager            # NOQA
-from .manager_elasticsearch import ManagerElasticsearch     # NOQA
