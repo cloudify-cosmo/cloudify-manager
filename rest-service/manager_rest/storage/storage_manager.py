@@ -177,7 +177,7 @@ class SQLStorageManager(object):
         if current_user.is_admin and all_tenants:
             tenants = []
         elif all_tenants:
-            tenants = current_user.get_all_tenants()
+            tenants = current_user.all_tenants
         else:
             tenants = [self.current_tenant]
 

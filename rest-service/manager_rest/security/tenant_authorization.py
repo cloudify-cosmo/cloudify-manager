@@ -33,8 +33,7 @@ class TenantAuthorization(object):
             )
 
         logger.debug('User attempting to connect with {0}'.format(tenant))
-        if tenant not in user.get_all_tenants() \
-                and admin_role not in user.roles:
+        if tenant not in user.all_tenants and admin_role not in user.roles:
             raise_unauthorized_user_error(
                 '{0} is not associated with {1}'.format(user, tenant)
             )

@@ -47,11 +47,20 @@ class Tenant(SQLModelBase):
 
     def to_response(self):
         tenant_dict = super(Tenant, self).to_response()
-        all_groups_names = [group.name for group in self.groups]
-        all_users_names = [user.username for user in self.users]
-        tenant_dict['groups'] = all_groups_names
-        tenant_dict['users'] = all_users_names
+        group_names = [group.name for group in self.groups]
+        user_names = [user.username for user in self.all_users]
+        tenant_dict['groups'] = sorted(group_names)
+        tenant_dict['users'] = sorted(user_names)
         return tenant_dict
+
+    @property
+    def all_users(self):
+        users_list = self.users
+        for group in self.groups:
+            for user in group.users:
+                users_list.append(user)
+
+        return list(set(users_list))
 
     @property
     def is_default_tenant(self):
@@ -77,8 +86,10 @@ class Group(SQLModelBase):
 
     def to_response(self):
         group_dict = super(Group, self).to_response()
-        group_dict['tenants'] = [tenant.name for tenant in self.tenants]
-        group_dict['users'] = [user.username for user in self.users]
+        tenant_names = [tenant.name for tenant in self.tenants]
+        user_names = [user.username for user in self.users]
+        group_dict['tenants'] = sorted(tenant_names)
+        group_dict['users'] = sorted(user_names)
         return group_dict
 
 
@@ -123,7 +134,8 @@ class User(SQLModelBase, UserMixin):
     def tenants(cls):
         return many_to_many_relationship(cls, Tenant)
 
-    def get_all_tenants(self):
+    @property
+    def all_tenants(self):
         """Return all tenants associated with a user - either directly, or
         via a group the user is in
 
@@ -138,9 +150,10 @@ class User(SQLModelBase, UserMixin):
 
     def to_response(self):
         user_dict = super(User, self).to_response()
-        all_tenants = [tenant.name for tenant in self.get_all_tenants()]
-        user_dict['tenants'] = all_tenants
-        user_dict['groups'] = [group.name for group in self.groups]
+        tenant_names = [tenant.name for tenant in self.all_tenants]
+        group_names = [group.name for group in self.groups]
+        user_dict['tenants'] = sorted(tenant_names)
+        user_dict['groups'] = sorted(group_names)
         user_dict['role'] = self.role
         return user_dict
 
