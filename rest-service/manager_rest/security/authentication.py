@@ -56,25 +56,54 @@ class Authentication(object):
     def _authenticate_password(self, user, auth):
         self.logger.debug('Authenticating username/password')
         username, password = auth.username, auth.password
-        if self.ldap:
-            self.logger.debug('Running LDAP authentication')
-            self.ldap.authenticate_user(username, password)
-            if user:
-                user = self.ldap.update_user(user)
-            else:
-                user = self.ldap.create_user(username)
+
+        # If LDAP is not configured, *or* if the user is the bootstrap admin
+        # we should run a basic HTTP auth
+        if (user and user.is_bootstrap_admin) or not self.ldap:
+            return self._http_auth(user, username, password)
+        # Otherwise, we authenticate through LDAP
         else:
-            self.logger.debug('Running basic HTTP authentication')
-            if not user:
-                raise_unauthorized_user_error(
-                    'Authentication failed for '
-                    '<User username=`{0}`>'.format(username)
-                )
-            if not verify_password(password, user.password):
-                raise_unauthorized_user_error(
-                    'Authentication failed for {0}'.format(user)
-                )
+            return self._ldap_auth(user, username, password)
+
+    def _http_auth(self, user, username, password):
+        """Perform basic user authentication
+        - Check that the password that was passed in the request can be
+          verified against the password stored in the DB
+
+        :param user: The DB user object
+        :param username: The username from the request
+        :param password: The password from the request
+        :return: The DB user object
+        """
+        self.logger.debug('Running basic HTTP authentication')
+        if not user:
+            raise_unauthorized_user_error(
+                'Authentication failed for '
+                '<User username=`{0}`>'.format(username)
+            )
+        if not verify_password(password, user.password):
+            raise_unauthorized_user_error(
+                'Authentication failed for {0}'.format(user)
+            )
         return user
+
+    def _ldap_auth(self, user, username, password):
+        """Perform LDAP user authentication
+        - Authenticate the username and password against the LDAP server
+        - If the user exists in the DB, update its groups and login date
+        - If the user doesn't exist in the DB, create it with data from LDAP
+
+        :param user: The DB user object
+        :param username: The username from the request
+        :param password: The password from the request
+        :return: The DB user object
+        """
+        self.logger.debug('Running LDAP authentication')
+        self.ldap.authenticate_user(username, password)
+        if user:
+            return self.ldap.update_user(user)
+        else:
+            return self.ldap.create_user(username)
 
     def _authenticate_token(self, token):
         """Make sure that the token passed exists, is valid, is not expired,
@@ -98,22 +127,6 @@ class Authentication(object):
             )
 
         return user
-
-    @staticmethod
-    def _basic_http_authenticate(user, hashed_pass):
-        """Assert that `user` exists and that its stored password matches the
-        one passed
-
-        :param user: A valid user object, or None
-        :param hashed_pass: md5 hashed password, or None
-        """
-        if not user or user.password != hashed_pass:
-            raise_unauthorized_user_error('HTTP authentication failed '
-                                          'for {0}'.format(user))
-
-        # Reloading the user from the datastore, because the current user
-        # object is detached from a session
-        return user_datastore.get_user(user.username)
 
 
 authenticator = Authentication()
