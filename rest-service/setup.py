@@ -19,7 +19,6 @@ from setuptools import setup
 
 
 install_requires = [
-    'six==1.8.0',
     'Flask==0.10.1',
     'flask-restful==0.2.5',
     'flask-restful-swagger==0.12',
