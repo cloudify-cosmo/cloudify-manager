@@ -112,8 +112,11 @@ class Events(SecuredResource):
             )
         )
 
+        if 'deployment_id' in filters:
+            query = query.filter(Deployment.id.in_(filters['deployment_id']))
+
         if 'cloudify_log' in filters['type']:
-            query = query.union(
+            logs_query = (
                 db.session.query(
                     Log.timestamp.label('timestamp'),
                     Deployment.id.label('deployment_id'),
@@ -131,6 +134,10 @@ class Events(SecuredResource):
                     Execution._deployment_fk == Deployment._storage_id,
                 )
             )
+            if 'deployment_id' in filters:
+                logs_query = logs_query.filter(
+                    Deployment.id.in_(filters['deployment_id']))
+            query = query.union(logs_query)
 
         if 'execution_id' in filters:
             query = query.filter(Execution.id == bindparam('execution_id'))
