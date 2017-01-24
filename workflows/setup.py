@@ -21,7 +21,10 @@ setup(
     version='4.0a12',
     author='elip',
     author_email='elip@gigaspaces.com',
-    packages=['cloudify_system_workflows'],
+    packages=[
+        'cloudify_system_workflows',
+        'cloudify_system_workflows.snapshots'
+    ],
     license='LICENSE',
     description='Various Cloudify Workflows',
     install_requires=[
