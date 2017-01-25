@@ -22,10 +22,10 @@ from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
 )
-from manager_rest.security import SecuredResource
+from manager_rest.security import SecuredResourceSkipTenantAuth
 
 
-class Version(SecuredResource):
+class Version(SecuredResourceSkipTenantAuth):
 
     @swagger.operation(
         responseClass=responses.Version,

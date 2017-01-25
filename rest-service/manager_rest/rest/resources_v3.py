@@ -34,15 +34,17 @@ try:
                                   SecuredMultiTenancyResource,
                                   ClusterResourceBase,
                                   ClusterState,
-                                  ClusterNode)
+                                  ClusterNode,
+                                  SecuredMultiTenancyResourceSkipTenantAuth)
 except ImportError:
     TenantResponse, GroupResponse, UserResponse, ClusterNode, ClusterState = \
         (BaseResponse, ) * 5
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
     ClusterResourceBase = MissingPremiumFeatureResource
+    SecuredMultiTenancyResourceSkipTenantAuth = MissingPremiumFeatureResource
 
 
-class Tenants(SecuredMultiTenancyResource):
+class Tenants(SecuredMultiTenancyResourceSkipTenantAuth):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.create_filters(models.Tenant)

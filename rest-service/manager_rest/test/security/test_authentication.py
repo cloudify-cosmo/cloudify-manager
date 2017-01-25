@@ -16,9 +16,11 @@
 from nose.plugins.attrib import attr
 from base64 import urlsafe_b64encode
 
-from manager_rest.constants import ADMIN_ROLE, USER_ROLE
 from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.utils import BASIC_AUTH_PREFIX, CLOUDIFY_AUTH_HEADER
+from manager_rest.constants import (ADMIN_ROLE,
+                                    USER_ROLE,
+                                    CLOUDIFY_TENANT_HEADER)
 
 from .test_base import SecurityTestBase
 
@@ -98,3 +100,11 @@ class AuthenticationTests(SecurityTestBase):
             self.client.maintenance_mode.activate()
             response = self.client.maintenance_mode.status()
         self.assertEqual(response.requested_by, 'alice')
+
+    def test_token_does_not_require_tenant_header(self):
+        with self.use_secured_client(username='alice',
+                                     password='alice_password'):
+            # Remove the the tenant header from the client
+            self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
+            token = self.client.tokens.get()
+        self._assert_user_authorized(token=token.value)
