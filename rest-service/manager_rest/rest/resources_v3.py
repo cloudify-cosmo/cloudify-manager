@@ -84,7 +84,7 @@ class TenantsId(SecuredMultiTenancyResource):
 
 class TenantUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(UserResponse)
+    @rest_decorators.marshal_with(TenantResponse)
     def put(self, multi_tenancy):
         """
         Add a user to a tenant
@@ -96,7 +96,7 @@ class TenantUsers(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(UserResponse)
+    @rest_decorators.marshal_with(TenantResponse)
     def delete(self, multi_tenancy):
         """
         Remove a user from a tenant
@@ -110,7 +110,7 @@ class TenantUsers(SecuredMultiTenancyResource):
 
 class TenantGroups(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(GroupResponse)
+    @rest_decorators.marshal_with(TenantResponse)
     def put(self, multi_tenancy):
         """
         Add a group to a tenant
@@ -123,7 +123,7 @@ class TenantGroups(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(GroupResponse)
+    @rest_decorators.marshal_with(TenantResponse)
     def delete(self, multi_tenancy):
         """
         Remove a group from a tenant
