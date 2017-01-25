@@ -20,7 +20,7 @@ function generate_checksum() {
 }
 
 
-export CORE_TAG_NAME="4.0m12"
+export CORE_TAG_NAME="4.0m13"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export REPO=$3
