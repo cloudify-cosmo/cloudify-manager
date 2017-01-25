@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from functools import wraps
+from functools import wraps, partial
 
 from flask_restful import Resource
 from flask import request, current_app
@@ -26,12 +26,13 @@ from .role_authorization import role_authorizer
 from .tenant_authorization import tenant_authorizer
 
 
-def authenticate_and_authorize(func):
+def authenticate_and_authorize(func, skip_tenant_auth=False):
     @wraps(func)
     def wrapper(*args, **kwargs):
         user = authenticator.authenticate(request)
         role_authorizer.authorize(user, request)
-        tenant_authorizer.authorize(user, request)
+        if not skip_tenant_auth:
+            tenant_authorizer.authorize(user, request)
 
         # Passed authentication and authorization
         return func(*args, **kwargs)
@@ -52,8 +53,20 @@ def missing_premium_feature_abort(func):
     return abort
 
 
+# A decorator that is identical to authenticate_and_authorize,
+# except that no tenant authorization is performed
+authenticate_and_authorize_skip_tenant = partial(
+    authenticate_and_authorize,
+    skip_tenant_auth=True
+)
+
+
 class SecuredResource(Resource):
     method_decorators = [authenticate_and_authorize]
+
+
+class SecuredResourceSkipTenantAuth(Resource):
+    method_decorators = [authenticate_and_authorize_skip_tenant]
 
 
 class MissingPremiumFeatureResource(Resource):

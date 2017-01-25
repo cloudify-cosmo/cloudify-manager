@@ -16,16 +16,41 @@
 from nose.plugins.attrib import attr
 
 from manager_rest import get_version_data
-from manager_rest.test import base_test
+from manager_rest.test.security_utils import get_admin_user
+from manager_rest.constants import CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME
+from manager_rest.test.base_test import BaseServerTestCase, LATEST_API_VERSION
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
-class VersionTestCase(base_test.BaseServerTestCase):
+@attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
+class VersionTestCase(BaseServerTestCase):
+    def setUp(self):
+        super(VersionTestCase, self).setUp()
+        admin = get_admin_user()
+        self.client = self.create_client_with_tenant(
+            username=admin['username'],
+            password=admin['password'],
+            tenant=DEFAULT_TENANT_NAME
+        )
+
+    @staticmethod
+    def _get_app(flask_app):
+        # Overriding the base class' app, because otherwise a custom
+        # auth header is set on every use of the client
+        return flask_app.test_client()
 
     def test_get_version(self):
+        self._test_get_version()
+
+    def test_version_does_not_require_tenant_header(self):
+        # Remove the the tenant header from the client, and make sure the
+        # rest call still works
+        self.client._client.headers.pop(CLOUDIFY_TENANT_HEADER, None)
+        self._test_get_version()
+
+    def _test_get_version(self):
         version_dict = get_version_data()
+        # Adding some values, for backwards compatibility with older clients
         version_dict['build'] = None
         version_dict['date'] = None
         version_dict['commit'] = None
-        self.assertDictEqual(self.client.manager.get_version(),
-                             version_dict)
+        self.assertDictEqual(self.client.manager.get_version(), version_dict)
