@@ -189,6 +189,7 @@ class Event(DerivedResource):
     message_code = db.Column(db.Text)
     event_type = db.Column(db.Text)
     operation = db.Column(db.Text)
+    node_id = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id, nullable=False)
 
@@ -219,6 +220,7 @@ class Log(DerivedResource):
     logger = db.Column(db.Text)
     level = db.Column(db.Text)
     operation = db.Column(db.Text)
+    node_id = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id, nullable=False)
 
