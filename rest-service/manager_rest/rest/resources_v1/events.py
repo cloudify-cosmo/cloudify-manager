@@ -144,7 +144,7 @@ class Events(SecuredResource):
 
         if '@timestamp' in sort:
             order_func = asc if sort['@timestamp'] == 'asc' else desc
-            query.order_by(order_func('timestamp'))
+            query = query.order_by(order_func('timestamp'))
 
         query = (
             query
