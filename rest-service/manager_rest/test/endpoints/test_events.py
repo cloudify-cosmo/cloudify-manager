@@ -28,14 +28,16 @@ from manager_rest.test import base_test
 EventResultTuple = namedtuple(
     'EventResult',
     [
-        'deployment_id',
-        'event_type',
-        'level',
         'timestamp',
+        'deployment_id',
         'message',
         'message_code',
-        'type',
+        'event_type',
+        'operation',
+        'node_id',
+        'level',
         'logger',
+        'type',
     ],
 )
 
@@ -192,18 +194,22 @@ class MapEventToEsTest(TestCase):
     def test_map_event(self):
         """Map event as returned by SQL query to elasticsearch style output."""
         sql_event = EventResult(
-            deployment_id='<deployment_id>',
-            event_type='<event_type>',
-            level=None,
             timestamp=datetime(2016, 12, 9),
+            deployment_id='<deployment_id>',
             message='<message>',
             message_code=None,
-            type='cloudify_event',
+            event_type='<event_type>',
+            operation='<operation>',
+            node_id='<node_id>',
             logger=None,
+            level=None,
+            type='cloudify_event',
         )
         expected_es_event = {
             'context': {
                 'deployment_id': '<deployment_id>',
+                'operation': '<operation>',
+                'node_id': '<node_id>',
             },
             'event_type': '<event_type>',
             'timestamp': '2016-12-09T00:00Z',
@@ -221,18 +227,22 @@ class MapEventToEsTest(TestCase):
     def test_map_log(self):
         """Map log as returned by SQL query to elasticsearch style output."""
         sql_log = EventResult(
-            deployment_id='<deployment_id>',
-            event_type=None,
-            level='<level>',
             timestamp=datetime(2016, 12, 9),
+            deployment_id='<deployment_id>',
             message='<message>',
             message_code=None,
-            type='cloudify_log',
+            event_type=None,
+            operation='<operation>',
+            node_id='<node_id>',
+            level='<level>',
             logger='<logger>',
+            type='cloudify_log',
         )
         expected_es_log = {
             'context': {
                 'deployment_id': '<deployment_id>',
+                'operation': '<operation>',
+                'node_id': '<node_id>',
             },
             'level': '<level>',
             'timestamp': '2016-12-09T00:00Z',
