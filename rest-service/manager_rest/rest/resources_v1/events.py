@@ -98,6 +98,8 @@ class Events(SecuredResource):
                 Event.message,
                 Event.message_code,
                 Event.event_type,
+                Event.operation,
+                Event.node_id,
                 literal_column('NULL').label('logger'),
                 literal_column('NULL').label('level'),
                 literal_column("'cloudify_event'").label('type'),
@@ -117,6 +119,8 @@ class Events(SecuredResource):
                     Log.message,
                     literal_column('NULL').label('message_code'),
                     literal_column('NULL').label('event_type'),
+                    Log.operation,
+                    Log.node_id,
                     Log.logger,
                     Log.level,
                     literal_column("'cloudify_log'").label('type'),
@@ -212,10 +216,19 @@ class Events(SecuredResource):
         event['message'] = {
             'text': event['message']
         }
+
+        context_fields = [
+            'deployment_id',
+            'operation',
+            'node_id',
+        ]
         event['context'] = {
-            'deployment_id': event['deployment_id']
+            field: event[field]
+            for field in context_fields
         }
-        del event['deployment_id']
+        for field in context_fields:
+            del event[field]
+
         if event['type'] == 'cloudify_event':
             event['message']['arguments'] = None
             del event['logger']
