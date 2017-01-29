@@ -65,7 +65,6 @@ class BuildSelectQueryTest(TestCase):
     # Parameters passed ot the _build_select_query_method
     # Each tests overwrites different fields as needed.
     DEFAULT_PARAMS = {
-        '_include': None,
         'filters': {
             'type': ['cloudify_event'],
         },
@@ -76,6 +75,7 @@ class BuildSelectQueryTest(TestCase):
         'sort': {
             '@timestamp': 'asc',
         },
+        'range_filters': {},
     }
 
     def setUp(self):
