@@ -176,6 +176,7 @@ class Events(SecuredResource):
             db.session.query(func.count('*').label('count'))
             .filter(
                 Event._execution_fk == Execution._storage_id,
+                Execution._deployment_fk == Deployment._storage_id,
             )
         )
 
@@ -187,6 +188,7 @@ class Events(SecuredResource):
                 db.session.query(func.count('*').label('count'))
                 .filter(
                     Log._execution_fk == Execution._storage_id,
+                    Execution._deployment_fk == Deployment._storage_id,
                 )
             )
             if 'execution_id' in filters:
