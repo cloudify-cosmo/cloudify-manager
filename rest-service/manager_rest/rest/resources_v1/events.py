@@ -54,6 +54,55 @@ class Events(SecuredResource):
     DEFAULT_SEARCH_SIZE = 10000
 
     @staticmethod
+    def _apply_range_filters(query, model, range_filters):
+        """Apply range filters to query.
+
+        :param query: Query in which the filtering should be applied
+        :type query: :class:`sqlalchemy.orm.query.Query`
+        :param model: Model to use to apply the filtering
+        :type model:
+            :class:`manager_rest.storage.resource_models.Event`
+            :class:`manager_rest.storage.resource_models.Log`
+        :param range_filters: Range filters passed as a request argument
+        :type range_filters: dict(str, dict(str))
+        :returns: Query with filtering applied
+        :rtype: :class:`sqlalchemy.orm.query.Query`
+
+        """
+        for field, range_filter in range_filters:
+            # Drop `@` prefix for compatibility
+            # with old Elasticsearch based implementation
+            field = field.lstrip('@')
+            if hasattr(model, field):
+                query = Events._apply_range_filters(
+                    query, model, field, range_filter)
+        return query
+
+    @staticmethod
+    def _apply_range_filter(query, model, field, range_filter):
+        """Apply a range filter to query.
+
+        :param query: Query in which the filtering should be applied
+        :type query: :class:`sqlalchemy.orm.query.Query`
+        :param model: Model to use to apply the filtering
+        :type model:
+            :class:`manager_rest.storage.resource_models.Event`
+            :class:`manager_rest.storage.resource_models.Log`
+        :param field: Field in the model that should be filtered
+        :type field: str
+        :param range_filter: Range filter passed as a request argument
+        :type range_filter: dict(str)
+        :returns: Query with filtering applied
+        :rtype: :class:`sqlalchemy.orm.query.Query`
+
+        """
+        if 'from' in range_filter:
+            query = query.filter(getattr(model, field) >= range_filter['from'])
+        if 'to' in range_filter:
+            query = query.filter(getattr(model, field) <= range_filter['to'])
+        return query
+
+    @staticmethod
     def _build_select_query(filters, pagination, sort, range_filters):
         """Build query used to list events for a given execution.
 
@@ -94,7 +143,7 @@ class Events(SecuredResource):
         :returns:
             A SQL query that returns the events found that match the conditions
             passed as arguments.
-        :rtype: :class:`sqlalchemy.sql.elements.TextClause`
+        :rtype: :class:`sqlalchemy.orm.query.Query`
 
         """
         if not isinstance(filters, dict) or 'type' not in filters:
@@ -124,15 +173,7 @@ class Events(SecuredResource):
             )
         )
 
-        if '@timestamp' in range_filters:
-            timestamp_range = range_filters['@timestamp']
-            if 'from' in timestamp_range:
-                query = query.filter(
-                    Event.timestamp >= timestamp_range['from'])
-            if 'to' in timestamp_range:
-                query = query.filter(
-                    Event.timestamp <= timestamp_range['to'])
-
+        query = Events._apply_range_filters(query, Event, range_filters)
         if 'deployment_id' in filters:
             query = query.filter(Deployment.id.in_(filters['deployment_id']))
 
@@ -155,18 +196,12 @@ class Events(SecuredResource):
                     Execution._deployment_fk == Deployment._storage_id,
                 )
             )
+            logs_query = Events._apply_range_filters(
+                logs_query, Log, range_filters)
             if 'deployment_id' in filters:
                 logs_query = logs_query.filter(
                     Deployment.id.in_(filters['deployment_id']))
 
-            if '@timestamp' in range_filters:
-                timestamp_range = range_filters['@timestamp']
-                if 'from' in timestamp_range:
-                    logs_query = logs_query.filter(
-                        Log.timestamp >= timestamp_range['from'])
-                if 'to' in timestamp_range:
-                    logs_query = logs_query.filter(
-                        Log.timestamp <= timestamp_range['to'])
             query = query.union(logs_query)
 
         if 'execution_id' in filters:
@@ -213,7 +248,7 @@ class Events(SecuredResource):
         :returns:
             A SQL query that returns the number of events found that match the
             conditions passed as arguments.
-        :rtype: :class:`sqlalchemy.sql.elements.TextClause`
+        :rtype: :class:`sqlalchemy.orm.query.Query`
 
         """
         if not isinstance(filters, dict) or 'type' not in filters:
@@ -237,14 +272,8 @@ class Events(SecuredResource):
         if 'deployment_id' in filters:
             events_query = events_query.filter(
                 Deployment.id.in_(filters['deployment_id']))
-        if '@timestamp' in range_filters:
-            timestamp_range = range_filters['@timestamp']
-            if 'from' in timestamp_range:
-                events_query = events_query.filter(
-                    Event.timestamp >= timestamp_range['from'])
-            if 'to' in timestamp_range:
-                events_query = events_query.filter(
-                    Event.timestamp <= timestamp_range['to'])
+        events_query = Events._apply_range_filters(
+            events_query, Event, range_filters)
 
         if 'cloudify_log' in filters['type']:
             logs_query = (
@@ -260,14 +289,8 @@ class Events(SecuredResource):
             if 'deployment_id' in filters:
                 logs_query = logs_query.filter(
                     Deployment.id.in_(filters['deployment_id']))
-            if '@timestamp' in range_filters:
-                timestamp_range = range_filters['@timestamp']
-                if 'from' in timestamp_range:
-                    logs_query = logs_query.filter(
-                        Log.timestamp >= timestamp_range['from'])
-                if 'to' in timestamp_range:
-                    logs_query = logs_query.filter(
-                        Log.timestamp <= timestamp_range['to'])
+            logs_query = Events._apply_range_filters(
+                logs_query, Log, range_filters)
 
             query = db.session.query(
                 events_query.subquery().c.count +
@@ -365,6 +388,7 @@ class Events(SecuredResource):
             for es_sort in request_dict['sort']
             for field, value in es_sort.items()
         }
+        # TBD: Support range filters in API v1 if needed
         range_filters = {}
 
         params = {
