@@ -185,7 +185,7 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _build_count_query(filters):
+    def _build_count_query(filters, range_filters):
         """Build query used to count events for a given execution.
 
         :param filters:
@@ -203,6 +203,13 @@ class Events(SecuredResource):
             filtering by a deployment and an execution that doesn't belong to
             that deployment won't return any result.
         :type filters: dict(str, str)
+        :param range_filters:
+            Filter out events that don't fall in a given range.
+
+            The only field that is supported for now is @timestamp (note the
+            `@` inherited from the old Elasticsearch implementation):
+                {'timestamp': {'from': <iso8601-date>, 'to': <iso8601-date>}}
+        :type range_filters: dict(str, str)
         :returns:
             A SQL query that returns the number of events found that match the
             conditions passed as arguments.
@@ -230,6 +237,14 @@ class Events(SecuredResource):
         if 'deployment_id' in filters:
             events_query = events_query.filter(
                 Deployment.id.in_(filters['deployment_id']))
+        if '@timestamp' in range_filters:
+            timestamp_range = range_filters['@timestamp']
+            if 'from' in timestamp_range:
+                events_query = events_query.filter(
+                    Event.timestamp >= timestamp_range['from'])
+            if 'to' in timestamp_range:
+                events_query = events_query.filter(
+                    Event.timestamp <= timestamp_range['to'])
 
         if 'cloudify_log' in filters['type']:
             logs_query = (
@@ -245,6 +260,14 @@ class Events(SecuredResource):
             if 'deployment_id' in filters:
                 logs_query = logs_query.filter(
                     Deployment.id.in_(filters['deployment_id']))
+            if '@timestamp' in range_filters:
+                timestamp_range = range_filters['@timestamp']
+                if 'from' in timestamp_range:
+                    logs_query = logs_query.filter(
+                        Log.timestamp >= timestamp_range['from'])
+                if 'to' in timestamp_range:
+                    logs_query = logs_query.filter(
+                        Log.timestamp <= timestamp_range['to'])
 
             query = db.session.query(
                 events_query.subquery().c.count +
