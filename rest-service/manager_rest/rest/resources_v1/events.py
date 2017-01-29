@@ -54,7 +54,7 @@ class Events(SecuredResource):
     DEFAULT_SEARCH_SIZE = 10000
 
     @staticmethod
-    def _build_select_query(filters, pagination, sort):
+    def _build_select_query(filters, pagination, sort, range_filters):
         """Build query used to list events for a given execution.
 
         :param filters:
@@ -73,6 +73,9 @@ class Events(SecuredResource):
             sort by timestamp in ascending order:
                 {'timestamp': 'asc'}
         :type sort: dict(str, str)
+        :param range_filters:
+            Filter out events that don't fall in a given timestamp range
+        :type range: dict(str, int)
         :returns:
             A SQL query that returns the events found that match the conditions
             passed as arguments.
@@ -106,6 +109,15 @@ class Events(SecuredResource):
             )
         )
 
+        if '@timestamp' in range_filters:
+            timestamp_range = range_filters['@timestamp']
+            if 'from' in timestamp_range:
+                query = query.filter(
+                    Event.timestamp >= timestamp_range['from'])
+            if 'to' in timestamp_range:
+                query = query.filter(
+                    Event.timestamp <= timestamp_range['to'])
+
         if 'deployment_id' in filters:
             query = query.filter(Deployment.id.in_(filters['deployment_id']))
 
@@ -131,6 +143,15 @@ class Events(SecuredResource):
             if 'deployment_id' in filters:
                 logs_query = logs_query.filter(
                     Deployment.id.in_(filters['deployment_id']))
+
+            if '@timestamp' in range_filters:
+                timestamp_range = range_filters['@timestamp']
+                if 'from' in timestamp_range:
+                    logs_query = logs_query.filter(
+                        Log.timestamp >= timestamp_range['from'])
+                if 'to' in timestamp_range:
+                    logs_query = logs_query.filter(
+                        Log.timestamp <= timestamp_range['to'])
             query = query.union(logs_query)
 
         if 'execution_id' in filters:
@@ -290,6 +311,7 @@ class Events(SecuredResource):
             for es_sort in request_dict['sort']
             for field, value in es_sort.items()
         }
+        range_filters = {}
 
         params = {
             'execution_id': (
@@ -301,7 +323,8 @@ class Events(SecuredResource):
         count_query = self._build_count_query(filters)
         total = count_query.params(**params).scalar()
 
-        select_query = self._build_select_query(filters, pagination, sort)
+        select_query = self._build_select_query(
+            filters, pagination, sort, range_filters)
 
         events = [
             self._map_event_to_es(_include, event)
