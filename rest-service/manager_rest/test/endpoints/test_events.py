@@ -101,13 +101,6 @@ class BuildSelectQueryTest(TestCase):
         Events._build_select_query(**params)
         self.assertTrue(self.db.session.query().filter().union.called)
 
-    def test_include_set_to_none(self):
-        """Include parameter is expected to be set to None."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['_include'] = '<invalid>'
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
         params = deepcopy(self.DEFAULT_PARAMS)
@@ -126,13 +119,6 @@ class BuildSelectQueryTest(TestCase):
         """Filter is set at least to cloudify_event."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters'] = {'type': ['cloudify_log']}
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
-    def test_sort_by_timestamp_required(self):
-        """Ordering by timestamp expected."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['sort'] = {'<field>': 'asc'}
         with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
