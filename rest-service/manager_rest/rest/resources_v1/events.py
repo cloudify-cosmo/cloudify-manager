@@ -227,6 +227,9 @@ class Events(SecuredResource):
 
         if 'execution_id' in filters:
             events_query.filter(Execution.id == bindparam('execution_id'))
+        if 'deployment_id' in filters:
+            events_query = events_query.filter(
+                Deployment.id.in_(filters['deployment_id']))
 
         if 'cloudify_log' in filters['type']:
             logs_query = (
@@ -239,6 +242,9 @@ class Events(SecuredResource):
             if 'execution_id' in filters:
                 logs_query = logs_query.filter(
                     Execution.id == bindparam('execution_id'))
+            if 'deployment_id' in filters:
+                logs_query = logs_query.filter(
+                    Deployment.id.in_(filters['deployment_id']))
 
             query = db.session.query(
                 events_query.subquery().c.count +
