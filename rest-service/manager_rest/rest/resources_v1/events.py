@@ -253,7 +253,8 @@ class Events(SecuredResource):
                 event[key] = '{}Z'.format(value.isoformat()[:-3])
 
         # Keep only keys passed in the _include request argument
-        event = dicttoolz.keyfilter(lambda key: key in _include, event)
+        if _include is not None:
+            event = dicttoolz.keyfilter(lambda key: key in _include, event)
 
         return event
 
