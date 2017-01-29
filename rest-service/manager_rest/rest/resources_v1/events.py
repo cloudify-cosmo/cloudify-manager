@@ -58,10 +58,19 @@ class Events(SecuredResource):
         """Build query used to list events for a given execution.
 
         :param filters:
-            Filter selection. It's used to decide if events:
-                {'type': ['cloudify_event']}
-            or both events and logs should be returned:
-                {'type': ['cloudify_event', 'cloudify_log']}
+            Filters selection.
+
+            Valid filtering criteria are:
+                - Type (return events or both events and logs):
+                    {'type': ['cloudify_event', 'cloudify_log']}
+                - Execution:
+                    {'execution_id': <some_id>}
+                - Deployment:
+                    {'deployment_id': <some_id>}
+
+            Results must match every the filtering criteria. In particular,
+            filtering by a deployment and an execution that doesn't belong to
+            that deployment won't return any result.
         :type filters: dict(str, str)
         :param pagination:
             Parameters used to limit results returned in a single query.
@@ -69,13 +78,19 @@ class Events(SecuredResource):
             and `OFFSET`.
         :type pagination: dict(str, int)
         :param sort:
-            Result sorting order. The only allowed and expected value is to
-            sort by timestamp in ascending order:
+            Result sorting order.
+
+            The only field that is supported for now is @timestamp (note the
+            `@` inherited from the old Elasticsearch implementation):
                 {'timestamp': 'asc'}
         :type sort: dict(str, str)
         :param range_filters:
-            Filter out events that don't fall in a given timestamp range
-        :type range: dict(str, int)
+            Filter out events that don't fall in a given range.
+
+            The only field that is supported for now is @timestamp (note the
+            `@` inherited from the old Elasticsearch implementation):
+                {'timestamp': {'from': <iso8601-date>, 'to': <iso8601-date>}}
+        :type range_filters: dict(str, str)
         :returns:
             A SQL query that returns the events found that match the conditions
             passed as arguments.
@@ -174,10 +189,19 @@ class Events(SecuredResource):
         """Build query used to count events for a given execution.
 
         :param filters:
-            Filter selection. It's used to decide if events:
-                {'type': ['cloudify_event']}
-            or both events and logs should be returned:
-                {'type': ['cloudify_event', 'cloudify_log']}
+            Filters selection.
+
+            Valid filtering criteria are:
+                - Type (return events or both events and logs):
+                    {'type': ['cloudify_event', 'cloudify_log']}
+                - Execution:
+                    {'execution_id': <some_id>}
+                - Deployment:
+                    {'deployment_id': <some_id>}
+
+            Results must match every the filtering criteria. In particular,
+            filtering by a deployment and an execution that doesn't belong to
+            that deployment won't return any result.
         :type filters: dict(str, str)
         :returns:
             A SQL query that returns the number of events found that match the
@@ -234,7 +258,7 @@ class Events(SecuredResource):
         expects data that has the same shape as elasticsearch would return.
 
         :param _include:
-            Projection used to get records from database (not currently used)
+            Projection used to get records from database
         :type _include: list(str)
         :param sql_event: Event data returned when SQL query was executed
         :type sql_event: :class:`sqlalchemy.util._collections.result`
@@ -276,6 +300,7 @@ class Events(SecuredResource):
                 event[key] = '{}Z'.format(value.isoformat()[:-3])
 
         # Keep only keys passed in the _include request argument
+        # TBD: Do the projection at the database level
         if _include is not None:
             event = dicttoolz.keyfilter(lambda key: key in _include, event)
 
