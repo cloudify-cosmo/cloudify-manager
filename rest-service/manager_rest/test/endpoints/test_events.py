@@ -199,6 +199,7 @@ class MapEventToEsTest(TestCase):
             },
             'event_type': '<event_type>',
             'timestamp': '2016-12-09T00:00Z',
+            '@timestamp': '2016-12-09T00:00Z',
             'message': {
                 'arguments': None,
                 'text': '<message>',
@@ -207,7 +208,7 @@ class MapEventToEsTest(TestCase):
             'type': 'cloudify_event',
         }
 
-        es_event = Events._map_event_to_es(sql_event)
+        es_event = Events._map_event_to_es(None, sql_event)
         self.assertDictEqual(es_event, expected_es_event)
 
     def test_map_log(self):
@@ -232,11 +233,13 @@ class MapEventToEsTest(TestCase):
             },
             'level': '<level>',
             'timestamp': '2016-12-09T00:00Z',
+            '@timestamp': '2016-12-09T00:00Z',
             'message': {'text': '<message>'},
             'message_code': None,
             'type': 'cloudify_log',
             'logger': '<logger>',
         }
 
-        es_log = Events._map_event_to_es(sql_log)
+        es_log = Events._map_event_to_es(None, sql_log)
+
         self.assertDictEqual(es_log, expected_es_log)
