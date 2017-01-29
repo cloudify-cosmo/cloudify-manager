@@ -24,6 +24,7 @@ from sqlalchemy import (
     func,
     literal_column,
 )
+from toolz import dicttoolz
 
 from manager_rest import manager_exceptions
 from manager_rest.rest.rest_decorators import (
@@ -53,12 +54,9 @@ class Events(SecuredResource):
     DEFAULT_SEARCH_SIZE = 10000
 
     @staticmethod
-    def _build_select_query(_include, filters, pagination, sort):
+    def _build_select_query(filters, pagination, sort):
         """Build query used to list events for a given execution.
 
-        :param _include:
-            Projection used to get records from database (not currently used)
-        :type _include: list(str)
         :param filters:
             Filter selection. It's used to decide if events:
                 {'type': ['cloudify_event']}
@@ -81,10 +79,6 @@ class Events(SecuredResource):
         :rtype: :class:`sqlalchemy.sql.elements.TextClause`
 
         """
-        if _include is not None:
-            raise manager_exceptions.BadParametersError(
-                'Projections with `_include` parameter are not supported')
-
         if not isinstance(filters, dict) or 'type' not in filters:
             raise manager_exceptions.BadParametersError(
                 'Filter by type is expected')
@@ -209,13 +203,16 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _map_event_to_es(sql_event):
+    def _map_event_to_es(_include, sql_event):
         """Restructure event data as if it was returned by elasticsearch.
 
         This restructuration is needed because the API in the past used
         elasticsearch as the backend and the client implementation still
         expects data that has the same shape as elasticsearch would return.
 
+        :param _include:
+            Projection used to get records from database (not currently used)
+        :type _include: list(str)
         :param sql_event: Event data returned when SQL query was executed
         :type sql_event: :class:`sqlalchemy.util._collections.result`
         :returns: Event as would have returned by elasticsearch
@@ -254,6 +251,10 @@ class Events(SecuredResource):
         for key, value in event.items():
             if isinstance(value, datetime):
                 event[key] = '{}Z'.format(value.isoformat()[:-3])
+
+        # Keep only keys passed in the _include request argument
+        event = dicttoolz.keyfilter(lambda key: key in _include, event)
+
         return event
 
     def _query_events(self):
@@ -297,11 +298,10 @@ class Events(SecuredResource):
         count_query = self._build_count_query(filters)
         total = count_query.params(**params).scalar()
 
-        select_query = self._build_select_query(
-            _include, filters, pagination, sort)
+        select_query = self._build_select_query(filters, pagination, sort)
 
         events = [
-            self._map_event_to_es(event)
+            self._map_event_to_es(_include, event)
             for event in select_query.params(**params).all()
         ]
 

@@ -102,11 +102,10 @@ class Events(resources_v1.Events):
         count_query = self._build_count_query(filters)
         total = count_query.params(**params).scalar()
 
-        select_query = self._build_select_query(
-            _include, filters, pagination, sort)
+        select_query = self._build_select_query(filters, pagination, sort)
 
         results = [
-            self._map_event_to_es(event)
+            self._map_event_to_es(_include, event)
             for event in select_query.params(**params).all()
         ]
 
