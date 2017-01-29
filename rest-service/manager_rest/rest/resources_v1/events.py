@@ -374,7 +374,7 @@ class Events(SecuredResource):
             'offset': pagination['offset'],
         }
 
-        count_query = self._build_count_query(filters)
+        count_query = self._build_count_query(filters, range_filters)
         total = count_query.params(**params).scalar()
 
         select_query = self._build_select_query(

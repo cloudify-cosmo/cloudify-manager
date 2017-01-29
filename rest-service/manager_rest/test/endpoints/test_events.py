@@ -142,34 +142,39 @@ class BuildCountQueryTest(TestCase):
     def test_from_events(self):
         """Query against events table."""
         filters = {'type': ['cloudify_event']}
-        Events._build_count_query(filters)
+        range_filters = {}
+        Events._build_count_query(filters, range_filters)
         self.assertEqual(
             self.db.session.query().filter().subquery.call_count, 1)
 
     def test_from_logs(self):
         """Query against both events and logs tables."""
         filters = {'type': ['cloudify_event', 'cloudify_log']}
-        Events._build_count_query(filters)
+        range_filters = {}
+        Events._build_count_query(filters, range_filters)
         self.assertEqual(
             self.db.session.query().filter().subquery.call_count, 2)
 
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
         filters = None
+        range_filters = {}
         with self.assertRaises(BadParametersError):
-            Events._build_count_query(filters)
+            Events._build_count_query(filters, range_filters)
 
     def test_filter_type_required(self):
         """Filter by type is expected."""
         filters = {}
+        range_filters = {}
         with self.assertRaises(BadParametersError):
-            Events._build_count_query(filters)
+            Events._build_count_query(filters, range_filters)
 
     def test_filter_type_event(self):
         """Filter is set at least to cloudify_event."""
         filters = {'type': ['cloudify_log']}
+        range_filters = {}
         with self.assertRaises(BadParametersError):
-            Events._build_count_query(filters)
+            Events._build_count_query(filters, range_filters)
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
