@@ -6,6 +6,8 @@ import subprocess
 import unittest
 import tempfile
 
+from nose.tools import nottest
+
 from cloudify_system_workflows.snapshot import make_zip64_archive
 
 
@@ -55,8 +57,15 @@ class MakeZip64Test(unittest.TestCase):
             'count={}'.format(chunk_count),
         ])
 
+    @nottest
     def test_huge_file(self):
-        """Size should not be be a problem with zip64 enabled."""
+        """Size should not be be a problem with zip64 enabled.
+
+        Note: This test case is disabled by default because it takes very long
+        to complete in a CI environment. To run it in your own machine delete
+        the `nottest` decorator above.
+
+        """
         zip_filename = os.path.join(self.base_dir, 'snapshot.zip')
         make_zip64_archive(zip_filename, self.data_dir)
 
