@@ -220,9 +220,8 @@ def _create(snapshot_id, config, include_metrics, include_credentials, **kw):
         snapshot_dir = os.path.join(snapshots_dir, snapshot_id)
         os.makedirs(snapshot_dir)
 
-        shutil.make_archive(
-            os.path.join(snapshot_dir, snapshot_id),
-            'zip',
+        make_zip64_archive(
+            os.path.join(snapshot_dir, '{}.zip'.format(snapshot_id)),
             tempdir
         )
         # end
