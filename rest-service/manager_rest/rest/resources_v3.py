@@ -14,16 +14,19 @@
 #  * limitations under the License.
 #
 
+from manager_rest import config
 from manager_rest.storage import models
+from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError)
 from manager_rest.security.resource_permissions import PermissionsHandler
 
-from flask import current_app
+from flask import current_app, request
 
 from . import rest_decorators
+from ..constants import CURRENT_TENANT_CONFIG
 from .responses_v3 import BaseResponse, ResourceID
 from .rest_utils import get_json_and_verify_params
 
@@ -387,3 +390,42 @@ class Permissions(SecuredResource):
         """
         params = self._get_and_validate_params()
         return PermissionsHandler.remove_permissions(params)
+
+
+class FileServerAuth(SecuredResource):
+    @staticmethod
+    def _verify_tenant(uri, tenant_name):
+        tenanted_resources = [
+            config.instance.file_server_blueprints_folder,
+            config.instance.file_server_uploaded_blueprints_folder,
+            config.instance.file_server_deployments_folder
+        ]
+        tenanted_resources = [r.strip('/') for r in tenanted_resources]
+        uri = uri.strip('/')
+
+        # verifying that the only tenant that can be accessed is the one in
+        # the header
+        for resource in tenanted_resources:
+            if uri.startswith(resource):
+                uri = uri.replace(resource, '').strip('/')
+                uri_tenant, _ = uri.split('/', 1)
+                if uri_tenant != tenant_name:
+                    raise_unauthorized_user_error(
+                        'Cannot access resources in /{0}/{1} '
+                        'with tenant {2}'.format(
+                            resource, uri_tenant, tenant_name))
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ResourceID)
+    def get(self):
+        """
+        Verify that the user is allowed to access requested resource.
+
+        The user cannot access tenants except the one in the request's header.
+        """
+        tenant_name = current_app.config[CURRENT_TENANT_CONFIG].name
+        uri = request.headers.get('X-Original-Uri')
+        self._verify_tenant(uri, tenant_name)
+
+        # verified successfully
+        return {}
