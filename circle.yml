@@ -17,6 +17,9 @@ dependencies:
     - pip install setuptools --upgrade
     - tox -c ./rest-service --notest
     - tox -c ./workflows --notest
+  cache_directories:
+    - ./rest-service/.tox
+    - ./workflows/.tox
 
 # Endpoints V1 runs with Infra V1
 # flake runs with Endpoints V2
