@@ -27,7 +27,6 @@ setup(
     description='Cloudify Integration Tests',
     zip_safe=False,
     install_requires=[
-        'cloudify==4.0a13',
         'pika==0.9.14',
         'elasticsearch==1.6.0',
         'celery==3.1.17',
