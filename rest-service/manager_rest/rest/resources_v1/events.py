@@ -73,9 +73,11 @@ class Events(SecuredResource):
             # Drop `@` prefix for compatibility
             # with old Elasticsearch based implementation
             field = field.lstrip('@')
-            if hasattr(model, field):
-                query = Events._apply_range_filters(
-                    query, model, field, range_filter)
+            if not hasattr(model, field):
+                raise manager_exceptions.BadParametersError(
+                    'Unknown field to filter by range: {}'.format(field))
+            query = Events._apply_range_filters(
+                query, model, field, range_filter)
         return query
 
     @staticmethod
