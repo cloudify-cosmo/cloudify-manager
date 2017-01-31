@@ -112,9 +112,9 @@ class SnapshotCreate(object):
 
     def _create_archive(self):
         snapshot_archive_name = self._get_snapshot_archive_name()
-        ctx.logger.info('Creating snapshot archive: {0}'
-                        .format(snapshot_archive_name))
-        shutil.make_archive(snapshot_archive_name, 'zip', self._tempdir)
+        ctx.logger.info(
+            'Creating snapshot archive: {0}'.format(snapshot_archive_name))
+        utils.make_zip64_archive(snapshot_archive_name, self._tempdir)
 
     def _get_snapshot_archive_name(self):
         """Return the base name for the snapshot archive
@@ -122,7 +122,7 @@ class SnapshotCreate(object):
         snapshots_dir = self._get_and_create_snapshots_dir()
         snapshot_dir = os.path.join(snapshots_dir, self._snapshot_id)
         os.makedirs(snapshot_dir)
-        return os.path.join(snapshot_dir, self._snapshot_id)
+        return os.path.join(snapshot_dir, '{}.zip'.format(self._snapshot_id))
 
     def _get_and_create_snapshots_dir(self):
         """Create (if necessary) and return the snapshots directory
