@@ -69,7 +69,7 @@ class Events(SecuredResource):
         :rtype: :class:`sqlalchemy.orm.query.Query`
 
         """
-        for field, range_filter in range_filters:
+        for field, range_filter in range_filters.items():
             # Drop `@` prefix for compatibility
             # with old Elasticsearch based implementation
             field = field.lstrip('@')
