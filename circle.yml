@@ -19,7 +19,7 @@ dependencies:
       case $CIRCLE_NODE_INDEX in
       0)
         tox -c ./rest-service/tox.ini -e clientV1-endpoints --notest
-        tox -c ./rest-service/tox.ini -e clientV1-insfrastructure --notest
+        tox -c ./rest-service/tox.ini -e clientV1-infrastructure --notest
         ;;
       1)
         tox -c ./rest-service/tox.ini -e clientV2-endpoints --notest
