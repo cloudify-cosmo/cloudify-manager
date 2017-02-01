@@ -109,7 +109,7 @@ class Events(SecuredResource):
             if not hasattr(model, field):
                 raise manager_exceptions.BadParametersError(
                     'Unknown field to filter by range: {}'.format(field))
-            query = Events._apply_range_filters(
+            query = Events._apply_range_filter(
                 query, model, field, range_filter)
         return query
 
