@@ -15,6 +15,11 @@ dependencies:
   override:
     - pip install tox
     - pip install setuptools --upgrade
+    - tox -c ./rest-service/tox.ini --notest
+    - tox -c ./workflows/tox.ini --notest
+  cache_directories:
+    - ./rest-service/.tox
+    - ./workflows/.tox
 
 # Endpoints V1 runs with Infra V1
 # flake runs with Endpoints V2
