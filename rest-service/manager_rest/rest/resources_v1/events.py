@@ -54,6 +54,39 @@ class Events(SecuredResource):
     DEFAULT_SEARCH_SIZE = 10000
 
     @staticmethod
+    def _apply_sort(query, sort):
+        """Apply sorting criteria.
+
+        Sorting will be rejected if the field doesn't match any of the column
+        names that has been selected for the query. Note that the query
+        involves two models at the same time, it is not possible to just check
+        a model.
+
+        :param query: Query in which the sorting should be applied
+        :type query: :class:`sqlalchemy.orm.query.Query`
+        :param sort: Sorting criteria passed as a request argument
+        :type sort: dict(str, str)
+        :returns: Query with sorting criteria applied
+        :rtype: :class:`sqlalchemy.orm.query.Query`
+
+        """
+        column_names = set(
+            column_description['name']
+            for column_description in query.column_descriptions
+        )
+        for field, order in sort.items():
+            # Drop `@` prefix for compatibility
+            # with old Elasticsearch based implementation
+            field = field.lstrip('@')
+            if field not in column_names:
+                raise manager_exceptions.BadParametersError(
+                    'Unknown field to sort by: {}'.format(field))
+
+            order_func = asc if order == 'asc' else desc
+            query = query.order_by(order_func(field))
+        return query
+
+    @staticmethod
     def _apply_range_filters(query, model, range_filters):
         """Apply range filters to query.
 
@@ -209,10 +242,7 @@ class Events(SecuredResource):
         if 'execution_id' in filters:
             query = query.filter(Execution.id == bindparam('execution_id'))
 
-        if '@timestamp' in sort:
-            order_func = asc if sort['@timestamp'] == 'asc' else desc
-            query = query.order_by(order_func('timestamp'))
-
+        query = Events._apply_sort(query, sort)
         query = (
             query
             .limit(bindparam('limit'))
