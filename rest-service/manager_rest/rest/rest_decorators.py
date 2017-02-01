@@ -207,6 +207,7 @@ def rangeable(func):
     """
     Decorator for enabling range
     """
+    @wraps(func)
     def create_range_params(*args, **kw):
         range_args = request.args.getlist("_range")
         range_params = {}
