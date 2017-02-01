@@ -204,8 +204,28 @@ def projection(func):
 
 
 def rangeable(func):
-    """
-    Decorator for enabling range
+    """Decorator for enabling filtering by a range of values.
+
+    Range filtering is expected to be passed in the `_range` header as a list
+    of triplets with the following values separated by commmas:
+        - Field: The name of the field to filter by
+        - From: The minimum value to include in the results
+        - To: The maxium value to include in the results
+
+    The range filters are mapped to a dictionary where the keys are the names
+    of the fields to filter and the values are dictionaries that have
+    `from`/`to` as fields with their values.
+
+    :param func:
+        The function to be wrapped. It is assumed that the function will be
+        implementing an endpoint.
+    :type func: callable
+    :returns:
+        Decorated function in which the `range_filters` parameter is injected
+        with the values from the `_range` headers mapped to a dictionary as
+        explained above.
+    :rtype: callable
+
     """
     @wraps(func)
     def create_range_params(*args, **kw):
