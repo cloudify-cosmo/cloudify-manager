@@ -23,6 +23,7 @@ from voluptuous import Invalid
 
 from manager_rest.rest.rest_decorators import (
     paginate,
+    rangeable,
     sortable,
 )
 from manager_rest.test import base_test
@@ -67,6 +68,58 @@ class PaginateTest(TestCase):
                 request.args = args
                 with self.assertRaises(Invalid):
                     paginate(verify)()
+
+
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+class RangeableTest(TestCase):
+
+    """Rangeable decorator test cases."""
+
+    def test_empty(self):
+        """No range arguments mapped to an empty dictionary."""
+        def verify(range_filters):
+            self.assertDictEqual(range_filters, {})
+            return Mock()
+
+        with patch('manager_rest.rest.rest_decorators.request') as request:
+            request.args.getlist.return_value = []
+            rangeable(verify)()
+
+    def test_invalid(self):
+        """Exception is raised for invalid values."""
+        with patch('manager_rest.rest.rest_decorators.request') as request:
+            invalid_values = [
+                'invalid',
+                ',,',
+                'field,from,to',  # from and to should be datetimes
+            ]
+            for invalid_value in invalid_values:
+                request.args.getlist.return_value = invalid_value
+                with self.assertRaises(Invalid):
+                    rangeable(Mock)()
+
+    def test_valid(self):
+        """Valid value should pass validation as expected."""
+
+        valid_datetime = '2016-09-12T00:00:00.0Z'
+
+        def verify(range_filters):
+            self.assertDictEqual(
+                range_filters,
+                {
+                    'field': {
+                        'from': valid_datetime,
+                        'to': valid_datetime,
+                    },
+                },
+            )
+            return Mock()
+
+        with patch('manager_rest.rest.rest_decorators.request') as request:
+            request.args.getlist.return_value = [
+                'field,{0},{0}'.format(valid_datetime),
+            ]
+            rangeable(verify)()
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
