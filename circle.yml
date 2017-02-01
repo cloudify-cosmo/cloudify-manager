@@ -23,6 +23,7 @@ dependencies:
         ;;
       1)
         tox -c ./rest-service/tox.ini -e clientV2-endpoints --notest
+        pip install flake8
         ;;
       2)
         tox -c ./rest-service/tox.ini -e clientV2-infrastructure --notest
@@ -58,7 +59,7 @@ test:
           ;;
         1)
           tox -c ./rest-service/tox.ini -e clientV2-endpoints
-          ./run-tests.sh flake8
+          flake8 plugins/riemann-controller/ workflows/ rest-service/ tests/
           ;;
         2)
           tox -c ./rest-service/tox.ini -e clientV2-infrastructure
