@@ -83,7 +83,7 @@ class SnapshotRestore(object):
             es = utils.get_es_client(self._config)
 
             with Postgres(self._config) as postgres:
-                self._restore_db(es, postgres)
+                self._restore_db(postgres)
                 self._restore_files_to_manager()
                 self._restore_events(es, metadata)
                 self._restore_plugins(existing_plugins)
@@ -119,7 +119,7 @@ class SnapshotRestore(object):
             new_tenant=new_tenant
         )
 
-    def _restore_db(self, es, postgres):
+    def _restore_db(self, postgres):
         ctx.logger.info('Restoring database')
         if self._snapshot_version >= V_4_0_0:
             postgres.restore(self._tempdir)
@@ -135,7 +135,6 @@ class SnapshotRestore(object):
                 self._tempdir,
                 tenant_name
             )
-            es.indices.flush()
 
     def _should_clean_old_db_for_3_x_snapshot(self):
         """The one case in which the DB should be cleared is when restoring
