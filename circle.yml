@@ -53,28 +53,28 @@ test:
     - ? |
         case $CIRCLE_NODE_INDEX in
         0)
-          ./run-tests.sh test-rest-service-endpoints-v1-client
-          ./run-tests.sh test-rest-service-infrastructure-v1-client
+          tox -c ./rest-service/tox.ini -e clientV1-endpoints
+          tox -c ./rest-service/tox.ini -e clientV1-infrastructure
           ;;
         1)
-          ./run-tests.sh test-rest-service-endpoints-v2-client
+          tox -c ./rest-service/tox.ini -e clientV2-endpoints
           ./run-tests.sh flake8
           ;;
         2)
-          ./run-tests.sh test-rest-service-infrastructure-v2-client
-          ./run-tests.sh test-system-workflows
+          tox -c ./rest-service/tox.ini -e clientV2-infrastructure
+          tox -c ./workflows/tox.ini
           ;;
         3)
-          ./run-tests.sh test-rest-service-endpoints-v2_1-client
+          tox -c ./rest-service/tox.ini -e clientV2_1-endpoints
           ;;
         4)
-          ./run-tests.sh test-rest-service-infrastructure-v2_1-client
+          tox -c ./rest-service/tox.ini -e clientV2_1-infrastructure
           ;;
         5)
-          ./run-tests.sh test-rest-service-endpoints-v3-client
+          tox -c ./rest-service/tox.ini -e clientV3-endpoints
           ;;
         6)
-          ./run-tests.sh test-rest-service-infrastructure-v3-client
+          tox -c ./rest-service/tox.ini -e clientV3-infrastructure
           ;;
         esac
       :
