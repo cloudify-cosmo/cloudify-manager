@@ -91,24 +91,19 @@ class Events(resources_v1.Events):
         :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
 
         """
-        if 'execution_id' not in filters:
-            raise manager_exceptions.BadParametersError(
-                'Expected execution_id parameter')
-
         params = {
-            'execution_id': filters['execution_id'][0],
             'limit': pagination.get('size', self.DEFAULT_SEARCH_SIZE),
             'offset': pagination.get('offset', 0),
         }
 
-        count_query = self._build_count_query(filters)
+        count_query = self._build_count_query(filters, range_filters)
         total = count_query.params(**params).scalar()
 
         select_query = self._build_select_query(
-            _include, filters, pagination, sort)
+            filters, pagination, sort, range_filters)
 
         results = [
-            self._map_event_to_es(event)
+            self._map_event_to_es(_include, event)
             for event in select_query.params(**params).all()
         ]
 

@@ -65,7 +65,6 @@ class BuildSelectQueryTest(TestCase):
     # Parameters passed ot the _build_select_query_method
     # Each tests overwrites different fields as needed.
     DEFAULT_PARAMS = {
-        '_include': None,
         'filters': {
             'type': ['cloudify_event'],
         },
@@ -76,6 +75,7 @@ class BuildSelectQueryTest(TestCase):
         'sort': {
             '@timestamp': 'asc',
         },
+        'range_filters': {},
     }
 
     def setUp(self):
@@ -87,26 +87,34 @@ class BuildSelectQueryTest(TestCase):
         """
         db_patcher = patch('manager_rest.rest.resources_v1.events.db')
         self.db = db_patcher.start()
+
+        # Set column descriptions (used by sorting functionality)
+        column_descriptions = [
+                {'name': 'timestamp'},
+        ]
+        self.db.session.query().filter().column_descriptions = (
+            column_descriptions)
+        self.db.session.query().filter().union().column_descriptions = (
+            column_descriptions)
         self.addCleanup(db_patcher.stop)
 
     def test_from_events(self):
         """Query against events table."""
         Events._build_select_query(**self.DEFAULT_PARAMS)
-        self.assertFalse(self.db.session.query().filter().union.called)
+        self.assertLessEqual(
+            self.db.session.query().filter().union.call_count,
+            1,
+        )
 
     def test_from_logs(self):
         """Query against both events and logs tables."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters']['type'].append('cloudify_log')
         Events._build_select_query(**params)
-        self.assertTrue(self.db.session.query().filter().union.called)
-
-    def test_include_set_to_none(self):
-        """Include parameter is expected to be set to None."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['_include'] = '<invalid>'
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
+        self.assertGreater(
+            self.db.session.query().filter().union.call_count,
+            1,
+        )
 
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
@@ -126,13 +134,6 @@ class BuildSelectQueryTest(TestCase):
         """Filter is set at least to cloudify_event."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters'] = {'type': ['cloudify_log']}
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
-    def test_sort_by_timestamp_required(self):
-        """Ordering by timestamp expected."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['sort'] = {'<field>': 'asc'}
         with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
@@ -156,34 +157,39 @@ class BuildCountQueryTest(TestCase):
     def test_from_events(self):
         """Query against events table."""
         filters = {'type': ['cloudify_event']}
-        Events._build_count_query(filters)
+        range_filters = {}
+        Events._build_count_query(filters, range_filters)
         self.assertEqual(
             self.db.session.query().filter().subquery.call_count, 1)
 
     def test_from_logs(self):
         """Query against both events and logs tables."""
         filters = {'type': ['cloudify_event', 'cloudify_log']}
-        Events._build_count_query(filters)
+        range_filters = {}
+        Events._build_count_query(filters, range_filters)
         self.assertEqual(
             self.db.session.query().filter().subquery.call_count, 2)
 
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
         filters = None
+        range_filters = {}
         with self.assertRaises(BadParametersError):
-            Events._build_count_query(filters)
+            Events._build_count_query(filters, range_filters)
 
     def test_filter_type_required(self):
         """Filter by type is expected."""
         filters = {}
+        range_filters = {}
         with self.assertRaises(BadParametersError):
-            Events._build_count_query(filters)
+            Events._build_count_query(filters, range_filters)
 
     def test_filter_type_event(self):
         """Filter is set at least to cloudify_event."""
         filters = {'type': ['cloudify_log']}
+        range_filters = {}
         with self.assertRaises(BadParametersError):
-            Events._build_count_query(filters)
+            Events._build_count_query(filters, range_filters)
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -213,6 +219,7 @@ class MapEventToEsTest(TestCase):
             },
             'event_type': '<event_type>',
             'timestamp': '2016-12-09T00:00Z',
+            '@timestamp': '2016-12-09T00:00Z',
             'message': {
                 'arguments': None,
                 'text': '<message>',
@@ -221,7 +228,7 @@ class MapEventToEsTest(TestCase):
             'type': 'cloudify_event',
         }
 
-        es_event = Events._map_event_to_es(sql_event)
+        es_event = Events._map_event_to_es(None, sql_event)
         self.assertDictEqual(es_event, expected_es_event)
 
     def test_map_log(self):
@@ -246,11 +253,13 @@ class MapEventToEsTest(TestCase):
             },
             'level': '<level>',
             'timestamp': '2016-12-09T00:00Z',
+            '@timestamp': '2016-12-09T00:00Z',
             'message': {'text': '<message>'},
             'message_code': None,
             'type': 'cloudify_log',
             'logger': '<logger>',
         }
 
-        es_log = Events._map_event_to_es(sql_log)
+        es_log = Events._map_event_to_es(None, sql_log)
+
         self.assertDictEqual(es_log, expected_es_log)
