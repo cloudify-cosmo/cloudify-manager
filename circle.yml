@@ -15,8 +15,32 @@ dependencies:
   override:
     - pip install tox
     - pip install setuptools --upgrade
-    - tox -c ./rest-service/tox.ini --notest
-    - tox -c ./workflows/tox.ini --notest
+    - |
+      case $CIRCLE_NODE_INDEX in
+      0)
+        tox -c ./rest-service/tox.ini -e clientV1-endpoints --notest
+        tox -c ./rest-service/tox.ini -e clientV1-insfrastructure --notest
+        ;;
+      1)
+        tox -c ./rest-service/tox.ini -e clientV2-endpoints --notest
+        ;;
+      2)
+        tox -c ./rest-service/tox.ini -e clientV2-infrastructure --notest
+        tox -c ./workflows/tox.ini --notest
+        ;;
+      3)
+        tox -c ./rest-service/tox.ini -e clientV2_1-endpoints --notest
+        ;;
+      4)
+        tox -c ./rest-service/tox.ini -e clientV2_1-infrastructure --notest
+        ;;
+      5)
+        tox -c ./rest-service/tox.ini -e clientV3-endpoints --notest
+        ;;
+      6)
+        tox -c ./rest-service/tox.ini -e clientV3-infrastructure --notest
+        ;;
+      esac
   cache_directories:
     - ./rest-service/.tox
     - ./workflows/.tox
