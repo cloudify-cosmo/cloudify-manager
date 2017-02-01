@@ -96,9 +96,6 @@ class Events(resources_v1.Events):
             'offset': pagination.get('offset', 0),
         }
 
-        if 'execution_id' in filters:
-            params['execution_id'] = filters['execution_id'][0]
-
         count_query = self._build_count_query(filters, range_filters)
         total = count_query.params(**params).scalar()
 

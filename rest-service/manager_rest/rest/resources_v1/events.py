@@ -52,6 +52,18 @@ class Events(SecuredResource):
     """
 
     DEFAULT_SEARCH_SIZE = 10000
+    ALLOWED_FILTERS = [
+        (Execution, 'execution_id'),
+        (Deployment, 'deployment_id'),
+    ]
+
+    @staticmethod
+    def _apply_filters(query, filters):
+        """Apply filters to the query."""
+        for model, field in Events.ALLOWED_FILTERS:
+            if field in filters:
+                query = query.filter(model.id.in_(filters[field]))
+        return query
 
     @staticmethod
     def _apply_sort(query, sort):
@@ -208,9 +220,8 @@ class Events(SecuredResource):
             )
         )
 
+        query = Events._apply_filters(query, filters)
         query = Events._apply_range_filters(query, Event, range_filters)
-        if 'deployment_id' in filters:
-            query = query.filter(Deployment.id.in_(filters['deployment_id']))
 
         if 'cloudify_log' in filters['type']:
             logs_query = (
@@ -231,16 +242,11 @@ class Events(SecuredResource):
                     Execution._deployment_fk == Deployment._storage_id,
                 )
             )
+            logs_query = Events._apply_filters(logs_query, filters)
             logs_query = Events._apply_range_filters(
                 logs_query, Log, range_filters)
-            if 'deployment_id' in filters:
-                logs_query = logs_query.filter(
-                    Deployment.id.in_(filters['deployment_id']))
 
             query = query.union(logs_query)
-
-        if 'execution_id' in filters:
-            query = query.filter(Execution.id == bindparam('execution_id'))
 
         query = Events._apply_sort(query, sort)
         query = (
@@ -299,11 +305,7 @@ class Events(SecuredResource):
             )
         )
 
-        if 'execution_id' in filters:
-            events_query.filter(Execution.id == bindparam('execution_id'))
-        if 'deployment_id' in filters:
-            events_query = events_query.filter(
-                Deployment.id.in_(filters['deployment_id']))
+        events_query = Events._apply_filters(events_query, filters)
         events_query = Events._apply_range_filters(
             events_query, Event, range_filters)
 
@@ -315,12 +317,7 @@ class Events(SecuredResource):
                     Execution._deployment_fk == Deployment._storage_id,
                 )
             )
-            if 'execution_id' in filters:
-                logs_query = logs_query.filter(
-                    Execution.id == bindparam('execution_id'))
-            if 'deployment_id' in filters:
-                logs_query = logs_query.filter(
-                    Deployment.id.in_(filters['deployment_id']))
+            logs_query = Events._apply_filters(logs_query, filters)
             logs_query = Events._apply_range_filters(
                 logs_query, Log, range_filters)
 
@@ -411,6 +408,9 @@ class Events(SecuredResource):
             filters = {'type': ['cloudify_event', 'cloudify_log']}
         else:
             filters = {'type': ['cloudify_event']}
+        filters['execution_id'] = [
+            es_query['must'][0]['match']['context.execution_id'],
+        ]
         pagination = {
             'size': request_dict.get('size', self.DEFAULT_SEARCH_SIZE),
             'offset': request_dict['from'],
@@ -424,8 +424,6 @@ class Events(SecuredResource):
         range_filters = {}
 
         params = {
-            'execution_id': (
-                es_query['must'][0]['match']['context.execution_id']),
             'limit': pagination['size'],
             'offset': pagination['offset'],
         }
