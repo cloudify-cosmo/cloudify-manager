@@ -15,7 +15,7 @@ dependencies:
   override:
     - pip install tox
     - pip install setuptools --upgrade
-    - ./run_tests.sh --install_dependencies
+    - ./run-tests.sh --install_dependencies
   cache_directories:
     - ./rest-service/.tox
     - ./workflows/.tox
@@ -25,7 +25,7 @@ dependencies:
 # System workflows runs with Infra V2
 test:
   override:
-    - ./run_tests.sh:
+    - ./run-tests.sh:
         parallel: true
 
 deployment:
