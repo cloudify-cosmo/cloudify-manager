@@ -15,45 +15,14 @@ dependencies:
   override:
     - pip install tox
     - pip install setuptools --upgrade
-    - tox -c ./rest-service/tox.ini --notest
-    - tox -c ./workflows/tox.ini --notest
+    - ./run-tests.sh --install-dependencies
   cache_directories:
     - ./rest-service/.tox
     - ./workflows/.tox
 
-# Endpoints V1 runs with Infra V1
-# flake runs with Endpoints V2
-# System workflows runs with Infra V2
 test:
   override:
-    - ? |
-        case $CIRCLE_NODE_INDEX in
-        0)
-          ./run-tests.sh test-rest-service-endpoints-v1-client
-          ./run-tests.sh test-rest-service-infrastructure-v1-client
-          ;;
-        1)
-          ./run-tests.sh test-rest-service-endpoints-v2-client
-          ./run-tests.sh flake8
-          ;;
-        2)
-          ./run-tests.sh test-rest-service-infrastructure-v2-client
-          ./run-tests.sh test-system-workflows
-          ;;
-        3)
-          ./run-tests.sh test-rest-service-endpoints-v2_1-client
-          ;;
-        4)
-          ./run-tests.sh test-rest-service-infrastructure-v2_1-client
-          ;;
-        5)
-          ./run-tests.sh test-rest-service-endpoints-v3-client
-          ;;
-        6)
-          ./run-tests.sh test-rest-service-infrastructure-v3-client
-          ;;
-        esac
-      :
+    - ./run-tests.sh:
         parallel: true
 
 deployment:

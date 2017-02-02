@@ -1,78 +1,73 @@
 #!/bin/bash -e
 
-test_system_workflows()
-{
-    echo "### Testing rest-service with V2.1 client..."
-    pushd workflows && tox && popd
+REST_CONFIG=./rest-service/tox.ini
+WORKFLOWS_CONFIG=./workflows/tox.ini
+
+install_dependencies() {
+    echo "### Installing dependencies..."
+    case $CIRCLE_NODE_INDEX in
+        0)
+            tox -c $REST_CONFIG -e clientV1-endpoints --notest
+            tox -c $REST_CONFIG -e clientV1-infrastructure --notest
+            ;;
+        1)
+            tox -c $REST_CONFIG -e clientV2-endpoints --notest
+            pip install flake8
+            ;;
+        2)
+            tox -c $REST_CONFIG -e clientV2-infrastructure --notest
+            tox -c $WORKFLOWS_CONFIG --notest
+            ;;
+        3)
+            tox -c $REST_CONFIG -e clientV2_1-endpoints --notest
+            ;;
+        4)
+            tox -c $REST_CONFIG -e clientV2_1-infrastructure --notest
+            ;;
+        5)
+            tox -c $REST_CONFIG -e clientV3-endpoints --notest
+            ;;
+        6)
+            tox -c $REST_CONFIG -e clientV3-infrastructure --notest
+            ;;
+    esac
 }
 
-test_rest_service_v3_endpoints()
-{
-    echo "### Testing rest-service endpoints with V3 client..."
-    pushd rest-service && tox -e clientV3-endpoints && popd
-}
-
-test_rest_service_v3_infrastructure()
-{
-    echo "### Testing rest-service infrastructure with V3 client..."
-    pushd rest-service && tox -e clientV3-infrastructure && popd
-}
-
-test_rest_service_v2_1_endpoints()
-{
-    echo "### Testing rest-service endpoints with V2.1 client..."
-    pushd rest-service && tox -e clientV2_1-endpoints && popd
-}
-
-test_rest_service_v2_1_infrastructure()
-{
-    echo "### Testing rest-service infrastructure with V2.1 client..."
-    pushd rest-service && tox -e clientV2_1-infrastructure && popd
-}
-
-test_rest_service_v2_endpoints()
-{
-    echo "### Testing rest-service endpoints with V2 client..."
-    pushd rest-service && tox -e clientV2-endpoints && popd
-}
-
-test_rest_service_v2_infrastructure()
-{
-    echo "### Testing rest-service infrastructure with V2 client..."
-    pushd rest-service && tox -e clientV2-infrastructure && popd
-}
-
-test_rest_service_v1_endpoints()
-{
-    echo "### Testing rest-service endpoints V1 client..."
-    pushd rest-service && tox -e clientV1-endpoints && popd
-}
-
-test_rest_service_v1_infrastructure()
-{
-    echo "### Testing rest-service infrastructure V1 client..."
-    pushd rest-service && tox -e clientV1-infrastructure && popd
-}
-
-run_flake8()
-{
-    echo "### Running flake8..."
-    pip install flake8
-    flake8 plugins/riemann-controller/
-    flake8 workflows/
-    flake8 rest-service/
-    flake8 tests/
+run() {
+    echo "### Running tests..."
+    case $CIRCLE_NODE_INDEX in
+        0)
+            tox -c $REST_CONFIG -e clientV1-endpoints
+            tox -c $REST_CONFIG -e clientV1-infrastructure
+            ;;
+        1)
+            tox -c $REST_CONFIG -e clientV2-endpoints
+            flake8 plugins/riemann-controller/ workflows/ rest-service/ tests/
+            ;;
+        2)
+            tox -c $REST_CONFIG -e clientV2-infrastructure
+            tox -c $WORKFLOWS_CONFIG
+            ;;
+        3)
+            tox -c $REST_CONFIG -e clientV2_1-endpoints
+            ;;
+        4)
+            tox -c $REST_CONFIG -e clientV2_1-infrastructure
+            ;;
+        5)
+            tox -c $REST_CONFIG -e clientV3-endpoints
+            ;;
+        6)
+            tox -c $REST_CONFIG -e clientV3-infrastructure
+            ;;
+    esac
 }
 
 case $1 in
-    test-rest-service-endpoints-v3-client           ) test_rest_service_v3_endpoints;;
-    test-rest-service-infrastructure-v3-client      ) test_rest_service_v3_infrastructure;;
-    test-rest-service-endpoints-v2_1-client         ) test_rest_service_v2_1_endpoints;;
-    test-rest-service-infrastructure-v2_1-client    ) test_rest_service_v2_1_infrastructure;;
-    test-rest-service-endpoints-v2-client           ) test_rest_service_v2_endpoints;;
-    test-rest-service-infrastructure-v2-client      ) test_rest_service_v2_infrastructure;;
-    test-rest-service-endpoints-v1-client           ) test_rest_service_v1_endpoints;;
-    test-rest-service-infrastructure-v1-client      ) test_rest_service_v1_infrastructure;;
-    flake8                                          ) run_flake8;;
-    test-system-workflows                           ) test_system_workflows;;
+    --install-dependencies)
+        install_dependencies
+        ;;
+    *)
+        run
+        ;;
 esac
