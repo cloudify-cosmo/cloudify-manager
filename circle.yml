@@ -15,7 +15,7 @@ dependencies:
   override:
     - pip install tox
     - pip install setuptools --upgrade
-    - ./run-tests.sh --install_dependencies
+    - ./run-tests.sh --install-dependencies
   cache_directories:
     - ./rest-service/.tox
     - ./workflows/.tox
