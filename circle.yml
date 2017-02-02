@@ -20,9 +20,6 @@ dependencies:
     - ./rest-service/.tox
     - ./workflows/.tox
 
-# Endpoints V1 runs with Infra V1
-# flake runs with Endpoints V2
-# System workflows runs with Infra V2
 test:
   override:
     - ./run-tests.sh:
