@@ -15,7 +15,6 @@
 #
 
 from manager_rest import config
-from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
@@ -28,8 +27,9 @@ from flask_security import current_user
 from flask import current_app, request
 
 from . import rest_decorators
-from ..constants import CURRENT_TENANT_CONFIG
 from .responses_v3 import BaseResponse, ResourceID
+from ..security.authentication import authenticator
+from ..security.tenant_authorization import tenant_authorizer
 from .rest_utils import get_json_and_verify_params, set_restart_task
 
 try:
@@ -395,9 +395,9 @@ class Permissions(SecuredResource):
         return PermissionsHandler.remove_permissions(params)
 
 
-class FileServerAuth(SecuredResource):
+class FileServerAuth(SecuredMultiTenancyResourceSkipTenantAuth):
     @staticmethod
-    def _verify_tenant(uri, tenant_name):
+    def _verify_tenant(uri):
         tenanted_resources = [
             config.instance.file_server_blueprints_folder,
             config.instance.file_server_uploaded_blueprints_folder,
@@ -412,23 +412,19 @@ class FileServerAuth(SecuredResource):
             if uri.startswith(resource):
                 uri = uri.replace(resource, '').strip('/')
                 uri_tenant, _ = uri.split('/', 1)
-                if uri_tenant != tenant_name:
-                    raise_unauthorized_user_error(
-                        'Cannot access resources in /{0}/{1} '
-                        'with tenant {2}'.format(
-                            resource, uri_tenant, tenant_name))
+                user = authenticator.authenticate(request)
+                tenant_authorizer.authorize(user, request, uri_tenant)
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ResourceID)
-    def get(self):
+    def get(self, **_):
         """
         Verify that the user is allowed to access requested resource.
 
         The user cannot access tenants except the one in the request's header.
         """
-        tenant_name = current_app.config[CURRENT_TENANT_CONFIG].name
         uri = request.headers.get('X-Original-Uri')
-        self._verify_tenant(uri, tenant_name)
+        self._verify_tenant(uri)
 
         # verified successfully
         return {}

@@ -11,13 +11,14 @@ from manager_rest.app_logging import raise_unauthorized_user_error
 
 
 class TenantAuthorization(object):
-    def authorize(self, user, request):
+    def authorize(self, user, request, tenant_name=None):
         logger = current_app.logger
 
         logger.debug('Tenant authorization for {0}'.format(user))
 
         admin_role = user_datastore.find_role(ADMIN_ROLE)
-        tenant_name = request.headers.get(CLOUDIFY_TENANT_HEADER)
+        if tenant_name is None:
+            tenant_name = request.headers.get(CLOUDIFY_TENANT_HEADER)
         if not tenant_name:
             raise raise_unauthorized_user_error(
                 'a Tenant name was not provided')
