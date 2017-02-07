@@ -209,13 +209,13 @@ class Events(SecuredResource):
 
         subqueries = []
         if 'cloudify_event' in filters['type']:
-            events_query = Events._build_select_events_query(
-                filters, range_filters)
+            events_query = Events._build_select_subquery(
+                Event, filters, range_filters)
             subqueries.append(events_query)
 
         if 'cloudify_log' in filters['type']:
-            logs_query = Events._build_select_logs_query(
-                filters, range_filters)
+            logs_query = Events._build_select_subquery(
+                Log, filters, range_filters)
             subqueries.append(logs_query)
 
         query = reduce(lambda left, right: left.union(right), subqueries)
@@ -229,8 +229,8 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _build_select_events_query(filters, range_filters):
-        """Build select events query.
+    def _build_select_subquery(model, filters, range_filters):
+        """Build select subquery.
 
         :param filters: Filters passed as request argument
         :type filters: dict(str, list(str))
@@ -240,61 +240,45 @@ class Events(SecuredResource):
         :rtype: :class:`sqlalchemy.orm.query.Query`
 
         """
+        def select_column(column_name):
+            """Select column from model by name.
+
+            If column is not present in the model, then select `NULL` value
+            instead.
+
+            :param column_name: Name of the column to select
+            :type column_name: str
+            :return: Selected colum
+            :rtype: :class:``
+
+            """
+            if hasattr(model, column_name):
+                return getattr(model, column_name)
+            return literal_column('NULL').label(column_name)
+
         query = (
             db.session.query(
-                Event.timestamp.label('timestamp'),
+                select_column('timestamp'),
                 Deployment.id.label('deployment_id'),
-                Event.message,
-                Event.message_code,
-                Event.event_type,
-                Event.operation,
-                Event.node_id,
-                literal_column('NULL').label('logger'),
-                literal_column('NULL').label('level'),
-                literal_column("'cloudify_event'").label('type'),
+                select_column('message'),
+                select_column('message_code'),
+                select_column('event_type'),
+                select_column('operation'),
+                select_column('node_id'),
+                select_column('logger'),
+                select_column('level'),
+                literal_column(
+                    "'cloudify_{}'".format(model.__name__.lower()))
+                .label('type'),
             )
             .filter(
-                Event._execution_fk == Execution._storage_id,
+                model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
             )
         )
 
         query = Events._apply_filters(query, filters)
-        query = Events._apply_range_filters(query, Event, range_filters)
-        return query
-
-    @staticmethod
-    def _build_select_logs_query(filters, range_filters):
-        """Build select logs query.
-
-        :param filters: Filters passed as request argument
-        :type filters: dict(str, list(str))
-        :param range_filters: Range filters passed as request argument
-        :type range_filters: dict(str, dict(str))
-        :returns: Select logs query
-        :rtype: :class:`sqlalchemy.orm.query.Query`
-
-        """
-        query = (
-            db.session.query(
-                Log.timestamp.label('timestamp'),
-                Deployment.id.label('deployment_id'),
-                Log.message,
-                literal_column('NULL').label('message_code'),
-                literal_column('NULL').label('event_type'),
-                Log.operation,
-                Log.node_id,
-                Log.logger,
-                Log.level,
-                literal_column("'cloudify_log'").label('type'),
-            )
-            .filter(
-                Log._execution_fk == Execution._storage_id,
-                Execution._deployment_fk == Deployment._storage_id,
-            )
-        )
-        query = Events._apply_filters(query, filters)
-        query = Events._apply_range_filters(query, Log, range_filters)
+        query = Events._apply_range_filters(query, model, range_filters)
         return query
 
     @staticmethod
