@@ -130,14 +130,6 @@ class BuildSelectQueryTest(TestCase):
         with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
 
-    def test_filter_type_event(self):
-        """Filter is set at least to cloudify_event."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['filters'] = {'type': ['cloudify_log']}
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
-
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class BuildCountQueryTest(TestCase):
 
@@ -180,13 +172,6 @@ class BuildCountQueryTest(TestCase):
     def test_filter_type_required(self):
         """Filter by type is expected."""
         filters = {}
-        range_filters = {}
-        with self.assertRaises(BadParametersError):
-            Events._build_count_query(filters, range_filters)
-
-    def test_filter_type_event(self):
-        """Filter is set at least to cloudify_event."""
-        filters = {'type': ['cloudify_log']}
         range_filters = {}
         with self.assertRaises(BadParametersError):
             Events._build_count_query(filters, range_filters)

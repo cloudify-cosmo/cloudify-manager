@@ -59,7 +59,17 @@ class Events(SecuredResource):
 
     @staticmethod
     def _apply_filters(query, filters):
-        """Apply filters to the query."""
+        """Apply filters to the query.
+
+        :param query: Base query to update with filters
+        :type query: :class:`sqlalchemy.orm.query.Query`
+        :param filters:
+            Dictionary of filters where the key is the column to filter and the
+            value is a list of elements that can be matched using the `IN`
+            operator.
+        :type filters: dict(str, list(str))
+
+        """
         for model, field in Events.ALLOWED_FILTERS:
             if field in filters:
                 query = query.filter(model.id.in_(filters[field]))
@@ -197,10 +207,39 @@ class Events(SecuredResource):
             raise manager_exceptions.BadParametersError(
                 'Filter by type is expected')
 
-        if 'cloudify_event' not in filters['type']:
-            raise manager_exceptions.BadParametersError(
-                'At least `type=cloudify_event` filter is expected')
+        subqueries = []
+        if 'cloudify_event' in filters['type']:
+            events_query = Events._build_select_events_query(
+                filters, range_filters)
+            subqueries.append(events_query)
 
+        if 'cloudify_log' in filters['type']:
+            logs_query = Events._build_select_logs_query(
+                filters, range_filters)
+            subqueries.append(logs_query)
+
+        query = reduce(lambda left, right: left.union(right), subqueries)
+        query = Events._apply_sort(query, sort)
+        query = (
+            query
+            .limit(bindparam('limit'))
+            .offset(bindparam('offset'))
+        )
+
+        return query
+
+    @staticmethod
+    def _build_select_events_query(filters, range_filters):
+        """Build select events query.
+
+        :param filters: Filters passed as request argument
+        :type filters: dict(str, list(str))
+        :param range_filters: Range filtres passed as request argument
+        :type range_filters: dict(str, dict(str))
+        :returns: Select events query
+        :rtype: :class:`sqlalchemy.orm.query.Query`
+
+        """
         query = (
             db.session.query(
                 Event.timestamp.label('timestamp'),
@@ -222,39 +261,40 @@ class Events(SecuredResource):
 
         query = Events._apply_filters(query, filters)
         query = Events._apply_range_filters(query, Event, range_filters)
+        return query
 
-        if 'cloudify_log' in filters['type']:
-            logs_query = (
-                db.session.query(
-                    Log.timestamp.label('timestamp'),
-                    Deployment.id.label('deployment_id'),
-                    Log.message,
-                    literal_column('NULL').label('message_code'),
-                    literal_column('NULL').label('event_type'),
-                    Log.operation,
-                    Log.node_id,
-                    Log.logger,
-                    Log.level,
-                    literal_column("'cloudify_log'").label('type'),
-                )
-                .filter(
-                    Log._execution_fk == Execution._storage_id,
-                    Execution._deployment_fk == Deployment._storage_id,
-                )
-            )
-            logs_query = Events._apply_filters(logs_query, filters)
-            logs_query = Events._apply_range_filters(
-                logs_query, Log, range_filters)
+    @staticmethod
+    def _build_select_logs_query(filters, range_filters):
+        """Build select logs query.
 
-            query = query.union(logs_query)
+        :param filters: Filters passed as request argument
+        :type filters: dict(str, list(str))
+        :param range_filters: Range filters passed as request argument
+        :type range_filters: dict(str, dict(str))
+        :returns: Select logs query
+        :rtype: :class:`sqlalchemy.orm.query.Query`
 
-        query = Events._apply_sort(query, sort)
+        """
         query = (
-            query
-            .limit(bindparam('limit'))
-            .offset(bindparam('offset'))
+            db.session.query(
+                Log.timestamp.label('timestamp'),
+                Deployment.id.label('deployment_id'),
+                Log.message,
+                literal_column('NULL').label('message_code'),
+                literal_column('NULL').label('event_type'),
+                Log.operation,
+                Log.node_id,
+                Log.logger,
+                Log.level,
+                literal_column("'cloudify_log'").label('type'),
+            )
+            .filter(
+                Log._execution_fk == Execution._storage_id,
+                Execution._deployment_fk == Deployment._storage_id,
+            )
         )
-
+        query = Events._apply_filters(query, filters)
+        query = Events._apply_range_filters(query, Log, range_filters)
         return query
 
     @staticmethod
@@ -293,11 +333,33 @@ class Events(SecuredResource):
             raise manager_exceptions.BadParametersError(
                 'Filter by type is expected')
 
-        if 'cloudify_event' not in filters['type']:
-            raise manager_exceptions.BadParametersError(
-                'At least `type=cloudify_event` filter is expected')
+        subqueries = []
+        if 'cloudify_event' in filters['type']:
+            events_query = Events._build_count_events_query(
+                filters, range_filters)
+            subqueries.append(events_query)
 
-        events_query = (
+        if 'cloudify_log' in filters['type']:
+            logs_query = Events._build_count_logs_query(
+                filters, range_filters)
+            subqueries.append(logs_query)
+
+        query = db.session.query(sum(subqueries))
+        return query
+
+    @staticmethod
+    def _build_count_events_query(filters, range_filters):
+        """Build count events query.
+
+        :param filters: Filters passed as request argument
+        :type filters: dict(str, list(str))
+        :param range_filters: Range filters passed as request argument
+        :type range_filters: dict(str, dict(str))
+        :returns: Count events query
+        :rtype: :class:`sqlalchemy.sql.elements.ColumnClause`
+
+        """
+        query = (
             db.session.query(func.count('*').label('count'))
             .filter(
                 Event._execution_fk == Execution._storage_id,
@@ -305,30 +367,32 @@ class Events(SecuredResource):
             )
         )
 
-        events_query = Events._apply_filters(events_query, filters)
-        events_query = Events._apply_range_filters(
-            events_query, Event, range_filters)
+        query = Events._apply_filters(query, filters)
+        query = Events._apply_range_filters(query, Event, range_filters)
+        return query.subquery().c.count
 
-        if 'cloudify_log' in filters['type']:
-            logs_query = (
-                db.session.query(func.count('*').label('count'))
-                .filter(
-                    Log._execution_fk == Execution._storage_id,
-                    Execution._deployment_fk == Deployment._storage_id,
-                )
+    @staticmethod
+    def _build_count_logs_query(filters, range_filters):
+        """Build count events query.
+
+        :param filters: Filters passed as request argument
+        :type filters: dict(str, list(str))
+        :param range_filters: Range filters passed as request argument
+        :type range_filters: dict(str, dict(str))
+        :returns: Count events query
+        :rtype: :class:`sqlalchemy.sql.elements.ColumnClause`
+
+        """
+        query = (
+            db.session.query(func.count('*').label('count'))
+            .filter(
+                Log._execution_fk == Execution._storage_id,
+                Execution._deployment_fk == Deployment._storage_id,
             )
-            logs_query = Events._apply_filters(logs_query, filters)
-            logs_query = Events._apply_range_filters(
-                logs_query, Log, range_filters)
-
-            query = db.session.query(
-                events_query.subquery().c.count +
-                logs_query.subquery().c.count
-            )
-        else:
-            query = db.session.query(events_query.subquery().c.count)
-
-        return query
+        )
+        query = Events._apply_filters(query, filters)
+        query = Events._apply_range_filters(query, Log, range_filters)
+        return query.subquery().c.count
 
     @staticmethod
     def _map_event_to_es(_include, sql_event):
@@ -428,7 +492,7 @@ class Events(SecuredResource):
             'offset': pagination['offset'],
         }
 
-        count_query = self._build_count_query(filters, range_filters)
+        count_query = Events._build_count_query(filters, range_filters)
         total = count_query.params(**params).scalar()
 
         select_query = self._build_select_query(
