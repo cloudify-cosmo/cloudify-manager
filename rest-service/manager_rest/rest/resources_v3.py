@@ -438,7 +438,10 @@ class LdapAuthentication(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(LdapResponse)
     def post(self):
-        ldap_config = self._validate_set_ldap_request()
+        self._validate_ldap_request()
+
+        ldap_config = get_json_and_verify_params(
+            self._get_ldap_config_fields())
 
         from cloudify_premium.multi_tenancy.ldap_authentication \
             import LdapAuthentication
@@ -469,30 +472,68 @@ class LdapAuthentication(SecuredResource):
         ldap_config.pop('ldap_password')
         return ldap_config
 
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(LdapResponse)
+    def delete(self):
+        force = get_json_and_verify_params().get('force', False)
+        self._validate_ldap_request(force=force)
+        if force:
+            _delete_all_users()
+
+        from cloudify_premium.multi_tenancy.ldap_authentication \
+            import LdapAuthentication
+
+        authenticator = LdapAuthentication()
+        if not authenticator.configure_ldap():
+            raise MethodNotAllowedError(
+                'LDAP authenticator is not being used by the Cloudify manager.'
+                ' Nothing to unset.')
+
+        # Unset authentication config
+        ldap_config = {}
+        for field in self._get_ldap_config_fields():
+            if not field == 'ldap_password':
+                ldap_config[field] = getattr(config.instance, field)
+            setattr(config.instance, field, '')
+
+        # Write new config to file
+        config.reset(config.instance, write=True)
+        # Set restart task
+        set_restart_task()
+
+        return ldap_config
+
     @staticmethod
-    def _validate_set_ldap_request():
+    def _validate_ldap_request(force=False):
         if not current_user.is_admin:
             raise UnauthorizedError('User is not authorized to set LDAP '
                                     'configuration.')
-        if not _only_admin_in_manager():
-            raise MethodNotAllowedError('LDAP Configuration may be set only on'
-                                        ' a clean manager.')
         if not current_app.premium_enabled:
             raise MethodNotAllowedError('LDAP is only supported in the '
                                         'Cloudify premium edition.')
-        ldap_config = get_json_and_verify_params({'ldap_server',
-                                                  'ldap_username',
-                                                  'ldap_password',
-                                                  'ldap_domain',
-                                                  'ldap_is_active_directory',
-                                                  'ldap_dn_extra'})
-        return ldap_config
+        if not _only_admin_in_manager() and not force:
+            raise MethodNotAllowedError('LDAP Configuration may only be set on'
+                                        ' a clean manager.')
+
+    @staticmethod
+    def _get_ldap_config_fields():
+        return {'ldap_server',
+                'ldap_username',
+                'ldap_password',
+                'ldap_domain',
+                'ldap_is_active_directory',
+                'ldap_dn_extra'}
 
 
 def _only_admin_in_manager():
     """
-    True if no users other than the admin user exists.
-    :return:
+    :return: True if no users other than the admin user exists.
     """
     users = get_storage_manager().list(models.User)
     return len(users) == 1
+
+
+def _delete_all_users():
+    for user in get_storage_manager().list(models.User):
+        if not user.username == 'admin':
+            get_storage_manager().delete(user)
