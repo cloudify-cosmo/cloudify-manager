@@ -68,20 +68,11 @@ class EventResult(EventResultTuple):
         return self._fields
 
 
-class SelectEventsFilterTest(TestCase):
+class SelectEventsBaseTest(TestCase):
 
-    """Filter by events, logs or both."""
+    """Select events test case base with database."""
 
     EVENT_COUNT = 50
-
-    DEFAULT_SORT = {
-        'timestamp': 'asc'
-    }
-    DEFAULT_RANGE_FILTERS = {}
-    DEFAULT_PAGINATION = {
-        'limit': 100,
-        'offset': 0,
-    }
 
     def setUp(self):
         """Initialize mock application with in memory sql database."""
@@ -168,6 +159,20 @@ class SelectEventsFilterTest(TestCase):
 
         self.events = sorted_events
 
+
+class SelectEventsFilterTypeTest(SelectEventsBaseTest):
+
+    """Filter events by type."""
+
+    DEFAULT_SORT = {
+        'timestamp': 'asc'
+    }
+    DEFAULT_RANGE_FILTERS = {}
+    DEFAULT_PAGINATION = {
+        'limit': 100,
+        'offset': 0,
+    }
+
     def test_get_events_and_logs(self):
         """Get both events and logs."""
 
@@ -223,6 +228,128 @@ class SelectEventsFilterTest(TestCase):
             if isinstance(event, Log)
         ]
         self.assertListEqual(event_ids, expected_event_ids)
+
+
+class SelectEventsSortTest(SelectEventsBaseTest):
+
+    """Sort events by timestamp ascending/descending."""
+
+    DEFAULT_FILTERS = {
+        'type': ['cloudify_event', 'cloudify_log']
+    }
+    DEFAULT_RANGE_FILTERS = {}
+    DEFAULT_PAGINATION = {
+        'limit': 100,
+        'offset': 0,
+    }
+
+    def test_sort_by_timestamp_ascending(self):
+        """Sort by timestamp ascending."""
+        sort = {
+            'timestamp': 'asc',
+        }
+        query = Events._build_select_query(
+            self.DEFAULT_FILTERS,
+            sort,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_timestamps = [
+            event.timestamp
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_events = sorted(
+            self.events,
+            key=lambda event: event.timestamp,
+        )
+        expected_event_timestamps = [
+            event.timestamp
+            for event in expected_events
+        ]
+        self.assertListEqual(event_timestamps, expected_event_timestamps)
+
+    def test_sort_by_timestamp_descending(self):
+        """Sort by timestamp descending."""
+        sort = {
+            'timestamp': 'desc',
+        }
+        query = Events._build_select_query(
+            self.DEFAULT_FILTERS,
+            sort,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_timestamps = [
+            event.timestamp
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_events = sorted(
+            self.events,
+            key=lambda event: event.timestamp,
+            reverse=True
+        )
+        expected_event_timestamps = [
+            event.timestamp
+            for event in expected_events
+        ]
+        self.assertListEqual(event_timestamps, expected_event_timestamps)
+
+    def test_sort_at_by_timestamp_ascending(self):
+        """Sort by @timestamp ascending.
+
+        This is to verify compatibility with the old Elasticsearch based
+        implementation.
+
+        """
+        sort = {
+            '@timestamp': 'asc',
+        }
+        query = Events._build_select_query(
+            self.DEFAULT_FILTERS,
+            sort,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_timestamps = [
+            event.timestamp
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_events = sorted(
+            self.events,
+            key=lambda event: event.timestamp,
+        )
+        expected_event_timestamps = [
+            event.timestamp
+            for event in expected_events
+        ]
+        self.assertListEqual(event_timestamps, expected_event_timestamps)
+
+    def test_sort_by_at_timestamp_descending(self):
+        """Sort by @timestamp descending.
+
+        This is to verify compatibility with the old Elasticsearch based
+        implementation.
+
+        """
+        sort = {
+            '@timestamp': 'desc',
+        }
+        query = Events._build_select_query(
+            self.DEFAULT_FILTERS,
+            sort,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_timestamps = [
+            event.timestamp
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_events = sorted(
+            self.events,
+            key=lambda event: event.timestamp,
+            reverse=True
+        )
+        expected_event_timestamps = [
+            event.timestamp
+            for event in expected_events
+        ]
+        self.assertListEqual(event_timestamps, expected_event_timestamps)
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
