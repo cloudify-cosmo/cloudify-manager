@@ -261,6 +261,7 @@ class Events(SecuredResource):
                 select_column('id'),
                 select_column('timestamp'),
                 Deployment.id.label('deployment_id'),
+                Execution.id.label('execution_id'),
                 select_column('message'),
                 select_column('message_code'),
                 select_column('event_type'),

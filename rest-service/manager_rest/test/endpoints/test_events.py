@@ -72,6 +72,8 @@ class SelectEventsBaseTest(TestCase):
 
     """Select events test case base with database."""
 
+    DEPLOYMENT_COUNT = 5
+    EXECUTION_COUNT = 5
     EVENT_COUNT = 50
 
     def setUp(self):
@@ -102,24 +104,31 @@ class SelectEventsBaseTest(TestCase):
         session.add(blueprint)
         session.commit()
 
-        deployment = Deployment(
-            id=fake.uuid4(),
-            created_at=fake.date_time(),
-            _blueprint_fk=blueprint._storage_id,
-            _creator_id=fake.uuid4(),
-        )
-        session.add(deployment)
+        deployments = [
+            Deployment(
+                id=fake.uuid4(),
+                created_at=fake.date_time(),
+                _blueprint_fk=blueprint._storage_id,
+                _creator_id=fake.uuid4(),
+            )
+            for _ in xrange(self.DEPLOYMENT_COUNT)
+        ]
+        session.add_all(deployments)
         session.commit()
 
-        execution = Execution(
-            created_at=fake.date_time(),
-            is_system_workflow=False,
-            workflow_id=fake.uuid4(),
-            _tenant_id=fake.uuid4(),
-            _creator_id=fake.uuid4(),
-            _deployment_fk=deployment._storage_id,
-        )
-        session.add(execution)
+        executions = [
+            Execution(
+                id=fake.uuid4(),
+                created_at=fake.date_time(),
+                is_system_workflow=False,
+                workflow_id=fake.uuid4(),
+                _tenant_id=fake.uuid4(),
+                _creator_id=fake.uuid4(),
+                _deployment_fk=choice(deployments)._storage_id,
+            )
+            for _ in xrange(self.EXECUTION_COUNT)
+        ]
+        session.add_all(executions)
         session.commit()
 
         def create_event():
@@ -127,7 +136,7 @@ class SelectEventsBaseTest(TestCase):
             return Event(
                 id=fake.uuid4(),
                 timestamp=fake.date_time(),
-                _execution_fk=execution._storage_id,
+                _execution_fk=choice(executions)._storage_id,
                 node_id=fake.uuid4(),
                 operation='<operation>',
                 event_type='<event_type>',
@@ -140,7 +149,7 @@ class SelectEventsBaseTest(TestCase):
             return Log(
                 id=fake.uuid4(),
                 timestamp=fake.date_time(),
-                _execution_fk=execution._storage_id,
+                _execution_fk=choice(executions)._storage_id,
                 node_id=fake.uuid4(),
                 operation='<operation>',
                 logger='<logger>',
@@ -157,7 +166,60 @@ class SelectEventsBaseTest(TestCase):
         session.add_all(sorted_events)
         session.commit()
 
+        self.deployments = deployments
+        self.executions = executions
         self.events = sorted_events
+
+
+class SelectEventsFilterTest(SelectEventsBaseTest):
+
+    """Filter events by deployment/execution."""
+
+    DEFAULT_SORT = {
+        'timestamp': 'asc'
+    }
+    DEFAULT_RANGE_FILTERS = {}
+    DEFAULT_PAGINATION = {
+        'limit': 100,
+        'offset': 0,
+    }
+
+    def test_filter_by_deployment(self):
+        """Filter events by deployment."""
+        deployment = choice(self.deployments)
+        filters = {
+            'deployment_id': [deployment.id],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        self.assertTrue(all(
+            event.deployment_id == deployment.id
+            for event in events
+        ))
+
+    def test_filter_by_execution(self):
+        """Filter events by execution."""
+        execution = choice(self.executions)
+        filters = {
+            'execution_id': [execution.id],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        self.assertTrue(all(
+            event.execution_id == execution.id
+            for event in events
+        ))
+
 
 
 class SelectEventsFilterTypeTest(SelectEventsBaseTest):
@@ -175,7 +237,6 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     def test_get_events_and_logs(self):
         """Get both events and logs."""
-
         filters = {'type': ['cloudify_event', 'cloudify_log']}
         query = Events._build_select_query(
             filters,
@@ -191,7 +252,6 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     def test_get_events(self):
         """Get only events."""
-
         filters = {'type': ['cloudify_event']}
         query = Events._build_select_query(
             filters,
@@ -211,7 +271,6 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     def test_get_logs(self):
         """Get only logs."""
-
         filters = {'type': ['cloudify_log']}
         query = Events._build_select_query(
             filters,
