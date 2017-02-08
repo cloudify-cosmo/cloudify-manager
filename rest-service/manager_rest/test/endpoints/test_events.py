@@ -221,7 +221,6 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         ))
 
 
-
 class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     """Filter events by type."""
