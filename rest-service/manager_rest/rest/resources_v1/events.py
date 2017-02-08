@@ -253,7 +253,7 @@ class Events(SecuredResource):
 
             """
             if hasattr(model, column_name):
-                return getattr(model, column_name)
+                return getattr(model, column_name).label(column_name)
             return literal_column('NULL').label(column_name)
 
         query = (
