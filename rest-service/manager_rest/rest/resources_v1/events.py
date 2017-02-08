@@ -160,7 +160,7 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _build_select_query(filters, pagination, sort, range_filters):
+    def _build_select_query(filters, sort, range_filters):
         """Build query used to list events for a given execution.
 
         :param filters:
@@ -461,8 +461,7 @@ class Events(SecuredResource):
         count_query = Events._build_count_query(filters, range_filters)
         total = count_query.params(**params).scalar()
 
-        select_query = self._build_select_query(
-            filters, pagination, sort, range_filters)
+        select_query = self._build_select_query(filters, sort, range_filters)
 
         events = [
             self._map_event_to_es(_include, event)
