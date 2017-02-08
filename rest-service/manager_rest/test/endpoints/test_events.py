@@ -15,14 +15,25 @@
 from collections import namedtuple
 from copy import deepcopy
 from datetime import datetime
+from random import choice
 from unittest import TestCase
 
+from faker import Faker
+from flask import Flask
 from mock import patch
 from nose.plugins.attrib import attr
 
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources_v1 import Events
 from manager_rest.test import base_test
+from manager_rest.storage import db
+from manager_rest.storage.resource_models import (
+    Blueprint,
+    Deployment,
+    Event,
+    Execution,
+    Log,
+)
 
 
 EventResultTuple = namedtuple(
@@ -57,6 +68,163 @@ class EventResult(EventResultTuple):
         return self._fields
 
 
+class SelectEventsFilterTest(TestCase):
+
+    """Filter by events, logs or both."""
+
+    EVENT_COUNT = 50
+
+    DEFAULT_SORT = {
+        'timestamp': 'asc'
+    }
+    DEFAULT_RANGE_FILTERS = {}
+    DEFAULT_PAGINATION = {
+        'limit': 100,
+        'offset': 0,
+    }
+
+    def setUp(self):
+        """Initialize mock application with in memory sql database."""
+        app = Flask(__name__)
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        context = app.app_context()
+        context.push()
+        self.addCleanup(context.pop)
+
+        db.init_app(app)
+        db.create_all()
+
+        self._populate_db()
+
+    def _populate_db(self):
+        """Populate database with events and logs."""
+        fake = Faker()
+        session = db.session
+
+        blueprint = Blueprint(
+            created_at=fake.date_time(),
+            main_file_name=fake.file_name(),
+            plan='<plan>',
+            _tenant_id=fake.uuid4(),
+            _creator_id=fake.uuid4(),
+        )
+        session.add(blueprint)
+        session.commit()
+
+        deployment = Deployment(
+            id=fake.uuid4(),
+            created_at=fake.date_time(),
+            _blueprint_fk=blueprint._storage_id,
+            _creator_id=fake.uuid4(),
+        )
+        session.add(deployment)
+        session.commit()
+
+        execution = Execution(
+            created_at=fake.date_time(),
+            is_system_workflow=False,
+            workflow_id=fake.uuid4(),
+            _tenant_id=fake.uuid4(),
+            _creator_id=fake.uuid4(),
+            _deployment_fk=deployment._storage_id,
+        )
+        session.add(execution)
+        session.commit()
+
+        def create_event():
+            """Create new event using the execution created above."""
+            return Event(
+                id=fake.uuid4(),
+                timestamp=fake.date_time(),
+                _execution_fk=execution._storage_id,
+                node_id=fake.uuid4(),
+                operation='<operation>',
+                event_type='<event_type>',
+                message=fake.sentence(),
+                message_code='<message_code>',
+            )
+
+        def create_log():
+            """Create new log using the execution created above."""
+            return Log(
+                id=fake.uuid4(),
+                timestamp=fake.date_time(),
+                _execution_fk=execution._storage_id,
+                node_id=fake.uuid4(),
+                operation='<operation>',
+                logger='<logger>',
+                level='<level>',
+                message=fake.sentence(),
+                message_code='<message_code>',
+            )
+
+        events = [
+            choice([create_event, create_log])()
+            for _ in xrange(self.EVENT_COUNT)
+        ]
+        sorted_events = sorted(events, key=lambda event: event.timestamp)
+        session.add_all(sorted_events)
+        session.commit()
+
+        self.events = sorted_events
+
+    def test_get_events_and_logs(self):
+        """Get both events and logs."""
+
+        filters = {'type': ['cloudify_event', 'cloudify_log']}
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [event.id for event in self.events]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_get_events(self):
+        """Get only events."""
+
+        filters = {'type': ['cloudify_event']}
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if isinstance(event, Event)
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_get_logs(self):
+        """Get only logs."""
+
+        filters = {'type': ['cloudify_log']}
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if isinstance(event, Log)
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class BuildSelectQueryTest(TestCase):
 
@@ -67,10 +235,6 @@ class BuildSelectQueryTest(TestCase):
     DEFAULT_PARAMS = {
         'filters': {
             'type': ['cloudify_event'],
-        },
-        'pagination': {
-            'offset': 0,
-            'size': 100,
         },
         'sort': {
             '@timestamp': 'asc',
@@ -129,6 +293,7 @@ class BuildSelectQueryTest(TestCase):
         del params['filters']['type']
         with self.assertRaises(BadParametersError):
             Events._build_select_query(**params)
+
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class BuildCountQueryTest(TestCase):

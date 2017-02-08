@@ -258,6 +258,7 @@ class Events(SecuredResource):
 
         query = (
             db.session.query(
+                select_column('id'),
                 select_column('timestamp'),
                 Deployment.id.label('deployment_id'),
                 select_column('message'),
