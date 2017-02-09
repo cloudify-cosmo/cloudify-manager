@@ -301,11 +301,16 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         'offset': 0,
     }
 
-    def test_sort_by_timestamp_ascending(self):
-        """Sort by timestamp ascending."""
-        sort = {
-            'timestamp': 'asc',
-        }
+    def _sort_by_timestamp(self, field, direction):
+        """Sort by a given field.
+
+        :param field: Field name (timestamp/@timestamp)
+        :type field: str
+        :param direction: Sorting direction (asc/desc)
+        :type direction: str
+
+        """
+        sort = {field: direction}
         query = Events._build_select_query(
             self.DEFAULT_FILTERS,
             sort,
@@ -318,6 +323,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         expected_events = sorted(
             self.events,
             key=lambda event: event.timestamp,
+            reverse=direction == 'desc',
         )
         expected_event_timestamps = [
             event.timestamp
@@ -325,30 +331,13 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         ]
         self.assertListEqual(event_timestamps, expected_event_timestamps)
 
+    def test_sort_by_timestamp_ascending(self):
+        """Sort by timestamp ascending."""
+        self._sort_by_timestamp('timestamp', 'asc')
+
     def test_sort_by_timestamp_descending(self):
         """Sort by timestamp descending."""
-        sort = {
-            'timestamp': 'desc',
-        }
-        query = Events._build_select_query(
-            self.DEFAULT_FILTERS,
-            sort,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_timestamps = [
-            event.timestamp
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_events = sorted(
-            self.events,
-            key=lambda event: event.timestamp,
-            reverse=True
-        )
-        expected_event_timestamps = [
-            event.timestamp
-            for event in expected_events
-        ]
-        self.assertListEqual(event_timestamps, expected_event_timestamps)
+        self._sort_by_timestamp('timestamp', 'desc')
 
     def test_sort_at_by_timestamp_ascending(self):
         """Sort by @timestamp ascending.
@@ -357,27 +346,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         implementation.
 
         """
-        sort = {
-            '@timestamp': 'asc',
-        }
-        query = Events._build_select_query(
-            self.DEFAULT_FILTERS,
-            sort,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_timestamps = [
-            event.timestamp
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_events = sorted(
-            self.events,
-            key=lambda event: event.timestamp,
-        )
-        expected_event_timestamps = [
-            event.timestamp
-            for event in expected_events
-        ]
-        self.assertListEqual(event_timestamps, expected_event_timestamps)
+        self._sort_by_timestamp('@timestamp', 'asc')
 
     def test_sort_by_at_timestamp_descending(self):
         """Sort by @timestamp descending.
@@ -386,28 +355,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         implementation.
 
         """
-        sort = {
-            '@timestamp': 'desc',
-        }
-        query = Events._build_select_query(
-            self.DEFAULT_FILTERS,
-            sort,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_timestamps = [
-            event.timestamp
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_events = sorted(
-            self.events,
-            key=lambda event: event.timestamp,
-            reverse=True
-        )
-        expected_event_timestamps = [
-            event.timestamp
-            for event in expected_events
-        ]
-        self.assertListEqual(event_timestamps, expected_event_timestamps)
+        self._sort_by_timestamp('@timestamp', 'desc')
 
 
 class SelectEventRangeFilterTest(SelectEventsBaseTest):
