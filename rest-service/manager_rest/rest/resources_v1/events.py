@@ -52,10 +52,10 @@ class Events(SecuredResource):
     """
 
     DEFAULT_SEARCH_SIZE = 10000
-    ALLOWED_FILTERS = [
-        (Execution, 'execution_id'),
-        (Deployment, 'deployment_id'),
-    ]
+    ALLOWED_FILTERS = {
+        'execution_id': Execution,
+        'deployment_id': Deployment,
+    }
 
     @staticmethod
     def _apply_filters(query, filters):
@@ -70,9 +70,15 @@ class Events(SecuredResource):
         :type filters: dict(str, list(str))
 
         """
-        for model, field in Events.ALLOWED_FILTERS:
-            if field in filters:
-                query = query.filter(model.id.in_(filters[field]))
+        for field, filter_ in filters.items():
+            if field == 'type':
+                # Filter by type is handled while building the query
+                continue
+            if field not in Events.ALLOWED_FILTERS:
+                raise manager_exceptions.BadParametersError(
+                    'Unknown field to filter by: {}'.format(field))
+            model = Events.ALLOWED_FILTERS[field]
+            query = query.filter(model.id.in_(filter_))
         return query
 
     @staticmethod

@@ -220,6 +220,19 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for event in events
         ))
 
+    def test_filter_by_unknown(self):
+        """Filter events by an unknown field."""
+        filters = {
+            'unknown': ['<value>'],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        with self.assertRaises(BadParametersError):
+            Events._build_select_query(
+                filters,
+                self.DEFAULT_SORT,
+                self.DEFAULT_RANGE_FILTERS,
+            )
+
 
 class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
@@ -352,7 +365,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         self._sort_by_timestamp('@timestamp', 'desc')
 
 
-class SelectEventRangeFilterTest(SelectEventsBaseTest):
+class SelectEventsRangeFilterTest(SelectEventsBaseTest):
 
     """Filter out events not included in a range."""
 
@@ -409,6 +422,15 @@ class SelectEventRangeFilterTest(SelectEventsBaseTest):
     def test_filter_by_at_timestamp_range(self):
         """Filter by @timestamp range."""
         self._filter_by_timestamp_range('@timestamp')
+
+    def test_filter_by_unknown_range(self):
+        """Filter by unknown field range."""
+        with self.assertRaises(BadParametersError):
+            Events._build_select_query(
+                self.DEFAULT_FILTERS,
+                self.DEFAULT_SORT,
+                {'unknown': {'from': 'a', 'to': 'b'}},
+            )
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
