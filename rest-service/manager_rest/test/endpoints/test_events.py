@@ -282,9 +282,24 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         ]
         self.assertListEqual(event_ids, expected_event_ids)
 
-    def test_get_events_and_logs(self):
-        """Get both events and logs."""
+    def test_get_events_and_logs_explicit(self):
+        """Get both events and logs explicitly by passing filters."""
         self._get_events_by_type(['cloudify_event', 'cloudify_log'])
+
+    def test_get_events_and_logs_implicit(self):
+        """Get both events and logs implicitly without passing any filter."""
+        filters = {}
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [event.id for event in self.events]
+        self.assertListEqual(event_ids, expected_event_ids)
 
     def test_get_events(self):
         """Get only events."""
@@ -492,14 +507,7 @@ class BuildSelectQueryTest(TestCase):
         """Filter parameter is expected to be dictionary."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters'] = None
-        with self.assertRaises(BadParametersError):
-            Events._build_select_query(**params)
-
-    def test_filter_type_required(self):
-        """Filter by type is expected."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        del params['filters']['type']
-        with self.assertRaises(BadParametersError):
+        with self.assertRaises(AssertionError):
             Events._build_select_query(**params)
 
 
@@ -539,14 +547,7 @@ class BuildCountQueryTest(TestCase):
         """Filter parameter is expected to be dictionary."""
         filters = None
         range_filters = {}
-        with self.assertRaises(BadParametersError):
-            Events._build_count_query(filters, range_filters)
-
-    def test_filter_type_required(self):
-        """Filter by type is expected."""
-        filters = {}
-        range_filters = {}
-        with self.assertRaises(BadParametersError):
+        with self.assertRaises(AssertionError):
             Events._build_count_query(filters, range_filters)
 
 

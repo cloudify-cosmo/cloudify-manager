@@ -204,17 +204,16 @@ class Events(SecuredResource):
         :rtype: :class:`sqlalchemy.orm.query.Query`
 
         """
-        if not isinstance(filters, dict) or 'type' not in filters:
-            raise manager_exceptions.BadParametersError(
-                'Filter by type is expected')
+        assert isinstance(filters, dict), \
+            'Filters is expected to be a dictionary'
 
         subqueries = []
-        if 'cloudify_event' in filters['type']:
+        if 'type' not in filters or 'cloudify_event' in filters['type']:
             events_query = Events._build_select_subquery(
                 Event, filters, range_filters)
             subqueries.append(events_query)
 
-        if 'cloudify_log' in filters['type']:
+        if 'type' not in filters or 'cloudify_log' in filters['type']:
             logs_query = Events._build_select_subquery(
                 Log, filters, range_filters)
             subqueries.append(logs_query)
@@ -316,17 +315,16 @@ class Events(SecuredResource):
         :rtype: :class:`sqlalchemy.orm.query.Query`
 
         """
-        if not isinstance(filters, dict) or 'type' not in filters:
-            raise manager_exceptions.BadParametersError(
-                'Filter by type is expected')
+        assert isinstance(filters, dict), \
+            'Filters is expected to be a dictionary'
 
         subqueries = []
-        if 'cloudify_event' in filters['type']:
+        if 'type' not in filters or 'cloudify_event' in filters['type']:
             events_query = Events._build_count_subquery(
                 Event, filters, range_filters)
             subqueries.append(events_query)
 
-        if 'cloudify_log' in filters['type']:
+        if 'type' not in filters or 'cloudify_log' in filters['type']:
             logs_query = Events._build_count_subquery(
                 Log, filters, range_filters)
             subqueries.append(logs_query)
