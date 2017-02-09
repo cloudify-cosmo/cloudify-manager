@@ -184,11 +184,6 @@ class Events(SecuredResource):
             filtering by a deployment and an execution that doesn't belong to
             that deployment won't return any result.
         :type filters: dict(str, str)
-        :param pagination:
-            Parameters used to limit results returned in a single query.
-            Expected values `size` and `offset` are mapped into SQL as `LIMIT`
-            and `OFFSET`.
-        :type pagination: dict(str, int)
         :param sort:
             Result sorting order.
 
