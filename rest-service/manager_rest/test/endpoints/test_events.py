@@ -234,9 +234,25 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         'offset': 0,
     }
 
-    def test_get_events_and_logs(self):
-        """Get both events and logs."""
-        filters = {'type': ['cloudify_event', 'cloudify_log']}
+    TYPE_TO_MODEL = {
+        'cloudify_log': Log,
+        'cloudify_event': Event,
+    }
+
+    def _get_events_by_type(self, event_types):
+        """Get events by type
+
+        :param event_types:
+            Type filter ('cloudify_event' and/or 'cloudify_log')
+        :type event_types: list(str)
+
+        """
+        event_classes = tuple([
+            self.TYPE_TO_MODEL[event_type]
+            for event_type in event_types
+        ])
+
+        filters = {'type': event_types}
         query = Events._build_select_query(
             filters,
             self.DEFAULT_SORT,
@@ -246,46 +262,24 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             event.id
             for event in query.params(**self.DEFAULT_PAGINATION).all()
         ]
-        expected_event_ids = [event.id for event in self.events]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if isinstance(event, event_classes)
+        ]
         self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_get_events_and_logs(self):
+        """Get both events and logs."""
+        self._get_events_by_type(['cloudify_event', 'cloudify_log'])
 
     def test_get_events(self):
         """Get only events."""
-        filters = {'type': ['cloudify_event']}
-        query = Events._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
-            for event in self.events
-            if isinstance(event, Event)
-        ]
-        self.assertListEqual(event_ids, expected_event_ids)
+        self._get_events_by_type(['cloudify_event'])
 
     def test_get_logs(self):
         """Get only logs."""
-        filters = {'type': ['cloudify_log']}
-        query = Events._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
-            for event in self.events
-            if isinstance(event, Log)
-        ]
-        self.assertListEqual(event_ids, expected_event_ids)
+        self._get_events_by_type(['cloudify_log'])
 
 
 class SelectEventsSortTest(SelectEventsBaseTest):
