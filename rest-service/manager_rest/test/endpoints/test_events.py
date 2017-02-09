@@ -410,6 +410,65 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         self.assertListEqual(event_timestamps, expected_event_timestamps)
 
 
+class SelectEventRangeFilterTest(SelectEventsBaseTest):
+
+    """Filter out events not included in a range."""
+
+    DEFAULT_FILTERS = {
+        'type': ['cloudify_event', 'cloudify_log']
+    }
+    DEFAULT_SORT = {
+        'timestamp': 'asc'
+    }
+    DEFAULT_PAGINATION = {
+        'limit': 100,
+        'offset': 0,
+    }
+
+    def _filter_by_timestamp_range(self, field):
+        """Filter by timestamp range.
+
+        :param field: Field name to use (timestamp/@timestamp)
+        :type fiel: str
+
+        """
+        fake = Faker()
+        from_timestamp, to_timestamp = sorted(
+            [fake.date_time(), fake.date_time()])
+
+        query = Events._build_select_query(
+            self.DEFAULT_FILTERS,
+            self.DEFAULT_SORT,
+            {field: {'from': from_timestamp, 'to': to_timestamp}},
+        )
+        event_timestamps = [
+            event.timestamp
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        events = sorted(
+            self.events,
+            key=lambda event: event.timestamp,
+        )
+
+        from_timestamp = '{}Z'.format(from_timestamp.isoformat()[:-3])
+        to_timestamp = '{}Z'.format(to_timestamp.isoformat()[:-3])
+        expected_event_timestamps = [
+            event.timestamp
+            for event in events
+            if from_timestamp <= event.timestamp <= to_timestamp
+        ]
+
+        self.assertListEqual(event_timestamps, expected_event_timestamps)
+
+    def test_filter_by_timestamp_range(self):
+        """Filter by timestamp range."""
+        self._filter_by_timestamp_range('timestamp')
+
+    def test_filter_by_at_timestamp_range(self):
+        """Filter by @timestamp range."""
+        self._filter_by_timestamp_range('@timestamp')
+
+
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class BuildSelectQueryTest(TestCase):
 
