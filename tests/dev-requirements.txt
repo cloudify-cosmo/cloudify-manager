@@ -14,6 +14,6 @@ pyzmq==15.1.0
 
 # test dependencies
 python-dateutil
-wagon
+wagon==0.3.2
 elasticsearch==1.6.0
 psycopg2==2.6.2
