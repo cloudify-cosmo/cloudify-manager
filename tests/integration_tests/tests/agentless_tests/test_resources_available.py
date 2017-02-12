@@ -19,7 +19,7 @@ import requests
 import requests.status_codes
 from requests.exceptions import ConnectionError
 
-# from cloudify_cli.env import get_auth_header
+from cloudify_cli.env import get_auth_header
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -56,10 +56,10 @@ class ResourcesAvailableTest(AgentlessTestCase):
             expected_status_code=requests.status_codes.codes.ok)
 
         # invalid authentication
-        # self._assert_request_status_code(
-        #     headers=get_auth_header('bla', 'bla'),
-        #     path='/blueprints/default_tenant/blu/empty_blueprint.yaml',
-        #     expected_status_code=requests.status_codes.codes.unauthorized)
+        self._assert_request_status_code(
+            headers=get_auth_header('bla', 'bla'),
+            path='/blueprints/default_tenant/blu/empty_blueprint.yaml',
+            expected_status_code=requests.status_codes.codes.unauthorized)
 
         # trying to access non-existing resource
         self._assert_request_status_code(
