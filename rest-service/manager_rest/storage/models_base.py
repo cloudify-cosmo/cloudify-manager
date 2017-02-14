@@ -101,7 +101,7 @@ class SQLModelBase(db.Model):
             res = {f: getattr(self, f) for f in self.resource_fields}
         return res
 
-    def to_response(self):
+    def to_response(self, **kwargs):
         return {f: getattr(self, f) for f in self.resource_fields}
 
     @classproperty

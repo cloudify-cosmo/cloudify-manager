@@ -151,7 +151,7 @@ class marshal_with(object):
         elif isinstance(data, list):
             return map(self.wrap_with_response_object, data)
         elif isinstance(data, SQLModelBase):
-            return data.to_response()
+            return data.to_response(get_data=self._get_data())
         # Support for partial results from SQLAlchemy (i.e. only
         # certain columns, and not the whole model class)
         elif isinstance(data, sql_alchemy_collection):
@@ -162,6 +162,11 @@ class marshal_with(object):
     @staticmethod
     def _is_include_parameter_in_request():
         return '_include' in request.args and request.args['_include']
+
+    @staticmethod
+    def _get_data():
+        get_data = request.args.get('_get_data', False)
+        return verify_and_convert_bool('get_data', get_data)
 
     def _get_fields_to_include(self):
         skipped_fields = self._get_skipped_fields()

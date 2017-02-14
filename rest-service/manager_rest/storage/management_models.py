@@ -28,6 +28,19 @@ from .relationships import many_to_many_relationship
 from .models_base import db, SQLModelBase, UTCDateTime, CIColumn
 
 
+def _get_response_data(resource_list, get_data=False, name_attr='name'):
+    """Either return the sorted list of resource names or their total count
+
+    :param resource_list: A list of users/tenants/user-groups
+    :param name_attr: The name attribute (name/username)
+    :param get_data: If True: return the names, o/w return the count
+    """
+    if get_data:
+        return sorted(getattr(res, name_attr) for res in resource_list)
+    else:
+        return len(resource_list)
+
+
 class ProviderContext(SQLModelBase):
     __tablename__ = 'provider_context'
 
@@ -45,12 +58,14 @@ class Tenant(SQLModelBase):
     def _get_identifier_dict(self):
         return OrderedDict({'name': self.name})
 
-    def to_response(self):
+    def to_response(self, get_data=False):
         tenant_dict = super(Tenant, self).to_response()
-        group_names = [group.name for group in self.groups]
-        user_names = [user.username for user in self.all_users]
-        tenant_dict['groups'] = sorted(group_names)
-        tenant_dict['users'] = sorted(user_names)
+        tenant_dict['groups'] = _get_response_data(self.groups, get_data)
+        tenant_dict['users'] = _get_response_data(
+            self.all_users,
+            get_data=get_data,
+            name_attr='username'
+        )
         return tenant_dict
 
     @property
@@ -84,12 +99,14 @@ class Group(SQLModelBase):
     def tenants(cls):
         return many_to_many_relationship(cls, Tenant)
 
-    def to_response(self):
+    def to_response(self, get_data=False):
         group_dict = super(Group, self).to_response()
-        tenant_names = [tenant.name for tenant in self.tenants]
-        user_names = [user.username for user in self.users]
-        group_dict['tenants'] = sorted(tenant_names)
-        group_dict['users'] = sorted(user_names)
+        group_dict['tenants'] = _get_response_data(self.tenants, get_data)
+        group_dict['users'] = _get_response_data(
+            self.users,
+            get_data=get_data,
+            name_attr='username'
+        )
         return group_dict
 
 
@@ -148,12 +165,10 @@ class User(SQLModelBase, UserMixin):
 
         return list(set(tenant_list))
 
-    def to_response(self):
+    def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
-        tenant_names = [tenant.name for tenant in self.all_tenants]
-        group_names = [group.name for group in self.groups]
-        user_dict['tenants'] = sorted(tenant_names)
-        user_dict['groups'] = sorted(group_names)
+        user_dict['tenants'] = _get_response_data(self.all_tenants, get_data)
+        user_dict['groups'] = _get_response_data(self.groups, get_data)
         user_dict['role'] = self.role
         return user_dict
 

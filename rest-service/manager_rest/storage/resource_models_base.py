@@ -47,7 +47,7 @@ class SQLResourceBase(SQLModelBase):
 
     @classproperty
     def response_fields(cls):
-        fields = cls.resource_fields
+        fields = cls.resource_fields.copy()
         fields.update(cls._extra_fields)
         return fields
 
@@ -70,7 +70,7 @@ class SQLResourceBase(SQLModelBase):
             return VIEWER_PERMISSION
         return ''
 
-    def to_response(self):
+    def to_response(self, **kwargs):
         return {f: getattr(self, f) for f in self.response_fields}
 
     def _get_identifier_dict(self):
