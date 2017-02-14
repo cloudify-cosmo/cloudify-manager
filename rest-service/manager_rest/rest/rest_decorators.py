@@ -24,7 +24,10 @@ from toolz import dicttoolz
 from voluptuous import (
     All,
     Coerce,
+    Datetime,
+    ExactSequence,
     Invalid,
+    Length,
     Match,
     REMOVE_EXTRA,
     Range,
@@ -204,27 +207,55 @@ def projection(func):
 
 
 def rangeable(func):
-    """
-    Decorator for enabling range
-    """
-    def create_range_params(*args, **kw):
-        range_args = request.args.getlist("_range")
-        range_params = {}
-        for range_arg in range_args:
-            try:
-                range_key, range_from, range_to = \
-                    range_arg.split(',')
-            except ValueError:
-                raise ValueError('Range parameter requires 3 values')
-            range_param = {}
-            if range_from:
-                range_param['from'] = range_from
-            if range_to:
-                range_param['to'] = range_to
-            if range_param:
-                range_params[range_key] = range_param
+    """Decorator for enabling filtering by a range of values.
 
-        return func(range_filters=range_params, *args, **kw)
+    Range filtering is expected to be passed in the `_range` header as a list
+    of triplets with the following values separated by commmas:
+        - Field: The name of the field to filter by
+        - From: The minimum value to include in the results
+        - To: The maxium value to include in the results
+
+    The range filters are mapped to a dictionary where the keys are the names
+    of the fields to filter and the values are dictionaries that have
+    `from`/`to` as fields with their values.
+
+    :param func:
+        The function to be wrapped. It is assumed that the function will be
+        implementing an endpoint.
+    :type func: callable
+    :returns:
+        Decorated function in which the `range_filters` parameter is injected
+        with the values from the `_range` headers mapped to a dictionary as
+        explained above.
+    :rtype: callable
+
+    """
+    schema = Schema(
+        All(
+            ExactSequence([str, Datetime(), Datetime()]),
+            Length(min=3, max=3),
+            msg=(
+                'Range parameter should contain 3 values: '
+                '<field:str>,<from:datetime>,<to:datetime>'
+            )
+        )
+    )
+
+    @wraps(func)
+    def create_range_params(*args, **kw):
+        range_args = request.args.getlist('_range')
+        range_params = [
+            schema(range_arg.split(','))
+            for range_arg in range_args
+        ]
+        range_filters = {
+            range_param[0]: {
+                'from': range_param[1],
+                'to': range_param[2],
+            }
+            for range_param in range_params
+        }
+        return func(range_filters=range_filters, *args, **kw)
     return create_range_params
 
 
