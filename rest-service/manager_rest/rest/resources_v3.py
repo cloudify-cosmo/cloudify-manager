@@ -307,12 +307,21 @@ class Cluster(ClusterResourceBase):
     @rest_decorators.marshal_with(ClusterState)
     def put(self, cluster):
         """
-        Start the "create cluster" execution.
+        Join the current manager to the cluster, or start a new one.
 
-        The created cluster will already have one node (the current manager).
+        If created, the cluster will already have one node (the current
+        manager).
         """
-        request_dict = get_json_and_verify_params({'config'})
-        return cluster.start(request_dict['config'])
+        config = get_json_and_verify_params({
+            'host_ip': {'type': unicode},
+            'node_name': {'type': unicode},
+            'encryption_key': {'type': unicode},
+            'join_addrs': {'type': list, 'optional': True},
+        })
+        if 'join_addrs' in config:
+            return cluster.join(config)
+        else:
+            return cluster.start(config)
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ClusterState)
@@ -322,8 +331,8 @@ class Cluster(ClusterResourceBase):
 
         Use this to change settings or promote a replica machine to master.
         """
-        request_dict = get_json_and_verify_params({'config'})
-        return cluster.update_config(request_dict['config'])
+        config = get_json_and_verify_params()
+        return cluster.update_config(config)
 
 
 class ClusterNodes(ClusterResourceBase):
@@ -347,15 +356,6 @@ class ClusterNodesId(ClusterResourceBase):
         Details of a node from the cluster.
         """
         return cluster.get_node(node_id)
-
-    @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(ClusterState)
-    def put(self, node_id, cluster):
-        """
-        Join the current manager to the cluster.
-        """
-        request_dict = get_json_and_verify_params({'config'})
-        return cluster.join(request_dict['config'])
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ClusterNode)
