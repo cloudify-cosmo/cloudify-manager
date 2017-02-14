@@ -127,7 +127,7 @@ class Deployment(TopLevelCreatorMixin, DerivedTenantMixin, SQLResourceBase):
         )
         return fields
 
-    def to_response(self):
+    def to_response(self, **kwargs):
         dep_dict = super(Deployment, self).to_response()
         dep_dict['workflows'] = self._list_workflows(self.workflows)
         return dep_dict
@@ -281,7 +281,7 @@ class DeploymentUpdate(DerivedResource):
         )
         return fields
 
-    def to_response(self):
+    def to_response(self, **kwargs):
         dep_update_dict = super(DeploymentUpdate, self).to_response()
         # Taking care of the fact the DeploymentSteps are objects
         dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
