@@ -51,7 +51,7 @@ class EventsPrinter(threading.Thread):
         queues = []
         for exchange in exchanges:
             channel.exchange_declare(exchange=exchange, type='fanout',
-                                     auto_delete=True,
+                                     auto_delete=False,
                                      durable=True)
             result = channel.queue_declare(exclusive=True)
             queue_name = result.method.queue
