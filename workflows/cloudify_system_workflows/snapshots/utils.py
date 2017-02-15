@@ -99,21 +99,9 @@ def copy_files_between_manager_and_snapshot(archive_root,
         if os.path.isfile(p1):
             shutil.copy(p1, p2)
         else:
-            if not os.path.exists(p2):
-                os.makedirs(p2)
-
-            for item in os.listdir(p1):
-                s = os.path.join(p1, item)
-                d = os.path.join(p2, item)
-                # The only case when it is possible that `d` exists is when
-                # restoring snapshot with plugins on the same manager this
-                # snapshot was created on. It means it is the same plugin so
-                # we are ok with not copying it.
-                if not os.path.exists(d):
-                    if os.path.isdir(s):
-                        shutil.copytree(s, d)
-                    else:
-                        shutil.copy2(s, d)
+            if os.path.exists(p2):
+                shutil.rmtree(p2)
+            shutil.copytree(p1, p2)
 
 
 def copy(source, destination):
@@ -203,14 +191,15 @@ def make_zip64_archive(zip_filename, directory):
 
     with zip_context_manager as zip_file:
         path = os.path.normpath(directory)
-        zip_file.write(path)
+        ctx.logger.debug('Creating zip archive of: {0}'.format(path))
+        base_dir = path
         for dirpath, dirnames, filenames in os.walk(directory):
             for dirname in sorted(dirnames):
                 path = os.path.normpath(os.path.join(dirpath, dirname))
-                zip_file.write(path)
+                zip_file.write(os.path.relpath(path, base_dir))
             for filename in filenames:
                 path = os.path.normpath(os.path.join(dirpath, filename))
                 # Not sure why this check is needed,
                 # but it's in the original stdlib's implementation
                 if os.path.isfile(path):
-                    zip_file.write(path)
+                    zip_file.write(os.path.relpath(path, base_dir))

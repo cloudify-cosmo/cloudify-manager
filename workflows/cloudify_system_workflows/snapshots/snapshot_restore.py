@@ -73,6 +73,8 @@ class SnapshotRestore(object):
     def restore(self):
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
+        ctx.logger.debug('Going to restore snapshot, '
+                         'snapshot_path: {0}'.format(snapshot_path))
         try:
             metadata = self._extract_snapshot_archive(snapshot_path)
             self._snapshot_version = ManagerVersion(metadata[M_VERSION])
@@ -226,14 +228,16 @@ class SnapshotRestore(object):
         ]))
 
     def _restore_events(self, es, metadata):
-        ctx.logger.info('Restoring ElasticSearch data '
-                        '[timeout={0} sec]'.format(self._timeout))
-        ElasticSearch().restore_logs_and_events(
-            es,
-            self._tempdir,
-            metadata,
-            bulk_read_timeout=self._timeout
-        )
+        ctx.logger.warning('NOT IMPLEMENTED. '
+                           'Events are now stored in pg, not es')
+        # ctx.logger.info('Restoring ElasticSearch data '
+        #                 '[timeout={0} sec]'.format(self._timeout))
+        # ElasticSearch().restore_logs_and_events(
+        #     es,
+        #     self._tempdir,
+        #     metadata,
+        #     bulk_read_timeout=self._timeout
+        # )
 
     def _restore_influxdb(self):
         ctx.logger.info('Restoring InfluxDB metrics')
