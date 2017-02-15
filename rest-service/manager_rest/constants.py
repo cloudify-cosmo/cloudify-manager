@@ -33,7 +33,7 @@ DEFAULT_TENANT_NAME = 'default_tenant'
 BOOTSTRAP_ADMIN_ID = 0
 DEFAULT_TENANT_ID = 0
 
-ADMIN_ROLE = 'administrator'
+ADMIN_ROLE = 'admin'
 USER_ROLE = 'user'
 SUSPENDED_ROLE = 'suspended'
 
