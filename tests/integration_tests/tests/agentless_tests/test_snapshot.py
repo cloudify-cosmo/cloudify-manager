@@ -93,8 +93,8 @@ class TestSnapshot(AgentlessTestCase):
             blueprint_id='bp',
             deployment_id='dep',
             node_ids=['http_web_server', 'vm'],
-            node_instance_ids=['http_web_server_mgr0fc', 'vm_9xgf6c'],
-            num_of_workflows=8,
+            node_instance_ids=['http_web_server_qsmovz', 'vm_n19lu7'],
+            num_of_workflows=7,
             num_of_inputs=4,
             num_of_outputs=1,
             num_of_executions=1
@@ -145,7 +145,7 @@ class TestSnapshot(AgentlessTestCase):
                 'virtual_ip_56b22',
                 'vm_2d90e'
             ],
-            num_of_workflows=6,
+            num_of_workflows=7,
             num_of_inputs=4,
             num_of_outputs=1,
             num_of_executions=1,

@@ -93,7 +93,7 @@ class Postgres(object):
         record_creation_date = self._get_restore_execution_date()
         return "INSERT INTO executions (id, created_at, " \
                "is_system_workflow, " \
-               "status, workflow_id, tenant_id, creator_id) " \
+               "status, workflow_id, _tenant_id, _creator_id) " \
                "VALUES ('{0}', '{1}', 't', " \
                "'started', 'restore_snapshot', 0, 0);"\
             .format(ctx.execution_id, record_creation_date)
