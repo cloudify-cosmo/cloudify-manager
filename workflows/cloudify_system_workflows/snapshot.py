@@ -13,19 +13,18 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-
+import os
 import json
-import platform
-import tempfile
 import shutil
 import zipfile
+import platform
+import tempfile
 import itertools
-import os
 import subprocess
-from datetime import datetime
-
 import elasticsearch
 import elasticsearch.helpers
+from datetime import datetime
+
 from wagon import wagon
 
 from cloudify.workflows import ctx
@@ -816,14 +815,14 @@ def make_zip64_archive(zip_filename, directory):
 
     with zip_context_manager as zip_file:
         path = os.path.normpath(directory)
-        zip_file.write(path)
+        base_dir = path
         for dirpath, dirnames, filenames in os.walk(directory):
             for dirname in sorted(dirnames):
                 path = os.path.normpath(os.path.join(dirpath, dirname))
-                zip_file.write(path)
+                zip_file.write(os.path.relpath(path, base_dir))
             for filename in filenames:
                 path = os.path.normpath(os.path.join(dirpath, filename))
                 # Not sure why this check is needed,
                 # but it's in the original stdlib's implementation
                 if os.path.isfile(path):
-                    zip_file.write(path)
+                    zip_file.write(os.path.relpath(path, base_dir))
