@@ -66,12 +66,6 @@ class SecuredSSLVerifyUserCertificate(TestSSLRestBase):
         with self.assertRaises(requests.exceptions.SSLError):
             client.manager.get_status()
 
-    def get_manager_blueprint_inputs(self):
-        inputs = super(SecuredSSLVerifyUserCertificate,
-                       self).get_manager_blueprint_inputs()
-        inputs['agent_verify_rest_certificate'] = True
-        return inputs
-
     def set_env_vars(self):
         super(SecuredSSLVerifyUserCertificate, self).set_env_vars()
         os.environ[constants.LOCAL_REST_CERT_FILE] = self.cert_path

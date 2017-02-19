@@ -28,22 +28,3 @@ class TestSecuredRestSslGeneratedCertificateAgentVerify(TestSSLRestBase):
     def test_ssl_generated_certificate_agent_verify(self):
         self.bootstrap_secured_manager()
         self.test_hello_world()
-
-    def get_manager_blueprint_inputs(self):
-        inputs = super(TestSecuredRestSslGeneratedCertificateAgentVerify,
-                       self).get_manager_blueprint_inputs()
-        inputs['agent_verify_rest_certificate'] = True
-        return inputs
-
-
-class TestSecuredRestSslGeneratedCertificateNoAgentVerify(TestSSLRestBase):
-
-    def test_ssl_generated_certificate_no_agent_verify(self):
-        self.bootstrap_secured_manager()
-        self.test_hello_world()
-
-    def get_manager_blueprint_inputs(self):
-        inputs = super(TestSecuredRestSslGeneratedCertificateNoAgentVerify,
-                       self).get_manager_blueprint_inputs()
-        inputs['agent_verify_rest_certificate'] = False
-        return inputs
