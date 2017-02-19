@@ -145,7 +145,7 @@ class TestSnapshot(AgentlessTestCase):
                 'virtual_ip_56b22',
                 'vm_2d90e'
             ],
-            num_of_workflows=7,
+            num_of_workflows=6,
             num_of_inputs=4,
             num_of_outputs=1,
             num_of_executions=1,
