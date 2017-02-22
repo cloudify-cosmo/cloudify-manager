@@ -6,4 +6,4 @@ https://github.com/cloudify-cosmo/cloudify-aria-extensions/archive/master.zip
 # test dependencies
 mock
 python-dateutil
-wagon
+wagon==0.3.2

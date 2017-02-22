@@ -12,7 +12,9 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import urllib
 import subprocess
+from string import ascii_letters
 
 from flask import request, make_response
 from flask_restful.reqparse import RequestParser
@@ -106,3 +108,32 @@ def set_restart_task(delay=1):
     cmd = 'sleep {0}; sudo systemctl restart {1}'\
         .format(delay, REST_SERVICE_NAME)
     subprocess.Popen(cmd, shell=True)
+
+
+def validate_inputs(input_dict):
+    for input_name, input_value in input_dict.iteritems():
+        prefix = 'The `{0}` argument'.format(input_name)
+
+        if not input_value:
+            raise manager_exceptions.BadParametersError(
+                '{0} is empty'.format(prefix)
+            )
+
+        if len(input_value) > 256:
+            raise manager_exceptions.BadParametersError(
+                '{0} is too long. Maximum allowed length is 256 '
+                'characters'.format(prefix)
+            )
+
+        # urllib.quote changes all chars except alphanumeric chars and _-.
+        quoted_value = urllib.quote(input_value, safe='')
+        if quoted_value != input_value:
+            raise manager_exceptions.BadParametersError(
+                '{0} contains illegal characters. Only letters, digits and the'
+                ' characters "-", "." and "_" are allowed'.format(prefix)
+            )
+
+        if input_value[0] not in ascii_letters:
+            raise manager_exceptions.BadParametersError(
+                '{0} must begin with a letter'.format(prefix)
+            )
