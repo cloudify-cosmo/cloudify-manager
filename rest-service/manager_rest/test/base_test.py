@@ -38,6 +38,7 @@ from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
 
 from cloudify_rest_client import CloudifyClient
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
@@ -578,3 +579,11 @@ class BaseServerTestCase(unittest.TestCase):
         if execution:
             deployment_update.execution = execution
         return self.sm.put(deployment_update)
+
+    def _test_invalid_input(self, func, argument, *args):
+        self.assertRaisesRegexp(
+            CloudifyClientError,
+            'The `{0}` argument contains illegal characters'.format(argument),
+            func,
+            *args
+        )
