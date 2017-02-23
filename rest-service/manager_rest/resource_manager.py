@@ -912,6 +912,7 @@ class ResourceManager(object):
         deployment_id = instance_dict.pop('deployment_id')
         node_id = instance_dict.pop('node_id')
         tenant_name = instance_dict.pop('tenant_name')
+        created_by = instance_dict.pop('created_by')
 
         # Link the node instance object to to the node, and add it to the DB
         new_node_instance = models.NodeInstance(**instance_dict)
@@ -923,6 +924,7 @@ class ResourceManager(object):
         instance_dict['deployment_id'] = deployment_id
         instance_dict['node_id'] = node_id
         instance_dict['tenant_name'] = tenant_name
+        instance_dict['created_by'] = created_by
 
     def evaluate_deployment_outputs(self, deployment_id):
         deployment = self.sm.get(
