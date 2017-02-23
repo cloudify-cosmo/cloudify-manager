@@ -59,6 +59,7 @@ class SQLResourceBase(SQLModelBase):
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
     tenant_name = association_proxy('tenant', 'name')
+    created_by = association_proxy('creator', 'username')
 
     @property
     def permission(self):
