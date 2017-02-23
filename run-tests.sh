@@ -8,11 +8,11 @@ install_dependencies() {
     case $CIRCLE_NODE_INDEX in
         0)
             pip install flake8
+            tox -c $WORKFLOWS_CONFIG --notest
             tox -c $REST_CONFIG -e clientV1-endpoints --notest
             tox -c $REST_CONFIG -e clientV1-infrastructure --notest
             tox -c $REST_CONFIG -e clientV2-endpoints --notest
             tox -c $REST_CONFIG -e clientV2-infrastructure --notest
-            tox -c $WORKFLOWS_CONFIG --notest
             tox -c $REST_CONFIG -e clientV2_1-endpoints --notest
             tox -c $REST_CONFIG -e clientV2_1-infrastructure --notest
             tox -c $REST_CONFIG -e clientV3-endpoints --notest
@@ -26,28 +26,26 @@ run() {
     case $CIRCLE_NODE_INDEX in
         0)
             flake8 plugins/riemann-controller/ workflows/ rest-service/ tests/
-            ;;
-        1)
             tox -c $REST_CONFIG -e clientV1-endpoints
             tox -c $REST_CONFIG -e clientV1-infrastructure
             ;;
-        2)
+        1)
             tox -c $REST_CONFIG -e clientV2-endpoints
             ;;
-        3)
+        2)
             tox -c $REST_CONFIG -e clientV2-infrastructure
             tox -c $WORKFLOWS_CONFIG
             ;;
-        4)
+        3)
             tox -c $REST_CONFIG -e clientV2_1-endpoints
             ;;
-        5)
+        4)
             tox -c $REST_CONFIG -e clientV2_1-infrastructure
             ;;
-        6)
+        5)
             tox -c $REST_CONFIG -e clientV3-endpoints
             ;;
-        7)
+        6)
             tox -c $REST_CONFIG -e clientV3-infrastructure
             ;;
     esac
