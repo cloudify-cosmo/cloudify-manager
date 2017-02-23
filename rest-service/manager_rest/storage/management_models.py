@@ -20,7 +20,6 @@ from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
 from manager_rest.constants import (ADMIN_ROLE,
                                     USER_ROLE,
-                                    SUSPENDED_ROLE,
                                     BOOTSTRAP_ADMIN_ID,
                                     DEFAULT_TENANT_ID)
 
@@ -183,10 +182,6 @@ class User(SQLModelBase, UserMixin):
     @property
     def is_admin(self):
         return self.role == ADMIN_ROLE
-
-    @property
-    def is_suspended(self):
-        return self.role == SUSPENDED_ROLE
 
     @property
     def is_bootstrap_admin(self):
