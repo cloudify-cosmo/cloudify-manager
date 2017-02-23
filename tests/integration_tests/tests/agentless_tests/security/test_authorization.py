@@ -47,17 +47,20 @@ class AuthorizationTest(TestAuthenticationBase):
         self._assert_execution_operations()
 
     def _assert_blueprint_operations(self):
+        self.logger.info('Asserting blueprint operations')
         self._assert_upload_blueprint()
         self._assert_list_blueprint()
         self._assert_get_blueprint()
         self._assert_delete_blueprint()
 
     def _assert_deployment_operations(self):
+        self.logger.info('Asserting deployment operations')
         self._assert_create_deployment()
         self._assert_list_deployment()
         self._assert_delete_deployment()
 
     def _assert_execution_operations(self):
+        self.logger.info('Asserting execution operations')
         self._assert_start_execution()
         execution_ids = [e.id for e in self.client.executions.list()]
         execution_id = execution_ids[0]
@@ -66,6 +69,7 @@ class AuthorizationTest(TestAuthenticationBase):
         self._assert_cancel_execution(execution_id)
 
     def _assert_upload_blueprint(self):
+        self.logger.info('Asserting blueprint upload')
         blueprint_path = resource('dsl/empty_blueprint.yaml')
 
         # admins and default users should be able to upload blueprints...
@@ -92,6 +96,8 @@ class AuthorizationTest(TestAuthenticationBase):
             self.wait_for_execution_to_end(executions[0])
 
     def _assert_list_blueprint(self):
+        self.logger.info('Asserting blueprint list')
+
         def _list_and_assert():
             bp_ids = [bp.id for bp in self.client.blueprints.list()]
             for blueprint_id in (self.blueprint1_id,
@@ -114,6 +120,7 @@ class AuthorizationTest(TestAuthenticationBase):
             self._assert_unauthorized(self.client.blueprints.list)
 
     def _assert_get_blueprint(self):
+        self.logger.info('Asserting blueprint get')
         # admins and default users should be able to get blueprints...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
@@ -130,6 +137,7 @@ class AuthorizationTest(TestAuthenticationBase):
                                       self.blueprint1_id)
 
     def _assert_delete_blueprint(self):
+        self.logger.info('Asserting blueprint delete')
         # admins and default users should be able to delete blueprints...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
@@ -146,6 +154,7 @@ class AuthorizationTest(TestAuthenticationBase):
                                       'dummy_bp')
 
     def _assert_create_deployment(self):
+        self.logger.info('Asserting deployment create')
         # admins and default users should be able to create deployments...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
@@ -167,6 +176,8 @@ class AuthorizationTest(TestAuthenticationBase):
                                       deployment_id='dummy_dp')
 
     def _assert_list_deployment(self):
+        self.logger.info('Asserting deployment list')
+
         def _list_and_assert():
             dep_ids = [dep.id for dep in self.client.deployments.list()]
             for deployment_id in (self.deployment1_id,
@@ -190,6 +201,7 @@ class AuthorizationTest(TestAuthenticationBase):
             self._assert_unauthorized(self.client.deployments.list)
 
     def _assert_delete_deployment(self):
+        self.logger.info('Asserting deployment delete')
         # admins and default users should be able to delete deployments...
         with self._login_client(username=self.admin_username,
                                 password=self.admin_password):
@@ -208,6 +220,7 @@ class AuthorizationTest(TestAuthenticationBase):
                                       'dummy_dp')
 
     def _assert_start_execution(self):
+        self.logger.info('Asserting executions start')
         workflow = 'install'
 
         # admins and default users should be able to start executions...
@@ -227,6 +240,8 @@ class AuthorizationTest(TestAuthenticationBase):
                                       workflow)
 
     def _assert_list_executions(self, execution_ids):
+        self.logger.info('Asserting executions list')
+
         def _list_and_assert():
             ex_ids = [ex.id for ex in self.client.executions.list()]
             for execution_id in execution_ids:
@@ -248,6 +263,8 @@ class AuthorizationTest(TestAuthenticationBase):
             self._assert_unauthorized(self.client.executions.list)
 
     def _assert_get_execution(self, execution_id):
+        self.logger.info('Asserting executions get')
+
         def _get_and_assert():
             execution = self.client.executions.get(execution_id)
             self.assertEqual(execution_id, execution.id)
@@ -267,6 +284,8 @@ class AuthorizationTest(TestAuthenticationBase):
             self._assert_unauthorized(self.client.executions.get, execution_id)
 
     def _assert_cancel_execution(self, execution_id):
+        self.logger.info('Asserting executions cancel')
+
         def _cancel_and_assert():
             # In this case, either option is ok, cancel or can't cancel
             # due to already terminated. important thing is no auth error

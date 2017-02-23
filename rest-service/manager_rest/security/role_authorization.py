@@ -14,8 +14,6 @@
 #  * limitations under the License.
 
 
-from manager_rest.constants import SUSPENDED_ROLE
-
 from manager_rest.app_logging import raise_unauthorized_user_error
 
 
@@ -37,10 +35,8 @@ class RoleAuthorization(object):
         self._method = request.method
         self._endpoint = request.path
 
-        if self._role == SUSPENDED_ROLE:
-            raise_unauthorized_user_error(
-                '{0} is suspended'.format(user)
-            )
+        if not user.active:
+            raise_unauthorized_user_error('{0} is not active'.format(user))
 
 
 role_authorizer = RoleAuthorization()

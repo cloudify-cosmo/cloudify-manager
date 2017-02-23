@@ -71,6 +71,7 @@ def setup_resources(api):
         'UserGroupsUsers': 'user-groups/users',
         'Users': 'users',
         'UsersId': 'users/<string:username>',
+        'UsersActive': 'users/active/<string:username>',
         'Cluster': 'cluster',
         'ClusterNodes': 'cluster/nodes',
         'ClusterNodesId': 'cluster/nodes/<string:node_id>',

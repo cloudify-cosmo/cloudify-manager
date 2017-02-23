@@ -19,7 +19,6 @@ from manager_rest.storage.models import Tenant
 from manager_rest.storage import user_datastore
 from manager_rest.constants import (ADMIN_ROLE,
                                     USER_ROLE,
-                                    SUSPENDED_ROLE,
                                     DEFAULT_TENANT_ID)
 
 
@@ -46,7 +45,8 @@ def get_test_users():
         {
             'username': 'clair',
             'password': 'clair_password',
-            'role': SUSPENDED_ROLE
+            'role': USER_ROLE,
+            'active': False
         },
         {
             'username': 'dave',
@@ -66,5 +66,6 @@ def add_users_to_db(user_list):
             password=encrypt_password(user['password']),
             roles=[role]
         )
+        user_obj.active = user.get('active', True)
         user_obj.tenants.append(default_tenant)
     user_datastore.commit()

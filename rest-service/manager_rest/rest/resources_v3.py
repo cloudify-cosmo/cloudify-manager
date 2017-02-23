@@ -279,6 +279,20 @@ class UsersId(SecuredMultiTenancyResource):
         return multi_tenancy.delete_user(username)
 
 
+class UsersActive(SecuredMultiTenancyResource):
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(UserResponse)
+    def post(self, username, multi_tenancy):
+        """
+        Activate a user
+        """
+        request_dict = get_json_and_verify_params({'action'})
+        if request_dict['action'] == 'activate':
+            return multi_tenancy.activate_user(username)
+        else:
+            return multi_tenancy.deactivate_user(username)
+
+
 class UserGroupsUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
