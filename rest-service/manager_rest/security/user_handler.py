@@ -16,7 +16,10 @@
 from flask import current_app
 from itsdangerous import BadSignature, SignatureExpired
 
-from manager_rest.storage import user_datastore
+from manager_rest.storage.models import User
+from manager_rest.manager_exceptions import NotFoundError
+from manager_rest.storage import user_datastore, get_storage_manager
+from manager_rest.utils import CLOUDIFY_API_AUTH_TOKEN_HEADER
 
 
 def user_loader(request):
@@ -32,11 +35,22 @@ def user_loader(request):
     :return: A user object, or None if not found
     """
     if request.authorization:
-        user = get_user_from_auth(request.authorization)
-    else:
-        token = get_token_from_request(request)
+        return get_user_from_auth(request.authorization)
+    token = get_token_from_request(request)
+    if token:
         _, _, user, _ = get_token_status(token)
-    return user
+        return user
+    api_token = get_api_token_from_request(request)
+    if api_token:
+        try:
+            user = get_storage_manager().get(
+                User,
+                api_token,
+                filters={'api_token': api_token}
+            )
+            return user
+        except NotFoundError:
+            return None
 
 
 def get_user_from_auth(auth):
@@ -45,8 +59,12 @@ def get_user_from_auth(auth):
 
 def get_token_from_request(request):
     token_auth_header = current_app.config[
-            'SECURITY_TOKEN_AUTHENTICATION_HEADER']
+        'SECURITY_TOKEN_AUTHENTICATION_HEADER']
     return request.headers.get(token_auth_header)
+
+
+def get_api_token_from_request(request):
+    return request.headers.get(CLOUDIFY_API_AUTH_TOKEN_HEADER)
 
 
 def get_token_status(token):

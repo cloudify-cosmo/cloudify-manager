@@ -19,7 +19,9 @@ from collections import namedtuple
 from flask import current_app
 from flask_security.utils import verify_password, md5
 
-from manager_rest.storage import user_datastore
+from manager_rest.storage.models import User
+from manager_rest.manager_exceptions import NotFoundError
+from manager_rest.storage import user_datastore, get_storage_manager
 from manager_rest.app_logging import raise_unauthorized_user_error
 
 from . import user_handler
@@ -39,15 +41,26 @@ class Authentication(object):
 
     def authenticate(self, request):
         auth = request.authorization
-        if auth:    # User + Password authentication
+        token = user_handler.get_token_from_request(request)
+        api_token = user_handler.get_api_token_from_request(request)
+        if auth:            # User + Password authentication
             user = user_handler.get_user_from_auth(auth)
             user = self._authenticate_password(user, auth)
-        else:       # Token authentication
-            token = user_handler.get_token_from_request(request)
-            if not token:
-                raise_unauthorized_user_error('No authentication '
-                                              'info provided')
+        elif token:         # Token authentication
             user = self._authenticate_token(token)
+        elif api_token:     # API token authentication
+            try:
+                user = get_storage_manager().get(
+                    User,
+                    api_token,
+                    filters={'api_token': api_token}
+                )
+            except NotFoundError:
+                raise_unauthorized_user_error(
+                    'API token authentication failed')
+        else:
+            raise_unauthorized_user_error('No authentication '
+                                          'info provided')
 
         user.last_login_at = datetime.now()
         user_datastore.commit()

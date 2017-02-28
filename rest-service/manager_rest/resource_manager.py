@@ -1172,6 +1172,7 @@ class ResourceManager(object):
                     'policy_triggers':
                         deployment_plan[constants.POLICY_TRIGGERS],
                     'groups': deployment_plan[constants.GROUPS],
+                    'api_token': current_user.api_token
                 }
             }
         )
