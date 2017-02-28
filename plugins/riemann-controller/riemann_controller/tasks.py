@@ -37,7 +37,8 @@ RIEMANN_LOG_PATH = '/var/log/cloudify/riemann/riemann.log'
 
 
 @operation
-def create(policy_types=None,
+def create(api_token,
+           policy_types=None,
            policy_triggers=None,
            groups=None,
            **_):

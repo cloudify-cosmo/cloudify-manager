@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from uuid import uuid4
 from collections import OrderedDict
 
 from sqlalchemy.ext.declarative import declared_attr
@@ -129,11 +130,16 @@ class User(SQLModelBase, UserMixin):
 
     active = db.Column(db.Boolean)
     created_at = db.Column(UTCDateTime)
-    email = db.Column(db.String(255), index=True)
+    email = db.Column(db.String(255))
     first_name = db.Column(db.String(255))
-    last_login_at = db.Column(UTCDateTime, index=True)
+    last_login_at = db.Column(UTCDateTime)
     last_name = db.Column(db.String(255))
     password = db.Column(db.String(255))
+    api_token = db.Column(db.String(100), index=True, unique=True)
+
+    def __init__(self, *args, **kwargs):
+        super(User, self).__init__(*args, **kwargs)
+        self.api_token = uuid4().hex
 
     def _get_identifier_dict(self):
         return OrderedDict({'username': self.username})
