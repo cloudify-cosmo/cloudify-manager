@@ -196,10 +196,10 @@ def make_zip64_archive(zip_filename, directory):
         for dirpath, dirnames, filenames in os.walk(directory):
             for dirname in sorted(dirnames):
                 path = os.path.normpath(os.path.join(dirpath, dirname))
-                zip_file.write(os.path.relpath(path, base_dir))
+                zip_file.write(path, os.path.relpath(path, base_dir))
             for filename in filenames:
                 path = os.path.normpath(os.path.join(dirpath, filename))
                 # Not sure why this check is needed,
                 # but it's in the original stdlib's implementation
                 if os.path.isfile(path):
-                    zip_file.write(os.path.relpath(path, base_dir))
+                    zip_file.write(path, os.path.relpath(path, base_dir))
