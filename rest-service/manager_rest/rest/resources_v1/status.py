@@ -24,6 +24,10 @@ from manager_rest.rest.rest_decorators import (
     marshal_with,
 )
 from manager_rest.security import SecuredResource
+try:
+    from cloudify_premium.ha import node_status
+except ImportError:
+    node_status = {'initialized': False}
 
 
 class Status(SecuredResource):
@@ -68,6 +72,20 @@ class Status(SecuredResource):
                             'nginx.service': 'Webserver',
                             'postgresql-9.5.service': 'PostgreSQL'
                             }
+
+                if self._is_clustered():
+                    # clustered postgresql service is named differently -
+                    # the old service is not used in a clustered manager,
+                    # so we can ignore its status
+                    del job_list['postgresql-9.5.service']
+
+                    # services that are only running in a clustered manager
+                    job_list.update({
+                        'cloudify-postgresql.service': 'PostgreSQL',
+                        'cloudify-consul.service': 'Consul',
+                        'cloudify-syncthing.service': 'Syncthing',
+                    })
+
                 jobs = get_services(job_list)
         except ImportError:
             jobs = ['undefined']
@@ -77,3 +95,7 @@ class Status(SecuredResource):
     @staticmethod
     def _is_docker_env():
         return os.getenv('DOCKER_ENV') is not None
+
+    @staticmethod
+    def _is_clustered():
+        return node_status.get('initialized')
