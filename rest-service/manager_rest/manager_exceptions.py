@@ -424,3 +424,17 @@ class BlueprintAlreadyExistsException(Exception):
     def __init__(self, blueprint_id, *args):
         Exception.__init__(self, args)
         self.blueprint_id = blueprint_id
+
+
+class DeploymentPluginNotFound(ManagerException):
+    """ Raised when a plugin is listed in the blueprint but not installed
+        on the manager"""
+    ERROR_CODE = 'deployment_plugin_not_found'
+
+    def __init__(self, *args, **kwargs):
+        super(DeploymentPluginNotFound, self).__init__(
+            412,
+            DeploymentPluginNotFound.ERROR_CODE,
+            *args,
+            **kwargs
+        )

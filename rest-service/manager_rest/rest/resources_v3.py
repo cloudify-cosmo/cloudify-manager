@@ -36,12 +36,14 @@ from .. import utils
 from . import rest_decorators, rest_utils
 from ..security.authentication import authenticator
 from ..security.tenant_authorization import tenant_authorizer
+from .resources_v2.nodes import Nodes as v2_Nodes
 from .resources_v1.nodes import NodeInstancesId as v1_NodeInstancesId
 from .resources_v2 import (
     Events as v2_Events,
     Nodes as v2_Nodes,
 )
 from .responses_v3 import BaseResponse, ResourceID, SecretsListResponse
+from . import resources_v1
 
 try:
     from cloudify_premium import (TenantResponse,
@@ -685,6 +687,18 @@ class Events(v2_Events):
             event = dicttoolz.keyfilter(lambda key: key in _include, event)
 
         return event
+
+
+class DeploymentsId(resources_v1.DeploymentsId):
+
+    def create_request_schema(self):
+        request_schema = super(DeploymentsId, self).create_request_schema()
+        request_schema['skip_plugins_validation'] = {
+            'optional': True, 'type': bool}
+        return request_schema
+
+    def get_skip_plugin_validation_flag(self, request_dict):
+        return request_dict.get('skip_plugins_validation', False)
 
 
 def _only_admin_in_manager():
