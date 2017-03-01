@@ -3,7 +3,7 @@
     (let [deployment-id         (:deployment_id ctx)
           parameters            (:trigger-parameters ctx)
           rest-host             (or (System/getenv "REST_HOST") "127.0.0.1")
-          rest-protocol         (or (System/getenv "REST_PROTOCOL") "http")
+          rest-protocol         "https"
           raw-rest-port         (or (System/getenv "REST_PORT") "80")
           rest-port             (Integer/parseInt raw-rest-port)
           verify-ssl-cert       false

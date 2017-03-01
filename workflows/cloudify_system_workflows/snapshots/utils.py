@@ -22,9 +22,9 @@ import zipfile
 
 from elasticsearch import Elasticsearch
 
+from cloudify import constants
 from cloudify.workflows import ctx
 from cloudify.utils import ManagerVersion
-from cloudify.constants import COMPUTE_NODE_TYPE
 
 
 class DictToAttributes(object):
@@ -67,15 +67,16 @@ def copy_files_between_manager_and_snapshot(archive_root,
     # absolute then should point to proper data in manager/snapshot archive
     data_to_copy = [
         (os.path.join(
-            config.file_server_blueprints_folder, new_tenant),
-         'blueprints'),
+            constants.FILE_SERVER_BLUEPRINTS_FOLDER, new_tenant),
+         constants.FILE_SERVER_BLUEPRINTS_FOLDER),
         (os.path.join(
-            config.file_server_deployments_folder, new_tenant),
-         'deployments'),
+            constants.FILE_SERVER_DEPLOYMENTS_FOLDER, new_tenant),
+         constants.FILE_SERVER_DEPLOYMENTS_FOLDER),
         (os.path.join(
-            config.file_server_uploaded_blueprints_folder, new_tenant),
-         'uploaded-blueprints'),
-        (config.file_server_uploaded_plugins_folder, 'plugins')
+            constants.FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER, new_tenant),
+         constants.FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER),
+        (constants.FILE_SERVER_PLUGINS_FOLDER,
+         constants.FILE_SERVER_PLUGINS_FOLDER)
     ]
 
     for (p1, p2) in data_to_copy:
@@ -158,7 +159,7 @@ def get_manager_version(client):
 
 
 def is_compute(node):
-    return COMPUTE_NODE_TYPE in node.type_hierarchy
+    return constants.COMPUTE_NODE_TYPE in node.type_hierarchy
 
 
 def make_zip64_archive(zip_filename, directory):

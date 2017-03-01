@@ -14,6 +14,13 @@
 #  * limitations under the License.
 #
 
+from flask_security import current_user
+from flask import current_app, request
+
+from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
+
 from manager_rest import config
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import (SecuredResource,
@@ -22,9 +29,6 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError)
 from manager_rest.security.resource_permissions import PermissionsHandler
-
-from flask_security import current_user
-from flask import current_app, request
 
 from . import rest_decorators
 from .responses_v3 import BaseResponse, ResourceID
@@ -432,9 +436,9 @@ class FileServerAuth(SecuredMultiTenancyResourceSkipTenantAuth):
     @staticmethod
     def _verify_tenant(uri):
         tenanted_resources = [
-            config.instance.file_server_blueprints_folder,
-            config.instance.file_server_uploaded_blueprints_folder,
-            config.instance.file_server_deployments_folder
+            FILE_SERVER_BLUEPRINTS_FOLDER,
+            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+            FILE_SERVER_DEPLOYMENTS_FOLDER
         ]
         tenanted_resources = [r.strip('/') for r in tenanted_resources]
         uri = uri.strip('/')

@@ -24,7 +24,6 @@ import os
 import shutil
 
 from flask.testing import FlaskClient
-from nose.tools import nottest
 from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
 from mock import MagicMock
@@ -33,9 +32,11 @@ from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
-from manager_rest.constants import CLOUDIFY_TENANT_HEADER, DEFAULT_TENANT_NAME
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
+from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
+                                    DEFAULT_TENANT_NAME,
+                                    FILE_SERVER_BLUEPRINTS_FOLDER)
 
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -44,46 +45,7 @@ from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
 
 FILE_SERVER_PORT = 53229
-FILE_SERVER_BLUEPRINTS_FOLDER = 'blueprints'
-FILE_SERVER_SNAPSHOTS_FOLDER = 'snapshots'
-FILE_SERVER_DEPLOYMENTS_FOLDER = 'deployments'
-FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER = 'uploaded-blueprints'
-FILE_SERVER_RESOURCES_URI = '/resources'
 LATEST_API_VERSION = 3  # to be used by max_client_version test attribute
-
-
-# todo: do we need it?
-@nottest
-def test_config(**kwargs):
-    """
-    decorator-generator that can be used on test functions to set
-    key-value pairs that may later be injected into functions using the
-    "inject_test_config" decorator
-    :param kwargs: key-value pairs to be stored on the function object
-    :return: a decorator for a test function, which stores with the test's
-     config on the test function's object under the "test_config" attribute
-    """
-    def _test_config_decorator(test_func):
-        test_func.test_config = kwargs
-        return test_func
-    return _test_config_decorator
-
-
-# todo: do we need it?
-@nottest
-def inject_test_config(f):
-    """
-    decorator for injecting "test_config" into a test obj method.
-    also see the "test_config" decorator
-    :param f: a test obj method to be injected with the "test_config" parameter
-    :return: the method augmented with the "test_config" parameter
-    """
-    def _wrapper(test_obj, *args, **kwargs):
-        test_func = getattr(test_obj, test_obj.id().split('.')[-1])
-        if hasattr(test_func, 'test_config'):
-            kwargs['test_config'] = test_func.test_config
-        return f(test_obj, *args, **kwargs)
-    return _wrapper
 
 
 class TestClient(FlaskClient):
@@ -275,17 +237,9 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.postgresql_username = ''
         test_config.postgresql_password = ''
         test_config.file_server_root = self.tmpdir
-        test_config.file_server_base_uri = 'http://localhost:{0}'.format(
-            FILE_SERVER_PORT)
-        test_config.file_server_blueprints_folder = \
-            FILE_SERVER_BLUEPRINTS_FOLDER
-        test_config.file_server_deployments_folder = \
-            FILE_SERVER_DEPLOYMENTS_FOLDER
-        test_config.file_server_uploaded_blueprints_folder = \
-            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
-        test_config.file_server_snapshots_folder = \
-            FILE_SERVER_SNAPSHOTS_FOLDER
-        test_config.file_server_resources_uri = FILE_SERVER_RESOURCES_URI
+        test_config.file_server_url = 'http://localhost:{0}'.format(
+            self.file_server.port)
+
         test_config.rest_service_log_level = 'DEBUG'
         test_config.rest_service_log_path = self.rest_service_log
         test_config.rest_service_log_file_size_MB = 100,

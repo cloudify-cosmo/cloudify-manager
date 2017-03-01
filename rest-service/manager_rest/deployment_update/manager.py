@@ -21,8 +21,9 @@ from flask import current_app
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
+from manager_rest import config
 from manager_rest.constants import CURRENT_TENANT_CONFIG
-from manager_rest import app_context, config, manager_exceptions
+from manager_rest import app_context, manager_exceptions
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.storage.models_states import ExecutionState
 from manager_rest import workflow_executor
@@ -94,25 +95,24 @@ class DeploymentUpdateManager(object):
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
         blueprint_id = deployment.blueprint_id
-
-        # enables reverting to original blueprint resources
-        file_server_base_url = \
-            '{0}/'.format(config.instance.file_server_base_uri)
+        file_server_root = config.instance.file_server_root
 
         blueprint_resource_dir = os.path.join(
-            file_server_base_url,
+            file_server_root,
             'blueprints',
             current_app.config[CURRENT_TENANT_CONFIG].name,
             blueprint_id)
+        # The dsl parser expects a URL
+        blueprint_resource_dir_url = 'file:{0}'.format(blueprint_resource_dir)
 
-        app_path = os.path.join(file_server_base_url, app_dir, app_blueprint)
+        app_path = os.path.join(file_server_root, app_dir, app_blueprint)
 
         # parsing the blueprint from here
         try:
             plan = tasks.parse_dsl(
                 app_path,
-                resources_base_url=file_server_base_url,
-                additional_resources=[blueprint_resource_dir],
+                resources_base_path=file_server_root,
+                additional_resources=[blueprint_resource_dir_url],
                 **app_context.get_parser_context())
 
         except parser_exceptions.DSLParsingException as ex:

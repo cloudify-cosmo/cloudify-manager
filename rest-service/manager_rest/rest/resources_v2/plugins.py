@@ -22,7 +22,6 @@ from uuid import uuid4
 from flask_restful_swagger import swagger
 
 from manager_rest import (
-    config,
     manager_exceptions,
     utils,
 )
@@ -38,6 +37,8 @@ from manager_rest.storage import (
 )
 from manager_rest.upload_manager import UploadedPluginsManager
 from manager_rest.utils import create_filter_params_list_description
+from manager_rest.constants import (FILE_SERVER_RESOURCES_FOLDER,
+                                    FILE_SERVER_PLUGINS_FOLDER)
 
 
 class Plugins(SecuredResource):
@@ -146,8 +147,8 @@ class PluginsArchive(SecuredResource):
                                "Plugin ID: {0}".format(plugin_id))
 
         plugin_path = '{0}/{1}/{2}/{3}'.format(
-            config.instance.file_server_resources_uri,
-            'plugins',
+            FILE_SERVER_RESOURCES_FOLDER,
+            FILE_SERVER_PLUGINS_FOLDER,
             plugin_id,
             archive_name)
 
