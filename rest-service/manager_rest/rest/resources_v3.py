@@ -14,6 +14,7 @@
 #  * limitations under the License.
 #
 
+from .. import utils
 from flask_security import current_user
 from flask import current_app, request
 
@@ -525,6 +526,53 @@ class LdapAuthentication(SecuredResource):
             'ldap_dn_extra'
         })
         return ldap_config
+
+
+class Secrets(SecuredResource):
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(models.Secret)
+    def get(self, key):
+        """
+        Get secret by key
+        """
+
+        rest_utils.validate_inputs({'key': key})
+        return get_storage_manager().get(models.Secret, key)
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(models.Secret)
+    def put(self, key):
+        """
+        Create a new secret
+        """
+
+        key, value = self._validate_secret_inputs(key)
+
+        return get_storage_manager().put(models.Secret(
+            id=key,
+            value=value,
+            created_at=utils.get_formatted_timestamp(),
+            updated_at=utils.get_formatted_timestamp()
+        ))
+
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(models.Secret)
+    def patch(self, key):
+        """
+        Update an existing secret
+        """
+
+        key, value = self._validate_secret_inputs(key)
+        secret = get_storage_manager().get(models.Secret, key)
+        secret.value = value
+        secret.updated_at = utils.get_formatted_timestamp()
+        return get_storage_manager().update(secret)
+
+    def _validate_secret_inputs(self, key):
+        request_dict = rest_utils.get_json_and_verify_params({'value'})
+        value = request_dict['value']
+        rest_utils.validate_inputs({'key': key, 'value': value})
+        return key, value
 
 
 def _only_admin_in_manager():

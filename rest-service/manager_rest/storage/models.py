@@ -34,4 +34,5 @@ from .resource_models import (Blueprint,
                               DeploymentModification,
                               DeploymentUpdate,
                               DeploymentModificationState,
-                              DeploymentUpdateStep)
+                              DeploymentUpdateStep,
+                              Secret)

@@ -76,10 +76,33 @@ class Plugin(TopLevelResource):
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
     wheels = db.Column(db.PickleType, nullable=False)
 
+
+class Secret(TopLevelResource):
+    __tablename__ = 'secrets'
+
+    value = db.Column(db.Text)
+    created_at = db.Column(UTCDateTime, nullable=False, index=True)
+    updated_at = db.Column(UTCDateTime)
+
+    @property
+    def key(self):
+        return self.id
+
+    @classproperty
+    def response_fields(cls):
+        response_fields = {
+            'key': flask_fields.String,
+            'value': flask_fields.String,
+            'created_at': flask_fields.String,
+            'updated_at': flask_fields.String
+        }
+
+        return response_fields
+
 # endregion
 
-
 # region Derived Resources
+
 
 class Deployment(TopLevelCreatorMixin, DerivedTenantMixin, SQLResourceBase):
     __tablename__ = 'deployments'

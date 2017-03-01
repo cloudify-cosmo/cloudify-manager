@@ -77,7 +77,8 @@ def setup_resources(api):
         'ClusterNodesId': 'cluster/nodes/<string:node_id>',
         'Permissions': 'permissions',
         'FileServerAuth': 'file-server-auth',
-        'LdapAuthentication': 'ldap'
+        'LdapAuthentication': 'ldap',
+        'Secrets': 'secrets/<string:key>'
     }
 
     # Set version endpoint as a non versioned endpoint

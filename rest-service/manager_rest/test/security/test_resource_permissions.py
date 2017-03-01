@@ -257,7 +257,7 @@ class ResourcePermissionTests(SecurityTestBase):
             add_permission_func_getter=lambda client:
             client.plugins.add_permission,
             custom_delete_message='Failed during plugin un-installation. '
-                                  '(Unauthorized: 401: Unauthorized)'
+                                  '(Unauthorized: 401 Unauthorized'
         )
 
     def _test_only_owner_can_delete_resource(self,
