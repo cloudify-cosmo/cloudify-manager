@@ -524,7 +524,15 @@ data_types:
       service_name:
         description: |
           Used to set the the cloudify agent service name.
-          It takes precedence over the deprecated 'cloudify.nodes.Compute.cloudify_agent.name'.
+
+          If not set, the default value for the service name is:
+          - Linux: 'celery-<id>'
+          - Windows: '<id>'
+
+          where 'id' is the instance id of the compute node in which the agent is running.
+
+          Note: the value in this field, takes precedence over the deprecated
+          'cloudify.nodes.Compute.cloudify_agent.name'.
         type: string
         required: false
       user:
