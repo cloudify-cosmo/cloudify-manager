@@ -507,6 +507,12 @@ data_types:
                        This method is only supported for specific IaaS plugins.
         type: string
         required: true
+      service_name:
+        description: |
+          Used to set the the cloudify agent service name.
+          It takes precedence over the deprecated 'cloudify.nodes.Compute.cloudify_agent.name'.
+        type: string
+        required: false
       user:
         description: >
           For host agents, the agent will be installed for this user.
