@@ -306,7 +306,7 @@ class BaseTestCase(unittest.TestCase):
 
     @staticmethod
     def deploy_application(dsl_path,
-                           timeout_seconds=30,
+                           timeout_seconds=60,
                            blueprint_id=None,
                            deployment_id=None,
                            wait_for_execution=True,
