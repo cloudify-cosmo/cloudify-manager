@@ -16,7 +16,7 @@ import copy
 import os
 import uuid
 
-from flask import current_app
+from flask import current_app, request
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
@@ -108,11 +108,19 @@ class DeploymentUpdateManager(object):
         app_path = os.path.join(file_server_base_url, app_dir, app_blueprint)
 
         # parsing the blueprint from here
+        headers = {}
+        if utils.CLOUDIFY_AUTH_HEADER in request.headers:
+            headers[utils.CLOUDIFY_AUTH_HEADER] = \
+                request.headers[utils.CLOUDIFY_AUTH_HEADER]
+        elif utils.CLOUDIFY_AUTH_TOKEN_HEADER in request.headers:
+            headers[utils.CLOUDIFY_AUTH_TOKEN_HEADER] = \
+                request.headers[utils.CLOUDIFY_AUTH_TOKEN_HEADER]
         try:
             plan = tasks.parse_dsl(
                 app_path,
                 resources_base_url=file_server_base_url,
                 additional_resources=[blueprint_resource_dir],
+                headers=headers,
                 **app_context.get_parser_context())
 
         except parser_exceptions.DSLParsingException as ex:
