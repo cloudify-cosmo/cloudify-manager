@@ -57,6 +57,9 @@ class Config(object):
 
         self.security_hash_salt = None
         self.security_secret_key = None
+        self.security_encoding_alphabet = None
+        self.security_encoding_block_size = None
+        self.security_encoding_min_length = None
 
         self.warnings = []
 

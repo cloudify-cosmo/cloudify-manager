@@ -16,10 +16,13 @@
 from flask import current_app
 from itsdangerous import BadSignature, SignatureExpired
 
+from ..storage.idencoder import get_encoder
 from manager_rest.storage.models import User
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import user_datastore, get_storage_manager
 from manager_rest.utils import CLOUDIFY_API_AUTH_TOKEN_HEADER
+
+ENCODED_ID_LENGTH = 5
 
 
 def user_loader(request):
@@ -42,15 +45,20 @@ def user_loader(request):
         return user
     api_token = get_api_token_from_request(request)
     if api_token:
-        try:
-            user = get_storage_manager().get(
-                User,
-                api_token,
-                filters={'api_token': api_token}
-            )
-            return user
-        except NotFoundError:
-            return None
+        user, user_token_key = extract_api_token(api_token)
+        return user
+    return None
+
+
+def extract_api_token(api_token):
+    user_id = api_token[:ENCODED_ID_LENGTH]
+    user_token_key = api_token[ENCODED_ID_LENGTH:]
+    user_id = get_encoder().decode(user_id)
+    try:
+        user = get_storage_manager().get(User, user_id)
+    except NotFoundError:
+        return None, None
+    return user, user_token_key
 
 
 def get_user_from_auth(auth):

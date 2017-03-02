@@ -48,7 +48,6 @@ class AttributesTestCase(base_test.BaseServerTestCase):
             self.node4.id, runtime_properties={'key4': 'value4'})
 
     def test_attributes(self):
-
         context = {
             'self': self.node1.id,
             'source': self.node2.id,
