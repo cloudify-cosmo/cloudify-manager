@@ -63,6 +63,7 @@ class AuthenticationTests(SecurityTestBase):
         self._assert_user_unauthorized(username='alice', password=None)
 
     def test_valid_token_authentication(self):
+
         with self.use_secured_client(username='alice',
                                      password='alice_password'):
             token = self.client.tokens.get()

@@ -247,6 +247,10 @@ class BaseServerTestCase(unittest.TestCase):
         test_config.maintenance_folder = self.maintenance_mode_dir
         test_config.security_hash_salt = 'hash_salt'
         test_config.security_secret_key = 'secret_key'
+        test_config.security_encoding_alphabet = \
+            'L7SMZ4XebsuIK8F6aVUBYGQtW0P12Rn'
+        test_config.security_encoding_block_size = 24
+        test_config.security_encoding_min_length = 5
         return test_config
 
     def _version_url(self, url):

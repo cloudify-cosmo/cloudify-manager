@@ -24,6 +24,7 @@ from manager_rest.constants import (ADMIN_ROLE,
                                     BOOTSTRAP_ADMIN_ID,
                                     DEFAULT_TENANT_ID)
 
+from .idencoder import get_encoder
 from .relationships import many_to_many_relationship
 from .models_base import db, SQLModelBase, UTCDateTime, CIColumn
 
@@ -135,11 +136,16 @@ class User(SQLModelBase, UserMixin):
     last_login_at = db.Column(UTCDateTime)
     last_name = db.Column(db.String(255))
     password = db.Column(db.String(255))
-    api_token = db.Column(db.String(100), index=True, unique=True)
+    api_token_key = db.Column(db.String(100))
 
     def __init__(self, *args, **kwargs):
         super(User, self).__init__(*args, **kwargs)
-        self.api_token = uuid4().hex
+        self.api_token_key = uuid4().hex
+
+    @property
+    def api_token(self):
+        encoded_id = get_encoder().encode(self.id)
+        return '{0}{1}'.format(encoded_id, self.api_token_key)
 
     def _get_identifier_dict(self):
         return OrderedDict({'username': self.username})

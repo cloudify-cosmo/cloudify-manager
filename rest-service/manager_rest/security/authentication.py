@@ -19,9 +19,7 @@ from collections import namedtuple
 from flask import current_app
 from flask_security.utils import verify_password, md5
 
-from manager_rest.storage.models import User
-from manager_rest.manager_exceptions import NotFoundError
-from manager_rest.storage import user_datastore, get_storage_manager
+from manager_rest.storage import user_datastore
 from manager_rest.app_logging import raise_unauthorized_user_error
 
 from . import user_handler
@@ -49,13 +47,8 @@ class Authentication(object):
         elif token:         # Token authentication
             user = self._authenticate_token(token)
         elif api_token:     # API token authentication
-            try:
-                user = get_storage_manager().get(
-                    User,
-                    api_token,
-                    filters={'api_token': api_token}
-                )
-            except NotFoundError:
+            user, user_token_key = user_handler.extract_api_token(api_token)
+            if not user or user.api_token_key != user_token_key:
                 raise_unauthorized_user_error(
                     'API token authentication failed')
         else:
