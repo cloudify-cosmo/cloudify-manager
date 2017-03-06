@@ -194,7 +194,7 @@ class SQLStorageManager(object):
         # System administrators should see all resources, regardless of tenant.
         # Queries of elements that aren't resources (tenants, users, etc.),
         # shouldn't be filtered as well
-        if current_user.is_admin or not model_class.is_resource:
+        if not model_class.is_resource or current_user.is_admin:
             return query
 
         # Only get resources where the current user appears in `viewers` or
