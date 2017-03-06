@@ -342,10 +342,10 @@ class ResourceManager(object):
                             ','.join([node.id for node in node_instances
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
-
-        self._delete_deployment_environment(deployment_id, bypass_maintenance)
-        self._delete_deployment_logs(deployment_id, bypass_maintenance)
-        return self.sm.delete(deployment)
+        delete_deployment_response = self.sm.delete(deployment)
+        self._delete_deployment_environment(deployment,
+                                            bypass_maintenance)
+        return delete_deployment_response
 
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
@@ -452,8 +452,7 @@ class ResourceManager(object):
 
         # currently, deployment env creation/deletion are not set as
         # system workflows
-        is_system_workflow = wf_id not in (
-            'create_deployment_environment', 'delete_deployment_environment')
+        is_system_workflow = wf_id != 'create_deployment_environment'
 
         # It means that a system-wide workflow is about to be launched
         if deployment is None and verify_no_executions:
@@ -469,7 +468,7 @@ class ResourceManager(object):
                 execution_parameters),
             is_system_workflow=is_system_workflow)
 
-        if deployment:
+        if not is_system_workflow and deployment:
             execution.deployment = deployment
         self.sm.put(execution)
 
@@ -1178,9 +1177,8 @@ class ResourceManager(object):
         )
 
     def _delete_deployment_environment(self,
-                                       deployment_id,
+                                       deployment,
                                        bypass_maintenance):
-        deployment = self.sm.get(models.Deployment, deployment_id)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
         wf_id = 'delete_deployment_environment'
         deployment_env_deletion_task_name = \
@@ -1190,27 +1188,14 @@ class ResourceManager(object):
             wf_id=wf_id,
             task_mapping=deployment_env_deletion_task_name,
             deployment=deployment,
-            timeout=300,
             bypass_maintenance=bypass_maintenance,
+            verify_no_executions=False,
             execution_parameters={
                 'deployment_plugins_to_uninstall': blueprint.plan[
                     constants.DEPLOYMENT_PLUGINS_TO_INSTALL],
                 'workflow_plugins_to_uninstall': blueprint.plan[
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
             })
-
-    def _delete_deployment_logs(self, deployment_id, bypass_maintenance):
-        self._execute_system_workflow(
-            wf_id='delete_deployment_logs',
-            task_mapping='cloudify_system_workflows.deployment_environment'
-                         '.delete_logs',
-            execution_parameters={
-                'deployment_id': deployment_id
-            },
-            verify_no_executions=False,
-            timeout=300,
-            bypass_maintenance=bypass_maintenance
-        )
 
     def _check_for_active_executions(self, deployment_id, force):
 
