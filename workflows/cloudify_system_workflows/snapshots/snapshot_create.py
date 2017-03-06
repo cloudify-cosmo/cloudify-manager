@@ -20,6 +20,7 @@ import tempfile
 
 from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
+from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
 from . import utils
 from . import constants
@@ -129,7 +130,7 @@ class SnapshotCreate(object):
         """
         snapshots_dir = os.path.join(
             self._config.file_server_root,
-            self._config.file_server_snapshots_folder
+            FILE_SERVER_SNAPSHOTS_FOLDER
         )
         if not os.path.exists(snapshots_dir):
             os.makedirs(snapshots_dir)

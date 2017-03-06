@@ -22,8 +22,10 @@ from flask_restful import types
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
+
 from manager_rest import config
 from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.resource_manager import (
     ResourceManager,
@@ -153,7 +155,7 @@ class DeploymentsId(SecuredResource):
         # Delete deployment resources from file server
         deployment_folder = os.path.join(
             config.instance.file_server_root,
-            config.instance.file_server_deployments_folder,
+            FILE_SERVER_DEPLOYMENTS_FOLDER,
             current_app.config[CURRENT_TENANT_CONFIG].name,
             deployment.id)
         if os.path.exists(deployment_folder):

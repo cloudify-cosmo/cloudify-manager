@@ -27,6 +27,7 @@ from cloudify.workflows import ctx
 from cloudify.utils import ManagerVersion
 from cloudify.manager import get_rest_client
 from cloudify.exceptions import NonRecoverableError
+from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
 from cloudify_system_workflows import plugins
 from cloudify_system_workflows.deployment_environment import \
@@ -168,7 +169,7 @@ class SnapshotRestore(object):
         file_server_root = self._config.file_server_root
         snapshots_dir = os.path.join(
             file_server_root,
-            self._config.file_server_snapshots_folder
+            FILE_SERVER_SNAPSHOTS_FOLDER
         )
         return os.path.join(
             snapshots_dir,

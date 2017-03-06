@@ -29,7 +29,7 @@ from os import path, makedirs
 import wagon.utils
 from flask_restful import abort
 
-from manager_rest import config, constants
+from manager_rest import constants, config
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
@@ -103,9 +103,12 @@ def is_bypass_maintenance_mode(request):
 
 
 def get_plugin_archive_path(plugin_id, archive_name):
-    return os.path.join(config.instance.file_server_uploaded_plugins_folder,
-                        plugin_id,
-                        archive_name)
+    return os.path.join(
+        config.instance.file_server_root,
+        constants.FILE_SERVER_PLUGINS_FOLDER,
+        plugin_id,
+        archive_name
+    )
 
 
 def plugin_installable_on_current_platform(plugin):

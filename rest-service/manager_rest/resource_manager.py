@@ -99,20 +99,10 @@ class ResourceManager(object):
         config_instance = config.instance
         return {
             'file_server_root': config_instance.file_server_root,
-            'file_server_snapshots_folder':
-                config_instance.file_server_snapshots_folder,
-            'file_server_blueprints_folder':
-                config_instance.file_server_blueprints_folder,
-            'file_server_deployments_folder':
-                config_instance.file_server_deployments_folder,
-            'file_server_uploaded_blueprints_folder':
-                config_instance.file_server_uploaded_blueprints_folder,
             'db_address': config_instance.db_address,
             'db_port': config_instance.db_port,
             'created_status': SnapshotState.CREATED,
             'failed_status': SnapshotState.FAILED,
-            'file_server_uploaded_plugins_folder':
-                config_instance.file_server_uploaded_plugins_folder,
             'postgresql_bin_path': config_instance.postgresql_bin_path,
             'postgresql_username': config_instance.postgresql_username,
             'postgresql_password': config_instance.postgresql_password,
@@ -262,8 +252,11 @@ class ResourceManager(object):
                           resources_base,
                           blueprint_id,
                           private_resource=False):
-        application_file = os.path.join(application_dir, application_file_name)
-        dsl_location = '{0}{1}'.format(resources_base, application_file)
+        dsl_location = os.path.join(
+            resources_base,
+            application_dir,
+            application_file_name
+        )
         try:
             plan = tasks.parse_dsl(dsl_location,
                                    resources_base,

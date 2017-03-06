@@ -36,12 +36,14 @@ from manager_rest.storage import (
 )
 from manager_rest.storage.models_states import SnapshotState
 from manager_rest.upload_manager import UploadedSnapshotsManager
+from manager_rest.constants import (FILE_SERVER_SNAPSHOTS_FOLDER,
+                                    FILE_SERVER_RESOURCES_FOLDER)
 
 
 def _get_snapshot_path(snapshot_id):
     return os.path.join(
         config.instance.file_server_root,
-        config.instance.file_server_snapshots_folder,
+        FILE_SERVER_SNAPSHOTS_FOLDER,
         snapshot_id
     )
 
@@ -201,8 +203,8 @@ class SnapshotsIdArchive(SecuredResource):
         )
 
         snapshot_uri = '{0}/{1}/{2}/{2}.zip'.format(
-            config.instance.file_server_resources_uri,
-            config.instance.file_server_snapshots_folder,
+            FILE_SERVER_RESOURCES_FOLDER,
+            FILE_SERVER_SNAPSHOTS_FOLDER,
             snapshot_id
         )
 

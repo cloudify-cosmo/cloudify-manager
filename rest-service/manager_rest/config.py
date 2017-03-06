@@ -39,12 +39,7 @@ class Config(object):
         self.ldap_is_active_directory = True
         self.ldap_dn_extra = {}
         self.file_server_root = None
-        self.file_server_base_uri = None
-        self.file_server_blueprints_folder = None
-        self.file_server_deployments_folder = None
-        self.file_server_uploaded_blueprints_folder = None
-        self.file_server_snapshots_folder = None
-        self.file_server_resources_uri = None
+        self.file_server_url = None
         self.maintenance_folder = None
         self.rest_service_log_level = None
         self.rest_service_log_path = None
@@ -59,12 +54,6 @@ class Config(object):
         self.security_secret_key = None
 
         self.warnings = []
-
-    @property
-    def file_server_uploaded_plugins_folder(self):
-        if not self.file_server_root:
-            return None
-        return os.path.join(self.file_server_root, 'plugins')
 
     def load_configuration(self):
         self._load_config('MANAGER_REST_CONFIG_PATH')

@@ -31,6 +31,12 @@ from flask import request, current_app
 from flask_restful import types
 from flask_restful.reqparse import RequestParser
 
+from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
+                                    FILE_SERVER_SNAPSHOTS_FOLDER,
+                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
+
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from manager_rest.archiving import get_archive_type
@@ -272,7 +278,7 @@ class UploadedSnapshotsManager(UploadedDataManager):
         return 'snapshot_archive_url'
 
     def _get_target_dir_path(self):
-        return config.instance.file_server_snapshots_folder
+        return FILE_SERVER_SNAPSHOTS_FOLDER
 
     def _get_archive_type(self, archive_path):
         return 'zip'
@@ -307,7 +313,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
         return 'blueprint_archive_url'
 
     def _get_target_dir_path(self):
-        return os.path.join(config.instance.file_server_deployments_folder,
+        return os.path.join(FILE_SERVER_DEPLOYMENTS_FOLDER,
                             current_app.config[CURRENT_TENANT_CONFIG].name)
 
     def _get_archive_type(self, archive_path):
@@ -357,7 +363,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
             # create the destination root dir
             file_server_deployment_root = \
                 os.path.join(file_server_root,
-                             config.instance.file_server_deployments_folder,
+                             FILE_SERVER_DEPLOYMENTS_FOLDER,
                              current_app.config[CURRENT_TENANT_CONFIG].name,
                              deployment_id)
 
@@ -455,7 +461,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
 
     def _get_target_dir_path(self):
         return os.path.join(
-            config.instance.file_server_uploaded_blueprints_folder,
+            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
             current_app.config[CURRENT_TENANT_CONFIG].name)
 
     def _get_archive_type(self, archive_path):
@@ -478,7 +484,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
     def _process_plugins(cls, file_server_root, blueprint_id):
         plugins_directory = path.join(
             file_server_root,
-            config.instance.file_server_blueprints_folder,
+            FILE_SERVER_BLUEPRINTS_FOLDER,
             current_app.config[CURRENT_TENANT_CONFIG].name,
             blueprint_id,
             "plugins")
@@ -529,7 +535,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
             blueprint = get_resource_manager().publish_blueprint(
                 app_dir,
                 app_file_name,
-                'file://{0}/'.format(file_server_root),
+                file_server_root,
                 blueprint_id,
                 private_resource=args.private_resource
             )
@@ -538,7 +544,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
             # directory named after the blueprint id
             tenant_dir = os.path.join(
                 file_server_root,
-                config.instance.file_server_blueprints_folder,
+                FILE_SERVER_BLUEPRINTS_FOLDER,
                 current_app.config[CURRENT_TENANT_CONFIG].name)
             mkdirs(tenant_dir)
             shutil.move(os.path.join(file_server_root, app_dir),
@@ -591,7 +597,7 @@ class UploadedPluginsManager(UploadedDataManager):
         return 'plugin_archive_url'
 
     def _get_target_dir_path(self):
-        return config.instance.file_server_uploaded_plugins_folder
+        return FILE_SERVER_PLUGINS_FOLDER
 
     def _get_archive_type(self, archive_path):
         return 'tar.gz'

@@ -22,6 +22,7 @@ from nose.plugins.attrib import attr
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
 from manager_rest.constants import DEFAULT_TENANT_NAME
+from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -320,7 +321,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
          deployment_response) = self.put_deployment(self.DEPLOYMENT_ID)
         config = self.server_configuration
         deployment_folder = os.path.join(config.file_server_root,
-                                         config.file_server_deployments_folder,
+                                         FILE_SERVER_DEPLOYMENTS_FOLDER,
                                          DEFAULT_TENANT_NAME,
                                          deployment_id)
         try:
