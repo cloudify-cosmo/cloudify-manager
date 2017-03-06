@@ -342,10 +342,10 @@ class ResourceManager(object):
                             ','.join([node.id for node in node_instances
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
-        delete_deployment_response = self.sm.delete(deployment)
-        self._delete_deployment_environment(deployment,
+        deleted_deployment = self.sm.delete(deployment)
+        self._delete_deployment_environment(deleted_deployment,
                                             bypass_maintenance)
-        return delete_deployment_response
+        return deleted_deployment
 
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
