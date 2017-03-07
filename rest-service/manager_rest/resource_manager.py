@@ -128,6 +128,11 @@ class ResourceManager(object):
                         include_credentials,
                         bypass_maintenance,
                         private_resource=False):
+        if not current_user.is_admin:
+            raise manager_exceptions.UnauthorizedError(
+                '{0} is not admin. Only admins are allowed to create '
+                'snapshots'.format(current_user)
+            )
         self.create_snapshot_model(snapshot_id,
                                    private_resource=private_resource)
         try:
