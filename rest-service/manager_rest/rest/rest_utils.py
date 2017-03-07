@@ -137,3 +137,22 @@ def validate_inputs(input_dict):
             raise manager_exceptions.BadParametersError(
                 '{0} must begin with a letter'.format(prefix)
             )
+
+
+def validate_and_decode_password(password):
+    if not password:
+        raise manager_exceptions.BadParametersError('The password is empty')
+
+    if len(password) > 256:
+        raise manager_exceptions.BadParametersError(
+            'The password is too long. Maximum allowed length is 256 '
+            'characters'
+        )
+
+    if len(password) < 5:
+        raise manager_exceptions.BadParametersError(
+            'The password is too short. Minimum allowed length is 5 '
+            'characters'
+        )
+
+    return password

@@ -30,13 +30,10 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              UnauthorizedError)
 from manager_rest.security.resource_permissions import PermissionsHandler
 
-from . import rest_decorators
+from . import rest_decorators, rest_utils
 from .responses_v3 import BaseResponse, ResourceID
 from ..security.authentication import authenticator
 from ..security.tenant_authorization import tenant_authorizer
-from .rest_utils import (get_json_and_verify_params,
-                         set_restart_task,
-                         validate_inputs)
 
 try:
     from cloudify_premium import (TenantResponse,
@@ -77,7 +74,7 @@ class TenantsId(SecuredMultiTenancyResource):
         """
         Create a tenant
         """
-        validate_inputs({'tenant_name': tenant_name})
+        rest_utils.validate_inputs({'tenant_name': tenant_name})
         return multi_tenancy.create_tenant(tenant_name)
 
     @rest_decorators.exceptions_handled
@@ -86,7 +83,7 @@ class TenantsId(SecuredMultiTenancyResource):
         """
         Get details for a single tenant
         """
-        validate_inputs({'tenant_name': tenant_name})
+        rest_utils.validate_inputs({'tenant_name': tenant_name})
         return multi_tenancy.get_tenant(tenant_name)
 
     @rest_decorators.exceptions_handled
@@ -95,7 +92,7 @@ class TenantsId(SecuredMultiTenancyResource):
         """
         Delete a tenant
         """
-        validate_inputs({'tenant_name': tenant_name})
+        rest_utils.validate_inputs({'tenant_name': tenant_name})
         return multi_tenancy.delete_tenant(tenant_name)
 
 
@@ -106,8 +103,9 @@ class TenantUsers(SecuredMultiTenancyResource):
         """
         Add a user to a tenant
         """
-        request_dict = get_json_and_verify_params({'tenant_name', 'username'})
-        validate_inputs(request_dict)
+        request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
+                                                              'username'})
+        rest_utils.validate_inputs(request_dict)
         return multi_tenancy.add_user_to_tenant(
             request_dict['username'],
             request_dict['tenant_name']
@@ -119,8 +117,9 @@ class TenantUsers(SecuredMultiTenancyResource):
         """
         Remove a user from a tenant
         """
-        request_dict = get_json_and_verify_params({'tenant_name', 'username'})
-        validate_inputs(request_dict)
+        request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
+                                                              'username'})
+        rest_utils.validate_inputs(request_dict)
         return multi_tenancy.remove_user_from_tenant(
             request_dict['username'],
             request_dict['tenant_name']
@@ -134,9 +133,9 @@ class TenantGroups(SecuredMultiTenancyResource):
         """
         Add a group to a tenant
         """
-        request_dict = get_json_and_verify_params({'tenant_name',
-                                                   'group_name'})
-        validate_inputs(request_dict)
+        request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
+                                                              'group_name'})
+        rest_utils.validate_inputs(request_dict)
         return multi_tenancy.add_group_to_tenant(
             request_dict['group_name'],
             request_dict['tenant_name']
@@ -148,9 +147,9 @@ class TenantGroups(SecuredMultiTenancyResource):
         """
         Remove a group from a tenant
         """
-        request_dict = get_json_and_verify_params({'tenant_name',
-                                                   'group_name'})
-        validate_inputs(request_dict)
+        request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
+                                                              'group_name'})
+        rest_utils.validate_inputs(request_dict)
         return multi_tenancy.remove_group_from_tenant(
             request_dict['group_name'],
             request_dict['tenant_name']
@@ -180,10 +179,10 @@ class UserGroups(SecuredMultiTenancyResource):
         """
         Create a group
         """
-        request_dict = get_json_and_verify_params()
+        request_dict = rest_utils.get_json_and_verify_params()
         group_name = request_dict['group_name']
         ldap_group_dn = request_dict.get('ldap_group_dn')
-        validate_inputs({'group_name': group_name})
+        rest_utils.validate_inputs({'group_name': group_name})
         return multi_tenancy.create_group(group_name, ldap_group_dn)
 
 
@@ -195,7 +194,7 @@ class UserGroupsId(SecuredMultiTenancyResource):
         """
         Get info for a single group
         """
-        validate_inputs({'group_name': group_name})
+        rest_utils.validate_inputs({'group_name': group_name})
         return multi_tenancy.get_group(group_name)
 
     @rest_decorators.exceptions_handled
@@ -204,7 +203,7 @@ class UserGroupsId(SecuredMultiTenancyResource):
         """
         Delete a user group
         """
-        validate_inputs({'group_name': group_name})
+        rest_utils.validate_inputs({'group_name': group_name})
         return multi_tenancy.delete_group(group_name)
 
 
@@ -232,12 +231,13 @@ class Users(SecuredMultiTenancyResource):
         """
         Create a user
         """
-        request_dict = get_json_and_verify_params(
+        request_dict = rest_utils.get_json_and_verify_params(
             {'username', 'password', 'role'}
         )
         # The password shouldn't be validated here
         password = request_dict.pop('password')
-        validate_inputs(request_dict)
+        password = rest_utils.validate_and_decode_password(password)
+        rest_utils.validate_inputs(request_dict)
         return multi_tenancy.create_user(
             request_dict['username'],
             password,
@@ -252,12 +252,13 @@ class UsersId(SecuredMultiTenancyResource):
         """
         Set password/role for a certain user
         """
-        request_dict = get_json_and_verify_params()
+        request_dict = rest_utils.get_json_and_verify_params()
         password = request_dict.get('password')
         role_name = request_dict.get('role')
         if password:
             if role_name:
                 raise BadParametersError('Both `password` and `role` provided')
+            password = rest_utils.validate_and_decode_password(password)
             return multi_tenancy.set_user_password(username, password)
         elif role_name:
             return multi_tenancy.set_user_role(username, role_name)
@@ -270,7 +271,7 @@ class UsersId(SecuredMultiTenancyResource):
         """
         Get details for a single user
         """
-        validate_inputs({'username': username})
+        rest_utils.validate_inputs({'username': username})
         return multi_tenancy.get_user(username)
 
     @rest_decorators.exceptions_handled
@@ -279,7 +280,7 @@ class UsersId(SecuredMultiTenancyResource):
         """
         Delete a user
         """
-        validate_inputs({'username': username})
+        rest_utils.validate_inputs({'username': username})
         return multi_tenancy.delete_user(username)
 
 
@@ -290,7 +291,7 @@ class UsersActive(SecuredMultiTenancyResource):
         """
         Activate a user
         """
-        request_dict = get_json_and_verify_params({'action'})
+        request_dict = rest_utils.get_json_and_verify_params({'action'})
         if request_dict['action'] == 'activate':
             return multi_tenancy.activate_user(username)
         else:
@@ -309,8 +310,9 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
                 'Explicit group to user association is not permitted when '
                 'using LDAP. Group association to users is done automatically'
                 ' according to the groups associated with the user in LDAP.')
-        request_dict = get_json_and_verify_params({'username', 'group_name'})
-        validate_inputs(request_dict)
+        request_dict = rest_utils.get_json_and_verify_params({'username',
+                                                              'group_name'})
+        rest_utils.validate_inputs(request_dict)
         return multi_tenancy.add_user_to_group(
             request_dict['username'],
             request_dict['group_name']
@@ -322,8 +324,9 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         """
         Remove a user from a group
         """
-        request_dict = get_json_and_verify_params({'username', 'group_name'})
-        validate_inputs(request_dict)
+        request_dict = rest_utils.get_json_and_verify_params({'username',
+                                                              'group_name'})
+        rest_utils.validate_inputs(request_dict)
         return multi_tenancy.remove_user_from_group(
             request_dict['username'],
             request_dict['group_name']
@@ -349,7 +352,7 @@ class Cluster(ClusterResourceBase):
         If created, the cluster will already have one node (the current
         manager).
         """
-        config = get_json_and_verify_params({
+        config = rest_utils.get_json_and_verify_params({
             'host_ip': {'type': unicode},
             'node_name': {'type': unicode},
             'encryption_key': {'type': unicode},
@@ -368,7 +371,7 @@ class Cluster(ClusterResourceBase):
 
         Use this to change settings or promote a replica machine to master.
         """
-        config = get_json_and_verify_params()
+        config = rest_utils.get_json_and_verify_params()
         return cluster.update_config(config)
 
 
@@ -408,7 +411,7 @@ class ClusterNodesId(ClusterResourceBase):
 class Permissions(SecuredResource):
     @staticmethod
     def _get_and_validate_params():
-        return get_json_and_verify_params({
+        return rest_utils.get_json_and_verify_params({
             'resource_type': {},
             'resource_id': {},
             'users': {'type': list},
@@ -497,7 +500,7 @@ class LdapAuthentication(SecuredResource):
 
         # Restart the rest service so that each the LDAP configuration
         # be loaded to all flask processes.
-        set_restart_task()
+        rest_utils.set_restart_task()
 
         ldap_config.pop('ldap_password')
         return ldap_config
@@ -513,12 +516,14 @@ class LdapAuthentication(SecuredResource):
         if not current_app.premium_enabled:
             raise MethodNotAllowedError('LDAP is only supported in the '
                                         'Cloudify premium edition.')
-        ldap_config = get_json_and_verify_params({'ldap_server',
-                                                  'ldap_username',
-                                                  'ldap_password',
-                                                  'ldap_domain',
-                                                  'ldap_is_active_directory',
-                                                  'ldap_dn_extra'})
+        ldap_config = rest_utils.get_json_and_verify_params({
+            'ldap_server',
+            'ldap_username',
+            'ldap_password',
+            'ldap_domain',
+            'ldap_is_active_directory',
+            'ldap_dn_extra'
+        })
         return ldap_config
 
 
