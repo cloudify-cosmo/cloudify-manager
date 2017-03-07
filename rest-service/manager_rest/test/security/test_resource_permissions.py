@@ -76,11 +76,10 @@ class ResourcePermissionTests(SecurityTestBase):
                                          private_resource=private)
         return snapshot_id
 
-    def _create_snapshot(self, private=False):
+    def _create_snapshot(self, username, password, private=False):
         snapshot_id = 'snapshot_id'
 
-        with self.use_secured_client(username='bob',
-                                     password='bob_password'):
+        with self.use_secured_client(username=username, password=password):
             self.client.snapshots.create(snapshot_id=snapshot_id,
                                          include_metrics=False,
                                          include_credentials=False,
@@ -165,7 +164,18 @@ class ResourcePermissionTests(SecurityTestBase):
         self._test_snapshots_get_and_list(snapshot_id)
 
     def test_private_snapshot_create(self):
-        snapshot_id = self._create_snapshot(private=True)
+        # Only admin are allowed to create snapshots, so bob should fail
+        self.assertRaises(
+            CloudifyClientError,
+            self._create_snapshot,
+            'bob',
+            'bob_password'
+        )
+        snapshot_id = self._create_snapshot(
+            'alice',
+            'alice_password',
+            private=True
+        )
         self._test_snapshots_get_and_list(snapshot_id)
 
     def test_cant_view_private_blueprint(self):
