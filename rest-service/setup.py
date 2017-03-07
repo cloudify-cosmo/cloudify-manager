@@ -35,7 +35,6 @@ install_requires = [
     'jsonpickle==0.9.2',
     'wagon==0.3.2',
     'python-dateutil==2.5.3',
-    'cloudify-aria-extensions',
     'voluptuous==0.9.3',
     'toolz==0.8.2',
 ]

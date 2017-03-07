@@ -234,7 +234,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
         do_retries(verify_deployment_environment_creation_complete,
-                   timeout_seconds=30,
+                   timeout_seconds=60,
                    deployment_id=deployment_id)
 
         self.delete_deployment(deployment_id, ignore_live_nodes=False)
