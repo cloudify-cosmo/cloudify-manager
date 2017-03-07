@@ -87,4 +87,5 @@ def set_flask_security_config(app, hash_salt=None, secret_key=None):
     app.config['SECURITY_TOKEN_MAX_AGE'] = 36000  # 10 hours
 
     app.config['SECURITY_PASSWORD_SALT'] = hash_salt
+    app.config['SECURITY_REMEMBER_SALT'] = hash_salt
     app.config['SECRET_KEY'] = secret_key

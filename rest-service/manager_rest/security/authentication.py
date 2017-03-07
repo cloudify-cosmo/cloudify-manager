@@ -119,10 +119,13 @@ class Authentication(object):
         :return: A tuple: (A user object, its hashed password)
         """
         self.logger.debug('Authenticating token')
-        expired, invalid, user, data = user_handler.get_token_status(token)
+        expired, invalid, user, data, error = \
+            user_handler.get_token_status(token)
 
         if invalid or (not isinstance(data, list) or len(data) != 2):
-            raise_unauthorized_user_error('Authentication token is invalid')
+            raise_unauthorized_user_error(
+                'Authentication token is invalid:\n{0}'.format(error)
+            )
         elif expired:
             raise_unauthorized_user_error('Token is expired')
         elif not user:

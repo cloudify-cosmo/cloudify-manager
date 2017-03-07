@@ -41,7 +41,7 @@ def user_loader(request):
         return get_user_from_auth(request.authorization)
     token = get_token_from_request(request)
     if token:
-        _, _, user, _ = get_token_status(token)
+        _, _, user, _, _ = get_token_status(token)
         return user
     api_token = get_api_token_from_request(request)
     if api_token:
@@ -85,17 +85,18 @@ def get_token_status(token):
     serializer = security.remember_token_serializer
     max_age = security.token_max_age
 
-    user, data = None, None
+    user, data, error = None, None, None
     expired, invalid = False, False
 
     try:
         data = serializer.loads(token, max_age=max_age)
     except SignatureExpired:
         expired = True
-    except (BadSignature, TypeError, ValueError):
+    except (BadSignature, TypeError, ValueError) as e:
         invalid = True
+        error = e
 
     if data:
         user = user_datastore.find_user(id=data[0])
 
-    return expired, invalid, user, data
+    return expired, invalid, user, data, error
