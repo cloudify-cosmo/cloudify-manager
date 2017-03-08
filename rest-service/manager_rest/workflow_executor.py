@@ -63,7 +63,8 @@ def execute_system_workflow(wf_id,
                             task_mapping,
                             deployment=None,
                             execution_parameters=None,
-                            bypass_maintenance=None):
+                            bypass_maintenance=None,
+                            update_execution_status=True):
     execution_parameters = execution_parameters or {}
     # task_id is not generated here since for system workflows,
     # the task id is equivalent to the execution id
@@ -75,7 +76,8 @@ def execute_system_workflow(wf_id,
         'task_target': task_queue,
         'execution_id': task_id,
         'workflow_id': wf_id,
-        'bypass_maintenance': bypass_maintenance
+        'bypass_maintenance': bypass_maintenance,
+        'update_execution_status': update_execution_status
     }
 
     if deployment:
