@@ -490,24 +490,6 @@ class BasicWorkflowsTest(TestCase):
 
         # assert plugin installer installed
         # the necessary plugins.
-        self._assert_plugin_uninstalled(deployment)
-
-        undeploy_application(deployment.id, is_delete_deployment=True)
-
-        # assert plugin installer uninstalled
-        # the necessary plugins.
-        agent_data = self.get_plugin_data(
-            plugin_name='agent',
-            deployment_id=deployment.id)
-
-        uninstalled = ['installed', 'uninstalled']
-        self.assertEqual(agent_data['local']['cloudmock'], uninstalled)
-        self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
-
-        self.assertFalse(os.path.isdir(deployment_dir_path))
-
-    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
-    def _assert_plugin_uninstalled(self, deployment):
         agent_data = self.get_plugin_data(
                 plugin_name='agent',
                 deployment_id=deployment.id)
@@ -516,6 +498,23 @@ class BasicWorkflowsTest(TestCase):
         installed = ['installed']
         self.assertEqual(agent_data['local']['cloudmock'], installed)
         self.assertEqual(agent_data['local']['mock_workflows'], installed)
+
+        undeploy_application(deployment.id, is_delete_deployment=True)
+
+        # assert plugin installer uninstalled
+        # the necessary plugins.
+        self._assert_plugin_uninstalled(deployment)
+
+        self.assertFalse(os.path.isdir(deployment_dir_path))
+
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
+    def _assert_plugin_uninstalled(self, deployment):
+        agent_data = self.get_plugin_data(
+                plugin_name='agent',
+                deployment_id=deployment.id)
+        uninstalled = ['installed', 'uninstalled']
+        self.assertEqual(agent_data['local']['cloudmock'], uninstalled)
+        self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
 
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
