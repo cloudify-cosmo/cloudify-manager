@@ -20,6 +20,8 @@ import tarfile
 import tempfile
 from contextlib import contextmanager
 
+import retrying
+
 from cloudify import context
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
@@ -488,15 +490,7 @@ class BasicWorkflowsTest(TestCase):
 
         # assert plugin installer installed
         # the necessary plugins.
-        agent_data = self.get_plugin_data(
-            plugin_name='agent',
-            deployment_id=deployment.id)
-
-        # cloudmock and mock_workflows should have been installed
-        # on the management worker as local tasks
-        installed = ['installed']
-        self.assertEqual(agent_data['local']['cloudmock'], installed)
-        self.assertEqual(agent_data['local']['mock_workflows'], installed)
+        self._assert_plugin_uninstalled(deployment)
 
         undeploy_application(deployment.id, is_delete_deployment=True)
 
@@ -511,6 +505,17 @@ class BasicWorkflowsTest(TestCase):
         self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
 
         self.assertFalse(os.path.isdir(deployment_dir_path))
+
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
+    def _assert_plugin_uninstalled(self, deployment):
+        agent_data = self.get_plugin_data(
+                plugin_name='agent',
+                deployment_id=deployment.id)
+        # cloudmock and mock_workflows should have been installed
+        # on the management worker as local tasks
+        installed = ['installed']
+        self.assertEqual(agent_data['local']['cloudmock'], installed)
+        self.assertEqual(agent_data['local']['mock_workflows'], installed)
 
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
@@ -547,6 +552,10 @@ class BasicWorkflowsTest(TestCase):
 
         undeploy_application(deployment.id, is_delete_deployment=True)
 
+        self._assert_riemann_core_is_down(deployment)
+
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
+    def _assert_riemann_core_is_down(self, deployment):
         self.assertFalse(self._is_riemann_core_up(deployment.id))
 
     def test_riemann_core_not_started_without_policies(self):
@@ -559,4 +568,4 @@ class BasicWorkflowsTest(TestCase):
 
         undeploy_application(deployment.id, is_delete_deployment=True)
 
-        self.assertFalse(self._is_riemann_core_up(deployment.id))
+        self._assert_riemann_core_is_down(deployment)
