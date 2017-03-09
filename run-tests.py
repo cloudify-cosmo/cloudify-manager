@@ -34,7 +34,9 @@ def install_dependencies():
     }
     for config, virtualenvs in tox_commands.iteritems():
         for virtualenv in virtualenvs:
-            call(['tox', '-c', config, '-e', virtualenv, '--notest'])
+            command = ['tox', '-c', config, '-e', virtualenv, '--notest']
+            LOGGER.debug(' '.join(command))
+            call(command)
 
 
 def run(circle_node_index):
@@ -65,7 +67,9 @@ def run(circle_node_index):
     node_commands = all_commands[circle_node_index]
     for config, virtualenvs in node_commands.iteritems():
         for virtualenv in virtualenvs:
-            call(['tox', '-c', config, '-e', virtualenv])
+            command = ['tox', '-c', config, '-e', virtualenv]
+            LOGGER.debug(' '.join(command))
+            call(command)
 
 
 def parse_arguments():
