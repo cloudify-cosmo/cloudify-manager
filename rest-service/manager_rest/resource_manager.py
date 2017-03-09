@@ -943,12 +943,18 @@ class ResourceManager(object):
         def get_node(node_id):
             return self.get_node(deployment_id, node_id)
 
+        def get_secret(secret_key):
+            # TODO: Remove before merging
+            return secret_key + '_value'
+            return self.sm.get(models.Secret, secret_key)
+
         try:
             return functions.evaluate_outputs(
                 outputs_def=deployment.outputs,
                 get_node_instances_method=get_node_instances,
                 get_node_instance_method=get_node_instance,
-                get_node_method=get_node)
+                get_node_method=get_node,
+                get_secret_method=get_secret)
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.DeploymentOutputsEvaluationError(str(e))
 
@@ -966,13 +972,18 @@ class ResourceManager(object):
         def get_node(node_id):
             return self.get_node(deployment_id, node_id)
 
+        def get_secret(secret_key):
+            return secret_key + '_value'
+            return self.sm.get(models.Secret, secret_key)
+
         try:
             return functions.evaluate_functions(
                 payload=payload,
                 context=context,
                 get_node_instances_method=get_node_instances,
                 get_node_instance_method=get_node_instance,
-                get_node_method=get_node)
+                get_node_method=get_node,
+                get_secret_method=get_secret)
         except parser_exceptions.FunctionEvaluationError, e:
             raise manager_exceptions.FunctionsEvaluationError(str(e))
 
