@@ -15,14 +15,14 @@ dependencies:
   override:
     - pip install tox
     - pip install setuptools --upgrade
-    - ./run-tests.sh --install-dependencies
+    - ./run-tests.py --install-dependencies
   cache_directories:
     - ./rest-service/.tox
     - ./workflows/.tox
 
 test:
   override:
-    - ./run-tests.sh:
+    - ./run-tests.py:
         parallel: true
 
 deployment:
