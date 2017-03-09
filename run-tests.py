@@ -66,8 +66,8 @@ def run(circle_node_index):
             'tests/',
         ])
 
-    node_commands = all_commands[circle_node_index]
-    for config, virtualenvs in node_commands.iteritems():
+    tox_commands = all_commands[circle_node_index]
+    for config, virtualenvs in tox_commands.iteritems():
         if isinstance(virtualenvs, str):
             virtualenvs = [virtualenvs]
 
