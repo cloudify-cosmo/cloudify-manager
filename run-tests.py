@@ -5,15 +5,15 @@ import os
 
 from subprocess import call
 
-CIRCLE_NODE_INDEX = os.environ.get('CIRCLE_NODE_INDEX')
 REST_CONFIG = './rest-service/tox.ini'
 WORKFLOWS_CONFIG = './workflows/tox.ini'
 
 
-def install_dependencies():
+def install_dependencies(circle_node_index):
+    """Install dependencies for each tox virtual environment."""
     print('### Installing dependencies...')
 
-    if CIRCLE_NODE_INDEX == 0:
+    if circle_node_index == 0:
         call(['pip', 'install', 'flake8'])
         call(['tox', '-c', WORKFLOWS_CONFIG, '--notest'])
         call([
@@ -66,9 +66,10 @@ def install_dependencies():
         ])
 
 
-def run():
+def run(circle_node_index):
+    """Run test cases splitted in different nodes."""
     print('### Running tests...')
-    if CIRCLE_NODE_INDEX == 0:
+    if circle_node_index == 0:
         call([
             'flake8',
             'plugins/riemann-controller/',
@@ -86,13 +87,13 @@ def run():
             '-c', REST_CONFIG,
             '-e', 'clientV1-infrastructure',
         ])
-    elif CIRCLE_NODE_INDEX == 1:
+    elif circle_node_index == 1:
         call([
             'tox',
             '-c', REST_CONFIG,
             '-e', 'clientV2-endpoints',
         ])
-    elif CIRCLE_NODE_INDEX == 2:
+    elif circle_node_index == 2:
         call([
             'tox',
             '-c', REST_CONFIG,
@@ -102,25 +103,25 @@ def run():
             'tox',
             '-c', WORKFLOWS_CONFIG,
         ])
-    elif CIRCLE_NODE_INDEX == 3:
+    elif circle_node_index == 3:
         call([
             'tox',
             '-c', REST_CONFIG,
             '-e', 'clientV2_1-endpoints',
         ])
-    elif CIRCLE_NODE_INDEX == 4:
+    elif circle_node_index == 4:
         call([
             'tox',
             '-c', REST_CONFIG,
             '-e', 'clientV2_1-infrastructure',
         ])
-    elif CIRCLE_NODE_INDEX == 5:
+    elif circle_node_index == 5:
         call([
             'tox',
             '-c', REST_CONFIG,
             '-e', 'clientV3-endpoints',
         ])
-    elif CIRCLE_NODE_INDEX == 6:
+    elif circle_node_index == 6:
         call([
             'tox',
             '-c', REST_CONFIG,
@@ -149,7 +150,9 @@ def parse_arguments():
 if __name__ == '__main__':
     args = parse_arguments()
 
+    circle_node_index = int(os.environ['CIRCLE_NODE_INDEX'])
+
     if args.install_dependencies:
-        install_dependencies()
+        install_dependencies(circle_node_index)
     else:
-        run()
+        run(circle_node_index)
