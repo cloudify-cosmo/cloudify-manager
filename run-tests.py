@@ -35,7 +35,12 @@ def install_dependencies():
 
 
 def run(circle_node_index):
-    """Run test cases splitted in different nodes."""
+    """Run test cases splitted in different nodes.
+
+    :param circle_node_index: Node index executing this code in CircleCI
+    :type circle_node_index: int
+
+    """
     LOGGER.debug('### Running tests...')
 
     all_commands = [
