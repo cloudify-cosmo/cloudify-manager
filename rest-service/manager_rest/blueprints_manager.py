@@ -349,10 +349,9 @@ class BlueprintsManager(object):
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
 
-        self.sm.delete_deployment(deployment_id)
         self._delete_deployment_environment(deployment,
                                             bypass_maintenance)
-        return deployment
+        return self.sm.delete_deployment(deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
@@ -439,7 +438,8 @@ class BlueprintsManager(object):
     def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
                                  created_at=None, verify_no_executions=True,
-                                 bypass_maintenance=None):
+                                 bypass_maintenance=None,
+                                 update_execution_status=True):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -459,7 +459,8 @@ class BlueprintsManager(object):
 
         # currently, deployment env creation/deletion are not set as
         # system workflows
-        is_system_workflow = wf_id != 'create_deployment_environment'
+        is_system_workflow = wf_id not in ('create_deployment_environment',
+                                           'delete_deployment_environment')
 
         # It means that a system-wide workflow is about to be launched
         if deployment is None and verify_no_executions:
@@ -477,7 +478,7 @@ class BlueprintsManager(object):
                 execution_parameters),
             is_system_workflow=is_system_workflow)
 
-        if not is_system_workflow and deployment:
+        if deployment:
             execution.deployment_id = deployment.id
         self.sm.put_execution(execution.id, execution)
 
@@ -487,7 +488,8 @@ class BlueprintsManager(object):
             task_mapping=task_mapping,
             deployment=deployment,
             execution_parameters=execution_parameters,
-            bypass_maintenance=bypass_maintenance)
+            bypass_maintenance=bypass_maintenance,
+            update_execution_status=update_execution_status)
 
         if timeout > 0:
             try:
@@ -1164,6 +1166,7 @@ class BlueprintsManager(object):
             task_mapping=deployment_env_deletion_task_name,
             deployment=deployment,
             verify_no_executions=False,
+            update_execution_status=False,
             bypass_maintenance=bypass_maintenance,
             execution_parameters={
                 'deployment_plugins_to_uninstall': blueprint.plan[
