@@ -41,14 +41,16 @@ class TestDeploymentLogs(TestCase):
             self.assertTrue(os.path.isfile(deployment_log_path))
             with open(deployment_log_path) as f:
                 self.assertIn(message, f.read())
+                return f.tell()
 
-        verify_logs_exist_with_content()
+        log_file_size = verify_logs_exist_with_content()
 
         undeploy(deployment.id, is_delete_deployment=True)
 
         # Verify log file id truncated on deployment delete
         with open(deployment_log_path) as f:
-            self.assertTrue('' == f.read())
+            f.read()
+            self.assertLess(f.tell(), log_file_size)
 
         deployment, _ = deploy(dsl_path, inputs=inputs,
                                deployment_id=deployment.id)
