@@ -16,55 +16,25 @@ def install_dependencies():
     LOGGER.debug('### Installing dependencies...')
 
     call(['pip', 'install', 'flake8'])
-    call(['tox', '-c', WORKFLOWS_CONFIG, '--notest'])
-    call([
-        'tox',
-        '-c', REST_CONFIG,
-        '-e', 'clientV1-endpoints',
-        '--notest',
-    ])
-    call([
-        'tox',
-        '-c', REST_CONFIG,
-        '-e', 'clientV1-infrastructure',
-        '--notest',
-    ])
-    call([
-        'tox',
-        '-c', REST_CONFIG,
-        '-e', 'clientV2-endpoints',
-        '--notest',
-    ])
-    call([
-        'tox',
-        '-c', REST_CONFIG,
-        '-e', 'clientV2-infrastructure',
-        '--notest',
-    ])
-    call([
-        'tox',
-        '-c', REST_CONFIG,
-        '-e', 'clientV2_1-endpoints',
-        '--notest',
-    ])
-    call([
-        'tox',
-        '-c', REST_CONFIG,
-        '-e', 'clientV2_1-infrastructure',
-        '--notest',
-    ])
-    call([
-        'tox',
-        '-c', REST_CONFIG,
-        '-e', 'clientV3-endpoints',
-        '--notest',
-    ])
-    call([
-        'tox',
-        '-c', REST_CONFIG,
-        '-e', 'clientV3-infrastructure',
-        '--notest',
-    ])
+
+    tox_commands = {
+        WORKFLOWS_CONFIG: [
+            'py27',
+        ],
+        REST_CONFIG: [
+            'clientV1-endpoints',
+            'clientV1-infrastructure',
+            'clientV2-endpoints',
+            'clientV2-infrastructure',
+            'clientV2_1-endpoints',
+            'clientV2_1-infrastructure',
+            'clientV3-endpoints',
+            'clientV-infrastructure',
+        ],
+    }
+    for config, virtualenvs in tox_commands.iteritems():
+        for virtualenv in virtualenvs:
+            call(['tox', '-c', config, '-e', virtualenv, '--notest'])
 
 
 def run(circle_node_index):
