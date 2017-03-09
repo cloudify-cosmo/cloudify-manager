@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""Run test cases and split them accross CircleCI nodes."""
 
 import argparse
 import logging
@@ -79,8 +80,7 @@ def parse_arguments():
     :rtype: :class:`argparse.Namespace`
 
     """
-    parser = argparse.ArgumentParser(
-        description='Run test cases and split them accross CircleCI nodes')
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         '-i', '--install-dependencies',
         action='store_true',
