@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 
 import argparse
+import logging
 import os
 
 from subprocess import call
 
+LOGGER = logging.getLogger()
 REST_CONFIG = './rest-service/tox.ini'
 WORKFLOWS_CONFIG = './workflows/tox.ini'
 
 
 def install_dependencies():
     """Install dependencies for each tox virtual environment."""
-    print('### Installing dependencies...')
+    LOGGER.debug('### Installing dependencies...')
 
     call(['pip', 'install', 'flake8'])
     call(['tox', '-c', WORKFLOWS_CONFIG, '--notest'])
@@ -67,7 +69,8 @@ def install_dependencies():
 
 def run(circle_node_index):
     """Run test cases splitted in different nodes."""
-    print('### Running tests...')
+    LOGGER.debug('### Running tests...')
+
     if circle_node_index == 0:
         call([
             'flake8',
@@ -148,6 +151,10 @@ def parse_arguments():
 
 if __name__ == '__main__':
     args = parse_arguments()
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(message)s',
+    )
 
     circle_node_index = int(os.environ['CIRCLE_NODE_INDEX'])
 
