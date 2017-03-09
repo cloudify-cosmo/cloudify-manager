@@ -128,7 +128,13 @@ def run():
         ])
 
 
-if __name__ == '__main__':
+def parse_arguments():
+    """Parse command line arguments.
+
+    :return: Arguments parsed
+    :rtype: :class:`argparse.Namespace`
+
+    """
     parser = argparse.ArgumentParser(
         description='Run test cases and split them accross CircleCI nodes')
     parser.add_argument(
@@ -137,6 +143,11 @@ if __name__ == '__main__':
         help='Install dependencies (do not run test cases)',
     )
     args = parser.parse_args()
+    return args
+
+
+if __name__ == '__main__':
+    args = parse_arguments()
 
     if args.install_dependencies:
         install_dependencies()
