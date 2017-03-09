@@ -18,7 +18,8 @@ from jinja2 import Template
 from config_constants import Constants
 
 
-def create(ctx, policy_types, policy_triggers, groups, config_template):
+def create(ctx, policy_types, policy_triggers, groups, config_template,
+           rest_api_token, tenant_id):
     streams = []
     for group_name, group in groups.items():
         for policy_name, policy in group['policies'].items():
@@ -39,9 +40,18 @@ def create(ctx, policy_types, policy_triggers, groups, config_template):
                 'data': data,
                 'metadata': metadata
             })
+    for trigger_name, trigger in policy_triggers.items():
+        source = Template(trigger.get('source', '')).render(
+            rest_api_token=rest_api_token,
+            tenant_id=tenant_id,
+        )
+        trigger['source'] = source
+
     return Template(config_template).render(
         streams=streams,
         policy_triggers=policy_triggers,
         ctx=ctx,
-        constants=Constants
+        constants=Constants,
+        rest_api_token=rest_api_token,
+        tenant_id=tenant_id,
     )
