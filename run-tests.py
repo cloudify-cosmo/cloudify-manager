@@ -31,14 +31,7 @@ def install_dependencies():
             'clientV3-infrastructure',
         ],
     }
-    for config, virtualenvs in tox_commands.iteritems():
-        if isinstance(virtualenvs, str):
-            virtualenvs = [virtualenvs]
-
-        for virtualenv in virtualenvs:
-            command = ['tox', '-c', config, '-e', virtualenv, '--notest']
-            LOGGER.debug(' '.join(command))
-            call(command)
+    run_tox_commands(tox_commands)
 
 
 def run(circle_node_index):
@@ -67,7 +60,16 @@ def run(circle_node_index):
             'tests/',
         ])
 
-    tox_commands = all_commands[circle_node_index]
+    run_tox_commands(all_commands[circle_node_index])
+
+
+def run_tox_commands(tox_commands):
+    """Run tox commands.
+
+    :param tox_commands: Metadata with configuration file path and virtualenvs
+    :type tox_commands: dict(str, list(str) | str)
+
+    """
     for config, virtualenvs in tox_commands.iteritems():
         if isinstance(virtualenvs, str):
             virtualenvs = [virtualenvs]
