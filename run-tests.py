@@ -53,6 +53,7 @@ def run(circle_node_index):
             REST_CONFIG: 'clientV2-infrastructure',
         },
         {REST_CONFIG: 'clientV2_1-endpoints'},
+        {REST_CONFIG: 'clientV2_1-infrastructure'},
         {REST_CONFIG: 'clientV3-endpoints'},
         {REST_CONFIG: 'clientV3-infrastructure'},
     ]
