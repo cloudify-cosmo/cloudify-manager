@@ -340,10 +340,9 @@ class ResourceManager(object):
                             ','.join([node.id for node in node_instances
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
-        deleted_deployment = self.sm.delete(deployment)
-        self._delete_deployment_environment(deleted_deployment,
+        self._delete_deployment_environment(deployment,
                                             bypass_maintenance)
-        return deleted_deployment
+        return self.sm.delete(deployment)
 
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
@@ -430,7 +429,8 @@ class ResourceManager(object):
     def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
                                  created_at=None, verify_no_executions=True,
-                                 bypass_maintenance=None):
+                                 bypass_maintenance=None,
+                                 update_execution_status=True):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -450,7 +450,8 @@ class ResourceManager(object):
 
         # currently, deployment env creation/deletion are not set as
         # system workflows
-        is_system_workflow = wf_id != 'create_deployment_environment'
+        is_system_workflow = wf_id not in ('create_deployment_environment',
+                                           'delete_deployment_environment')
 
         # It means that a system-wide workflow is about to be launched
         if deployment is None and verify_no_executions:
@@ -466,7 +467,7 @@ class ResourceManager(object):
                 execution_parameters),
             is_system_workflow=is_system_workflow)
 
-        if not is_system_workflow and deployment:
+        if deployment:
             execution.deployment = deployment
         self.sm.put(execution)
 
@@ -476,7 +477,8 @@ class ResourceManager(object):
             task_mapping=task_mapping,
             deployment=deployment,
             execution_parameters=execution_parameters,
-            bypass_maintenance=bypass_maintenance)
+            bypass_maintenance=bypass_maintenance,
+            update_execution_status=update_execution_status)
 
         if timeout > 0:
             try:
@@ -1187,6 +1189,7 @@ class ResourceManager(object):
             task_mapping=deployment_env_deletion_task_name,
             deployment=deployment,
             bypass_maintenance=bypass_maintenance,
+            update_execution_status=False,
             verify_no_executions=False,
             execution_parameters={
                 'deployment_plugins_to_uninstall': blueprint.plan[

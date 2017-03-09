@@ -13,11 +13,23 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
+import retrying
+
 
 class TestDeploymentLogs(AgentlessTestCase):
+
+    # retrying is needed as the delete_deployment_environment workflow
+    # which truncates the deployment log file is async.
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
+    def _assert_log_file_truncated(self,
+                                   read_deployment_logs_func,
+                                   previous_log_file_size):
+        self.assertLess(len(read_deployment_logs_func()),
+                        previous_log_file_size)
 
     def test_deployment_logs(self):
         message = 'TEST MESSAGE'
@@ -33,14 +45,16 @@ class TestDeploymentLogs(AgentlessTestCase):
             return self.read_manager_file(deployment_log_path, no_strip=True)
 
         def verify_logs_exist_with_content():
-            self.assertIn(message, read_deployment_logs())
+            deployment_logs = read_deployment_logs()
+            self.assertIn(message, deployment_logs)
+            return len(deployment_logs)
 
-        verify_logs_exist_with_content()
+        log_file_size = verify_logs_exist_with_content()
 
         self.undeploy_application(deployment.id, is_delete_deployment=True)
 
         # Verify log file id truncated on deployment delete
-        self.assertEqual('', read_deployment_logs())
+        self._assert_log_file_truncated(read_deployment_logs, log_file_size)
 
         deployment, _ = self.deploy_application(
                 dsl_path, inputs=inputs,
