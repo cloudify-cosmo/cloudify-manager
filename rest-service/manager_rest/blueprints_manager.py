@@ -314,7 +314,7 @@ class BlueprintsManager(object):
                           bypass_maintenance=None,
                           ignore_live_nodes=False):
         # Verify deployment exists.
-        self.sm.get_deployment(deployment_id)
+        deployment = self.sm.get_deployment(deployment_id)
 
         # validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
@@ -349,8 +349,8 @@ class BlueprintsManager(object):
                                      if node.state not in
                                      ('uninitialized', 'deleted')])))
 
-        self._delete_deployment_environment(deployment_id, bypass_maintenance)
-        self._delete_deployment_logs(deployment_id, bypass_maintenance)
+        self._delete_deployment_environment(deployment,
+                                            bypass_maintenance)
         return self.sm.delete_deployment(deployment_id)
 
     def execute_workflow(self, deployment_id, workflow_id,
@@ -438,7 +438,8 @@ class BlueprintsManager(object):
     def _execute_system_workflow(self, wf_id, task_mapping, deployment=None,
                                  execution_parameters=None, timeout=0,
                                  created_at=None, verify_no_executions=True,
-                                 bypass_maintenance=None):
+                                 bypass_maintenance=None,
+                                 update_execution_status=True):
         """
         :param deployment: deployment for workflow execution
         :param wf_id: workflow id
@@ -458,8 +459,8 @@ class BlueprintsManager(object):
 
         # currently, deployment env creation/deletion are not set as
         # system workflows
-        is_system_workflow = wf_id not in (
-            'create_deployment_environment', 'delete_deployment_environment')
+        is_system_workflow = wf_id not in ('create_deployment_environment',
+                                           'delete_deployment_environment')
 
         # It means that a system-wide workflow is about to be launched
         if deployment is None and verify_no_executions:
@@ -471,12 +472,14 @@ class BlueprintsManager(object):
             created_at=created_at or str(datetime.now()),
             blueprint_id=deployment.blueprint_id if deployment else None,
             workflow_id=wf_id,
-            deployment_id=deployment.id if deployment else None,
+            deployment_id=None,
             error='',
             parameters=self._get_only_user_execution_parameters(
                 execution_parameters),
             is_system_workflow=is_system_workflow)
 
+        if deployment:
+            execution.deployment_id = deployment.id
         self.sm.put_execution(execution.id, execution)
 
         async_task = self.workflow_client.execute_system_workflow(
@@ -485,7 +488,8 @@ class BlueprintsManager(object):
             task_mapping=task_mapping,
             deployment=deployment,
             execution_parameters=execution_parameters,
-            bypass_maintenance=bypass_maintenance)
+            bypass_maintenance=bypass_maintenance,
+            update_execution_status=update_execution_status)
 
         if timeout > 0:
             try:
@@ -1150,9 +1154,8 @@ class BlueprintsManager(object):
         )
 
     def _delete_deployment_environment(self,
-                                       deployment_id,
+                                       deployment,
                                        bypass_maintenance):
-        deployment = self.sm.get_deployment(deployment_id)
         blueprint = self.sm.get_blueprint(deployment.blueprint_id)
         wf_id = 'delete_deployment_environment'
         deployment_env_deletion_task_name = \
@@ -1162,7 +1165,8 @@ class BlueprintsManager(object):
             wf_id=wf_id,
             task_mapping=deployment_env_deletion_task_name,
             deployment=deployment,
-            timeout=300,
+            verify_no_executions=False,
+            update_execution_status=False,
             bypass_maintenance=bypass_maintenance,
             execution_parameters={
                 'deployment_plugins_to_uninstall': blueprint.plan[
@@ -1170,19 +1174,6 @@ class BlueprintsManager(object):
                 'workflow_plugins_to_uninstall': blueprint.plan[
                     constants.WORKFLOW_PLUGINS_TO_INSTALL],
             })
-
-    def _delete_deployment_logs(self, deployment_id, bypass_maintenance):
-        self._execute_system_workflow(
-            wf_id='delete_deployment_logs',
-            task_mapping='cloudify_system_workflows.deployment_environment'
-                         '.delete_logs',
-            execution_parameters={
-                'deployment_id': deployment_id
-            },
-            verify_no_executions=False,
-            timeout=300,
-            bypass_maintenance=bypass_maintenance
-        )
 
     def _check_for_active_executions(self, deployment_id, force):
 

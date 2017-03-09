@@ -103,6 +103,11 @@ def delete(ctx,
     graph = ctx.graph_mode()
     sequence = graph.sequence()
 
+    sequence.add(
+            ctx.send_event(
+                    'Deleting deployment [{}] environment'.format(
+                            ctx.deployment.id)))
+
     dep_plugins = [p for p in deployment_plugins_to_uninstall if p['install']]
     wf_plugins = [p for p in workflow_plugins_to_uninstall if p['install']]
     plugins_to_uninstall = dep_plugins + wf_plugins
@@ -118,24 +123,21 @@ def delete(ctx,
                        '(if applicable)'),
         ctx.execute_task('riemann_controller.tasks.delete'))
 
-    sequence.add(
-        ctx.send_event('Deleting deployment work directory'),
-        ctx.local_task(_delete_deployment_workdir,
-                       kwargs={'deployment_id': ctx.deployment.id,
-                               'logger': ctx.logger}))
-
     for task in graph.tasks_iter():
         _ignore_task_on_fail_and_send_event(task, ctx)
 
-    return graph.execute()
+    try:
+        return graph.execute()
+    finally:
+        _delete_deployment_workdir(ctx)
+        _delete_logs(ctx)
 
 
-@workflow(system_wide=True)
-def delete_logs(ctx, deployment_id):
+def _delete_logs(ctx):
     log_dir = os.environ.get('CELERY_LOG_DIR')
     if log_dir:
         log_file_path = os.path.join(log_dir, 'logs',
-                                     '{0}.log'.format(deployment_id))
+                                     '{0}.log'.format(ctx.deployment.id))
         if os.path.exists(log_file_path):
             try:
                 with open(log_file_path, 'w') as f:
@@ -180,15 +182,14 @@ def _create_deployment_workdir(deployment_id, logger):
         raise
 
 
-@workflow_context.task_config(send_task_events=False)
-def _delete_deployment_workdir(deployment_id, logger):
-    deployment_workdir = _workdir(deployment_id)
+def _delete_deployment_workdir(ctx):
+    deployment_workdir = _workdir(ctx.deployment.id)
     if not os.path.exists(deployment_workdir):
         return
     try:
-        shutil.rmtree(_workdir(deployment_id))
+        shutil.rmtree(deployment_workdir)
     except os.error:
-        logger.warning(
+        ctx.logger.warning(
             'Failed deleting directory {0}. Current directory content: {1}'
             .format(deployment_workdir, os.listdir(deployment_workdir),
                     exc_info=True))

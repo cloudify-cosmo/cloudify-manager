@@ -15,6 +15,8 @@
 
 import os
 
+import retrying
+
 import testenv
 from testenv import TestCase
 from testenv.utils import get_resource as resource
@@ -41,14 +43,14 @@ class TestDeploymentLogs(TestCase):
             self.assertTrue(os.path.isfile(deployment_log_path))
             with open(deployment_log_path) as f:
                 self.assertIn(message, f.read())
+                return f.tell()
 
-        verify_logs_exist_with_content()
+        log_file_size = verify_logs_exist_with_content()
 
         undeploy(deployment.id, is_delete_deployment=True)
 
         # Verify log file id truncated on deployment delete
-        with open(deployment_log_path) as f:
-            self.assertTrue('' == f.read())
+        self._assert_log_file_truncated(deployment_log_path, log_file_size)
 
         deployment, _ = deploy(dsl_path, inputs=inputs,
                                deployment_id=deployment.id)
@@ -56,3 +58,11 @@ class TestDeploymentLogs(TestCase):
         # Verify new deployment with the same deployment id
         # can write to the previous location.
         verify_logs_exist_with_content()
+
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
+    def _assert_log_file_truncated(self,
+                                   deployment_log_path,
+                                   previous_log_file_size):
+        with open(deployment_log_path) as f:
+            f.read()
+            self.assertLess(f.tell(), previous_log_file_size)
