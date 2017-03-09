@@ -29,7 +29,7 @@ def install_dependencies():
             'clientV2_1-endpoints',
             'clientV2_1-infrastructure',
             'clientV3-endpoints',
-            'clientV-infrastructure',
+            'clientV3-infrastructure',
         ],
     }
     for config, virtualenvs in tox_commands.iteritems():
