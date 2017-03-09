@@ -1,6 +1,6 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/3.4.2.zip
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/3.4.2.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/CFY-6516-concurrent-deployment-fix-for-3.4.2.zip
+https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/3.4.2.zip
 https://github.com/cloudify-cosmo/cloudify-diamond-plugin/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.4.zip
 https://github.com/cloudify-cosmo/cloudify-agent/archive/3.4.2.zip
