@@ -19,6 +19,7 @@ import tarfile
 import tempfile
 from contextlib import contextmanager
 
+import retrying
 import sh
 
 from cloudify import context
@@ -491,17 +492,20 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
         # assert plugin installer uninstalled
         # the necessary plugins.
-        agent_data = self.get_plugin_data(
-            plugin_name='agent',
-            deployment_id=deployment.id)
-
-        uninstalled = ['installed', 'uninstalled']
-        self.assertEqual(agent_data['local']['cloudmock'], uninstalled)
-        self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
+        self._assert_plugin_uninstalled(deployment)
 
         self.assertRaises(sh.ErrorReturnCode,
                           self.execute_on_manager,
                           'test -d {0}'.format(deployment_dir_path))
+
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
+    def _assert_plugin_uninstalled(self, deployment):
+        agent_data = self.get_plugin_data(
+                plugin_name='agent',
+                deployment_id=deployment.id)
+        uninstalled = ['installed', 'uninstalled']
+        self.assertEqual(agent_data['local']['cloudmock'], uninstalled)
+        self.assertEqual(agent_data['local']['mock_workflows'], uninstalled)
 
     def test_get_attribute(self):
         # assertion happens in operation get_attribute.tasks.assertion
@@ -527,6 +531,10 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
         self.undeploy_application(deployment.id, is_delete_deployment=True)
 
+        self._assert_riemann_core_is_down(deployment)
+
+    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
+    def _assert_riemann_core_is_down(self, deployment):
         self.assertFalse(self.is_riemann_core_up(deployment.id))
 
     def test_riemann_core_not_started_without_policies(self):
@@ -539,4 +547,4 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
         self.undeploy_application(deployment.id, is_delete_deployment=True)
 
-        self.assertFalse(self.is_riemann_core_up(deployment.id))
+        self._assert_riemann_core_is_down(deployment)
