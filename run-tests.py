@@ -41,6 +41,18 @@ def run(circle_node_index):
     """Run test cases splitted in different nodes."""
     LOGGER.debug('### Running tests...')
 
+    all_commands = [
+        {REST_CONFIG: ['clientV1-endpoints', 'clientV1-infrastructure']},
+        {REST_CONFIG: ['clientV2-endpoints']},
+        {
+            WORKFLOWS_CONFIG: ['py27'],
+            REST_CONFIG: ['clientV2-infrastructure'],
+        },
+        {REST_CONFIG: ['clientV2_1-endpoints']},
+        {REST_CONFIG: ['clientV3-endpoints']},
+        {REST_CONFIG: ['clientV3-infrastructure']},
+    ]
+
     if circle_node_index == 0:
         call([
             'flake8',
@@ -49,56 +61,11 @@ def run(circle_node_index):
             'rest-service/',
             'tests/',
         ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV1-endpoints',
-        ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV1-infrastructure',
-        ])
-    elif circle_node_index == 1:
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV2-endpoints',
-        ])
-    elif circle_node_index == 2:
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV2-infrastructure',
-        ])
-        call([
-            'tox',
-            '-c', WORKFLOWS_CONFIG,
-        ])
-    elif circle_node_index == 3:
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV2_1-endpoints',
-        ])
-    elif circle_node_index == 4:
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV2_1-infrastructure',
-        ])
-    elif circle_node_index == 5:
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV3-endpoints',
-        ])
-    elif circle_node_index == 6:
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV3-infrastructure',
-        ])
+
+    node_commands = all_commands[circle_node_index]
+    for config, virtualenvs in node_commands.iteritems():
+        for virtualenv in virtualenvs:
+            call(['tox', '-c', config, '-e', virtualenv])
 
 
 def parse_arguments():
