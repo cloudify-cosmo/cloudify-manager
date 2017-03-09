@@ -9,61 +9,60 @@ REST_CONFIG = './rest-service/tox.ini'
 WORKFLOWS_CONFIG = './workflows/tox.ini'
 
 
-def install_dependencies(circle_node_index):
+def install_dependencies():
     """Install dependencies for each tox virtual environment."""
     print('### Installing dependencies...')
 
-    if circle_node_index == 0:
-        call(['pip', 'install', 'flake8'])
-        call(['tox', '-c', WORKFLOWS_CONFIG, '--notest'])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV1-endpoints',
-            '--notest',
-        ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV1-infrastructure',
-            '--notest',
-        ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV2-endpoints',
-            '--notest',
-        ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV2-infrastructure',
-            '--notest',
-        ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV2_1-endpoints',
-            '--notest',
-        ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV2_1-infrastructure',
-            '--notest',
-        ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV3-endpoints',
-            '--notest',
-        ])
-        call([
-            'tox',
-            '-c', REST_CONFIG,
-            '-e', 'clientV3-infrastructure',
-            '--notest',
-        ])
+    call(['pip', 'install', 'flake8'])
+    call(['tox', '-c', WORKFLOWS_CONFIG, '--notest'])
+    call([
+        'tox',
+        '-c', REST_CONFIG,
+        '-e', 'clientV1-endpoints',
+        '--notest',
+    ])
+    call([
+        'tox',
+        '-c', REST_CONFIG,
+        '-e', 'clientV1-infrastructure',
+        '--notest',
+    ])
+    call([
+        'tox',
+        '-c', REST_CONFIG,
+        '-e', 'clientV2-endpoints',
+        '--notest',
+    ])
+    call([
+        'tox',
+        '-c', REST_CONFIG,
+        '-e', 'clientV2-infrastructure',
+        '--notest',
+    ])
+    call([
+        'tox',
+        '-c', REST_CONFIG,
+        '-e', 'clientV2_1-endpoints',
+        '--notest',
+    ])
+    call([
+        'tox',
+        '-c', REST_CONFIG,
+        '-e', 'clientV2_1-infrastructure',
+        '--notest',
+    ])
+    call([
+        'tox',
+        '-c', REST_CONFIG,
+        '-e', 'clientV3-endpoints',
+        '--notest',
+    ])
+    call([
+        'tox',
+        '-c', REST_CONFIG,
+        '-e', 'clientV3-infrastructure',
+        '--notest',
+    ])
 
 
 def run(circle_node_index):
@@ -152,7 +151,9 @@ if __name__ == '__main__':
 
     circle_node_index = int(os.environ['CIRCLE_NODE_INDEX'])
 
-    if args.install_dependencies:
-        install_dependencies(circle_node_index)
+    # Install dependencies only in first node
+    # This is because caching only happens in the first node
+    if args.install_dependencies and circle_node_index == 0:
+        install_dependencies()
     else:
         run(circle_node_index)
