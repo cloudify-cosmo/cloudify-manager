@@ -19,9 +19,7 @@ def install_dependencies():
     call(['pip', 'install', 'flake8'])
 
     tox_commands = {
-        WORKFLOWS_CONFIG: [
-            'py27',
-        ],
+        WORKFLOWS_CONFIG: 'py27',
         REST_CONFIG: [
             'clientV1-endpoints',
             'clientV1-infrastructure',
@@ -34,6 +32,9 @@ def install_dependencies():
         ],
     }
     for config, virtualenvs in tox_commands.iteritems():
+        if isinstance(virtualenvs, str):
+            virtualenvs = [virtualenvs]
+
         for virtualenv in virtualenvs:
             command = ['tox', '-c', config, '-e', virtualenv, '--notest']
             LOGGER.debug(' '.join(command))
@@ -46,14 +47,14 @@ def run(circle_node_index):
 
     all_commands = [
         {REST_CONFIG: ['clientV1-endpoints', 'clientV1-infrastructure']},
-        {REST_CONFIG: ['clientV2-endpoints']},
+        {REST_CONFIG: 'clientV2-endpoints'},
         {
-            WORKFLOWS_CONFIG: ['py27'],
-            REST_CONFIG: ['clientV2-infrastructure'],
+            WORKFLOWS_CONFIG: 'py27',
+            REST_CONFIG: 'clientV2-infrastructure',
         },
-        {REST_CONFIG: ['clientV2_1-endpoints']},
-        {REST_CONFIG: ['clientV3-endpoints']},
-        {REST_CONFIG: ['clientV3-infrastructure']},
+        {REST_CONFIG: 'clientV2_1-endpoints'},
+        {REST_CONFIG: 'clientV3-endpoints'},
+        {REST_CONFIG: 'clientV3-infrastructure'},
     ]
 
     if circle_node_index == 0:
@@ -67,6 +68,9 @@ def run(circle_node_index):
 
     node_commands = all_commands[circle_node_index]
     for config, virtualenvs in node_commands.iteritems():
+        if isinstance(virtualenvs, str):
+            virtualenvs = [virtualenvs]
+
         for virtualenv in virtualenvs:
             command = ['tox', '-c', config, '-e', virtualenv]
             LOGGER.debug(' '.join(command))
