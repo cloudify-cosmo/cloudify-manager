@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Run test cases and split them accross CircleCI nodes."""
+"""Run test cases and split them across CircleCI nodes."""
 
 import argparse
 import logging
