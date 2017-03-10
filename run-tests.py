@@ -31,7 +31,7 @@ def install_dependencies():
             'clientV3-infrastructure',
         ],
     }
-    run_tox_commands(tox_commands)
+    run_tox_commands(tox_commands, ['--notest'])
 
 
 def run(circle_node_index):
@@ -68,7 +68,7 @@ def run(circle_node_index):
     run_tox_commands(all_commands[circle_node_index])
 
 
-def run_tox_commands(tox_commands):
+def run_tox_commands(tox_commands, extra_parameters=None):
     """Run tox commands.
 
     :param tox_commands: Metadata with configuration file path and virtualenvs
@@ -81,6 +81,8 @@ def run_tox_commands(tox_commands):
 
         for virtualenv in virtualenvs:
             command = ['tox', '-c', config, '-e', virtualenv]
+            if extra_parameters:
+                command.extend(extra_parameters)
             LOGGER.debug(' '.join(command))
             call(command)
 
