@@ -62,7 +62,7 @@ def get_virtualenvs():
     workflows_config = './workflows/tox.ini'
 
     metadata = {
-        workflows_config: 'py27',
+        workflows_config: ['py27'],
         rest_config: [
             'clientV1-endpoints',
             'clientV1-infrastructure',
