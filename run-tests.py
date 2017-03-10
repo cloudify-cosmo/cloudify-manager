@@ -7,19 +7,63 @@ import os
 import subprocess
 
 LOGGER = logging.getLogger()
-REST_CONFIG = './rest-service/tox.ini'
-WORKFLOWS_CONFIG = './workflows/tox.ini'
+
+# Mapping from CircleCI node index to virtualenv
+NODE_INDEX_TO_VIRTUALENV_NAMES = [
+    ['clientV1-endpoints', 'clientV1-infrastructure'],
+    ['clientV2-endpoints'],
+    ['py27', 'clientV2-infrastructure'],
+    ['clientV2_1-endpoints'],
+    ['clientV2_1-infrastructure'],
+    ['clientV3-endpoints'],
+    ['clientV3-infrastructure'],
+]
 
 
-def install_dependencies():
-    """Install dependencies for each tox virtual environment."""
-    LOGGER.debug('### Installing dependencies...')
+class VirtualEnv(object):
 
-    call(['pip', 'install', 'flake8'])
+    """Tox virtual environment."""
 
-    tox_commands = {
-        WORKFLOWS_CONFIG: 'py27',
-        REST_CONFIG: [
+    def __init__(self, name, config_path):
+        self.name = name
+        self.config_path = config_path
+
+    def install_dependencies(self):
+        """Install dependencies defined in tox configuration."""
+        self._run_tox_command(['--notest'])
+
+    def run_tests(self):
+        """Run test cases for the virtual environment."""
+        self._run_tox_command()
+
+    def _run_tox_command(self, extra_parameters=None):
+        """Run tox command.
+
+        :extra_parameters: Additional parameters to pass to the command.
+        :type extra_parameters: list(str)
+
+        """
+        command = ['tox', '-c', self.config_path, '-e', self.name]
+        if extra_parameters:
+            command.extend(extra_parameters)
+        call(command)
+
+
+def get_virtualenvs():
+    """Get virtualenv metadata for this repository.
+
+    :return: Virtual environments
+    :rtype: dict(str, VirtualEnv)
+
+    """
+    virtualenvs = {}
+
+    rest_config = './rest-service/tox.ini'
+    workflows_config = './workflows/tox.ini'
+
+    metadata = {
+        workflows_config: 'py27',
+        rest_config: [
             'clientV1-endpoints',
             'clientV1-infrastructure',
             'clientV2-endpoints',
@@ -30,30 +74,39 @@ def install_dependencies():
             'clientV3-infrastructure',
         ],
     }
-    run_tox_commands(tox_commands, ['--notest'])
+    for config_path, virtualenv_names in metadata.iteritems():
+        for virtualenv_name in virtualenv_names:
+            virtualenvs[virtualenv_name] = (
+                VirtualEnv(name=virtualenv_name, config_path=config_path)
+            )
+    return virtualenvs
 
 
-def run(circle_node_index):
+def install_dependencies(virtualenvs):
+    """Install dependencies for each tox virtual environment.
+
+    :param virtualenvs: Virtual environments to consider.
+    :type virtualenvs: dict(str, VirtualEnv)
+
+    """
+    LOGGER.debug('### Installing dependencies...')
+
+    call(['pip', 'install', 'flake8'])
+
+    for virtualenv in virtualenvs.itervalues():
+        virtualenv.install_dependencies()
+
+
+def run_tests(circle_node_index, virtualenvs):
     """Run test cases splitted in different nodes.
 
     :param circle_node_index: Node index executing this code in CircleCI
     :type circle_node_index: int
+    :param virtualenvs: Virtual environments to consider.
+    :type virtualenvs: dict(str, VirtualEnv)
 
     """
     LOGGER.debug('### Running tests...')
-
-    all_commands = [
-        {REST_CONFIG: ['clientV1-endpoints', 'clientV1-infrastructure']},
-        {REST_CONFIG: 'clientV2-endpoints'},
-        {
-            WORKFLOWS_CONFIG: 'py27',
-            REST_CONFIG: 'clientV2-infrastructure',
-        },
-        {REST_CONFIG: 'clientV2_1-endpoints'},
-        {REST_CONFIG: 'clientV2_1-infrastructure'},
-        {REST_CONFIG: 'clientV3-endpoints'},
-        {REST_CONFIG: 'clientV3-infrastructure'},
-    ]
 
     if circle_node_index == 0:
         call([
@@ -64,25 +117,10 @@ def run(circle_node_index):
             'tests/',
         ])
 
-    run_tox_commands(all_commands[circle_node_index])
-
-
-def run_tox_commands(tox_commands, extra_parameters=None):
-    """Run tox commands.
-
-    :param tox_commands: Metadata with configuration file path and virtualenvs
-    :type tox_commands: dict(str, list(str) | str)
-
-    """
-    for config, virtualenvs in tox_commands.iteritems():
-        if isinstance(virtualenvs, str):
-            virtualenvs = [virtualenvs]
-
-        for virtualenv in virtualenvs:
-            command = ['tox', '-c', config, '-e', virtualenv]
-            if extra_parameters:
-                command.extend(extra_parameters)
-            call(command)
+    virtualenv_names = NODE_INDEX_TO_VIRTUALENV_NAMES[circle_node_index]
+    for virtualenv_name in virtualenv_names:
+        virtualenv = virtualenvs[virtualenv_name]
+        virtualenv.run_tests()
 
 
 def call(command):
@@ -121,11 +159,12 @@ if __name__ == '__main__':
     )
 
     circle_node_index = int(os.environ['CIRCLE_NODE_INDEX'])
+    virtualenvs = get_virtualenvs()
 
     if args.install_dependencies:
         # Install dependencies only in first node
         # because that's the node that CircleCI uses for caching
         if circle_node_index == 0:
-            install_dependencies()
+            install_dependencies(virtualenvs)
     else:
-        run(circle_node_index)
+        run_tests(circle_node_index, virtualenvs)
