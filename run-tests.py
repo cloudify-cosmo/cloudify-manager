@@ -4,8 +4,7 @@
 import argparse
 import logging
 import os
-
-from subprocess import call
+import subprocess
 
 LOGGER = logging.getLogger()
 REST_CONFIG = './rest-service/tox.ini'
@@ -83,8 +82,18 @@ def run_tox_commands(tox_commands, extra_parameters=None):
             command = ['tox', '-c', config, '-e', virtualenv]
             if extra_parameters:
                 command.extend(extra_parameters)
-            LOGGER.debug(' '.join(command))
             call(command)
+
+
+def call(command):
+    """Call subprocess with logging.
+
+    :param command: Command as passed to `subprocess.call`
+    :type command: list(str)
+
+    """
+    LOGGER.debug('>>> %s', ' '.join(command))
+    subprocess.call(command)
 
 
 def parse_arguments():
