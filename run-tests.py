@@ -113,9 +113,10 @@ if __name__ == '__main__':
 
     circle_node_index = int(os.environ['CIRCLE_NODE_INDEX'])
 
-    # Install dependencies only in first node
-    # This is because caching only happens in the first node
-    if args.install_dependencies and circle_node_index == 0:
-        install_dependencies()
+    if args.install_dependencies:
+        # Install dependencies only in first node
+        # because that's the node that CircleCI uses for caching
+        if circle_node_index == 0:
+            install_dependencies()
     else:
         run(circle_node_index)
