@@ -39,7 +39,7 @@ function create_resources_tar() {
 }
 
 
-export CORE_TAG_NAME="4.0rc1"
+export CORE_TAG_NAME="4.0m15"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export REPO=$3
