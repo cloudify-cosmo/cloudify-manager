@@ -27,7 +27,7 @@ from manager_rest import config
 from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 from manager_rest.maintenance import is_bypass_maintenance_mode
-from manager_rest.functions import evaluate_deployment_outputs
+from manager_rest.dsl_functions import evaluate_deployment_outputs
 from manager_rest.resource_manager import (
     ResourceManager,
     get_resource_manager,

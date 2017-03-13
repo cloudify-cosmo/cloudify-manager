@@ -203,6 +203,7 @@ class marshal_with(object):
 def projection(func):
     """Decorator for enabling projection
     """
+    @wraps(func)
     def create_projection_params(*args, **kw):
         projection_params = None
         if '_include' in request.args:
@@ -320,6 +321,7 @@ def all_tenants(func):
     """
     Decorator for enabling sort
     """
+    @wraps(func)
     def is_all_tenants(*args, **kw):
         all_tenants_flag = verify_and_convert_bool(
             'all_tenants', request.args.get('_all_tenants', False))
@@ -331,6 +333,7 @@ def marshal_events(func):
     """
     Decorator for marshalling raw event responses
     """
+    @wraps(func)
     def marshal_response(*args, **kwargs):
         return marshal(func(*args, **kwargs), ListResponse.resource_fields)
     return marshal_response
@@ -394,6 +397,7 @@ def create_filters(response_class=None):
     fields = response_class.resource_fields if response_class else {}
 
     def create_filters_dec(f):
+        @wraps(f)
         def some_func(*args, **kw):
             request_args = request.args.to_dict(flat=False)
             # NOTE: all filters are created as lists
@@ -416,6 +420,20 @@ def override_marshal_with(f, model):
     def wrapper(*args, **kwargs):
         with skip_nested_marshalling():
             return f(*args, **kwargs)
+    return wrapper
+
+# endregion
+
+
+# region V3 decorators
+
+def evaluate_functions(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        val = request.args.get('_evaluate_functions', False)
+        val = verify_and_convert_bool('_evaluate_functions', val)
+        kwargs['evaluate_functions'] = val
+        return func(*args, **kwargs)
     return wrapper
 
 # endregion

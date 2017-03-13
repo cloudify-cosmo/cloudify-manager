@@ -18,14 +18,14 @@ from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage import get_node as get_storage_node
-from manager_rest.storage.models import NodeInstance, Deployment
+from manager_rest.storage.models import NodeInstance, Deployment, Secret
 from manager_rest.manager_exceptions import (
     FunctionsEvaluationError,
     DeploymentOutputsEvaluationError
 )
 
 
-def evaluate_functions(payload, deployment_id, context=None):
+def evaluate_intrinsic_functions(payload, deployment_id, context=None):
     context = context or {}
     sm = get_storage_manager()
     sm.get(Deployment, deployment_id, include=['id'])
@@ -70,8 +70,7 @@ def _get_methods(deployment_id, storage_manager):
         return get_storage_node(deployment_id, node_id)
 
     def get_secret(secret_key):
-        return secret_key + '_value'
-        return storage_manager.get(models.Secret, secret_key)
+        return storage_manager.get(Secret, secret_key)
 
     return dict(
         get_node_instances_method=get_node_instances,

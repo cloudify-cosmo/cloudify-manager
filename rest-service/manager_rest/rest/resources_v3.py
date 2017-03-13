@@ -22,7 +22,7 @@ from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
 
 from manager_rest import config
-from manager_rest.functions import evaluate_functions
+from manager_rest.dsl_functions import evaluate_intrinsic_functions
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
@@ -37,7 +37,7 @@ from .responses_v3 import BaseResponse, ResourceID
 from ..security.authentication import authenticator
 from ..security.tenant_authorization import tenant_authorizer
 from .resources_v2.nodes import Nodes as v2_Nodes
-from .resources_v2_1 import NodeInstancesId as v2_1_NodeInstancesId
+from .resources_v1.nodes import NodeInstancesId as v1_NodeInstancesId
 
 try:
     from cloudify_premium import (TenantResponse,
@@ -579,20 +579,28 @@ class Secrets(SecuredResource):
 
 
 class Nodes(v2_Nodes):
-    def get(self, _evaluate_functions=False, *args, **kwargs):
+    @rest_decorators.evaluate_functions
+    def get(self, evaluate_functions=False, *args, **kwargs):
+        # We don't skip marshalling, because we want an already marshalled
+        # object, to avoid setting evaluated secrets in the node's properties
         nodes = super(Nodes, self).get(*args, **kwargs)
-        if _evaluate_functions:
-            for node in nodes:
-                evaluate_functions(node.properties, node.deployment_id)
+        if evaluate_functions:
+            for node in nodes['items']:
+                evaluate_intrinsic_functions(node['properties'],
+                                             node['deployment_id'])
         return nodes
 
 
-class NodeInstancesId(v2_1_NodeInstancesId):
-    def get(self, _evaluate_functions=False, *args, **kwargs):
+class NodeInstancesId(v1_NodeInstancesId):
+    @rest_decorators.evaluate_functions
+    def get(self, evaluate_functions=False, *args, **kwargs):
+        # We don't skip marshalling, because we want an already marshalled
+        # object, to avoid setting evaluated secrets in the node instances's
+        # runtime properties
         node_instance = super(NodeInstancesId, self).get(*args, **kwargs)
-        if _evaluate_functions:
-            evaluate_functions(node_instance.runtime_properties,
-                               node_instance.deployment_id)
+        if evaluate_functions:
+            evaluate_intrinsic_functions(node_instance['runtime_properties'],
+                                         node_instance['deployment_id'])
         return node_instance
 
 

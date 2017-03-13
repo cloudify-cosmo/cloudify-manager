@@ -27,3 +27,9 @@ class ListResponse(object):
     def __init__(self, **kwargs):
         self.metadata = kwargs.get('metadata')
         self.items = kwargs.get('items')
+
+    def __len__(self):
+        return len(self.items)
+
+    def __iter__(self):
+        return iter(self.items)

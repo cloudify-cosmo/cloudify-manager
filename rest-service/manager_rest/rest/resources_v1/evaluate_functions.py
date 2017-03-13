@@ -25,7 +25,7 @@ from manager_rest.rest.rest_decorators import (
     marshal_with,
 )
 from manager_rest.security import SecuredResource
-from manager_rest.functions import evaluate_functions
+from manager_rest.dsl_functions import evaluate_intrinsic_functions
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 
 
@@ -60,7 +60,7 @@ class EvaluateFunctions(SecuredResource):
         deployment_id = request_dict['deployment_id']
         context = request_dict.get('context', {})
         payload = request_dict.get('payload')
-        processed_payload = evaluate_functions(
+        processed_payload = evaluate_intrinsic_functions(
             deployment_id=deployment_id,
             context=context,
             payload=payload)
