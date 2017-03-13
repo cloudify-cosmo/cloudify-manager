@@ -172,7 +172,7 @@ def call(command, **kwargs):
 
     """
     LOGGER.debug('>>> %s', command)
-    subprocess.call(command, **kwargs)
+    return subprocess.check_call(command, **kwargs)
 
 
 def parse_arguments():
