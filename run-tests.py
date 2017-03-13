@@ -162,15 +162,17 @@ def run_tests(circle_node_index, virtualenvs):
         virtualenv.run_tests()
 
 
-def call(command):
+def call(command, **kwargs):
     """Call subprocess with logging.
 
     :param command: Command as passed to `subprocess.call`
     :type command: list(str)
+    :param kwargs: Keyword arguments to pass to `subprocess.call`
+    :type kwargs: dict(str)
 
     """
     LOGGER.debug('>>> %s', ' '.join(command))
-    subprocess.call(command)
+    subprocess.call(command, **kwargs)
 
 
 def parse_arguments():
