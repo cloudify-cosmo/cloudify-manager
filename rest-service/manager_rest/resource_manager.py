@@ -25,12 +25,12 @@ import celery.exceptions
 from flask import current_app
 from flask_security import current_user
 
-from dsl_parser import constants, functions, tasks
+from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
-from manager_rest.storage import get_storage_manager, models
 from manager_rest.app_logging import raise_unauthorized_user_error
+from manager_rest.storage import get_storage_manager, models, get_node
 from manager_rest.storage.models_states import (SnapshotState,
                                                 ExecutionState,
                                                 DeploymentModificationState)
@@ -615,7 +615,7 @@ class ResourceManager(object):
                                                        dsl_node_instances):
         node_instances = []
         for node_instance in dsl_node_instances:
-            node = self.get_node(deployment_id, node_instance['node_id'])
+            node = get_node(deployment_id, node_instance['node_id'])
             instance_id = node_instance['id']
             scaling_groups = node_instance.get('scaling_groups', [])
             relationships = node_instance.get('relationships', [])
@@ -751,7 +751,7 @@ class ResourceManager(object):
                 })
                 deployment.scaling_groups = scaling_groups
             else:
-                node = self.get_node(modification.deployment_id, node_id)
+                node = get_node(modification.deployment_id, node_id)
                 node.planned_number_of_instances = modified_node['instances']
                 self.sm.update(node)
         self.sm.update(deployment)
@@ -762,7 +762,7 @@ class ResourceManager(object):
             if node_instance.get('modification') == 'added':
                 added_node_instances.append(node_instance)
             else:
-                node = self.get_node(
+                node = get_node(
                     deployment_id=deployment_id,
                     node_id=node_instance['node_id']
                 )
@@ -821,7 +821,7 @@ class ResourceManager(object):
                 })
                 deployment.scaling_groups = scaling_groups
             else:
-                node = self.get_node(modification.deployment_id, node_id)
+                node = get_node(modification.deployment_id, node_id)
                 node.number_of_instances = modified_node['instances']
                 self.sm.update(node)
         self.sm.update(deployment)
@@ -894,7 +894,7 @@ class ResourceManager(object):
                 props['planned_instances'] = props['current_instances']
                 deployment.scaling_groups = scaling_groups
             else:
-                node = self.get_node(modification.deployment_id, node_id)
+                node = get_node(modification.deployment_id, node_id)
                 node.planned_number_of_instances = nodes_num_instances[
                         node_id].number_of_instances
                 self.sm.update(node)
@@ -915,7 +915,7 @@ class ResourceManager(object):
 
         # Link the node instance object to to the node, and add it to the DB
         new_node_instance = models.NodeInstance(**instance_dict)
-        node = self.get_node(deployment_id, node_id)
+        node = get_node(deployment_id, node_id)
         new_node_instance.node = node
         self.sm.put(new_node_instance)
 
@@ -924,68 +924,6 @@ class ResourceManager(object):
         instance_dict['node_id'] = node_id
         instance_dict['tenant_name'] = tenant_name
         instance_dict['created_by'] = created_by
-
-    def evaluate_deployment_outputs(self, deployment_id):
-        deployment = self.sm.get(
-            models.Deployment,
-            deployment_id,
-            include=['outputs']
-        )
-
-        def get_node_instances(node_id=None):
-            filters = self.create_filters_dict(deployment_id=deployment_id,
-                                               node_id=node_id)
-            return self.sm.list(models.NodeInstance, filters=filters).items
-
-        def get_node_instance(node_instance_id):
-            return self.sm.get(models.NodeInstance, node_instance_id)
-
-        def get_node(node_id):
-            return self.get_node(deployment_id, node_id)
-
-        def get_secret(secret_key):
-            # TODO: Remove before merging
-            return secret_key + '_value'
-            return self.sm.get(models.Secret, secret_key)
-
-        try:
-            return functions.evaluate_outputs(
-                outputs_def=deployment.outputs,
-                get_node_instances_method=get_node_instances,
-                get_node_instance_method=get_node_instance,
-                get_node_method=get_node,
-                get_secret_method=get_secret)
-        except parser_exceptions.FunctionEvaluationError, e:
-            raise manager_exceptions.DeploymentOutputsEvaluationError(str(e))
-
-    def evaluate_functions(self, deployment_id, context, payload):
-        self.sm.get(models.Deployment, deployment_id, include=['id'])
-
-        def get_node_instances(node_id=None):
-            filters = self.create_filters_dict(deployment_id=deployment_id,
-                                               node_id=node_id)
-            return self.sm.list(models.NodeInstance, filters=filters).items
-
-        def get_node_instance(node_instance_id):
-            return self.sm.get(models.NodeInstance, node_instance_id)
-
-        def get_node(node_id):
-            return self.get_node(deployment_id, node_id)
-
-        def get_secret(secret_key):
-            return secret_key + '_value'
-            return self.sm.get(models.Secret, secret_key)
-
-        try:
-            return functions.evaluate_functions(
-                payload=payload,
-                context=context,
-                get_node_instances_method=get_node_instances,
-                get_node_instance_method=get_node_instance,
-                get_node_method=get_node,
-                get_secret_method=get_secret)
-        except parser_exceptions.FunctionEvaluationError, e:
-            raise manager_exceptions.FunctionsEvaluationError(str(e))
 
     @staticmethod
     def _try_convert_from_str(string, target_type):
@@ -1252,19 +1190,6 @@ class ResourceManager(object):
 
         app_context.update_parser_context(context_dict['context'])
 
-    def get_node(self, deployment_id, node_id):
-        """Return the single node associated with a given ID and Dep ID
-        """
-        nodes = self.sm.list(
-            models.Node,
-            filters={'deployment_id': deployment_id, 'id': node_id}
-        )
-        if not nodes:
-            raise manager_exceptions.NotFoundError(
-                'Requested Node with ID `{0}` on Deployment `{1}` '
-                'was not found'.format(node_id, deployment_id)
-            )
-        return nodes[0]
 
     @staticmethod
     def assert_user_has_modify_permissions(resource):

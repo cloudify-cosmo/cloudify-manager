@@ -16,8 +16,25 @@
 from flask_security.utils import encrypt_password
 
 from manager_rest import constants
-from manager_rest.storage import user_datastore, db
+from manager_rest.storage.models import Node
 from manager_rest.storage.management_models import Tenant
+from manager_rest.manager_exceptions import NotFoundError
+from manager_rest.storage import user_datastore, db, get_storage_manager
+
+
+def get_node(deployment_id, node_id):
+    """Return the single node associated with a given ID and Dep ID
+    """
+    nodes = get_storage_manager().list(
+        Node,
+        filters={'deployment_id': deployment_id, 'id': node_id}
+    )
+    if not nodes:
+        raise NotFoundError(
+            'Requested Node with ID `{0}` on Deployment `{1}` '
+            'was not found'.format(node_id, deployment_id)
+        )
+    return nodes[0]
 
 
 def create_default_user_tenant_and_roles(admin_username, admin_password):

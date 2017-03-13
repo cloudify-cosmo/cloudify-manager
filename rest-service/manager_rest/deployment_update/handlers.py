@@ -4,8 +4,8 @@ import utils as deployment_update_utils
 from constants import ENTITY_TYPES, NODE_MOD_TYPES
 
 from manager_rest import utils
-from manager_rest.storage import get_storage_manager, models
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage import get_storage_manager, models, get_node
 from entity_context import get_entity_context
 
 
@@ -51,7 +51,7 @@ class NodeHandler(FrozenEntitiesHandlerBase):
                       for r in ctx.raw_node.get(ctx.RELATIONSHIPS, [])]
 
         for node_id in target_ids:
-            node = self.rm.get_node(ctx.deployment_id, node_id)
+            node = get_node(ctx.deployment_id, node_id)
             node.plugins = deployment_update_utils.get_raw_node(
                 ctx.deployment_plan, node_id)['plugins']
             self.sm.update(node)
@@ -124,7 +124,7 @@ class RelationshipHandler(ModifiableEntityHandlerBase):
         raw_source_node = current_entities[source_node.id]
         raw_source_node[ctx.PLUGINS] = source_node.plugins
 
-        target_node = self.rm.get_node(ctx.deployment_id, ctx.target_id)
+        target_node = get_node(ctx.deployment_id, ctx.target_id)
         target_node.plugins = ctx.raw_target_node[ctx.PLUGINS]
         self.sm.update(target_node)
 
@@ -181,7 +181,7 @@ class OperationHandler(ModifiableEntityHandlerBase):
     def _modify_node_operation(self, ctx, current_entities):
         new_operation = deployment_update_utils.create_dict(
             ctx.modification_breadcrumbs, ctx.raw_entity_value)
-        node = self.rm.get_node(ctx.deployment_id, ctx.raw_node_id)
+        node = get_node(ctx.deployment_id, ctx.raw_node_id)
         operations = deepcopy(node.operations)
         operations.update({ctx.operation_id: new_operation})
         node.operations = operations
@@ -221,7 +221,7 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
         current_node[ctx.PLUGINS] = ctx.raw_node[ctx.PLUGINS]
 
-        node = self.rm.get_node(ctx.deployment_id, ctx.raw_node_id)
+        node = get_node(ctx.deployment_id, ctx.raw_node_id)
         node.relationships = deepcopy(relationships)
         node.plugins = ctx.raw_node[ctx.PLUGINS]
         self.sm.update(node)
@@ -273,7 +273,7 @@ class OperationHandler(ModifiableEntityHandlerBase):
 
 class PropertyHandler(ModifiableEntityHandlerBase):
     def modify(self, ctx, current_entities):
-        node = self.rm.get_node(ctx.deployment_id, ctx.raw_node_id)
+        node = get_node(ctx.deployment_id, ctx.raw_node_id)
         properties = deepcopy(node.properties)
         properties[ctx.property_id] = deployment_update_utils.create_dict(
             ctx.modification_breadcrumbs,
@@ -465,7 +465,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
             # some reason any left).
             modified_node['relationships'] = \
                 [r for r in modified_node['relationships'] if r]
-            node = self.rm.get_node(
+            node = get_node(
                 modified_node['deployment_id'],
                 modified_node['id']
             )
@@ -479,7 +479,7 @@ class DeploymentUpdateNodeHandler(UpdateHandler):
             self.sm.update(node)
 
         for removed_node_instance in removed_node_instances:
-            node = self.rm.get_node(
+            node = get_node(
                 dep_update.deployment_id,
                 removed_node_instance['node_id']
             )
