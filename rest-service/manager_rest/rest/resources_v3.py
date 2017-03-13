@@ -546,11 +546,12 @@ class Secrets(SecuredResource):
         Create a new secret
         """
 
-        key, value = self._validate_secret_inputs(key)
+        request_dict = rest_utils.get_json_and_verify_params({'value'})
+        rest_utils.validate_inputs({'key': key})
 
         return get_storage_manager().put(models.Secret(
             id=key,
-            value=value,
+            value=request_dict['value'],
             created_at=utils.get_formatted_timestamp(),
             updated_at=utils.get_formatted_timestamp()
         ))
@@ -562,17 +563,12 @@ class Secrets(SecuredResource):
         Update an existing secret
         """
 
-        key, value = self._validate_secret_inputs(key)
+        request_dict = rest_utils.get_json_and_verify_params({'value'})
+        rest_utils.validate_inputs({'key': key})
         secret = get_storage_manager().get(models.Secret, key)
-        secret.value = value
+        secret.value = request_dict['value']
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret)
-
-    def _validate_secret_inputs(self, key):
-        request_dict = rest_utils.get_json_and_verify_params({'value'})
-        value = request_dict['value']
-        rest_utils.validate_inputs({'key': key, 'value': value})
-        return key, value
 
 
 def _only_admin_in_manager():
