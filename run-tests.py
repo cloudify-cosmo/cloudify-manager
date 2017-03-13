@@ -214,6 +214,8 @@ if __name__ == '__main__':
         # because that's the node that CircleCI uses for caching
         if circle_node_index == 0:
             install_dependencies(virtualenvs)
+        else:
+            LOGGER.debug('Not running on first node. Skipping...')
     elif args.upgrade_dependencies:
         upgrade_dependencies(circle_node_index, virtualenvs)
     else:
