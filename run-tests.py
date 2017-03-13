@@ -10,13 +10,13 @@ LOGGER = logging.getLogger()
 
 # Mapping from CircleCI node index to virtualenv
 NODE_INDEX_TO_VIRTUALENV_NAMES = [
-    ['clientV1-endpoints', 'clientV1-infrastructure'],
-    ['clientV2-endpoints'],
-    ['py27', 'clientV2-infrastructure'],
-    ['clientV2_1-endpoints'],
-    ['clientV2_1-infrastructure'],
-    ['clientV3-endpoints'],
-    ['clientV3-infrastructure'],
+    ['clientV1-endpoints'],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
 ]
 
 
