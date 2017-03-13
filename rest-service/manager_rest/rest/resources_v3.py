@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-from .. import utils
 from flask_security import current_user
 from flask import current_app, request
 
@@ -23,6 +22,7 @@ from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
 
 from manager_rest import config
+from manager_rest.functions import evaluate_functions
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
@@ -31,10 +31,13 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              UnauthorizedError)
 from manager_rest.security.resource_permissions import PermissionsHandler
 
+from .. import utils
 from . import rest_decorators, rest_utils
 from .responses_v3 import BaseResponse, ResourceID
 from ..security.authentication import authenticator
 from ..security.tenant_authorization import tenant_authorizer
+from .resources_v2.nodes import Nodes as v2_Nodes
+from .resources_v2_1 import NodeInstancesId as v2_1_NodeInstancesId
 
 try:
     from cloudify_premium import (TenantResponse,
@@ -573,6 +576,24 @@ class Secrets(SecuredResource):
         value = request_dict['value']
         rest_utils.validate_inputs({'key': key, 'value': value})
         return key, value
+
+
+class Nodes(v2_Nodes):
+    def get(self, _evaluate_functions=False, *args, **kwargs):
+        nodes = super(Nodes, self).get(*args, **kwargs)
+        if _evaluate_functions:
+            for node in nodes:
+                evaluate_functions(node.properties, node.deployment_id)
+        return nodes
+
+
+class NodeInstancesId(v2_1_NodeInstancesId):
+    def get(self, _evaluate_functions=False, *args, **kwargs):
+        node_instance = super(NodeInstancesId, self).get(*args, **kwargs)
+        if _evaluate_functions:
+            evaluate_functions(node_instance.runtime_properties,
+                               node_instance.deployment_id)
+        return node_instance
 
 
 def _only_admin_in_manager():

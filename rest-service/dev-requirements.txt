@@ -1,5 +1,5 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/CFY-6530-get-secret-func.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-6530-get-secret-func.zip
 
 # test dependencies
 mock

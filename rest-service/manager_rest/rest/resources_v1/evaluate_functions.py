@@ -16,7 +16,6 @@
 
 from flask_restful_swagger import swagger
 
-from manager_rest.resource_manager import get_resource_manager
 from manager_rest.rest import (
     requests_schema,
     responses,
@@ -25,8 +24,9 @@ from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
 )
-from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
+from manager_rest.functions import evaluate_functions
+from manager_rest.rest.rest_utils import get_json_and_verify_params
 
 
 class EvaluateFunctions(SecuredResource):
@@ -60,7 +60,7 @@ class EvaluateFunctions(SecuredResource):
         deployment_id = request_dict['deployment_id']
         context = request_dict.get('context', {})
         payload = request_dict.get('payload')
-        processed_payload = get_resource_manager().evaluate_functions(
+        processed_payload = evaluate_functions(
             deployment_id=deployment_id,
             context=context,
             payload=payload)

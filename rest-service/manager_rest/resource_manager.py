@@ -1190,7 +1190,6 @@ class ResourceManager(object):
 
         app_context.update_parser_context(context_dict['context'])
 
-
     @staticmethod
     def assert_user_has_modify_permissions(resource):
         """Assert that the current user has `owner` permissions on a given
