@@ -43,6 +43,11 @@ class VirtualEnv(object):
         """
         base_dir = os.path.dirname(self.config_path)
         virtualenv_dir = os.path.join(base_dir, '.tox', self.name)
+        if not os.path.isdir(virtualenv_dir):
+            LOGGER.debug(
+                "virtualenv directory doesn't exist yet, nothing to upgrade")
+            return
+
         activate_path = os.path.join(virtualenv_dir, 'bin', 'activate')
         dev_requirements_path = os.path.join(base_dir, 'dev-requirements.txt')
         call(
