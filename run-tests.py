@@ -171,7 +171,7 @@ def call(command, **kwargs):
     :type kwargs: dict(str)
 
     """
-    LOGGER.debug('>>> %s', ' '.join(command))
+    LOGGER.debug('>>> %s', command)
     subprocess.call(command, **kwargs)
 
 
