@@ -21,6 +21,9 @@ dependencies:
     - ./workflows/.tox
 
 test:
+  pre:
+    - ./run-tests.py --upgrade-dependencies:
+        parallel: true
   override:
     - ./run-tests.py:
         parallel: true

@@ -32,6 +32,27 @@ class VirtualEnv(object):
         """Install dependencies defined in tox configuration."""
         self._run_tox_command(['--notest'])
 
+    def upgrade_development_dependencies(self):
+        """Upgrade development dependencies.
+
+        This will upgrade only development dependencies. The reason for this is
+        that development dependencies coming from cloudify github repositories
+        might be updated even if the version didn't change, so they need to be
+        updated on each run.
+
+        """
+        base_dir = os.path.dirname(self.config_path)
+        virtualenv_dir = os.path.join(base_dir, '.tox', self.name)
+        activate_path = os.path.join(virtualenv_dir, 'bin', 'activate')
+        dev_requirements_path = os.path.join(base_dir, 'dev-requirements.txt')
+        call(
+            'source {0}; '
+            'pip install -U --no-deps -r {1}; '
+            'deactivate'
+            .format(activate_path, dev_requirements_path),
+            shell=True
+        )
+
     def run_tests(self):
         """Run test cases for the virtual environment."""
         self._run_tox_command()
@@ -97,6 +118,24 @@ def install_dependencies(virtualenvs):
         virtualenv.install_dependencies()
 
 
+def upgrade_dependencies(circle_node_index, virtualenvs):
+    """Upgrade development dependencies for each tox virtual environment.
+
+    The upgrade happens only for the tox environments to be executed in the
+    node in which the command is executed.
+
+    :param virtualenvs: Virtual environments to consider.
+    :type virtualenvs: dict(str, VirtualEnv)
+
+    """
+    LOGGER.debug('### Upgrading development dependencies...')
+
+    virtualenv_names = NODE_INDEX_TO_VIRTUALENV_NAMES[circle_node_index]
+    for virtualenv_name in virtualenv_names:
+        virtualenv = virtualenvs[virtualenv_name]
+        virtualenv.upgrade_development_dependencies()
+
+
 def run_tests(circle_node_index, virtualenvs):
     """Run test cases splitted in different nodes.
 
@@ -142,10 +181,17 @@ def parse_arguments():
 
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         '-i', '--install-dependencies',
         action='store_true',
         help='Install dependencies (do not run test cases)',
+    )
+    group.add_argument(
+        '-u', '--upgrade-dependencies',
+        action='store_true',
+        help='Upgrade development dependencies (do not run test cases)',
     )
     args = parser.parse_args()
     return args
@@ -166,5 +212,7 @@ if __name__ == '__main__':
         # because that's the node that CircleCI uses for caching
         if circle_node_index == 0:
             install_dependencies(virtualenvs)
+    elif args.upgrade_dependencies:
+        upgrade_dependencies(circle_node_index, virtualenvs)
     else:
         run_tests(circle_node_index, virtualenvs)
