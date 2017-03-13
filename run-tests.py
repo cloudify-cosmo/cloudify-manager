@@ -46,7 +46,7 @@ class VirtualEnv(object):
         activate_path = os.path.join(virtualenv_dir, 'bin', 'activate')
         dev_requirements_path = os.path.join(base_dir, 'dev-requirements.txt')
         call(
-            'source {0}; '
+            '. {0}; '
             'pip install -U --no-deps -r {1}; '
             'deactivate'
             .format(activate_path, dev_requirements_path),
