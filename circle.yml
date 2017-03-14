@@ -17,6 +17,7 @@ dependencies:
     - pip install setuptools --upgrade
     - ./run-tests.sh --install-dependencies
   cache_directories:
+    - ~/.cache/pip
     - ./rest-service/.tox
     - ./workflows/.tox
 
