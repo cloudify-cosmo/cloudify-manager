@@ -18,6 +18,8 @@ install_dependencies() {
             tox -c $REST_CONFIG -e clientV3-endpoints --notest
             tox -c $REST_CONFIG -e clientV3-infrastructure --notest
             ;;
+        *)
+            echo "Not running in fist node. Skipping..."
     esac
 }
 
