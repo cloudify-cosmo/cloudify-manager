@@ -33,11 +33,11 @@ from manager_rest.security.resource_permissions import PermissionsHandler
 
 from .. import utils
 from . import rest_decorators, rest_utils
-from .responses_v3 import BaseResponse, ResourceID
 from ..security.authentication import authenticator
 from ..security.tenant_authorization import tenant_authorizer
 from .resources_v2.nodes import Nodes as v2_Nodes
 from .resources_v1.nodes import NodeInstancesId as v1_NodeInstancesId
+from .responses_v3 import BaseResponse, ResourceID, SecretsListResponse
 
 try:
     from cloudify_premium import (TenantResponse,
@@ -531,7 +531,7 @@ class LdapAuthentication(SecuredResource):
         return ldap_config
 
 
-class Secrets(SecuredResource):
+class SecretsKey(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Secret)
     def get(self, key):
@@ -571,11 +571,46 @@ class Secrets(SecuredResource):
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret)
 
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(models.Secret)
+    def delete(self, key):
+        """
+        Delete a secret
+        """
+
+        rest_utils.validate_inputs({'key': key})
+        storage_manager = get_storage_manager()
+        secret = storage_manager.get(models.Secret, key)
+        return storage_manager.delete(secret)
+
     def _validate_secret_inputs(self, key):
         request_dict = rest_utils.get_json_and_verify_params({'value'})
         value = request_dict['value']
         rest_utils.validate_inputs({'key': key})
         return key, value
+
+
+class Secrets(SecuredResource):
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(SecretsListResponse)
+    @rest_decorators.create_filters(models.Secret)
+    @rest_decorators.paginate
+    @rest_decorators.sortable(models.Secret)
+    @rest_decorators.all_tenants
+    def get(self, _include=None, filters=None, pagination=None, sort=None,
+            all_tenants=None, **kwargs):
+        """
+        List secrets
+        """
+
+        return get_storage_manager().list(
+            models.Secret,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort,
+            all_tenants=all_tenants
+        )
 
 
 class Nodes(v2_Nodes):

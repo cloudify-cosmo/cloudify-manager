@@ -84,20 +84,15 @@ class Secret(TopLevelResource):
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     updated_at = db.Column(UTCDateTime)
 
-    @property
+    @hybrid_property
     def key(self):
         return self.id
 
     @classproperty
-    def response_fields(cls):
-        response_fields = {
-            'key': flask_fields.String,
-            'value': flask_fields.String,
-            'created_at': flask_fields.String,
-            'updated_at': flask_fields.String
-        }
-
-        return response_fields
+    def resource_fields(cls):
+        fields = super(Secret, cls).resource_fields
+        fields['key'] = fields.pop('id')
+        return fields
 
 # endregion
 

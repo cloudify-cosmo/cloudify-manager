@@ -30,3 +30,22 @@ class ResourceID(BaseResponse):
 
     def __init__(self, **kwargs):
         self.resource_id = kwargs.get('resource_id')
+
+
+class SecretsListResponse(BaseResponse):
+    resource_fields = {
+        'key': fields.String,
+        'created_at': fields.String,
+        'updated_at': fields.String,
+        'permission': fields.String,
+        'tenant_name': fields.String,
+        'created_by': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.key = kwargs.get('key')
+        self.created_at = kwargs.get('created_at')
+        self.updated_at = kwargs.get('updated_at')
+        self.permission = kwargs.get('permission')
+        self.tenant_name = kwargs.get('tenant_name')
+        self.created_by = kwargs.get('created_by')
