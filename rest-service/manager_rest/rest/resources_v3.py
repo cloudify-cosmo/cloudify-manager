@@ -574,7 +574,7 @@ class Secrets(SecuredResource):
     def _validate_secret_inputs(self, key):
         request_dict = rest_utils.get_json_and_verify_params({'value'})
         value = request_dict['value']
-        rest_utils.validate_inputs({'key': key, 'value': value})
+        rest_utils.validate_inputs({'key': key})
         return key, value
 
 
