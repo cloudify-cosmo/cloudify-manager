@@ -2,8 +2,7 @@ import utils
 
 from constants import ENTITY_TYPES
 
-from manager_rest.storage import get_storage_manager, models
-from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage import get_storage_manager, models, get_node
 
 
 def get_entity_context(plan, deployment_id, entity_type, entity_id):
@@ -43,7 +42,6 @@ class EntityContextBase(object):
 
     def __init__(self, plan, deployment_id, entity_type, top_level_entity_id):
         self.sm = get_storage_manager()
-        self.rm = get_resource_manager()
         self._deployment_id = deployment_id
         self._entity_type = entity_type
         self._top_level_entity_id = top_level_entity_id
@@ -98,8 +96,7 @@ class NodeContextBase(EntityContextBase):
 
     @property
     def storage_node(self):
-        return self.rm.get_node(self._deployment_id,
-                                self._top_level_entity_id) or None
+        return get_node(self._deployment_id, self._top_level_entity_id) or None
 
     @property
     def raw_node(self):
@@ -168,7 +165,7 @@ class RelationshipContext(NodeContextBase):
 
     @property
     def storage_target_node(self):
-        return self.rm.get_node(self._deployment_id, self.target_id) or None
+        return get_node(self._deployment_id, self.target_id) or None
 
     @property
     def raw_target_node(self):

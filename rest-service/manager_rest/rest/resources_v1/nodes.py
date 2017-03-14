@@ -21,10 +21,7 @@ from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
 from manager_rest import manager_exceptions
-from manager_rest.resource_manager import (
-    ResourceManager,
-    get_resource_manager,
-)
+from manager_rest.resource_manager import ResourceManager
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
@@ -37,6 +34,7 @@ from manager_rest.security import SecuredResource
 from manager_rest.storage import (
     get_storage_manager,
     models,
+    get_node
 )
 
 
@@ -68,10 +66,7 @@ class Nodes(SecuredResource):
         node_id = args.get('node_id')
         if deployment_id and node_id:
             try:
-                nodes = [get_resource_manager().get_node(
-                    deployment_id,
-                    node_id
-                )]
+                nodes = [get_node(deployment_id, node_id)]
             except manager_exceptions.NotFoundError:
                 nodes = []
         else:

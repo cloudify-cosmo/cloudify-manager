@@ -21,7 +21,7 @@ from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.test import base_test
 from manager_rest import manager_exceptions
-from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage import get_node
 from manager_rest.storage.models import (Blueprint,
                                          Deployment,
                                          Node,
@@ -423,8 +423,7 @@ class NodesTest(base_test.BaseServerTestCase):
 
     def _get_or_create_node(self, node_id, deployment):
         try:
-            bm = get_resource_manager()
-            return bm.get_node(deployment.id, node_id)
+            return get_node(deployment.id, node_id)
         except manager_exceptions.NotFoundError:
             node = Node(
                 id=node_id,

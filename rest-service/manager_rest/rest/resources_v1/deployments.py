@@ -27,6 +27,7 @@ from manager_rest import config
 from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 from manager_rest.maintenance import is_bypass_maintenance_mode
+from manager_rest.dsl_functions import evaluate_deployment_outputs
 from manager_rest.resource_manager import (
     ResourceManager,
     get_resource_manager,
@@ -279,6 +280,5 @@ class DeploymentsIdOutputs(SecuredResource):
     @marshal_with(responses.DeploymentOutputs)
     def get(self, deployment_id, **kwargs):
         """Get deployment outputs"""
-        outputs = get_resource_manager().evaluate_deployment_outputs(
-            deployment_id)
+        outputs = evaluate_deployment_outputs(deployment_id)
         return dict(deployment_id=deployment_id, outputs=outputs)
