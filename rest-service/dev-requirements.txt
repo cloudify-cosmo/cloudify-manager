@@ -5,3 +5,4 @@ https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
 mock
 python-dateutil
 wagon==0.3.2
+faker
