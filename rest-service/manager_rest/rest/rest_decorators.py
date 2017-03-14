@@ -39,7 +39,6 @@ from manager_rest.rest.rest_utils import verify_and_convert_bool
 from manager_rest.storage.models_base import SQLModelBase
 
 from .responses_v2 import ListResponse
-from .rest_utils import skip_nested_marshalling
 
 INCLUDE = 'Include'
 SORT = 'Sort'
@@ -408,19 +407,6 @@ def create_filters(response_class=None):
             return f(filters=filters, *args, **kw)
         return some_func
     return create_filters_dec
-
-# endregion
-
-# region V2.1 decorators
-
-
-def override_marshal_with(f, model):
-    @exceptions_handled
-    @marshal_with(model)
-    def wrapper(*args, **kwargs):
-        with skip_nested_marshalling():
-            return f(*args, **kwargs)
-    return wrapper
 
 # endregion
 
