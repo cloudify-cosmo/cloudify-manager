@@ -48,7 +48,6 @@ class Status(SecuredResource):
                 job_list = {'riemann': 'Riemann',
                             'rabbitmq-server': 'RabbitMQ',
                             'celeryd-cloudify-management': 'Celery Management',
-                            'elasticsearch': 'Elasticsearch',
                             'cloudify-ui': 'Cloudify UI',
                             'logstash': 'Logstash',
                             'nginx': 'Webserver',
@@ -67,7 +66,6 @@ class Status(SecuredResource):
                             'cloudify-rabbitmq.service': 'RabbitMQ',
                             'cloudify-riemann.service': 'Riemann',
                             'cloudify-webui.service': 'Cloudify UI',
-                            'elasticsearch.service': 'Elasticsearch',
                             'logstash.service': 'Logstash',
                             'nginx.service': 'Webserver',
                             'postgresql-9.5.service': 'PostgreSQL'
