@@ -67,34 +67,8 @@ class SQLStorageManager(object):
             # If all columns should be returned, query directly from the model
             query = model_class.query
 
-        if not self._skip_joining(joins, include):
-            for join_table in joins:
-                query = query.join(join_table)
-
+        query = query.join(*joins)
         return query
-
-    @staticmethod
-    def _skip_joining(joins, include):
-        """Dealing with an edge case where the only included column comes from
-        an other table. In this case, we mustn't join on the same table again
-
-        :param joins: A list of tables on which we're trying to join
-        :param include: The list of
-        :return: True if we need to skip joining
-        """
-        if not joins:
-            return True
-        join_table_names = [t.__tablename__ for t in joins]
-
-        if len(include) != 1:
-            return False
-
-        column = include[0]
-        if column.is_clause_element:
-            table_name = column.element.table.name
-        else:
-            table_name = column.class_.__tablename__
-        return table_name in join_table_names
 
     @staticmethod
     def _sort_query(query, sort=None):
@@ -213,24 +187,25 @@ class SQLStorageManager(object):
 
     @staticmethod
     def _get_joins(model_class, columns):
-        """Get a list of all the tables on which we need to join
+        """Get a list of all the attributes on which we need to join
 
         :param columns: A set of all columns involved in the query
         """
-        joins = []  # Using a list instead of a set because order is important
+        # Using an ordered dict because the order of the joins is important
+        joins = OrderedDict()
         for column_name in columns:
             column = getattr(model_class, column_name)
             while not column.is_attribute:
-                column = column.remote_attr
-                if column.is_attribute:
-                    join_class = column.class_
-                else:
-                    join_class = column.local_attr.class_
+                join_attr = column.local_attr
 
-                # Don't add the same class more than once
-                if join_class not in joins:
-                    joins.append(join_class)
-        return joins
+                # This is a hack, to deal with the fact that SQLA doesn't
+                # fully support doing something like: `if join_attr in joins`,
+                # because some SQLA elements have their own comparators
+                join_attr_name = str(join_attr)
+                if join_attr_name not in joins:
+                    joins[join_attr_name] = join_attr
+                column = column.remote_attr
+        return joins.values()
 
     def _get_joins_and_converted_columns(self,
                                          model_class,
