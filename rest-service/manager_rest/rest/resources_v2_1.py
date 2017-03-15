@@ -27,6 +27,7 @@ from manager_rest import utils
 from manager_rest.security import SecuredResource
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_DEACTIVATED)
@@ -70,20 +71,20 @@ class MaintenanceModeAction(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(MaintenanceModeResponse)
     def post(self, maintenance_action, **_):
+        if not current_user.is_admin:
+            raise_unauthorized_user_error(
+                '{0} does not have privileges to set maintenance mode'.format(
+                    current_user))
         maintenance_file_path = get_maintenance_file_path()
-
         if maintenance_action == 'activate':
             if os.path.isfile(maintenance_file_path):
                 state = utils.read_json_file(maintenance_file_path)
                 return state, 304
-
             now = utils.get_formatted_timestamp()
-
             try:
                 user = current_user.username
             except AttributeError:
                 user = ''
-
             remaining_executions = get_running_executions()
             status = MAINTENANCE_MODE_ACTIVATING \
                 if remaining_executions else MAINTENANCE_MODE_ACTIVATED
@@ -96,16 +97,13 @@ class MaintenanceModeAction(SecuredResource):
                 remaining_executions=remaining_executions,
                 requested_by=user)
             utils.write_dict_to_json_file(maintenance_file_path, new_state)
-
             return new_state
-
         if maintenance_action == 'deactivate':
             if not os.path.isfile(maintenance_file_path):
                 return prepare_maintenance_dict(
                         MAINTENANCE_MODE_DEACTIVATED), 304
             os.remove(maintenance_file_path)
             return prepare_maintenance_dict(MAINTENANCE_MODE_DEACTIVATED)
-
         valid_actions = ['activate', 'deactivate']
         raise BadParametersError(
                 'Invalid action: {0}, Valid action '
