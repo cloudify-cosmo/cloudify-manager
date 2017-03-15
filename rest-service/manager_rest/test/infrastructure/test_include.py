@@ -163,3 +163,11 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         self.assertRaises(
             NoSuchIncludeFieldError,
             lambda: self.client.manager.get_context(_include=['hello']))
+
+    def test_association_proxy_include(self):
+        self.put_deployment(deployment_id='a', blueprint_id='a')
+        self.put_deployment(deployment_id='b', blueprint_id='b')
+        response = self.client.deployments.get('a', _include=['blueprint_id'])
+        self.assertEqual(response, {'blueprint_id': 'a'})
+        response = self.client.deployments.get('b', _include=['blueprint_id'])
+        self.assertEqual(response, {'blueprint_id': 'b'})
