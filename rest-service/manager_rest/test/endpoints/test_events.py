@@ -68,6 +68,7 @@ class EventResult(EventResultTuple):
         return self._fields
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsBaseTest(TestCase):
 
     """Select events test case base with database."""
@@ -171,6 +172,7 @@ class SelectEventsBaseTest(TestCase):
         self.events = sorted_events
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsFilterTest(SelectEventsBaseTest):
 
     """Filter events by deployment/execution."""
@@ -234,6 +236,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             )
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     """Filter events by type."""
@@ -310,6 +313,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         self._get_events_by_type(['cloudify_log'])
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsSortTest(SelectEventsBaseTest):
 
     """Sort events by timestamp ascending/descending."""
@@ -380,6 +384,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         self._sort_by_timestamp('@timestamp', 'desc')
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsRangeFilterTest(SelectEventsBaseTest):
 
     """Filter out events not included in a range."""
