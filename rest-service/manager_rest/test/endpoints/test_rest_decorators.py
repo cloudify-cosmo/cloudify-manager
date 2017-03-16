@@ -90,11 +90,12 @@ class RangeableTest(TestCase):
         with patch('manager_rest.rest.rest_decorators.request') as request:
             invalid_values = [
                 'invalid',
-                ',,',
+                ',,',  # parameter must be a string
+                'field,,',  # one of from or to must be present
                 'field,from,to',  # from and to should be datetimes
             ]
             for invalid_value in invalid_values:
-                request.args.getlist.return_value = invalid_value
+                request.args.getlist.return_value = [invalid_value]
                 with self.assertRaises(Invalid):
                     rangeable(Mock)()
 
@@ -103,23 +104,31 @@ class RangeableTest(TestCase):
 
         valid_datetime = '2016-09-12T00:00:00.0Z'
 
-        def verify(range_filters):
-            self.assertDictEqual(
-                range_filters,
-                {
-                    'field': {
-                        'from': valid_datetime,
-                        'to': valid_datetime,
-                    },
-                },
-            )
-            return Mock()
+        def verify(expected_value):
+            def verify_helper(range_filters):
+                self.assertDictEqual(range_filters, expected_value)
+                return Mock()
+            return verify_helper
 
         with patch('manager_rest.rest.rest_decorators.request') as request:
-            request.args.getlist.return_value = [
-                'field,{0},{0}'.format(valid_datetime),
+            data = [
+                (
+                    'field,{0},{0}'.format(valid_datetime),
+                    {'field': {'from': valid_datetime, 'to': valid_datetime}},
+                ),
+                (
+                    'field,,{0}'.format(valid_datetime),
+                    {'field': {'to': valid_datetime}},
+                ),
+                (
+                    'field,{0},'.format(valid_datetime),
+                    {'field': {'from': valid_datetime}},
+                ),
             ]
-            rangeable(verify)()
+
+            for (valid_value, expected_value) in data:
+                request.args.getlist.return_value = [valid_value]
+                rangeable(verify(expected_value))()
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
