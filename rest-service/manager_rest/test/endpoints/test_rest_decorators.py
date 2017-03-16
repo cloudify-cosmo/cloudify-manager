@@ -76,15 +76,18 @@ class RangeableTest(TestCase):
 
     """Rangeable decorator test cases."""
 
+    def verify(self, expected_value):
+        """Verify range_filters arguments matches expected value."""
+        def verify_helper(range_filters):
+            self.assertDictEqual(range_filters, expected_value)
+            return Mock()
+        return verify_helper
+
     def test_empty(self):
         """No range arguments mapped to an empty dictionary."""
-        def verify(range_filters):
-            self.assertDictEqual(range_filters, {})
-            return Mock()
-
         with patch('manager_rest.rest.rest_decorators.request') as request:
             request.args.getlist.return_value = []
-            rangeable(verify)()
+            rangeable(self.verify({}))()
 
     def test_invalid(self):
         """Exception is raised for invalid values."""
@@ -109,12 +112,6 @@ class RangeableTest(TestCase):
             '20170316T123301Z',
         )
 
-        def verify(expected_value):
-            def verify_helper(range_filters):
-                self.assertDictEqual(range_filters, expected_value)
-                return Mock()
-            return verify_helper
-
         with patch('manager_rest.rest.rest_decorators.request') as request:
             for valid_datetime_str in valid_datetime_strs:
                 valid_value = 'field,{0},{0}'.format(valid_datetime_str)
@@ -127,19 +124,13 @@ class RangeableTest(TestCase):
                 }
 
                 request.args.getlist.return_value = [valid_value]
-                rangeable(verify(expected_value))()
+                rangeable(self.verify(expected_value))()
 
     def test_from_to_optional(self):
         """From/to are optional and validation passes if one is missing."""
 
         valid_datetime_str = '2016-09-12T00:00:00.0Z'
         valid_datetime = parse_datetime(valid_datetime_str)
-
-        def verify(expected_value):
-            def verify_helper(range_filters):
-                self.assertDictEqual(range_filters, expected_value)
-                return Mock()
-            return verify_helper
 
         with patch('manager_rest.rest.rest_decorators.request') as request:
             data = [
@@ -159,7 +150,7 @@ class RangeableTest(TestCase):
 
             for (valid_value, expected_value) in data:
                 request.args.getlist.return_value = [valid_value]
-                rangeable(verify(expected_value))()
+                rangeable(self.verify(expected_value))()
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
