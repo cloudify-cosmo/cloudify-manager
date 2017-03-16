@@ -135,7 +135,10 @@ class TaskRetriesTest(AgentlessTestCase):
             self.assertTrue(len(retry_events), 12)
 
             retries = 0
-            for i in range(0, 10, 3):  # Set the range's step to 3
+            # We should have 4 groups of 3 events - sending_task, task_started
+            # and task rescheduled (in the last case it will be
+            # task_succeeded). Thus setting the range's step to 3
+            for i in range(0, 10, 3):
                 send_task = retry_events[i]
                 start_task = retry_events[i + 1]
                 reschedule_task = retry_events[i + 2]
