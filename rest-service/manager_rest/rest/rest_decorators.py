@@ -16,6 +16,7 @@
 from functools import wraps
 from collections import OrderedDict
 
+from dateutil.parser import parse as parse_datetime
 from flask_restful import marshal
 from flask_restful.utils import unpack
 from flask import request, current_app
@@ -28,7 +29,6 @@ from voluptuous import (
     All,
     Any,
     Coerce,
-    Datetime,
     ExactSequence,
     Invalid,
     Length,
@@ -239,6 +239,22 @@ def rangeable(func):
     :rtype: callable
 
     """
+    def valid_datetime(datetime):
+        """Make sure that datetime is parseable.
+
+        :param datetime: Datetime value to parse
+        :type datetime: str
+        :return: The same value that was passed
+        :rtype: str
+
+        """
+        try:
+            parse_datetime(datetime)
+        except Exception:
+            raise Invalid('Datetime parsing error')
+
+        return datetime
+
     def from_or_to_present(range_param):
         """Make sure that at least one of from or to are present.
 
@@ -255,7 +271,11 @@ def rangeable(func):
 
     schema = Schema(
         All(
-            ExactSequence([str, Any(Datetime(), ''), Any(Datetime(), '')]),
+            ExactSequence([
+                str,
+                Any(valid_datetime, ''),
+                Any(valid_datetime, ''),
+            ]),
             Length(min=3, max=3),
             from_or_to_present,
             msg=(
