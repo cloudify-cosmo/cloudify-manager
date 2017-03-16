@@ -99,8 +99,36 @@ class RangeableTest(TestCase):
                 with self.assertRaises(Invalid):
                     rangeable(Mock)()
 
-    def test_valid(self):
-        """Valid value should pass validation as expected."""
+    def test_iso8601_datetime(self):
+        """ISO8601 datetimes are valid and pass validation."""
+        valid_datetimes = (
+            '2017-03-16',
+            '2017-03-16T12:33:01+00:00',
+            '2017-03-16T12:33:01Z',
+            '20170316T123301Z',
+        )
+
+        def verify(expected_value):
+            def verify_helper(range_filters):
+                self.assertDictEqual(range_filters, expected_value)
+                return Mock()
+            return verify_helper
+
+        with patch('manager_rest.rest.rest_decorators.request') as request:
+            for valid_datetime in valid_datetimes:
+                expected_value = {
+                    'field': {
+                        'from': valid_datetime,
+                        'to': valid_datetime,
+                    }
+                }
+                valid_value = 'field,{0},{0}'.format(valid_datetime)
+
+                request.args.getlist.return_value = [valid_value]
+                rangeable(verify(expected_value))()
+
+    def test_from_to_optional(self):
+        """From/to are optional and validation passes if one is missing."""
 
         valid_datetime = '2016-09-12T00:00:00.0Z'
 
