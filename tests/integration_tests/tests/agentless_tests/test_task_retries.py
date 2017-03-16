@@ -127,16 +127,34 @@ class TaskRetriesTest(AgentlessTestCase):
                     break
             else:
                 self.fail('could not find expected message')
-            events = [e for e in events if
-                      e.get('event_type', '').startswith('task_') or
-                      e.get('event_type', '') == 'sending_task']
-            seen_current_retries = set()
-            for event in events:
-                current_retries = event['context']['task_current_retries']
-                seen_current_retries.add(current_retries)
-                total_retries = event['context']['task_total_retries']
-                self.assertEqual(total_retries, 5)
-            self.assertSetEqual(seen_current_retries, {0, 1, 2, 3})
+
+            # We're looking only at the events from the create operation
+            retry_events = [e for e in events if e['context']['operation'] ==
+                            'cloudify.interfaces.lifecycle.create']
+            retry_events = sorted(retry_events, key=lambda e: e['timestamp'])
+            self.assertTrue(len(retry_events), 12)
+
+            retries = 0
+            for i in range(0, 10, 3):  # Set the range's step to 3
+                send_task = retry_events[i]
+                start_task = retry_events[i + 1]
+                reschedule_task = retry_events[i + 2]
+                self.assertEqual('sending_task', send_task['event_type'])
+                self.assertEqual('task_started', start_task['event_type'])
+
+                if retries < 3:  # The final retry should succeed
+                    self.assertEqual('task_rescheduled',
+                                     reschedule_task['event_type'])
+                else:
+                    self.assertEqual('task_succeeded',
+                                     reschedule_task['event_type'])
+                if retries:
+                    retry_msg = '[retry {0}/5]'.format(retries)
+                    for task in (send_task, start_task, reschedule_task):
+                        msg = task['message']['text']
+                        self.assertTrue(msg.endswith(retry_msg))
+                retries += 1
+
         # events are async so we may have to wait some
         self.do_assertions(assertion, timeout=120)
 
