@@ -20,9 +20,13 @@ from flask_restful import marshal
 from flask_restful.utils import unpack
 from flask import request, current_app
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
-from toolz import dicttoolz
+from toolz import (
+    dicttoolz,
+    functoolz,
+)
 from voluptuous import (
     All,
+    Any,
     Coerce,
     Datetime,
     ExactSequence,
@@ -235,13 +239,30 @@ def rangeable(func):
     :rtype: callable
 
     """
+    def from_or_to_present(range_param):
+        """Make sure that at least one of from or to are present.
+
+        :param range_param: Range parameter splitted at the commas
+        :type range_param: tuple(str, str, str)
+        :return: The same value that was passed
+        :rtype: tuple(str, str, str)
+
+        """
+        field, from_, to = range_param
+        if not (from_ or to):
+            raise Invalid('At least one of from/to must be passed')
+        return range_param
+
     schema = Schema(
         All(
-            ExactSequence([str, Datetime(), Datetime()]),
+            ExactSequence([str, Any(Datetime(), ''), Any(Datetime(), '')]),
             Length(min=3, max=3),
+            from_or_to_present,
             msg=(
-                'Range parameter should contain 3 values: '
-                '<field:str>,<from:datetime>,<to:datetime>'
+                'Range parameter should be formatted as follows: '
+                '<field:str>,[<from:datetime>],[<to:datetime>]\n'
+                'Where from/to are optional, '
+                'but at least one of them must be passed'
             )
         )
     )
@@ -254,10 +275,12 @@ def rangeable(func):
             for range_arg in range_args
         ]
         range_filters = {
-            range_param[0]: {
-                'from': range_param[1],
-                'to': range_param[2],
-            }
+            range_param[0]: dicttoolz.valfilter(
+                functoolz.identity,
+                {
+                    'from': range_param[1],
+                    'to': range_param[2],
+                })
             for range_param in range_params
         }
         return func(range_filters=range_filters, *args, **kw)
