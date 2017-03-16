@@ -244,16 +244,16 @@ def rangeable(func):
 
         :param datetime: Datetime value to parse
         :type datetime: str
-        :return: The same value that was passed
-        :rtype: str
+        :return: The datetime value after parsing
+        :rtype: :class:`datetime.datetime`
 
         """
         try:
-            parse_datetime(datetime)
+            parsed_datetime = parse_datetime(datetime)
         except Exception:
             raise Invalid('Datetime parsing error')
 
-        return datetime
+        return parsed_datetime
 
     def from_or_to_present(range_param):
         """Make sure that at least one of from or to are present.
