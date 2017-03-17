@@ -62,7 +62,9 @@ def create(api_token,
                               policy_types,
                               policy_triggers,
                               groups,
-                              deployment_config_template))
+                              deployment_config_template,
+                              api_token,
+                              ctx.tenant_name))
     _publish_configuration_event('start', deployment_config_dir_path)
     _verify_core_up(deployment_config_dir_path)
 
