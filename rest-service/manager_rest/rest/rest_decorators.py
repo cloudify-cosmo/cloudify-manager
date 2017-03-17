@@ -272,7 +272,7 @@ def rangeable(func):
     schema = Schema(
         All(
             ExactSequence([
-                str,
+                basestring,
                 Any(valid_datetime, ''),
                 Any(valid_datetime, ''),
             ]),
