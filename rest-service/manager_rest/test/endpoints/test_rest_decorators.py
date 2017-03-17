@@ -17,6 +17,7 @@
 from unittest import TestCase
 
 
+from dateutil.parser import parse as parse_datetime
 from mock import Mock, patch, MagicMock
 from nose.plugins.attrib import attr
 from voluptuous import Invalid
@@ -75,51 +76,107 @@ class RangeableTest(TestCase):
 
     """Rangeable decorator test cases."""
 
+    def verify(self, expected_value):
+        """Verify range_filters arguments matches expected value."""
+        def verify_helper(range_filters):
+            self.assertDictEqual(range_filters, expected_value)
+            return Mock()
+        return verify_helper
+
     def test_empty(self):
         """No range arguments mapped to an empty dictionary."""
-        def verify(range_filters):
-            self.assertDictEqual(range_filters, {})
-            return Mock()
-
         with patch('manager_rest.rest.rest_decorators.request') as request:
             request.args.getlist.return_value = []
-            rangeable(verify)()
+            rangeable(self.verify({}))()
 
     def test_invalid(self):
         """Exception is raised for invalid values."""
         with patch('manager_rest.rest.rest_decorators.request') as request:
             invalid_values = [
                 'invalid',
-                ',,',
+                ',,',  # parameter must be a string
+                'field,,',  # one of from or to must be present
                 'field,from,to',  # from and to should be datetimes
             ]
             for invalid_value in invalid_values:
-                request.args.getlist.return_value = invalid_value
+                request.args.getlist.return_value = [invalid_value]
                 with self.assertRaises(Invalid):
                     rangeable(Mock)()
 
-    def test_valid(self):
-        """Valid value should pass validation as expected."""
+    def test_iso8601_datetime(self):
+        """ISO8601 datetimes are valid and pass validation."""
+        valid_datetime_strs = (
+            '2017-03-16',
+            '2017-03-16T12:33:01+00:00',
+            '2017-03-16T12:33:01Z',
+            '20170316T123301Z',
+        )
 
-        valid_datetime = '2016-09-12T00:00:00.0Z'
-
-        def verify(range_filters):
-            self.assertDictEqual(
-                range_filters,
-                {
+        with patch('manager_rest.rest.rest_decorators.request') as request:
+            for valid_datetime_str in valid_datetime_strs:
+                valid_value = 'field,{0},{0}'.format(valid_datetime_str)
+                valid_datetime = parse_datetime(valid_datetime_str)
+                expected_value = {
                     'field': {
                         'from': valid_datetime,
                         'to': valid_datetime,
-                    },
-                },
-            )
-            return Mock()
+                    }
+                }
+
+                request.args.getlist.return_value = [valid_value]
+                rangeable(self.verify(expected_value))()
+
+    def test_from_to_optional(self):
+        """From/to are optional and validation passes if one is missing."""
+
+        valid_datetime_str = '2016-09-12T00:00:00.0Z'
+        valid_datetime = parse_datetime(valid_datetime_str)
 
         with patch('manager_rest.rest.rest_decorators.request') as request:
-            request.args.getlist.return_value = [
-                'field,{0},{0}'.format(valid_datetime),
+            data = [
+                (
+                    'field,{0},{0}'.format(valid_datetime_str),
+                    {'field': {'from': valid_datetime, 'to': valid_datetime}},
+                ),
+                (
+                    'field,,{0}'.format(valid_datetime_str),
+                    {'field': {'to': valid_datetime}},
+                ),
+                (
+                    'field,{0},'.format(valid_datetime_str),
+                    {'field': {'from': valid_datetime}},
+                ),
             ]
-            rangeable(verify)()
+
+            for (valid_value, expected_value) in data:
+                request.args.getlist.return_value = [valid_value]
+                rangeable(self.verify(expected_value))()
+
+    def test_unicode(self):
+        """Unicode values pass validation."""
+
+        valid_datetime_str = '2016-09-12T00:00:00.0Z'
+        valid_datetime = parse_datetime(valid_datetime_str)
+
+        with patch('manager_rest.rest.rest_decorators.request') as request:
+            data = [
+                (
+                    u'field,{0},{0}'.format(valid_datetime_str),
+                    {'field': {'from': valid_datetime, 'to': valid_datetime}},
+                ),
+                (
+                    u'field,{0},'.format(valid_datetime_str),
+                    {'field': {'from': valid_datetime}},
+                ),
+                (
+                    u'field,,{0}'.format(valid_datetime_str),
+                    {'field': {'to': valid_datetime}},
+                ),
+            ]
+
+            for (valid_value, expected_value) in data:
+                request.args.getlist.return_value = [valid_value]
+                rangeable(self.verify(expected_value))()
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)

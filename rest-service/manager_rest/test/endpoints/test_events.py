@@ -68,6 +68,7 @@ class EventResult(EventResultTuple):
         return self._fields
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsBaseTest(TestCase):
 
     """Select events test case base with database."""
@@ -171,6 +172,7 @@ class SelectEventsBaseTest(TestCase):
         self.events = sorted_events
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsFilterTest(SelectEventsBaseTest):
 
     """Filter events by deployment/execution."""
@@ -234,6 +236,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             )
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     """Filter events by type."""
@@ -310,6 +313,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         self._get_events_by_type(['cloudify_log'])
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsSortTest(SelectEventsBaseTest):
 
     """Sort events by timestamp ascending/descending."""
@@ -380,6 +384,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         self._sort_by_timestamp('@timestamp', 'desc')
 
 
+@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsRangeFilterTest(SelectEventsBaseTest):
 
     """Filter out events not included in a range."""
@@ -395,21 +400,33 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         'offset': 0,
     }
 
-    def _filter_by_timestamp_range(self, field):
+    def _filter_by_timestamp_range(
+            self, field, include_from=True, include_to=True):
         """Filter by timestamp range.
 
         :param field: Field name to use (timestamp/@timestamp)
-        :type fiel: str
+        :type field: str
+        :param include_from: Whether to include from field in range filter
+        :type include_from: bool
+        :param include_to: Whether to include from field in range filter
+        :type include_to: bool
 
         """
         fake = Faker()
-        from_timestamp, to_timestamp = sorted(
+        from_datetime, to_datetime = sorted(
             [fake.date_time(), fake.date_time()])
+
+        range_filter = {}
+        if include_from:
+            range_filter['from'] = from_datetime
+        if include_to:
+            range_filter['to'] = to_datetime
+        range_filters = {field: range_filter}
 
         query = Events._build_select_query(
             self.DEFAULT_FILTERS,
             self.DEFAULT_SORT,
-            {field: {'from': from_timestamp, 'to': to_timestamp}},
+            range_filters,
         )
         event_timestamps = [
             event.timestamp
@@ -420,12 +437,15 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
             key=lambda event: event.timestamp,
         )
 
-        from_timestamp = '{}Z'.format(from_timestamp.isoformat()[:-3])
-        to_timestamp = '{}Z'.format(to_timestamp.isoformat()[:-3])
+        from_timestamp = '{}Z'.format(from_datetime.isoformat()[:-3])
+        to_timestamp = '{}Z'.format(to_datetime.isoformat()[:-3])
         expected_event_timestamps = [
             event.timestamp
             for event in events
-            if from_timestamp <= event.timestamp <= to_timestamp
+            if (
+                (not include_from or from_timestamp <= event.timestamp) and
+                (not include_to or event.timestamp <= to_timestamp)
+            )
         ]
 
         self.assertListEqual(event_timestamps, expected_event_timestamps)
@@ -446,6 +466,14 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
                 self.DEFAULT_SORT,
                 {'unknown': {'from': 'a', 'to': 'b'}},
             )
+
+    def test_filter_do_not_include_from(self):
+        """Filter by timestamp without including from field."""
+        self._filter_by_timestamp_range('timestamp', include_from=False)
+
+    def test_filter_do_not_include_to(self):
+        """Filter by timestamp without including to field."""
+        self._filter_by_timestamp_range('timestamp', include_to=False)
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
