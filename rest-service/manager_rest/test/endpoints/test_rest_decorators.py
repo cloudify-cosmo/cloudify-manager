@@ -152,6 +152,32 @@ class RangeableTest(TestCase):
                 request.args.getlist.return_value = [valid_value]
                 rangeable(self.verify(expected_value))()
 
+    def test_unicode(self):
+        """Unicode values pass validation."""
+
+        valid_datetime_str = '2016-09-12T00:00:00.0Z'
+        valid_datetime = parse_datetime(valid_datetime_str)
+
+        with patch('manager_rest.rest.rest_decorators.request') as request:
+            data = [
+                (
+                    u'field,{0},{0}'.format(valid_datetime_str),
+                    {'field': {'from': valid_datetime, 'to': valid_datetime}},
+                ),
+                (
+                    u'field,{0},'.format(valid_datetime_str),
+                    {'field': {'from': valid_datetime}},
+                ),
+                (
+                    u'field,,{0}'.format(valid_datetime_str),
+                    {'field': {'to': valid_datetime}},
+                ),
+            ]
+
+            for (valid_value, expected_value) in data:
+                request.args.getlist.return_value = [valid_value]
+                rangeable(self.verify(expected_value))()
+
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class SortableTest(TestCase):
