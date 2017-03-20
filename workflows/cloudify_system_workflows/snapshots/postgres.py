@@ -22,6 +22,8 @@ from cloudify.exceptions import NonRecoverableError
 
 from .utils import run as run_shell
 
+POSTGRESQL_DEFAULT_PORT = 5432
+
 
 class Postgres(object):
     """Use as a context manager
@@ -39,9 +41,14 @@ class Postgres(object):
         self._bin_dir = config.postgresql_bin_path
         self._db_name = config.postgresql_db_name
         self._host = config.postgresql_host
+        self._port = str(POSTGRESQL_DEFAULT_PORT)
         self._username = config.postgresql_username
         self._password = config.postgresql_password
         self._connection = None
+        if ':' in self._host:
+            self._host, self._port = self._host.split(':')
+            ctx.logger.debug('Updating Postgres config: host: {0}, port: {1}'
+                             .format(self._host, self._port))
 
     def restore(self, tempdir):
         ctx.logger.info('Restoring DB from postgres dump')
@@ -118,6 +125,7 @@ class Postgres(object):
         drop_db_bin = os.path.join(self._bin_dir, 'dropdb')
         command = [drop_db_bin,
                    '--host', self._host,
+                   '--port', self._port,
                    '-U', self._username,
                    self._db_name]
         run_shell(command)
@@ -127,6 +135,7 @@ class Postgres(object):
         create_db_bin = os.path.join(self._bin_dir, 'createdb')
         command = [create_db_bin,
                    '--host', self._host,
+                   '--port', self._port,
                    '-U', self._username,
                    '-T', 'template0',
                    self._db_name]
@@ -144,6 +153,7 @@ class Postgres(object):
         command = [pg_dump_bin,
                    '-a',
                    '--host', self._host,
+                   '--port', self._port,
                    '-U', self._username,
                    self._db_name,
                    '-f', destination_path]
@@ -158,6 +168,7 @@ class Postgres(object):
         command = [psql_bin,
                    '--single-transaction',
                    '--host', self._host,
+                   '--port', self._port,
                    '-U', self._username,
                    self._db_name,
                    '-f', dump_file]
@@ -211,7 +222,8 @@ class Postgres(object):
                 database=self._db_name,
                 user=self._username,
                 password=self._password,
-                host=self._host
+                host=self._host,
+                port=self._port
             )
             conn.autocommit = True
             return conn
