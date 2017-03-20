@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-workflows',
-    version='4.0rc1',
+    version='4.0',
     author='elip',
     author_email='elip@gigaspaces.com',
     packages=[
@@ -28,7 +28,7 @@ setup(
     license='LICENSE',
     description='Various Cloudify Workflows',
     install_requires=[
-        'cloudify-plugins-common==4.0rc1',
+        'cloudify-plugins-common==4.0',
         'elasticsearch==1.6.0'
     ]
 )
