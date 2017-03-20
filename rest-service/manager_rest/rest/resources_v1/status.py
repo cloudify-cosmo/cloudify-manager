@@ -65,7 +65,7 @@ class Status(SecuredResource):
                             'cloudify-influxdb.service': 'InfluxDB',
                             'cloudify-rabbitmq.service': 'RabbitMQ',
                             'cloudify-riemann.service': 'Riemann',
-                            'cloudify-stage.service': 'Cloudify UI',
+                            'cloudify-stage.service': 'Cloudify Stage',
                             'logstash.service': 'Logstash',
                             'nginx.service': 'Webserver',
                             'postgresql-9.5.service': 'PostgreSQL'
