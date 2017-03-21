@@ -192,6 +192,7 @@ class SelectEventsBaseTest(TestCase):
         session.add_all(sorted_events)
         session.commit()
 
+        self.fake = fake
         self.blueprints = blueprints
         self.deployments = deployments
         self.executions = executions
@@ -341,6 +342,37 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             if getattr(event, 'level', None) == level
         ]
         self.assertListEqual(event_ids, expected_event_ids)
+
+    def filter_by_message_helper(self, message_field):
+        """Filter events by message field."""
+        word = self.fake.word()
+        filters = {
+            message_field: ['%{0}%'.format(word)],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            (event.id, event.message)
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            (event.id, event.message)
+            for event in self.events
+            if word in event.message.lower()
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_filter_by_message(self):
+        """Filter events by message.text."""
+        self.filter_by_message_helper('message')
+
+    def test_filter_by_message_text(self):
+        """Filter events by message.text."""
+        self.filter_by_message_helper('message.text')
 
     def test_filter_by_unknown(self):
         """Filter events by an unknown field."""
