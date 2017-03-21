@@ -71,7 +71,7 @@ class Events(SecuredResource):
 
         """
         for field, filter_ in filters.items():
-            if field == 'type':
+            if field in ['type', 'event_type']:
                 # Filter by type is handled while building the query
                 continue
             if field not in Events.ALLOWED_FILTERS:
