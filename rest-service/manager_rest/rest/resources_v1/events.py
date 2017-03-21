@@ -53,20 +53,31 @@ class Events(SecuredResource):
     """
 
     DEFAULT_SEARCH_SIZE = 10000
+
     ALLOWED_FILTERS = {
-        'blueprint_id': Blueprint.id,
-        'execution_id': Execution.id,
-        'deployment_id': Deployment.id,
-        'event_type': Event.event_type,
-        'level': Log.level,
+        'blueprint_id': (Blueprint.id, 'in'),
+        'execution_id': (Execution.id, 'in'),
+        'deployment_id': (Deployment.id, 'in'),
+        'event_type': (Event.event_type, 'in'),
+        'level': (Log.level, 'in'),
+        'message': ('message', 'ilike'),
+    }
+
+    # Map from old Elasticsearch field name to PostgreSQL one
+    ES_TO_PG_FILTER_FIELD = {
+        'message.text': 'message',
     }
 
     @staticmethod
-    def _apply_filters(query, filters):
+    def _apply_filters(query, model, filters):
         """Apply filters to the query.
 
         :param query: Base query to update with filters
         :type query: :class:`sqlalchemy.orm.query.Query`
+        :param model: Model used to filter by default
+        :type model:
+            :class:`manager_rest.storage.resource_models.Event`
+            :class:`manager_rest.storage.resource_models.Log`
         :param filters:
             Dictionary of filters where the key is the column to filter and the
             value is a list of elements that can be matched using the `IN`
@@ -75,14 +86,28 @@ class Events(SecuredResource):
 
         """
         for filter_field, filter_ in filters.items():
+            filter_field = Events.ES_TO_PG_FILTER_FIELD.get(
+                filter_field, filter_field)
+
             if filter_field == 'type':
                 # Filter by type is handled while building the query
                 continue
             if filter_field not in Events.ALLOWED_FILTERS:
                 raise manager_exceptions.BadParametersError(
                     'Unknown field to filter by: {}'.format(filter_field))
-            model_field = Events.ALLOWED_FILTERS[filter_field]
-            query = query.filter(model_field.in_(filter_))
+            model_field, filter_type = Events.ALLOWED_FILTERS[filter_field]
+            if isinstance(model_field, str):
+                model_field = getattr(model, model_field)
+
+            if filter_type == 'in':
+                query = query.filter(model_field.in_(filter_))
+            elif filter_type == 'ilike':
+                for filter_element in filter_:
+                    query = query.filter(model_field.ilike(filter_element))
+            else:
+                raise ValueError(
+                    'Unknown filter type: {0}'.format(filter_type))
+
         return query
 
     @staticmethod
@@ -238,6 +263,10 @@ class Events(SecuredResource):
     def _build_select_subquery(model, filters, range_filters):
         """Build select subquery.
 
+        :param model: Model used to build the query (either Event or Log)
+        :type model:
+            :class:`manager_rest.storage.resource_models.Event`
+            :class:`manager_rest.storage.resource_models.Log`
         :param filters: Filters passed as request argument
         :type filters: dict(str, list(str))
         :param range_filters: Range filtres passed as request argument
@@ -287,7 +316,7 @@ class Events(SecuredResource):
             )
         )
 
-        query = Events._apply_filters(query, filters)
+        query = Events._apply_filters(query, model, filters)
         query = Events._apply_range_filters(query, model, range_filters)
         return query
 
@@ -364,7 +393,7 @@ class Events(SecuredResource):
             )
         )
 
-        query = Events._apply_filters(query, filters)
+        query = Events._apply_filters(query, model, filters)
         query = Events._apply_range_filters(query, model, range_filters)
         return query.subquery().c.count
 
