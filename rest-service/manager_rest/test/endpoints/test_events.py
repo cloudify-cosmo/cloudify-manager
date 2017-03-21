@@ -77,6 +77,26 @@ class SelectEventsBaseTest(TestCase):
     EXECUTION_COUNT = 5
     EVENT_COUNT = 50
 
+    EVENT_TYPES = [
+        'workflow_started',
+        'workflow_succeeded',
+        'workflow_failed',
+        'workflow_cancelled',
+        'sending_task',
+        'task_started',
+        'task_succeeded',
+        'task_rescheduled',
+        'task_failed',
+    ]
+
+    LOG_LEVELS = [
+        'INFO',
+        'WARN',
+        'WARNING',
+        'ERROR',
+        'FATAL',
+    ]
+
     def setUp(self):
         """Initialize mock application with in memory sql database."""
         app = Flask(__name__)
@@ -140,7 +160,7 @@ class SelectEventsBaseTest(TestCase):
                 _execution_fk=choice(executions)._storage_id,
                 node_id=fake.uuid4(),
                 operation='<operation>',
-                event_type='<event_type>',
+                event_type=choice(self.EVENT_TYPES),
                 message=fake.sentence(),
                 message_code='<message_code>',
             )
@@ -154,7 +174,7 @@ class SelectEventsBaseTest(TestCase):
                 node_id=fake.uuid4(),
                 operation='<operation>',
                 logger='<logger>',
-                level='<level>',
+                level=choice(self.LOG_LEVELS),
                 message=fake.sentence(),
                 message_code='<message_code>',
             )
@@ -221,6 +241,52 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             event.execution_id == execution.id
             for event in events
         ))
+
+    def test_filter_by_event_type(self):
+        """Filter events by event_type."""
+        event_type = choice(self.EVENT_TYPES)
+        filters = {
+            'event_type': [event_type],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if getattr(event, 'event_type', None) == event_type
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_filter_by_level(self):
+        """Filter events by level."""
+        level = choice(self.LOG_LEVELS)
+        filters = {
+            'level': [level],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if getattr(event, 'level', None) == level
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_unknown(self):
         """Filter events by an unknown field."""
