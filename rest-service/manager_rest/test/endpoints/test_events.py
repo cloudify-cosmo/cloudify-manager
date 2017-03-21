@@ -73,9 +73,10 @@ class SelectEventsBaseTest(TestCase):
 
     """Select events test case base with database."""
 
-    DEPLOYMENT_COUNT = 5
-    EXECUTION_COUNT = 5
-    EVENT_COUNT = 50
+    BLUEPRINT_COUNT = 2
+    DEPLOYMENT_COUNT = 4
+    EXECUTION_COUNT = 8
+    EVENT_COUNT = 100
 
     EVENT_TYPES = [
         'workflow_started',
@@ -115,21 +116,25 @@ class SelectEventsBaseTest(TestCase):
         fake = Faker()
         session = db.session
 
-        blueprint = Blueprint(
-            created_at=fake.date_time(),
-            main_file_name=fake.file_name(),
-            plan='<plan>',
-            _tenant_id=fake.uuid4(),
-            _creator_id=fake.uuid4(),
-        )
-        session.add(blueprint)
+        blueprints = [
+            Blueprint(
+                id=fake.uuid4(),
+                created_at=fake.date_time(),
+                main_file_name=fake.file_name(),
+                plan='<plan>',
+                _tenant_id=fake.uuid4(),
+                _creator_id=fake.uuid4(),
+            )
+            for _ in xrange(self.BLUEPRINT_COUNT)
+        ]
+        session.add_all(blueprints)
         session.commit()
 
         deployments = [
             Deployment(
                 id=fake.uuid4(),
                 created_at=fake.date_time(),
-                _blueprint_fk=blueprint._storage_id,
+                _blueprint_fk=choice(blueprints)._storage_id,
                 _creator_id=fake.uuid4(),
             )
             for _ in xrange(self.DEPLOYMENT_COUNT)
@@ -187,6 +192,7 @@ class SelectEventsBaseTest(TestCase):
         session.add_all(sorted_events)
         session.commit()
 
+        self.blueprints = blueprints
         self.deployments = deployments
         self.executions = executions
         self.events = sorted_events
@@ -205,6 +211,39 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         'limit': 100,
         'offset': 0,
     }
+
+    def test_filter_by_blueprint(self):
+        """Filter events by blueprint."""
+        blueprint = choice(self.blueprints)
+        filters = {
+            'blueprint_id': [blueprint.id],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_deployment_ids = [
+            deployment._storage_id
+            for deployment in self.deployments
+            if deployment._blueprint_fk == blueprint._storage_id
+        ]
+        expected_executions_id = [
+            execution._storage_id
+            for execution in self.executions
+            if execution._deployment_fk in expected_deployment_ids
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if event._execution_fk in expected_executions_id
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_deployment(self):
         """Filter events by deployment."""
