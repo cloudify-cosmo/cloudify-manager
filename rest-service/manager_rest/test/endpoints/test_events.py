@@ -257,11 +257,21 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        self.assertTrue(all(
-            event.deployment_id == deployment.id
-            for event in events
-        ))
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_executions_id = [
+            execution._storage_id
+            for execution in self.executions
+            if execution._deployment_fk == deployment._storage_id
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if event._execution_fk in expected_executions_id
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_execution(self):
         """Filter events by execution."""
@@ -275,11 +285,16 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        self.assertTrue(all(
-            event.execution_id == execution.id
-            for event in events
-        ))
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if event._execution_fk == execution._storage_id
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_event_type(self):
         """Filter events by event_type."""
