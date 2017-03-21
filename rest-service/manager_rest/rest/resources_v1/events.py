@@ -53,8 +53,10 @@ class Events(SecuredResource):
 
     DEFAULT_SEARCH_SIZE = 10000
     ALLOWED_FILTERS = {
-        'execution_id': Execution,
-        'deployment_id': Deployment,
+        'execution_id': Execution.id,
+        'deployment_id': Deployment.id,
+        'event_type': Event.event_type,
+        'level': Log.level,
     }
 
     @staticmethod
@@ -70,15 +72,15 @@ class Events(SecuredResource):
         :type filters: dict(str, list(str))
 
         """
-        for field, filter_ in filters.items():
-            if field == 'type':
+        for filter_field, filter_ in filters.items():
+            if filter_field == 'type':
                 # Filter by type is handled while building the query
                 continue
-            if field not in Events.ALLOWED_FILTERS:
+            if filter_field not in Events.ALLOWED_FILTERS:
                 raise manager_exceptions.BadParametersError(
-                    'Unknown field to filter by: {}'.format(field))
-            model = Events.ALLOWED_FILTERS[field]
-            query = query.filter(model.id.in_(filter_))
+                    'Unknown field to filter by: {}'.format(filter_field))
+            model_field = Events.ALLOWED_FILTERS[filter_field]
+            query = query.filter(model_field.in_(filter_))
         return query
 
     @staticmethod
@@ -208,12 +210,14 @@ class Events(SecuredResource):
             'Filters is expected to be a dictionary'
 
         subqueries = []
-        if 'type' not in filters or 'cloudify_event' in filters['type']:
+        if (('type' not in filters or 'cloudify_event' in filters['type']) and
+                ('level' not in filters)):
             events_query = Events._build_select_subquery(
                 Event, filters, range_filters)
             subqueries.append(events_query)
 
-        if 'type' not in filters or 'cloudify_log' in filters['type']:
+        if (('type' not in filters or 'cloudify_log' in filters['type']) and
+                ('event_type' not in filters)):
             logs_query = Events._build_select_subquery(
                 Log, filters, range_filters)
             subqueries.append(logs_query)
