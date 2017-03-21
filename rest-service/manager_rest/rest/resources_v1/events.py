@@ -35,6 +35,7 @@ from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
 from manager_rest.storage.models_base import db
 from manager_rest.storage.resource_models import (
+    Blueprint,
     Deployment,
     Execution,
     Event,
@@ -53,6 +54,7 @@ class Events(SecuredResource):
 
     DEFAULT_SEARCH_SIZE = 10000
     ALLOWED_FILTERS = {
+        'blueprint_id': Blueprint.id,
         'execution_id': Execution.id,
         'deployment_id': Deployment.id,
         'event_type': Event.event_type,
@@ -264,6 +266,7 @@ class Events(SecuredResource):
             db.session.query(
                 select_column('id'),
                 select_column('timestamp'),
+                Blueprint.id.label('blueprint_id'),
                 Deployment.id.label('deployment_id'),
                 Execution.id.label('execution_id'),
                 select_column('message'),
@@ -280,6 +283,7 @@ class Events(SecuredResource):
             .filter(
                 model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
+                Deployment._blueprint_fk == Blueprint._storage_id,
             )
         )
 
