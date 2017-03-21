@@ -46,7 +46,7 @@ class Events(SecuredResource):
 
     """Events resource.
 
-    Throgh the events endpoint a user can retrieve both events and logs as
+    Through the events endpoint a user can retrieve both events and logs as
     stored in the SQL database.
 
     """
