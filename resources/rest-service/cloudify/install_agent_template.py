@@ -34,6 +34,7 @@ from cloudify.constants import CLOUDIFY_TOKEN_AUTHENTICATION_HEADER
 CELERY_CONFIG_ENV_VARS = ['CELERY_CONFIG_MODULE', 'CELERY_WORK_DIR',
                           'CELERY_BROKER_URL']
 
+# This variable will be filled in using a template during `install_new_agents`
 CREDENTIALS_URL = "{{ creds_url }}"
 
 
@@ -116,6 +117,7 @@ class CommandRunner(object):
         with open(self._cert_file, 'w') as cert_file:
             cert_file.write(credentials['ssl_cert_content'])
 
+        # Set the rest token, to be used later on to download other files
         self.rest_token = credentials['rest_token']
 
     def rm_dir(self, directory):
