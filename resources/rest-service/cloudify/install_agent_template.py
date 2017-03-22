@@ -34,9 +34,7 @@ from cloudify.constants import CLOUDIFY_TOKEN_AUTHENTICATION_HEADER
 CELERY_CONFIG_ENV_VARS = ['CELERY_CONFIG_MODULE', 'CELERY_WORK_DIR',
                           'CELERY_BROKER_URL']
 
-
-REST_TOKEN = """{{ auth_token_value }}"""
-SSL_CERT_CONTENT = """{{ ssl_cert_content }}"""
+CREDENTIALS_URL = "{{ creds_url }}"
 
 
 def get_cloudify_agent():
@@ -54,6 +52,8 @@ class CommandRunner(object):
 
     def __init__(self, logger):
         self.logger = logger
+        self.rest_token = None
+        self._cert_file = get_local_rest_certificate()
 
     def run(self, command, execution_env=None):
         self.logger.debug('run: {0}'.format(command))
@@ -85,15 +85,9 @@ class CommandRunner(object):
     def download(self, url, destination=None):
         self.logger.debug('Retrieving file from {0}'.format(url))
 
-        # Overwrite the old certificate with the new manager's certificate
-        cert_file_location = get_local_rest_certificate()
-        with open(cert_file_location, 'w') as cert_file:
-            cert_file.write(SSL_CERT_CONTENT)
-
-        headers = {CLOUDIFY_TOKEN_AUTHENTICATION_HEADER: REST_TOKEN}
+        headers = {CLOUDIFY_TOKEN_AUTHENTICATION_HEADER: self.rest_token}
         response = requests.get(url, stream=True, headers=headers,
-                                verify=cert_file_location)
-
+                                verify=self._cert_file)
         if destination:
             destination_file = open(destination, 'wb')
         else:
@@ -105,6 +99,24 @@ class CommandRunner(object):
                 f.write(chunk)
 
         return destination
+
+    def download_credentials(self, destination):
+        # The credentials file resides in a location that doesn't require
+        # authorization, and we use verify=False to skip SSL verification
+        response = requests.get(CREDENTIALS_URL, stream=True, verify=False)
+        with open(destination, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+        # Load the credentials dict to memory
+        with open(destination, 'r') as f:
+            credentials = json.load(f)
+
+        # Overwrite the old certificate with the new manager's certificate
+        with open(self._cert_file, 'w') as cert_file:
+            cert_file.write(credentials['ssl_cert_content'])
+
+        self.rest_token = credentials['rest_token']
 
     def rm_dir(self, directory):
         shutil.rmtree(directory)
@@ -166,6 +178,8 @@ class Installer(object):
         path = tempfile.mkdtemp()
         try:
             package_path = os.path.join(path, self.runner.archive_name())
+            creds_path = os.path.join(path, 'creds.json')
+            self.runner.download_credentials(creds_path)
             self.runner.download(
                 url=self.cloudify_agent['package_url'],
                 destination=package_path)
@@ -177,9 +191,11 @@ class Installer(object):
             agent_cmd = self.runner.env_command(path, 'cfy-agent')
             command = ('{0} install-local'
                        ' --agent-file {1}'
-                       ' --output-agent-file {2}').format(
+                       ' --rest-token {2}'
+                       ' --output-agent-file {3}').format(
                            agent_cmd,
                            agent_config_path,
+                           self.runner.rest_token,
                            agent_output_path)
             self.runner.run(command)
             with open(agent_output_path) as agent_file:
