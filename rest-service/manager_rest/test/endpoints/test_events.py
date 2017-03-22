@@ -73,9 +73,30 @@ class SelectEventsBaseTest(TestCase):
 
     """Select events test case base with database."""
 
-    DEPLOYMENT_COUNT = 5
-    EXECUTION_COUNT = 5
-    EVENT_COUNT = 50
+    BLUEPRINT_COUNT = 2
+    DEPLOYMENT_COUNT = 4
+    EXECUTION_COUNT = 8
+    EVENT_COUNT = 100
+
+    EVENT_TYPES = [
+        'workflow_started',
+        'workflow_succeeded',
+        'workflow_failed',
+        'workflow_cancelled',
+        'sending_task',
+        'task_started',
+        'task_succeeded',
+        'task_rescheduled',
+        'task_failed',
+    ]
+
+    LOG_LEVELS = [
+        'INFO',
+        'WARN',
+        'WARNING',
+        'ERROR',
+        'FATAL',
+    ]
 
     def setUp(self):
         """Initialize mock application with in memory sql database."""
@@ -95,21 +116,25 @@ class SelectEventsBaseTest(TestCase):
         fake = Faker()
         session = db.session
 
-        blueprint = Blueprint(
-            created_at=fake.date_time(),
-            main_file_name=fake.file_name(),
-            plan='<plan>',
-            _tenant_id=fake.uuid4(),
-            _creator_id=fake.uuid4(),
-        )
-        session.add(blueprint)
+        blueprints = [
+            Blueprint(
+                id=fake.uuid4(),
+                created_at=fake.date_time(),
+                main_file_name=fake.file_name(),
+                plan='<plan>',
+                _tenant_id=fake.uuid4(),
+                _creator_id=fake.uuid4(),
+            )
+            for _ in xrange(self.BLUEPRINT_COUNT)
+        ]
+        session.add_all(blueprints)
         session.commit()
 
         deployments = [
             Deployment(
                 id=fake.uuid4(),
                 created_at=fake.date_time(),
-                _blueprint_fk=blueprint._storage_id,
+                _blueprint_fk=choice(blueprints)._storage_id,
                 _creator_id=fake.uuid4(),
             )
             for _ in xrange(self.DEPLOYMENT_COUNT)
@@ -140,7 +165,7 @@ class SelectEventsBaseTest(TestCase):
                 _execution_fk=choice(executions)._storage_id,
                 node_id=fake.uuid4(),
                 operation='<operation>',
-                event_type='<event_type>',
+                event_type=choice(self.EVENT_TYPES),
                 message=fake.sentence(),
                 message_code='<message_code>',
             )
@@ -154,7 +179,7 @@ class SelectEventsBaseTest(TestCase):
                 node_id=fake.uuid4(),
                 operation='<operation>',
                 logger='<logger>',
-                level='<level>',
+                level=choice(self.LOG_LEVELS),
                 message=fake.sentence(),
                 message_code='<message_code>',
             )
@@ -167,6 +192,8 @@ class SelectEventsBaseTest(TestCase):
         session.add_all(sorted_events)
         session.commit()
 
+        self.fake = fake
+        self.blueprints = blueprints
         self.deployments = deployments
         self.executions = executions
         self.events = sorted_events
@@ -186,6 +213,39 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         'offset': 0,
     }
 
+    def test_filter_by_blueprint(self):
+        """Filter events by blueprint."""
+        blueprint = choice(self.blueprints)
+        filters = {
+            'blueprint_id': [blueprint.id],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_deployment_ids = [
+            deployment._storage_id
+            for deployment in self.deployments
+            if deployment._blueprint_fk == blueprint._storage_id
+        ]
+        expected_executions_id = [
+            execution._storage_id
+            for execution in self.executions
+            if execution._deployment_fk in expected_deployment_ids
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if event._execution_fk in expected_executions_id
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
     def test_filter_by_deployment(self):
         """Filter events by deployment."""
         deployment = choice(self.deployments)
@@ -198,11 +258,21 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        self.assertTrue(all(
-            event.deployment_id == deployment.id
-            for event in events
-        ))
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_executions_id = [
+            execution._storage_id
+            for execution in self.executions
+            if execution._deployment_fk == deployment._storage_id
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if event._execution_fk in expected_executions_id
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_execution(self):
         """Filter events by execution."""
@@ -216,11 +286,93 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        self.assertTrue(all(
-            event.execution_id == execution.id
-            for event in events
-        ))
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if event._execution_fk == execution._storage_id
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_filter_by_event_type(self):
+        """Filter events by event_type."""
+        event_type = choice(self.EVENT_TYPES)
+        filters = {
+            'event_type': [event_type],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if getattr(event, 'event_type', None) == event_type
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_filter_by_level(self):
+        """Filter events by level."""
+        level = choice(self.LOG_LEVELS)
+        filters = {
+            'level': [level],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            event.id
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            event.id
+            for event in self.events
+            if getattr(event, 'level', None) == level
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+    def filter_by_message_helper(self, message_field):
+        """Filter events by message field."""
+        word = self.fake.word()
+        filters = {
+            message_field: ['%{0}%'.format(word)],
+            'type': ['cloudify_event', 'cloudify_log']
+        }
+        query = Events._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_ids = [
+            (event.id, event.message)
+            for event in query.params(**self.DEFAULT_PAGINATION).all()
+        ]
+        expected_event_ids = [
+            (event.id, event.message)
+            for event in self.events
+            if word in event.message.lower()
+        ]
+        self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_filter_by_message(self):
+        """Filter events by message.text."""
+        self.filter_by_message_helper('message')
+
+    def test_filter_by_message_text(self):
+        """Filter events by message.text."""
+        self.filter_by_message_helper('message.text')
 
     def test_filter_by_unknown(self):
         """Filter events by an unknown field."""
