@@ -40,6 +40,7 @@ function create_resources_tar() {
 
 
 export CORE_TAG_NAME="4.0"
+export VERSION=""
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export REPO=$3
@@ -47,7 +48,7 @@ export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
 if [ $REPO == "cloudify-versions" ];then
-    REPO_TAG="master"
+    REPO_TAG=$VERSION
 else
     REPO_TAG=$CORE_TAG_NAME
 fi
