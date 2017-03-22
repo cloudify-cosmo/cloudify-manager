@@ -42,6 +42,7 @@ class EsToPg(object):
         self._plugins_path = '{0}.plugins'.format(es_dump_path)
         self._executions_path = '{0}.executions'.format(es_dump_path)
         self._events_path = '{0}.events'.format(es_dump_path)
+        self._logs_path = '{0}.logs'.format(es_dump_path)
 
     def _get_storage_manager(self, tenant_name):
         app = setup_flask_app()
@@ -188,6 +189,7 @@ class EsToPg(object):
         dump_files['executions'] = open(self._executions_path, 'w')
         dump_files['plugins'] = open(self._plugins_path, 'w')
         dump_files['events'] = open(self._events_path, 'w')
+        dump_files['logs'] = open(self._logs_path, 'w')
         for line in open(self._es_dump_path, 'r'):
             try:
                 elem = json.loads(line)
@@ -210,9 +212,10 @@ class EsToPg(object):
                     dump_files['executions'].write(line)
                 elif node_type == 'plugin':
                     dump_files['plugins'].write(line)
-                elif node_type in ['cloudify_event',
-                                   'cloudify_log']:
+                elif node_type == 'cloudify_event':
                     dump_files['events'].write(line)
+                elif node_type == 'cloudify_log':
+                    dump_files['logs'].write(line)
                 else:
                     raise Exception('Undefined type {0}'.format(node_type))
             except Exception as ex:
