@@ -18,7 +18,6 @@ import sys
 import json
 import logging
 import argparse
-from shutil import move
 
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import CURRENT_TENANT_CONFIG, DEFAULT_TENANT_NAME
@@ -221,8 +220,6 @@ class EsToPg(object):
                 continue
         for index, dump_file in dump_files.items():
             dump_file.close()
-        move(self._es_dump_path, '{0}.backup'.format(self._es_dump_path))
-        move(self._events_path, self._es_dump_path)
 
     def _update_deployment(self, dep_dict):
         workflows = dep_dict['workflows']
