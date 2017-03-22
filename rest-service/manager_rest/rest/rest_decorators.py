@@ -38,6 +38,7 @@ from voluptuous import (
     Schema,
 )
 
+from ..security.authentication import authenticator
 from manager_rest import utils, config, manager_exceptions
 from manager_rest.rest.rest_utils import verify_and_convert_bool
 from manager_rest.storage.models_base import SQLModelBase
@@ -464,5 +465,18 @@ def evaluate_functions(func):
         kwargs['evaluate_functions'] = val
         return func(*args, **kwargs)
     return wrapper
+
+
+def no_ldap(action):
+    def no_ldap_dec(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if authenticator.ldap:
+                raise manager_exceptions.IllegalActionError(
+                    'Action `{0}` is not available in ldap mode'.format(action)
+                )
+            return func(*args, **kwargs)
+        return wrapper
+    return no_ldap_dec
 
 # endregion

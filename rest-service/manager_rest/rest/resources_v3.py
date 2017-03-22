@@ -103,6 +103,7 @@ class TenantsId(SecuredMultiTenancyResource):
 class TenantUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(TenantResponse)
+    @rest_decorators.no_ldap('add user to tenant')
     def put(self, multi_tenancy):
         """
         Add a user to a tenant
@@ -117,6 +118,7 @@ class TenantUsers(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(TenantResponse)
+    @rest_decorators.no_ldap('remove user from tenant')
     def delete(self, multi_tenancy):
         """
         Remove a user from a tenant
@@ -231,6 +233,7 @@ class Users(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
+    @rest_decorators.no_ldap('create user')
     def put(self, multi_tenancy):
         """
         Create a user
@@ -280,6 +283,7 @@ class UsersId(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
+    @rest_decorators.no_ldap('delete user')
     def delete(self, username, multi_tenancy):
         """
         Delete a user
@@ -305,6 +309,7 @@ class UsersActive(SecuredMultiTenancyResource):
 class UserGroupsUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
+    @rest_decorators.no_ldap('add user to group')
     def put(self, multi_tenancy):
         """
         Add a user to a group
@@ -324,6 +329,7 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(GroupResponse)
+    @rest_decorators.no_ldap('remove user from group')
     def delete(self, multi_tenancy):
         """
         Remove a user from a group
