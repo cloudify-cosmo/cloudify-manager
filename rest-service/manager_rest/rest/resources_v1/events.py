@@ -94,7 +94,7 @@ class Events(SecuredResource):
                 continue
             if filter_field not in Events.ALLOWED_FILTERS:
                 raise manager_exceptions.BadParametersError(
-                    'Unknown field to filter by: {0}\n'
+                    'Unknown field to filter by: {0}. '
                     'Allowed values: {1}'
                     .format(
                         filter_field,
@@ -111,7 +111,7 @@ class Events(SecuredResource):
                     query = query.filter(model_field.ilike(filter_element))
             else:
                 raise ValueError(
-                    'Unknown filter type: {0}\n'
+                    'Unknown filter type: {0}. '
                     'Allowed values: ilike, in'
                     .format(filter_type)
                 )
