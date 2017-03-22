@@ -26,11 +26,17 @@ import requests
 
 from cloudify import ctx
 from cloudify.state import ctx_parameters
+from cloudify.utils import get_local_rest_certificate
 from cloudify.exceptions import CommandExecutionException
+from cloudify.constants import CLOUDIFY_TOKEN_AUTHENTICATION_HEADER
 
 
 CELERY_CONFIG_ENV_VARS = ['CELERY_CONFIG_MODULE', 'CELERY_WORK_DIR',
                           'CELERY_BROKER_URL']
+
+
+REST_TOKEN = """{{ auth_token_value }}"""
+SSL_CERT_CONTENT = """{{ ssl_cert_content }}"""
 
 
 def get_cloudify_agent():
@@ -76,14 +82,17 @@ class CommandRunner(object):
             self.logger.error(err)
             raise CommandExecutionException(command, err, out, p.returncode)
 
-    def download(self, url, destination=None, verify_certificate=True,
-                 certificate_file=None):
+    def download(self, url, destination=None):
         self.logger.debug('Retrieving file from {0}'.format(url))
 
-        verify = False
-        if verify_certificate:
-            verify = certificate_file or True
-        response = requests.get(url, stream=True, verify=verify)
+        # Overwrite the old certificate with the new manager's certificate
+        cert_file_location = get_local_rest_certificate()
+        with open(cert_file_location, 'w') as cert_file:
+            cert_file.write(SSL_CERT_CONTENT)
+
+        headers = {CLOUDIFY_TOKEN_AUTHENTICATION_HEADER: REST_TOKEN}
+        response = requests.get(url, stream=True, headers=headers,
+                                verify=cert_file_location)
 
         if destination:
             destination_file = open(destination, 'wb')
@@ -159,8 +168,7 @@ class Installer(object):
             package_path = os.path.join(path, self.runner.archive_name())
             self.runner.download(
                 url=self.cloudify_agent['package_url'],
-                destination=package_path,
-                certificate_file=self.cloudify_agent['agent_rest_cert_path'])
+                destination=package_path)
             self.runner.extract(package_path, path)
             agent_config_path = os.path.join(path, 'agent.json')
             agent_output_path = os.path.join(path, 'output.json')
