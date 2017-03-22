@@ -19,6 +19,7 @@ import json
 import logging
 import argparse
 
+from manager_rest import manager_exceptions
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import CURRENT_TENANT_CONFIG, DEFAULT_TENANT_NAME
 from manager_rest.storage import models, get_storage_manager
@@ -99,6 +100,8 @@ class EsToPg(object):
         self._restore_node_instances()
         self._restore_executions()
         self._restore_plugins()
+        self._restore_events()
+        self._restore_logs()
         logger.debug('Restoring elastic search completed..')
 
     @staticmethod
@@ -170,6 +173,53 @@ class EsToPg(object):
             elem = json.loads(line)
             plugin = models.Plugin(**elem['_source'])
             self._storage_manager.put(plugin)
+
+    def _restore_events(self):
+        """Restore events to postgres."""
+        for line in open(self._events_path, 'r'):
+            es_event = json.loads(line)['_source']
+            try:
+                execution = self._storage_manager.get(
+                    models.Execution,
+                    es_event['context']['execution_id'],
+                )
+            except manager_exceptions.NotFoundError:
+                execution = None
+            pg_event = {
+                'timestamp': es_event['timestamp'],
+                'message': es_event['message']['text'],
+                'message_code': es_event['message_code'],
+                'event_type': es_event['event_type'],
+                'operation': es_event['context'].get('operation'),
+                'node_id': es_event['context'].get('node_id'),
+                'execution': execution,
+            }
+            event = models.Event(**pg_event)
+            self._storage_manager.put(event)
+
+    def _restore_logs(self):
+        """Restore logs to postgres."""
+        for line in open(self._logs_path, 'r'):
+            es_log = json.loads(line)['_source']
+            try:
+                execution = self._storage_manager.get(
+                    models.Execution,
+                    es_log['context']['execution_id'],
+                )
+            except manager_exceptions.NotFoundError:
+                execution = None
+            pg_log = {
+                'timestamp': es_log['timestamp'],
+                'message': es_log['message']['text'],
+                'message_code': es_log['message_code'],
+                'logger': es_log['logger'],
+                'level': es_log['level'],
+                'operation': es_log['context'].get('operation'),
+                'node_id': es_log['context'].get('node_id'),
+                'execution': execution,
+            }
+            log = models.Log(**pg_log)
+            self._storage_manager.put(log)
 
     def _get_node(self, node_id, deployment_id):
         nodes = self._storage_manager.list(
