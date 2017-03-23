@@ -18,6 +18,7 @@ import json
 
 from cloudify.workflows import ctx
 from cloudify.context import BootstrapContext
+from cloudify.utils import get_broker_ssl_cert_path
 
 from .utils import is_compute
 
@@ -51,6 +52,10 @@ class Agents(object):
     @staticmethod
     def _get_defaults(manager_version):
         broker_config = BootstrapContext(ctx.bootstrap_context).broker_config()
+        if not broker_config.get('broker_ssl_cert'):
+            with open(get_broker_ssl_cert_path(), 'r') as f:
+                broker_config['broker_ssl_cert'] = f.read()
+
         return {
             'version': str(manager_version),
             'broker_config': broker_config
