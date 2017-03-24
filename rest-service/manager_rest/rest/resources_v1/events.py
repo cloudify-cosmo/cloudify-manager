@@ -306,6 +306,7 @@ class Events(SecuredResource):
                 Blueprint.id.label('blueprint_id'),
                 Deployment.id.label('deployment_id'),
                 Execution.id.label('execution_id'),
+                Execution.workflow_id.label('workflow_id'),
                 select_column('message'),
                 select_column('message_code'),
                 select_column('event_type'),
@@ -435,6 +436,7 @@ class Events(SecuredResource):
         context_fields = [
             'deployment_id',
             'execution_id',
+            'workflow_id',
             'operation',
             'node_id',
         ]
