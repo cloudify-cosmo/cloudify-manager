@@ -216,6 +216,7 @@ class Event(DerivedResource):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
+    _tenant_id = association_proxy('execution', '_tenant_id')
 
     @hybrid_property
     def parent(self):
@@ -247,6 +248,7 @@ class Log(DerivedResource):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
+    _tenant_id = association_proxy('execution', '_tenant_id')
 
     @hybrid_property
     def parent(self):
