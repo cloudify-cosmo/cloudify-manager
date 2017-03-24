@@ -20,8 +20,6 @@ import shutil
 import subprocess
 import zipfile
 
-from elasticsearch import Elasticsearch
-
 from cloudify import constants
 from cloudify.workflows import ctx
 from cloudify.utils import ManagerVersion
@@ -147,11 +145,6 @@ def run(command, ignore_failures=False, redirect_output_path=None):
                 command_str, proc.aggr_stderr)
             raise RuntimeError(msg)
     return proc
-
-
-def get_es_client(config):
-    return Elasticsearch(hosts=[{'host': config.db_address,
-                                 'port': int(config.db_port)}])
 
 
 def get_manager_version(client):

@@ -18,8 +18,8 @@ import sys
 import json
 import logging
 import argparse
-from shutil import move
 
+from manager_rest import manager_exceptions
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import CURRENT_TENANT_CONFIG, DEFAULT_TENANT_NAME
 from manager_rest.storage import models, get_storage_manager
@@ -43,6 +43,7 @@ class EsToPg(object):
         self._plugins_path = '{0}.plugins'.format(es_dump_path)
         self._executions_path = '{0}.executions'.format(es_dump_path)
         self._events_path = '{0}.events'.format(es_dump_path)
+        self._logs_path = '{0}.logs'.format(es_dump_path)
 
     def _get_storage_manager(self, tenant_name):
         app = setup_flask_app()
@@ -99,6 +100,8 @@ class EsToPg(object):
         self._restore_node_instances()
         self._restore_executions()
         self._restore_plugins()
+        self._restore_events()
+        self._restore_logs()
         logger.debug('Restoring elastic search completed..')
 
     @staticmethod
@@ -171,6 +174,75 @@ class EsToPg(object):
             plugin = models.Plugin(**elem['_source'])
             self._storage_manager.put(plugin)
 
+    def _restore_events(self):
+        """Restore events to postgres."""
+        for line in open(self._events_path, 'r'):
+            es_document = json.loads(line)
+            es_event = es_document['_source']
+            execution_id = es_event['context']['execution_id']
+            try:
+                execution = self._storage_manager.get(
+                    models.Execution,
+                    execution_id,
+                )
+            except manager_exceptions.NotFoundError:
+                logger.warning(
+                    'Event *not* added to database: %s. '
+                    'Execution not found: %s',
+                    es_document['_id'],
+                    execution_id,
+                )
+                continue
+
+            pg_event = {
+                'id': es_document['_id'],
+                'timestamp': es_event['timestamp'],
+                'message': es_event['message']['text'],
+                'message_code': es_event['message_code'],
+                'event_type': es_event['event_type'],
+                'operation': es_event['context'].get('operation'),
+                'node_id': es_event['context'].get('node_id'),
+                'execution': execution,
+            }
+            event = models.Event(**pg_event)
+            self._storage_manager.put(event)
+            logger.debug('Event added to database: %s', pg_event['id'])
+
+    def _restore_logs(self):
+        """Restore logs to postgres."""
+        for line in open(self._logs_path, 'r'):
+            es_document = json.loads(line)
+            es_log = es_document['_source']
+            execution_id = es_log['context']['execution_id']
+            try:
+                execution = self._storage_manager.get(
+                    models.Execution,
+                    execution_id,
+                )
+            except manager_exceptions.NotFoundError:
+                logger.warning(
+                    'Log not inserted into database: %s. '
+                    'Execution not found: %s',
+                    es_document['_id'],
+                    execution_id,
+                )
+                continue
+
+            pg_log = {
+                'id': es_document['_id'],
+                'timestamp': es_log['timestamp'],
+                'message': es_log['message']['text'],
+                'message_code': es_log['message_code'],
+                'logger': es_log['logger'],
+                'level': es_log['level'],
+                'operation': es_log['context'].get('operation'),
+                'node_id': es_log['context'].get('node_id'),
+                'execution': execution,
+            }
+            log = models.Log(**pg_log)
+            self._storage_manager.put(log)
+            logger.debug('Log added to database: %s', pg_log['id'])
+
     def _get_node(self, node_id, deployment_id):
         nodes = self._storage_manager.list(
             models.Node,
@@ -189,6 +261,7 @@ class EsToPg(object):
         dump_files['executions'] = open(self._executions_path, 'w')
         dump_files['plugins'] = open(self._plugins_path, 'w')
         dump_files['events'] = open(self._events_path, 'w')
+        dump_files['logs'] = open(self._logs_path, 'w')
         for line in open(self._es_dump_path, 'r'):
             try:
                 elem = json.loads(line)
@@ -211,9 +284,10 @@ class EsToPg(object):
                     dump_files['executions'].write(line)
                 elif node_type == 'plugin':
                     dump_files['plugins'].write(line)
-                elif node_type in ['cloudify_event',
-                                   'cloudify_log']:
+                elif node_type == 'cloudify_event':
                     dump_files['events'].write(line)
+                elif node_type == 'cloudify_log':
+                    dump_files['logs'].write(line)
                 else:
                     raise Exception('Undefined type {0}'.format(node_type))
             except Exception as ex:
@@ -221,8 +295,6 @@ class EsToPg(object):
                 continue
         for index, dump_file in dump_files.items():
             dump_file.close()
-        move(self._es_dump_path, '{0}.backup'.format(self._es_dump_path))
-        move(self._events_path, self._es_dump_path)
 
     def _update_deployment(self, dep_dict):
         workflows = dep_dict['workflows']
