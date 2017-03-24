@@ -87,7 +87,6 @@ class SnapshotRestore(object):
             with Postgres(self._config) as postgres:
                 self._restore_db(postgres)
                 self._restore_files_to_manager()
-                self._restore_events(metadata)
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
                 self._restore_credentials(postgres)
@@ -226,18 +225,6 @@ class SnapshotRestore(object):
             plugin['distribution'] == dist,
             plugin['distribution_release'] == release
         ]))
-
-    def _restore_events(self, metadata):
-        ctx.logger.warning('NOT IMPLEMENTED. '
-                           'Events are now stored in pg, not es')
-        # ctx.logger.info('Restoring ElasticSearch data '
-        #                 '[timeout={0} sec]'.format(self._timeout))
-        # ElasticSearch().restore_logs_and_events(
-        #     es,
-        #     self._tempdir,
-        #     metadata,
-        #     bulk_read_timeout=self._timeout
-        # )
 
     def _restore_influxdb(self):
         ctx.logger.info('Restoring InfluxDB metrics')
