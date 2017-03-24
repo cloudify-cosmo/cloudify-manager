@@ -177,15 +177,25 @@ class EsToPg(object):
     def _restore_events(self):
         """Restore events to postgres."""
         for line in open(self._events_path, 'r'):
-            es_event = json.loads(line)['_source']
+            es_document = json.loads(line)
+            es_event = es_document['_source']
+            execution_id = es_event['context']['execution_id']
             try:
                 execution = self._storage_manager.get(
                     models.Execution,
-                    es_event['context']['execution_id'],
+                    execution_id,
                 )
             except manager_exceptions.NotFoundError:
-                execution = None
+                logger.warning(
+                    'Event *not* added to database: %s. '
+                    'Execution not found: %s',
+                    es_document['_id'],
+                    execution_id,
+                )
+                continue
+
             pg_event = {
+                'id': es_document['_id'],
                 'timestamp': es_event['timestamp'],
                 'message': es_event['message']['text'],
                 'message_code': es_event['message_code'],
@@ -196,19 +206,30 @@ class EsToPg(object):
             }
             event = models.Event(**pg_event)
             self._storage_manager.put(event)
+            logger.debug('Event added to database: %s', pg_event['id'])
 
     def _restore_logs(self):
         """Restore logs to postgres."""
         for line in open(self._logs_path, 'r'):
-            es_log = json.loads(line)['_source']
+            es_document = json.loads(line)
+            es_log = es_document['_source']
+            execution_id = es_log['context']['execution_id']
             try:
                 execution = self._storage_manager.get(
                     models.Execution,
                     es_log['context']['execution_id'],
                 )
             except manager_exceptions.NotFoundError:
-                execution = None
+                logger.warning(
+                    'Log not inserted into database: %s. '
+                    'Execution not found: %s',
+                    es_document['_id'],
+                    execution_id,
+                )
+                continue
+
             pg_log = {
+                'id': es_document['_id'],
                 'timestamp': es_log['timestamp'],
                 'message': es_log['message']['text'],
                 'message_code': es_log['message_code'],
@@ -220,6 +241,7 @@ class EsToPg(object):
             }
             log = models.Log(**pg_log)
             self._storage_manager.put(log)
+            logger.debug('Log added to database: %s', pg_log['id'])
 
     def _get_node(self, node_id, deployment_id):
         nodes = self._storage_manager.list(
