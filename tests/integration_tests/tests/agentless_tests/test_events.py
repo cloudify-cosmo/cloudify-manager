@@ -13,8 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import re
-
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -81,24 +79,6 @@ class EventsTest(AgentlessTestCase):
         message = '+ - = && || > < ! ( ) { } [ ] ^ " ~ * ? : \ /'
         self._events_list(message=message,
                           skip_assertion=True)
-
-    def test_search_event_message_with_reserved_characters(self):
-        from manager_rest.storage.manager_elasticsearch import \
-            RESERVED_CHARS_REGEX
-
-        # expecting to find a message containing 'dummy workflow'
-        message = 'dum-my *low: ++**'
-        searched_events = self._events_list(message=message,
-                                            include_logs=True)
-        message_without_reserved_chars = \
-            re.sub(RESERVED_CHARS_REGEX, '', message)
-
-        keywords = message_without_reserved_chars.lower().split()
-
-        # assert some search results contain requested message
-        for event in searched_events:
-            text = event['message']['text'].lower()
-            self.assertTrue(all([keyword in text for keyword in keywords]))
 
     def test_search_event_message(self):
         all_events = self._events_list()
