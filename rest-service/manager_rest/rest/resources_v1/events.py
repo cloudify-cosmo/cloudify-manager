@@ -434,6 +434,7 @@ class Events(SecuredResource):
 
         context_fields = [
             'deployment_id',
+            'execution_id',
             'operation',
             'node_id',
         ]
