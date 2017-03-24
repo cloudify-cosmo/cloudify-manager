@@ -103,13 +103,16 @@ class EventsTest(AgentlessTestCase):
     def test_search_event_message(self):
         all_events = self._events_list()
         # checking partial word and case insensitivity ('sending')
-        message = 'SeNdIN'
+        raw_message = 'SeNdIN'
+        message = '%{}%'.format(raw_message)
         searched_events = self._events_list(message=message)
         # assert the search actually returned a partial result
         self.assertLess(len(searched_events), len(all_events))
         # assert all search results are relevant
         for event in searched_events:
-            self.assertIn(message.lower(), event['message']['text'].lower())
+            self.assertIn(
+                raw_message.lower(),
+                event['message']['text'].lower())
 
     def test_list_with_include_option(self):
         _include = ['@timestamp', 'type']
