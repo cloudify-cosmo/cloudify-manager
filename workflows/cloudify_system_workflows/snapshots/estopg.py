@@ -217,7 +217,7 @@ class EsToPg(object):
             try:
                 execution = self._storage_manager.get(
                     models.Execution,
-                    es_log['context']['execution_id'],
+                    execution_id,
                 )
             except manager_exceptions.NotFoundError:
                 logger.warning(
