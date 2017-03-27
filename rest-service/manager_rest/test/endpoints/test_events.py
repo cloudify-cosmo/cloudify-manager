@@ -262,10 +262,8 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
         expected_deployment_ids = [
             deployment._storage_id
             for deployment in self.deployments
@@ -276,11 +274,12 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for execution in self.executions
             if execution._deployment_fk in expected_deployment_ids
         ]
-        expected_event_ids = [
-            event.id
+        expected_events = [
+            event
             for event in self.events
             if event._execution_fk in expected_executions_id
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_deployment(self):
@@ -295,20 +294,20 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_executions_id = [
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+
+        expected_execution_ids = [
             execution._storage_id
             for execution in self.executions
             if execution._deployment_fk == deployment._storage_id
         ]
-        expected_event_ids = [
-            event.id
+        expected_events = [
+            event
             for event in self.events
-            if event._execution_fk in expected_executions_id
+            if event._execution_fk in expected_execution_ids
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_execution(self):
@@ -323,15 +322,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if event._execution_fk == execution._storage_id
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_event_type(self):
@@ -346,15 +344,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if getattr(event, 'event_type', None) == event_type
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_level(self):
@@ -369,15 +366,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if getattr(event, 'level', None) == level
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def filter_by_message_helper(self, message_field):
@@ -392,15 +388,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            (event.id, event.message)
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            (event.id, event.message)
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if word in event.message.lower()
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_message(self):
@@ -463,15 +458,14 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if isinstance(event, event_classes)
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_get_events_and_logs_explicit(self):
