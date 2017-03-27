@@ -91,9 +91,11 @@ class Events(resources_v1.Events):
         :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
 
         """
+        size = pagination.get('size', self.DEFAULT_SEARCH_SIZE)
+        offset = pagination.get('offset', 0)
         params = {
-            'limit': pagination.get('size', self.DEFAULT_SEARCH_SIZE),
-            'offset': pagination.get('offset', 0),
+            'limit': size,
+            'offset': offset,
         }
 
         count_query = self._build_count_query(filters, range_filters)
@@ -107,7 +109,11 @@ class Events(resources_v1.Events):
         ]
 
         metadata = {
-            'pagination': dict(pagination, total=total)
+            'pagination': {
+                'size': size,
+                'offset': offset,
+                'total': total,
+            }
         }
         return ListResult(results, metadata)
 
