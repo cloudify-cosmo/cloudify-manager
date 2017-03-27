@@ -399,7 +399,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_message(self):
-        """Filter events by message.text."""
+        """Filter events by message."""
         self.filter_by_message_helper('message')
 
     def test_filter_by_message_text(self):
