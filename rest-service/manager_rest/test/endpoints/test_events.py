@@ -33,6 +33,8 @@ from manager_rest.storage.resource_models import (
     Event,
     Execution,
     Log,
+    Node,
+    NodeInstance,
 )
 
 
@@ -80,6 +82,8 @@ class SelectEventsBaseTest(TestCase):
     BLUEPRINT_COUNT = 2
     DEPLOYMENT_COUNT = 4
     EXECUTION_COUNT = 8
+    NODE_COUNT = 8
+    NODE_INSTANCE_COUNT = 16
     EVENT_COUNT = 100
 
     EVENT_TYPES = [
@@ -161,13 +165,40 @@ class SelectEventsBaseTest(TestCase):
         session.add_all(executions)
         session.commit()
 
+        nodes = [
+            Node(
+                id='node_{}'.format(fake.uuid4()),
+                deploy_number_of_instances=1,
+                max_number_of_instances=1,
+                min_number_of_instances=1,
+                number_of_instances=1,
+                planned_number_of_instances=1,
+                type='<type>',
+                _deployment_fk=choice(deployments)._storage_id,
+            )
+            for _ in xrange(self.NODE_COUNT)
+        ]
+        session.add_all(nodes)
+        session.commit()
+
+        node_instances = [
+            NodeInstance(
+                id='node_instance_{}'.format(fake.uuid4()),
+                state='<state>',
+                _node_fk=choice(nodes)._storage_id,
+            )
+            for _ in xrange(self.NODE_INSTANCE_COUNT)
+        ]
+        session.add_all(node_instances)
+        session.commit()
+
         def create_event():
             """Create new event using the execution created above."""
             return Event(
                 id=fake.uuid4(),
                 timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
-                node_id=fake.uuid4(),
+                node_id=choice(node_instances).id,
                 operation='<operation>',
                 event_type=choice(self.EVENT_TYPES),
                 message=fake.sentence(),
@@ -180,7 +211,7 @@ class SelectEventsBaseTest(TestCase):
                 id=fake.uuid4(),
                 timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
-                node_id=fake.uuid4(),
+                node_id=choice(node_instances).id,
                 operation='<operation>',
                 logger='<logger>',
                 level=choice(self.LOG_LEVELS),
@@ -200,6 +231,8 @@ class SelectEventsBaseTest(TestCase):
         self.blueprints = blueprints
         self.deployments = deployments
         self.executions = executions
+        self.nodes = nodes
+        self.node_instances = node_instances
         self.events = sorted_events
 
 
