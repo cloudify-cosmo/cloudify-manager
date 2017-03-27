@@ -690,29 +690,27 @@ class BuildSelectQueryTest(TestCase):
         column_descriptions = [
                 {'name': 'timestamp'},
         ]
-        self.db.session.query().filter().column_descriptions = (
-            column_descriptions)
-        self.db.session.query().filter().union().column_descriptions = (
-            column_descriptions)
+        select_query = (
+            self.db.session.query().filter().outerjoin().outerjoin())
+        select_query.column_descriptions = column_descriptions
+        select_query.union().column_descriptions = column_descriptions
         self.addCleanup(db_patcher.stop)
 
     def test_from_events(self):
         """Query against events table."""
         Events._build_select_query(**self.DEFAULT_PARAMS)
-        self.assertLessEqual(
-            self.db.session.query().filter().union.call_count,
-            1,
-        )
+        select_query = (
+            self.db.session.query().filter().outerjoin().outerjoin().union)
+        self.assertLessEqual(select_query.call_count, 1)
 
     def test_from_logs(self):
         """Query against both events and logs tables."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters']['type'].append('cloudify_log')
         Events._build_select_query(**params)
-        self.assertGreater(
-            self.db.session.query().filter().union.call_count,
-            1,
-        )
+        select_query = (
+            self.db.session.query().filter().outerjoin().outerjoin().union)
+        self.assertGreater(select_query.call_count, 1)
 
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
