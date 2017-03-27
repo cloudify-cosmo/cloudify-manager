@@ -239,7 +239,7 @@ class SelectEventsBaseTest(TestCase):
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsFilterTest(SelectEventsBaseTest):
 
-    """Filter events by deployment/execution."""
+    """Filter events by blueprint, deployment, execution, etc."""
 
     DEFAULT_SORT = {
         'timestamp': 'asc'
