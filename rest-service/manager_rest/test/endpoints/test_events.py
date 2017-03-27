@@ -126,7 +126,7 @@ class SelectEventsBaseTest(TestCase):
 
         blueprints = [
             Blueprint(
-                id=fake.uuid4(),
+                id='blueprint_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 main_file_name=fake.file_name(),
                 plan='<plan>',
@@ -140,7 +140,7 @@ class SelectEventsBaseTest(TestCase):
 
         deployments = [
             Deployment(
-                id=fake.uuid4(),
+                id='deployment_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 _blueprint_fk=choice(blueprints)._storage_id,
                 _creator_id=fake.uuid4(),
@@ -152,7 +152,7 @@ class SelectEventsBaseTest(TestCase):
 
         executions = [
             Execution(
-                id=fake.uuid4(),
+                id='execution_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 is_system_workflow=False,
                 workflow_id=fake.uuid4(),
@@ -195,7 +195,7 @@ class SelectEventsBaseTest(TestCase):
         def create_event():
             """Create new event using the execution created above."""
             return Event(
-                id=fake.uuid4(),
+                id='event_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
                 node_id=choice(node_instances).id,
@@ -208,7 +208,7 @@ class SelectEventsBaseTest(TestCase):
         def create_log():
             """Create new log using the execution created above."""
             return Log(
-                id=fake.uuid4(),
+                id='log_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
                 node_id=choice(node_instances).id,
