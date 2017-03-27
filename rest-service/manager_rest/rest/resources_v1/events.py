@@ -413,12 +413,14 @@ class Events(SecuredResource):
         return query.subquery().c.count
 
     @staticmethod
-    def _map_event_to_es(_include, sql_event):
-        """Restructure event data as if it was returned by elasticsearch.
+    def _map_event_to_dict(_include, sql_event):
+        """Map event to a dictionary to be sent as an API response.
 
-        This restructuration is needed because the API in the past used
-        elasticsearch as the backend and the client implementation still
-        expects data that has the same shape as elasticsearch would return.
+        In this implementation, the goal is to restructure event data as if it
+        was returned by elasticsearch. This restructuration is needed because
+        the API in the past used elasticsearch as the backend and the client
+        implementation still expects data that has the same shape as
+        elasticsearch would return.
 
         :param _include:
             Projection used to get records from database
@@ -478,7 +480,7 @@ class Events(SecuredResource):
 
         :returns:
             Results using a format that resembles the one used by elasticsearch
-            (more information about the format in :meth:`.._map_event_to_es`)
+            (more information about the format in :meth:`.._map_event_to_dict`)
         :rtype: dict(str)
 
         """
@@ -520,7 +522,7 @@ class Events(SecuredResource):
         select_query = self._build_select_query(filters, sort, range_filters)
 
         events = [
-            self._map_event_to_es(_include, event)
+            self._map_event_to_dict(_include, event)
             for event in select_query.params(**params).all()
         ]
 

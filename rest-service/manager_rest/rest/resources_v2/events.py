@@ -104,7 +104,7 @@ class Events(resources_v1.Events):
         select_query = self._build_select_query(filters, sort, range_filters)
 
         results = [
-            self._map_event_to_es(_include, event)
+            self._map_event_to_dict(_include, event)
             for event in select_query.params(**params).all()
         ]
 
