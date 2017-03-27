@@ -441,13 +441,15 @@ class Events(SecuredResource):
             'text': event['message']
         }
 
+        if 'node_instance_id' in event:
+            del event['node_instance_id']
+
         context_fields = [
             'deployment_id',
             'execution_id',
             'workflow_id',
             'operation',
             'node_id',
-            'node_instance_id',
             'node_name',
         ]
         event['context'] = {
