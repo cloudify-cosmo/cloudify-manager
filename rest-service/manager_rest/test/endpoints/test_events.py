@@ -33,6 +33,8 @@ from manager_rest.storage.resource_models import (
     Event,
     Execution,
     Log,
+    Node,
+    NodeInstance,
 )
 
 
@@ -41,11 +43,15 @@ EventResultTuple = namedtuple(
     [
         'timestamp',
         'deployment_id',
+        'execution_id',
+        'workflow_id',
         'message',
         'message_code',
         'event_type',
         'operation',
         'node_id',
+        'node_instance_id',
+        'node_name',
         'level',
         'logger',
         'type',
@@ -76,6 +82,8 @@ class SelectEventsBaseTest(TestCase):
     BLUEPRINT_COUNT = 2
     DEPLOYMENT_COUNT = 4
     EXECUTION_COUNT = 8
+    NODE_COUNT = 8
+    NODE_INSTANCE_COUNT = 16
     EVENT_COUNT = 100
 
     EVENT_TYPES = [
@@ -118,7 +126,7 @@ class SelectEventsBaseTest(TestCase):
 
         blueprints = [
             Blueprint(
-                id=fake.uuid4(),
+                id='blueprint_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 main_file_name=fake.file_name(),
                 plan='<plan>',
@@ -132,7 +140,7 @@ class SelectEventsBaseTest(TestCase):
 
         deployments = [
             Deployment(
-                id=fake.uuid4(),
+                id='deployment_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 _blueprint_fk=choice(blueprints)._storage_id,
                 _creator_id=fake.uuid4(),
@@ -144,7 +152,7 @@ class SelectEventsBaseTest(TestCase):
 
         executions = [
             Execution(
-                id=fake.uuid4(),
+                id='execution_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 is_system_workflow=False,
                 workflow_id=fake.uuid4(),
@@ -157,13 +165,40 @@ class SelectEventsBaseTest(TestCase):
         session.add_all(executions)
         session.commit()
 
+        nodes = [
+            Node(
+                id='node_{}'.format(fake.uuid4()),
+                deploy_number_of_instances=1,
+                max_number_of_instances=1,
+                min_number_of_instances=1,
+                number_of_instances=1,
+                planned_number_of_instances=1,
+                type='<type>',
+                _deployment_fk=choice(deployments)._storage_id,
+            )
+            for _ in xrange(self.NODE_COUNT)
+        ]
+        session.add_all(nodes)
+        session.commit()
+
+        node_instances = [
+            NodeInstance(
+                id='node_instance_{}'.format(fake.uuid4()),
+                state='<state>',
+                _node_fk=choice(nodes)._storage_id,
+            )
+            for _ in xrange(self.NODE_INSTANCE_COUNT)
+        ]
+        session.add_all(node_instances)
+        session.commit()
+
         def create_event():
             """Create new event using the execution created above."""
             return Event(
-                id=fake.uuid4(),
+                id='event_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
-                node_id=fake.uuid4(),
+                node_id=choice(node_instances).id,
                 operation='<operation>',
                 event_type=choice(self.EVENT_TYPES),
                 message=fake.sentence(),
@@ -173,10 +208,10 @@ class SelectEventsBaseTest(TestCase):
         def create_log():
             """Create new log using the execution created above."""
             return Log(
-                id=fake.uuid4(),
+                id='log_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
-                node_id=fake.uuid4(),
+                node_id=choice(node_instances).id,
                 operation='<operation>',
                 logger='<logger>',
                 level=choice(self.LOG_LEVELS),
@@ -196,13 +231,15 @@ class SelectEventsBaseTest(TestCase):
         self.blueprints = blueprints
         self.deployments = deployments
         self.executions = executions
+        self.nodes = nodes
+        self.node_instances = node_instances
         self.events = sorted_events
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsFilterTest(SelectEventsBaseTest):
 
-    """Filter events by deployment/execution."""
+    """Filter events by blueprint, deployment, execution, etc."""
 
     DEFAULT_SORT = {
         'timestamp': 'asc'
@@ -225,10 +262,8 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
         expected_deployment_ids = [
             deployment._storage_id
             for deployment in self.deployments
@@ -239,11 +274,12 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for execution in self.executions
             if execution._deployment_fk in expected_deployment_ids
         ]
-        expected_event_ids = [
-            event.id
+        expected_events = [
+            event
             for event in self.events
             if event._execution_fk in expected_executions_id
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_deployment(self):
@@ -258,20 +294,20 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_executions_id = [
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+
+        expected_execution_ids = [
             execution._storage_id
             for execution in self.executions
             if execution._deployment_fk == deployment._storage_id
         ]
-        expected_event_ids = [
-            event.id
+        expected_events = [
+            event
             for event in self.events
-            if event._execution_fk in expected_executions_id
+            if event._execution_fk in expected_execution_ids
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_execution(self):
@@ -286,15 +322,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if event._execution_fk == execution._storage_id
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_event_type(self):
@@ -309,15 +344,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if getattr(event, 'event_type', None) == event_type
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_level(self):
@@ -332,15 +366,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if getattr(event, 'level', None) == level
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def filter_by_message_helper(self, message_field):
@@ -355,15 +388,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            (event.id, event.message)
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            (event.id, event.message)
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if word in event.message.lower()
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_filter_by_message(self):
@@ -426,15 +458,14 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
-        event_ids = [
-            event.id
-            for event in query.params(**self.DEFAULT_PAGINATION).all()
-        ]
-        expected_event_ids = [
-            event.id
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        event_ids = [event.id for event in events]
+        expected_events = [
+            event
             for event in self.events
             if isinstance(event, event_classes)
         ]
+        expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
     def test_get_events_and_logs_explicit(self):
@@ -741,11 +772,15 @@ class MapEventToEsTest(TestCase):
         sql_event = EventResult(
             timestamp=datetime(2016, 12, 9),
             deployment_id='<deployment_id>',
+            execution_id='<execution_id>',
+            workflow_id='<workflow_id>',
             message='<message>',
             message_code=None,
             event_type='<event_type>',
             operation='<operation>',
             node_id='<node_id>',
+            node_instance_id='<node_instance_id>',
+            node_name='<node_name>',
             logger=None,
             level=None,
             type='cloudify_event',
@@ -753,8 +788,12 @@ class MapEventToEsTest(TestCase):
         expected_es_event = {
             'context': {
                 'deployment_id': '<deployment_id>',
+                'execution_id': '<execution_id>',
+                'workflow_id': '<workflow_id>',
                 'operation': '<operation>',
                 'node_id': '<node_id>',
+                'node_instance_id': '<node_instance_id>',
+                'node_name': '<node_name>',
             },
             'event_type': '<event_type>',
             'timestamp': '2016-12-09T00:00Z',
@@ -775,11 +814,15 @@ class MapEventToEsTest(TestCase):
         sql_log = EventResult(
             timestamp=datetime(2016, 12, 9),
             deployment_id='<deployment_id>',
+            execution_id='<execution_id>',
+            workflow_id='<workflow_id>',
             message='<message>',
             message_code=None,
             event_type=None,
             operation='<operation>',
             node_id='<node_id>',
+            node_instance_id='<node_instance_id>',
+            node_name='<node_name>',
             level='<level>',
             logger='<logger>',
             type='cloudify_log',
@@ -787,8 +830,12 @@ class MapEventToEsTest(TestCase):
         expected_es_log = {
             'context': {
                 'deployment_id': '<deployment_id>',
+                'execution_id': '<execution_id>',
+                'workflow_id': '<workflow_id>',
                 'operation': '<operation>',
                 'node_id': '<node_id>',
+                'node_instance_id': '<node_instance_id>',
+                'node_name': '<node_name>',
             },
             'level': '<level>',
             'timestamp': '2016-12-09T00:00Z',

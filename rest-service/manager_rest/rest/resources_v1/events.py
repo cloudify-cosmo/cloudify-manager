@@ -40,6 +40,8 @@ from manager_rest.storage.resource_models import (
     Execution,
     Event,
     Log,
+    Node,
+    NodeInstance,
 )
 
 
@@ -306,11 +308,14 @@ class Events(SecuredResource):
                 Blueprint.id.label('blueprint_id'),
                 Deployment.id.label('deployment_id'),
                 Execution.id.label('execution_id'),
+                Execution.workflow_id.label('workflow_id'),
                 select_column('message'),
                 select_column('message_code'),
                 select_column('event_type'),
                 select_column('operation'),
                 select_column('node_id'),
+                NodeInstance.id.label('node_instance_id'),
+                Node.id.label('node_name'),
                 select_column('logger'),
                 select_column('level'),
                 literal_column(
@@ -321,6 +326,8 @@ class Events(SecuredResource):
                 model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
                 Deployment._blueprint_fk == Blueprint._storage_id,
+                model.node_id == NodeInstance.id,
+                NodeInstance._node_fk == Node._storage_id,
             )
         )
 
@@ -434,8 +441,12 @@ class Events(SecuredResource):
 
         context_fields = [
             'deployment_id',
+            'execution_id',
+            'workflow_id',
             'operation',
             'node_id',
+            'node_instance_id',
+            'node_name',
         ]
         event['context'] = {
             field: event[field]
