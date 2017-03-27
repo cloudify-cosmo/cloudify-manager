@@ -33,7 +33,7 @@ install_requires = [
     'celery==3.1.17',
     'psutil==3.3.0',
     'jsonpickle==0.9.2',
-    'wagon==0.3.2',
+    'wagon==0.6.0',
     'python-dateutil==2.5.3',
     'voluptuous==0.9.3',
     'toolz==0.8.2',

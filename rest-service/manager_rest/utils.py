@@ -14,22 +14,23 @@
 #  * limitations under the License.
 
 
-import StringIO
-import errno
-import json
 import os
-import platform
-import shutil
 import sys
+import json
+import errno
+import shutil
+import platform
+import StringIO
 import traceback
-from base64 import urlsafe_b64encode
-from datetime import datetime
 from os import path, makedirs
+from datetime import datetime
+from base64 import urlsafe_b64encode
 
-import wagon.utils
+import wagon
 from flask_restful import abort
 
 from manager_rest import constants, config
+
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
@@ -113,7 +114,7 @@ def get_plugin_archive_path(plugin_id, archive_name):
 
 def plugin_installable_on_current_platform(plugin):
     dist, _, release = platform.linux_distribution(
-            full_distribution_name=False)
+        full_distribution_name=False)
     dist, release = dist.lower(), release.lower()
 
     # Mac OSX is a special case, in which plugin.distribution and
@@ -123,7 +124,7 @@ def plugin_installable_on_current_platform(plugin):
         release = release or None
 
     return (plugin.supported_platform == 'any' or all([
-        plugin.supported_platform == wagon.utils.get_platform(),
+        plugin.supported_platform == wagon.get_platform(),
         plugin.distribution == dist,
         plugin.distribution_release == release
     ]))
@@ -134,7 +135,7 @@ def get_formatted_timestamp():
     return '{0}Z'.format(datetime.now().isoformat()[:-3])
 
 
-class classproperty(object):
+class classproperty(object):  # NOQA
     """A class that acts a a decorator for class-level properties
 
     class A(object):
@@ -149,10 +150,13 @@ class classproperty(object):
     print A.foo  # 3
 
     """
+
     def __init__(self, get_func):
         self.get_func = get_func
 
     def __get__(self, _, owner_cls):
+        """See class level docstring
+        """
         return self.get_func(owner_cls)
 
 

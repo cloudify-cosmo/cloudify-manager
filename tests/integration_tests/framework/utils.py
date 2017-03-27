@@ -18,26 +18,25 @@ import re
 import sys
 import time
 import json
-import yaml
-import tempfile
 import shutil
+import tempfile
 
 from functools import wraps
 from multiprocessing import Process
 
-import influxdb
-import pika
 import sh
-
-from wagon import wagon
-
-import constants
+import yaml
+import pika
+import wagon
+import influxdb
 
 from cloudify.utils import setup_logger
 from cloudify_cli import env as cli_env
 from cloudify_rest_client import CloudifyClient
 from manager_rest.utils import create_auth_header
 from cloudify_cli.constants import CLOUDIFY_BASE_DIRECTORY_NAME
+
+import constants
 
 
 logger = setup_logger('testenv.utils')
@@ -53,8 +52,8 @@ def _write(stream, s):
 
 def sh_bake(command):
     return command.bake(
-            _out=lambda line: _write(sys.stdout, line),
-            _err=lambda line: _write(sys.stderr, line))
+        _out=lambda line: _write(sys.stdout, line),
+        _err=lambda line: _write(sys.stderr, line))
 
 
 def get_manager_ip():
@@ -108,12 +107,12 @@ def create_rest_client(**kwargs):
     headers = create_auth_header(username, password, token, tenant)
 
     return CloudifyClient(
-            host=get_manager_ip(),
-            port=rest_port,
-            protocol=rest_protocol,
-            headers=headers,
-            trust_all=trust_all,
-            cert=cert_path)
+        host=get_manager_ip(),
+        port=rest_port,
+        protocol=rest_protocol,
+        headers=headers,
+        trust_all=trust_all,
+        cert=cert_path)
 
 
 def create_influxdb_client():
@@ -172,10 +171,11 @@ def _create_mock_wagon(package_name, package_version):
             f.write('from setuptools import setup\n')
             f.write('setup(name="{0}", version={1})'.format(
                 package_name, package_version))
-        wagon_client = wagon.Wagon(module_src)
-        result = wagon_client.create(
+        result = wagon.create(
+            source=module_src,
             archive_destination_dir=tempfile.gettempdir(),
-            force=True)
+            force=True,
+            archive_format='tar.gz')
     finally:
         shutil.rmtree(module_src)
     return result
@@ -199,7 +199,7 @@ class YamlPatcher(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if not exc_type:
             output = json.dumps(self.obj) if self.is_json else yaml.safe_dump(
-                    self.obj, default_flow_style=self.default_flow_style)
+                self.obj, default_flow_style=self.default_flow_style)
             with open(self.yaml_path, 'w') as f:
                 f.write(output)
 

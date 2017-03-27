@@ -18,10 +18,10 @@ import os
 from mock import patch
 from nose.plugins.attrib import attr
 
-from manager_rest.utils import read_json_file, write_dict_to_json_file
-from manager_rest.utils import plugin_installable_on_current_platform
-from manager_rest.test import base_test
 from manager_rest.storage import models
+from manager_rest.test import base_test
+from manager_rest.utils import plugin_installable_on_current_platform
+from manager_rest.utils import read_json_file, write_dict_to_json_file
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -74,7 +74,7 @@ class TestUtils(base_test.BaseServerTestCase):
             return platform
 
         with patch('platform.linux_distribution', mock_linux_dist):
-            with patch('wagon.utils.get_platform', mock_get_platform):
+            with patch('wagon.get_platform', mock_get_platform):
                 plugin = create_plugin(supported_platform=platform)
                 self.assertFalse(
                     plugin_installable_on_current_platform(plugin))
