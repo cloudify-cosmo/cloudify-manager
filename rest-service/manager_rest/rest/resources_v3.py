@@ -14,8 +14,11 @@
 #  * limitations under the License.
 #
 
+from datetime import datetime
+
 from flask_security import current_user
 from flask import current_app, request
+from toolz import dicttoolz
 
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
@@ -35,8 +38,11 @@ from .. import utils
 from . import rest_decorators, rest_utils
 from ..security.authentication import authenticator
 from ..security.tenant_authorization import tenant_authorizer
-from .resources_v2.nodes import Nodes as v2_Nodes
 from .resources_v1.nodes import NodeInstancesId as v1_NodeInstancesId
+from .resources_v2 import (
+    Events as v2_Events,
+    Nodes as v2_Nodes,
+)
 from .responses_v3 import BaseResponse, ResourceID, SecretsListResponse
 
 try:
@@ -643,6 +649,57 @@ class NodeInstancesId(v1_NodeInstancesId):
             evaluate_intrinsic_functions(node_instance['runtime_properties'],
                                          node_instance['deployment_id'])
         return node_instance
+
+
+class Events(v2_Events):
+    """Events resource.
+
+    Through the events endpoint a user can retrieve both events and logs as
+    stored in the SQL database.
+
+    """
+    @staticmethod
+    def _map_event_to_dict(_include, sql_event):
+        """Map event to a dictionary to be sent as an API response.
+
+        In this implementation, the goal is to return a flat structure as
+        opposed to the nested one that was returned by Elasticsearch in the
+        past (see v1 implementation for more information).
+
+        :param _include:
+            Projection used to get records from database
+        :type _include: list(str)
+        :param sql_event: Event data returned when SQL query was executed
+        :type sql_event: :class:`sqlalchemy.util._collections.result`
+        :returns: Event as would have returned by elasticsearch
+        :rtype: dict(str)
+
+        """
+        event = {
+            attr: getattr(sql_event, attr)
+            for attr in sql_event.keys()
+        }
+        event['reported_timestamp'] = event['timestamp']
+
+        if 'node_id' in event:
+            del event['node_id']
+
+        if event['type'] == 'cloudify_event':
+            del event['logger']
+            del event['level']
+        elif event['type'] == 'cloudify_log':
+            del event['event_type']
+
+        for key, value in event.items():
+            if isinstance(value, datetime):
+                event[key] = '{}Z'.format(value.isoformat()[:-3])
+
+        # Keep only keys passed in the _include request argument
+        # TBD: Do the projection at the database level
+        if _include is not None:
+            event = dicttoolz.keyfilter(lambda key: key in _include, event)
+
+        return event
 
 
 def _only_admin_in_manager():

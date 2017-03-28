@@ -24,8 +24,7 @@ from mock import patch
 from nose.plugins.attrib import attr
 
 from manager_rest.manager_exceptions import BadParametersError
-from manager_rest.rest.resources_v1 import Events
-from manager_rest.test import base_test
+from manager_rest.rest.resources_v1 import Events as EventsV1
 from manager_rest.storage import db
 from manager_rest.storage.resource_models import (
     Blueprint,
@@ -74,7 +73,6 @@ class EventResult(EventResultTuple):
         return self._fields
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class SelectEventsBaseTest(TestCase):
 
     """Select events test case base with database."""
@@ -236,7 +234,7 @@ class SelectEventsBaseTest(TestCase):
         self.events = sorted_events
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+@attr(client_min_version=1, client_max_version=1)
 class SelectEventsFilterTest(SelectEventsBaseTest):
 
     """Filter events by blueprint, deployment, execution, etc."""
@@ -257,7 +255,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'blueprint_id': [blueprint.id],
             'type': ['cloudify_event', 'cloudify_log']
         }
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -289,7 +287,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'deployment_id': [deployment.id],
             'type': ['cloudify_event', 'cloudify_log']
         }
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -317,7 +315,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'execution_id': [execution.id],
             'type': ['cloudify_event', 'cloudify_log']
         }
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -339,7 +337,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'event_type': [event_type],
             'type': ['cloudify_event', 'cloudify_log']
         }
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -361,7 +359,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'level': [level],
             'type': ['cloudify_event', 'cloudify_log']
         }
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -383,7 +381,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             message_field: ['%{0}%'.format(word)],
             'type': ['cloudify_event', 'cloudify_log']
         }
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -413,14 +411,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'type': ['cloudify_event', 'cloudify_log']
         }
         with self.assertRaises(BadParametersError):
-            Events._build_select_query(
+            EventsV1._build_select_query(
                 filters,
                 self.DEFAULT_SORT,
                 self.DEFAULT_RANGE_FILTERS,
             )
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+@attr(client_min_version=1, client_max_version=1)
 class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     """Filter events by type."""
@@ -453,7 +451,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         ])
 
         filters = {'type': event_types}
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -475,7 +473,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
     def test_get_events_and_logs_implicit(self):
         """Get both events and logs implicitly without passing any filter."""
         filters = {}
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
@@ -496,7 +494,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         self._get_events_by_type(['cloudify_log'])
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+@attr(client_min_version=1, client_max_version=1)
 class SelectEventsSortTest(SelectEventsBaseTest):
 
     """Sort events by timestamp ascending/descending."""
@@ -520,7 +518,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
 
         """
         sort = {field: direction}
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             self.DEFAULT_FILTERS,
             sort,
             self.DEFAULT_RANGE_FILTERS,
@@ -567,7 +565,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         self._sort_by_timestamp('@timestamp', 'desc')
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+@attr(client_min_version=1, client_max_version=1)
 class SelectEventsRangeFilterTest(SelectEventsBaseTest):
 
     """Filter out events not included in a range."""
@@ -606,7 +604,7 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
             range_filter['to'] = to_datetime
         range_filters = {field: range_filter}
 
-        query = Events._build_select_query(
+        query = EventsV1._build_select_query(
             self.DEFAULT_FILTERS,
             self.DEFAULT_SORT,
             range_filters,
@@ -644,7 +642,7 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
     def test_filter_by_unknown_range(self):
         """Filter by unknown field range."""
         with self.assertRaises(BadParametersError):
-            Events._build_select_query(
+            EventsV1._build_select_query(
                 self.DEFAULT_FILTERS,
                 self.DEFAULT_SORT,
                 {'unknown': {'from': 'a', 'to': 'b'}},
@@ -659,7 +657,7 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         self._filter_by_timestamp_range('timestamp', include_to=False)
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+@attr(client_min_version=1, client_max_version=1)
 class BuildSelectQueryTest(TestCase):
 
     """Event retrieval query."""
@@ -681,10 +679,10 @@ class BuildSelectQueryTest(TestCase):
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters'] = None
         with self.assertRaises(AssertionError):
-            Events._build_select_query(**params)
+            EventsV1._build_select_query(**params)
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
+@attr(client_min_version=1, client_max_version=1)
 class BuildCountQueryTest(TestCase):
 
     """Event count query."""
@@ -704,7 +702,7 @@ class BuildCountQueryTest(TestCase):
         """Query against events table."""
         filters = {'type': ['cloudify_event']}
         range_filters = {}
-        Events._build_count_query(filters, range_filters)
+        EventsV1._build_count_query(filters, range_filters)
         self.assertEqual(
             self.db.session.query().filter().subquery.call_count, 1)
 
@@ -712,7 +710,7 @@ class BuildCountQueryTest(TestCase):
         """Query against both events and logs tables."""
         filters = {'type': ['cloudify_event', 'cloudify_log']}
         range_filters = {}
-        Events._build_count_query(filters, range_filters)
+        EventsV1._build_count_query(filters, range_filters)
         self.assertEqual(
             self.db.session.query().filter().subquery.call_count, 2)
 
@@ -721,13 +719,13 @@ class BuildCountQueryTest(TestCase):
         filters = None
         range_filters = {}
         with self.assertRaises(AssertionError):
-            Events._build_count_query(filters, range_filters)
+            EventsV1._build_count_query(filters, range_filters)
 
 
-@attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
-class MapEventToEsTest(TestCase):
+@attr(client_min_version=1, client_max_version=1)
+class MapEventToDictTestV1(TestCase):
 
-    """Map event information to elasticsearch format."""
+    """Map event information to a dictionary."""
 
     def test_map_event(self):
         """Map event as returned by SQL query to elasticsearch style output."""
@@ -754,7 +752,6 @@ class MapEventToEsTest(TestCase):
                 'workflow_id': '<workflow_id>',
                 'operation': '<operation>',
                 'node_id': '<node_id>',
-                'node_instance_id': '<node_instance_id>',
                 'node_name': '<node_name>',
             },
             'event_type': '<event_type>',
@@ -768,7 +765,7 @@ class MapEventToEsTest(TestCase):
             'type': 'cloudify_event',
         }
 
-        es_event = Events._map_event_to_es(None, sql_event)
+        es_event = EventsV1._map_event_to_dict(None, sql_event)
         self.assertDictEqual(es_event, expected_es_event)
 
     def test_map_log(self):
@@ -796,7 +793,6 @@ class MapEventToEsTest(TestCase):
                 'workflow_id': '<workflow_id>',
                 'operation': '<operation>',
                 'node_id': '<node_id>',
-                'node_instance_id': '<node_instance_id>',
                 'node_name': '<node_name>',
             },
             'level': '<level>',
@@ -808,6 +804,6 @@ class MapEventToEsTest(TestCase):
             'logger': '<logger>',
         }
 
-        es_log = Events._map_event_to_es(None, sql_log)
+        es_log = EventsV1._map_event_to_dict(None, sql_log)
 
         self.assertDictEqual(es_log, expected_es_log)
