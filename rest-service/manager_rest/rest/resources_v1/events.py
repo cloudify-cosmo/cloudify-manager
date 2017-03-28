@@ -326,9 +326,9 @@ class Events(SecuredResource):
                 model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
                 Deployment._blueprint_fk == Blueprint._storage_id,
-                model.node_id == NodeInstance.id,
-                NodeInstance._node_fk == Node._storage_id,
             )
+            .outerjoin(NodeInstance, NodeInstance.id == model.node_id)
+            .outerjoin(Node, Node._storage_id == NodeInstance._node_fk)
         )
 
         query = Events._apply_filters(query, model, filters)

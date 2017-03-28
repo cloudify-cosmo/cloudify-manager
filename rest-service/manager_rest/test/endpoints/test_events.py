@@ -676,44 +676,6 @@ class BuildSelectQueryTest(TestCase):
         'range_filters': {},
     }
 
-    def setUp(self):
-        """Patch flask application.
-
-        The application is only used to write to logs, so it can be patched for
-        unit testing.
-
-        """
-        db_patcher = patch('manager_rest.rest.resources_v1.events.db')
-        self.db = db_patcher.start()
-
-        # Set column descriptions (used by sorting functionality)
-        column_descriptions = [
-                {'name': 'timestamp'},
-        ]
-        self.db.session.query().filter().column_descriptions = (
-            column_descriptions)
-        self.db.session.query().filter().union().column_descriptions = (
-            column_descriptions)
-        self.addCleanup(db_patcher.stop)
-
-    def test_from_events(self):
-        """Query against events table."""
-        Events._build_select_query(**self.DEFAULT_PARAMS)
-        self.assertLessEqual(
-            self.db.session.query().filter().union.call_count,
-            1,
-        )
-
-    def test_from_logs(self):
-        """Query against both events and logs tables."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['filters']['type'].append('cloudify_log')
-        Events._build_select_query(**params)
-        self.assertGreater(
-            self.db.session.query().filter().union.call_count,
-            1,
-        )
-
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
         params = deepcopy(self.DEFAULT_PARAMS)
