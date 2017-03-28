@@ -26,9 +26,7 @@ import requests
 
 from cloudify import ctx
 from cloudify.state import ctx_parameters
-from cloudify.utils import get_local_rest_certificate
 from cloudify.exceptions import CommandExecutionException
-from cloudify.constants import CLOUDIFY_TOKEN_AUTHENTICATION_HEADER
 
 
 CELERY_CONFIG_ENV_VARS = ['CELERY_CONFIG_MODULE', 'CELERY_WORK_DIR',
@@ -54,7 +52,7 @@ class CommandRunner(object):
     def __init__(self, logger):
         self.logger = logger
         self.rest_token = None
-        self._cert_file = get_local_rest_certificate()
+        self.cert_file_path = None
 
     def run(self, command, execution_env=None):
         self.logger.debug('run: {0}'.format(command))
@@ -86,9 +84,9 @@ class CommandRunner(object):
     def download(self, url, destination=None):
         self.logger.debug('Retrieving file from {0}'.format(url))
 
-        headers = {CLOUDIFY_TOKEN_AUTHENTICATION_HEADER: self.rest_token}
+        headers = {'Authentication-Token': self.rest_token}
         response = requests.get(url, stream=True, headers=headers,
-                                verify=self._cert_file)
+                                verify=self.cert_file_path)
         if destination:
             destination_file = open(destination, 'wb')
         else:
@@ -113,9 +111,10 @@ class CommandRunner(object):
         with open(destination, 'r') as f:
             credentials = json.load(f)
 
-        # Overwrite the old certificate with the new manager's certificate
-        with open(self._cert_file, 'w') as cert_file:
-            cert_file.write(credentials['ssl_cert_content'])
+        # Create a temporary location fot eh
+        cert_file = tempfile.NamedTemporaryFile(delete=False)
+        cert_file.write(credentials['ssl_cert_content'])
+        self.cert_file_path = cert_file.name
 
         # Set the rest token, to be used later on to download other files
         self.rest_token = credentials['rest_token']
@@ -194,10 +193,12 @@ class Installer(object):
             command = ('{0} install-local'
                        ' --agent-file {1}'
                        ' --rest-token {2}'
-                       ' --output-agent-file {3}').format(
+                       ' --rest-cert-path {3}'
+                       ' --output-agent-file {4}').format(
                            agent_cmd,
                            agent_config_path,
                            self.runner.rest_token,
+                           self.runner.cert_file_path,
                            agent_output_path)
             self.runner.run(command)
             with open(agent_output_path) as agent_file:
