@@ -58,8 +58,14 @@ class LocalDateTime(UTCDateTime):
 
     """A datetime serialized as a iso8601 string with local timezone."""
 
-    TO_MILLISECONDS = partial(re.compile(r'\d{3}(?=\+)').sub, '')
-    REMOVE_UTC = partial(re.compile(r'\+00:00').sub, r'Z')
+    TRANSFORMATIONS = [
+        # Add millisecons if they are missing between seconds and time zone
+        partial(re.compile(r'(?<=:\d{2})(?=\+)').sub, '.000'),
+        # Drop microseconds and keep just milliseconds
+        partial(re.compile(r'(?<=\.\d{3})\d{3}(?=\+)').sub, ''),
+        # Use Z as time zone designator for UTC
+        partial(re.compile(r'\+00:00').sub, r'Z'),
+    ]
 
     def process_result_value(self, value, engine):
         """Serialize to iso8601 string with local timezone.
@@ -73,8 +79,13 @@ class LocalDateTime(UTCDateTime):
 
         utc_datetime = value.replace(tzinfo=tz.tzutc())
         local_datetime = utc_datetime.astimezone(tz.tzlocal())
-        return self.REMOVE_UTC(
-            self.TO_MILLISECONDS(local_datetime.isoformat()))
+
+        serialized_datetime = local_datetime.isoformat()
+
+        for transformation in self.TRANSFORMATIONS:
+            serialized_datetime = transformation(serialized_datetime)
+
+        return serialized_datetime
 
 
 class CIColumn(db.Column):
