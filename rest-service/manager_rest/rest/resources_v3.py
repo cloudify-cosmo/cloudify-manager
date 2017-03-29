@@ -658,6 +658,9 @@ class Events(v2_Events):
     stored in the SQL database.
 
     """
+
+    UNUSED_FIELDS = ['id', 'node_id', 'message_code']
+
     @staticmethod
     def _map_event_to_dict(_include, sql_event):
         """Map event to a dictionary to be sent as an API response.
@@ -681,8 +684,9 @@ class Events(v2_Events):
         }
         event['reported_timestamp'] = event['timestamp']
 
-        if 'node_id' in event:
-            del event['node_id']
+        for unused_field in Events.UNUSED_FIELDS:
+            if unused_field in event:
+                del event[unused_field]
 
         if event['type'] == 'cloudify_event':
             del event['logger']
