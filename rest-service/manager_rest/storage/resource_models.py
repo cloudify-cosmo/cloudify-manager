@@ -22,7 +22,11 @@ from manager_rest.utils import classproperty
 from manager_rest.rest.responses import Workflow
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 
-from .models_base import db, UTCDateTime
+from .models_base import (
+    db,
+    LocalDateTime,
+    UTCDateTime,
+)
 from .relationships import foreign_key, one_to_many_relationship
 from .resource_models_base import (TopLevelResource,
                                    DerivedResource,
@@ -202,7 +206,7 @@ class Event(DerivedResource):
 
     __tablename__ = 'events'
 
-    timestamp = db.Column(UTCDateTime, nullable=False, index=True)
+    timestamp = db.Column(LocalDateTime, nullable=False, index=True)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
     event_type = db.Column(db.Text)
@@ -233,7 +237,7 @@ class Log(DerivedResource):
 
     __tablename__ = 'logs'
 
-    timestamp = db.Column(UTCDateTime, nullable=False, index=True)
+    timestamp = db.Column(LocalDateTime, nullable=False, index=True)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
     logger = db.Column(db.Text)
