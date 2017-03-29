@@ -14,7 +14,10 @@
 #  * limitations under the License.
 
 from collections import OrderedDict
-from dateutil import parser as date_parser
+from dateutil import (
+    parser as date_parser,
+    tz,
+)
 
 from flask_sqlalchemy import SQLAlchemy, inspect
 from flask_restful import fields as flask_fields
@@ -46,6 +49,25 @@ class UTCDateTime(db.TypeDecorator):
             return date_parser.parse(value)
         else:
             return value
+
+
+class LocalDateTime(UTCDateTime):
+
+    """A datetime serialized as a iso8601 string with local timezone."""
+
+    def process_result_value(self, value, engine):
+        """Serialize to iso8601 string with local timezone.
+
+        :param value: Datetime stored in the database
+        :type value: :class:`datetime.datetime`
+
+        """
+        if value is None:
+            return
+
+        utc_datetime = value.replace(microsecond=0, tzinfo=tz.tzutc())
+        local_datetime = utc_datetime.astimezone(tz.tzlocal())
+        return local_datetime.isoformat()
 
 
 class CIColumn(db.Column):
