@@ -13,12 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import re
+
 from collections import OrderedDict
+from functools import partial
+
 from dateutil import (
     parser as date_parser,
     tz,
 )
-
 from flask_sqlalchemy import SQLAlchemy, inspect
 from flask_restful import fields as flask_fields
 from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
@@ -55,6 +58,9 @@ class LocalDateTime(UTCDateTime):
 
     """A datetime serialized as a iso8601 string with local timezone."""
 
+    TO_MILLISECONDS = partial(re.compile(r'\d{3}(?=\+)').sub, '')
+    REMOVE_UTC = partial(re.compile(r'\+00:00').sub, r'Z')
+
     def process_result_value(self, value, engine):
         """Serialize to iso8601 string with local timezone.
 
@@ -65,9 +71,10 @@ class LocalDateTime(UTCDateTime):
         if value is None:
             return
 
-        utc_datetime = value.replace(microsecond=0, tzinfo=tz.tzutc())
+        utc_datetime = value.replace(tzinfo=tz.tzutc())
         local_datetime = utc_datetime.astimezone(tz.tzlocal())
-        return local_datetime.isoformat()
+        return self.REMOVE_UTC(
+            self.TO_MILLISECONDS(local_datetime.isoformat()))
 
 
 class CIColumn(db.Column):
