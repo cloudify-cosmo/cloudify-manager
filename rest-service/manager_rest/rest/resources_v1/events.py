@@ -14,8 +14,6 @@
 #  * limitations under the License.
 #
 
-from datetime import datetime
-
 from flask_restful_swagger import swagger
 from sqlalchemy import (
     asc,
@@ -465,10 +463,6 @@ class Events(SecuredResource):
             del event['level']
         elif event['type'] == 'cloudify_log':
             del event['event_type']
-
-        for key, value in event.items():
-            if isinstance(value, datetime):
-                event[key] = '{}Z'.format(value.isoformat()[:-3])
 
         # Keep only keys passed in the _include request argument
         # TBD: Do the projection at the database level
