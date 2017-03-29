@@ -433,9 +433,15 @@ workflows:
     mapping: default_workflows.cloudify.plugins.workflows.execute_operation
     parameters:
       operation: {}
+      # Deprecated: use 'operation_inputs' instead.
       operation_kwargs:
         default: {}
+      # Deprecated: use 'allow_inputs_override' instead.
       allow_kwargs_override:
+        default: null
+      operation_inputs:
+        default: {}
+      allow_inputs_override:
         default: null
       run_by_dependency_order:
         default: false
