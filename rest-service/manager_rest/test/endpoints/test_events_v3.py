@@ -56,7 +56,6 @@ class MapEventToDictTestV3(TestCase):
             'timestamp': '2016-12-09T00:00Z',
             'reported_timestamp': '2016-12-09T00:00Z',
             'message': '<message>',
-            'message_code': None,
             'type': 'cloudify_event',
         }
 
@@ -92,7 +91,6 @@ class MapEventToDictTestV3(TestCase):
             'timestamp': '2016-12-09T00:00Z',
             'reported_timestamp': '2016-12-09T00:00Z',
             'message': '<message>',
-            'message_code': None,
             'type': 'cloudify_log',
             'logger': '<logger>',
         }
