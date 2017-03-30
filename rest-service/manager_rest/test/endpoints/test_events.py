@@ -199,6 +199,7 @@ class SelectEventsBaseTest(TestCase):
             return Event(
                 id='event_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
+                reported_timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
                 _tenant_id=choice(executions)._tenant_id,
                 _creator_id=choice(executions)._creator_id,
@@ -214,6 +215,7 @@ class SelectEventsBaseTest(TestCase):
             return Log(
                 id='log_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
+                reported_timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
                 _tenant_id=choice(executions)._tenant_id,
                 _creator_id=choice(executions)._creator_id,
