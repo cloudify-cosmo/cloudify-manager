@@ -12,7 +12,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from datetime import datetime
 from unittest import TestCase
 
 from nose.plugins.attrib import attr
@@ -30,7 +29,7 @@ class MapEventToDictTestV3(TestCase):
     def test_map_event(self):
         """Map event as returned by SQL query to elasticsearch style output."""
         sql_event = EventResult(
-            timestamp=datetime(2016, 12, 9),
+            timestamp='2016-12-09T00:00Z',
             deployment_id='<deployment_id>',
             execution_id='<execution_id>',
             workflow_id='<workflow_id>',
@@ -65,7 +64,7 @@ class MapEventToDictTestV3(TestCase):
     def test_map_log(self):
         """Map log as returned by SQL query to elasticsearch style output."""
         sql_log = EventResult(
-            timestamp=datetime(2016, 12, 9),
+            timestamp='2016-12-09T00:00Z',
             deployment_id='<deployment_id>',
             execution_id='<execution_id>',
             workflow_id='<workflow_id>',

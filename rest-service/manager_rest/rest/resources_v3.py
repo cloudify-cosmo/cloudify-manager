@@ -14,8 +14,6 @@
 #  * limitations under the License.
 #
 
-from datetime import datetime
-
 from flask_security import current_user
 from flask import current_app, request
 from toolz import dicttoolz
@@ -693,10 +691,6 @@ class Events(v2_Events):
             del event['level']
         elif event['type'] == 'cloudify_log':
             del event['event_type']
-
-        for key, value in event.items():
-            if isinstance(value, datetime):
-                event[key] = '{}Z'.format(value.isoformat()[:-3])
 
         # Keep only keys passed in the _include request argument
         # TBD: Do the projection at the database level

@@ -14,7 +14,6 @@
 
 from collections import namedtuple
 from copy import deepcopy
-from datetime import datetime
 from random import choice
 from unittest import TestCase
 
@@ -730,7 +729,7 @@ class MapEventToDictTestV1(TestCase):
     def test_map_event(self):
         """Map event as returned by SQL query to elasticsearch style output."""
         sql_event = EventResult(
-            timestamp=datetime(2016, 12, 9),
+            timestamp='2016-12-09T00:00Z',
             deployment_id='<deployment_id>',
             execution_id='<execution_id>',
             workflow_id='<workflow_id>',
@@ -771,7 +770,7 @@ class MapEventToDictTestV1(TestCase):
     def test_map_log(self):
         """Map log as returned by SQL query to elasticsearch style output."""
         sql_log = EventResult(
-            timestamp=datetime(2016, 12, 9),
+            timestamp='2016-12-09T00:00Z',
             deployment_id='<deployment_id>',
             execution_id='<execution_id>',
             workflow_id='<workflow_id>',

@@ -13,9 +13,15 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from collections import OrderedDict
-from dateutil import parser as date_parser
+import re
 
+from collections import OrderedDict
+from functools import partial
+
+from dateutil import (
+    parser as date_parser,
+    tz,
+)
 from flask_sqlalchemy import SQLAlchemy, inspect
 from flask_restful import fields as flask_fields
 from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
@@ -46,6 +52,40 @@ class UTCDateTime(db.TypeDecorator):
             return date_parser.parse(value)
         else:
             return value
+
+
+class LocalDateTime(UTCDateTime):
+
+    """A datetime serialized as a iso8601 string with local timezone."""
+
+    TRANSFORMATIONS = [
+        # Add millisecons if they are missing between seconds and time zone
+        partial(re.compile(r'(?<=:\d{2})(?=\+)').sub, '.000'),
+        # Drop microseconds and keep just milliseconds
+        partial(re.compile(r'(?<=\.\d{3})\d{3}(?=\+)').sub, ''),
+        # Use Z as time zone designator for UTC
+        partial(re.compile(r'\+00:00').sub, r'Z'),
+    ]
+
+    def process_result_value(self, value, engine):
+        """Serialize to iso8601 string with local timezone.
+
+        :param value: Datetime stored in the database
+        :type value: :class:`datetime.datetime`
+
+        """
+        if value is None:
+            return
+
+        utc_datetime = value.replace(tzinfo=tz.tzutc())
+        local_datetime = utc_datetime.astimezone(tz.tzlocal())
+
+        serialized_datetime = local_datetime.isoformat()
+
+        for transformation in self.TRANSFORMATIONS:
+            serialized_datetime = transformation(serialized_datetime)
+
+        return serialized_datetime
 
 
 class CIColumn(db.Column):
