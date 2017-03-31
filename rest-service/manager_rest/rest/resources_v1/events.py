@@ -257,13 +257,21 @@ class Events(SecuredResource):
                 Log, filters, range_filters)
             subqueries.append(logs_query)
 
-        query = reduce(lambda left, right: left.union(right), subqueries)
-        query = Events._apply_sort(query, sort)
-        query = (
-            query
-            .limit(bindparam('limit'))
-            .offset(bindparam('offset'))
-        )
+        if subqueries:
+            query = reduce(lambda left, right: left.union(right), subqueries)
+            query = Events._apply_sort(query, sort)
+            query = (
+                query
+                .limit(bindparam('limit'))
+                .offset(bindparam('offset'))
+            )
+        else:
+            # Simple query that returns no results
+            # Used when filtering by a field that doesn't exist for a type
+            query = (
+                db.session.query(Event.timestamp)
+                .filter(Event.timestamp is None)
+            )
 
         return query
 
