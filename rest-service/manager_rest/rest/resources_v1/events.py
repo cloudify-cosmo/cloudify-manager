@@ -387,7 +387,14 @@ class Events(SecuredResource):
                 Log, filters, range_filters)
             subqueries.append(logs_query)
 
-        query = db.session.query(sum(subqueries))
+        if subqueries:
+            query = db.session.query(sum(subqueries))
+        else:
+            query = (
+                db.session.query(func.count('*').label('count'))
+                .filter(Event.timestamp is None)
+            )
+
         return query
 
     @staticmethod
