@@ -377,12 +377,14 @@ class Events(SecuredResource):
             'Filters is expected to be a dictionary'
 
         subqueries = []
-        if 'type' not in filters or 'cloudify_event' in filters['type']:
+        if (('type' not in filters or 'cloudify_event' in filters['type']) and
+                ('level' not in filters)):
             events_query = Events._build_count_subquery(
                 Event, filters, range_filters)
             subqueries.append(events_query)
 
-        if 'type' not in filters or 'cloudify_log' in filters['type']:
+        if (('type' not in filters or 'cloudify_log' in filters['type']) and
+                ('event_type' not in filters)):
             logs_query = Events._build_count_subquery(
                 Log, filters, range_filters)
             subqueries.append(logs_query)
@@ -418,6 +420,7 @@ class Events(SecuredResource):
             .filter(
                 model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
+                Deployment._blueprint_fk == Blueprint._storage_id,
             )
         )
 
