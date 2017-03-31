@@ -358,15 +358,24 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'event_type': [event_type],
             'type': ['cloudify_log']
         }
+
         query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
+
+        count_query = EventsV1._build_count_query(
+            filters,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+
         # logs don't have event_type, so query should return no results
         expected_events = []
         self.assertListEqual(events, expected_events)
+        self.assertEqual(event_count, len(expected_events))
 
     def test_filter_by_level(self):
         """Filter events by level."""
@@ -397,15 +406,24 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'level': [level],
             'type': ['cloudify_event']
         }
+
         query = EventsV1._build_select_query(
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
+
+        count_query = EventsV1._build_count_query(
+            filters,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+
         # events don't have level, so query should return no results
         expected_events = []
         self.assertListEqual(events, expected_events)
+        self.assertEqual(event_count, len(expected_events))
 
     def filter_by_message_helper(self, message_field):
         """Filter events by message field."""
