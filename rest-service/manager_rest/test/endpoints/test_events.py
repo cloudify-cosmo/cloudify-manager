@@ -849,22 +849,6 @@ class BuildCountQueryTest(TestCase):
         self.db = db_patcher.start()
         self.addCleanup(db_patcher.stop)
 
-    def test_from_events(self):
-        """Query against events table."""
-        filters = {'type': ['cloudify_event']}
-        range_filters = {}
-        EventsV1._build_count_query(filters, range_filters)
-        self.assertEqual(
-            self.db.session.query().filter().subquery.call_count, 1)
-
-    def test_from_logs(self):
-        """Query against both events and logs tables."""
-        filters = {'type': ['cloudify_event', 'cloudify_log']}
-        range_filters = {}
-        EventsV1._build_count_query(filters, range_filters)
-        self.assertEqual(
-            self.db.session.query().filter().subquery.call_count, 2)
-
     def test_filter_required(self):
         """Filter parameter is expected to be dictionary."""
         filters = None
