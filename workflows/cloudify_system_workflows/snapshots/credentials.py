@@ -28,19 +28,21 @@ class Credentials(object):
     _CRED_KEY_NAME = 'agent_key'
 
     def restore(self, tempdir, postgres):
+        self._postgres = postgres
         dump_cred_dir = os.path.join(tempdir, self._CRED_DIR)
         if not os.path.isdir(dump_cred_dir):
             ctx.logger.info('Missing credentials dir: '
                             '{0}'.format(dump_cred_dir))
             return
         restored_cred_dir = self._create_restored_cred_dir()
+        agent_key_path_dict = self._create_agent_key_path_dict()
 
         for dep_node_id in os.listdir(dump_cred_dir):
             self._restore_agent_credentials(
                 dep_node_id,
                 dump_cred_dir,
                 restored_cred_dir,
-                postgres
+                agent_key_path_dict
             )
 
     def dump(self, tempdir):
@@ -84,13 +86,12 @@ class Credentials(object):
                                    dep_node_id,
                                    dump_cred_dir,
                                    restored_cred_dir,
-                                   postgres):
+                                   agent_key_path_dict):
         restored_agent_key_path = \
             self._restore_agent_key_from_dump(dump_cred_dir,
                                               restored_cred_dir,
                                               dep_node_id)
-        db_agent_key_path = self._get_agent_key_path_from_db(postgres,
-                                                             dep_node_id)
+        db_agent_key_path = agent_key_path_dict[dep_node_id]
 
         if os.path.isfile(db_agent_key_path):
             self._handle_existing_agent_key_path(
@@ -151,35 +152,38 @@ class Credentials(object):
         shutil.copy(agent_key_path_in_dump, agent_key_path)
         return agent_key_path
 
-    def _get_agent_key_path_from_db(self, postgres, dep_node_id):
-        """Retrieve the agent key path as it is stored in the db
-
-        :param postgres: A Postgres helper object
-        :param dep_node_id:
-        :return:
+    def _get_node_properties_query_result(self):
+        """Create an SQL query that retrieves node properties from the DB
+        :return: A list of tuples - each has three elements:
+        1. Deployment ID
+        2. Node Id
+        3. The pickled properties dict
         """
-        properties = self._get_node_properties(postgres, dep_node_id)
-        key_path = properties['cloudify_agent']['key']
-        key_path = os.path.expanduser(key_path)
-        ctx.logger.debug('Agent key path in db: {0}'.format(key_path))
-        return key_path
-
-    def _get_node_properties(self, postgres, dep_node_id):
-        """Retrieve node properties from the DB
-        """
-        query = self._get_node_properties_query(dep_node_id)
-        result = postgres.run_query(query)
-        pickled_buffer = result['all'][0][0]
-        return pickle.loads(pickled_buffer)
+        query = "SELECT nodes.id, deployments.id, properties " \
+                "FROM nodes JOIN deployments " \
+                "ON nodes._deployment_fk = deployments._storage_id;"
+        return self._postgres.run_query(query)['all']
 
     @staticmethod
-    def _get_node_properties_query(dep_node_id):
-        """Create an SQL query that retrieves node properties from the DB
+    def _get_agent_config(node_properties):
+        """cloudify_agent is deprecated, but still might be used in older
+        systems, so we try to gather the agent config from both sources
         """
-        deployment_id, node_id = dep_node_id.split('_')
-        return "SELECT properties FROM nodes " \
-               "JOIN deployments on " \
-               "nodes._deployment_fk = deployments._storage_id " \
-               "WHERE nodes.id = '{0}' " \
-               "AND deployments.id = '{1}';" \
-               "".format(node_id, deployment_id)
+        cloudify_agent = node_properties.get('cloudify_agent', {})
+        agent_config = node_properties.get('agent_config', {})
+        agent_config.update(cloudify_agent)
+        return agent_config
+
+    def _create_agent_key_path_dict(self):
+        agent_key_path_dict = dict()
+        result = self._get_node_properties_query_result()
+        for elem in result:
+            node_id = elem[0]
+            deployment_id = elem[1]
+            node_properties = pickle.loads(elem[2])
+            agent_config = self._get_agent_config(node_properties)
+            if 'key' in agent_config:
+                agent_key_path = agent_config['key']
+                key = deployment_id + '_' + node_id
+                agent_key_path_dict[key] = os.path.expanduser(agent_key_path)
+        return agent_key_path_dict
