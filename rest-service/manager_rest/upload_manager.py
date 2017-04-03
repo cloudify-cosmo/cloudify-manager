@@ -615,9 +615,10 @@ class UploadedPluginsManager(UploadedDataManager):
                                  file_server_root,
                                  archive_target_path,
                                  **kwargs):
-        new_plugin = self._create_plugin_from_archive(data_id,
-                                                      archive_target_path)
         args = self._get_args()
+        new_plugin = self._create_plugin_from_archive(data_id,
+                                                      archive_target_path,
+                                                      args.private_resource)
         filter_by_name = {'package_name': new_plugin.package_name}
         sm = get_resource_manager().sm
         plugins = sm.list(Plugin, filters=filter_by_name)
@@ -631,11 +632,14 @@ class UploadedPluginsManager(UploadedDataManager):
                                        package_name=new_plugin.package_name,
                                        version=new_plugin.package_version))
         else:
-            sm.put(new_plugin, args.private_resource)
+            sm.put(new_plugin)
 
         return new_plugin, new_plugin.archive_name
 
-    def _create_plugin_from_archive(self, plugin_id, archive_path):
+    def _create_plugin_from_archive(self,
+                                    plugin_id,
+                                    archive_path,
+                                    private_resource):
         plugin = self._load_plugin_package_json(archive_path)
         build_props = plugin.get('build_server_os_properties')
         return Plugin(
@@ -651,7 +655,9 @@ class UploadedPluginsManager(UploadedDataManager):
             wheels=plugin.get('wheels'),
             excluded_wheels=plugin.get('excluded_wheels'),
             supported_py_versions=plugin.get('supported_python_versions'),
-            uploaded_at=get_formatted_timestamp())
+            uploaded_at=get_formatted_timestamp(),
+            private_resource=private_resource
+        )
 
     @staticmethod
     def _load_plugin_package_json(tar_source):

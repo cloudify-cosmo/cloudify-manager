@@ -99,8 +99,7 @@ class ModifyTests(base_test.BaseServerTestCase):
 
         before_modification = self._get_items(
             self.client.node_instances.list,
-            deployment_id=deployment.id,
-            fix_node_instances=True
+            deployment_id=deployment.id
         )
         modified_nodes = {'node1': {'instances': 2}}
         modification = self.client.deployment_modifications.start(
@@ -129,12 +128,10 @@ class ModifyTests(base_test.BaseServerTestCase):
                          DeploymentModification.STARTED)
 
         before_end = self._get_items(self.client.node_instances.list,
-                                     deployment_id=deployment.id,
-                                     fix_node_instances=True)
+                                     deployment_id=deployment.id)
         end_func(modification_id)
         after_end = self._get_items(self.client.node_instances.list,
-                                    deployment_id=deployment.id,
-                                    fix_node_instances=True)
+                                    deployment_id=deployment.id)
 
         node_assertions(**expected_end_node_counts)
 
@@ -166,8 +163,7 @@ class ModifyTests(base_test.BaseServerTestCase):
         self.assertEqual(all_modifications, dep_modifications)
         modifications_list = self._get_items(
             self.client.deployment_modifications.list,
-            deployment_id='i_really_should_not_exist',
-            fix_node_instances=True
+            deployment_id='i_really_should_not_exist'
         )
         self.assertEqual([], modifications_list)
         self._assert_instances_equal(
@@ -207,20 +203,12 @@ class ModifyTests(base_test.BaseServerTestCase):
                 for node_instance in node_instances:
                     node_instance.pop('scaling_groups', None)
 
-    def _get_items(self, list_func, fix_node_instances=False, *args, **kwargs):
+    def _get_items(self, list_func, *args, **kwargs):
         if CLIENT_API_VERSION != 'v1':
             items = list_func(*args, **kwargs).items
         else:
             items = list_func(*args, **kwargs)
-        if fix_node_instances:
-            self._fix_node_instances(items)
         return items
-
-    @staticmethod
-    def _fix_node_instances(node_instances):
-        if CLIENT_API_VERSION >= 3:
-            for node_instance in node_instances:
-                node_instance.pop('permission', None)
 
     def test_no_concurrent_modifications(self):
         blueprint_id, _, _, deployment = self.put_deployment(

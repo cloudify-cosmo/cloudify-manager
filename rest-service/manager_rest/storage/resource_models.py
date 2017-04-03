@@ -28,12 +28,7 @@ from .models_base import (
     UTCDateTime,
 )
 from .relationships import foreign_key, one_to_many_relationship
-from .resource_models_base import (TopLevelResource,
-                                   DerivedResource,
-                                   SQLResourceBase)
-from .mixins import (DerivedTenantMixin,
-                     TopLevelCreatorMixin,
-                     TopLevelMixin)
+from .resource_models_base import SQLResourceBase
 from .models_states import (DeploymentModificationState,
                             SnapshotState,
                             ExecutionState)
@@ -41,11 +36,11 @@ from .models_states import (DeploymentModificationState,
 
 # region Top Level Resources
 
-class Blueprint(TopLevelResource):
+class Blueprint(SQLResourceBase):
     __tablename__ = 'blueprints'
 
     skipped_fields = dict(
-        TopLevelResource.skipped_fields,
+        SQLResourceBase.skipped_fields,
         v1=['main_file_name', 'description']
     )
 
@@ -56,7 +51,7 @@ class Blueprint(TopLevelResource):
     description = db.Column(db.Text)
 
 
-class Snapshot(TopLevelResource):
+class Snapshot(SQLResourceBase):
     __tablename__ = 'snapshots'
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
@@ -64,7 +59,7 @@ class Snapshot(TopLevelResource):
     error = db.Column(db.Text)
 
 
-class Plugin(TopLevelResource):
+class Plugin(SQLResourceBase):
     __tablename__ = 'plugins'
 
     archive_name = db.Column(db.Text, nullable=False, index=True)
@@ -81,7 +76,7 @@ class Plugin(TopLevelResource):
     wheels = db.Column(db.PickleType, nullable=False)
 
 
-class Secret(TopLevelResource):
+class Secret(SQLResourceBase):
     __tablename__ = 'secrets'
 
     value = db.Column(db.Text)
@@ -103,11 +98,11 @@ class Secret(TopLevelResource):
 # region Derived Resources
 
 
-class Deployment(TopLevelCreatorMixin, DerivedTenantMixin, SQLResourceBase):
+class Deployment(SQLResourceBase):
     __tablename__ = 'deployments'
 
     skipped_fields = dict(
-        TopLevelResource.skipped_fields,
+        SQLResourceBase.skipped_fields,
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
@@ -130,16 +125,7 @@ class Deployment(TopLevelCreatorMixin, DerivedTenantMixin, SQLResourceBase):
     def blueprint(cls):
         return one_to_many_relationship(cls, Blueprint, cls._blueprint_fk)
 
-    @hybrid_property
-    def parent(self):
-        return self.blueprint
-
-    @parent.expression
-    def parent(cls):
-        return Blueprint
-
     blueprint_id = association_proxy('blueprint', 'id')
-    _tenant_id = association_proxy('blueprint', '_tenant_id')
 
     @classproperty
     def response_fields(cls):
@@ -164,8 +150,12 @@ class Deployment(TopLevelCreatorMixin, DerivedTenantMixin, SQLResourceBase):
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.iteritems()]
 
+    def set_blueprint(self, blueprint):
+        self._set_parent(blueprint)
+        self.blueprint = blueprint
 
-class Execution(TopLevelMixin, SQLResourceBase):
+
+class Execution(SQLResourceBase):
     __tablename__ = 'executions'
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
@@ -186,21 +176,17 @@ class Execution(TopLevelMixin, SQLResourceBase):
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
 
-    @hybrid_property
-    def parent(self):
-        return self.deployment
-
-    @parent.expression
-    def parent(cls):
-        return Deployment
-
     def _get_identifier_dict(self):
         id_dict = super(Execution, self)._get_identifier_dict()
         id_dict['status'] = self.status
         return id_dict
 
+    def set_deployment(self, deployment):
+        self._set_parent(deployment)
+        self.deployment = deployment
 
-class Event(DerivedResource):
+
+class Event(SQLResourceBase):
 
     """Execution events."""
 
@@ -213,25 +199,20 @@ class Event(DerivedResource):
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
 
-    _execution_fk = foreign_key(Execution._storage_id, nullable=False)
+    _execution_fk = foreign_key(Execution._storage_id)
 
     @declared_attr
     def execution(cls):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
-    _tenant_id = association_proxy('execution', '_tenant_id')
 
-    @hybrid_property
-    def parent(self):
-        return self.execution
-
-    @parent.expression
-    def parent(cls):
-        return Execution
+    def set_execution(self, execution):
+        self._set_parent(execution)
+        self.execution = execution
 
 
-class Log(DerivedResource):
+class Log(SQLResourceBase):
 
     """Execution logs."""
 
@@ -245,25 +226,20 @@ class Log(DerivedResource):
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
 
-    _execution_fk = foreign_key(Execution._storage_id, nullable=False)
+    _execution_fk = foreign_key(Execution._storage_id)
 
     @declared_attr
     def execution(cls):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
     execution_id = association_proxy('execution', 'id')
-    _tenant_id = association_proxy('execution', '_tenant_id')
 
-    @hybrid_property
-    def parent(self):
-        return self.execution
-
-    @parent.expression
-    def parent(cls):
-        return Execution
+    def set_execution(self, execution):
+        self._set_parent(execution)
+        self.execution = execution
 
 
-class DeploymentUpdate(DerivedResource):
+class DeploymentUpdate(SQLResourceBase):
     __tablename__ = 'deployment_updates'
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
@@ -285,17 +261,8 @@ class DeploymentUpdate(DerivedResource):
     def deployment(cls):
         return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
 
-    @hybrid_property
-    def parent(self):
-        return self.deployment
-
-    @parent.expression
-    def parent(cls):
-        return Deployment
-
     deployment_id = association_proxy('deployment', 'id')
     execution_id = association_proxy('execution', 'id')
-    _tenant_id = association_proxy('deployment', '_tenant_id')
 
     @classproperty
     def response_fields(cls):
@@ -311,8 +278,12 @@ class DeploymentUpdate(DerivedResource):
         dep_update_dict['steps'] = [step.to_dict() for step in self.steps]
         return dep_update_dict
 
+    def set_deployment(self, deployment):
+        self._set_parent(deployment)
+        self.deployment = deployment
 
-class DeploymentUpdateStep(DerivedResource):
+
+class DeploymentUpdateStep(SQLResourceBase):
     __tablename__ = 'deployment_update_steps'
 
     action = db.Column(db.Enum(*ACTION_TYPES, name='action_type'))
@@ -328,19 +299,14 @@ class DeploymentUpdateStep(DerivedResource):
                                         cls._deployment_update_fk,
                                         backreference='steps')
 
-    @hybrid_property
-    def parent(self):
-        return self.deployment_update
-
-    @parent.expression
-    def parent(cls):
-        return DeploymentUpdate
-
     deployment_update_id = association_proxy('deployment_update', 'id')
-    _tenant_id = association_proxy('deployment_update', '_tenant_id')
+
+    def set_deployment_update(self, deployment_update):
+        self._set_parent(deployment_update)
+        self.deployment_update = deployment_update
 
 
-class DeploymentModification(DerivedResource):
+class DeploymentModification(SQLResourceBase):
     __tablename__ = 'deployment_modifications'
 
     context = db.Column(db.PickleType)
@@ -362,24 +328,19 @@ class DeploymentModification(DerivedResource):
                                         cls._deployment_fk,
                                         backreference='modifications')
 
-    @hybrid_property
-    def parent(self):
-        return self.deployment
-
-    @parent.expression
-    def parent(cls):
-        return Deployment
-
     deployment_id = association_proxy('deployment', 'id')
-    _tenant_id = association_proxy('deployment', '_tenant_id')
+
+    def set_deployment(self, deployment):
+        self._set_parent(deployment)
+        self.deployment = deployment
 
 
-class Node(DerivedResource):
+class Node(SQLResourceBase):
     __tablename__ = 'nodes'
 
     is_id_unique = False
     skipped_fields = dict(
-        TopLevelResource.skipped_fields,
+        SQLResourceBase.skipped_fields,
         v1=['max_number_of_instances', 'min_number_of_instances'],
         v2=['max_number_of_instances', 'min_number_of_instances']
     )
@@ -406,24 +367,19 @@ class Node(DerivedResource):
     def deployment(cls):
         return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
 
-    @hybrid_property
-    def parent(self):
-        return self.deployment
-
-    @parent.expression
-    def parent(cls):
-        return Deployment
-
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
-    _tenant_id = association_proxy('deployment', '_tenant_id')
+
+    def set_deployment(self, deployment):
+        self._set_parent(deployment)
+        self.deployment = deployment
 
 
-class NodeInstance(DerivedResource):
+class NodeInstance(SQLResourceBase):
     __tablename__ = 'node_instances'
 
     skipped_fields = dict(
-        TopLevelResource.skipped_fields,
+        SQLResourceBase.skipped_fields,
         v1=['scaling_groups'],
         v2=['scaling_groups']
     )
@@ -443,16 +399,11 @@ class NodeInstance(DerivedResource):
     def node(cls):
         return one_to_many_relationship(cls, Node, cls._node_fk)
 
-    @hybrid_property
-    def parent(self):
-        return self.node
-
-    @parent.expression
-    def parent(cls):
-        return Node
-
     node_id = association_proxy('node', 'id')
     deployment_id = association_proxy('node', 'deployment_id')
-    _tenant_id = association_proxy('node', '_tenant_id')
+
+    def set_node(self, node):
+        self._set_parent(node)
+        self.node = node
 
 # endregion

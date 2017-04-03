@@ -148,17 +148,17 @@ class SQLStorageManager(object):
         if not model_class.is_resource:
             return query
 
+        # If an admin passed the `all_tenants` flag, no need to filter
         if current_user.is_admin and all_tenants:
-            tenants = []
-        elif all_tenants:
-            tenants = current_user.all_tenants
-        else:
-            tenants = [self.current_tenant]
+            return query
 
-        # Filter by the `tenant_id` column. If tenant's list is empty, clauses
-        # will not have effect on the query.
-        clauses = [model_class._tenant_id == tenant.id for tenant in tenants]
-        return query.filter(sql_or(*clauses))
+        if all_tenants:
+            tenant_ids = [tenant.id for tenant in current_user.all_tenants]
+        else:
+            tenant_ids = [self.current_tenant.id]
+
+        # Match any of the applicable tenant ids
+        return query.filter(model_class._tenant_id.in_(tenant_ids))
 
     @staticmethod
     def _add_permissions_filter(query, model_class):
@@ -171,16 +171,10 @@ class SQLStorageManager(object):
         if not model_class.is_resource or current_user.is_admin:
             return query
 
-        # Only get resources where the current user appears in `viewers` or
-        # `owners` *or* where the `viewers` list is empty (meaning that this
-        # resource is public) *or* where the current user is the creator
+        # Only get resources that are public - not private (note that ~ stands
+        # for NOT, in SQLA), *or* those where the current user is the creator
         user_filter = sql_or(
-            sql_or(
-                model_class.viewers.any(id=current_user.id),
-                model_class.owners.any(id=current_user.id)
-            ),
-            # ~ means `not` - i.e. all resources that don't have any viewers
-            ~model_class.viewers.any(),
+            ~model_class.private_resource,
             model_class.creator == current_user
         )
         return query.filter(user_filter)
@@ -366,18 +360,14 @@ class SQLStorageManager(object):
                 )
             )
 
-    def _associate_users_and_tenants(self, instance, private_resource):
+    def _associate_users_and_tenants(self, instance):
         """Associate, if necessary, the instance with the current tenant/user
         """
-        if instance.top_level_tenant:
-            instance.tenant = self.current_tenant
-        if instance.top_level_creator:
-            instance.creator = current_user
-
-            # If it's a private resource, the creator is the only viewer/owner
-            if private_resource:
-                instance.owners = [current_user]
-                instance.viewers = [current_user]
+        if instance.is_resource:
+            if not instance.tenant:
+                instance.tenant = self.current_tenant
+            if not instance.creator:
+                instance.creator = current_user
 
     @staticmethod
     def _load_relationships(instance):
@@ -461,16 +451,14 @@ class SQLStorageManager(object):
         current_app.logger.debug('Returning: {0}'.format(results))
         return ListResult(items=results, metadata={'pagination': pagination})
 
-    def put(self, instance, private_resource=False):
+    def put(self, instance):
         """Create a `model_class` instance from a serializable `model` object
 
         :param instance: An instance of the SQLModelBase class (or some class
         derived from it)
-        :param private_resource: If set to True, the resource's `viewers` list
-        will be populated by the creating user only
         :return: The same instance, with the tenant set, if necessary
         """
-        self._associate_users_and_tenants(instance, private_resource)
+        self._associate_users_and_tenants(instance)
         current_app.logger.debug('Put {0}'.format(instance))
         self.update(instance, log=False)
 

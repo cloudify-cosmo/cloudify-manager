@@ -139,7 +139,7 @@ class DeploymentUpdateManager(object):
             deployment_plan=prepared_plan,
             created_at=utils.get_formatted_timestamp()
         )
-        deployment_update.deployment = deployment
+        deployment_update.set_deployment(deployment)
         self.sm.put(deployment_update)
         return deployment_update
 
@@ -163,7 +163,7 @@ class DeploymentUpdateManager(object):
             entity_id=entity_id,
         )
         deployment_update = self.get_deployment_update(deployment_update_id)
-        step.deployment_update = deployment_update
+        step.set_deployment_update(deployment_update)
         return self.sm.put(step)
 
     def extract_steps_from_deployment_update(self, deployment_update):
@@ -501,7 +501,7 @@ class DeploymentUpdateManager(object):
             is_system_workflow=False)
 
         if deployment:
-            new_execution.deployment = deployment
+            new_execution.set_deployment(deployment)
             deployment_update.execution = new_execution
         self.sm.put(new_execution)
 

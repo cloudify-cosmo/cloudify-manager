@@ -24,8 +24,8 @@ from manager_rest.deployment_update.constants import PHASES
 from manager_rest import config
 from manager_rest import manager_exceptions
 from manager_rest import utils
+from manager_rest.storage import models
 from manager_rest.security import SecuredResource
-from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
@@ -135,15 +135,9 @@ class DeploymentUpdate(SecuredResource):
         :param phase: initiate or finalize
         :return: update response
         """
-        sm = get_storage_manager()
-        rm = get_resource_manager()
         if phase == PHASES.INITIAL:
-            deployment = sm.get(models.Deployment, id)
-            rm.assert_user_has_modify_permissions(deployment)
             return self._commit(id)
         elif phase == PHASES.FINAL:
-            deployment = sm.get(models.DeploymentUpdate, id).deployment
-            rm.assert_user_has_modify_permissions(deployment)
             return get_deployment_updates_manager().finalize_commit(id)
 
     @staticmethod

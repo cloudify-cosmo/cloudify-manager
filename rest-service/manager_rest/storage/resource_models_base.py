@@ -13,17 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask_security import current_user
-from flask_restful import fields as flask_fields
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
 from manager_rest.utils import classproperty
-from manager_rest.constants import (OWNER_PERMISSION,
-                                    VIEWER_PERMISSION,
-                                    CREATOR_PERMISSION)
 
 from .models_base import db, SQLModelBase
-from .mixins import TopLevelMixin, DerivedMixin
+from .management_models import Tenant, User
+from .relationships import one_to_many_relationship, foreign_key
 
 
 class SQLResourceBase(SQLModelBase):
@@ -40,7 +37,7 @@ class SQLResourceBase(SQLModelBase):
     # Indicates whether the `id` column in this class should be unique
     is_id_unique = True
 
-    _extra_fields = {'permission': flask_fields.String}
+    _extra_fields = {}
 
     # Lists of fields to skip when using older versions of the client
     skipped_fields = {'v1': [], 'v2': [], 'v2.1': []}
@@ -58,18 +55,25 @@ class SQLResourceBase(SQLModelBase):
     # Some must-have columns for all resources
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
+    private_resource = db.Column(db.Boolean, default=False)
     tenant_name = association_proxy('tenant', 'name')
     created_by = association_proxy('creator', 'username')
 
-    @property
-    def permission(self):
-        if self.creator == current_user:
-            return CREATOR_PERMISSION
-        if current_user in self.owners:
-            return OWNER_PERMISSION
-        if current_user in self.viewers:
-            return VIEWER_PERMISSION
-        return ''
+    @declared_attr
+    def _tenant_id(cls):
+        return foreign_key(Tenant.id)
+
+    @declared_attr
+    def _creator_id(cls):
+        return foreign_key(User.id)
+
+    @declared_attr
+    def tenant(cls):
+        return one_to_many_relationship(cls, Tenant, cls._tenant_id, 'id')
+
+    @declared_attr
+    def creator(cls):
+        return one_to_many_relationship(cls, User, cls._creator_id, 'id')
 
     def to_response(self, **kwargs):
         return {f: getattr(self, f) for f in self.response_fields}
@@ -79,12 +83,14 @@ class SQLResourceBase(SQLModelBase):
         id_dict['tenant'] = self.tenant_name
         return id_dict
 
-
-class TopLevelResource(TopLevelMixin, SQLResourceBase):
-    # SQLAlchemy syntax
-    __abstract__ = True
-
-
-class DerivedResource(DerivedMixin, SQLResourceBase):
-    # SQLAlchemy syntax
-    __abstract__ = True
+    def _set_parent(self, parent_instance):
+        """A convenient method for derived resources to update
+        several fields that they always inherit from the parents
+        """
+        # We make sure the SQL query that creates the resource doesn't
+        # get flushed to the DB, because it is still lacking data (the parent's
+        # foreign key)
+        with db.session.no_autoflush:
+            self.creator = parent_instance.creator
+            self.tenant = parent_instance.tenant
+            self.private_resource = parent_instance.private_resource

@@ -75,7 +75,6 @@ def setup_resources(api):
         'Cluster': 'cluster',
         'ClusterNodes': 'cluster/nodes',
         'ClusterNodesId': 'cluster/nodes/<string:node_id>',
-        'Permissions': 'permissions',
         'FileServerAuth': 'file-server-auth',
         'LdapAuthentication': 'ldap',
         'Secrets': 'secrets',

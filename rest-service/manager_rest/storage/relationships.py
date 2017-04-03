@@ -31,6 +31,7 @@ def foreign_key(foreign_key_column, nullable=False):
 def one_to_many_relationship(child_class,
                              parent_class,
                              foreign_key_column,
+                             parent_class_primary_key='_storage_id',
                              backreference=None):
     """Return a one-to-many SQL relationship object
     Meant to be used from inside the *child* object
@@ -38,13 +39,15 @@ def one_to_many_relationship(child_class,
     :param parent_class: Class of the parent table
     :param child_class: Class of the child table
     :param foreign_key_column: The column of the foreign key
+    :param parent_class_primary_key: The name of the parent's primary key
     :param backreference: The name to give to the reference to the child
     """
     backreference = backreference or child_class.__tablename__
+    parent_primary_key = getattr(parent_class, parent_class_primary_key)
     return db.relationship(
         parent_class,
-        primaryjoin=lambda: parent_class._storage_id == foreign_key_column,
-        # The following line make sure that when the *parent* is
+        primaryjoin=lambda: parent_primary_key == foreign_key_column,
+        # The following line makes sure that when the *parent* is
         # deleted, all its connected children are deleted as well
         backref=db.backref(backreference, cascade='all')
     )

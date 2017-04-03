@@ -141,6 +141,7 @@ class SelectEventsBaseTest(TestCase):
                 created_at=fake.date_time(),
                 _blueprint_fk=choice(blueprints)._storage_id,
                 _creator_id=fake.uuid4(),
+                _tenant_id=fake.uuid4()
             )
             for _ in xrange(self.DEPLOYMENT_COUNT)
         ]
@@ -172,6 +173,8 @@ class SelectEventsBaseTest(TestCase):
                 planned_number_of_instances=1,
                 type='<type>',
                 _deployment_fk=choice(deployments)._storage_id,
+                _tenant_id=choice(deployments)._tenant_id,
+                _creator_id=choice(deployments)._creator_id,
             )
             for _ in xrange(self.NODE_COUNT)
         ]
@@ -183,6 +186,8 @@ class SelectEventsBaseTest(TestCase):
                 id='node_instance_{}'.format(fake.uuid4()),
                 state='<state>',
                 _node_fk=choice(nodes)._storage_id,
+                _tenant_id=choice(nodes)._tenant_id,
+                _creator_id=choice(nodes)._creator_id,
             )
             for _ in xrange(self.NODE_INSTANCE_COUNT)
         ]
@@ -195,6 +200,8 @@ class SelectEventsBaseTest(TestCase):
                 id='event_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
+                _tenant_id=choice(executions)._tenant_id,
+                _creator_id=choice(executions)._creator_id,
                 node_id=choice(node_instances).id,
                 operation='<operation>',
                 event_type=choice(self.EVENT_TYPES),
@@ -208,6 +215,8 @@ class SelectEventsBaseTest(TestCase):
                 id='log_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
                 _execution_fk=choice(executions)._storage_id,
+                _tenant_id=choice(executions)._tenant_id,
+                _creator_id=choice(executions)._creator_id,
                 node_id=choice(node_instances).id,
                 operation='<operation>',
                 logger='<logger>',
