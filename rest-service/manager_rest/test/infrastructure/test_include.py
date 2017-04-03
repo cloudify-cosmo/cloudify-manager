@@ -171,3 +171,8 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
         self.assertEqual(response, {'blueprint_id': 'a'})
         response = self.client.deployments.get('b', _include=['blueprint_id'])
         self.assertEqual(response, {'blueprint_id': 'b'})
+
+    def test_created_by_include(self):
+        self.put_deployment(deployment_id='a', blueprint_id='a')
+        response = self.client.deployments.get('a', _include=['created_by'])
+        self.assertEqual(response, {'created_by': 'admin'})
