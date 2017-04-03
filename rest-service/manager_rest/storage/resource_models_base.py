@@ -56,8 +56,6 @@ class SQLResourceBase(SQLModelBase):
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
     private_resource = db.Column(db.Boolean, default=False)
-    tenant_name = association_proxy('tenant', 'name')
-    created_by = association_proxy('creator', 'username')
 
     @declared_attr
     def _tenant_id(cls):
@@ -74,6 +72,14 @@ class SQLResourceBase(SQLModelBase):
     @declared_attr
     def creator(cls):
         return one_to_many_relationship(cls, User, cls._creator_id, 'id')
+
+    @declared_attr
+    def tenant_name(cls):
+        return association_proxy('tenant', 'name')
+
+    @declared_attr
+    def created_by(cls):
+        return association_proxy('creator', 'username')
 
     def to_response(self, **kwargs):
         return {f: getattr(self, f) for f in self.response_fields}
