@@ -360,6 +360,32 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
 
+    def test_filter_by_event_type_and_type_cloudify_log(self):
+        """Filter events by even_type and type cloudify_log."""
+        event_type = choice(self.EVENT_TYPES)
+        filters = {
+            'event_type': [event_type],
+            'type': ['cloudify_log']
+        }
+
+        query = EventsV1._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+
+        count_query = EventsV1._build_count_query(
+            filters,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+
+        # logs don't have event_type, so query should return no results
+        expected_events = []
+        self.assertListEqual(events, expected_events)
+        self.assertEqual(event_count, len(expected_events))
+
     def test_filter_by_level(self):
         """Filter events by level."""
         level = choice(self.LOG_LEVELS)
@@ -381,6 +407,32 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         ]
         expected_event_ids = [event.id for event in expected_events]
         self.assertListEqual(event_ids, expected_event_ids)
+
+    def test_filter_by_level_and_type_cloudify_event(self):
+        """Filter events by level and type cloudify_event."""
+        level = choice(self.LOG_LEVELS)
+        filters = {
+            'level': [level],
+            'type': ['cloudify_event']
+        }
+
+        query = EventsV1._build_select_query(
+            filters,
+            self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+
+        count_query = EventsV1._build_count_query(
+            filters,
+            self.DEFAULT_RANGE_FILTERS,
+        )
+        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+
+        # events don't have level, so query should return no results
+        expected_events = []
+        self.assertListEqual(events, expected_events)
+        self.assertEqual(event_count, len(expected_events))
 
     def filter_by_message_helper(self, message_field):
         """Filter events by message field."""

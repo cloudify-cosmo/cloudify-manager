@@ -257,13 +257,21 @@ class Events(SecuredResource):
                 Log, filters, range_filters)
             subqueries.append(logs_query)
 
-        query = reduce(lambda left, right: left.union(right), subqueries)
-        query = Events._apply_sort(query, sort)
-        query = (
-            query
-            .limit(bindparam('limit'))
-            .offset(bindparam('offset'))
-        )
+        if subqueries:
+            query = reduce(lambda left, right: left.union(right), subqueries)
+            query = Events._apply_sort(query, sort)
+            query = (
+                query
+                .limit(bindparam('limit'))
+                .offset(bindparam('offset'))
+            )
+        else:
+            # Simple query that returns no results
+            # Used when filtering by a field that doesn't exist for a type
+            query = (
+                db.session.query(Event.timestamp)
+                .filter(Event.timestamp is None)
+            )
 
         return query
 
@@ -369,17 +377,26 @@ class Events(SecuredResource):
             'Filters is expected to be a dictionary'
 
         subqueries = []
-        if 'type' not in filters or 'cloudify_event' in filters['type']:
+        if (('type' not in filters or 'cloudify_event' in filters['type']) and
+                ('level' not in filters)):
             events_query = Events._build_count_subquery(
                 Event, filters, range_filters)
             subqueries.append(events_query)
 
-        if 'type' not in filters or 'cloudify_log' in filters['type']:
+        if (('type' not in filters or 'cloudify_log' in filters['type']) and
+                ('event_type' not in filters)):
             logs_query = Events._build_count_subquery(
                 Log, filters, range_filters)
             subqueries.append(logs_query)
 
-        query = db.session.query(sum(subqueries))
+        if subqueries:
+            query = db.session.query(sum(subqueries))
+        else:
+            query = (
+                db.session.query(func.count('*').label('count'))
+                .filter(Event.timestamp is None)
+            )
+
         return query
 
     @staticmethod
@@ -403,6 +420,7 @@ class Events(SecuredResource):
             .filter(
                 model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
+                Deployment._blueprint_fk == Blueprint._storage_id,
             )
         )
 
