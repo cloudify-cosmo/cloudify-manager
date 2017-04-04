@@ -30,7 +30,6 @@ from manager_rest.security import (SecuredResource,
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError)
-from manager_rest.security.resource_permissions import PermissionsHandler
 
 from .. import utils
 from . import rest_decorators, rest_utils
@@ -420,33 +419,6 @@ class ClusterNodesId(ClusterResourceBase):
         Use this when a node is permanently down.
         """
         return cluster.remove_node(node_id)
-
-
-class Permissions(SecuredResource):
-    @staticmethod
-    def _get_and_validate_params():
-        return rest_utils.get_json_and_verify_params({
-            'resource_type': {},
-            'resource_id': {},
-            'users': {'type': list},
-            'permission': {'optional': True}
-        })
-
-    @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(ResourceID)
-    def put(self):
-        """Add permissions to a resource
-        """
-        params = self._get_and_validate_params()
-        return PermissionsHandler.add_permissions(params)
-
-    @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_with(ResourceID)
-    def delete(self):
-        """Remove permissions from a resource
-        """
-        params = self._get_and_validate_params()
-        return PermissionsHandler.remove_permissions(params)
 
 
 class FileServerAuth(SecuredMultiTenancyResourceSkipTenantAuth):

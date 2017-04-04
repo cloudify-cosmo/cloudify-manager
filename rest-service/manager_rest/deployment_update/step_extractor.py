@@ -166,14 +166,15 @@ class DeploymentPlan(dict):
         deployment_plan = deployment_update.deployment_plan
         deployment_id = deployment_update.deployment_id
 
-        blueprint_id = rm.sm.get(models.Deployment, deployment_id).blueprint_id
+        blueprint = deployment_update.deployment.blueprint
 
         deployment = rm.prepare_deployment_for_storage(
             deployment_id,
-            deployment_plan
+            deployment_plan,
+            blueprint
         )
         dep_dict = deployment.to_dict(suppress_error=True)
-        dep_dict['blueprint_id'] = blueprint_id
+        dep_dict['blueprint_id'] = blueprint.id
 
         deployment_plugins_to_install = \
             deployment_plan['deployment_plugins_to_install']

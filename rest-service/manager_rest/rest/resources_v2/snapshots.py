@@ -134,7 +134,6 @@ class SnapshotsId(SecuredResource):
     def delete(self, snapshot_id):
         sm = get_storage_manager()
         snapshot = sm.get(models.Snapshot, snapshot_id)
-        get_resource_manager().assert_user_has_modify_permissions(snapshot)
         sm.delete(snapshot)
         path = _get_snapshot_path(snapshot_id)
         shutil.rmtree(path, ignore_errors=True)
@@ -146,7 +145,6 @@ class SnapshotsId(SecuredResource):
         """
         request_dict = rest_utils.get_json_and_verify_params({'status'})
         snapshot = get_storage_manager().get(models.Snapshot, snapshot_id)
-        get_resource_manager().assert_user_has_modify_permissions(snapshot)
 
         snapshot.status = request_dict['status']
         snapshot.error = request_dict.get('error', '')

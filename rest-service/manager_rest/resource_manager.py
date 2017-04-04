@@ -29,7 +29,6 @@ from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
-from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.storage import get_storage_manager, models, get_node
 from manager_rest.storage.models_states import (SnapshotState,
                                                 ExecutionState,
@@ -119,8 +118,9 @@ class ResourceManager(object):
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
                                        status=status,
+                                       private_resource=private_resource,
                                        error='')
-        return self.sm.put(new_snapshot, private_resource)
+        return self.sm.put(new_snapshot)
 
     def create_snapshot(self,
                         snapshot_id,
@@ -207,7 +207,6 @@ class ResourceManager(object):
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists.
         plugin = self.sm.get(models.Plugin, plugin_id)
-        self.assert_user_has_modify_permissions(plugin)
 
         # Uninstall (if applicable)
         if utils.plugin_installable_on_current_platform(plugin):
@@ -277,12 +276,13 @@ class ResourceManager(object):
             description=plan.get('description'),
             created_at=now,
             updated_at=now,
-            main_file_name=application_file_name)
-        return self.sm.put(new_blueprint, private_resource)
+            main_file_name=application_file_name,
+            private_resource=private_resource
+        )
+        return self.sm.put(new_blueprint)
 
     def delete_blueprint(self, blueprint_id):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
-        self.assert_user_has_modify_permissions(blueprint)
 
         if len(blueprint.deployments) > 0:
             raise manager_exceptions.DependentExistsError(
@@ -300,7 +300,6 @@ class ResourceManager(object):
                           ignore_live_nodes=False):
         # Verify deployment exists.
         deployment = self.sm.get(models.Deployment, deployment_id)
-        self.assert_user_has_modify_permissions(deployment)
 
         # validate there are no running executions for this deployment
         deplyment_id_filter = self.create_filters_dict(
@@ -379,7 +378,7 @@ class ResourceManager(object):
             is_system_workflow=False)
 
         if deployment:
-            new_execution.deployment = deployment
+            new_execution.set_deployment(deployment)
         self.sm.put(new_execution)
 
         # executing the user workflow
@@ -468,7 +467,7 @@ class ResourceManager(object):
             is_system_workflow=is_system_workflow)
 
         if deployment:
-            execution.deployment = deployment
+            execution.set_deployment(deployment)
         self.sm.put(execution)
 
         async_task = workflow_executor.execute_system_workflow(
@@ -557,21 +556,24 @@ class ResourceManager(object):
         return self.sm.update(execution)
 
     @staticmethod
-    def prepare_deployment_for_storage(deployment_id, deployment_plan):
-        deployment = models.Deployment(id=deployment_id)
-
+    def prepare_deployment_for_storage(deployment_id,
+                                       deployment_plan,
+                                       blueprint):
         now = utils.get_formatted_timestamp()
-        deployment.created_at = now
-        deployment.updated_at = now
-        deployment.description = deployment_plan['description']
-        deployment.workflows = deployment_plan['workflows']
-        deployment.inputs = deployment_plan['inputs']
-        deployment.policy_types = deployment_plan['policy_types']
-        deployment.policy_triggers = deployment_plan['policy_triggers']
-        deployment.groups = deployment_plan['groups']
-        deployment.scaling_groups = deployment_plan['scaling_groups']
-        deployment.outputs = deployment_plan['outputs']
-
+        deployment = models.Deployment(
+            id=deployment_id,
+            created_at=now,
+            updated_at=now,
+            description=deployment_plan['description'],
+            workflows=deployment_plan['workflows'],
+            inputs=deployment_plan['inputs'],
+            policy_types=deployment_plan['policy_types'],
+            policy_triggers=deployment_plan['policy_triggers'],
+            groups=deployment_plan['groups'],
+            scaling_groups=deployment_plan['scaling_groups'],
+            outputs=deployment_plan['outputs'],
+        )
+        deployment.set_blueprint(blueprint)
         return deployment
 
     def prepare_deployment_nodes_for_storage(self,
@@ -629,7 +631,7 @@ class ResourceManager(object):
                 version=None,
                 scaling_groups=scaling_groups
             )
-            instance.node = node
+            instance.set_node(node)
             node_instances.append(instance)
 
         return node_instances
@@ -642,7 +644,7 @@ class ResourceManager(object):
         deployment = self.sm.get(models.Deployment, deployment_id)
 
         for node in nodes:
-            node.deployment = deployment
+            node.set_deployment(deployment)
             self.sm.put(node)
 
     def _create_deployment_node_instances(self,
@@ -674,9 +676,14 @@ class ResourceManager(object):
 
         new_deployment = self.prepare_deployment_for_storage(
             deployment_id,
-            deployment_plan)
-        new_deployment.blueprint = blueprint
-        self.sm.put(new_deployment, private_resource)
+            deployment_plan,
+            blueprint
+        )
+        # The deployment is private if either the blueprint was
+        # private, or the user passed the `private_resource` flag
+        private_resource = private_resource or blueprint.private_resource
+        new_deployment.private_resource = private_resource
+        self.sm.put(new_deployment)
 
         self._create_deployment_nodes(deployment_id, deployment_plan)
 
@@ -694,7 +701,6 @@ class ResourceManager(object):
                                       modified_nodes,
                                       context):
         deployment = self.sm.get(models.Deployment, deployment_id)
-        self.assert_user_has_modify_permissions(deployment)
 
         deployment_id_filter = self.create_filters_dict(
             deployment_id=deployment_id)
@@ -740,7 +746,7 @@ class ResourceManager(object):
             modified_nodes=modified_nodes,
             node_instances=node_instances_modification,
             context=context)
-        modification.deployment = deployment
+        modification.set_deployment(deployment)
         self.sm.put(modification)
 
         scaling_groups = deepcopy(deployment.scaling_groups)
@@ -810,7 +816,6 @@ class ResourceManager(object):
                 ' {1} status.'.format(modification_id,
                                       modification.status))
         deployment = self.sm.get(models.Deployment, modification.deployment_id)
-        self.assert_user_has_modify_permissions(deployment)
 
         modified_nodes = modification.modified_nodes
         scaling_groups = deepcopy(deployment.scaling_groups)
@@ -865,7 +870,6 @@ class ResourceManager(object):
                                         modification.status))
 
         deployment = self.sm.get(models.Deployment, modification.deployment_id)
-        self.assert_user_has_modify_permissions(deployment)
 
         deployment_id_filter = self.create_filters_dict(
             deployment_id=modification.deployment_id)
@@ -916,7 +920,7 @@ class ResourceManager(object):
         # Link the node instance object to to the node, and add it to the DB
         new_node_instance = models.NodeInstance(**instance_dict)
         node = get_node(deployment_id, node_id)
-        new_node_instance.node = node
+        new_node_instance.set_node(node)
         self.sm.put(new_node_instance)
 
         # Return the IDs to the dict for later use
@@ -1189,22 +1193,6 @@ class ResourceManager(object):
         self.sm.update(context_instance)
 
         app_context.update_parser_context(context_dict['context'])
-
-    @staticmethod
-    def assert_user_has_modify_permissions(resource):
-        """Assert that the current user has `owner` permissions on a given
-         resource, i.e. he's either the resource's creator, he is one of the
-         resource's owners or he's an admin.
-        """
-        if current_user.is_admin \
-                or resource.creator == current_user \
-                or current_user in resource.owners:
-            return
-
-        raise_unauthorized_user_error(
-            "{0} does not have permissions to "
-            "modify/delete {1}".format(current_user, resource)
-        )
 
 
 # What we need to access this manager in Flask
