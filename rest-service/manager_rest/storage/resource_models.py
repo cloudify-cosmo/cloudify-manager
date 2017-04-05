@@ -198,6 +198,7 @@ class Event(SQLResourceBase):
     event_type = db.Column(db.Text)
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
+    error_causes = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id)
 
