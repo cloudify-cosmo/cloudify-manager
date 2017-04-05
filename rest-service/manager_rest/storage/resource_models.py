@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from flask_restful import fields as flask_fields
+from sqlalchemy import func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -192,7 +193,13 @@ class Event(SQLResourceBase):
 
     __tablename__ = 'events'
 
-    timestamp = db.Column(LocalDateTime, nullable=False, index=True)
+    timestamp = db.Column(
+        LocalDateTime,
+        server_default=func.current_timestamp(),
+        nullable=False,
+        index=True,
+    )
+    reported_timestamp = db.Column(LocalDateTime, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
     event_type = db.Column(db.Text)
@@ -219,7 +226,13 @@ class Log(SQLResourceBase):
 
     __tablename__ = 'logs'
 
-    timestamp = db.Column(LocalDateTime, nullable=False, index=True)
+    timestamp = db.Column(
+        LocalDateTime,
+        server_default=func.current_timestamp(),
+        nullable=False,
+        index=True,
+    )
+    reported_timestamp = db.Column(LocalDateTime, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
     logger = db.Column(db.Text)
