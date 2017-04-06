@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 import re
 
 from collections import OrderedDict
@@ -86,6 +87,30 @@ class LocalDateTime(UTCDateTime):
             serialized_datetime = transformation(serialized_datetime)
 
         return serialized_datetime
+
+
+class JSONString(db.TypeDecorator):
+
+    """A json object stored as a string.
+
+    json encoding/decoding is handled by SQLAlchemy, so this type is database
+    agnostic and is not affected by differences in underlying JSON types
+    implementations.
+
+    """
+
+    impl = db.Text
+
+    def process_bind_param(self, value, dialect):
+        """Encode object to a string before inserting into database."""
+        return json.dumps(value)
+
+    def process_result_value(self, value, engine):
+        """Decode string to an object after selecting from database."""
+        if value is None:
+            return
+
+        return json.loads(value)
 
 
 class CIColumn(db.Column):

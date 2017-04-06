@@ -25,6 +25,7 @@ from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 
 from .models_base import (
     db,
+    JSONString,
     LocalDateTime,
     UTCDateTime,
 )
@@ -205,7 +206,7 @@ class Event(SQLResourceBase):
     event_type = db.Column(db.Text)
     operation = db.Column(db.Text)
     node_id = db.Column(db.Text)
-    error_causes = db.Column(db.Text)
+    error_causes = db.Column(JSONString)
 
     _execution_fk = foreign_key(Execution._storage_id)
 
