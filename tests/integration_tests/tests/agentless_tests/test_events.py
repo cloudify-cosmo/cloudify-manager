@@ -47,24 +47,23 @@ class EventsTest(AgentlessTestCase):
         self.assertListEqual(events.items, sorted_events)
 
     def test_filtered_events(self):
+        """Filter events by deployment."""
         # create multiple deployments
-        deployment_ids = []
-        for i in range(3):
-            deployment_ids.append(self._create_deployment())
+        deployment_ids = [self._create_deployment() for _ in range(3)]
 
         # filter a subset of the deployments
         expected_deployment_ids = deployment_ids[:2]
         filters = {'deployment_id': expected_deployment_ids}
         events = self._events_list(**filters)
 
-        deployments_with_events = \
-            {event['deployment_id'] for event in events}
-        self.assertEquals(sorted(deployments_with_events),
-                          sorted(expected_deployment_ids),
-                          'Expected events of deployment ids {0} exactly, '
-                          'received deployment ids {1} instead'
-                          .format(expected_deployment_ids,
-                                  deployments_with_events))
+        deployments_with_events = {event['deployment_id'] for event in events}
+        self.assertListEqual(
+            sorted(deployments_with_events),
+            sorted(expected_deployment_ids),
+            'Expected events of deployment ids {0} exactly, '
+            'received deployment ids {1} instead'
+            .format(expected_deployment_ids,
+                    deployments_with_events))
 
     def test_paginated_events(self):
         size = 5
