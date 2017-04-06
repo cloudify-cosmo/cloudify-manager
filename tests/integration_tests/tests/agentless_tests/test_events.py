@@ -30,11 +30,12 @@ class EventsTest(AgentlessTestCase):
                              'Expected events only')
 
     def test_timestamp_range(self):
+        """Filter events by timestamp range."""
         all_events = self._events_list(_sort='@timestamp')
         first_event = all_events[0]
         median_event = all_events[len(all_events) / 2 - 1]
-        min_time = first_event['@timestamp']
-        max_time = median_event['@timestamp']
+        min_time = first_event['timestamp']
+        max_time = median_event['timestamp']
         # get only half of the events by timestamp
         ranged_events = self._events_list(from_datetime=min_time,
                                           to_datetime=max_time)
