@@ -30,15 +30,20 @@ class EventsTest(AgentlessTestCase):
                              'Expected events only')
 
     def test_timestamp_range(self):
+        """Filter events by timestamp range."""
         all_events = self._events_list(_sort='@timestamp')
-        first_event = all_events[0]
-        median_event = all_events[len(all_events) / 2 - 1]
-        min_time = first_event['@timestamp']
-        max_time = median_event['@timestamp']
+        min_time = all_events[0]['timestamp']
+
+        expected_event_count, max_time = next(
+            (index, event['timestamp'])
+            for index, event in enumerate(all_events)
+            if event['timestamp'] > min_time
+        )
+
         # get only half of the events by timestamp
-        ranged_events = self._events_list(from_datetime=min_time,
-                                          to_datetime=max_time)
-        self.assertEquals(len(ranged_events), len(all_events) / 2)
+        ranged_events = self._events_list(
+            from_datetime=min_time, to_datetime=max_time)
+        self.assertEquals(len(ranged_events), expected_event_count)
 
     def test_sorted_events(self):
         events = self._events_list(_sort='-@timestamp')
@@ -47,24 +52,23 @@ class EventsTest(AgentlessTestCase):
         self.assertListEqual(events.items, sorted_events)
 
     def test_filtered_events(self):
+        """Filter events by deployment."""
         # create multiple deployments
-        deployment_ids = []
-        for i in range(3):
-            deployment_ids.append(self._create_deployment())
+        deployment_ids = [self._create_deployment() for _ in range(3)]
 
         # filter a subset of the deployments
         expected_deployment_ids = deployment_ids[:2]
         filters = {'deployment_id': expected_deployment_ids}
         events = self._events_list(**filters)
 
-        deployments_with_events = \
-            {event['context']['deployment_id'] for event in events}
-        self.assertEquals(sorted(deployments_with_events),
-                          sorted(expected_deployment_ids),
-                          'Expected events of deployment ids {0} exactly, '
-                          'received deployment ids {1} instead'
-                          .format(expected_deployment_ids,
-                                  deployments_with_events))
+        deployments_with_events = {event['deployment_id'] for event in events}
+        self.assertListEqual(
+            sorted(deployments_with_events),
+            sorted(expected_deployment_ids),
+            'Expected events of deployment ids {0} exactly, '
+            'received deployment ids {1} instead'
+            .format(expected_deployment_ids,
+                    deployments_with_events))
 
     def test_paginated_events(self):
         size = 5
@@ -81,6 +85,7 @@ class EventsTest(AgentlessTestCase):
                           skip_assertion=True)
 
     def test_search_event_message(self):
+        """Filter events by message pattern."""
         all_events = self._events_list()
         # checking partial word and case insensitivity ('sending')
         raw_message = 'SeNdIN'
@@ -90,12 +95,11 @@ class EventsTest(AgentlessTestCase):
         self.assertLess(len(searched_events), len(all_events))
         # assert all search results are relevant
         for event in searched_events:
-            self.assertIn(
-                raw_message.lower(),
-                event['message']['text'].lower())
+            self.assertIn(raw_message.lower(), event['message'].lower())
 
     def test_list_with_include_option(self):
-        _include = ['@timestamp', 'type']
+        """Include only desired fields."""
+        _include = ['timestamp', 'type']
         events = self._events_list(_include=_include)
         for event in events:
             self.assertListEqual(_include, event.keys(),
