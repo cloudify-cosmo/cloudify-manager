@@ -80,6 +80,7 @@ class EventsTest(AgentlessTestCase):
                           skip_assertion=True)
 
     def test_search_event_message(self):
+        """Filter events by message pattern."""
         all_events = self._events_list()
         # checking partial word and case insensitivity ('sending')
         raw_message = 'SeNdIN'
@@ -89,9 +90,7 @@ class EventsTest(AgentlessTestCase):
         self.assertLess(len(searched_events), len(all_events))
         # assert all search results are relevant
         for event in searched_events:
-            self.assertIn(
-                raw_message.lower(),
-                event['message']['text'].lower())
+            self.assertIn(raw_message.lower(), event['message'].lower())
 
     def test_list_with_include_option(self):
         _include = ['@timestamp', 'type']
