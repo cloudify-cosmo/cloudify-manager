@@ -58,7 +58,7 @@ class EventsTest(AgentlessTestCase):
         events = self._events_list(**filters)
 
         deployments_with_events = \
-            {event['context']['deployment_id'] for event in events}
+            {event['deployment_id'] for event in events}
         self.assertEquals(sorted(deployments_with_events),
                           sorted(expected_deployment_ids),
                           'Expected events of deployment ids {0} exactly, '
