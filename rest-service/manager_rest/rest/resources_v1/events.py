@@ -317,6 +317,7 @@ class Events(SecuredResource):
                 Execution.workflow_id.label('workflow_id'),
                 select_column('message'),
                 select_column('message_code'),
+                select_column('error_causes'),
                 select_column('event_type'),
                 select_column('operation'),
                 select_column('node_id'),
