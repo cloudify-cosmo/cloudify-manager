@@ -98,7 +98,8 @@ class EventsTest(AgentlessTestCase):
             self.assertIn(raw_message.lower(), event['message'].lower())
 
     def test_list_with_include_option(self):
-        _include = ['@timestamp', 'type']
+        """Include only desired fields."""
+        _include = ['timestamp', 'type']
         events = self._events_list(_include=_include)
         for event in events:
             self.assertListEqual(_include, event.keys(),
