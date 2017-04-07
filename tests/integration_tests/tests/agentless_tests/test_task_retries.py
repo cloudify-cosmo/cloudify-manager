@@ -118,12 +118,12 @@ class TaskRetriesTest(AgentlessTestCase):
                                              include_logs=True)
             self.assertGreater(len(events), 0)
             for event in events:
-                if 'Task rescheduled' in event['message']['text']:
+                if 'Task rescheduled' in event['message']:
                     break
             else:
                 self.fail('could not find expected message')
             for event in events:
-                if 'Retrying operation' in event['message']['text']:
+                if 'Retrying operation' in event['message']:
                     break
             else:
                 self.fail('could not find expected message')
@@ -154,7 +154,7 @@ class TaskRetriesTest(AgentlessTestCase):
                 if retries:
                     retry_msg = '[retry {0}/5]'.format(retries)
                     for task in (send_task, start_task, reschedule_task):
-                        msg = task['message']['text']
+                        msg = task['message']
                         self.assertTrue(msg.endswith(retry_msg))
                 retries += 1
 
