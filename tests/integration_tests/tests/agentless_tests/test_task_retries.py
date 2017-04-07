@@ -143,24 +143,13 @@ class TaskRetriesTest(AgentlessTestCase):
             # We should have 4 groups of 3 events - sending_task, task_started
             # and task rescheduled (in the last case it will be
             # task_succeeded). Thus setting the range's step to 3
-            sending_task_events = retry_events[::3]
-            self.assertTrue(all(
-                event['event_type'] == 'sending_task'
-                for event in sending_task_events))
-
-            task_started_events = retry_events[1::3]
-            self.assertTrue(all(
-                event['event_type'] == 'task_started'
-                for event in task_started_events))
-
-            task_rescheduled_events = retry_events[2:-1:3]
-            self.assertTrue(all(
-                event['event_type'] == 'task_rescheduled'
-                for event in task_rescheduled_events))
-
-            task_succeeded_event = retry_events[-1]
-            self.assertEqual(
-                task_succeeded_event['event_type'], 'task_succeeded')
+            event_types = ['sending_task', 'task_started', 'task_rescheduled']
+            for start_index, event_type in enumerate(event_types):
+                events_by_event_type = retry_events[start_index:-1:3]
+                self.assertTrue(all(
+                    event['event_type'] == event_type
+                    for event in events_by_event_type))
+            self.assertEqual(retry_events[-1]['event_type'], 'task_succeeded')
 
             for retry_attempt in xrange(1, 3):
                 retry_attempt_events = (
