@@ -117,16 +117,12 @@ class TaskRetriesTest(AgentlessTestCase):
             events = self.client.events.list(deployment_id=deployment_id,
                                              include_logs=True)
             self.assertGreater(len(events), 0)
-            for event in events:
-                if 'Task rescheduled' in event['message']:
-                    break
-            else:
-                self.fail('could not find expected message')
-            for event in events:
-                if 'Retrying operation' in event['message']:
-                    break
-            else:
-                self.fail('could not find expected message')
+            self.assertTrue(any(
+                'Task rescheduled' in event['message']
+                for event in events))
+            self.assertTrue(any(
+                'Retrying operation' in event['message']
+                for event in events))
 
             # We're looking only at the events from the create operation
             retry_events = [
