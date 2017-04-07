@@ -129,8 +129,11 @@ class TaskRetriesTest(AgentlessTestCase):
                 self.fail('could not find expected message')
 
             # We're looking only at the events from the create operation
-            retry_events = [e for e in events if e['context']['operation'] ==
-                            'cloudify.interfaces.lifecycle.create']
+            retry_events = [
+                event
+                for event in events
+                if event['operation'] == 'cloudify.interfaces.lifecycle.create'
+            ]
             retry_events = sorted(retry_events, key=lambda e: e['timestamp'])
             self.assertTrue(len(retry_events), 12)
 
