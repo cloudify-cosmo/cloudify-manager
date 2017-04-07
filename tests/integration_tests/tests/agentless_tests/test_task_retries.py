@@ -140,29 +140,36 @@ class TaskRetriesTest(AgentlessTestCase):
             )
             self.assertTrue(len(retry_events), 12)
 
-            retries = 0
             # We should have 4 groups of 3 events - sending_task, task_started
             # and task rescheduled (in the last case it will be
             # task_succeeded). Thus setting the range's step to 3
-            for i in range(0, 10, 3):
-                send_task = retry_events[i]
-                start_task = retry_events[i + 1]
-                reschedule_task = retry_events[i + 2]
-                self.assertEqual('sending_task', send_task['event_type'])
-                self.assertEqual('task_started', start_task['event_type'])
+            sending_task_events = retry_events[::3]
+            self.assertTrue(all(
+                event['event_type'] == 'sending_task'
+                for event in sending_task_events))
 
-                if retries < 3:  # The final retry should succeed
-                    self.assertEqual('task_rescheduled',
-                                     reschedule_task['event_type'])
-                else:
-                    self.assertEqual('task_succeeded',
-                                     reschedule_task['event_type'])
-                if retries:
-                    retry_msg = '[retry {0}/5]'.format(retries)
-                    for task in (send_task, start_task, reschedule_task):
-                        msg = task['message']
-                        self.assertTrue(msg.endswith(retry_msg))
-                retries += 1
+            task_started_events = retry_events[1::3]
+            self.assertTrue(all(
+                event['event_type'] == 'task_started'
+                for event in task_started_events))
+
+            task_rescheduled_events = retry_events[2:-1:3]
+            self.assertTrue(all(
+                event['event_type'] == 'task_rescheduled'
+                for event in task_rescheduled_events))
+
+            task_succeeded_event = retry_events[-1]
+            self.assertEqual(
+                task_succeeded_event['event_type'], 'task_succeeded')
+
+            for retry_attempt in xrange(1, 3):
+                retry_attempt_events = (
+                    retry_events[retry_attempt * 3:(retry_attempt + 1) * 3])
+                retry_msg = '[retry {0}/5]'.format(retry_attempt)
+                self.assertTrue(all(
+                    retry_task_event['message'].endswith(retry_msg)
+                    for retry_task_event in retry_attempt_events
+                ))
 
         # events are async so we may have to wait some
         self.do_assertions(assertion, timeout=120)
