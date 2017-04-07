@@ -130,7 +130,14 @@ class TaskRetriesTest(AgentlessTestCase):
                 for event in events
                 if event['operation'] == 'cloudify.interfaces.lifecycle.create'
             ]
-            retry_events = sorted(retry_events, key=lambda e: e['timestamp'])
+
+            # Note: sorting by timestamp and event_type to guarantee
+            # that # sending_task will come before task_started
+            # even if they have the same timestamp
+            retry_events = sorted(
+                retry_events,
+                key=lambda e: (e['timestamp'], e['event_type']),
+            )
             self.assertTrue(len(retry_events), 12)
 
             retries = 0
