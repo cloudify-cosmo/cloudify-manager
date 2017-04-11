@@ -132,11 +132,20 @@ class TaskRetriesTest(AgentlessTestCase):
             ]
 
             # Note: sorting by timestamp and event_type to guarantee
-            # that # sending_task will come before task_started
+            # that tasks will be correctly ordered
             # even if they have the same timestamp
+            event_type_sort_order = {
+                'sending_task': 0,
+                'task_started': 1,
+                'task_rescheduled': 2,
+                'task_succeeded': 3
+            }
             retry_events = sorted(
                 retry_events,
-                key=lambda e: (e['timestamp'], e['event_type']),
+                key=lambda e: (
+                    e['timestamp'],
+                    event_type_sort_order[e['event_type']],
+                ),
             )
             self.assertTrue(len(retry_events), 12)
 
