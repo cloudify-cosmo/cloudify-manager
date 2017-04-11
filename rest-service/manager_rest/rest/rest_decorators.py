@@ -106,14 +106,15 @@ class marshal_with(object):
         :param response_class: response class to marshal result with.
          class must have a "resource_fields" class variable
         """
-        if hasattr(response_class, 'response_fields'):
+        notset = object()
+        if getattr(response_class, 'response_fields', notset) is not notset:
             self._fields = response_class.response_fields
-        elif hasattr(response_class, 'resource_fields'):
+        elif getattr(response_class, 'resource_fields', notset) is not notset:
             self._fields = response_class.resource_fields
         else:
             raise RuntimeError(
                 'Response class {0} does not contain a "resource_fields" '
-                'class variable'.format(type(response_class)))
+                'class variable'.format(response_class))
 
         self.response_class = response_class
 

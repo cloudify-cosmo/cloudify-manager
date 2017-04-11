@@ -142,7 +142,10 @@ class SQLModelBase(db.Model):
         'PickleType': flask_fields.Raw,
         'UTCDateTime': flask_fields.String,
         'Enum': flask_fields.String,
-        'Boolean': flask_fields.Boolean
+        'Boolean': flask_fields.Boolean,
+        'LocalDateTime': flask_fields.String,
+        'JSONString': flask_fields.String,
+        'NullType': flask_fields.Raw
     }
 
     def to_dict(self, suppress_error=False):

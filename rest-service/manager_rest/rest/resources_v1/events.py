@@ -66,6 +66,7 @@ class Events(SecuredResource):
     # Map from old Elasticsearch field name to PostgreSQL one
     ES_TO_PG_FILTER_FIELD = {
         'message.text': 'message',
+        '@timestamp': 'timestamp'
     }
 
     @staticmethod

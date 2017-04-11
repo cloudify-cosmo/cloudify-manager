@@ -18,7 +18,6 @@ from sqlalchemy import func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
-
 from manager_rest.utils import classproperty
 from manager_rest.rest.responses import Workflow
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
@@ -30,14 +29,13 @@ from .models_base import (
     UTCDateTime,
 )
 from .relationships import foreign_key, one_to_many_relationship
-from .resource_models_base import SQLResourceBase
+from .resource_models_base import SQLResourceBase, SQLModelBase
 from .models_states import (DeploymentModificationState,
                             SnapshotState,
                             ExecutionState)
-
+from sqlalchemy.ext.declarative import AbstractConcreteBase
 
 # region Top Level Resources
-
 class Blueprint(SQLResourceBase):
     __tablename__ = 'blueprints'
 
@@ -188,70 +186,82 @@ class Execution(SQLResourceBase):
         self.deployment = deployment
 
 
-class Event(SQLResourceBase):
+class EventsAndLogs(AbstractConcreteBase, SQLModelBase):
+    """Base class for events and logs.
 
-    """Execution events."""
+    Event and logs contain some common attributes, and are often queried
+    for together. We use sqlalchemy's concrete table inheritance, so that
+    when querying for EventsAndLogs, the tables of Events and Logs will
+    be selected, using a `UNION ALL`. An additional "type" attribute is
+    added for when filtering on the concrete type is required.
+    """
+    is_resource = True
+    __tablename__ = None
 
-    __tablename__ = 'events'
+    @declared_attr
+    def _execution_fk(cls):
+        return foreign_key(Execution._storage_id)
 
+    @declared_attr
+    def execution(cls):
+        # can't use one_to_many here, because this isn't a real table; we'll
+        # still be able to have a separate actual backref though
+        return db.relationship(Execution,
+                               backref=db.backref('events_and_logs'))
+
+    operation = db.Column(db.Text)
+    node_id = db.Column(db.Text)
+    message = db.Column(db.Text)
+    message_code = db.Column(db.Text)
+    reported_timestamp = db.Column(LocalDateTime, nullable=False)
     timestamp = db.Column(
         LocalDateTime,
         server_default=func.current_timestamp(),
         nullable=False,
         index=True,
     )
-    reported_timestamp = db.Column(LocalDateTime, nullable=False)
-    message = db.Column(db.Text)
-    message_code = db.Column(db.Text)
+
+    blueprint_id = association_proxy('execution', 'blueprint_id')
+    deployment_id = association_proxy('execution', 'deployment_id')
+    execution_id = association_proxy('execution', 'id')
+
+    def set_execution(self, execution):
+        self._set_parent(execution)
+        self.execution = execution
+
+
+class Event(EventsAndLogs, SQLResourceBase):
+    """Execution events."""
+    __mapper_args__ = {
+        'polymorphic_identity': 'cloudify_event',
+        'concrete': True
+    }
+    __tablename__ = 'events'
+    is_resource = True
+
     event_type = db.Column(db.Text)
-    operation = db.Column(db.Text)
-    node_id = db.Column(db.Text)
     error_causes = db.Column(JSONString)
 
-    _execution_fk = foreign_key(Execution._storage_id)
-
     @declared_attr
     def execution(cls):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
 
-    execution_id = association_proxy('execution', 'id')
 
-    def set_execution(self, execution):
-        self._set_parent(execution)
-        self.execution = execution
-
-
-class Log(SQLResourceBase):
-
+class Log(EventsAndLogs, SQLResourceBase):
     """Execution logs."""
-
+    __mapper_args__ = {
+        'polymorphic_identity': 'cloudify_log',
+        'concrete': True
+    }
     __tablename__ = 'logs'
+    is_resource = True
 
-    timestamp = db.Column(
-        LocalDateTime,
-        server_default=func.current_timestamp(),
-        nullable=False,
-        index=True,
-    )
-    reported_timestamp = db.Column(LocalDateTime, nullable=False)
-    message = db.Column(db.Text)
-    message_code = db.Column(db.Text)
     logger = db.Column(db.Text)
     level = db.Column(db.Text)
-    operation = db.Column(db.Text)
-    node_id = db.Column(db.Text)
-
-    _execution_fk = foreign_key(Execution._storage_id)
 
     @declared_attr
     def execution(cls):
         return one_to_many_relationship(cls, Execution, cls._execution_fk)
-
-    execution_id = association_proxy('execution', 'id')
-
-    def set_execution(self, execution):
-        self._set_parent(execution)
-        self.execution = execution
 
 
 class DeploymentUpdate(SQLResourceBase):

@@ -22,17 +22,4 @@ from .management_models import (User,
                                 user_datastore,
                                 ProviderContext)
 
-from .resource_models import (Blueprint,
-                              Snapshot,
-                              Plugin,
-                              Deployment,
-                              Node,
-                              NodeInstance,
-                              Execution,
-                              Event,
-                              Log,
-                              DeploymentModification,
-                              DeploymentUpdate,
-                              DeploymentModificationState,
-                              DeploymentUpdateStep,
-                              Secret)
+from .resource_models import *

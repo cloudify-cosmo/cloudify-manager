@@ -38,7 +38,6 @@ class TenantAuthorization(object):
             raise_unauthorized_user_error(
                 '{0} is not associated with {1}'.format(user, tenant)
             )
-
         current_app.config[CURRENT_TENANT_CONFIG] = tenant
 
 

@@ -22,6 +22,10 @@ from manager_rest.rest import (
     resources_v1,
     rest_decorators,
 )
+from manager_rest.storage import (
+    get_storage_manager,
+    models,
+)
 from manager_rest.storage.models_base import db
 from manager_rest.storage.resource_models import (
     Deployment,
@@ -47,7 +51,7 @@ class Events(resources_v1.Events):
         notes='Returns a list of events for optionally provided filters'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.marshal_events
+    @rest_decorators.marshal_with(models.EventsAndLogs)
     @rest_decorators.create_filters()
     @rest_decorators.paginate
     @rest_decorators.rangeable
@@ -81,41 +85,49 @@ class Events(resources_v1.Events):
             sort by timestamp in ascending order:
                 {'timestamp': 'asc'}
         :type sort: dict(str, str)
-        :returns: Events that match the conditions passed as arguments
         :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
         :param range_filters:
             Apparently was used to select a timestamp interval. It's not
             currently used.
         :type range_filters: dict(str)
-        :returns: Events found in the SQL backend
+        :returns: Events that match the conditions passed as arguments
         :rtype: :class:`manager_rest.storage.storage_manager.ListResult`
 
         """
-        size = pagination.get('size', self.DEFAULT_SEARCH_SIZE)
-        offset = pagination.get('offset', 0)
-        params = {
-            'limit': size,
-            'offset': offset,
-        }
+        return get_storage_manager().list(
+            models.EventsAndLogs,
+            filters=self._prepare_filters(filters, range_filters),
+            sort=sort,
+            include=_include,
+            pagination=pagination)
 
-        count_query = self._build_count_query(filters, range_filters)
-        total = count_query.params(**params).scalar()
+    def _prepare_filters(self, filters, range_filters):
+        self._rename_filters(filters)
+        self._rename_filters(range_filters)
 
-        select_query = self._build_select_query(filters, sort, range_filters)
+        message = filters.get('message')
+        if isinstance(message, list) and len(message) == 1:
+            filters['message'] = models.EventsAndLogs.message.ilike(message[0])
 
-        results = [
-            self._map_event_to_dict(_include, event)
-            for event in select_query.params(**params).all()
-        ]
+        timestamp = range_filters.get('timestamp')
+        if timestamp:
+            if 'from' in timestamp and 'to' in timestamp:
+                predicate = models.EventsAndLogs.timestamp.between(
+                    timestamp['from'], timestamp['to'])
+            elif 'from' in timestamp:
+                predicate = models.EventsAndLogs.timestamp >= timestamp['from']
+            elif 'to' in timestamp:
+                predicate = models.EventsAndLogs.timestamp <= timestamp['to']
+            else:
+                raise ValueError('Malformed range filter')
+            filters['timestamp'] = predicate
 
-        metadata = {
-            'pagination': {
-                'size': size,
-                'offset': offset,
-                'total': total,
-            }
-        }
-        return ListResult(results, metadata)
+        return filters
+
+    def _rename_filters(self, filters):
+        for from_name, to_name in self.ES_TO_PG_FILTER_FIELD.items():
+            if from_name in filters:
+                filters[to_name] = filters.pop(from_name)
 
     @rest_decorators.exceptions_handled
     def post(self):

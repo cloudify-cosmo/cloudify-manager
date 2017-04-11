@@ -13,18 +13,18 @@
 #  * limitations under the License.
 
 from collections import namedtuple
-from copy import deepcopy
 from random import choice
 from unittest import TestCase
 
 from faker import Faker
-from flask import Flask
-from mock import patch
 from nose.plugins.attrib import attr
 
-from manager_rest.manager_exceptions import BadParametersError
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 from manager_rest.rest.resources_v1 import Events as EventsV1
-from manager_rest.storage import db
+from manager_rest.test import base_test
+from manager_rest.storage import db, user_datastore
+from manager_rest.storage.management_models import Tenant
 from manager_rest.storage.resource_models import (
     Blueprint,
     Deployment,
@@ -72,7 +72,7 @@ class EventResult(EventResultTuple):
         return self._fields
 
 
-class SelectEventsBaseTest(TestCase):
+class SelectEventsBaseTest(base_test.BaseServerTestCase):
 
     """Select events test case base with database."""
 
@@ -105,14 +105,15 @@ class SelectEventsBaseTest(TestCase):
 
     def setUp(self):
         """Initialize mock application with in memory sql database."""
-        app = Flask(__name__)
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-        context = app.app_context()
-        context.push()
-        self.addCleanup(context.pop)
+        super(SelectEventsBaseTest, self).setUp()
+        # app = Flask(__name__)
+        # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        # context = app.app_context()
+        # context.push()
+        # self.addCleanup(context.pop)
 
-        db.init_app(app)
-        db.create_all()
+        # db.init_app(app)
+        # db.create_all()
 
         self._populate_db()
 
@@ -120,6 +121,7 @@ class SelectEventsBaseTest(TestCase):
         """Populate database with events and logs."""
         fake = Faker()
         session = db.session
+        tenant_id = Tenant.query.first().id
 
         blueprints = [
             Blueprint(
@@ -127,7 +129,7 @@ class SelectEventsBaseTest(TestCase):
                 created_at=fake.date_time(),
                 main_file_name=fake.file_name(),
                 plan='<plan>',
-                _tenant_id=fake.uuid4(),
+                _tenant_id=tenant_id,
                 _creator_id=fake.uuid4(),
             )
             for _ in xrange(self.BLUEPRINT_COUNT)
@@ -141,7 +143,7 @@ class SelectEventsBaseTest(TestCase):
                 created_at=fake.date_time(),
                 _blueprint_fk=choice(blueprints)._storage_id,
                 _creator_id=fake.uuid4(),
-                _tenant_id=fake.uuid4()
+                _tenant_id=tenant_id
             )
             for _ in xrange(self.DEPLOYMENT_COUNT)
         ]
@@ -154,7 +156,7 @@ class SelectEventsBaseTest(TestCase):
                 created_at=fake.date_time(),
                 is_system_workflow=False,
                 workflow_id=fake.uuid4(),
-                _tenant_id=fake.uuid4(),
+                _tenant_id=tenant_id,
                 _creator_id=fake.uuid4(),
                 _deployment_fk=choice(deployments)._storage_id,
             )
@@ -261,23 +263,10 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
     def test_filter_by_blueprint(self):
         """Filter events by blueprint."""
         blueprint = choice(self.blueprints)
-        filters = {
-            'blueprint_id': [blueprint.id],
-            'type': ['cloudify_event', 'cloudify_log']
-        }
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events = self.client.events.list(blueprint_id=blueprint.id,
+                                         include_logs=True)
+        event_messages = {event['message'] for event in events}
+        event_count = events.metadata['pagination']['total']
 
         expected_deployment_ids = [
             deployment._storage_id
@@ -294,31 +283,18 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for event in self.events
             if event._execution_fk in expected_executions_id
         ]
-        expected_event_ids = [event.id for event in expected_events]
-        self.assertListEqual(event_ids, expected_event_ids)
+        expected_event_messages = {event.message for event in expected_events}
+        self.assertEqual(event_messages, expected_event_messages)
         self.assertEqual(event_count, len(expected_events))
 
     def test_filter_by_deployment(self):
         """Filter events by deployment."""
         deployment = choice(self.deployments)
-        filters = {
-            'deployment_id': [deployment.id],
-            'type': ['cloudify_event', 'cloudify_log']
-        }
 
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events = self.client.events.list(deployment_id=deployment.id,
+                                         include_logs=True)
+        event_messages = {event['message'] for event in events}
+        event_count = events.metadata['pagination']['total']
 
         expected_execution_ids = [
             execution._storage_id
@@ -330,69 +306,43 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             for event in self.events
             if event._execution_fk in expected_execution_ids
         ]
-        expected_event_ids = [event.id for event in expected_events]
-        self.assertListEqual(event_ids, expected_event_ids)
+        expected_event_messages = {event.message for event in expected_events}
+        self.assertEqual(event_messages, expected_event_messages)
         self.assertEqual(event_count, len(expected_events))
 
     def test_filter_by_execution(self):
         """Filter events by execution."""
         execution = choice(self.executions)
-        filters = {
-            'execution_id': [execution.id],
-            'type': ['cloudify_event', 'cloudify_log']
-        }
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
 
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events = self.client.events.list(execution_id=execution.id,
+                                         include_logs=True)
+        event_count = events.metadata['pagination']['total']
+        event_messages = {event['message'] for event in events}
 
         expected_events = [
             event
             for event in self.events
             if event._execution_fk == execution._storage_id
         ]
-        expected_event_ids = [event.id for event in expected_events]
-        self.assertListEqual(event_ids, expected_event_ids)
+        expected_event_messages = {event.message for event in expected_events}
+        self.assertEqual(event_messages, expected_event_messages)
         self.assertEqual(event_count, len(expected_events))
 
     def test_filter_by_event_type(self):
         """Filter events by event_type."""
         event_type = choice(self.EVENT_TYPES)
-        filters = {
-            'event_type': [event_type],
-            'type': ['cloudify_event', 'cloudify_log']
-        }
-
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events = self.client.events.list(event_type=event_type,
+                                         include_logs=True)
+        event_count = events.metadata['pagination']['total']
+        event_messages = {event['message'] for event in events}
 
         expected_events = [
             event
             for event in self.events
             if getattr(event, 'event_type', None) == event_type
         ]
-        expected_event_ids = [event.id for event in expected_events]
-        self.assertListEqual(event_ids, expected_event_ids)
+        expected_event_messages = {event.message for event in expected_events}
+        self.assertEqual(event_messages, expected_event_messages)
         self.assertEqual(event_count, len(expected_events))
 
     def test_filter_by_event_type_and_type_cloudify_log(self):
@@ -402,112 +352,58 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             'event_type': [event_type],
             'type': ['cloudify_log']
         }
-
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        # the client doesn't have a way to query for just logs currently,
+        # so we'll have to do the request using the lower level http api
+        events_response = self.get('/events', query_params=filters)
+        events = events_response.json['items']
 
         # logs don't have event_type, so query should return no results
         expected_events = []
-        self.assertListEqual(events, expected_events)
-        self.assertEqual(event_count, len(expected_events))
+        self.assertEqual(events, expected_events)
 
     def test_filter_by_level(self):
         """Filter events by level."""
         level = choice(self.LOG_LEVELS)
-        filters = {
-            'level': [level],
-            'type': ['cloudify_event', 'cloudify_log']
-        }
-
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events = self.client.events.list(level=level,
+                                         include_logs=True)
+        event_count = events.metadata['pagination']['total']
+        event_messages = {event['message'] for event in events}
 
         expected_events = [
             event
             for event in self.events
             if getattr(event, 'level', None) == level
         ]
-        expected_event_ids = [event.id for event in expected_events]
-        self.assertListEqual(event_ids, expected_event_ids)
+        expected_event_messages = {event.message for event in expected_events}
+        self.assertEqual(event_messages, expected_event_messages)
         self.assertEqual(event_count, len(expected_events))
 
     def test_filter_by_level_and_type_cloudify_event(self):
         """Filter events by level and type cloudify_event."""
         level = choice(self.LOG_LEVELS)
-        filters = {
-            'level': [level],
-            'type': ['cloudify_event']
-        }
-
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events = list(self.client.events.list(level=level))
 
         # events don't have level, so query should return no results
         expected_events = []
-        self.assertListEqual(events, expected_events)
-        self.assertEqual(event_count, len(expected_events))
+        self.assertEqual(events, expected_events)
 
     def filter_by_message_helper(self, message_field):
         """Filter events by message field."""
         word = self.fake.word()
-        filters = {
-            message_field: ['%{0}%'.format(word)],
-            'type': ['cloudify_event', 'cloudify_log']
-        }
 
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events = self.client.events.list(
+            include_logs=True, **{message_field: '%{0}%'.format(word)})
+        event_messages = {event['message'] for event in events}
+        event_count = events.metadata['pagination']['total']
 
         expected_events = [
             event
             for event in self.events
             if word in event.message.lower()
         ]
-        expected_event_ids = [event.id for event in expected_events]
-        self.assertListEqual(event_ids, expected_event_ids)
+        expected_event_messages = {event.message for event in expected_events}
         self.assertEqual(event_count, len(expected_events))
+        self.assertEqual(event_messages, expected_event_messages)
 
     def test_filter_by_message(self):
         """Filter events by message."""
@@ -519,21 +415,9 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
 
     def test_filter_by_unknown(self):
         """Filter events by an unknown field."""
-        filters = {
-            'unknown': ['<value>'],
-            'type': ['cloudify_event', 'cloudify_log']
-        }
-        with self.assertRaises(BadParametersError):
-            EventsV1._build_select_query(
-                filters,
-                self.DEFAULT_SORT,
-                self.DEFAULT_RANGE_FILTERS,
-            )
-        with self.assertRaises(BadParametersError):
-            EventsV1._build_count_query(
-                filters,
-                self.DEFAULT_RANGE_FILTERS,
-            )
+        with self.assertRaises(CloudifyClientError) as cm:
+            self.client.events.list(unknown='<value>', include_logs=True)
+        self.assertEqual(cm.exception.error_code, 'bad_parameters_error')
 
 
 @attr(client_min_version=1, client_max_version=1)
@@ -569,27 +453,18 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         ])
         filters = {'type': event_types}
 
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events_response = self.get('/events', query_params=filters)
+        events = events_response.json['items']
+        event_messages = {event['message'] for event in events}
+        event_count = events_response.json['metadata']['pagination']['total']
 
         expected_events = [
             event
             for event in self.events
             if isinstance(event, event_classes)
         ]
-        expected_event_ids = [event.id for event in expected_events]
-        self.assertListEqual(event_ids, expected_event_ids)
+        expected_event_messages = {event.message for event in expected_events}
+        self.assertEqual(event_messages, expected_event_messages)
         self.assertEqual(event_count, len(expected_events))
 
     def test_get_events_and_logs_explicit(self):
@@ -598,25 +473,14 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
 
     def test_get_events_and_logs_implicit(self):
         """Get both events and logs implicitly without passing any filter."""
-        filters = {}
-
-        query = EventsV1._build_select_query(
-            filters,
-            self.DEFAULT_SORT,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_ids = [event.id for event in events]
-
-        count_query = EventsV1._build_count_query(
-            filters,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events_response = self.get('/events')
+        events = events_response.json['items']
+        event_messages = {event['message'] for event in events}
+        event_count = events_response.json['metadata']['pagination']['total']
 
         expected_events = self.events
-        expected_event_ids = [event.id for event in expected_events]
-        self.assertListEqual(event_ids, expected_event_ids)
+        expected_event_messages = {event.message for event in expected_events}
+        self.assertEqual(event_messages, expected_event_messages)
         self.assertEqual(event_count, len(expected_events))
 
     def test_get_events(self):
@@ -651,21 +515,10 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         :type direction: str
 
         """
-        sort = {field: direction}
-
-        query = EventsV1._build_select_query(
-            self.DEFAULT_FILTERS,
-            sort,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_timestamps = [event.timestamp for event in events]
-
-        count_query = EventsV1._build_count_query(
-            self.DEFAULT_FILTERS,
-            self.DEFAULT_RANGE_FILTERS,
-        )
-        event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
+        events = self.client.events.list(sort={field: direction},
+                                         include_logs=True)
+        event_timestamps = [event['timestamp'] for event in events]
+        event_count = events.metadata['pagination']['total']
 
         expected_events = sorted(
             self.events,
@@ -676,8 +529,8 @@ class SelectEventsSortTest(SelectEventsBaseTest):
             event.timestamp
             for event in expected_events
         ]
-        self.assertListEqual(event_timestamps, expected_event_timestamps)
         self.assertEqual(event_count, len(expected_events))
+        self.assertEqual(event_timestamps, expected_event_timestamps)
 
     def test_sort_by_timestamp_ascending(self):
         """Sort by timestamp ascending."""
@@ -738,26 +591,13 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         from_datetime, to_datetime = sorted(
             [fake.date_time(), fake.date_time()])
 
-        range_filter = {}
-        if include_from:
-            range_filter['from'] = from_datetime
-        if include_to:
-            range_filter['to'] = to_datetime
-        range_filters = {field: range_filter}
-
-        query = EventsV1._build_select_query(
-            self.DEFAULT_FILTERS,
-            self.DEFAULT_SORT,
-            range_filters,
-        )
-        events = query.params(**self.DEFAULT_PAGINATION).all()
-        event_timestamps = [event.timestamp for event in events]
-
-        count_query = EventsV1._build_count_query(
-            self.DEFAULT_FILTERS,
-            range_filters,
-        )
-        event_count = count_query.params(**range_filters).scalar()
+        events = self.client.events.list(
+            from_datetime=from_datetime if include_from else None,
+            to_datetime=to_datetime if include_to else None,
+            include_logs=True,
+            sort={'timestamp': 'asc'})
+        event_count = events.metadata['pagination']['total']
+        event_timestamps = [event['timestamp'] for event in events]
 
         sorted_events = sorted(
             self.events,
@@ -776,8 +616,8 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         expected_event_timestamps = [
             event.timestamp for event in expected_events]
 
-        self.assertListEqual(event_timestamps, expected_event_timestamps)
         self.assertEqual(event_count, len(expected_events))
+        self.assertListEqual(event_timestamps, expected_event_timestamps)
 
     def test_filter_by_timestamp_range(self):
         """Filter by timestamp range."""
@@ -789,17 +629,9 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
 
     def test_filter_by_unknown_range(self):
         """Filter by unknown field range."""
-        with self.assertRaises(BadParametersError):
-            EventsV1._build_select_query(
-                self.DEFAULT_FILTERS,
-                self.DEFAULT_SORT,
-                {'unknown': {'from': 'a', 'to': 'b'}},
-            )
-        with self.assertRaises(BadParametersError):
-            EventsV1._build_count_query(
-                self.DEFAULT_FILTERS,
-                {'unknown': {'from': 'a', 'to': 'b'}},
-            )
+        response = self.get('/events', query_params={'from': 'a', 'to': 'b'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json['error_code'], 'bad_parameters_error')
 
     def test_filter_do_not_include_from(self):
         """Filter by timestamp without including from field."""
@@ -808,55 +640,6 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
     def test_filter_do_not_include_to(self):
         """Filter by timestamp without including to field."""
         self._filter_by_timestamp_range('timestamp', include_to=False)
-
-
-@attr(client_min_version=1, client_max_version=1)
-class BuildSelectQueryTest(TestCase):
-
-    """Event retrieval query."""
-
-    # Parameters passed ot the _build_select_query_method
-    # Each tests overwrites different fields as needed.
-    DEFAULT_PARAMS = {
-        'filters': {
-            'type': ['cloudify_event'],
-        },
-        'sort': {
-            '@timestamp': 'asc',
-        },
-        'range_filters': {},
-    }
-
-    def test_filter_required(self):
-        """Filter parameter is expected to be dictionary."""
-        params = deepcopy(self.DEFAULT_PARAMS)
-        params['filters'] = None
-        with self.assertRaises(AssertionError):
-            EventsV1._build_select_query(**params)
-
-
-@attr(client_min_version=1, client_max_version=1)
-class BuildCountQueryTest(TestCase):
-
-    """Event count query."""
-
-    def setUp(self):
-        """Patch flask application.
-
-        The application is only used to write to logs, so it can be patched for
-        unit testing.
-
-        """
-        db_patcher = patch('manager_rest.rest.resources_v1.events.db')
-        self.db = db_patcher.start()
-        self.addCleanup(db_patcher.stop)
-
-    def test_filter_required(self):
-        """Filter parameter is expected to be dictionary."""
-        filters = None
-        range_filters = {}
-        with self.assertRaises(AssertionError):
-            EventsV1._build_count_query(filters, range_filters)
 
 
 @attr(client_min_version=1, client_max_version=1)
@@ -944,3 +727,23 @@ class MapEventToDictTestV1(TestCase):
         es_log = EventsV1._map_event_to_dict(None, sql_log)
 
         self.assertDictEqual(es_log, expected_es_log)
+
+
+@attr(client_min_version=1, client_max_version=1)
+class SelectEventsWithTenantTest(SelectEventsBaseTest):
+    def test_another_tenant(self):
+        new_user = user_datastore.create_user(
+            username='new',
+            password='new'
+        )
+
+        new_tenant = Tenant(name='newtenant')
+        new_user.tenants.append(new_tenant)
+        user_datastore.commit()
+        other_client = self.create_client_with_tenant(
+            username=new_user.username,
+            password=new_user.password,
+            tenant=new_tenant.name
+        )
+        evs = other_client.events.list()
+        self.assertEqual([], evs.items)

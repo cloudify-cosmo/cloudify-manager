@@ -26,6 +26,7 @@ from manager_rest.constants import CURRENT_TENANT_CONFIG
 
 from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.sql.elements import ClauseElement
 from sqlite3 import DatabaseError as SQLiteDBError
 
 try:
@@ -103,11 +104,15 @@ class SQLStorageManager(object):
     def _add_value_filter(self, query, filters):
         for column, value in filters.iteritems():
             column, value = self._update_case_insensitive(column, value)
-            if isinstance(value, (list, tuple)):
-                query = query.filter(column.in_(value))
+            if isinstance(value, ClauseElement):
+                predicate = value
+            elif isinstance(value, (list, tuple)):
+                predicate = column.in_(value)
+            elif isinstance(value, basestring) and value.startswith('%'):
+                predicate = column.ilike(value)
             else:
-                query = query.filter(column == value)
-
+                predicate = column == value
+            query = query.filter(predicate)
         return query
 
     @staticmethod
@@ -186,9 +191,13 @@ class SQLStorageManager(object):
         :param columns: A set of all columns involved in the query
         """
         # Using an ordered dict because the order of the joins is important
+        nonexistent = object()
         joins = OrderedDict()
         for column_name in columns:
-            column = getattr(model_class, column_name)
+            column = getattr(model_class, column_name, nonexistent)
+            if column is nonexistent:
+                raise manager_exceptions.BadParametersError(
+                    'Unknown field: {0}'.format(column_name))
             while not column.is_attribute:
                 join_attr = column.local_attr
 

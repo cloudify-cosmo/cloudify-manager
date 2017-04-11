@@ -58,8 +58,8 @@ class TestClient(FlaskClient):
         kwargs['headers'] = kwargs.get('headers') or {}
         kwargs['headers'].update(utils.create_auth_header(
             username=admin['username'], password=admin['password']))
-        kwargs['headers'][constants.CLOUDIFY_TENANT_HEADER] = \
-            constants.DEFAULT_TENANT_NAME
+        kwargs['headers'].setdefault(constants.CLOUDIFY_TENANT_HEADER,
+                                     constants.DEFAULT_TENANT_NAME)
         return super(TestClient, self).open(*args, **kwargs)
 
 
