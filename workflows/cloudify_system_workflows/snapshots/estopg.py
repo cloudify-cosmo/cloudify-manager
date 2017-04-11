@@ -196,7 +196,8 @@ class EsToPg(object):
 
             pg_event = {
                 'id': es_document['_id'],
-                'timestamp': es_event['timestamp'],
+                'timestamp': es_event['@timestamp'],
+                'reported_timestamp': es_event['timestamp'],
                 'message': es_event['message']['text'],
                 'message_code': es_event['message_code'],
                 'event_type': es_event['event_type'],
@@ -230,7 +231,8 @@ class EsToPg(object):
 
             pg_log = {
                 'id': es_document['_id'],
-                'timestamp': es_log['timestamp'],
+                'timestamp': es_log['@timestamp'],
+                'reported_timestamp': es_log['timestamp'],
                 'message': es_log['message']['text'],
                 'message_code': es_log['message_code'],
                 'logger': es_log['logger'],
