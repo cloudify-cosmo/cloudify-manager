@@ -98,10 +98,12 @@ class Events(resources_v1.Events):
             'offset': offset,
         }
 
-        count_query = self._build_count_query(filters, range_filters)
+        count_query = self._build_count_query(filters, range_filters,
+                                              self.current_tenant.id)
         total = count_query.params(**params).scalar()
 
-        select_query = self._build_select_query(filters, sort, range_filters)
+        select_query = self._build_select_query(filters, sort, range_filters,
+                                                self.current_tenant.id)
 
         results = [
             self._map_event_to_dict(_include, event)
@@ -149,15 +151,20 @@ class Events(resources_v1.Events):
             .filter(
                 Execution._deployment_fk == Deployment._storage_id,
                 Deployment.id == bindparam('deployment_id'),
+                Execution._tenant_id == bindparam('tenant_id')
             )
         )
         params = {
             'deployment_id': filters['deployment_id'][0],
+            'tenant_id': self.current_tenant.id
         }
 
         delete_event_query = (
             db.session.query(Event)
-            .filter(Event._execution_fk.in_(executions_query))
+            .filter(
+                Event._execution_fk.in_(executions_query),
+                Event._tenant_id == bindparam('tenant_id')
+            )
             .params(**params)
         )
         total = delete_event_query.delete(synchronize_session=False)
@@ -165,7 +172,10 @@ class Events(resources_v1.Events):
         if 'cloudify_log' in filters['type']:
             delete_log_query = (
                 db.session.query(Log)
-                .filter(Log._execution_fk.in_(executions_query))
+                .filter(
+                    Log._execution_fk.in_(executions_query),
+                    Log._tenant_id == bindparam('tenant_id')
+                )
                 .params(**params)
             )
             total += delete_log_query.delete('fetch')
