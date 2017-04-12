@@ -25,6 +25,7 @@ from nose.plugins.attrib import attr
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.rest.resources_v1 import Events as EventsV1
 from manager_rest.storage import db
+from manager_rest.storage.management_models import Tenant
 from manager_rest.storage.resource_models import (
     Blueprint,
     Deployment,
@@ -121,13 +122,17 @@ class SelectEventsBaseTest(TestCase):
         fake = Faker()
         session = db.session
 
+        tenant = Tenant(name='test_tenant')
+        session.add(tenant)
+        session.commit()
+
         blueprints = [
             Blueprint(
                 id='blueprint_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 main_file_name=fake.file_name(),
                 plan='<plan>',
-                _tenant_id=fake.uuid4(),
+                _tenant_id=tenant.id,
                 _creator_id=fake.uuid4(),
             )
             for _ in xrange(self.BLUEPRINT_COUNT)
@@ -135,36 +140,38 @@ class SelectEventsBaseTest(TestCase):
         session.add_all(blueprints)
         session.commit()
 
-        deployments = [
-            Deployment(
+        deployments = []
+        for _ in xrange(self.DEPLOYMENT_COUNT):
+            blueprint = choice(blueprints)
+            deployments.append(Deployment(
                 id='deployment_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
-                _blueprint_fk=choice(blueprints)._storage_id,
+                _blueprint_fk=blueprint._storage_id,
                 _creator_id=fake.uuid4(),
-                _tenant_id=fake.uuid4()
-            )
-            for _ in xrange(self.DEPLOYMENT_COUNT)
-        ]
+                _tenant_id=blueprint._tenant_id
+            ))
         session.add_all(deployments)
         session.commit()
 
-        executions = [
-            Execution(
+        executions = []
+        for _ in xrange(self.EXECUTION_COUNT):
+            deployment = choice(deployments)
+            executions.append(Execution(
                 id='execution_{}'.format(fake.uuid4()),
                 created_at=fake.date_time(),
                 is_system_workflow=False,
                 workflow_id=fake.uuid4(),
-                _tenant_id=fake.uuid4(),
+                _tenant_id=deployment._tenant_id,
                 _creator_id=fake.uuid4(),
-                _deployment_fk=choice(deployments)._storage_id,
-            )
-            for _ in xrange(self.EXECUTION_COUNT)
-        ]
+                _deployment_fk=deployment._storage_id,
+            ))
         session.add_all(executions)
         session.commit()
 
-        nodes = [
-            Node(
+        nodes = []
+        for _ in xrange(self.NODE_COUNT):
+            deployment = choice(deployments)
+            nodes.append(Node(
                 id='node_{}'.format(fake.uuid4()),
                 deploy_number_of_instances=1,
                 max_number_of_instances=1,
@@ -172,37 +179,36 @@ class SelectEventsBaseTest(TestCase):
                 number_of_instances=1,
                 planned_number_of_instances=1,
                 type='<type>',
-                _deployment_fk=choice(deployments)._storage_id,
-                _tenant_id=choice(deployments)._tenant_id,
-                _creator_id=choice(deployments)._creator_id,
-            )
-            for _ in xrange(self.NODE_COUNT)
-        ]
+                _deployment_fk=deployment._storage_id,
+                _tenant_id=deployment._tenant_id,
+                _creator_id=deployment._creator_id,
+            ))
         session.add_all(nodes)
         session.commit()
 
-        node_instances = [
-            NodeInstance(
+        node_instances = []
+        for _ in xrange(self.NODE_INSTANCE_COUNT):
+            node = choice(nodes)
+            node_instances.append(NodeInstance(
                 id='node_instance_{}'.format(fake.uuid4()),
                 state='<state>',
-                _node_fk=choice(nodes)._storage_id,
-                _tenant_id=choice(nodes)._tenant_id,
-                _creator_id=choice(nodes)._creator_id,
-            )
-            for _ in xrange(self.NODE_INSTANCE_COUNT)
-        ]
+                _node_fk=node._storage_id,
+                _tenant_id=node._tenant_id,
+                _creator_id=node._creator_id,
+            ))
         session.add_all(node_instances)
         session.commit()
 
         def create_event():
             """Create new event using the execution created above."""
+            execution = choice(executions)
             return Event(
                 id='event_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
                 reported_timestamp=fake.date_time(),
-                _execution_fk=choice(executions)._storage_id,
-                _tenant_id=choice(executions)._tenant_id,
-                _creator_id=choice(executions)._creator_id,
+                _execution_fk=execution._storage_id,
+                _tenant_id=execution._tenant_id,
+                _creator_id=execution._creator_id,
                 node_id=choice(node_instances).id,
                 operation='<operation>',
                 event_type=choice(self.EVENT_TYPES),
@@ -212,13 +218,14 @@ class SelectEventsBaseTest(TestCase):
 
         def create_log():
             """Create new log using the execution created above."""
+            execution = choice(executions)
             return Log(
                 id='log_{}'.format(fake.uuid4()),
                 timestamp=fake.date_time(),
                 reported_timestamp=fake.date_time(),
-                _execution_fk=choice(executions)._storage_id,
-                _tenant_id=choice(executions)._tenant_id,
-                _creator_id=choice(executions)._creator_id,
+                _execution_fk=execution._storage_id,
+                _tenant_id=execution._tenant_id,
+                _creator_id=execution._creator_id,
                 node_id=choice(node_instances).id,
                 operation='<operation>',
                 logger='<logger>',
@@ -235,6 +242,7 @@ class SelectEventsBaseTest(TestCase):
         session.add_all(sorted_events)
         session.commit()
 
+        self.tenant = tenant
         self.fake = fake
         self.blueprints = blueprints
         self.deployments = deployments
@@ -269,6 +277,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
@@ -276,6 +285,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -310,6 +320,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
@@ -317,6 +328,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -345,6 +357,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
@@ -352,6 +365,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -376,6 +390,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
@@ -383,6 +398,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -407,12 +423,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
 
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -433,6 +451,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
@@ -440,6 +459,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -464,12 +484,14 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
 
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -490,6 +512,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
@@ -497,6 +520,7 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -528,11 +552,13 @@ class SelectEventsFilterTest(SelectEventsBaseTest):
                 filters,
                 self.DEFAULT_SORT,
                 self.DEFAULT_RANGE_FILTERS,
+                self.tenant.id
             )
         with self.assertRaises(BadParametersError):
             EventsV1._build_count_query(
                 filters,
                 self.DEFAULT_RANGE_FILTERS,
+                self.tenant.id
             )
 
 
@@ -573,6 +599,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
@@ -580,6 +607,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -604,6 +632,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
             filters,
             self.DEFAULT_SORT,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_ids = [event.id for event in events]
@@ -611,6 +640,7 @@ class SelectEventsFilterTypeTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             filters,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -657,6 +687,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
             self.DEFAULT_FILTERS,
             sort,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_timestamps = [event.timestamp for event in events]
@@ -664,6 +695,7 @@ class SelectEventsSortTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             self.DEFAULT_FILTERS,
             self.DEFAULT_RANGE_FILTERS,
+            self.tenant.id
         )
         event_count = count_query.params(**self.DEFAULT_RANGE_FILTERS).scalar()
 
@@ -749,6 +781,7 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
             self.DEFAULT_FILTERS,
             self.DEFAULT_SORT,
             range_filters,
+            self.tenant.id
         )
         events = query.params(**self.DEFAULT_PAGINATION).all()
         event_timestamps = [event.timestamp for event in events]
@@ -756,6 +789,7 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
         count_query = EventsV1._build_count_query(
             self.DEFAULT_FILTERS,
             range_filters,
+            self.tenant.id
         )
         event_count = count_query.params(**range_filters).scalar()
 
@@ -794,11 +828,13 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
                 self.DEFAULT_FILTERS,
                 self.DEFAULT_SORT,
                 {'unknown': {'from': 'a', 'to': 'b'}},
+                self.tenant.id
             )
         with self.assertRaises(BadParametersError):
             EventsV1._build_count_query(
                 self.DEFAULT_FILTERS,
                 {'unknown': {'from': 'a', 'to': 'b'}},
+                self.tenant.id
             )
 
     def test_filter_do_not_include_from(self):
@@ -808,6 +844,38 @@ class SelectEventsRangeFilterTest(SelectEventsBaseTest):
     def test_filter_do_not_include_to(self):
         """Filter by timestamp without including to field."""
         self._filter_by_timestamp_range('timestamp', include_to=False)
+
+
+@attr(client_min_version=1, client_max_version=1)
+class SelectEventTenantTest(SelectEventsBaseTest):
+    DEFAULT_FILTERS = {
+        'type': ['cloudify_event', 'cloudify_log']
+    }
+    DEFAULT_SORT = {
+        'timestamp': 'asc'
+    }
+    DEFAULT_PAGINATION = {
+        'limit': 100,
+        'offset': 0,
+    }
+    DEFAULT_RANGE_FILTERS = {}
+
+    def test_different_tenant(self):
+        """A new tenant sees none of the events of other tenants"""
+        tenant = Tenant(name='other_tenant')
+        db.session.add(tenant)
+        db.session.commit()
+
+        query = EventsV1._build_select_query(
+            self.DEFAULT_FILTERS, self.DEFAULT_SORT,
+            self.DEFAULT_RANGE_FILTERS, tenant.id)
+        events = query.params(**self.DEFAULT_PAGINATION).all()
+        events_count = EventsV1._build_count_query(
+            self.DEFAULT_FILTERS, self.DEFAULT_RANGE_FILTERS,
+            tenant.id).scalar()
+
+        self.assertEqual(events, [])
+        self.assertEqual(events_count, 0)
 
 
 @attr(client_min_version=1, client_max_version=1)
@@ -831,6 +899,7 @@ class BuildSelectQueryTest(TestCase):
         """Filter parameter is expected to be dictionary."""
         params = deepcopy(self.DEFAULT_PARAMS)
         params['filters'] = None
+        params['tenant_id'] = 1
         with self.assertRaises(AssertionError):
             EventsV1._build_select_query(**params)
 
@@ -856,7 +925,7 @@ class BuildCountQueryTest(TestCase):
         filters = None
         range_filters = {}
         with self.assertRaises(AssertionError):
-            EventsV1._build_count_query(filters, range_filters)
+            EventsV1._build_count_query(filters, range_filters, tenant_id=1)
 
 
 @attr(client_min_version=1, client_max_version=1)

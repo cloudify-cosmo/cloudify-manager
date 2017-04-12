@@ -14,6 +14,7 @@
 #  * limitations under the License.
 #
 
+from flask import current_app
 from flask_restful_swagger import swagger
 from sqlalchemy import (
     asc,
@@ -24,7 +25,7 @@ from sqlalchemy import (
 )
 from toolz import dicttoolz
 
-from manager_rest import manager_exceptions
+from manager_rest import constants, manager_exceptions
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     insecure_rest_method,
@@ -203,7 +204,7 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _build_select_query(filters, sort, range_filters):
+    def _build_select_query(filters, sort, range_filters, tenant_id):
         """Build query used to list events for a given execution.
 
         :param filters:
@@ -248,13 +249,13 @@ class Events(SecuredResource):
         if (('type' not in filters or 'cloudify_event' in filters['type']) and
                 ('level' not in filters)):
             events_query = Events._build_select_subquery(
-                Event, filters, range_filters)
+                Event, filters, range_filters, tenant_id)
             subqueries.append(events_query)
 
         if (('type' not in filters or 'cloudify_log' in filters['type']) and
                 ('event_type' not in filters)):
             logs_query = Events._build_select_subquery(
-                Log, filters, range_filters)
+                Log, filters, range_filters, tenant_id)
             subqueries.append(logs_query)
 
         if subqueries:
@@ -276,7 +277,7 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _build_select_subquery(model, filters, range_filters):
+    def _build_select_subquery(model, filters, range_filters, tenant_id):
         """Build select subquery.
 
         :param model: Model used to build the query (either Event or Log)
@@ -333,6 +334,7 @@ class Events(SecuredResource):
                 model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
                 Deployment._blueprint_fk == Blueprint._storage_id,
+                model._tenant_id == tenant_id
             )
             .outerjoin(NodeInstance, NodeInstance.id == model.node_id)
             .outerjoin(Node, Node._storage_id == NodeInstance._node_fk)
@@ -343,7 +345,7 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _build_count_query(filters, range_filters):
+    def _build_count_query(filters, range_filters, tenant_id):
         """Build query used to count events for a given execution.
 
         :param filters:
@@ -381,13 +383,13 @@ class Events(SecuredResource):
         if (('type' not in filters or 'cloudify_event' in filters['type']) and
                 ('level' not in filters)):
             events_query = Events._build_count_subquery(
-                Event, filters, range_filters)
+                Event, filters, range_filters, tenant_id)
             subqueries.append(events_query)
 
         if (('type' not in filters or 'cloudify_log' in filters['type']) and
                 ('event_type' not in filters)):
             logs_query = Events._build_count_subquery(
-                Log, filters, range_filters)
+                Log, filters, range_filters, tenant_id)
             subqueries.append(logs_query)
 
         if subqueries:
@@ -401,7 +403,7 @@ class Events(SecuredResource):
         return query
 
     @staticmethod
-    def _build_count_subquery(model, filters, range_filters):
+    def _build_count_subquery(model, filters, range_filters, tenant_id):
         """Build count subquery.
 
         :param model: Count either events or logs
@@ -422,6 +424,7 @@ class Events(SecuredResource):
                 model._execution_fk == Execution._storage_id,
                 Execution._deployment_fk == Deployment._storage_id,
                 Deployment._blueprint_fk == Blueprint._storage_id,
+                model._tenant_id == tenant_id
             )
         )
 
@@ -531,10 +534,12 @@ class Events(SecuredResource):
             'offset': pagination['offset'],
         }
 
-        count_query = Events._build_count_query(filters, range_filters)
+        count_query = Events._build_count_query(filters, range_filters,
+                                                self.current_tenant.id)
         total = count_query.params(**params).scalar()
 
-        select_query = self._build_select_query(filters, sort, range_filters)
+        select_query = self._build_select_query(filters, sort, range_filters,
+                                                self.current_tenant.id)
 
         events = [
             self._map_event_to_dict(_include, event)
@@ -595,3 +600,9 @@ class Events(SecuredResource):
         List events for the provided Elasticsearch query
         """
         return self._query_events()
+
+    @property
+    def current_tenant(self):
+        """Return the tenant with which the user accessed the app
+        """
+        return current_app.config[constants.CURRENT_TENANT_CONFIG]
