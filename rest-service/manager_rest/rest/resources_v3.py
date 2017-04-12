@@ -449,7 +449,7 @@ class Permissions(SecuredResource):
         return PermissionsHandler.remove_permissions(params)
 
 
-class FileServerAuth(SecuredMultiTenancyResourceSkipTenantAuth):
+class FileServerAuth(SecuredResource):
     @staticmethod
     def _verify_tenant(uri):
         tenanted_resources = [
