@@ -435,7 +435,7 @@ class ClusterNodesId(ClusterResourceBase):
         return cluster.remove_node(node_id)
 
 
-class FileServerAuth(SecuredMultiTenancyResourceSkipTenantAuth):
+class FileServerAuth(SecuredResource):
     @staticmethod
     def _verify_tenant(uri):
         tenanted_resources = [
