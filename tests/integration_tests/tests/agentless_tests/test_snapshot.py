@@ -236,7 +236,6 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(deployment.id, deployment_id)
         self.assertEqual(len(deployment.workflows), num_of_workflows)
         self.assertEqual(deployment.blueprint_id, blueprint_id)
-        self.assertEqual(deployment['permission'], 'creator')
         self.assertEqual(deployment['tenant_name'], tenant_name)
         self.assertEqual(len(deployment.inputs), num_of_inputs)
         self.assertEqual(len(deployment.outputs), num_of_outputs)
