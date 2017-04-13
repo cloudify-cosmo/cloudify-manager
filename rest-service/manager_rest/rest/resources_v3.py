@@ -26,6 +26,7 @@ from manager_rest import config
 from manager_rest.dsl_functions import evaluate_intrinsic_functions
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import (SecuredResource,
+                                   SecuredResourceSkipTenantAuth,
                                    MissingPremiumFeatureResource)
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
@@ -449,7 +450,7 @@ class Permissions(SecuredResource):
         return PermissionsHandler.remove_permissions(params)
 
 
-class FileServerAuth(SecuredResource):
+class FileServerAuth(SecuredResourceSkipTenantAuth):
     @staticmethod
     def _verify_tenant(uri):
         tenanted_resources = [
