@@ -106,10 +106,8 @@ class DeploymentsId(SecuredResource):
         """
         Create a deployment
         """
-        request_dict = get_json_and_verify_params({
-            'blueprint_id': {},
-            'inputs': {'optional': True, 'type': dict}
-        })
+        request_schema = self.create_request_schema()
+        request_dict = get_json_and_verify_params(request_schema)
         blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
         args = get_args_and_verify_arguments(
@@ -120,9 +118,21 @@ class DeploymentsId(SecuredResource):
             deployment_id,
             inputs=request_dict.get('inputs', {}),
             bypass_maintenance=bypass_maintenance,
-            private_resource=args.private_resource
-        )
+            private_resource=args.private_resource,
+            skip_plugins_validation=self.get_skip_plugin_validation_flag(
+                request_dict)
+            )
         return deployment, 201
+
+    def create_request_schema(self):
+        request_schema = {
+            'blueprint_id': {},
+            'inputs': {'optional': True, 'type': dict}
+        }
+        return request_schema
+
+    def get_skip_plugin_validation_flag(self, request_dict):
+        return True
 
     @swagger.operation(
         responseClass=models.Deployment,

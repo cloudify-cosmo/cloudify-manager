@@ -662,7 +662,8 @@ class ResourceManager(object):
                           deployment_id,
                           inputs=None,
                           bypass_maintenance=None,
-                          private_resource=False):
+                          private_resource=False,
+                          skip_plugins_validation=False):
 
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
@@ -674,6 +675,18 @@ class ResourceManager(object):
         except parser_exceptions.UnknownInputError, e:
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
 
+        #  validate plugins exists on manager when
+        #  skip_plugins_validation is False
+        if not skip_plugins_validation:
+            plugins_list = deployment_plan.get('deployment_plugins_to_install',
+                                               [])
+            # validate that all central-deployment plugins are installed
+            for plugin in plugins_list:
+                self.validate_plugin_is_installed(plugin)
+            # validate that all host_agent plugins are installed
+            for node in deployment_plan.get('nodes', []):
+                for plugin in node.get('plugins_to_install', []):
+                    self.validate_plugin_is_installed(plugin)
         new_deployment = self.prepare_deployment_for_storage(
             deployment_id,
             deployment_plan,
@@ -695,6 +708,42 @@ class ResourceManager(object):
                                             deployment_plan,
                                             bypass_maintenance)
         return new_deployment
+
+    def validate_plugin_is_installed(self, plugin):
+        """
+        This method checks if a plugin is already installed on the manager,
+        if not - raises an appropriate exception.
+        :param plugin: A plugin from the blueprint
+        """
+
+        # if plugin['install']==False we don't need to install this plugin
+        if not plugin['install']:
+            return
+        query_parameters = {
+            'package_name': plugin['package_name'],
+            'package_version': plugin['package_version']
+        }
+        if plugin['distribution']:
+            query_parameters['distribution'] = plugin['distribution']
+        if plugin['distribution_version']:
+            query_parameters['distribution_version'] =\
+                plugin['distribution_version']
+        if plugin['distribution_release']:
+            query_parameters['distribution_release'] =\
+                plugin['distribution_release']
+        if plugin['supported_platform']:
+            query_parameters['supported_platform'] =\
+                plugin['supported_platform']
+        if plugin['source']:
+            query_parameters['package_source'] = plugin['source']
+
+        result = self.sm.list(models.Plugin, filters=query_parameters)
+        if result.metadata['pagination']['total'] == 0:
+            raise manager_exceptions.\
+                DeploymentPluginNotFound(
+                    'Required plugin {}, version {} is not installed '
+                    'on the manager'.format(plugin['name'],
+                                            plugin['package_version']))
 
     def start_deployment_modification(self,
                                       deployment_id,

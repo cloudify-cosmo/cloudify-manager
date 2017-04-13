@@ -45,7 +45,7 @@ from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
 
 FILE_SERVER_PORT = 53229
-LATEST_API_VERSION = 3  # to be used by max_client_version test attribute
+LATEST_API_VERSION = 3.1  # to be used by max_client_version test attribute
 
 
 class TestClient(FlaskClient):
@@ -387,22 +387,31 @@ class BaseServerTestCase(unittest.TestCase):
                        blueprint_file_name=None,
                        blueprint_id='blueprint',
                        inputs=None,
-                       blueprint_dir='mock_blueprint'):
+                       blueprint_dir='mock_blueprint',
+                       skip_plugins_validation=None):
+        blueprint_response = self.put_blueprint(blueprint_dir,
+                                                blueprint_file_name,
+                                                blueprint_id)
+        blueprint_id = blueprint_response['id']
+        create_deployment_kwargs = {'inputs': inputs}
+        if skip_plugins_validation is not None:
+            create_deployment_kwargs['skip_plugins_validation'] =\
+                skip_plugins_validation
+        deployment = self.client.deployments.create(blueprint_id,
+                                                    deployment_id,
+                                                    **create_deployment_kwargs)
+        return blueprint_id, deployment.id, blueprint_response, deployment
+
+    def put_blueprint(self, blueprint_dir, blueprint_file_name, blueprint_id):
         blueprint_response = self.put_file(
             *self.put_blueprint_args(blueprint_file_name,
                                      blueprint_id,
                                      blueprint_dir=blueprint_dir)).json
-
         if 'error_code' in blueprint_response:
             raise RuntimeError(
                 '{}: {}'.format(blueprint_response['error_code'],
                                 blueprint_response['message']))
-
-        blueprint_id = blueprint_response['id']
-        deployment = self.client.deployments.create(blueprint_id,
-                                                    deployment_id,
-                                                    inputs=inputs)
-        return blueprint_id, deployment.id, blueprint_response, deployment
+        return blueprint_response
 
     def upload_plugin(self, package_name, package_version):
         temp_file_path = self.create_wheel(package_name, package_version)

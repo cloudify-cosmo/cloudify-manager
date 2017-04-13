@@ -12,12 +12,15 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-from . import swagger, resources_v1, resources_v2, resources_v2_1, resources_v3
+
+from . import (swagger, resources_v1, resources_v2,
+               resources_v2_1, resources_v3, resources_v3_1)
 
 SUPPORTED_API_VERSIONS = [('v1', resources_v1),
                           ('v2', resources_v2),
                           ('v2.1', resources_v2_1),
-                          ('v3', resources_v3)]
+                          ('v3', resources_v3),
+                          ('v3.1', resources_v3_1)]
 
 
 def setup_resources(api):

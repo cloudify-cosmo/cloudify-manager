@@ -16,6 +16,7 @@
 import errno
 import os
 import uuid
+import exceptions
 
 from nose.plugins.attrib import attr
 
@@ -25,6 +26,10 @@ from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 
 from cloudify_rest_client.exceptions import CloudifyClientError
+#
+
+TEST_PACKAGE_NAME = 'cloudify-script-plugin'
+TEST_PACKAGE_VERSION = '1.2'
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -426,3 +431,109 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             self.assertEqual(
                 manager_exceptions.DeploymentOutputsEvaluationError.ERROR_CODE,
                 e.error_code)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_when_plugin_not_found_central_deployment(self):
+        from cloudify_rest_client.exceptions import DeploymentPluginNotFound
+        id_ = str(uuid.uuid4())
+        try:
+            self.put_deployment(
+                blueprint_file_name='deployment_with_source_plugin.yaml',
+                blueprint_id=id_,
+                deployment_id=id_)
+            raise exceptions.AssertionError(
+                "Expected DeploymentPluginNotFound error")
+        except DeploymentPluginNotFound, e:
+            self.assertEqual(412, e.status_code)
+            self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
+                             ERROR_CODE,
+                             e.error_code)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_when_plugin_not_found_host_agent(self):
+        from cloudify_rest_client.exceptions import DeploymentPluginNotFound
+        id_ = str(uuid.uuid4())
+        try:
+            self.put_deployment(
+                blueprint_file_name='deployment_'
+                                    'with_source_plugin_host_agent.yaml',
+                blueprint_id=id_,
+                deployment_id=id_)
+            raise exceptions.AssertionError(
+                "Expected DeploymentPluginNotFound error")
+        except DeploymentPluginNotFound, e:
+            self.assertEqual(412, e.status_code)
+            self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
+                             ERROR_CODE,
+                             e.error_code)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_when_source_plugin_exists_on_manager(self):
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='deployment_with_'
+                                'existing_plugin_on_manager.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_when_plugin_not_found_with_new_flag(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='deployment_with_source_plugin.yaml',
+            blueprint_id=id_,
+            deployment_id=id_,
+            skip_plugins_validation=True)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_with_invalid_flag_argument(self):
+        id_ = str(uuid.uuid4())
+        try:
+            self.put_deployment(
+                blueprint_file_name='deployment_with_source_plugin.yaml',
+                blueprint_id=id_,
+                deployment_id=id_,
+                skip_plugins_validation='invalid_arg')
+            raise exceptions.AssertionError("Expected CloudifyClientError")
+        except CloudifyClientError, e:
+            self.assertEqual(400, e.status_code)
+            self.assertEqual(manager_exceptions.BadParametersError.
+                             BAD_PARAMETERS_ERROR_CODE,
+                             e.error_code)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_failure_without_skip_plugins_validation_argument(self):
+        id_ = str(uuid.uuid4())
+        self.put_blueprint('mock_blueprint',
+                           'deployment_with_source_plugin.yaml', id_)
+        response = self.put('/deployments/{}'.format(id_),
+                            {'blueprint_id': id_})
+        self.assertEqual('deployment_plugin_not_found',
+                         response.json['error_code'])
+        self.assertEqual('412 PRECONDITION FAILED', response.status)
+        self.assertEqual(412, response.status_code)
+
+    @attr(client_min_version=1, client_max_version=3)
+    def test_creation_success_when_plugin_not_found_central_deployment_agent(
+            self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+             blueprint_file_name='deployment_with_source_plugin.yaml',
+             blueprint_id=id_,
+             deployment_id=id_)
+
+    @attr(client_min_version=1, client_max_version=3)
+    def test_creation_success_when_plugin_not_found_host_agent(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+             blueprint_file_name='deployment_with'
+                                 '_source_plugin_host_agent.yaml',
+             blueprint_id=id_,
+             deployment_id=id_)
