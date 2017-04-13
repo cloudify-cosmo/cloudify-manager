@@ -42,7 +42,6 @@ from .resources_v2 import (
     Nodes as v2_Nodes,
 )
 from .responses_v3 import BaseResponse, ResourceID, SecretsListResponse
-from . import resources_v1
 
 try:
     from cloudify_premium import (TenantResponse,

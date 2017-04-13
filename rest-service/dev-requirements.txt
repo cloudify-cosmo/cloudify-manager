@@ -1,5 +1,5 @@
 https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/4.0.1.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-6474-create-deployment-plugin-validation.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/4.0.1.zip
 
 # test dependencies
 mock
