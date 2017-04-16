@@ -44,6 +44,7 @@ from .es_snapshot import ElasticSearch
 from .constants import METADATA_FILENAME, M_VERSION
 
 
+V_4_0_1 = ManagerVersion('4.0.1')
 V_4_0_0 = ManagerVersion('4.0.0')
 
 
@@ -111,7 +112,7 @@ class SnapshotRestore(object):
 
     def _restore_files_to_manager(self):
         new_tenant = self._tenant_name \
-            if self._snapshot_version < V_4_0_0 else ''
+            if self._snapshot_version < V_4_0_1 else ''
         ctx.logger.info('Restoring files from the archive to the manager')
         utils.copy_files_between_manager_and_snapshot(
             self._tempdir,
@@ -369,7 +370,7 @@ class SnapshotRestoreValidator(object):
                     'of version {0}. Tenant name must be provided when '
                     'restoring versions prior to {1}'.format(
                         self._snapshot_version,
-                        V_4_0_0
+                        V_4_0_1
                     ))
             else:
                 self._assert_clean_db()
