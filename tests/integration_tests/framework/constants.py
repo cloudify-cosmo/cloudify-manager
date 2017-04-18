@@ -23,3 +23,5 @@ BRANCH_NAME_CORE = 'BRANCH_NAME_CORE'
 ##########################################
 DOCL_CONTAINER_IP = 'DOCL_CONTAINER_IP'
 CLOUDIFY_REST_PORT = 'CLOUDIFY_REST_PORT'
+
+PLUGIN_STORAGE_DIR = '/opt/integration-plugin-storage'

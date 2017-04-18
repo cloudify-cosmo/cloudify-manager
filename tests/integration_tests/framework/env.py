@@ -89,6 +89,12 @@ class BaseTestEnvironment(object):
             self.destroy()
             raise
 
+    @staticmethod
+    def _set_permissions():
+        docl.execute('chown -R mgmtworker:mgmtworker {0}'.format(
+            constants.PLUGIN_STORAGE_DIR
+        ))
+
     def on_environment_created(self):
         raise NotImplementedError
 
@@ -99,6 +105,7 @@ class BaseTestEnvironment(object):
         self.on_manager_created()
 
     def on_manager_created(self):
+        self._set_permissions()
         self.start_events_printer()
 
     def _build_resource_mapping(self):
@@ -115,7 +122,7 @@ class BaseTestEnvironment(object):
         # test can later read.
         resources = [{
             'src': self.plugins_storage_dir,
-            'dst': '/opt/integration-plugin-storage',
+            'dst': constants.PLUGIN_STORAGE_DIR,
             'write': True
         }]
 
