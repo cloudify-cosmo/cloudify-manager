@@ -110,6 +110,7 @@ def init(expose=None, resources=None):
     :param resources: List of {'src':'', 'dst':''} dicts
     """
     docl_home = _docl_home()
+    resource_tar_name = 'cloudify-manager-resources.tar.gz'
     work_dir = os.path.join(docl_home, 'work')
     if not os.path.exists(docl_home):
         os.makedirs(docl_home)
@@ -117,10 +118,10 @@ def init(expose=None, resources=None):
         os.makedirs(work_dir)
     with open(os.path.expanduser('~/.docl/config.yaml')) as f:
         conf = yaml.safe_load(f)
-    resources_tar_path = os.path.join(conf['workdir'], 'resources.tar.gz')
+    resources_tar_path = os.path.join(conf['workdir'], resource_tar_name)
     if os.path.exists(resources_tar_path):
         os.symlink(resources_tar_path,
-                   os.path.join(work_dir, 'resources.tar.gz'))
+                   os.path.join(work_dir, resource_tar_name))
     conf['expose'] += list(expose or [])
     conf['resources'] += list(resources or [])
     conf['workdir'] = work_dir
