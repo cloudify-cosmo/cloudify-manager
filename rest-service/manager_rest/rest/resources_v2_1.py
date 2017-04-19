@@ -175,7 +175,7 @@ class DeploymentUpdate(SecuredResource):
         manager.extract_steps_from_deployment_update(deployment_update)
 
         return manager.commit_deployment_update(
-            deployment_update.id,
+            deployment_update,
             skip_install=skip_install,
             skip_uninstall=skip_uninstall,
             workflow_id=workflow_id)

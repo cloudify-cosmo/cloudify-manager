@@ -43,7 +43,7 @@ class TestRestServiceListSort(AgentlessTestCase):
                 deployment_id=deployment.id,
                 nodes={'node': {'instances': i}})
             self.client.deployment_modifications.finish(modification.id)
-        self._test_sort('deployment_modifications', 'deployment_id')
+        self._test_sort('deployment_modifications', 'id')
 
     def test_executions_sort(self):
         deployment = self.deploy(resource('dsl/sort.yaml'))

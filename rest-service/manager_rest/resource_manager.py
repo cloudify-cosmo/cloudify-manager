@@ -556,11 +556,9 @@ class ResourceManager(object):
         return self.sm.update(execution)
 
     @staticmethod
-    def prepare_deployment_for_storage(deployment_id,
-                                       deployment_plan,
-                                       blueprint):
+    def prepare_deployment_for_storage(deployment_id, deployment_plan):
         now = utils.get_formatted_timestamp()
-        deployment = models.Deployment(
+        return models.Deployment(
             id=deployment_id,
             created_at=now,
             updated_at=now,
@@ -573,8 +571,6 @@ class ResourceManager(object):
             scaling_groups=deployment_plan['scaling_groups'],
             outputs=deployment_plan['outputs'],
         )
-        deployment.set_blueprint(blueprint)
-        return deployment
 
     def prepare_deployment_nodes_for_storage(self,
                                              deployment_plan,
@@ -689,9 +685,9 @@ class ResourceManager(object):
                     self.validate_plugin_is_installed(plugin)
         new_deployment = self.prepare_deployment_for_storage(
             deployment_id,
-            deployment_plan,
-            blueprint
+            deployment_plan
         )
+        new_deployment.set_blueprint(blueprint)
         # The deployment is private if either the blueprint was
         # private, or the user passed the `private_resource` flag
         private_resource = private_resource or blueprint.private_resource

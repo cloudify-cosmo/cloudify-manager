@@ -195,20 +195,18 @@ class DeploymentUpdateManager(object):
                     .format('\n'.join(unsupported_entity_ids)))
 
     def commit_deployment_update(self,
-                                 deployment_update_id,
+                                 dep_update,
                                  skip_install=False,
                                  skip_uninstall=False,
                                  workflow_id=None):
         """commit the deployment update steps
 
+        :param dep_update:
         :param skip_install:
         :param skip_uninstall:
-        :param deployment_update_id:
         :param workflow_id:
         :return:
         """
-        dep_update = self.get_deployment_update(deployment_update_id)
-
         # mark deployment update as committing
         dep_update.state = STATES.UPDATING
         self.sm.update(dep_update)
