@@ -27,7 +27,7 @@ from cloudify.exceptions import NonRecoverableError
 IMAGE = 'cloudify/centos:7'
 PUBLIC_KEY_CONTAINER_PATH = '/etc/ssh/ssh_host_rsa_key.pub'
 PRIVATE_KEY_CONTAINER_PATH = '/etc/ssh/ssh_host_rsa_key'
-DOCKER_CONF_PATH = '/root/dockercompute/docker_conf.json'
+DOCKER_CONF_PATH = '/etc/cloudify/dockercompute/docker_conf.json'
 
 
 @operation
