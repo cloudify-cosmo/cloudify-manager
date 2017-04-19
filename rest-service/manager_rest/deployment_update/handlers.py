@@ -767,10 +767,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
                                         ENTITY_TYPES.DESCRIPTION}
 
     def handle(self, dep_update):
-        deployment = self.sm.get(
-            models.Deployment,
-            dep_update.deployment_id
-        ).to_dict()
+        deployment = dep_update.deployment.to_dict()
         modified_entities = {
             ENTITY_TYPES.WORKFLOW: [],
             ENTITY_TYPES.OUTPUT: [],
@@ -791,8 +788,7 @@ class DeploymentUpdateDeploymentHandler(UpdateHandler):
         return modified_entities, deployment
 
     def finalize(self, dep_update):
-
-        deployment = self.sm.get(models.Deployment, dep_update.deployment_id)
+        deployment = dep_update.deployment
         deployment.updated_at = utils.get_formatted_timestamp()
         self.sm.update(deployment)
 

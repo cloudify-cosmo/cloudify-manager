@@ -168,12 +168,11 @@ class DeploymentPlan(dict):
 
         blueprint = deployment_update.deployment.blueprint
 
-        deployment = rm.prepare_deployment_for_storage(
+        new_deployment = rm.prepare_deployment_for_storage(
             deployment_id,
-            deployment_plan,
-            blueprint
+            deployment_plan
         )
-        dep_dict = deployment.to_dict(suppress_error=True)
+        dep_dict = new_deployment.to_dict(suppress_error=True)
         dep_dict['blueprint_id'] = blueprint.id
 
         deployment_plugins_to_install = \
