@@ -25,3 +25,4 @@ DOCL_CONTAINER_IP = 'DOCL_CONTAINER_IP'
 CLOUDIFY_REST_PORT = 'CLOUDIFY_REST_PORT'
 
 PLUGIN_STORAGE_DIR = '/opt/integration-plugin-storage'
+DOCKER_COMPUTE_DIR = '/etc/cloudify/dockercompute'

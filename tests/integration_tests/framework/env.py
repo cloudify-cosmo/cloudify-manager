@@ -89,11 +89,12 @@ class BaseTestEnvironment(object):
             self.destroy()
             raise
 
+    def _set_permissions(self):
+        self.chown('mgmtworker', constants.PLUGIN_STORAGE_DIR)
+
     @staticmethod
-    def _set_permissions():
-        docl.execute('chown -R mgmtworker:mgmtworker {0}'.format(
-            constants.PLUGIN_STORAGE_DIR
-        ))
+    def chown(owner, path_in_container):
+        docl.execute('chown -R {0}:{0} {1}'.format(owner, path_in_container))
 
     def on_environment_created(self):
         raise NotImplementedError
@@ -233,7 +234,7 @@ class AgentTestEnvironment(BaseTestEnvironment):
         # the docker_conf.json file is used to pass information
         # to the dockercompute plugin. (see
         # integration_tests_plugins/dockercompute)
-        docl.execute('mkdir -p /root/dockercompute')
+        docl.execute('mkdir -p {0}'.format(constants.DOCKER_COMPUTE_DIR))
         with tempfile.NamedTemporaryFile() as f:
             json.dump({
                 # The dockercompute plugin needs to know where to find the
@@ -250,7 +251,9 @@ class AgentTestEnvironment(BaseTestEnvironment):
             f.flush()
             docl.copy_file_to_manager(
                 source=f.name,
-                target='/root/dockercompute/docker_conf.json')
+                target=os.path.join(constants.DOCKER_COMPUTE_DIR,
+                                    'docker_conf.json'))
+        self.chown('mgmtworker', constants.DOCKER_COMPUTE_DIR)
 
 
 class ManagerTestEnvironment(AgentTestEnvironment):
