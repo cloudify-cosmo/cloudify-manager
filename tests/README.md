@@ -108,6 +108,8 @@ To test everything is working as it should, run:
 
 ```
 $ cd <root directory of cloudify-manager repository>
+$ export CLOUDIFY_USERNAME=admin
+$ export CLOUDIFY_PASSWORD=admin
 $ nosetests -s tests/integration_tests/tests/agentless_tests/test_workflow.py:BasicWorkflowsTest.test_execute_operation
 ```
 
