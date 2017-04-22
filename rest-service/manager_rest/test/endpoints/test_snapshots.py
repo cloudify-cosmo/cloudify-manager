@@ -13,7 +13,7 @@ class SnapshotsTest(BaseServerTestCase):
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_snapshot_upload_progress(self):
-        tmp_file_path = self.create_wheel('wagon', '0.3.2')
+        tmp_file_path = self.create_wheel('wagon', '0.6.0')
         total_size = os.path.getsize(tmp_file_path)
 
         progress_func = generate_progress_func(
@@ -31,7 +31,7 @@ class SnapshotsTest(BaseServerTestCase):
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_snapshot_download_progress(self):
-        tmp_file_path = self.create_wheel('wagon', '0.3.2')
+        tmp_file_path = self.create_wheel('wagon', '0.6.0')
         total_size = os.path.getsize(tmp_file_path)
         tmp_local_path = '/tmp/snapshot.sn'
 
