@@ -19,6 +19,7 @@ import shutil
 import zipfile
 import platform
 import tempfile
+import subprocess
 from contextlib import contextmanager
 
 from wagon import wagon
@@ -92,6 +93,9 @@ class SnapshotRestore(object):
                 self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_deployment_envs(existing_dep_envs)
+                subprocess.check_call([
+                    'sudo', '/opt/cloudify/snapshot_permissions_fixer'
+                ])
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
