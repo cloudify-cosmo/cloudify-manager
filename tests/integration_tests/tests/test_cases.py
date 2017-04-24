@@ -72,6 +72,10 @@ class BaseTestCase(unittest.TestCase):
             yaml.dump(config, f)
             f.flush()
             cls.copy_file_to_manager(f.name, config_file_location)
+            cls.execute_on_manager('chown {0}:{1} {2}'.format(
+                'cloudify-restservice',
+                'cloudify-restservice',
+                config_file_location))
         cls.restart_service('cloudify-restservice')
 
     def _setup_running_manager_attributes(self):
