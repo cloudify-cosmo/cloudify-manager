@@ -20,13 +20,13 @@ from flask_migrate import upgrade
 
 from cloudify.utils import setup_logger
 
+import manager_rest
 from manager_rest.storage import db, models
 from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
 from manager_rest.constants import PROVIDER_CONTEXT_ID, CURRENT_TENANT_CONFIG
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
 
-import integration_tests
 from integration_tests.framework import utils
 from integration_tests.framework.postgresql import safe_drop_all
 from integration_tests.framework.docl import read_file as read_manager_file
@@ -37,9 +37,9 @@ logger = setup_logger('Flask Utils', logging.INFO)
 security_config = None
 
 # This is a hacky way to get to the migrations folder
-base_dir = path(integration_tests.__file__).parent.parent.parent
+base_dir = path(manager_rest.__file__).parent.parent.parent
 migrations_dir = base_dir / 'resources' / 'rest-service' / \
-                 'cloudify' / 'migrations'
+                            'cloudify' / 'migrations'
 
 
 def setup_flask_app():
