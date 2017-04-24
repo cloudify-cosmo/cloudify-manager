@@ -33,6 +33,8 @@ class Postgres(object):
     """
     _TRUNCATE_QUERY = "TRUNCATE {0} CASCADE;"
     _POSTGRES_DUMP_FILENAME = 'pg_data'
+    _STAGE_DUMP_FILENAME = 'stage_data'
+    _STAGE_DB_NAME = 'stage'
     _TABLES_TO_KEEP = ['provider_context', 'roles']
     _TABLES_TO_RESTORE = ['users', 'tenants']
 
@@ -70,11 +72,30 @@ class Postgres(object):
         destination_path = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
         exclude_tables = ['snapshots', 'provider_context', 'roles']
         try:
-            self._dump_to_file(destination_path, exclude_tables)
+            self._dump_to_file(destination_path, self._db_name, exclude_tables)
         except Exception as ex:
             raise NonRecoverableError('Error during dumping Postgres data, '
                                       'exception: {0}'.format(ex))
         self._append_delete_current_execution(destination_path)
+
+    def dump_stage(self, tempdir):
+        if not self._stage_db_exists():
+            return
+        destination_path = os.path.join(tempdir, self._STAGE_DUMP_FILENAME)
+        try:
+            self._dump_to_file(destination_path, self._STAGE_DB_NAME)
+        except Exception as ex:
+            raise NonRecoverableError('Error during dumping Stage data, '
+                                      'exception: {0}'.format(ex))
+
+    def _stage_db_exists(self):
+        """Return True if the stage DB exists"""
+
+        exists_query = "SELECT 1 FROM pg_database " \
+                       "WHERE datname='{0}'".format(self._STAGE_DB_NAME)
+        response = self.run_query(exists_query)
+        # Will wither be an empty list, of a list with 1 in it
+        return bool(response['all'])
 
     def _append_delete_current_execution(self, dump_file):
         """Append to the dump file a query that deletes the current execution
@@ -141,21 +162,22 @@ class Postgres(object):
                    self._db_name]
         run_shell(command)
 
-    def _dump_to_file(self, destination_path, exclude_tables=None):
+    def _dump_to_file(self, destination_path, db_name, exclude_tables=None):
         ctx.logger.debug('Creating db dump file: {0}, excluding: {0}'.
                          format(destination_path, exclude_tables))
-        exclude_tables = exclude_tables if exclude_tables else []
-        flags = ["--exclude-table={0}".format(t)
-                 for t in exclude_tables]
-        flags.extend(["--exclude-table-data={0}".format(t)
-                      for t in exclude_tables])
+        flags = []
+        if exclude_tables:
+            flags = ["--exclude-table={0}".format(t)
+                     for t in exclude_tables]
+            flags.extend(["--exclude-table-data={0}".format(t)
+                          for t in exclude_tables])
         pg_dump_bin = os.path.join(self._bin_dir, 'pg_dump')
         command = [pg_dump_bin,
                    '-a',
                    '--host', self._host,
                    '--port', self._port,
                    '-U', self._username,
-                   self._db_name,
+                   db_name,
                    '-f', destination_path]
         command.extend(flags)
         run_shell(command)
