@@ -25,11 +25,17 @@ from dateutil import (
 )
 from flask_sqlalchemy import SQLAlchemy, inspect
 from flask_restful import fields as flask_fields
+from sqlalchemy import MetaData
 from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
 
 from manager_rest.utils import classproperty
 
-db = SQLAlchemy()
+
+db = SQLAlchemy(metadata=MetaData(naming_convention={
+    # This is to generate migration scripts with constraint names
+    # using the same naming convention used by PostgreSQL by default
+    'fk': '%(table_name)s_%(column_0_name)s_fkey',
+}))
 
 
 class UTCDateTime(db.TypeDecorator):
