@@ -14,9 +14,13 @@
 # limitations under the License.
 import yaml
 import logging
+from path import path
+
+from flask_migrate import upgrade
 
 from cloudify.utils import setup_logger
 
+import manager_rest
 from manager_rest.storage import db, models
 from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
 from manager_rest.constants import PROVIDER_CONTEXT_ID, CURRENT_TENANT_CONFIG
@@ -31,6 +35,11 @@ from integration_tests.tests.constants import PROVIDER_NAME, PROVIDER_CONTEXT
 logger = setup_logger('Flask Utils', logging.INFO)
 
 security_config = None
+
+# This is a hacky way to get to the migrations folder
+base_dir = path(manager_rest.__file__).parent.parent.parent
+migrations_dir = base_dir / 'resources' / 'rest-service' / \
+                            'cloudify' / 'migrations'
 
 
 def setup_flask_app():
@@ -54,7 +63,7 @@ def reset_storage():
 
     # Rebuild the DB
     safe_drop_all()
-    db.create_all()
+    upgrade(directory=migrations_dir)
 
     # Add default tenant, admin user and provider context
     _add_defaults(app)

@@ -21,12 +21,6 @@ from cloudify.utils import setup_logger
 from integration_tests.framework import utils
 from manager_rest.flask_utils import get_postgres_conf
 from manager_rest.storage import db
-from sqlalchemy.engine import reflection
-from sqlalchemy.schema import (MetaData,
-                               Table,
-                               DropTable,
-                               ForeignKeyConstraint,
-                               DropConstraint)
 
 logger = setup_logger('postgresql', logging.INFO)
 setup_logger('postgresql.trace', logging.INFO)
@@ -58,37 +52,7 @@ def safe_drop_all():
     """Creates a single transaction that *always* drops all tables, regardless
     of relationships and foreign key constraints (as opposed to `db.drop_all`)
     """
-
-    conn = db.engine.connect()
-
-    # the transaction only applies if the DB supports
-    # transactional DDL, i.e. Postgresql, MS SQL Server
-    trans = conn.begin()
-
-    inspector = reflection.Inspector.from_engine(db.engine)
-
-    # gather all data first before dropping anything.
-    # some DBs lock after things have been dropped in
-    # a transaction.
-    metadata = MetaData()
-
-    tbs = []
-    all_fks = []
-
-    for table_name in inspector.get_table_names():
-        fks = []
-        for fk in inspector.get_foreign_keys(table_name):
-            if not fk['name']:
-                continue
-            fks.append(ForeignKeyConstraint((), (), name=fk['name']))
-        t = Table(table_name, metadata, *fks)
-        tbs.append(t)
-        all_fks.extend(fks)
-
-    for fkc in all_fks:
-        conn.execute(DropConstraint(fkc))
-
-    for table in tbs:
-        conn.execute(DropTable(table))
-
-    trans.commit()
+    meta = db.metadata
+    for table in reversed(meta.sorted_tables):
+        db.session.execute(table.delete())
+    db.session.commit()

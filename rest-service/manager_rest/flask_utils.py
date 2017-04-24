@@ -16,6 +16,7 @@
 from collections import namedtuple
 
 from flask import Flask
+from flask_migrate import Migrate
 from flask_security import Security
 
 from manager_rest import config
@@ -40,6 +41,7 @@ def setup_flask_app(manager_ip='localhost',
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     set_flask_security_config(app, hash_salt, secret_key)
     Security(app=app, datastore=user_datastore)
+    Migrate(app=app, db=db)
     db.init_app(app)
     app.app_context().push()
     return app
