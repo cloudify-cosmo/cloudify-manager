@@ -15,32 +15,53 @@
 
 import uuid
 
-from integration_tests import AgentTestCase
+from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.utils import get_resource as resource
 
 
-class ExistingVMTest(AgentTestCase):
-
+class BaseExistingVMTest(AgentTestWithPlugins):
     def setUp(self):
-        super(ExistingVMTest, self).setUp()
+        super(BaseExistingVMTest, self).setUp()
         self.setup_deployment_id = str(uuid.uuid4())
+        self.setup_node_id = 'setup_host'
         dsl_path = resource("dsl/existing-vm-setup.yaml")
         self.deploy_application(dsl_path,
                                 deployment_id=self.setup_deployment_id)
 
+    def _get_ssh_key_content(self):
+        ssh_key_path = self.get_host_key_path(
+            node_id=self.setup_node_id,
+            deployment_id=self.setup_deployment_id
+        )
+        return self.read_manager_file(ssh_key_path)
+
+    def _get_host_ip(self):
+        return self.get_host_ip(
+            node_id=self.setup_node_id,
+            deployment_id=self.setup_deployment_id
+        )
+
+
+class ExistingVMTest(BaseExistingVMTest):
     def test_existing_vm(self):
         dsl_path = resource("dsl/existing-vm.yaml")
-        deployment, _ = self.deploy_application(dsl_path, inputs={
-            'ip': self.get_host_ip(
-                node_id='setup_host',
-                deployment_id=self.setup_deployment_id),
+        inputs = {
+            'ip': self._get_host_ip(),
             'agent_key': self.get_host_key_path(
-                node_id='setup_host',
+                node_id=self.setup_node_id,
                 deployment_id=self.setup_deployment_id),
-        })
+        }
+        deployment, _ = self.deploy_application(dsl_path, inputs=inputs)
+        plugin_data = self.get_plugin_data('testmockoperations', deployment.id)
+        self.assertEqual(1, len(plugin_data['mock_operation_invocation']))
 
-        invocations = self.get_plugin_data(
-            plugin_name='testmockoperations',
-            deployment_id=deployment.id)['mock_operation_invocation']
 
-        self.assertEqual(1, len(invocations))
+class SecretAgentKeyTest(BaseExistingVMTest):
+    def test_secret_ssh_key_in_existing_vm(self):
+        ssh_key_content = self._get_ssh_key_content()
+        self.client.secrets.create('agent_key', ssh_key_content)
+        dsl_path = resource("dsl/secret-ssh-key-in-existing-vm.yaml")
+        inputs = {'ip': self._get_host_ip()}
+        deployment, _ = self.deploy_application(dsl_path, inputs=inputs)
+        plugin_data = self.get_plugin_data('testmockoperations', deployment.id)
+        self.assertEqual(1, len(plugin_data['mock_operation_invocation']))

@@ -57,14 +57,7 @@ def _start_container(image, label):
     label = list(label or [])
     docker_conf = _docker_conf()
     label.append(docker_conf['env_label'])
-    src_plugins_storage = docker_conf['plugins_storage_dir']
-    dst_plugins_storage = '/opt/integration-plugin-storage'
-    args = [
-        '--privileged',
-        '--detach',
-        '--volume', '{0}:{1}:rw'.format(src_plugins_storage,
-                                        dst_plugins_storage)
-    ]
+    args = ['--privileged', '--detach']
     for l in label:
         args += ['--label', l]
     args.append(image)

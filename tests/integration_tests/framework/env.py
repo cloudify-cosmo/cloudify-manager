@@ -37,7 +37,7 @@ cloudify.utils.setup_logger('cloudify.rest_client', logging.INFO)
 third_party_logs = {
     'sh': logging.WARNING,
     'pika.adapters.base_connection': logging.CRITICAL,
-    'requests': logging.WARNING,
+    'requests': logging.ERROR,
     'alembic': logging.WARNING
 }
 for logger_name, logger_level in third_party_logs.iteritems():
@@ -58,11 +58,6 @@ class BaseTestEnvironment(object):
         # (manager and dockercompute node instances)
         # This label is later used for cleanup purposes.
         self.env_label = 'env={0}'.format(self.env_id)
-        self.plugins_storage_dir = os.path.join(
-            self.test_working_dir, 'plugins-storage')
-        self.maintenance_folder = os.path.join(
-            self.test_working_dir, 'maintenance')
-        os.makedirs(self.plugins_storage_dir)
         self.amqp_events_printer_thread = None
         # This is used by tests/framework when a repository is fetched from
         # github. For example, the hello world repo or the plugin template.
@@ -90,9 +85,6 @@ class BaseTestEnvironment(object):
             self.destroy()
             raise
 
-    def _set_permissions(self):
-        self.chown('mgmtworker', constants.PLUGIN_STORAGE_DIR)
-
     @staticmethod
     def chown(owner, path_in_container):
         docl.execute('chown -R {0}:{0} {1}'.format(owner, path_in_container))
@@ -107,7 +99,8 @@ class BaseTestEnvironment(object):
         self.on_manager_created()
 
     def on_manager_created(self):
-        self._set_permissions()
+        docl.execute('mkdir -p {0}'.format(constants.PLUGIN_STORAGE_DIR))
+        self.chown('mgmtworker', constants.PLUGIN_STORAGE_DIR)
         self.start_events_printer()
 
     def _build_resource_mapping(self):
@@ -117,17 +110,7 @@ class BaseTestEnvironment(object):
         machine (the client) and where it should be mounted on the container.
         """
 
-        # The plugins storage dir is mounted as a writable shared directory
-        # between all containers and the host machine. Most mock plugins make
-        # use of a utility method in
-        # integration_tests_plugins.utils.update_storage to save state that the
-        # test can later read.
-        resources = [{
-            'src': self.plugins_storage_dir,
-            'dst': constants.PLUGIN_STORAGE_DIR,
-            'write': True
-        }]
-
+        resources = []
         # Import only for the sake of finding the module path on the file
         # system
         import integration_tests_plugins
@@ -187,6 +170,8 @@ class BaseTestEnvironment(object):
         os.environ.pop('CFY_WORKDIR', None)
         docl.clean(label=[self.env_label])
         self.delete_working_directory()
+        logger.debug('Waiting for AMQP events printer thread')
+        self.amqp_events_printer_thread.join()
 
     def delete_working_directory(self):
         if os.path.exists(self.test_working_dir):
@@ -241,10 +226,6 @@ class AgentTestEnvironment(BaseTestEnvironment):
                 # The dockercompute plugin needs to know where to find the
                 # docker host
                 'docker_host': docl.docker_host(),
-
-                # Used to know from where to mount the plugins storage dir
-                # on dockercompute node instances containers
-                'plugins_storage_dir': self.plugins_storage_dir,
 
                 # Used for cleanup purposes
                 'env_label': self.env_label

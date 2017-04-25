@@ -36,8 +36,13 @@ def update_storage(ctx):
         if ctx.task_name.startswith('cloudify_agent'):
             plugin_name = 'agent'
 
-    storage_file_path = '/opt/integration-plugin-storage/{0}.json'.format(
-        plugin_name)
+    plugins_storage_dir = '/opt/integration-plugin-storage'
+    if not os.path.exists(plugins_storage_dir):
+        os.makedirs(plugins_storage_dir)
+    storage_file_path = os.path.join(
+        plugins_storage_dir,
+        '{0}.json'.format(plugin_name)
+    )
 
     with storage_file_lock(storage_file_path):
         # create storage file if it doesn't exist
