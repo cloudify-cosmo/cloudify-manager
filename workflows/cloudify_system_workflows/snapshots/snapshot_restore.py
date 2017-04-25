@@ -25,7 +25,7 @@ from contextlib import contextmanager
 from wagon import wagon
 
 from cloudify.workflows import ctx
-from cloudify.utils import ManagerVersion
+from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.manager import get_rest_client
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
@@ -42,7 +42,7 @@ from .influxdb import InfluxDB
 from .postgres import Postgres
 from .credentials import Credentials
 from .es_snapshot import ElasticSearch
-from .constants import METADATA_FILENAME, M_VERSION
+from .constants import METADATA_FILENAME, M_VERSION, ARCHIVE_CERT_DIR
 
 
 V_4_0_0 = ManagerVersion('4.0.0')
@@ -85,6 +85,7 @@ class SnapshotRestore(object):
             existing_plugins = self._get_existing_plugin_names()
             existing_dep_envs = self._get_existing_dep_envs()
 
+            self._restore_certificate()
             with Postgres(self._config) as postgres:
                 self._restore_db(postgres)
                 self._restore_files_to_manager()
@@ -99,6 +100,13 @@ class SnapshotRestore(object):
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
+
+    def _restore_certificate(self):
+        local_cert_dir = os.path.dirname(get_local_rest_certificate())
+        archive_cert_dir = os.path.join(self._tempdir, ARCHIVE_CERT_DIR)
+        if utils.compare_cert_metadata(local_cert_dir, archive_cert_dir):
+            utils.copy_snapshot_path(archive_cert_dir,
+                                     local_cert_dir + '_from_snapshot')
 
     def _validate_snapshot(self):
         manager_version = utils.get_manager_version(self._client)

@@ -16,3 +16,4 @@
 METADATA_FILENAME = 'metadata.json'
 M_VERSION = 'snapshot_version'
 M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
+ARCHIVE_CERT_DIR = 'ssl'
