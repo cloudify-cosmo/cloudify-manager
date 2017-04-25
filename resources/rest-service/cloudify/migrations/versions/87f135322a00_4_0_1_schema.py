@@ -33,13 +33,22 @@ def upgrade():
     op.drop_table('owners_deployments_users')
     op.add_column(
         'blueprints',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
+        sa.Column(
+            'private_resource',
+            sa.Boolean(name='private_resource'),
+            nullable=True,
+        ),
     )
     with op.batch_alter_table('deployment_modifications') as batch_op:
         batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
         batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
         batch_op.add_column(
-            sa.Column('private_resource', sa.Boolean(), nullable=True))
+            sa.Column(
+                'private_resource',
+                sa.Boolean(name='private_resource'),
+                nullable=True,
+            ),
+        )
         batch_op.create_foreign_key(
             op.f('fk_deployment_modifications__tenant_id_tenants'),
             'tenants',
@@ -60,7 +69,12 @@ def upgrade():
         batch_op.add_column(
             sa.Column('_tenant_id', sa.Integer(), nullable=False))
         batch_op.add_column(
-            sa.Column('private_resource', sa.Boolean(), nullable=True))
+            sa.Column(
+                'private_resource',
+                sa.Boolean(name='private_resource'),
+                nullable=True,
+            ),
+        )
         batch_op.create_foreign_key(
             op.f('fk_deployment_update_steps__tenant_id_tenants'),
             'tenants',
@@ -79,7 +93,11 @@ def upgrade():
         batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
         batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
         batch_op.add_column(
-            sa.Column('private_resource', sa.Boolean(), nullable=True),
+            sa.Column(
+                'private_resource',
+                sa.Boolean(name='private_resource'),
+                nullable=True,
+            ),
         )
         batch_op.create_foreign_key(
             op.f('fk_deployment_updates__creator_id_users'),
@@ -98,7 +116,12 @@ def upgrade():
     with op.batch_alter_table('deployments') as batch_op:
         batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
         batch_op.add_column(
-            sa.Column('private_resource', sa.Boolean(), nullable=True))
+            sa.Column(
+                'private_resource',
+                sa.Boolean(name='private_resource'),
+                nullable=True,
+            ),
+        )
         batch_op.create_foreign_key(
             op.f('fk_deployments__tenant_id_tenants'),
             'tenants',
@@ -117,7 +140,11 @@ def upgrade():
             ),
         )
         batch_op.add_column(
-            sa.Column('private_resource', sa.Boolean(), nullable=True),
+            sa.Column(
+                'private_resource',
+                sa.Boolean(name='private_resource'),
+                nullable=True,
+            ),
         )
         batch_op.add_column(
             sa.Column(
@@ -141,13 +168,22 @@ def upgrade():
         )
     op.add_column(
         'executions',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
+        sa.Column(
+            'private_resource',
+            sa.Boolean(name='private_resource'),
+            nullable=True,
+        ),
     )
     with op.batch_alter_table('logs') as batch_op:
         batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
         batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
         batch_op.add_column(
-            sa.Column('private_resource', sa.Boolean(), nullable=True))
+            sa.Column(
+                'private_resource',
+                sa.Boolean(name='private_resource'),
+                nullable=True,
+            ),
+        )
         batch_op.add_column(
             sa.Column(
                 'reported_timestamp',
@@ -172,7 +208,12 @@ def upgrade():
         batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
         batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
         batch_op.add_column(
-            sa.Column('private_resource', sa.Boolean(), nullable=True))
+            sa.Column(
+                'private_resource',
+                sa.Boolean(name='private_resource'),
+                nullable=True,
+            ),
+        )
         batch_op.create_foreign_key(
             op.f('fk_node_instances__creator_id_users'),
             'users',
@@ -191,7 +232,11 @@ def upgrade():
         batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
         batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
         batch_op.add_column(
-            sa.Column('private_resource', sa.Boolean(), nullable=True),
+            sa.Column(
+                'private_resource',
+                sa.Boolean(name='private_resource'),
+                nullable=True,
+            ),
         )
         batch_op.create_foreign_key(
             op.f('fk_nodes__tenant_id_tenants'),
@@ -209,15 +254,27 @@ def upgrade():
         )
     op.add_column(
         'plugins',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
+        sa.Column(
+            'private_resource',
+            sa.Boolean(name='private_resource'),
+            nullable=True,
+        ),
     )
     op.add_column(
         'secrets',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
+        sa.Column(
+            'private_resource',
+            sa.Boolean(name='private_resource'),
+            nullable=True,
+        ),
     )
     op.add_column(
         'snapshots',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
+        sa.Column(
+            'private_resource',
+            sa.Boolean(name='private_resource'),
+            nullable=True,
+        ),
     )
     # ### end Alembic commands ###
 
