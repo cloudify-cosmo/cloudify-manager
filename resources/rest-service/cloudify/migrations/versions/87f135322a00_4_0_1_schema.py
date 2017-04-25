@@ -31,52 +31,262 @@ def upgrade():
     op.drop_table('viewers_secrets_users')
     op.drop_table('owners_executions_users')
     op.drop_table('owners_deployments_users')
-    op.add_column('blueprints', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.add_column('deployment_modifications', sa.Column('_creator_id', sa.Integer(), nullable=False))
-    op.add_column('deployment_modifications', sa.Column('_tenant_id', sa.Integer(), nullable=False))
-    op.add_column('deployment_modifications', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.create_foreign_key(op.f('fk_deployment_modifications__tenant_id_tenants'), 'deployment_modifications', 'tenants', ['_tenant_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(op.f('fk_deployment_modifications__creator_id_users'), 'deployment_modifications', 'users', ['_creator_id'], ['id'], ondelete='CASCADE')
-    op.add_column('deployment_update_steps', sa.Column('_creator_id', sa.Integer(), nullable=False))
-    op.add_column('deployment_update_steps', sa.Column('_tenant_id', sa.Integer(), nullable=False))
-    op.add_column('deployment_update_steps', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.create_foreign_key(op.f('fk_deployment_update_steps__tenant_id_tenants'), 'deployment_update_steps', 'tenants', ['_tenant_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(op.f('fk_deployment_update_steps__creator_id_users'), 'deployment_update_steps', 'users', ['_creator_id'], ['id'], ondelete='CASCADE')
-    op.add_column('deployment_updates', sa.Column('_creator_id', sa.Integer(), nullable=False))
-    op.add_column('deployment_updates', sa.Column('_tenant_id', sa.Integer(), nullable=False))
-    op.add_column('deployment_updates', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.create_foreign_key(op.f('fk_deployment_updates__creator_id_users'), 'deployment_updates', 'users', ['_creator_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(op.f('fk_deployment_updates__tenant_id_tenants'), 'deployment_updates', 'tenants', ['_tenant_id'], ['id'], ondelete='CASCADE')
-    op.add_column('deployments', sa.Column('_tenant_id', sa.Integer(), nullable=False))
-    op.add_column('deployments', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.create_foreign_key(op.f('fk_deployments__tenant_id_tenants'), 'deployments', 'tenants', ['_tenant_id'], ['id'], ondelete='CASCADE')
-    op.add_column('events', sa.Column('_creator_id', sa.Integer(), nullable=False))
-    op.add_column('events', sa.Column('_tenant_id', sa.Integer(), nullable=False))
-    op.add_column('events', sa.Column('error_causes', manager_rest.storage.models_base.JSONString(), nullable=True))
-    op.add_column('events', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.add_column('events', sa.Column('reported_timestamp', manager_rest.storage.models_base.LocalDateTime(), nullable=False))
-    op.create_foreign_key(op.f('fk_events__tenant_id_tenants'), 'events', 'tenants', ['_tenant_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(op.f('fk_events__creator_id_users'), 'events', 'users', ['_creator_id'], ['id'], ondelete='CASCADE')
-    op.add_column('executions', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.add_column('logs', sa.Column('_creator_id', sa.Integer(), nullable=False))
-    op.add_column('logs', sa.Column('_tenant_id', sa.Integer(), nullable=False))
-    op.add_column('logs', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.add_column('logs', sa.Column('reported_timestamp', manager_rest.storage.models_base.LocalDateTime(), nullable=False))
-    op.create_foreign_key(op.f('fk_logs__tenant_id_tenants'), 'logs', 'tenants', ['_tenant_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(op.f('fk_logs__creator_id_users'), 'logs', 'users', ['_creator_id'], ['id'], ondelete='CASCADE')
-    op.add_column('node_instances', sa.Column('_creator_id', sa.Integer(), nullable=False))
-    op.add_column('node_instances', sa.Column('_tenant_id', sa.Integer(), nullable=False))
-    op.add_column('node_instances', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.create_foreign_key(op.f('fk_node_instances__creator_id_users'), 'node_instances', 'users', ['_creator_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(op.f('fk_node_instances__tenant_id_tenants'), 'node_instances', 'tenants', ['_tenant_id'], ['id'], ondelete='CASCADE')
-    op.add_column('nodes', sa.Column('_creator_id', sa.Integer(), nullable=False))
-    op.add_column('nodes', sa.Column('_tenant_id', sa.Integer(), nullable=False))
-    op.add_column('nodes', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.create_foreign_key(op.f('fk_nodes__tenant_id_tenants'), 'nodes', 'tenants', ['_tenant_id'], ['id'], ondelete='CASCADE')
-    op.create_foreign_key(op.f('fk_nodes__creator_id_users'), 'nodes', 'users', ['_creator_id'], ['id'], ondelete='CASCADE')
-    op.add_column('plugins', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.add_column('secrets', sa.Column('private_resource', sa.Boolean(), nullable=True))
-    op.add_column('snapshots', sa.Column('private_resource', sa.Boolean(), nullable=True))
+    op.add_column(
+        'blueprints',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.add_column(
+        'deployment_modifications',
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'deployment_modifications',
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'deployment_modifications',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.create_foreign_key(
+        op.f('fk_deployment_modifications__tenant_id_tenants'),
+        'deployment_modifications',
+        'tenants',
+        ['_tenant_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.create_foreign_key(
+        op.f('fk_deployment_modifications__creator_id_users'),
+        'deployment_modifications',
+        'users',
+        ['_creator_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.add_column(
+        'deployment_update_steps',
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'deployment_update_steps',
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'deployment_update_steps',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.create_foreign_key(
+        op.f('fk_deployment_update_steps__tenant_id_tenants'),
+        'deployment_update_steps',
+        'tenants',
+        ['_tenant_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.create_foreign_key(
+        op.f('fk_deployment_update_steps__creator_id_users'),
+        'deployment_update_steps',
+        'users',
+        ['_creator_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.add_column(
+        'deployment_updates',
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'deployment_updates',
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'deployment_updates',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.create_foreign_key(
+        op.f('fk_deployment_updates__creator_id_users'),
+        'deployment_updates',
+        'users',
+        ['_creator_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.create_foreign_key(
+        op.f('fk_deployment_updates__tenant_id_tenants'),
+        'deployment_updates',
+        'tenants',
+        ['_tenant_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.add_column(
+        'deployments',
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'deployments',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.create_foreign_key(
+        op.f('fk_deployments__tenant_id_tenants'),
+        'deployments',
+        'tenants',
+        ['_tenant_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.add_column(
+        'events',
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'events',
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'events',
+        sa.Column(
+            'error_causes',
+            manager_rest.storage.models_base.JSONString(),
+            nullable=True,
+        ),
+    )
+    op.add_column(
+        'events',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.add_column(
+        'events',
+        sa.Column(
+            'reported_timestamp',
+            manager_rest.storage.models_base.LocalDateTime(),
+            nullable=False,
+        ),
+    )
+    op.create_foreign_key(
+        op.f('fk_events__tenant_id_tenants'),
+        'events',
+        'tenants',
+        ['_tenant_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.create_foreign_key(
+        op.f('fk_events__creator_id_users'),
+        'events',
+        'users',
+        ['_creator_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.add_column(
+        'executions',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.add_column(
+        'logs',
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'logs',
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'logs',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.add_column(
+        'logs',
+        sa.Column(
+            'reported_timestamp',
+            manager_rest.storage.models_base.LocalDateTime(),
+            nullable=False,
+        ),
+    )
+    op.create_foreign_key(
+        op.f('fk_logs__tenant_id_tenants'),
+        'logs',
+        'tenants',
+        ['_tenant_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.create_foreign_key(
+        op.f('fk_logs__creator_id_users'),
+        'logs',
+        'users',
+        ['_creator_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.add_column(
+        'node_instances',
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'node_instances',
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'node_instances',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.create_foreign_key(
+        op.f('fk_node_instances__creator_id_users'),
+        'node_instances',
+        'users',
+        ['_creator_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.create_foreign_key(
+        op.f('fk_node_instances__tenant_id_tenants'),
+        'node_instances',
+        'tenants',
+        ['_tenant_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.add_column(
+        'nodes',
+        sa.Column('_creator_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'nodes',
+        sa.Column('_tenant_id', sa.Integer(), nullable=False),
+    )
+    op.add_column(
+        'nodes',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.create_foreign_key(
+        op.f('fk_nodes__tenant_id_tenants'),
+        'nodes',
+        'tenants',
+        ['_tenant_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.create_foreign_key(
+        op.f('fk_nodes__creator_id_users'),
+        'nodes',
+        'users',
+        ['_creator_id'],
+        ['id'],
+        ondelete='CASCADE',
+    )
+    op.add_column(
+        'plugins',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.add_column(
+        'secrets',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
+    op.add_column(
+        'snapshots',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
     # ### end Alembic commands ###
 
 
@@ -85,119 +295,303 @@ def downgrade():
     op.drop_column('snapshots', 'private_resource')
     op.drop_column('secrets', 'private_resource')
     op.drop_column('plugins', 'private_resource')
-    op.drop_constraint(op.f('fk_nodes__creator_id_users'), 'nodes', type_='foreignkey')
-    op.drop_constraint(op.f('fk_nodes__tenant_id_tenants'), 'nodes', type_='foreignkey')
+    op.drop_constraint(
+        op.f('fk_nodes__creator_id_users'),
+        'nodes',
+        type_='foreignkey',
+    )
+    op.drop_constraint(
+        op.f('fk_nodes__tenant_id_tenants'),
+        'nodes',
+        type_='foreignkey',
+    )
     op.drop_column('nodes', 'private_resource')
     op.drop_column('nodes', '_tenant_id')
     op.drop_column('nodes', '_creator_id')
-    op.drop_constraint(op.f('fk_node_instances__tenant_id_tenants'), 'node_instances', type_='foreignkey')
-    op.drop_constraint(op.f('fk_node_instances__creator_id_users'), 'node_instances', type_='foreignkey')
+    op.drop_constraint(
+        op.f('fk_node_instances__tenant_id_tenants'),
+        'node_instances',
+        type_='foreignkey',
+    )
+    op.drop_constraint(
+        op.f('fk_node_instances__creator_id_users'),
+        'node_instances',
+        type_='foreignkey',
+    )
     op.drop_column('node_instances', 'private_resource')
     op.drop_column('node_instances', '_tenant_id')
     op.drop_column('node_instances', '_creator_id')
-    op.drop_constraint(op.f('fk_logs__creator_id_users'), 'logs', type_='foreignkey')
-    op.drop_constraint(op.f('fk_logs__tenant_id_tenants'), 'logs', type_='foreignkey')
+    op.drop_constraint(
+        op.f('fk_logs__creator_id_users'),
+        'logs',
+        type_='foreignkey',
+    )
+    op.drop_constraint(
+        op.f('fk_logs__tenant_id_tenants'),
+        'logs',
+        type_='foreignkey',
+    )
     op.drop_column('logs', 'reported_timestamp')
     op.drop_column('logs', 'private_resource')
     op.drop_column('logs', '_tenant_id')
     op.drop_column('logs', '_creator_id')
     op.drop_column('executions', 'private_resource')
-    op.drop_constraint(op.f('fk_events__creator_id_users'), 'events', type_='foreignkey')
-    op.drop_constraint(op.f('fk_events__tenant_id_tenants'), 'events', type_='foreignkey')
+    op.drop_constraint(
+        op.f('fk_events__creator_id_users'),
+        'events',
+        type_='foreignkey',
+    )
+    op.drop_constraint(
+        op.f('fk_events__tenant_id_tenants'),
+        'events',
+        type_='foreignkey',
+    )
     op.drop_column('events', 'reported_timestamp')
     op.drop_column('events', 'private_resource')
     op.drop_column('events', 'error_causes')
     op.drop_column('events', '_tenant_id')
     op.drop_column('events', '_creator_id')
-    op.drop_constraint(op.f('fk_deployments__tenant_id_tenants'), 'deployments', type_='foreignkey')
+    op.drop_constraint(
+        op.f('fk_deployments__tenant_id_tenants'),
+        'deployments',
+        type_='foreignkey',
+    )
     op.drop_column('deployments', 'private_resource')
     op.drop_column('deployments', '_tenant_id')
-    op.drop_constraint(op.f('fk_deployment_updates__tenant_id_tenants'), 'deployment_updates', type_='foreignkey')
-    op.drop_constraint(op.f('fk_deployment_updates__creator_id_users'), 'deployment_updates', type_='foreignkey')
+    op.drop_constraint(
+        op.f('fk_deployment_updates__tenant_id_tenants'),
+        'deployment_updates',
+        type_='foreignkey',
+    )
+    op.drop_constraint(
+        op.f('fk_deployment_updates__creator_id_users'),
+        'deployment_updates',
+        type_='foreignkey',
+    )
     op.drop_column('deployment_updates', 'private_resource')
     op.drop_column('deployment_updates', '_tenant_id')
     op.drop_column('deployment_updates', '_creator_id')
-    op.drop_constraint(op.f('fk_deployment_update_steps__creator_id_users'), 'deployment_update_steps', type_='foreignkey')
-    op.drop_constraint(op.f('fk_deployment_update_steps__tenant_id_tenants'), 'deployment_update_steps', type_='foreignkey')
+    op.drop_constraint(
+        op.f('fk_deployment_update_steps__creator_id_users'),
+        'deployment_update_steps',
+        type_='foreignkey',
+    )
+    op.drop_constraint(
+        op.f('fk_deployment_update_steps__tenant_id_tenants'),
+        'deployment_update_steps',
+        type_='foreignkey',
+    )
     op.drop_column('deployment_update_steps', 'private_resource')
     op.drop_column('deployment_update_steps', '_tenant_id')
     op.drop_column('deployment_update_steps', '_creator_id')
-    op.drop_constraint(op.f('fk_deployment_modifications__creator_id_users'), 'deployment_modifications', type_='foreignkey')
-    op.drop_constraint(op.f('fk_deployment_modifications__tenant_id_tenants'), 'deployment_modifications', type_='foreignkey')
+    op.drop_constraint(
+        op.f('fk_deployment_modifications__creator_id_users'),
+        'deployment_modifications',
+        type_='foreignkey',
+    )
+    op.drop_constraint(
+        op.f('fk_deployment_modifications__tenant_id_tenants'),
+        'deployment_modifications',
+        type_='foreignkey',
+    )
     op.drop_column('deployment_modifications', 'private_resource')
     op.drop_column('deployment_modifications', '_tenant_id')
     op.drop_column('deployment_modifications', '_creator_id')
     op.drop_column('blueprints', 'private_resource')
-    op.create_table('owners_deployments_users',
-    sa.Column('deployment_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['deployment_id'], [u'deployments._storage_id'], name=u'fk_owners_deployments_users_deployment_id_deployments'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_owners_deployments_users_user_id_users')
+    op.create_table(
+        'owners_deployments_users',
+        sa.Column(
+            'deployment_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['deployment_id'],
+            [u'deployments._storage_id'],
+            name=u'fk_owners_deployments_users_deployment_id_deployments',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_owners_deployments_users_user_id_users',
+        ),
     )
-    op.create_table('owners_executions_users',
-    sa.Column('execution_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['execution_id'], [u'executions._storage_id'], name=u'fk_owners_executions_users_execution_id_executions'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_owners_executions_users_user_id_users')
+    op.create_table(
+        'owners_executions_users',
+        sa.Column(
+            'execution_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['execution_id'],
+            [u'executions._storage_id'],
+            name=u'fk_owners_executions_users_execution_id_executions',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_owners_executions_users_user_id_users',
+        ),
     )
-    op.create_table('viewers_secrets_users',
-    sa.Column('secret_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['secret_id'], [u'secrets._storage_id'], name=u'fk_viewers_secrets_users_secret_id_secrets'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_viewers_secrets_users_user_id_users')
+    op.create_table(
+        'viewers_secrets_users',
+        sa.Column(
+            'secret_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['secret_id'],
+            [u'secrets._storage_id'],
+            name=u'fk_viewers_secrets_users_secret_id_secrets',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_viewers_secrets_users_user_id_users',
+        ),
     )
-    op.create_table('owners_blueprints_users',
-    sa.Column('blueprint_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['blueprint_id'], [u'blueprints._storage_id'], name=u'fk_owners_blueprints_users_blueprint_id_blueprints'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_owners_blueprints_users_user_id_users')
+    op.create_table(
+        'owners_blueprints_users',
+        sa.Column(
+            'blueprint_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['blueprint_id'],
+            [u'blueprints._storage_id'],
+            name=u'fk_owners_blueprints_users_blueprint_id_blueprints',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_owners_blueprints_users_user_id_users',
+        ),
     )
-    op.create_table('viewers_deployments_users',
-    sa.Column('deployment_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['deployment_id'], [u'deployments._storage_id'], name=u'fk_viewers_deployments_users_deployment_id_deployments'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_viewers_deployments_users_user_id_users')
+    op.create_table(
+        'viewers_deployments_users',
+        sa.Column(
+            'deployment_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['deployment_id'],
+            [u'deployments._storage_id'],
+            name=u'fk_viewers_deployments_users_deployment_id_deployments',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_viewers_deployments_users_user_id_users',
+        ),
     )
-    op.create_table('owners_plugins_users',
-    sa.Column('plugin_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['plugin_id'], [u'plugins._storage_id'], name=u'fk_owners_plugins_users_plugin_id_plugins'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_owners_plugins_users_user_id_users')
+    op.create_table(
+        'owners_plugins_users',
+        sa.Column(
+            'plugin_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['plugin_id'],
+            [u'plugins._storage_id'],
+            name=u'fk_owners_plugins_users_plugin_id_plugins',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_owners_plugins_users_user_id_users',
+        ),
     )
-    op.create_table('viewers_blueprints_users',
-    sa.Column('blueprint_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['blueprint_id'], [u'blueprints._storage_id'], name=u'fk_viewers_blueprints_users_blueprint_id_blueprints'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_viewers_blueprints_users_user_id_users')
+    op.create_table(
+        'viewers_blueprints_users',
+        sa.Column(
+            'blueprint_id',
+            sa.INTEGER(),
+            autoincrement=False,
+            nullable=True,
+        ),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['blueprint_id'],
+            [u'blueprints._storage_id'],
+            name=u'fk_viewers_blueprints_users_blueprint_id_blueprints',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_viewers_blueprints_users_user_id_users',
+        ),
     )
-    op.create_table('viewers_plugins_users',
-    sa.Column('plugin_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['plugin_id'], [u'plugins._storage_id'], name=u'fk_viewers_plugins_users_plugin_id_plugins'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_viewers_plugins_users_user_id_users')
+    op.create_table(
+        'viewers_plugins_users',
+        sa.Column(
+            'plugin_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['plugin_id'],
+            [u'plugins._storage_id'],
+            name=u'fk_viewers_plugins_users_plugin_id_plugins',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_viewers_plugins_users_user_id_users',
+        ),
     )
-    op.create_table('viewers_snapshots_users',
-    sa.Column('snapshot_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['snapshot_id'], [u'snapshots._storage_id'], name=u'fk_viewers_snapshots_users_snapshot_id_snapshots'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_viewers_snapshots_users_user_id_users')
+    op.create_table(
+        'viewers_snapshots_users',
+        sa.Column(
+            'snapshot_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['snapshot_id'],
+            [u'snapshots._storage_id'],
+            name=u'fk_viewers_snapshots_users_snapshot_id_snapshots',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_viewers_snapshots_users_user_id_users',
+        ),
     )
-    op.create_table('viewers_executions_users',
-    sa.Column('execution_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['execution_id'], [u'executions._storage_id'], name=u'fk_viewers_executions_users_execution_id_executions'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_viewers_executions_users_user_id_users')
+    op.create_table(
+        'viewers_executions_users',
+        sa.Column(
+            'execution_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['execution_id'],
+            [u'executions._storage_id'],
+            name=u'fk_viewers_executions_users_execution_id_executions',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_viewers_executions_users_user_id_users',
+        ),
     )
-    op.create_table('owners_snapshots_users',
-    sa.Column('snapshot_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['snapshot_id'], [u'snapshots._storage_id'], name=u'fk_owners_snapshots_users_snapshot_id_snapshots'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_owners_snapshots_users_user_id_users')
+    op.create_table(
+        'owners_snapshots_users',
+        sa.Column(
+            'snapshot_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['snapshot_id'],
+            [u'snapshots._storage_id'],
+            name=u'fk_owners_snapshots_users_snapshot_id_snapshots',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_owners_snapshots_users_user_id_users',
+        ),
     )
-    op.create_table('owners_secrets_users',
-    sa.Column('secret_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['secret_id'], [u'secrets._storage_id'], name=u'fk_owners_secrets_users_secret_id_secrets'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'fk_owners_secrets_users_user_id_users')
+    op.create_table(
+        'owners_secrets_users',
+        sa.Column(
+            'secret_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(
+            ['secret_id'],
+            [u'secrets._storage_id'],
+            name=u'fk_owners_secrets_users_secret_id_secrets',
+        ),
+        sa.ForeignKeyConstraint(
+            ['user_id'],
+            [u'users.id'],
+            name=u'fk_owners_secrets_users_user_id_users',
+        ),
     )
     # ### end Alembic commands ###
