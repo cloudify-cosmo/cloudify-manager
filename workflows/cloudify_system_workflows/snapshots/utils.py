@@ -22,7 +22,8 @@ import zipfile
 
 from cloudify import constants
 from cloudify.workflows import ctx
-from cloudify.utils import ManagerVersion
+from .constants import ARCHIVE_CERT_DIR
+from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 
 class DictToAttributes(object):
@@ -77,6 +78,10 @@ def copy_files_between_manager_and_snapshot(archive_root,
          constants.FILE_SERVER_PLUGINS_FOLDER)
     ]
 
+    local_cert_dir = os.path.dirname(get_local_rest_certificate())
+    if to_archive:
+        data_to_copy.append((local_cert_dir, ARCHIVE_CERT_DIR))
+
     for (p1, p2) in data_to_copy:
         # first expand relative paths
         if p1[0] != '/':
@@ -88,19 +93,22 @@ def copy_files_between_manager_and_snapshot(archive_root,
         if not to_archive:
             p1, p2 = p2, p1
 
+        copy_snapshot_path(p1, p2)
+
+
+def copy_snapshot_path(source, destination):
         # source doesn't need to exist, then ignore
-        if not os.path.exists(p1):
-            continue
-
-        ctx.logger.debug('Copying from dump: {0} to: {1}..'.format(p1, p2))
-
+        if not os.path.exists(source):
+            return
+        ctx.logger.debug(
+            'Copying from dump: {0} to: {1}..'.format(source, destination))
         # copy data
-        if os.path.isfile(p1):
-            shutil.copy(p1, p2)
+        if os.path.isfile(source):
+            shutil.copy(source, destination)
         else:
-            if os.path.exists(p2):
-                shutil.rmtree(p2)
-            shutil.copytree(p1, p2)
+            if os.path.exists(destination):
+                shutil.rmtree(destination)
+            shutil.copytree(source, destination)
 
 
 def copy(source, destination):
@@ -197,3 +205,16 @@ def make_zip64_archive(zip_filename, directory):
                 # but it's in the original stdlib's implementation
                 if os.path.isfile(path):
                     zip_file.write(path, os.path.relpath(path, base_dir))
+
+
+def compare_cert_metadata(path1, path2):
+    metadata_filename = 'certificate_metadata'
+    path1 = os.path.join(path1, metadata_filename)
+    path2 = os.path.join(path2, metadata_filename)
+    if not os.path.exists(path1) or not os.path.exists(path2):
+        return False
+    with open(path1) as f:
+        content1 = f.read()
+    with open(path2) as f:
+        content2 = f.read()
+    return content1 == content2
