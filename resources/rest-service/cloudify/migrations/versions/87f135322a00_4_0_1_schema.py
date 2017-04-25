@@ -35,246 +35,178 @@ def upgrade():
         'blueprints',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.add_column(
-        'deployment_modifications',
-        sa.Column('_creator_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'deployment_modifications',
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'deployment_modifications',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
-    )
-    op.create_foreign_key(
-        op.f('fk_deployment_modifications__tenant_id_tenants'),
-        'deployment_modifications',
-        'tenants',
-        ['_tenant_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.create_foreign_key(
-        op.f('fk_deployment_modifications__creator_id_users'),
-        'deployment_modifications',
-        'users',
-        ['_creator_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.add_column(
-        'deployment_update_steps',
-        sa.Column('_creator_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'deployment_update_steps',
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'deployment_update_steps',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
-    )
-    op.create_foreign_key(
-        op.f('fk_deployment_update_steps__tenant_id_tenants'),
-        'deployment_update_steps',
-        'tenants',
-        ['_tenant_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.create_foreign_key(
-        op.f('fk_deployment_update_steps__creator_id_users'),
-        'deployment_update_steps',
-        'users',
-        ['_creator_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.add_column(
-        'deployment_updates',
-        sa.Column('_creator_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'deployment_updates',
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'deployment_updates',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
-    )
-    op.create_foreign_key(
-        op.f('fk_deployment_updates__creator_id_users'),
-        'deployment_updates',
-        'users',
-        ['_creator_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.create_foreign_key(
-        op.f('fk_deployment_updates__tenant_id_tenants'),
-        'deployment_updates',
-        'tenants',
-        ['_tenant_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.add_column(
-        'deployments',
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'deployments',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
-    )
-    op.create_foreign_key(
-        op.f('fk_deployments__tenant_id_tenants'),
-        'deployments',
-        'tenants',
-        ['_tenant_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.add_column(
-        'events',
-        sa.Column('_creator_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'events',
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'events',
-        sa.Column(
-            'error_causes',
-            manager_rest.storage.models_base.JSONString(),
-            nullable=True,
-        ),
-    )
-    op.add_column(
-        'events',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
-    )
-    op.add_column(
-        'events',
-        sa.Column(
-            'reported_timestamp',
-            manager_rest.storage.models_base.LocalDateTime(),
-            nullable=False,
-        ),
-    )
-    op.create_foreign_key(
-        op.f('fk_events__tenant_id_tenants'),
-        'events',
-        'tenants',
-        ['_tenant_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.create_foreign_key(
-        op.f('fk_events__creator_id_users'),
-        'events',
-        'users',
-        ['_creator_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
+    with op.batch_alter_table('deployment_modifications') as batch_op:
+        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
+        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('private_resource', sa.Boolean(), nullable=True))
+        batch_op.create_foreign_key(
+            op.f('fk_deployment_modifications__tenant_id_tenants'),
+            'tenants',
+            ['_tenant_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_deployment_modifications__creator_id_users'),
+            'users',
+            ['_creator_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+    with op.batch_alter_table('deployment_update_steps') as batch_op:
+        batch_op.add_column(
+            sa.Column('_creator_id', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('_tenant_id', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('private_resource', sa.Boolean(), nullable=True))
+        batch_op.create_foreign_key(
+            op.f('fk_deployment_update_steps__tenant_id_tenants'),
+            'tenants',
+            ['_tenant_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_deployment_update_steps__creator_id_users'),
+            'users',
+            ['_creator_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+    with op.batch_alter_table('deployment_updates') as batch_op:
+        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
+        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('private_resource', sa.Boolean(), nullable=True),
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_deployment_updates__creator_id_users'),
+            'users',
+            ['_creator_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_deployment_updates__tenant_id_tenants'),
+            'tenants',
+            ['_tenant_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+    with op.batch_alter_table('deployments') as batch_op:
+        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('private_resource', sa.Boolean(), nullable=True))
+        batch_op.create_foreign_key(
+            op.f('fk_deployments__tenant_id_tenants'),
+            'tenants',
+            ['_tenant_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+    with op.batch_alter_table('events') as batch_op:
+        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
+        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column(
+                'error_causes',
+                manager_rest.storage.models_base.JSONString(),
+                nullable=True,
+            ),
+        )
+        batch_op.add_column(
+            sa.Column('private_resource', sa.Boolean(), nullable=True),
+        )
+        batch_op.add_column(
+            sa.Column(
+                'reported_timestamp',
+                manager_rest.storage.models_base.LocalDateTime(),
+            ),
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_events__tenant_id_tenants'),
+            'tenants',
+            ['_tenant_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_events__creator_id_users'),
+            'users',
+            ['_creator_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
     op.add_column(
         'executions',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.add_column(
-        'logs',
-        sa.Column('_creator_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'logs',
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'logs',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
-    )
-    op.add_column(
-        'logs',
-        sa.Column(
-            'reported_timestamp',
-            manager_rest.storage.models_base.LocalDateTime(),
-            nullable=False,
-        ),
-    )
-    op.create_foreign_key(
-        op.f('fk_logs__tenant_id_tenants'),
-        'logs',
-        'tenants',
-        ['_tenant_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.create_foreign_key(
-        op.f('fk_logs__creator_id_users'),
-        'logs',
-        'users',
-        ['_creator_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.add_column(
-        'node_instances',
-        sa.Column('_creator_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'node_instances',
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'node_instances',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
-    )
-    op.create_foreign_key(
-        op.f('fk_node_instances__creator_id_users'),
-        'node_instances',
-        'users',
-        ['_creator_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.create_foreign_key(
-        op.f('fk_node_instances__tenant_id_tenants'),
-        'node_instances',
-        'tenants',
-        ['_tenant_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.add_column(
-        'nodes',
-        sa.Column('_creator_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'nodes',
-        sa.Column('_tenant_id', sa.Integer(), nullable=False),
-    )
-    op.add_column(
-        'nodes',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
-    )
-    op.create_foreign_key(
-        op.f('fk_nodes__tenant_id_tenants'),
-        'nodes',
-        'tenants',
-        ['_tenant_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
-    op.create_foreign_key(
-        op.f('fk_nodes__creator_id_users'),
-        'nodes',
-        'users',
-        ['_creator_id'],
-        ['id'],
-        ondelete='CASCADE',
-    )
+    with op.batch_alter_table('logs') as batch_op:
+        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
+        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('private_resource', sa.Boolean(), nullable=True))
+        batch_op.add_column(
+            sa.Column(
+                'reported_timestamp',
+                manager_rest.storage.models_base.LocalDateTime(),
+            ),
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_logs__tenant_id_tenants'),
+            'tenants',
+            ['_tenant_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_logs__creator_id_users'),
+            'users',
+            ['_creator_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+    with op.batch_alter_table('node_instances') as batch_op:
+        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
+        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('private_resource', sa.Boolean(), nullable=True))
+        batch_op.create_foreign_key(
+            op.f('fk_node_instances__creator_id_users'),
+            'users',
+            ['_creator_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_node_instances__tenant_id_tenants'),
+            'tenants',
+            ['_tenant_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+    with op.batch_alter_table('nodes') as batch_op:
+        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
+        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('private_resource', sa.Boolean(), nullable=True),
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_nodes__tenant_id_tenants'),
+            'tenants',
+            ['_tenant_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
+        batch_op.create_foreign_key(
+            op.f('fk_nodes__creator_id_users'),
+            'users',
+            ['_creator_id'],
+            ['id'],
+            ondelete='CASCADE',
+        )
     op.add_column(
         'plugins',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
