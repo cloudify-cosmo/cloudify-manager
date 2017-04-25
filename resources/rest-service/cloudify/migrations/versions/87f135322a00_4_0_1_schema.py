@@ -40,8 +40,10 @@ def upgrade():
         ),
     )
     with op.batch_alter_table('deployment_modifications') as batch_op:
-        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
-        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('_creator_id', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('_tenant_id', sa.Integer(), nullable=False))
         batch_op.add_column(
             sa.Column(
                 'private_resource',
@@ -90,8 +92,10 @@ def upgrade():
             ondelete='CASCADE',
         )
     with op.batch_alter_table('deployment_updates') as batch_op:
-        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
-        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('_creator_id', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('_tenant_id', sa.Integer(), nullable=False))
         batch_op.add_column(
             sa.Column(
                 'private_resource',
@@ -114,7 +118,8 @@ def upgrade():
             ondelete='CASCADE',
         )
     with op.batch_alter_table('deployments') as batch_op:
-        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('_tenant_id', sa.Integer(), nullable=False))
         batch_op.add_column(
             sa.Column(
                 'private_resource',
@@ -130,8 +135,10 @@ def upgrade():
             ondelete='CASCADE',
         )
     with op.batch_alter_table('events') as batch_op:
-        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
-        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('_creator_id', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('_tenant_id', sa.Integer(), nullable=False))
         batch_op.add_column(
             sa.Column(
                 'error_causes',
@@ -150,6 +157,7 @@ def upgrade():
             sa.Column(
                 'reported_timestamp',
                 manager_rest.storage.models_base.LocalDateTime(),
+                nullable=False,
             ),
         )
         batch_op.create_foreign_key(
@@ -175,8 +183,10 @@ def upgrade():
         ),
     )
     with op.batch_alter_table('logs') as batch_op:
-        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
-        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('_creator_id', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('_tenant_id', sa.Integer(), nullable=False))
         batch_op.add_column(
             sa.Column(
                 'private_resource',
@@ -188,6 +198,7 @@ def upgrade():
             sa.Column(
                 'reported_timestamp',
                 manager_rest.storage.models_base.LocalDateTime(),
+                nullable=False,
             ),
         )
         batch_op.create_foreign_key(
@@ -205,8 +216,10 @@ def upgrade():
             ondelete='CASCADE',
         )
     with op.batch_alter_table('node_instances') as batch_op:
-        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
-        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('_creator_id', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('_tenant_id', sa.Integer(), nullable=False))
         batch_op.add_column(
             sa.Column(
                 'private_resource',
@@ -229,8 +242,10 @@ def upgrade():
             ondelete='CASCADE',
         )
     with op.batch_alter_table('nodes') as batch_op:
-        batch_op.add_column(sa.Column('_creator_id', sa.Integer()))
-        batch_op.add_column(sa.Column('_tenant_id', sa.Integer()))
+        batch_op.add_column(
+            sa.Column('_creator_id', sa.Integer(), nullable=False))
+        batch_op.add_column(
+            sa.Column('_tenant_id', sa.Integer(), nullable=False))
         batch_op.add_column(
             sa.Column(
                 'private_resource',
