@@ -12,18 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import uuid
 
-
-from integration_tests import AgentTestCase
+from integration_tests import AgentTestWithPlugins
 from integration_tests.tests.agentless_tests import test_policies
 from integration_tests.tests.utils import get_resource as resource
 
 
-class TestPoliciesWithDiamond(AgentTestCase, test_policies.PoliciesTestsBase):
+class TestPoliciesWithDiamond(AgentTestWithPlugins,
+                              test_policies.PoliciesTestsBase):
+    def setUp(self):
+        super(TestPoliciesWithDiamond, self).setUp()
+        self.setup_deployment_id = str(uuid.uuid4())
+        self.setup_node_id = 'node'
 
     def test_policies_flow_with_diamond(self):
-        dsl_path = resource('dsl/with_policies_and_diamond.yaml')
-        self.deployment, _ = self.deploy_application(dsl_path)
+        dsl_path = resource("dsl/with_policies_and_diamond.yaml")
+        self.deployment, _ = self.deploy_application(
+            dsl_path,
+            deployment_id=self.setup_deployment_id
+        )
         expected_metric_value = 42
         self.wait_for_executions(3)
         invocations = self.wait_for_invocations(self.deployment.id, 1)

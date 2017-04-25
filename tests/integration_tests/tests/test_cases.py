@@ -37,14 +37,15 @@ import cloudify.event
 from logging.handlers import RotatingFileHandler
 
 from manager_rest.utils import mkdirs
+from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
 from integration_tests.framework import utils, hello_world, docl
 from integration_tests.framework.flask_utils import reset_storage
 from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
+from integration_tests.framework.constants import PLUGIN_STORAGE_DIR
 
 from cloudify_rest_client.executions import Execution
-from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
 
 class BaseTestCase(unittest.TestCase):
@@ -154,6 +155,13 @@ class BaseTestCase(unittest.TestCase):
         return docl.read_file(file_path, no_strip=no_strip)
 
     @staticmethod
+    def delete_manager_file(file_path, quiet=True):
+        """
+        Remove file from a cloudify manager
+        """
+        return docl.execute('rm -rf {0}'.format(file_path), quiet=quiet)
+
+    @staticmethod
     def execute_on_manager(command, quiet=True):
         """
         Execute a shell command on the cloudify manager container.
@@ -167,6 +175,13 @@ class BaseTestCase(unittest.TestCase):
 
         """
         return docl.copy_file_to_manager(source=source, target=target)
+
+    @staticmethod
+    def write_data_to_file_on_manager(data, target_path):
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(data)
+            f.flush()
+            BaseTestCase.copy_file_to_manager(f.name, target_path)
 
     @staticmethod
     def restart_service(service_name):
@@ -194,17 +209,13 @@ class BaseTestCase(unittest.TestCase):
         :return: plugin data relevant for the deployment.
         :rtype dict
         """
-        storage_file_path = os.path.join(
-            self.env.plugins_storage_dir,
-            '{0}.json'.format(plugin_name)
+        data = self.read_manager_file(
+            os.path.join(PLUGIN_STORAGE_DIR, '{0}.json'.format(plugin_name))
         )
-        if not os.path.exists(storage_file_path):
+        if not data:
             return {}
-        with open(storage_file_path, 'r') as f:
-            data = json.load(f)
-            if deployment_id not in data:
-                data[deployment_id] = {}
-            return data.get(deployment_id)
+        data = json.loads(data)
+        return data.get(deployment_id, {})
 
     def clear_plugin_data(self, plugin_name):
         """
@@ -212,12 +223,9 @@ class BaseTestCase(unittest.TestCase):
 
         :param plugin_name: the plugin in question.
         """
-        storage_file_path = os.path.join(
-            self.env.plugins_storage_dir,
-            '{0}.json'.format(plugin_name)
+        self.delete_manager_file(
+            os.path.join(PLUGIN_STORAGE_DIR, '{0}.json'.format(plugin_name))
         )
-        if os.path.exists(storage_file_path):
-            os.remove(storage_file_path)
 
     @staticmethod
     def do_assertions(assertions_func, timeout=10, **kwargs):
@@ -490,6 +498,28 @@ class AgentTestCase(BaseAgentTestCase):
         super(AgentTestCase, self).setUp()
         self._setup_running_manager_attributes()
         self.addCleanup(self._save_manager_logs_after_test)
+
+
+class AgentTestWithPlugins(AgentTestCase):
+    def setUp(self):
+        super(AgentTestWithPlugins, self).setUp()
+
+        # Subclasses should set these two values during setup
+        self.setup_deployment_id = None
+        self.setup_node_id = None
+
+    def get_plugin_data(self, plugin_name, deployment_id):
+        """Reading plugin data from agent containers"""
+
+        plugin_path = os.path.join(PLUGIN_STORAGE_DIR,
+                                   '{0}.json'.format(plugin_name))
+        data = self.read_host_file(plugin_path,
+                                   self.setup_deployment_id,
+                                   self.setup_node_id)
+        if not data:
+            return {}
+        data = json.loads(data)
+        return data.get(deployment_id, {})
 
 
 class ManagerTestCase(BaseAgentTestCase):

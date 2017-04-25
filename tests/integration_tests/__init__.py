@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from integration_tests.tests.test_cases import AgentTestCase      # noqa
-from integration_tests.tests.test_cases import BaseTestCase       # noqa
-from integration_tests.tests.test_cases import AgentlessTestCase  # noqa
-from integration_tests.tests.test_cases import ManagerTestCase    # noqa
+from integration_tests.tests.test_cases import AgentTestCase            # noqa
+from integration_tests.tests.test_cases import AgentTestWithPlugins     # noqa
+from integration_tests.tests.test_cases import BaseTestCase             # noqa
+from integration_tests.tests.test_cases import AgentlessTestCase        # noqa
+from integration_tests.tests.test_cases import ManagerTestCase          # noqa
