@@ -129,7 +129,7 @@ class User(SQLModelBase, UserMixin):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = CIColumn(db.String(255), index=True, unique=True)
 
-    active = db.Column(db.Boolean)
+    active = db.Column(db.Boolean(name='active'))
     created_at = db.Column(UTCDateTime)
     email = db.Column(db.String(255))
     first_name = db.Column(db.String(255))
