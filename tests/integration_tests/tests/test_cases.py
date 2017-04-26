@@ -53,9 +53,11 @@ class BaseTestCase(unittest.TestCase):
     A test case for cloudify integration tests.
     """
 
+    env = None
+
     def setUp(self):
         import integration_tests.framework.env
-        self.env = integration_tests.framework.env.instance
+        BaseTestCase.env = integration_tests.framework.env.instance
         self.workdir = tempfile.mkdtemp(
             dir=self.env.test_working_dir,
             prefix='{0}-'.format(self._testMethodName))
@@ -72,11 +74,11 @@ class BaseTestCase(unittest.TestCase):
         with tempfile.NamedTemporaryFile() as f:
             yaml.dump(config, f)
             f.flush()
-            cls.copy_file_to_manager(f.name, config_file_location)
-            cls.execute_on_manager('chown {0}:{1} {2}'.format(
-                'cloudify-restservice',
-                'cloudify-restservice',
-                config_file_location))
+            cls.copy_file_to_manager(
+                source=f.name,
+                target=config_file_location,
+                owner='cloudify-restservice'
+            )
         cls.restart_service('cloudify-restservice')
 
     def _setup_running_manager_attributes(self):
@@ -169,21 +171,27 @@ class BaseTestCase(unittest.TestCase):
         return docl.execute(command, quiet)
 
     @staticmethod
-    def copy_file_to_manager(source, target):
+    def copy_file_to_manager(source, target, owner=None):
         """
         Copy a file to the cloudify manager filesystem
 
         """
-        return docl.copy_file_to_manager(source=source, target=target)
+        ret_val = docl.copy_file_to_manager(source=source, target=target)
+        if owner:
+            BaseTestCase.env.chown(owner, target)
+        return ret_val
 
     @staticmethod
-    def write_data_to_file_on_manager(data, target_path, to_json=False):
+    def write_data_to_file_on_manager(data,
+                                      target_path,
+                                      to_json=False,
+                                      owner=None):
         with tempfile.NamedTemporaryFile() as f:
             if to_json:
                 data = json.dumps(data)
             f.write(data)
             f.flush()
-            BaseTestCase.copy_file_to_manager(f.name, target_path)
+            BaseTestCase.copy_file_to_manager(f.name, target_path, owner=owner)
 
     @staticmethod
     def restart_service(service_name):
