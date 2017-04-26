@@ -17,3 +17,8 @@ METADATA_FILENAME = 'metadata.json'
 M_VERSION = 'snapshot_version'
 M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
 ARCHIVE_CERT_DIR = 'ssl'
+
+MGMTWORKER_USER = 'mgmtworker'
+MGMTWORKER_GROUP = 'mgmtworker'
+
+SECRET_STORE_AGENT_KEY_PREFIX = 'cfyagent_key__'
