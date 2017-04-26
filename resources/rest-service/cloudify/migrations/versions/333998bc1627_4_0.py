@@ -71,7 +71,11 @@ def upgrade():
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(
-        op.f('ix_groups_ldap_dn'), 'groups', ['ldap_dn'], unique=True)
+        op.f('ix_groups_ldap_dn'),
+        'groups',
+        ['ldap_dn'],
+        unique=True,
+    )
     op.create_index(op.f('ix_groups_name'), 'groups', ['name'], unique=True)
     op.create_table(
         'provider_context',
@@ -118,7 +122,11 @@ def upgrade():
         sa.PrimaryKeyConstraint('id')
     )
     op.create_index(
-        op.f('ix_users_username'), 'users', ['username'], unique=True)
+        op.f('ix_users_username'),
+        'users',
+        ['username'],
+        unique=True,
+    )
     op.create_table(
         'blueprints',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
@@ -156,7 +164,12 @@ def upgrade():
         ['created_at'],
         unique=False,
     )
-    op.create_index(op.f('ix_blueprints_id'), 'blueprints', ['id'], unique=False)
+    op.create_index(
+        op.f('ix_blueprints_id'),
+        'blueprints',
+        ['id'],
+        unique=False,
+    )
     op.create_table(
         'groups_tenants',
         sa.Column('group_id', sa.Integer(), nullable=True),
@@ -178,47 +191,117 @@ def upgrade():
         sa.Column('package_version', sa.Text(), nullable=True),
         sa.Column('supported_platform', sa.PickleType(), nullable=True),
         sa.Column('supported_py_versions', sa.PickleType(), nullable=True),
-        sa.Column('uploaded_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
+        sa.Column(
+            'uploaded_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=False,
+        ),
         sa.Column('wheels', sa.PickleType(), nullable=False),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['_tenant_id'], [u'tenants.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            [u'users.id'],
+            ondelete='CASCADE',
+        ),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            [u'tenants.id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_plugins_archive_name'), 'plugins', ['archive_name'], unique=False)
+    op.create_index(
+        op.f('ix_plugins_archive_name'),
+        'plugins',
+        ['archive_name'],
+        unique=False,
+    )
     op.create_index(op.f('ix_plugins_id'), 'plugins', ['id'], unique=False)
-    op.create_index(op.f('ix_plugins_package_name'), 'plugins', ['package_name'], unique=False)
-    op.create_index(op.f('ix_plugins_uploaded_at'), 'plugins', ['uploaded_at'], unique=False)
+    op.create_index(
+        op.f('ix_plugins_package_name'),
+        'plugins',
+        ['package_name'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_plugins_uploaded_at'),
+        'plugins',
+        ['uploaded_at'],
+        unique=False,
+    )
     op.create_table(
         'secrets',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
         sa.Column('value', sa.Text(), nullable=True),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
-        sa.Column('updated_at', manager_rest.storage.models_base.UTCDateTime(), nullable=True),
+        sa.Column(
+            'created_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=False,
+        ),
+        sa.Column(
+            'updated_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=True,
+        ),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['_tenant_id'], [u'tenants.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            [u'users.id'],
+            ondelete='CASCADE',
+        ),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            [u'tenants.id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_secrets_created_at'), 'secrets', ['created_at'], unique=False)
-    op.create_index(op.f('ix_secrets_id'), 'secrets', ['id'], unique=False)
+    op.create_index(
+        op.f('ix_secrets_created_at'),
+        'secrets',
+        ['created_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_secrets_id'),
+        'secrets',
+        ['id'],
+        unique=False,
+    )
     op.create_table(
         'snapshots',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
+        sa.Column(
+            'created_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=False,
+        ),
         sa.Column('status', snapshot_status, nullable=True),
         sa.Column('error', sa.Text(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['_tenant_id'], [u'tenants.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            [u'users.id'],
+            ondelete='CASCADE',
+        ),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            [u'tenants.id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_snapshots_created_at'), 'snapshots', ['created_at'], unique=False)
+    op.create_index(op.f(
+        'ix_snapshots_created_at'),
+        'snapshots',
+        ['created_at'],
+        unique=False,
+    )
     op.create_index(op.f('ix_snapshots_id'), 'snapshots', ['id'], unique=False)
     op.create_table(
         'users_groups',
@@ -245,7 +328,11 @@ def upgrade():
         'deployments',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
+        sa.Column(
+            'created_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=False,
+        ),
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('inputs', sa.PickleType(), nullable=True),
         sa.Column('groups', sa.PickleType(), nullable=True),
@@ -254,21 +341,46 @@ def upgrade():
         sa.Column('policy_types', sa.PickleType(), nullable=True),
         sa.Column('outputs', sa.PickleType(), nullable=True),
         sa.Column('scaling_groups', sa.PickleType(), nullable=True),
-        sa.Column('updated_at', manager_rest.storage.models_base.UTCDateTime(), nullable=True),
+        sa.Column(
+            'updated_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=True,
+        ),
         sa.Column('workflows', sa.PickleType(), nullable=True),
         sa.Column('_blueprint_fk', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_blueprint_fk'], [u'blueprints._storage_id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_blueprint_fk'],
+            [u'blueprints._storage_id'],
+            ondelete='CASCADE',
+        ),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            [u'users.id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_deployments_created_at'), 'deployments', ['created_at'], unique=False)
-    op.create_index(op.f('ix_deployments_id'), 'deployments', ['id'], unique=False)
+    op.create_index(
+        op.f('ix_deployments_created_at'),
+        'deployments',
+        ['created_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_deployments_id'),
+        'deployments',
+        ['id'],
+        unique=False,
+    )
     op.create_table(
         'owners_blueprints_users',
         sa.Column('blueprint_id', sa.Integer(), nullable=True),
         sa.Column('user_id', sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(['blueprint_id'], ['blueprints._storage_id'], ),
+        sa.ForeignKeyConstraint(
+            ['blueprint_id'],
+            ['blueprints._storage_id'],
+        ),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], )
     )
     op.create_table(
@@ -296,7 +408,10 @@ def upgrade():
         'viewers_blueprints_users',
         sa.Column('blueprint_id', sa.Integer(), nullable=True),
         sa.Column('user_id', sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(['blueprint_id'], ['blueprints._storage_id'], ),
+        sa.ForeignKeyConstraint(
+            ['blueprint_id'],
+            ['blueprints._storage_id'],
+        ),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], )
     )
     op.create_table(
@@ -325,23 +440,54 @@ def upgrade():
         sa.Column('_storage_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
         sa.Column('context', sa.PickleType(), nullable=True),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
-        sa.Column('ended_at', manager_rest.storage.models_base.UTCDateTime(), nullable=True),
+        sa.Column(
+            'created_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=False,
+        ),
+        sa.Column(
+            'ended_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=True,
+        ),
         sa.Column('modified_nodes', sa.PickleType(), nullable=True),
         sa.Column('node_instances', sa.PickleType(), nullable=True),
         sa.Column('status', deployment_modification_status, nullable=True),
         sa.Column('_deployment_fk', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_deployment_fk'], [u'deployments._storage_id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_deployment_fk'],
+            [u'deployments._storage_id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_deployment_modifications_created_at'), 'deployment_modifications', ['created_at'], unique=False)
-    op.create_index(op.f('ix_deployment_modifications_ended_at'), 'deployment_modifications', ['ended_at'], unique=False)
-    op.create_index(op.f('ix_deployment_modifications_id'), 'deployment_modifications', ['id'], unique=False)
+    op.create_index(
+        op.f('ix_deployment_modifications_created_at'),
+        'deployment_modifications',
+        ['created_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_deployment_modifications_ended_at'),
+        'deployment_modifications',
+        ['ended_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_deployment_modifications_id'),
+        'deployment_modifications',
+        ['id'],
+        unique=False,
+    )
     op.create_table(
         'executions',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
+        sa.Column(
+            'created_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=False,
+        ),
         sa.Column('error', sa.Text(), nullable=True),
         sa.Column('is_system_workflow', sa.Boolean(), nullable=False),
         sa.Column('parameters', sa.PickleType(), nullable=True),
@@ -350,13 +496,35 @@ def upgrade():
         sa.Column('_deployment_fk', sa.Integer(), nullable=True),
         sa.Column('_tenant_id', sa.Integer(), nullable=False),
         sa.Column('_creator_id', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_creator_id'], [u'users.id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['_deployment_fk'], [u'deployments._storage_id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['_tenant_id'], [u'tenants.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_creator_id'],
+            [u'users.id'],
+            ondelete='CASCADE',
+        ),
+        sa.ForeignKeyConstraint(
+            ['_deployment_fk'],
+            [u'deployments._storage_id'],
+            ondelete='CASCADE',
+        ),
+        sa.ForeignKeyConstraint(
+            ['_tenant_id'],
+            [u'tenants.id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_executions_created_at'), 'executions', ['created_at'], unique=False)
-    op.create_index(op.f('ix_executions_id'), 'executions', ['id'], unique=False)
+    op.create_index(
+        op.f('ix_executions_created_at'),
+        'executions',
+        ['created_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_executions_id'),
+        'executions',
+        ['id'],
+        unique=False,
+    )
     op.create_table(
         'nodes',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
@@ -375,7 +543,11 @@ def upgrade():
         sa.Column('type', sa.Text(), nullable=False),
         sa.Column('type_hierarchy', sa.PickleType(), nullable=True),
         sa.Column('_deployment_fk', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_deployment_fk'], [u'deployments._storage_id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_deployment_fk'],
+            [u'deployments._storage_id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
     op.create_index(op.f('ix_nodes_id'), 'nodes', ['id'], unique=False)
@@ -384,56 +556,109 @@ def upgrade():
         'owners_deployments_users',
         sa.Column('deployment_id', sa.Integer(), nullable=True),
         sa.Column('user_id', sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(['deployment_id'], ['deployments._storage_id'], ),
+        sa.ForeignKeyConstraint(
+            ['deployment_id'],
+            ['deployments._storage_id'],
+        ),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], )
     )
     op.create_table(
         'viewers_deployments_users',
         sa.Column('deployment_id', sa.Integer(), nullable=True),
         sa.Column('user_id', sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(['deployment_id'], ['deployments._storage_id'], ),
+        sa.ForeignKeyConstraint(
+            ['deployment_id'],
+            ['deployments._storage_id'],
+        ),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], )
     )
     op.create_table(
         'deployment_updates',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
-        sa.Column('created_at', manager_rest.storage.models_base.UTCDateTime(), nullable=False),
+        sa.Column(
+            'created_at',
+            manager_rest.storage.models_base.UTCDateTime(),
+            nullable=False,
+        ),
         sa.Column('deployment_plan', sa.PickleType(), nullable=True),
-        sa.Column('deployment_update_node_instances', sa.PickleType(), nullable=True),
-        sa.Column('deployment_update_deployment', sa.PickleType(), nullable=True),
+        sa.Column(
+            'deployment_update_node_instances',
+            sa.PickleType(),
+            nullable=True,
+        ),
+        sa.Column(
+            'deployment_update_deployment',
+            sa.PickleType(),
+            nullable=True,
+        ),
         sa.Column('deployment_update_nodes', sa.PickleType(), nullable=True),
         sa.Column('modified_entity_ids', sa.PickleType(), nullable=True),
         sa.Column('state', sa.Text(), nullable=True),
         sa.Column('_execution_fk', sa.Integer(), nullable=True),
         sa.Column('_deployment_fk', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_deployment_fk'], [u'deployments._storage_id'], ondelete='CASCADE'),
-        sa.ForeignKeyConstraint(['_execution_fk'], [u'executions._storage_id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_deployment_fk'],
+            [u'deployments._storage_id'],
+            ondelete='CASCADE',
+        ),
+        sa.ForeignKeyConstraint(
+            ['_execution_fk'],
+            [u'executions._storage_id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_deployment_updates_created_at'), 'deployment_updates', ['created_at'], unique=False)
-    op.create_index(op.f('ix_deployment_updates_id'), 'deployment_updates', ['id'], unique=False)
+    op.create_index(
+        op.f('ix_deployment_updates_created_at'),
+        'deployment_updates',
+        ['created_at'],
+        unique=False,
+    )
+    op.create_index(
+        op.f('ix_deployment_updates_id'),
+        'deployment_updates',
+        ['id'],
+        unique=False,
+    )
     op.create_table(
         'events',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
-        sa.Column('timestamp', manager_rest.storage.models_base.LocalDateTime(), nullable=False),
+        sa.Column(
+            'timestamp',
+            manager_rest.storage.models_base.LocalDateTime(),
+            nullable=False,
+        ),
         sa.Column('message', sa.Text(), nullable=True),
         sa.Column('message_code', sa.Text(), nullable=True),
         sa.Column('event_type', sa.Text(), nullable=True),
         sa.Column('operation', sa.Text(), nullable=True),
         sa.Column('node_id', sa.Text(), nullable=True),
         sa.Column('_execution_fk', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_execution_fk'], [u'executions._storage_id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_execution_fk'],
+            [u'executions._storage_id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
     op.create_index(op.f('ix_events_id'), 'events', ['id'], unique=False)
-    op.create_index(op.f('ix_events_timestamp'), 'events', ['timestamp'], unique=False)
+    op.create_index(
+        op.f('ix_events_timestamp'),
+        'events',
+        ['timestamp'],
+        unique=False,
+    )
     op.create_table(
         'logs',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
         sa.Column('id', sa.Text(), nullable=True),
-        sa.Column('timestamp', manager_rest.storage.models_base.LocalDateTime(), nullable=False),
+        sa.Column(
+            'timestamp',
+            manager_rest.storage.models_base.LocalDateTime(),
+            nullable=False,
+        ),
         sa.Column('message', sa.Text(), nullable=True),
         sa.Column('message_code', sa.Text(), nullable=True),
         sa.Column('logger', sa.Text(), nullable=True),
@@ -441,11 +666,20 @@ def upgrade():
         sa.Column('operation', sa.Text(), nullable=True),
         sa.Column('node_id', sa.Text(), nullable=True),
         sa.Column('_execution_fk', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_execution_fk'], [u'executions._storage_id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_execution_fk'],
+            [u'executions._storage_id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
     op.create_index(op.f('ix_logs_id'), 'logs', ['id'], unique=False)
-    op.create_index(op.f('ix_logs_timestamp'), 'logs', ['timestamp'], unique=False)
+    op.create_index(
+        op.f('ix_logs_timestamp'),
+        'logs',
+        ['timestamp'],
+        unique=False,
+    )
     op.create_table(
         'node_instances',
         sa.Column('_storage_id', sa.Integer(), nullable=False),
@@ -457,22 +691,37 @@ def upgrade():
         sa.Column('state', sa.Text(), nullable=False),
         sa.Column('version', sa.Integer(), nullable=True),
         sa.Column('_node_fk', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_node_fk'], [u'nodes._storage_id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_node_fk'],
+            [u'nodes._storage_id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_node_instances_id'), 'node_instances', ['id'], unique=False)
+    op.create_index(
+        op.f('ix_node_instances_id'),
+        'node_instances',
+        ['id'],
+        unique=False,
+    )
     op.create_table(
         'owners_executions_users',
         sa.Column('execution_id', sa.Integer(), nullable=True),
         sa.Column('user_id', sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(['execution_id'], ['executions._storage_id'], ),
+        sa.ForeignKeyConstraint(
+            ['execution_id'],
+            ['executions._storage_id'],
+        ),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], )
     )
     op.create_table(
         'viewers_executions_users',
         sa.Column('execution_id', sa.Integer(), nullable=True),
         sa.Column('user_id', sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(['execution_id'], ['executions._storage_id'], ),
+        sa.ForeignKeyConstraint(
+            ['execution_id'],
+            ['executions._storage_id'],
+        ),
         sa.ForeignKeyConstraint(['user_id'], ['users.id'], )
     )
     op.create_table(
@@ -483,16 +732,28 @@ def upgrade():
         sa.Column('entity_id', sa.Text(), nullable=False),
         sa.Column('entity_type', entity_type, nullable=True),
         sa.Column('_deployment_update_fk', sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(['_deployment_update_fk'], [u'deployment_updates._storage_id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(
+            ['_deployment_update_fk'],
+            [u'deployment_updates._storage_id'],
+            ondelete='CASCADE',
+        ),
         sa.PrimaryKeyConstraint('_storage_id')
     )
-    op.create_index(op.f('ix_deployment_update_steps_id'), 'deployment_update_steps', ['id'], unique=False)
+    op.create_index(
+        op.f('ix_deployment_update_steps_id'),
+        'deployment_update_steps',
+        ['id'],
+        unique=False,
+    )
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_deployment_update_steps_id'), table_name='deployment_update_steps')
+    op.drop_index(
+        op.f('ix_deployment_update_steps_id'),
+        table_name='deployment_update_steps',
+    )
     op.drop_table('deployment_update_steps')
     entity_type.drop(op.get_bind())
     action_type.drop(op.get_bind())
@@ -506,8 +767,14 @@ def downgrade():
     op.drop_index(op.f('ix_events_timestamp'), table_name='events')
     op.drop_index(op.f('ix_events_id'), table_name='events')
     op.drop_table('events')
-    op.drop_index(op.f('ix_deployment_updates_id'), table_name='deployment_updates')
-    op.drop_index(op.f('ix_deployment_updates_created_at'), table_name='deployment_updates')
+    op.drop_index(
+        op.f('ix_deployment_updates_id'),
+        table_name='deployment_updates',
+    )
+    op.drop_index(
+        op.f('ix_deployment_updates_created_at'),
+        table_name='deployment_updates',
+    )
     op.drop_table('deployment_updates')
     op.drop_table('viewers_deployments_users')
     op.drop_table('owners_deployments_users')
@@ -518,9 +785,18 @@ def downgrade():
     op.drop_index(op.f('ix_executions_created_at'), table_name='executions')
     op.drop_table('executions')
     execution_status.drop(op.get_bind())
-    op.drop_index(op.f('ix_deployment_modifications_id'), table_name='deployment_modifications')
-    op.drop_index(op.f('ix_deployment_modifications_ended_at'), table_name='deployment_modifications')
-    op.drop_index(op.f('ix_deployment_modifications_created_at'), table_name='deployment_modifications')
+    op.drop_index(
+        op.f('ix_deployment_modifications_id'),
+        table_name='deployment_modifications',
+    )
+    op.drop_index(
+        op.f('ix_deployment_modifications_ended_at'),
+        table_name='deployment_modifications',
+    )
+    op.drop_index(
+        op.f('ix_deployment_modifications_created_at'),
+        table_name='deployment_modifications',
+    )
     op.drop_table('deployment_modifications')
     deployment_modification_status.drop(op.get_bind())
     op.drop_table('viewers_snapshots_users')
