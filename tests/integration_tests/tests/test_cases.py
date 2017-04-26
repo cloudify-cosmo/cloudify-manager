@@ -177,8 +177,10 @@ class BaseTestCase(unittest.TestCase):
         return docl.copy_file_to_manager(source=source, target=target)
 
     @staticmethod
-    def write_data_to_file_on_manager(data, target_path):
+    def write_data_to_file_on_manager(data, target_path, to_json=False):
         with tempfile.NamedTemporaryFile() as f:
+            if to_json:
+                data = json.dumps(data)
             f.write(data)
             f.flush()
             BaseTestCase.copy_file_to_manager(f.name, target_path)

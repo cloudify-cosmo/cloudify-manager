@@ -95,7 +95,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
 
         data = {deployment_id: {'raise_exception_on_delete': True}}
         agent_json_path = os.path.join(PLUGIN_STORAGE_DIR, 'agent.json')
-        self.write_data_to_file_on_manager(data, agent_json_path)
+        self.write_data_to_file_on_manager(data, agent_json_path, to_json=True)
 
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id)
