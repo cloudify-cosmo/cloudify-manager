@@ -55,7 +55,10 @@ class SQLResourceBase(SQLModelBase):
     # Some must-have columns for all resources
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
-    private_resource = db.Column(db.Boolean, default=False)
+    private_resource = db.Column(
+        db.Boolean(name='private_resource'),
+        default=False,
+    )
 
     @declared_attr
     def _tenant_id(cls):

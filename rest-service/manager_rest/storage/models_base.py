@@ -25,11 +25,19 @@ from dateutil import (
 )
 from flask_sqlalchemy import SQLAlchemy, inspect
 from flask_restful import fields as flask_fields
+from sqlalchemy import MetaData
 from sqlalchemy.ext.associationproxy import ASSOCIATION_PROXY
 
 from manager_rest.utils import classproperty
 
-db = SQLAlchemy()
+
+db = SQLAlchemy(metadata=MetaData(naming_convention={
+    'ix': 'ix_%(column_0_label)s',
+    'uq': 'uq_%(table_name)s_%(column_0_name)s',
+    'ck': 'ck_%(table_name)s_%(constraint_name)s',
+    'fk': 'fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s',
+    'pk': 'pk_%(table_name)s'
+}))
 
 
 class UTCDateTime(db.TypeDecorator):

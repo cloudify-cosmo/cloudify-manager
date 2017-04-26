@@ -162,7 +162,10 @@ class Execution(SQLResourceBase):
 
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     error = db.Column(db.Text)
-    is_system_workflow = db.Column(db.Boolean, nullable=False)
+    is_system_workflow = db.Column(
+        db.Boolean(name='is_system_workflow'),
+        nullable=False,
+    )
     parameters = db.Column(db.PickleType)
     status = db.Column(
         db.Enum(*ExecutionState.STATES, name='execution_status')
