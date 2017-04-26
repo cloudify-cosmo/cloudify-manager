@@ -38,7 +38,6 @@ third_party_logs = {
     'sh': logging.WARNING,
     'pika.adapters.base_connection': logging.CRITICAL,
     'requests': logging.ERROR,
-    'alembic': logging.WARNING
 }
 for logger_name, logger_level in third_party_logs.iteritems():
     cloudify.utils.setup_logger(logger_name, logger_level)
