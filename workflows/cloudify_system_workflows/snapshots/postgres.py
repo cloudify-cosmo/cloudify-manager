@@ -188,6 +188,7 @@ class Postgres(object):
         ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
         psql_bin = os.path.join(self._bin_dir, 'psql')
         command = [psql_bin,
+                   '-v', 'ON_ERROR_STOP=1',
                    '--single-transaction',
                    '--host', self._host,
                    '--port', self._port,
