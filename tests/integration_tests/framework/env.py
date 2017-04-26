@@ -170,8 +170,6 @@ class BaseTestEnvironment(object):
         os.environ.pop('CFY_WORKDIR', None)
         docl.clean(label=[self.env_label])
         self.delete_working_directory()
-        logger.debug('Waiting for AMQP events printer thread')
-        self.amqp_events_printer_thread.join()
 
     def delete_working_directory(self):
         if os.path.exists(self.test_working_dir):

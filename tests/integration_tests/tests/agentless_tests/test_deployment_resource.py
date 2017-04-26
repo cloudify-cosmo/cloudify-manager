@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+from os.path import join
 import tempfile
 import uuid
 
@@ -35,13 +35,13 @@ class DeploymentResourceTest(AgentlessTestCase):
         blueprint_id = str(uuid.uuid4())
         deployment_id = blueprint_id
         blueprint_path = resource('dsl/deployment_resource.yaml')
-        deployment_folder_on_manager = \
-            '/opt/manager/resources/deployments/{0}/{1}'.format(
-                DEFAULT_TENANT_NAME, deployment_id)
-        full_resource_path = os.path.join(deployment_folder_on_manager,
-                                          RESOURCE_PATH)
-        self.execute_on_manager('mkdir -p {0}/resources'.format(
-            deployment_folder_on_manager))
+        base_dep_dir = '/opt/manager/resources/deployments'
+        dep_dir = join(base_dep_dir, DEFAULT_TENANT_NAME, deployment_id)
+        full_resource_path = join(base_dep_dir,
+                                  DEFAULT_TENANT_NAME,
+                                  deployment_id,
+                                  RESOURCE_PATH)
+        self.execute_on_manager('mkdir -p {0}/resources'.format(dep_dir))
 
         with tempfile.NamedTemporaryFile() as f:
             f.write(RESOURCE_CONTENT)
@@ -49,6 +49,9 @@ class DeploymentResourceTest(AgentlessTestCase):
             self.copy_file_to_manager(source=f.name,
                                       target=full_resource_path)
             self.execute_on_manager('chmod +r {0}'.format(full_resource_path))
+
+        # Everything under /opt/manager should be owned be the rest service
+        self.env.chown('cloudify-restservice', base_dep_dir)
 
         deployment, _ = self.deploy_application(
             blueprint_path,
@@ -70,4 +73,4 @@ class DeploymentResourceTest(AgentlessTestCase):
         self.assertRaises(
             sh.ErrorReturnCode,
             self.execute_on_manager,
-            'test -d {0}'.format(deployment_folder_on_manager))
+            'test -d {0}'.format(dep_dir))
