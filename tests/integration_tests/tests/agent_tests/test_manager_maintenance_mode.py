@@ -24,6 +24,12 @@ from integration_tests.tests.utils import \
 
 
 class ManagerMaintenanceModeTest(AgentTestCase):
+    def setUp(self):
+        super(ManagerMaintenanceModeTest, self).setUp()
+        # Only chowning the /opt/manager folder to allow creating the
+        # maintenance folder. Not doing chown -R to avoid touching the
+        # read-only /opt/manager/env folder
+        self.env.chown('cloudify-restservice', '/opt/manager', recursive=False)
 
     def test_maintenance_mode(self):
         blueprint_id = str(uuid.uuid4())

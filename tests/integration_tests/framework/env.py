@@ -85,8 +85,9 @@ class BaseTestEnvironment(object):
             raise
 
     @staticmethod
-    def chown(owner, path_in_container):
-        docl.execute('chown -R {0}:{0} {1}'.format(owner, path_in_container))
+    def chown(owner, path_in_container, recursive=True):
+        chown = 'chown -R' if recursive else 'chown'
+        docl.execute('{0} {1}:{1} {2}'.format(chown, owner, path_in_container))
 
     def on_environment_created(self):
         raise NotImplementedError
