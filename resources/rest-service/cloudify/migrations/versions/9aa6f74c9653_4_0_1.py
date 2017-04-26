@@ -168,24 +168,30 @@ def upgrade():
         'events',
         sa.Column('_creator_id', sa.Integer(), nullable=True),
     )
-    op.execute(
-        'UPDATE events '
-        'SET _creator_id = executions._creator_id '
-        'FROM executions '
-        'WHERE events._execution_fk = executions._storage_id'
-    )
-    op.alter_column('events', '_creator_id', nullable=False)
     op.add_column(
         'events',
         sa.Column('_tenant_id', sa.Integer(), nullable=True),
     )
+    op.add_column(
+        'events',
+        sa.Column(
+            'reported_timestamp',
+            manager_rest.storage.models_base.LocalDateTime(),
+            nullable=True,
+        ),
+    )
     op.execute(
         'UPDATE events '
-        'SET _tenant_id = executions._tenant_id '
+        'SET '
+        '_creator_id = executions._creator_id, '
+        '_tenant_id = executions._tenant_id, '
+        'reported_timestamp = timestamp '
         'FROM executions '
         'WHERE events._execution_fk = executions._storage_id'
     )
+    op.alter_column('events', '_creator_id', nullable=False)
     op.alter_column('events', '_tenant_id', nullable=False)
+    op.alter_column('events', 'reported_timestamp', nullable=False)
     op.add_column(
         'events',
         sa.Column(
@@ -198,19 +204,6 @@ def upgrade():
         'events',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.add_column(
-        'events',
-        sa.Column(
-            'reported_timestamp',
-            manager_rest.storage.models_base.LocalDateTime(),
-            nullable=True,
-        ),
-    )
-    op.execute(
-        'UPDATE events '
-        'SET reported_timestamp = timestamp '
-    )
-    op.alter_column('events', 'reported_timestamp', nullable=False)
     op.drop_index('ix_events_id', table_name='events')
     op.drop_index('ix_events_timestamp', table_name='events')
     op.create_foreign_key(
@@ -241,27 +234,9 @@ def upgrade():
         'logs',
         sa.Column('_creator_id', sa.Integer(), nullable=True),
     )
-    op.execute(
-        'UPDATE logs '
-        'SET _creator_id = executions._creator_id '
-        'FROM executions '
-        'WHERE logs._execution_fk = executions._storage_id'
-    )
-    op.alter_column('logs', '_creator_id', nullable=False)
     op.add_column(
         'logs',
         sa.Column('_tenant_id', sa.Integer(), nullable=True),
-    )
-    op.execute(
-        'UPDATE logs '
-        'SET _tenant_id = executions._tenant_id '
-        'FROM executions '
-        'WHERE logs._execution_fk = executions._storage_id'
-    )
-    op.alter_column('logs', '_tenant_id', nullable=False)
-    op.add_column(
-        'logs',
-        sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
     op.add_column(
         'logs',
@@ -273,9 +248,20 @@ def upgrade():
     )
     op.execute(
         'UPDATE logs '
-        'SET reported_timestamp = timestamp '
+        'SET '
+        '_creator_id = executions._creator_id, '
+        '_tenant_id = executions._tenant_id, '
+        'reported_timestamp = timestamp '
+        'FROM executions '
+        'WHERE logs._execution_fk = executions._storage_id'
     )
+    op.alter_column('logs', '_creator_id', nullable=False)
+    op.alter_column('logs', '_tenant_id', nullable=False)
     op.alter_column('logs', 'reported_timestamp', nullable=False)
+    op.add_column(
+        'logs',
+        sa.Column('private_resource', sa.Boolean(), nullable=True),
+    )
     op.drop_index('ix_logs_id', table_name='logs')
     op.drop_index('ix_logs_timestamp', table_name='logs')
     op.create_foreign_key(
@@ -298,23 +284,19 @@ def upgrade():
         'nodes',
         sa.Column('_creator_id', sa.Integer(), nullable=True),
     )
-    op.execute(
-        'UPDATE nodes '
-        'SET _creator_id = deployments._creator_id '
-        'FROM deployments '
-        'WHERE nodes._deployment_fk = deployments._storage_id'
-    )
-    op.alter_column('nodes', '_creator_id', nullable=False)
     op.add_column(
         'nodes',
         sa.Column('_tenant_id', sa.Integer(), nullable=True),
     )
     op.execute(
         'UPDATE nodes '
-        'SET _tenant_id = deployments._tenant_id '
+        'SET '
+        '_creator_id = deployments._creator_id, '
+        '_tenant_id = deployments._tenant_id '
         'FROM deployments '
         'WHERE nodes._deployment_fk = deployments._storage_id'
     )
+    op.alter_column('nodes', '_creator_id', nullable=False)
     op.alter_column('nodes', '_tenant_id', nullable=False)
     op.add_column(
         'nodes',
@@ -342,23 +324,19 @@ def upgrade():
         'node_instances',
         sa.Column('_creator_id', sa.Integer(), nullable=True),
     )
-    op.execute(
-        'UPDATE node_instances '
-        'SET _creator_id = nodes._creator_id '
-        'FROM nodes '
-        'WHERE node_instances._node_fk = nodes._storage_id'
-    )
-    op.alter_column('node_instances', '_creator_id', nullable=False)
     op.add_column(
         'node_instances',
         sa.Column('_tenant_id', sa.Integer(), nullable=True),
     )
     op.execute(
         'UPDATE node_instances '
-        'SET _tenant_id = nodes._tenant_id '
+        'SET '
+        '_creator_id = nodes._creator_id, '
+        '_tenant_id = nodes._tenant_id '
         'FROM nodes '
         'WHERE node_instances._node_fk = nodes._storage_id'
     )
+    op.alter_column('node_instances', '_creator_id', nullable=False)
     op.alter_column('node_instances', '_tenant_id', nullable=False)
     op.add_column(
         'node_instances',
