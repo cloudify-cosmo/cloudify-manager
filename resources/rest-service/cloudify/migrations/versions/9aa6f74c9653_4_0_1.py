@@ -192,76 +192,88 @@ def downgrade():
     op.create_index('ix_blueprints_id', 'blueprints', ['id'], unique=False)
     op.create_index('ix_blueprints_created_at', 'blueprints', ['created_at'], unique=False)
     op.drop_column('blueprints', 'private_resource')
-    op.create_table('owners_deployments_users',
-    sa.Column('deployment_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['deployment_id'], [u'deployments._storage_id'], name=u'owners_deployments_users_deployment_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_deployments_users_user_id_fkey')
+    op.create_table(
+        'owners_deployments_users',
+        sa.Column('deployment_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['deployment_id'], [u'deployments._storage_id'], name=u'owners_deployments_users_deployment_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_deployments_users_user_id_fkey')
     )
-    op.create_table('owners_executions_users',
-    sa.Column('execution_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['execution_id'], [u'executions._storage_id'], name=u'owners_executions_users_execution_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_executions_users_user_id_fkey')
+    op.create_table(
+        'owners_executions_users',
+        sa.Column('execution_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['execution_id'], [u'executions._storage_id'], name=u'owners_executions_users_execution_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_executions_users_user_id_fkey')
     )
-    op.create_table('viewers_secrets_users',
-    sa.Column('secret_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['secret_id'], [u'secrets._storage_id'], name=u'viewers_secrets_users_secret_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_secrets_users_user_id_fkey')
+    op.create_table(
+        'viewers_secrets_users',
+        sa.Column('secret_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['secret_id'], [u'secrets._storage_id'], name=u'viewers_secrets_users_secret_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_secrets_users_user_id_fkey')
     )
-    op.create_table('owners_blueprints_users',
-    sa.Column('blueprint_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['blueprint_id'], [u'blueprints._storage_id'], name=u'owners_blueprints_users_blueprint_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_blueprints_users_user_id_fkey')
+    op.create_table(
+        'owners_blueprints_users',
+        sa.Column('blueprint_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['blueprint_id'], [u'blueprints._storage_id'], name=u'owners_blueprints_users_blueprint_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_blueprints_users_user_id_fkey')
     )
-    op.create_table('viewers_deployments_users',
-    sa.Column('deployment_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['deployment_id'], [u'deployments._storage_id'], name=u'viewers_deployments_users_deployment_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_deployments_users_user_id_fkey')
+    op.create_table(
+        'viewers_deployments_users',
+        sa.Column('deployment_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['deployment_id'], [u'deployments._storage_id'], name=u'viewers_deployments_users_deployment_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_deployments_users_user_id_fkey')
     )
-    op.create_table('owners_plugins_users',
-    sa.Column('plugin_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['plugin_id'], [u'plugins._storage_id'], name=u'owners_plugins_users_plugin_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_plugins_users_user_id_fkey')
+    op.create_table(
+        'owners_plugins_users',
+        sa.Column('plugin_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['plugin_id'], [u'plugins._storage_id'], name=u'owners_plugins_users_plugin_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_plugins_users_user_id_fkey')
     )
-    op.create_table('viewers_blueprints_users',
-    sa.Column('blueprint_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['blueprint_id'], [u'blueprints._storage_id'], name=u'viewers_blueprints_users_blueprint_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_blueprints_users_user_id_fkey')
+    op.create_table(
+        'viewers_blueprints_users',
+        sa.Column('blueprint_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['blueprint_id'], [u'blueprints._storage_id'], name=u'viewers_blueprints_users_blueprint_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_blueprints_users_user_id_fkey')
     )
-    op.create_table('viewers_plugins_users',
-    sa.Column('plugin_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['plugin_id'], [u'plugins._storage_id'], name=u'viewers_plugins_users_plugin_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_plugins_users_user_id_fkey')
+    op.create_table(
+        'viewers_plugins_users',
+        sa.Column('plugin_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['plugin_id'], [u'plugins._storage_id'], name=u'viewers_plugins_users_plugin_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_plugins_users_user_id_fkey')
     )
-    op.create_table('viewers_snapshots_users',
-    sa.Column('snapshot_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['snapshot_id'], [u'snapshots._storage_id'], name=u'viewers_snapshots_users_snapshot_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_snapshots_users_user_id_fkey')
+    op.create_table(
+        'viewers_snapshots_users',
+        sa.Column('snapshot_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['snapshot_id'], [u'snapshots._storage_id'], name=u'viewers_snapshots_users_snapshot_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_snapshots_users_user_id_fkey')
     )
-    op.create_table('viewers_executions_users',
-    sa.Column('execution_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['execution_id'], [u'executions._storage_id'], name=u'viewers_executions_users_execution_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_executions_users_user_id_fkey')
+    op.create_table(
+        'viewers_executions_users',
+        sa.Column('execution_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['execution_id'], [u'executions._storage_id'], name=u'viewers_executions_users_execution_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'viewers_executions_users_user_id_fkey')
     )
-    op.create_table('owners_snapshots_users',
-    sa.Column('snapshot_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['snapshot_id'], [u'snapshots._storage_id'], name=u'owners_snapshots_users_snapshot_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_snapshots_users_user_id_fkey')
+    op.create_table(
+        'owners_snapshots_users',
+        sa.Column('snapshot_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['snapshot_id'], [u'snapshots._storage_id'], name=u'owners_snapshots_users_snapshot_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_snapshots_users_user_id_fkey')
     )
-    op.create_table('owners_secrets_users',
-    sa.Column('secret_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
-    sa.ForeignKeyConstraint(['secret_id'], [u'secrets._storage_id'], name=u'owners_secrets_users_secret_id_fkey'),
-    sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_secrets_users_user_id_fkey')
+    op.create_table(
+        'owners_secrets_users',
+        sa.Column('secret_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.Column('user_id', sa.INTEGER(), autoincrement=False, nullable=True),
+        sa.ForeignKeyConstraint(['secret_id'], [u'secrets._storage_id'], name=u'owners_secrets_users_secret_id_fkey'),
+        sa.ForeignKeyConstraint(['user_id'], [u'users.id'], name=u'owners_secrets_users_user_id_fkey')
     )
     # ### end Alembic commands ###
