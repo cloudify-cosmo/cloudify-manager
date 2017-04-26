@@ -43,8 +43,13 @@ class TestScriptMapping(AgentlessTestCase):
         with open(workflow_script_path, 'r') as f:
             workflow_script_content = f.read()
 
-        deployment_folder = ('/opt/manager/resources/deployments/{0}/{1}'
-                             .format(DEFAULT_TENANT_NAME, deployment.id))
+        base_dep_dir = '/opt/manager/resources/deployments'
+
+        deployment_folder = os.path.join(
+            base_dep_dir,
+            DEFAULT_TENANT_NAME,
+            deployment.id
+        )
         workflow_folder = os.path.join(deployment_folder, 'scripts/workflows')
         try:
             self.execute_on_manager('mkdir -p {0}'.format(workflow_folder))
@@ -63,6 +68,9 @@ class TestScriptMapping(AgentlessTestCase):
                     target=deployment_workflow_script_path)
                 self.execute_on_manager(
                     'chmod 644 {0}'.format(deployment_workflow_script_path))
+
+            # Everything under /opt/manager should be owned be the rest service
+            self.env.chown('cloudify-restservice', base_dep_dir)
 
             self.execute_workflow('workflow', deployment.id)
 
