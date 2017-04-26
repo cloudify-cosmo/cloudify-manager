@@ -14,13 +14,18 @@
 #    * limitations under the License.
 
 import os
-import shutil
 import pickle
+import shutil
+import string
 
 from cloudify.workflows import ctx
 from cloudify.exceptions import NonRecoverableError
 
+from .constants import SECRET_STORE_AGENT_KEY_PREFIX
 from .utils import is_compute, copy as copy_file
+
+
+ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
 
 
 class Credentials(object):
@@ -34,15 +39,13 @@ class Credentials(object):
             ctx.logger.info('Missing credentials dir: '
                             '{0}'.format(dump_cred_dir))
             return
-        restored_cred_dir = self._create_restored_cred_dir()
         agent_key_path_dict = self._create_agent_key_path_dict()
 
         for dep_node_id in os.listdir(dump_cred_dir):
             self._restore_agent_credentials(
                 dep_node_id,
                 dump_cred_dir,
-                restored_cred_dir,
-                agent_key_path_dict
+                agent_key_path_dict,
             )
 
     def dump(self, tempdir):
@@ -82,75 +85,22 @@ class Credentials(object):
                          .format(source, destination))
         shutil.copy(source, destination)
 
-    def _restore_agent_credentials(self,
-                                   dep_node_id,
-                                   dump_cred_dir,
-                                   restored_cred_dir,
-                                   agent_key_path_dict):
-        restored_agent_key_path = \
-            self._restore_agent_key_from_dump(dump_cred_dir,
-                                              restored_cred_dir,
-                                              dep_node_id)
+    def _restore_agent_credentials(
+            self,
+            dep_node_id,
+            dump_cred_dir,
+            agent_key_path_dict,
+            ):
+        agent_key_path_in_dump = os.path.join(dump_cred_dir,
+                                              dep_node_id,
+                                              Credentials._CRED_KEY_NAME)
+
         db_agent_key_path = agent_key_path_dict[dep_node_id]
 
-        if os.path.isfile(db_agent_key_path):
-            self._handle_existing_agent_key_path(
-                restored_agent_key_path,
-                db_agent_key_path
-            )
-        else:
-            copy_file(restored_agent_key_path, db_agent_key_path)
+        with open(agent_key_path_in_dump) as f:
+            key_data = f.read()
 
-    @staticmethod
-    def _handle_existing_agent_key_path(restored_key_path,
-                                        db_key_path):
-        """Handle the case where the agent key already exists; either ignore
-        it if the contents are identical, or raise an error if they aren't
-
-        :param restored_key_path: The key path as restored from the dump
-        :param db_key_path: The key path as retrieved from the DB
-        """
-        with open(db_key_path) as key_file:
-                content_1 = key_file.read()
-        with open(restored_key_path) as key_file:
-            content_2 = key_file.read()
-        if content_1 != content_2:
-            raise NonRecoverableError(
-                'Agent key path already taken: {0}'.format(db_key_path)
-            )
-        ctx.logger.debug('Agent key path already exist: '
-                         '{0}'.format(db_key_path))
-
-    @staticmethod
-    def _create_restored_cred_dir():
-        """Create a new directory for agent key paths
-        """
-        restored_cred_dir = os.path.join('/opt/manager', Credentials._CRED_DIR)
-        if os.path.exists(restored_cred_dir):
-            shutil.rmtree(restored_cred_dir)
-        os.makedirs(restored_cred_dir)
-        return restored_cred_dir
-
-    @staticmethod
-    def _restore_agent_key_from_dump(dump_cred_dir,
-                                     restored_cred_dir,
-                                     deployment_node_id):
-        """Restore the agent key from the snapshot dump and return its path
-
-        :param dump_cred_dir: Key path directory in the snapshot dump
-        :param restored_cred_dir: Key path directory on the manager
-        :param deployment_node_id:
-        :return: The local path of the agent key
-        """
-        os.makedirs(os.path.join(restored_cred_dir, deployment_node_id))
-        agent_key_path = os.path.join(restored_cred_dir,
-                                      deployment_node_id,
-                                      Credentials._CRED_KEY_NAME)
-        agent_key_path_in_dump = os.path.join(dump_cred_dir,
-                                              deployment_node_id,
-                                              Credentials._CRED_KEY_NAME)
-        shutil.copy(agent_key_path_in_dump, agent_key_path)
-        return agent_key_path
+        add_key_secret(db_agent_key_path, key_data)
 
     def _get_node_properties_query_result(self):
         """Create an SQL query that retrieves node properties from the DB
@@ -187,3 +137,23 @@ class Credentials(object):
                 key = deployment_id + '_' + node_id
                 agent_key_path_dict[key] = os.path.expanduser(agent_key_path)
         return agent_key_path_dict
+
+
+def add_key_secret(key_path, key_data):
+    key_name = SECRET_STORE_AGENT_KEY_PREFIX + ''.join(
+        char if char in ALLOWED_KEY_CHARS else '_'
+        for char in key_path
+        )
+
+    ctx.logger.info(dir(ctx))
+
+    while True:
+        try:
+            secret_value = ctx.secrets.get(key_name)
+        except KeyError:
+            ctx.secrets.create(key_name, key_data)
+            break
+        if secret_value != key_data:
+            break
+
+    return key_name
