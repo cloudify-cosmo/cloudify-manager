@@ -46,9 +46,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
             blueprint_id=blueprint_id,
             timeout_seconds=15
         )
-
         self.assertEqual(blueprint_id, deployment.blueprint_id)
-
         machines = self.get_plugin_data(
             plugin_name='cloudmock',
             deployment_id=deployment.id
@@ -232,8 +230,10 @@ class BasicWorkflowsTest(AgentlessTestCase):
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
         # 'uninitialized' state.
+
         self.client.blueprints.upload(dsl_path, blueprint_id)
-        self.client.deployments.create(blueprint_id, deployment_id)
+        self.client.deployments.create(blueprint_id, deployment_id,
+                                       skip_plugins_validation=True)
         do_retries(verify_deployment_environment_creation_complete,
                    timeout_seconds=60,
                    deployment_id=deployment_id)
@@ -337,7 +337,8 @@ class BasicWorkflowsTest(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
-        self.client.deployments.create(blueprint_id, deployment_id)
+        self.client.deployments.create(blueprint_id, deployment_id,
+                                       skip_plugins_validation=True)
 
         def assert_deployment_nodes_length():
             _deployment_nodes = self.client.node_instances.list(
