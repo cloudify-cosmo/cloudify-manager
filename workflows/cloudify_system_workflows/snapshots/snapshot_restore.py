@@ -94,8 +94,9 @@ class SnapshotRestore(object):
                 self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_deployment_envs(existing_dep_envs)
+                script = '/opt/cloudify/mgmtworker/snapshot_permissions_fixer'
                 subprocess.check_call([
-                    'sudo', '/opt/cloudify/snapshot_permissions_fixer'
+                    'sudo', script
                 ])
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
