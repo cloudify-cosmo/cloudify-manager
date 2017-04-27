@@ -39,7 +39,8 @@ class RestAPITest(AgentlessTestCase):
         blueprint_id = blueprint_id or self.blueprint_id
         deployment_id = deployment_id or self.deployment_id
         self.client.blueprints.upload(dsl_path, blueprint_id)
-        self.client.deployments.create(blueprint_id, deployment_id)
+        self.client.deployments.create(blueprint_id, deployment_id,
+                                       skip_plugins_validation=True)
         wait_for_deployment_creation_to_complete(
             deployment_id=deployment_id)
 

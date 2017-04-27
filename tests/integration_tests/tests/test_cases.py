@@ -302,7 +302,8 @@ class BaseTestCase(unittest.TestCase):
         deployment = client.deployments.create(
                 blueprint.id,
                 deployment_id,
-                inputs=inputs)
+                inputs=inputs,
+                skip_plugins_validation=True)
 
         test_utils.wait_for_deployment_creation_to_complete(
             deployment_id=deployment_id)
