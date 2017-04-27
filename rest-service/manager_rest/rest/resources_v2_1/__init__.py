@@ -14,9 +14,9 @@
 #  * limitations under the License.
 #
 
-from .plugins import PluginsId
-from .maintenance import (MaintenanceMode,
+from .plugins import PluginsId                      # noqa
+from .maintenance import (MaintenanceMode,          # noqa
                           MaintenanceModeAction)
-from .deployment_update import (DeploymentUpdate,
+from .deployment_update import (DeploymentUpdate,   # noqa
                                 DeploymentUpdateId,
                                 DeploymentUpdates)
