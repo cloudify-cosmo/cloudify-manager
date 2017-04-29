@@ -17,6 +17,7 @@ import os
 import pickle
 import shutil
 import string
+import subprocess
 
 from cloudify.workflows import ctx
 from cloudify.exceptions import NonRecoverableError
@@ -103,9 +104,16 @@ class Credentials(object):
         with open(agent_key_path_in_dump) as f:
             key_data = f.read()
 
-        add_key_secret(
-            agent_key_path_dict[dep_node_id][1],
-            db_agent_key_path, key_data)
+        for tenant, path in agent_key_path_dict[dep_node_id].items():
+            key_name = add_key_secret(tenant, db_agent_key_path, key_data)
+
+            subprocess.check_call(
+                [
+                    'sudo', '-u', 'cloudify-restservice',
+                    '/opt/manager/fix_snapshot_ssh_db',
+                    tenant, db_agent_key_path, key_name,
+                ],
+            )
 
     def _get_node_properties_query_result(self):
         """Create an SQL query that retrieves node properties from the DB
@@ -146,10 +154,8 @@ class Credentials(object):
             if 'key' in agent_config:
                 agent_key_path = agent_config['key']
                 key = deployment_id + '_' + node_id
-                agent_key_path_dict[key] = (
-                    os.path.expanduser(agent_key_path),
-                    tenant
-                    )
+                agent_key_path_dict.setdefault(
+                    key, {})[tenant] = os.path.expanduser(agent_key_path)
         return agent_key_path_dict
 
 
