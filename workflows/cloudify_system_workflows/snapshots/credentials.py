@@ -20,12 +20,11 @@ import string
 import subprocess
 
 from cloudify.workflows import ctx
-from cloudify.exceptions import NonRecoverableError
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .constants import SECRET_STORE_AGENT_KEY_PREFIX
-from .utils import is_compute, copy as copy_file
+from .utils import is_compute
 
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
