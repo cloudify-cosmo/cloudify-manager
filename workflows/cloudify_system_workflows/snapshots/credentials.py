@@ -98,12 +98,14 @@ class Credentials(object):
                                               dep_node_id,
                                               Credentials._CRED_KEY_NAME)
 
-        db_agent_key_path = agent_key_path_dict[dep_node_id]
+        db_agent_key_path = agent_key_path_dict[dep_node_id][0]
 
         with open(agent_key_path_in_dump) as f:
             key_data = f.read()
 
-        add_key_secret('default_tenant', db_agent_key_path, key_data)
+        add_key_secret(
+            agent_key_path_dict[dep_node_id][1],
+            db_agent_key_path, key_data)
 
     def _get_node_properties_query_result(self):
         """Create an SQL query that retrieves node properties from the DB
@@ -112,9 +114,14 @@ class Credentials(object):
         2. Node Id
         3. The pickled properties dict
         """
-        query = "SELECT nodes.id, deployments.id, properties " \
-                "FROM nodes JOIN deployments " \
-                "ON nodes._deployment_fk = deployments._storage_id;"
+        query = (
+            "SELECT nodes.id, deployments.id, properties, tenants.name "
+            "FROM nodes "
+            "JOIN deployments "
+            "ON nodes._deployment_fk = deployments._storage_id "
+            "JOIN tenants "
+            "ON deployments._tenant_id = tenants.id "
+            ";")
         return self._postgres.run_query(query)['all']
 
     @staticmethod
@@ -135,10 +142,14 @@ class Credentials(object):
             deployment_id = elem[1]
             node_properties = pickle.loads(elem[2])
             agent_config = self._get_agent_config(node_properties)
+            tenant = elem[3]
             if 'key' in agent_config:
                 agent_key_path = agent_config['key']
                 key = deployment_id + '_' + node_id
-                agent_key_path_dict[key] = os.path.expanduser(agent_key_path)
+                agent_key_path_dict[key] = (
+                    os.path.expanduser(agent_key_path),
+                    tenant
+                    )
         return agent_key_path_dict
 
 
