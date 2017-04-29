@@ -179,7 +179,7 @@ def add_key_secret(tenant, key_path, key_data):
                 break
             else:
                 raise
-        if secret_value != key_data:
+        if secret_value == key_data:
             break
 
     return key_name
