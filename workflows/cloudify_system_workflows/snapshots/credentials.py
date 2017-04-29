@@ -99,12 +99,11 @@ class Credentials(object):
                                               dep_node_id,
                                               Credentials._CRED_KEY_NAME)
 
-        db_agent_key_path = agent_key_path_dict[dep_node_id][0]
-
         with open(agent_key_path_in_dump) as f:
             key_data = f.read()
 
         for tenant, path in agent_key_path_dict[dep_node_id].items():
+            db_agent_key_path = agent_key_path_dict[dep_node_id][tenant]
             key_name = add_key_secret(tenant, db_agent_key_path, key_data)
 
             subprocess.check_call(
