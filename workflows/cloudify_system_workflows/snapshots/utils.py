@@ -14,10 +14,7 @@
 #    * limitations under the License.
 
 import os
-import grp
-import itertools
 import json
-import pwd
 import shlex
 import shutil
 import subprocess
