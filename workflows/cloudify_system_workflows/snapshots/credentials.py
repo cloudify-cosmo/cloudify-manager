@@ -56,9 +56,10 @@ class Credentials(object):
 
         for deployment_id, n in self._get_hosts():
             props = n.properties
-            if 'cloudify_agent' in props and 'key' in props['cloudify_agent']:
+            agent_config = self._get_agent_config(props)
+            if 'key' in agent_config:
                 node_id = deployment_id + '_' + n.id
-                agent_key_path = props['cloudify_agent']['key']
+                agent_key_path = agent_config['key']
                 self._dump_agent_key(
                     node_id,
                     agent_key_path,
