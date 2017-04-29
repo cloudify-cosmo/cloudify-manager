@@ -20,6 +20,8 @@ import string
 
 from cloudify.workflows import ctx
 from cloudify.exceptions import NonRecoverableError
+from cloudify_rest_client import CloudifyClient
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .constants import SECRET_STORE_AGENT_KEY_PREFIX
 from .utils import is_compute, copy as copy_file
@@ -101,7 +103,7 @@ class Credentials(object):
         with open(agent_key_path_in_dump) as f:
             key_data = f.read()
 
-        add_key_secret(db_agent_key_path, key_data)
+        add_key_secret('default_tenant', db_agent_key_path, key_data)
 
     def _get_node_properties_query_result(self):
         """Create an SQL query that retrieves node properties from the DB
@@ -140,20 +142,28 @@ class Credentials(object):
         return agent_key_path_dict
 
 
-def add_key_secret(key_path, key_data):
+def add_key_secret(tenant, key_path, key_data):
     key_name = SECRET_STORE_AGENT_KEY_PREFIX + ''.join(
         char if char in ALLOWED_KEY_CHARS else '_'
         for char in key_path
         )
 
-    ctx.logger.info(dir(ctx))
+    client = CloudifyClient(
+        'localhost',
+        token=ctx.rest_token,
+        tenant=tenant,
+    )
+    secrets = client.secrets
 
     while True:
         try:
-            secret_value = ctx.secrets.get(key_name)
-        except KeyError:
-            ctx.secrets.create(key_name, key_data)
-            break
+            secret_value = secrets.get(key_name)
+        except CloudifyClientError as e:
+            if e.status_code == 404 and 'not found' in str(e):
+                secrets.create(key_name, key_data)
+                break
+            else:
+                raise
         if secret_value != key_data:
             break
 
