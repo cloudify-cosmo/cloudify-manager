@@ -192,6 +192,7 @@ def upgrade():
     op.alter_column('events', '_creator_id', nullable=False)
     op.alter_column('events', '_tenant_id', nullable=False)
     op.alter_column('events', 'reported_timestamp', nullable=False)
+    op.alter_column('events', 'timestamp', server_default=sa.text(u'CURRENT_TIMESTAMP'), nullable=False)
     op.add_column(
         'events',
         sa.Column(
@@ -258,6 +259,7 @@ def upgrade():
     op.alter_column('logs', '_creator_id', nullable=False)
     op.alter_column('logs', '_tenant_id', nullable=False)
     op.alter_column('logs', 'reported_timestamp', nullable=False)
+    op.alter_column('logs', 'timestamp', server_default=sa.text(u'CURRENT_TIMESTAMP'), nullable=False)
     op.add_column(
         'logs',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
