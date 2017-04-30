@@ -100,7 +100,7 @@ class BaseTestEnvironment(object):
 
     def on_manager_created(self):
         docl.execute('mkdir -p {0}'.format(constants.PLUGIN_STORAGE_DIR))
-        self.chown('mgmtworker', constants.PLUGIN_STORAGE_DIR)
+        self.chown(constants.CLOUDIFY_USER, constants.PLUGIN_STORAGE_DIR)
         self.start_events_printer()
 
     def _build_resource_mapping(self):
@@ -233,7 +233,7 @@ class AgentTestEnvironment(BaseTestEnvironment):
                 source=f.name,
                 target=os.path.join(constants.DOCKER_COMPUTE_DIR,
                                     'docker_conf.json'))
-        self.chown('mgmtworker', constants.DOCKER_COMPUTE_DIR)
+        self.chown(constants.CLOUDIFY_USER, constants.DOCKER_COMPUTE_DIR)
 
 
 class ManagerTestEnvironment(AgentTestEnvironment):
