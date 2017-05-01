@@ -82,6 +82,23 @@ def update_agent_properties(input_dict, original_string, secret_name):
     return changed
 
 
+def fix_fabric_env(input_dict, original_string, secret_name):
+    """
+        Fix any fabric env in the provided dict. This will replace key paths
+        to the specified path with keys pointing to the specified secret.
+    """
+    changed = False
+    if 'fabric_env' in input_dict:
+        if 'key_filename' in input_dict['fabric_env']:
+            if input_dict['fabric_env']['key_filename'] == original_string:
+                input_dict['fabric_env'].pop('fabric_env')
+                input_dict['fabric_env']['key'] = {
+                    'get_secret': secret_name,
+                }
+                changed = True
+    return changed
+
+
 def main(tenant, original_string, secret_name):
     """
         For a given tenant, replace the SSH key path with the specified
@@ -129,10 +146,13 @@ def main(tenant, original_string, secret_name):
                 changed = False
                 for op in ops:
                     inputs = ops[op].get('inputs', {})
-                    new_changed = replace_ssh_keys(inputs,
+                    key_changed = replace_ssh_keys(inputs,
                                                    original_string,
                                                    secret_name)
-                    changed = changed or new_changed
+                    fabric_changed = fix_fabric_env(inputs,
+                                                    original_string,
+                                                    secret_name)
+                    changed = changed or key_changed or fabric_changed
                 props = node.properties
                 new_changed = replace_ssh_keys(props,
                                                original_string,
