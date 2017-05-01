@@ -5,7 +5,6 @@ import os
 
 import manager_rest.storage.storage_manager as stor
 from manager_rest.storage.resource_models import (
-    Blueprint,
     Deployment,
     Node,
     NodeInstance,
@@ -92,8 +91,6 @@ def main(tenant, original_string, secret_name):
           - Deployment runtime properties (for agent configuration only).
           - Deployment operation inputs.
           - Deployment node properties (including agent configuration).
-          - Blueprint plan inputs.
-          - Blueprint plan node operation inputs.
     """
     with app.app_context():
         sm = stor.SQLStorageManager()
@@ -156,35 +153,6 @@ def main(tenant, original_string, secret_name):
                     print('Updated')
                 else:
                     print('No changes')
-
-        # Updating blueprint plan as this is used by the deployment
-        # Not updating blueprints themselves due to complexity and time
-        # constraints.
-        res = sm.list(model_class=Blueprint)
-        for blueprint in res:
-            plan = blueprint.plan
-            changed = False
-            inputs = plan['inputs']
-            new_changed = replace_ssh_keys(inputs,
-                                           original_string,
-                                           secret_name)
-            changed = new_changed or changed
-            nodes = plan['nodes']
-            for node in nodes:
-                ops = node.get('operations', {})
-                for op in ops:
-                    op_inputs = ops[op].get('inputs', {})
-                    new_changed = replace_ssh_keys(op_inputs,
-                                                   original_string,
-                                                   secret_name)
-                    changed = new_changed or changed
-            if changed:
-                print('Changing inputs to: %s' % str(inputs))
-                print('Changing nodes to: %s' % str(nodes))
-                commit_changes(stor, Blueprint, blueprint, {'plan': plan})
-                print('Updated')
-            else:
-                print('No changes')
 
 
 if __name__ == '__main__':
