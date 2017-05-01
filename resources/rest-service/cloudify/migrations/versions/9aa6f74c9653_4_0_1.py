@@ -206,7 +206,6 @@ def upgrade():
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
     op.drop_index('ix_events_id', table_name='events')
-    op.drop_index('ix_events_timestamp', table_name='events')
     op.create_foreign_key(
         op.f('events__tenant_id_fkey'),
         'events',
@@ -265,7 +264,6 @@ def upgrade():
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
     op.drop_index('ix_logs_id', table_name='logs')
-    op.drop_index('ix_logs_timestamp', table_name='logs')
     op.create_foreign_key(
         op.f('logs__tenant_id_fkey'),
         'logs',
@@ -472,7 +470,6 @@ def downgrade():
         'logs',
         type_='foreignkey',
     )
-    op.create_index('ix_logs_timestamp', 'logs', ['timestamp'], unique=False)
     op.create_index('ix_logs_id', 'logs', ['id'], unique=False)
     op.drop_column('logs', 'reported_timestamp')
     op.drop_column('logs', 'private_resource')
@@ -497,12 +494,6 @@ def downgrade():
         op.f('events__tenant_id_fkey'),
         'events',
         type_='foreignkey',
-    )
-    op.create_index(
-        'ix_events_timestamp',
-        'events',
-        ['timestamp'],
-        unique=False,
     )
     op.create_index('ix_events_id', 'events', ['id'], unique=False)
     op.drop_column('events', 'reported_timestamp')
