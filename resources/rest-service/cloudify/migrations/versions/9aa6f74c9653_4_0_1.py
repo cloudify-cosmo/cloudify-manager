@@ -195,7 +195,7 @@ def upgrade():
     op.alter_column(
         'events',
         'timestamp',
-        server_default=sa.text(u'CURRENT_TIMESTAMP'),
+        server_default=sa.func.current_timestamp(),
         nullable=False,
     )
     op.add_column(
@@ -266,7 +266,7 @@ def upgrade():
     op.alter_column(
         'logs',
         'timestamp',
-        server_default=sa.text(u'CURRENT_TIMESTAMP'),
+        server_default=sa.func.current_timestamp(),
         nullable=False,
     )
     op.add_column(
