@@ -108,7 +108,7 @@ class Credentials(object):
             subprocess.check_call(
                 [
                     'sudo', '-u', 'cloudify-restservice',
-                    '/opt/cloudify/fix_snapshot_ssh_db',
+                    '/opt/mgmtworker/resources/cloudify/fix_snapshot_ssh_db',
                     tenant, db_agent_key_path, key_name,
                 ],
             )
