@@ -115,19 +115,20 @@ class Credentials(object):
 
     def _get_node_properties_query_result(self):
         """Create an SQL query that retrieves node properties from the DB
-        :return: A list of tuples - each has three elements:
-        1. Deployment ID
-        2. Node Id
-        3. The pickled properties dict
+        :return: A list of tuples - each has 4 elements:
+        0. Deployment ID
+        1. Node Id
+        2. The pickled properties dict
+        3. The tenant which owns the deployment
         """
-        query = (
-            "SELECT nodes.id, deployments.id, properties, tenants.name "
-            "FROM nodes "
-            "JOIN deployments "
-            "ON nodes._deployment_fk = deployments._storage_id "
-            "JOIN tenants "
-            "ON deployments._tenant_id = tenants.id "
-            ";")
+        query = """
+            SELECT nodes.id, deployments.id, properties, tenants.name
+            FROM nodes
+            JOIN deployments
+            ON nodes._deployment_fk = deployments._storage_id
+            JOIN tenants
+            ON deployments._tenant_id = tenants.id
+            ;"""
         return self._postgres.run_query(query)['all']
 
     @staticmethod
