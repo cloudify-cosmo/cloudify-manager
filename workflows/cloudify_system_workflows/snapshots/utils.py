@@ -26,6 +26,11 @@ from cloudify.workflows import ctx
 from .constants import ARCHIVE_CERT_DIR
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
+# Path to python binary in the manager environment
+PYTHON_MANAGER_ENV = '/opt/manager/env/bin/python'
+# Path to database migration script
+SCHEMA_SCRIPT = '/opt/manager/resources/cloudify/migrations/schema.py'
+
 
 class DictToAttributes(object):
     def __init__(self, dic):
@@ -249,8 +254,8 @@ def db_schema_downgrade(revision='-1'):
 
     """
     subprocess.check_call([
-        '/opt/manager/env/bin/python',
-        '/opt/manager/resources/cloudify/migrations/schema.py',
+        PYTHON_MANAGER_ENV,
+        SCHEMA_SCRIPT,
         'downgrade',
         revision,
     ])
@@ -266,8 +271,8 @@ def db_schema_upgrade(revision='head'):
 
     """
     subprocess.check_call([
-        '/opt/manager/env/bin/python',
-        '/opt/manager/resources/cloudify/migrations/schema.py',
+        PYTHON_MANAGER_ENV,
+        SCHEMA_SCRIPT,
         'upgrade',
         revision,
     ])
