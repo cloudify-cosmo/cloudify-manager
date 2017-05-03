@@ -139,26 +139,9 @@ class SnapshotRestore(object):
             postgres.restore(self._tempdir)
             postgres.restore_stage(self._tempdir)
         elif self._snapshot_version == V_4_0_0:
-            base_script = (
-                'import flask_migrate;'
-                'from manager_rest.flask_utils import setup_flask_app;'
-                'setup_flask_app();'
-                "directory = '/opt/manager/resources/cloudify/migrations';"
-            )
-            downgrade_script = (
-                base_script +
-                "flask_migrate.downgrade(directory, '333998bc1627')"
-            )
-            upgrade_script = (
-                base_script +
-                "flask_migrate.upgrade(directory)"
-            )
-            subprocess.check_call(
-                ['/opt/manager/env/bin/python', '-c', downgrade_script])
-            postgres.restore(self._tempdir)
+            with utils.db_schema('333998bc1627'):
+                postgres.restore(self._tempdir)
             postgres.restore_stage(self._tempdir)
-            subprocess.check_call(
-                ['/opt/manager/env/bin/python', '-c', upgrade_script])
         else:
             if self._should_clean_old_db_for_3_x_snapshot():
                 postgres.clean_db()
