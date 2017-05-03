@@ -35,7 +35,7 @@ class Postgres(object):
     _POSTGRES_DUMP_FILENAME = 'pg_data'
     _STAGE_DUMP_FILENAME = 'stage_data'
     _STAGE_DB_NAME = 'stage'
-    _TABLES_TO_KEEP = ['provider_context', 'roles']
+    _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
     _TABLES_TO_RESTORE = ['users', 'tenants']
 
     def __init__(self, config):
