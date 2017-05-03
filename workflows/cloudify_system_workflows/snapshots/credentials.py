@@ -182,5 +182,6 @@ def add_key_secret(tenant, key_path, key_data):
                 raise
         if secret_value == key_data:
             break
+        key_name += '_'
 
     return key_name
