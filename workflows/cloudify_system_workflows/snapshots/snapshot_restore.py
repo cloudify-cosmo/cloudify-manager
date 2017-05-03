@@ -137,6 +137,7 @@ class SnapshotRestore(object):
         ctx.logger.info('Restoring database')
         if self._snapshot_version >= V_4_0_0:
             postgres.restore(self._tempdir)
+            postgres.restore_stage(self._tempdir)
         else:
             if self._should_clean_old_db_for_3_x_snapshot():
                 postgres.clean_db()

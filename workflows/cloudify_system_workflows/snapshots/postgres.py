@@ -65,7 +65,7 @@ class Postgres(object):
         self._append_dump(dump_file, restore_admin_query)
         self._append_dump(dump_file, self._get_execution_restore_query())
 
-        self._restore_dump(dump_file)
+        self._restore_dump(dump_file, self._db_name)
         ctx.logger.debug('Postgres restored')
 
     def dump(self, tempdir):
@@ -87,6 +87,14 @@ class Postgres(object):
         except Exception as ex:
             raise NonRecoverableError('Error during dumping Stage data, '
                                       'exception: {0}'.format(ex))
+
+    def restore_stage(self, tempdir):
+        if not self._stage_db_exists():
+            return
+        ctx.logger.info('Restoring Stage DB')
+        stage_dump_file = os.path.join(tempdir, self._STAGE_DUMP_FILENAME)
+        self._restore_dump(stage_dump_file, self._STAGE_DB_NAME)
+        ctx.logger.debug('Stage DB restored')
 
     def _stage_db_exists(self):
         """Return True if the stage DB exists"""
@@ -182,7 +190,7 @@ class Postgres(object):
         command.extend(flags)
         run_shell(command)
 
-    def _restore_dump(self, dump_file):
+    def _restore_dump(self, dump_file, db_name):
         """Execute `psql` to restore an SQL dump into the DB
         """
         ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
@@ -192,7 +200,7 @@ class Postgres(object):
                    '--host', self._host,
                    '--port', self._port,
                    '-U', self._username,
-                   self._db_name,
+                   db_name,
                    '-f', dump_file]
         run_shell(command)
 
