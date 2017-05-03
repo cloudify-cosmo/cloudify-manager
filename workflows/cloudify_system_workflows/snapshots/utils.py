@@ -221,14 +221,6 @@ def compare_cert_metadata(path1, path2):
     return content1 == content2
 
 
-BASE_MIGRATION_SCRIPT = (
-    'import flask_migrate;'
-    'from manager_rest.flask_utils import setup_flask_app;'
-    'setup_flask_app();'
-    "directory = '/opt/manager/resources/cloudify/migrations';"
-)
-
-
 @contextlib.contextmanager
 def db_schema(revision):
     """Downgrade schema to desired revision to perform operation and upgrade.
@@ -256,12 +248,12 @@ def db_schema_downgrade(revision='-1'):
     :type revision: str
 
     """
-    downgrade_script = (
-        BASE_MIGRATION_SCRIPT +
-        "flask_migrate.downgrade(directory, '{}')".format(revision)
-    )
-    subprocess.check_call(
-        ['/opt/manager/env/bin/python', '-c', downgrade_script])
+    subprocess.check_call([
+        '/opt/manager/env/bin/python',
+        '/opt/manager/resources/cloudify/migrations/schema.py',
+        'downgrade',
+        revision,
+    ])
 
 
 def db_schema_upgrade(revision='head'):
@@ -273,9 +265,9 @@ def db_schema_upgrade(revision='head'):
     :type revision: str
 
     """
-    upgrade_script = (
-        BASE_MIGRATION_SCRIPT +
-        "flask_migrate.upgrade(directory, '{}')".format(revision)
-    )
-    subprocess.check_call(
-        ['/opt/manager/env/bin/python', '-c', upgrade_script])
+    subprocess.check_call([
+        '/opt/manager/env/bin/python',
+        '/opt/manager/resources/cloudify/migrations/schema.py',
+        'upgrade',
+        revision,
+    ])
