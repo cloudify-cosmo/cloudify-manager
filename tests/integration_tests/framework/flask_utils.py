@@ -62,7 +62,7 @@ def reset_storage():
     app = setup_flask_app()
 
     # Rebuild the DB
-    safe_drop_all()
+    safe_drop_all(keep_tables=['roles'])
     upgrade(directory=migrations_dir)
 
     # Add default tenant, admin user and provider context
