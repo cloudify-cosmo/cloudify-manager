@@ -171,7 +171,7 @@ def add_key_secret(tenant, key_path, key_data):
         try:
             secret_value = secrets.get(key_name)
         except CloudifyClientError as e:
-            if e.status_code == 404 and 'not found' in str(e):
+            if e.status_code == 404:
                 secrets.create(key_name, key_data)
                 break
             else:
