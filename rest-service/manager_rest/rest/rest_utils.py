@@ -12,7 +12,6 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-import os
 import urllib
 import subprocess
 from flask import current_app
@@ -111,7 +110,7 @@ def set_restart_task(delay=1):
     cmd = 'sleep {0}; sudo systemctl restart {1}' \
         .format(delay, REST_SERVICE_NAME)
 
-    run(command=cmd, logger=current_app.logger)
+    subprocess.Popen(cmd, shell=True)
 
 
 def validate_inputs(input_dict):
@@ -160,31 +159,3 @@ def validate_and_decode_password(password):
         )
 
     return password
-
-
-def run(command, logger, execution_env=None):
-    logger.debug('run: {0}'.format(command))
-    command_env = os.environ.copy()
-    command_env.update(execution_env or {})
-
-    process = subprocess.Popen(command,
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE,
-                               shell=True,
-                               env=command_env)
-    out, err = process.communicate()
-
-    if process.returncode != 0:
-        if out:
-            out = out.rstrip()
-        if err:
-            err = err.rstrip()
-        error_msg = 'Command "{0}" failed. Stdout: {1} Stderr: {2}'.format(
-            command,
-            out,
-            err)
-
-        raise manager_exceptions.ExecutionFailure(error_msg)
-
-    process.out, process.err = out, err
-    return process
