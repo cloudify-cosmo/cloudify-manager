@@ -19,8 +19,8 @@ import shutil
 import string
 import subprocess
 
+from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
-from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .constants import SECRET_STORE_AGENT_KEY_PREFIX
@@ -164,11 +164,7 @@ def add_key_secret(tenant, key_path, key_data):
         for char in key_path
         )
 
-    client = CloudifyClient(
-        'localhost',
-        token=ctx.rest_token,
-        tenant=tenant,
-    )
+    client = get_rest_client()
     secrets = client.secrets
 
     while True:
