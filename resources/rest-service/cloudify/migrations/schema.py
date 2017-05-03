@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-"""Downgrade/upgrade database schema to target revision."""
+"""Database schema operations."""
 
 import argparse
 import logging
@@ -26,6 +26,7 @@ from manager_rest.flask_utils import setup_flask_app
 
 
 LOGGER = logging.getLogger(__name__)
+DIRECTORY = os.path.dirname(__file__)
 
 
 def main():
@@ -34,10 +35,24 @@ def main():
     configure_logging(args['log_level'])
 
     setup_flask_app()
-    directory = os.path.dirname(__file__)
 
-    command = getattr(flask_migrate, args['command'])
-    command(directory, args['revision'])
+    func = args['func']
+    func(args)
+
+
+def downgrade(args):
+    """Downgrade database schema."""
+    flask_migrate.downgrade(DIRECTORY, args['revision'])
+
+
+def upgrade(args):
+    """Upgrade database schema."""
+    flask_migrate.upgrade(DIRECTORY, args['revision'])
+
+
+def current(args):
+    """Get current database schema revision."""
+    flask_migrate.current(DIRECTORY)
 
 
 def parse_arguments(argv):
@@ -50,12 +65,21 @@ def parse_arguments(argv):
 
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        'command',
-        choices=['downgrade', 'upgrade'],
-        help='Migration command',
-    )
-    parser.add_argument('revision', help='Target schema revision')
+    subparsers = parser.add_subparsers(help='Migration subcommands')
+
+    downgrade_parser = subparsers.add_parser(
+        'downgrade', help='Downgrade schema to target revision')
+    downgrade_parser.add_argument('revision', help='Target schema revision')
+    downgrade_parser.set_defaults(func=downgrade)
+
+    upgrade_parser = subparsers.add_parser(
+        'upgrade', help='Upgrade schema to target revision')
+    upgrade_parser.add_argument('revision', help='Target schema revision')
+    upgrade_parser.set_defaults(func=upgrade)
+
+    current_parser = subparsers.add_parser(
+        'current', help='Get current database schema revision')
+    current_parser.set_defaults(func=current)
 
     log_levels = ['debug', 'info', 'warning', 'error', 'critical']
     parser.add_argument(

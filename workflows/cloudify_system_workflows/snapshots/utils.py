@@ -276,3 +276,19 @@ def db_schema_upgrade(revision='head'):
         'upgrade',
         revision,
     ])
+
+
+def db_schema_get_current_revision():
+    """Get database schema revision.
+
+    :returns: Current revision
+    :rtype: str
+
+    """
+    output = subprocess.check_output([
+        PYTHON_MANAGER_ENV,
+        SCHEMA_SCRIPT,
+        'current',
+    ])
+    revision = output.split(' ', 1)[0]
+    return revision
