@@ -48,11 +48,13 @@ def run_query(query, db_name=None):
             return {'status': status_message, 'all': fetchall}
 
 
-def safe_drop_all():
+def safe_drop_all(keep_tables):
     """Creates a single transaction that *always* drops all tables, regardless
     of relationships and foreign key constraints (as opposed to `db.drop_all`)
     """
     meta = db.metadata
     for table in reversed(meta.sorted_tables):
+        if table.name in keep_tables:
+            continue
         db.session.execute(table.delete())
     db.session.commit()
