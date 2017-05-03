@@ -108,7 +108,7 @@ class Credentials(object):
         with open(agent_key_path_in_dump) as f:
             key_data = f.read()
 
-        for tenant, path in agent_key_path_dict[dep_node_id].items():
+        for tenant, path in agent_key_path_dict.get(dep_node_id, {}).items():
             db_agent_key_path = agent_key_path_dict[dep_node_id][tenant]
             key_name = add_key_secret(tenant, db_agent_key_path, key_data)
 
