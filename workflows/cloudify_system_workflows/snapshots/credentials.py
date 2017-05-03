@@ -61,10 +61,10 @@ class Credentials(object):
             agent_config = self._get_agent_config(props)
             if 'key' in agent_config:
                 node_id = deployment_id + '_' + n.id
-                agent_key_path = agent_config['key']
+                agent_key = agent_config['key']
                 self._dump_agent_key(
                     node_id,
-                    agent_key_path,
+                    agent_key,
                     archive_cred_path
                 )
 
@@ -75,18 +75,25 @@ class Credentials(object):
                 for node in wctx.nodes
                 if is_compute(node)]
 
-    def _dump_agent_key(self, node_id, agent_key_path, archive_cred_path):
+    def _dump_agent_key(self, node_id, agent_key, archive_cred_path):
         """Copy an agent key from its location on the manager to the snapshot
         dump
         """
         os.makedirs(os.path.join(archive_cred_path, node_id))
-        source = os.path.expanduser(agent_key_path)
+        source = os.path.expanduser(agent_key)
         destination = os.path.join(archive_cred_path, node_id,
                                    self._CRED_KEY_NAME)
         ctx.logger.debug('Dumping credentials data, '
                          'copy from: {0} to {1}'
                          .format(source, destination))
-        shutil.copy(source, destination)
+        try:
+            shutil.copy(source, destination)
+        except IOError as e:
+            if e.filename == source:
+                ctx.logger.debug(
+                    "Key doesn't appear to be a file path. Skipping")
+            else:
+                raise
 
     def _restore_agent_credentials(
             self,
