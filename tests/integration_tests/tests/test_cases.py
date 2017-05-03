@@ -55,9 +55,12 @@ class BaseTestCase(unittest.TestCase):
 
     env = None
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         import integration_tests.framework.env
         BaseTestCase.env = integration_tests.framework.env.instance
+
+    def setUp(self):
         self.workdir = tempfile.mkdtemp(
             dir=self.env.test_working_dir,
             prefix='{0}-'.format(self._testMethodName))
