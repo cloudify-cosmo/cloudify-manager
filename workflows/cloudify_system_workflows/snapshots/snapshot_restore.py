@@ -141,7 +141,6 @@ class SnapshotRestore(object):
         elif self._snapshot_version == V_4_0_0:
             with utils.db_schema('333998bc1627'):
                 postgres.restore(self._tempdir)
-            postgres.restore_stage(self._tempdir)
         else:
             if self._should_clean_old_db_for_3_x_snapshot():
                 postgres.clean_db()
