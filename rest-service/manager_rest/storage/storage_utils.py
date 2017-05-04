@@ -58,7 +58,7 @@ def create_default_user_tenant_and_roles(admin_username, admin_password):
 
 def _create_roles():
     for role in constants.ALL_ROLES:
-        user_datastore.create_role(name=role)
+        user_datastore.find_or_create_role(name=role)
     return user_datastore.find_role(constants.ADMIN_ROLE)
 
 

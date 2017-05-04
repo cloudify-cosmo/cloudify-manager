@@ -15,6 +15,7 @@
 
 METADATA_FILENAME = 'metadata.json'
 M_VERSION = 'snapshot_version'
+M_SCHEMA_REVISION = 'schema_revision'
 M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
 ARCHIVE_CERT_DIR = 'ssl'
 

@@ -13,6 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import contextlib
 import os
 import json
 import shlex
@@ -24,6 +25,11 @@ from cloudify import constants
 from cloudify.workflows import ctx
 from .constants import ARCHIVE_CERT_DIR
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
+
+# Path to python binary in the manager environment
+PYTHON_MANAGER_ENV = '/opt/manager/env/bin/python'
+# Path to database migration script
+SCHEMA_SCRIPT = '/opt/manager/resources/cloudify/migrations/schema.py'
 
 
 class DictToAttributes(object):
@@ -218,3 +224,71 @@ def compare_cert_metadata(path1, path2):
     with open(path2) as f:
         content2 = f.read()
     return content1 == content2
+
+
+@contextlib.contextmanager
+def db_schema(revision):
+    """Downgrade schema to desired revision to perform operation and upgrade.
+
+    Used when restoring a snapshot to make sure the restore operation happens
+    whith the same version of the schema that was used when the snapshot was
+    created.
+
+    :param revision: Revision to downgrade to before performing any operation.
+    :type revision: str
+
+    """
+    db_schema_downgrade(revision)
+    yield
+    db_schema_upgrade()
+
+
+def db_schema_downgrade(revision='-1'):
+    """Downgrade database schema.
+
+    Used before restoring a snapshot to make sure that the schema matches the
+    one that was used when the snapshot was created.
+
+    :param revision: Revision to downgrade to.
+    :type revision: str
+
+    """
+    subprocess.check_call([
+        PYTHON_MANAGER_ENV,
+        SCHEMA_SCRIPT,
+        'downgrade',
+        revision,
+    ])
+
+
+def db_schema_upgrade(revision='head'):
+    """Upgrade database schema.
+
+    Used after restoring snapshot to get an up-to-date schema.
+
+    :param revision: Revision to upgrade to.
+    :type revision: str
+
+    """
+    subprocess.check_call([
+        PYTHON_MANAGER_ENV,
+        SCHEMA_SCRIPT,
+        'upgrade',
+        revision,
+    ])
+
+
+def db_schema_get_current_revision():
+    """Get database schema revision.
+
+    :returns: Current revision
+    :rtype: str
+
+    """
+    output = subprocess.check_output([
+        PYTHON_MANAGER_ENV,
+        SCHEMA_SCRIPT,
+        'current',
+    ])
+    revision = output.split(' ', 1)[0]
+    return revision

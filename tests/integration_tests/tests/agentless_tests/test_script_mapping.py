@@ -18,6 +18,7 @@ import os
 import tempfile
 
 from integration_tests import AgentlessTestCase
+from integration_tests.framework.constants import CLOUDIFY_USER
 from integration_tests.tests.utils import get_resource as resource
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
@@ -70,7 +71,7 @@ class TestScriptMapping(AgentlessTestCase):
                     'chmod 644 {0}'.format(deployment_workflow_script_path))
 
             # Everything under /opt/manager should be owned be the rest service
-            self.env.chown('cloudify-restservice', base_dep_dir)
+            self.env.chown(CLOUDIFY_USER, base_dep_dir)
 
             self.execute_workflow('workflow', deployment.id)
 

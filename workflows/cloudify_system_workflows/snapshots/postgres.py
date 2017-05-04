@@ -35,7 +35,7 @@ class Postgres(object):
     _POSTGRES_DUMP_FILENAME = 'pg_data'
     _STAGE_DUMP_FILENAME = 'stage_data'
     _STAGE_DB_NAME = 'stage'
-    _TABLES_TO_KEEP = ['provider_context', 'roles']
+    _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
     _TABLES_TO_RESTORE = ['users', 'tenants']
 
     def __init__(self, config):
@@ -65,7 +65,7 @@ class Postgres(object):
         self._append_dump(dump_file, restore_admin_query)
         self._append_dump(dump_file, self._get_execution_restore_query())
 
-        self._restore_dump(dump_file)
+        self._restore_dump(dump_file, self._db_name)
         ctx.logger.debug('Postgres restored')
 
     def dump(self, tempdir):
@@ -87,6 +87,14 @@ class Postgres(object):
         except Exception as ex:
             raise NonRecoverableError('Error during dumping Stage data, '
                                       'exception: {0}'.format(ex))
+
+    def restore_stage(self, tempdir):
+        if not self._stage_db_exists():
+            return
+        ctx.logger.info('Restoring Stage DB')
+        stage_dump_file = os.path.join(tempdir, self._STAGE_DUMP_FILENAME)
+        self._restore_dump(stage_dump_file, self._STAGE_DB_NAME)
+        ctx.logger.debug('Stage DB restored')
 
     def _stage_db_exists(self):
         """Return True if the stage DB exists"""
@@ -182,7 +190,7 @@ class Postgres(object):
         command.extend(flags)
         run_shell(command)
 
-    def _restore_dump(self, dump_file):
+    def _restore_dump(self, dump_file, db_name):
         """Execute `psql` to restore an SQL dump into the DB
         """
         ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
@@ -192,7 +200,7 @@ class Postgres(object):
                    '--host', self._host,
                    '--port', self._port,
                    '-U', self._username,
-                   self._db_name,
+                   db_name,
                    '-f', dump_file]
         run_shell(command)
 
@@ -217,13 +225,13 @@ class Postgres(object):
         run_shell(command=cat_content, redirect_output_path=new_dump_file)
         return new_dump_file
 
-    def run_query(self, query):
+    def run_query(self, query, vars=None):
         str_query = query.decode(encoding='UTF-8', errors='replace')
         str_query = str_query.replace(u"\uFFFD", "?")
         ctx.logger.debug('Running query: {0}'.format(str_query))
         with closing(self._connection.cursor()) as cur:
             try:
-                cur.execute(query)
+                cur.execute(query, vars)
                 status_message = cur.statusmessage
                 fetchall = cur.fetchall()
                 result = {'status': status_message, 'all': fetchall}

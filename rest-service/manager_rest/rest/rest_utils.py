@@ -14,6 +14,7 @@
 #  * limitations under the License.
 import urllib
 import subprocess
+from flask import current_app
 from string import ascii_letters
 
 from flask import request, make_response
@@ -105,8 +106,10 @@ def make_streaming_response(res_id, res_path, content_length, archive_type):
 
 
 def set_restart_task(delay=1):
-    cmd = 'sleep {0}; sudo systemctl restart {1}'\
+    current_app.logger.info('Restarting the rest service')
+    cmd = 'sleep {0}; sudo systemctl restart {1}' \
         .format(delay, REST_SERVICE_NAME)
+
     subprocess.Popen(cmd, shell=True)
 
 

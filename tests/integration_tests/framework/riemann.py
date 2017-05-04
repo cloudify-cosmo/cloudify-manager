@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from integration_tests.framework import docl
+from integration_tests.framework.constants import CLOUDIFY_USER
 
 
 RIEMANN_CONFIGS_DIR = '/opt/riemann'
@@ -23,6 +24,7 @@ def reset_data_and_restart():
     docl.execute('rm -rf {0}'.format(RIEMANN_CONFIGS_DIR))
     docl.execute('mkdir -p {0}'.format(RIEMANN_CONFIGS_DIR))
     # This is how the dir is currently set up during the bootstrap
-    docl.execute('chown -R riemann:mgmtworker {0}'.format(RIEMANN_CONFIGS_DIR))
+    docl.execute('chown -R riemann:{0} {1}'.format(CLOUDIFY_USER,
+                                                   RIEMANN_CONFIGS_DIR))
     docl.execute('chmod 770 {0}'.format(RIEMANN_CONFIGS_DIR))
     docl.execute('systemctl restart cloudify-riemann')

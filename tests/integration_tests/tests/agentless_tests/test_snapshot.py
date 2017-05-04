@@ -97,7 +97,8 @@ class TestSnapshot(AgentlessTestCase):
             num_of_workflows=7,
             num_of_inputs=4,
             num_of_outputs=1,
-            num_of_executions=1
+            num_of_executions=1,
+            num_of_events=12,
         )
 
     def test_3_4_0_snapshot_with_deployment(self):

@@ -20,6 +20,7 @@ import uuid
 import sh
 
 from integration_tests import AgentlessTestCase
+from integration_tests.framework.constants import CLOUDIFY_USER
 from integration_tests.tests.utils import get_resource as resource
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
@@ -51,7 +52,7 @@ class DeploymentResourceTest(AgentlessTestCase):
             self.execute_on_manager('chmod +r {0}'.format(full_resource_path))
 
         # Everything under /opt/manager should be owned be the rest service
-        self.env.chown('cloudify-restservice', base_dep_dir)
+        self.env.chown(CLOUDIFY_USER, base_dep_dir)
 
         deployment, _ = self.deploy_application(
             blueprint_path,
