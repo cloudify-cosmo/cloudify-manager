@@ -188,6 +188,7 @@ def restore(tempdir, postgres):
                         new_key_secrets[key] = key_data
                         key_secrets[key_data] = key
                         secret_keys.add(key)
+                        break
 
             replacements[agent_key] = key_secrets[key_data]
 
