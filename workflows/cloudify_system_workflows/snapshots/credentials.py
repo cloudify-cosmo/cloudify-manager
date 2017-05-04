@@ -198,7 +198,7 @@ def restore(tempdir, postgres):
         for orig, replace in replacements.items():
             subprocess.check_call(
                 [
-                    'sudo', '-u', 'cloudify-restservice',
+                    'sudo', '-u', 'cfyuser',
                     '/opt/mgmtworker/resources/cloudify/fix_snapshot_ssh_db',
                     tenant, orig, replace,
                 ],
