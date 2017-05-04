@@ -132,7 +132,7 @@ def restore(tempdir, postgres):
         for secret in client.secrets.list():
             if secret.key.startswith(SECRET_STORE_AGENT_KEY_PREFIX):
                 secret = client.secrets.get(secret.key)
-                key_secrets.setdefault(secret.value, {'key': secret.key})
+                key_secrets[secret.value] = secret.key
                 secret_keys.add(secret.key)
 
         new_key_secrets = {}
