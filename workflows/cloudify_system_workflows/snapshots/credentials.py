@@ -23,7 +23,6 @@ import subprocess
 
 from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
-from cloudify_rest_client.exceptions import CloudifyClientError
 
 from .constants import SECRET_STORE_AGENT_KEY_PREFIX
 from .utils import is_compute
