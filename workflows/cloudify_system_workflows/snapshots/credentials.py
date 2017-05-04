@@ -13,8 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+import itertools
 import os
 import pickle
+import re
 import shutil
 import string
 import subprocess
@@ -28,37 +30,31 @@ from .utils import is_compute
 
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
+CRED_DIR = 'snapshot-credentials'
+DEPLOYMENTS_QUERY = """
+    SELECT nodes.id, deployments.id, properties
+    FROM nodes
+    JOIN deployments
+    ON nodes._deployment_fk = deployments._storage_id
+    JOIN tenants
+    ON deployments._tenant_id = tenants.id
+    WHERE tenants.name = %(tenant)s
+    ;
+"""
 
 
 class Credentials(object):
-    _CRED_DIR = 'snapshot-credentials'
     _CRED_KEY_NAME = 'agent_key'
 
-    def restore(self, tempdir, postgres):
-        self._postgres = postgres
-        dump_cred_dir = os.path.join(tempdir, self._CRED_DIR)
-        if not os.path.isdir(dump_cred_dir):
-            ctx.logger.info('Missing credentials dir: '
-                            '{0}'.format(dump_cred_dir))
-            return
-        agent_key_path_dict = self._create_agent_key_path_dict()
-
-        for dep_node_id in os.listdir(dump_cred_dir):
-            self._restore_agent_credentials(
-                dep_node_id,
-                dump_cred_dir,
-                agent_key_path_dict,
-            )
-
     def dump(self, tempdir):
-        archive_cred_path = os.path.join(tempdir, self._CRED_DIR)
+        archive_cred_path = os.path.join(tempdir, CRED_DIR)
         ctx.logger.debug('Dumping credentials data, '
                          'archive_cred_path: {0}'.format(archive_cred_path))
         os.makedirs(archive_cred_path)
 
         for deployment_id, n in self._get_hosts():
             props = n.properties
-            agent_config = self._get_agent_config(props)
+            agent_config = get_agent_config(props)
             if 'key' in agent_config:
                 node_id = deployment_id + '_' + n.id
                 agent_key = agent_config['key']
@@ -95,96 +91,129 @@ class Credentials(object):
             else:
                 raise
 
-    def _restore_agent_credentials(
-            self,
-            dep_node_id,
-            dump_cred_dir,
-            agent_key_path_dict,
-            ):
-        agent_key_path_in_dump = os.path.join(dump_cred_dir,
-                                              dep_node_id,
-                                              Credentials._CRED_KEY_NAME)
 
-        with open(agent_key_path_in_dump) as f:
-            key_data = f.read()
+def get_agent_config(node_properties):
+    """cloudify_agent is deprecated, but still might be used in older
+    systems, so we try to gather the agent config from both sources
+    """
+    cloudify_agent = node_properties.get('cloudify_agent', {})
+    agent_config = node_properties.get('agent_config', {})
+    agent_config.update(cloudify_agent)
+    return agent_config
 
-        for tenant, path in agent_key_path_dict.get(dep_node_id, {}).items():
-            db_agent_key_path = agent_key_path_dict[dep_node_id][tenant]
-            key_name = add_key_secret(tenant, db_agent_key_path, key_data)
 
-            subprocess.check_call(
-                [
-                    'sudo', '-u', 'cloudify-restservice',
-                    '/opt/mgmtworker/resources/cloudify/fix_snapshot_ssh_db',
-                    tenant, db_agent_key_path, key_name,
-                ],
-            )
+def get_existing_key_secrets():
+    """Returns existing secrets matching the prefix"""
+    secrets = get_rest_client().secrets
 
-    def _get_node_properties_query_result(self):
-        """Create an SQL query that retrieves node properties from the DB
-        :return: A list of tuples - each has 4 elements:
-        0. Deployment ID
-        1. Node Id
-        2. The pickled properties dict
-        3. The tenant which owns the deployment
-        """
-        query = """
-            SELECT nodes.id, deployments.id, properties, tenants.name
-            FROM nodes
-            JOIN deployments
-            ON nodes._deployment_fk = deployments._storage_id
-            JOIN tenants
-            ON deployments._tenant_id = tenants.id
-            ;"""
-        return self._postgres.run_query(query)['all']
+    keys = {}
 
-    @staticmethod
-    def _get_agent_config(node_properties):
-        """cloudify_agent is deprecated, but still might be used in older
-        systems, so we try to gather the agent config from both sources
-        """
-        cloudify_agent = node_properties.get('cloudify_agent', {})
-        agent_config = node_properties.get('agent_config', {})
-        agent_config.update(cloudify_agent)
-        return agent_config
+    for secret in secrets.list():
+        if secret.key.startswith(SECRET_STORE_AGENT_KEY_PREFIX):
+            secret = secrets.get(secret.key)
+            keys.setdefault(secret.value, {'key': secret.key})
 
-    def _create_agent_key_path_dict(self):
-        agent_key_path_dict = dict()
-        result = self._get_node_properties_query_result()
+    return keys
+
+
+def candidate_key_names(path):
+    filtered = SECRET_STORE_AGENT_KEY_PREFIX + ''.join(
+        char if char in ALLOWED_KEY_CHARS else '_'
+        for char in path
+        )
+    yield filtered
+    for suffix in itertools.count(1):
+        yield filtered + '_' + suffix
+
+
+def restore(tempdir, postgres):
+    dump_cred_dir = os.path.join(tempdir, CRED_DIR)
+    if not os.path.isdir(dump_cred_dir):
+        ctx.logger.info('Missing credentials dir: '
+                        '{0}'.format(dump_cred_dir))
+        return
+
+    client = get_rest_client()
+
+    tenants = [t.name for t in client.tenants.list()]
+
+    credential_dirs = set(os.listdir(dump_cred_dir))
+
+    for tenant in tenants:
+        client._client._set_header('Tenant', tenant)
+
+        key_secrets = {}
+        secret_keys = set()
+        for secret in client.secrets.list():
+            if secret.key.startswith(SECRET_STORE_AGENT_KEY_PREFIX):
+                secret = client.secrets.get(secret.key)
+                key_secrets.setdefault(secret.value, {'key': secret.key})
+                secret_keys.add(secret.key)
+
+        new_key_secrets = {}
+        replacements = {}
+
+        result = postgres.run_query(
+            DEPLOYMENTS_QUERY,
+            {'tenant': tenant},
+        )['all']
+
         for elem in result:
             node_id = elem[0]
             deployment_id = elem[1]
             node_properties = pickle.loads(elem[2])
-            agent_config = self._get_agent_config(node_properties)
-            tenant = elem[3]
-            if 'key' in agent_config:
-                agent_key_path = agent_config['key']
-                key = deployment_id + '_' + node_id
-                agent_key_path_dict.setdefault(
-                    key, {})[tenant] = os.path.expanduser(agent_key_path)
-        return agent_key_path_dict
+            agent_config = get_agent_config(node_properties)
 
+            if 'key' not in agent_config:
+                continue
 
-def add_key_secret(tenant, key_path, key_data):
-    key_name = SECRET_STORE_AGENT_KEY_PREFIX + ''.join(
-        char if char in ALLOWED_KEY_CHARS else '_'
-        for char in key_path
-        )
+            agent_key = agent_config['key']
+            dir_name = deployment_id + '_' + node_id
 
-    client = get_rest_client()
-    secrets = client.secrets
+            if not isinstance(agent_key, basestring):
+                ctx.logger.info('key for {} is not a path'.format(dir_name))
+                continue
+            if re.search('BEGIN .* PRIVATE KEY', agent_key):
+                ctx.logger.info('key for {} is bare key'.format(dir_name))
+                continue
+            if dir_name not in credential_dirs:
+                continue
 
-    while True:
-        try:
-            secret_value = secrets.get(key_name)
-        except CloudifyClientError as e:
-            if e.status_code == 404:
-                secrets.create(key_name, key_data)
-                break
-            else:
+            agent_key_path_in_dump = os.path.join(
+                dump_cred_dir,
+                dir_name,
+                'agent_key',
+                )
+            try:
+                with open(agent_key_path_in_dump) as f:
+                    key_data = f.read()
+            except IOError as e:
+                if e.errno == os.errno.ENOENT:
+                    ctx.logger.info(
+                        'key file for {} not found'.format(dir_name))
+                    continue
                 raise
-        if secret_value == key_data:
-            break
-        key_name += '_'
 
-    return key_name
+            # We've probably found the right key!
+
+            if key_data not in key_secrets:
+                # If we got here, we need to create a secret
+                for key in candidate_key_names(agent_key):
+                    if key not in secret_keys:
+                        new_key_secrets[key] = key_data
+                        key_secrets[key_data] = key
+                        secret_keys.add(key)
+
+            replacements[agent_key] = key_secrets[key_data]
+
+        for key, value in new_key_secrets.items():
+            client.secrets.create(key, value)
+
+        for orig, replace in replacements.items():
+            subprocess.check_call(
+                [
+                    'sudo', '-u', 'cloudify-restservice',
+                    '/opt/mgmtworker/resources/cloudify/fix_snapshot_ssh_db',
+                    tenant, orig, replace,
+                ],
+            )
