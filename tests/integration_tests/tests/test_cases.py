@@ -46,8 +46,6 @@ from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
                                                    CLOUDIFY_USER)
 
-from cloudify_rest_client.executions import Execution
-
 
 class BaseTestCase(unittest.TestCase):
     """
@@ -390,22 +388,14 @@ class BaseTestCase(unittest.TestCase):
         return node_instance['state'] == 'started'
 
     @staticmethod
-    def wait_for_execution_to_end(execution, timeout_seconds=240):
-        client = test_utils.create_rest_client()
-        deadline = time.time() + timeout_seconds
-        while execution.status not in Execution.END_STATES:
-            time.sleep(0.5)
-            execution = client.executions.get(execution.id)
-            if time.time() > deadline:
-                raise utils.TimeoutException(
-                        'Execution timed out: \n{0}'
-                        .format(json.dumps(execution, indent=2)))
-        if execution.status == Execution.FAILED:
-            raise RuntimeError(
-                    'Workflow execution failed: {0} [{1}]'.format(
-                            execution.error,
-                            execution.status))
-        return execution
+    def wait_for_execution_to_end(execution,
+                                  timeout_seconds=240,
+                                  tolerate_client_errors=False):
+        return test_utils.wait_for_execution_to_end(
+            execution,
+            timeout_seconds,
+            tolerate_client_errors,
+        )
 
     @staticmethod
     def is_riemann_core_up(deployment_id):
@@ -427,11 +417,14 @@ class BaseTestCase(unittest.TestCase):
 
 
 class AgentlessTestCase(BaseTestCase):
+    run_storage_reset = True
 
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
-        reset_storage()
+        if self.run_storage_reset:
+            reset_storage()
+
         self.addCleanup(self._save_manager_logs_after_test)
 
 

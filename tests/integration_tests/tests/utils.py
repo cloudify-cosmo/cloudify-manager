@@ -23,6 +23,7 @@ from contextlib import contextmanager
 
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
+from cloudify_rest_client.exceptions import CloudifyClientError
 from integration_tests.framework import utils, postgresql, docl
 
 
@@ -200,3 +201,94 @@ def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
 
 def delete_provider_context():
     postgresql.run_query('DELETE from provider_context')
+
+
+def delete_snapshot_if_existing(snapshot_id):
+    client = create_rest_client()
+
+    try:
+        client.snapshots.delete(snapshot_id)
+    except CloudifyClientError as err:
+        if 'not found' in str(err):
+            pass
+        else:
+            raise
+
+
+def upload_snapshot(path_to_snapshot, snapshot_id):
+    client = create_rest_client()
+
+    client.snapshots.upload(path_to_snapshot, snapshot_id)
+
+
+def restore_snapshot(snapshot_id, tenant):
+    client = create_rest_client()
+
+    return client.snapshots.restore(
+        snapshot_id,
+        tenant_name=tenant,
+        force=True,
+    )
+
+
+def upload_and_restore_snapshot(path_to_snapshot, snapshot_id, tenant):
+    # TODO: Add getter from s3 once we reach that point
+
+    # This and the force setting allow multiple tests to run on the same
+    # container (the default for agentless tests)
+    delete_snapshot_if_existing(snapshot_id)
+
+    upload_snapshot(path_to_snapshot, snapshot_id)
+
+    validate_snapshot(snapshot_id, path_to_snapshot)
+
+    execution = restore_snapshot(snapshot_id, tenant)
+
+    # If checking the workflow status immediately, we will be likely to cause
+    # a deadlock on the database and make the restore fail
+    # This may be possible to do using the cfy utility, but I've not managed
+    # to be fast enough with it to trigger the issue.
+    # NOTE: Jira should be opened for this
+    time.sleep(3)
+    wait_for_execution_to_end(
+        execution,
+        timeout_seconds=30,
+        tolerate_client_errors=True,
+    )
+
+
+def validate_snapshot(snapshot_id, original_path):
+    client = create_rest_client()
+
+    snapshot = client.snapshots.get(snapshot_id)
+    assert snapshot['status'] == 'uploaded', (
+        'Snapshot from {path} did not upload correctly.'.format(
+            path=original_path,
+        )
+    )
+
+
+def wait_for_execution_to_end(execution,
+                              timeout_seconds=240,
+                              tolerate_client_errors=False):
+    client = create_rest_client()
+    deadline = time.time() + timeout_seconds
+    while execution.status not in Execution.END_STATES:
+        time.sleep(0.5)
+        try:
+            execution = client.executions.get(execution.id)
+        except CloudifyClientError:
+            if tolerate_client_errors:
+                pass
+            else:
+                raise
+        if time.time() > deadline:
+            raise utils.TimeoutException(
+                    'Execution timed out: \n{0}'
+                    .format(json.dumps(execution, indent=2)))
+    if execution.status == Execution.FAILED:
+        raise RuntimeError(
+                'Workflow execution failed: {0} [{1}]'.format(
+                        execution.error,
+                        execution.status))
+    return execution
