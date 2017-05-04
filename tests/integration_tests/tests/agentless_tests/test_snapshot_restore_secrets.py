@@ -87,7 +87,7 @@ zjNe/LgcU1cbpIVxN3TmoTd3sDg6ELvpWr5hlc3SbcSgYfY4RfWTyQ==
 -----END RSA PRIVATE KEY-----
 '''.lstrip()
 
-        self._test_restore_secrets('snapshot_3.4.2.zip', key1, key2,
+        self._test_restore_secrets('secretshot_3.4.2.zip', key1, key2,
                                    tenant='default_tenant')
 
     # Skipped because the restore doesn't work due to a constraint violation
@@ -153,7 +153,7 @@ RIIj1rTFvkK4/gMRnJDtxkLom5Xlg85PLu1ZPV1hMnchgj715NMOdRBnbN15VfZX
 -----END RSA PRIVATE KEY-----
 '''.lstrip()
 
-        self._test_restore_secrets('snapshot_4.0.zip', key1, key2)
+        self._test_restore_secrets('secretshot_4.0.zip', key1, key2)
 
     def test_restore_4_0_1_secrets(self):
         key1 = '''
@@ -216,7 +216,7 @@ dQlnLmh5qCayfwLy9JIGzZ3CyRkfQf8dOPXrsjjhrudsbb26AQQ=
 -----END RSA PRIVATE KEY-----
 '''.lstrip()
 
-        self._test_restore_secrets('snapshot_4.0.1.zip', key1, key2)
+        self._test_restore_secrets('secretshot_4.0.1.zip', key1, key2)
 
     def _test_restore_secrets(self, snapshot, key1, key2, tenant=None):
         upload_and_restore_snapshot(snapshot, 'snapshot_abc123', tenant)

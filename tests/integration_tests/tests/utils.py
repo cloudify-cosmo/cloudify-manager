@@ -18,8 +18,11 @@ import sh
 import json
 import time
 import tarfile
+import tempfile
 from os import path
 from contextlib import contextmanager
+
+import requests
 
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
@@ -231,8 +234,8 @@ def restore_snapshot(snapshot_id, tenant):
     )
 
 
-def upload_and_restore_snapshot(path_to_snapshot, snapshot_id, tenant):
-    # TODO: Add getter from s3 once we reach that point
+def upload_and_restore_snapshot(snapshot_file_name, snapshot_id, tenant):
+    path_to_snapshot = get_snapshot_from_s3(snapshot_file_name)
 
     # This and the force setting allow multiple tests to run on the same
     # container (the default for agentless tests)
@@ -257,13 +260,13 @@ def upload_and_restore_snapshot(path_to_snapshot, snapshot_id, tenant):
     )
 
 
-def validate_snapshot(snapshot_id, original_path):
+def validate_snapshot(snapshot_id, original_name):
     client = create_rest_client()
 
     snapshot = client.snapshots.get(snapshot_id)
     assert snapshot['status'] == 'uploaded', (
-        'Snapshot from {path} did not upload correctly.'.format(
-            path=original_path,
+        'Snapshot {name} did not upload correctly.'.format(
+            name=original_name,
         )
     )
 
@@ -292,3 +295,19 @@ def wait_for_execution_to_end(execution,
                         execution.error,
                         execution.status))
     return execution
+
+
+# Copied from test_snapshot with the intent of refactoring to move it to just
+# be here as the snapshot secrets tests also need this logic now
+def get_snapshot_from_s3(name):
+    base_url = (
+        'http://cloudify-tests-files.s3-eu-west-1.amazonaws.com/snapshots/'
+    )
+    snapshot_url = os.path.join(base_url, name)
+    response = requests.get(snapshot_url, stream=True)
+    destination_file = tempfile.NamedTemporaryFile(delete=False)
+    destination = destination_file.name
+    with destination_file as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    return destination
