@@ -102,20 +102,6 @@ def get_agent_config(node_properties):
     return agent_config
 
 
-def get_existing_key_secrets():
-    """Returns existing secrets matching the prefix"""
-    secrets = get_rest_client().secrets
-
-    keys = {}
-
-    for secret in secrets.list():
-        if secret.key.startswith(SECRET_STORE_AGENT_KEY_PREFIX):
-            secret = secrets.get(secret.key)
-            keys.setdefault(secret.value, {'key': secret.key})
-
-    return keys
-
-
 def candidate_key_names(path):
     filtered = SECRET_STORE_AGENT_KEY_PREFIX + ''.join(
         char if char in ALLOWED_KEY_CHARS else '_'
