@@ -108,7 +108,7 @@ def candidate_key_names(path):
         )
     yield filtered
     for suffix in itertools.count(1):
-        yield filtered + '_' + suffix
+        yield '{name}_{suffix}'.format(name=filtered, suffix=suffix)
 
 
 def restore(tempdir, postgres):
