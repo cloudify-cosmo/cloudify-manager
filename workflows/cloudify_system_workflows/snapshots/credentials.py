@@ -196,7 +196,8 @@ def restore(tempdir, postgres):
         for orig, replace in replacements.items():
             subprocess.check_call(
                 [
-                    'sudo', '-u', 'cfyuser',
+                    # 'sudo', '-u', 'cfyuser',  # TODO restore sudo when user
+                    # separation gets fixed
                     '/opt/mgmtworker/resources/cloudify/fix_snapshot_ssh_db',
                     tenant, orig, replace,
                 ],
