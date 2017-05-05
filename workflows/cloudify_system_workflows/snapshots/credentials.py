@@ -124,6 +124,7 @@ def restore(tempdir, postgres):
     for tenant in tenants:
         client._client._set_header('Tenant', tenant)
 
+        # !! mapping key CONTENTS to their secret store keys
         key_secrets = {}
         secret_keys = set()
         for secret in client.secrets.list():
