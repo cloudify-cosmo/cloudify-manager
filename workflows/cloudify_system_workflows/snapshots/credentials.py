@@ -95,9 +95,8 @@ def get_agent_config(node_properties):
     """cloudify_agent is deprecated, but still might be used in older
     systems, so we try to gather the agent config from both sources
     """
-    cloudify_agent = node_properties.get('cloudify_agent', {})
-    agent_config = node_properties.get('agent_config', {})
-    agent_config.update(cloudify_agent)
+    agent_config = node_properties.get('cloudify_agent', {})
+    agent_config.update(node_properties.get('agent_config', {}))
     return agent_config
 
 
