@@ -225,13 +225,13 @@ class Postgres(object):
         run_shell(command=cat_content, redirect_output_path=new_dump_file)
         return new_dump_file
 
-    def run_query(self, query):
+    def run_query(self, query, vars=None):
         str_query = query.decode(encoding='UTF-8', errors='replace')
         str_query = str_query.replace(u"\uFFFD", "?")
         ctx.logger.debug('Running query: {0}'.format(str_query))
         with closing(self._connection.cursor()) as cur:
             try:
-                cur.execute(query)
+                cur.execute(query, vars)
                 status_message = cur.statusmessage
                 fetchall = cur.fetchall()
                 result = {'status': status_message, 'all': fetchall}

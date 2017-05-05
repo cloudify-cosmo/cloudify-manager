@@ -39,7 +39,7 @@ from . import utils
 from .agents import Agents
 from .influxdb import InfluxDB
 from .postgres import Postgres
-from .credentials import Credentials
+from .credentials import restore
 from .es_snapshot import ElasticSearch
 from .constants import METADATA_FILENAME, M_VERSION, ARCHIVE_CERT_DIR
 
@@ -244,7 +244,7 @@ class SnapshotRestore(object):
 
     def _restore_credentials(self, postgres):
         ctx.logger.info('Restoring credentials')
-        Credentials().restore(self._tempdir, postgres)
+        restore(self._tempdir, postgres)
 
     def _restore_agents(self):
         ctx.logger.info('Restoring cloudify agent data')
