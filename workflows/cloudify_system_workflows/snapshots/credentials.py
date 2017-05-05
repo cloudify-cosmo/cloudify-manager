@@ -83,12 +83,10 @@ class Credentials(object):
                          .format(source, destination))
         try:
             shutil.copy(source, destination)
-        except IOError as e:
-            if e.filename == source:
-                ctx.logger.debug(
-                    "Key doesn't appear to be a file path. Skipping")
-            else:
-                raise
+        except Exception as e:
+            ctx.logger.debug(
+                "Key doesn't appear to be a file path. Skipping ({})".format(
+                    e))
 
 
 def get_agent_config(node_properties):
