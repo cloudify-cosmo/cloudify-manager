@@ -292,3 +292,19 @@ def db_schema_get_current_revision():
     ])
     revision = output.split(' ', 1)[0]
     return revision
+
+
+def stage_db_schema_get_current_revision():
+    """Get stage database schema revision.
+
+    :returns: Current revision
+    :rtype: str
+
+    """
+    output = subprocess.check_output([
+        '/opt/nodejs/bin/node',
+        '/opt/cloudify-stage/backend/migration.js',
+        'current',
+    ])
+    revision = output.strip()
+    return revision
