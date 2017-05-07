@@ -50,12 +50,17 @@ class SnapshotCreate(object):
         try:
             manager_version = utils.get_manager_version(self._client)
             schema_revision = utils.db_schema_get_current_revision()
+            stage_schema_revision = \
+                utils.stage_db_schema_get_current_revision()
 
             self._dump_files()
             self._dump_postgres()
             self._dump_influxdb()
             self._dump_credentials()
-            self._dump_metadata(metadata, manager_version, schema_revision)
+            self._dump_metadata(metadata,
+                                manager_version,
+                                schema_revision,
+                                stage_schema_revision)
             self._dump_agents(manager_version)
 
             self._create_archive()
@@ -99,10 +104,15 @@ class SnapshotCreate(object):
         if self._include_credentials:
             Credentials().dump(self._tempdir)
 
-    def _dump_metadata(self, metadata, manager_version, schema_revision):
+    def _dump_metadata(self,
+                       metadata,
+                       manager_version,
+                       schema_revision,
+                       stage_schema_revision):
         ctx.logger.info('Dumping metadata')
         metadata[constants.M_VERSION] = str(manager_version)
         metadata[constants.M_SCHEMA_REVISION] = schema_revision
+        metadata[constants.M_STAGE_SCHEMA_REVISION] = stage_schema_revision
         metadata_filename = os.path.join(
             self._tempdir,
             constants.METADATA_FILENAME
