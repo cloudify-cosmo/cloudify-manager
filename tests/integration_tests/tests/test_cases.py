@@ -43,7 +43,8 @@ from integration_tests.framework import utils, hello_world, docl
 from integration_tests.framework.flask_utils import reset_storage
 from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
-from integration_tests.framework.constants import PLUGIN_STORAGE_DIR
+from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
+                                                   CLOUDIFY_USER)
 
 from cloudify_rest_client.executions import Execution
 
@@ -80,7 +81,7 @@ class BaseTestCase(unittest.TestCase):
             cls.copy_file_to_manager(
                 source=f.name,
                 target=config_file_location,
-                owner='cloudify-restservice'
+                owner=CLOUDIFY_USER
             )
         cls.restart_service('cloudify-restservice')
 

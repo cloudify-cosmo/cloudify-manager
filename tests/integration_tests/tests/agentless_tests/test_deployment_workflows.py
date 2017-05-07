@@ -23,7 +23,8 @@ from integration_tests.tests.utils import get_resource as resource
 from integration_tests.tests.utils import (
     verify_deployment_environment_creation_complete)
 from integration_tests.tests.utils import do_retries
-from integration_tests.framework.constants import PLUGIN_STORAGE_DIR
+from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
+                                                   CLOUDIFY_USER)
 
 
 class TestDeploymentWorkflows(AgentlessTestCase):
@@ -99,7 +100,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
             data,
             agent_json_path,
             to_json=True,
-            owner='mgmtworker'
+            owner=CLOUDIFY_USER
         )
 
         self.client.blueprints.upload(dsl_path, blueprint_id)
