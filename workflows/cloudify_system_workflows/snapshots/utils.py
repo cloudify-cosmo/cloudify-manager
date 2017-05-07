@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import zipfile
 
-from cloudify import constants
+from cloudify import constants, manager
 from cloudify.workflows import ctx
 from .constants import ARCHIVE_CERT_DIR
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
@@ -301,6 +301,10 @@ def stage_db_schema_get_current_revision():
     :rtype: str
 
     """
+    client = manager.get_rest_client()
+    version = client.manager.get_version()
+    if version['edition'] != 'premium':
+        return None
     output = subprocess.check_output([
         '/opt/nodejs/bin/node',
         '/opt/cloudify-stage/backend/migration.js',
