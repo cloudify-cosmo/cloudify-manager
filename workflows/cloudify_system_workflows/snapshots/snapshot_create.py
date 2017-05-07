@@ -112,7 +112,8 @@ class SnapshotCreate(object):
         ctx.logger.info('Dumping metadata')
         metadata[constants.M_VERSION] = str(manager_version)
         metadata[constants.M_SCHEMA_REVISION] = schema_revision
-        metadata[constants.M_STAGE_SCHEMA_REVISION] = stage_schema_revision
+        if stage_schema_revision:
+            metadata[constants.M_STAGE_SCHEMA_REVISION] = stage_schema_revision
         metadata_filename = os.path.join(
             self._tempdir,
             constants.METADATA_FILENAME
