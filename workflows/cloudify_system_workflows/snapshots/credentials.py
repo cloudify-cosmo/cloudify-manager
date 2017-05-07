@@ -19,13 +19,12 @@ import pickle
 import re
 import shutil
 import string
-import subprocess
 
 from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
 from .constants import SECRET_STORE_AGENT_KEY_PREFIX
-from .utils import is_compute
+from .utils import is_compute, run
 
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
@@ -106,6 +105,17 @@ def candidate_key_names(path):
     yield filtered
     for suffix in itertools.count(1):
         yield '{name}_{suffix}'.format(name=filtered, suffix=suffix)
+
+
+def _fix_snapshot_ssh_db(tenant, orig, replace):
+    python_bin = '/opt/manager/env/bin/python'
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    script_path = os.path.join(dir_path, 'fix_snapshot_ssh_db.py')
+    command = [python_bin, script_path, tenant, orig, replace]
+    res = run(command)
+    if res and hasattr(res, 'aggr_stdout'):
+        ctx.logger.debug('Process result: \n{0}'
+                         .format(res.aggr_stdout))
 
 
 def restore(tempdir, postgres):
@@ -194,9 +204,4 @@ def restore(tempdir, postgres):
             client.secrets.create(key, value)
 
         for orig, replace in replacements.items():
-            subprocess.check_call(
-                [
-                    '/opt/mgmtworker/resources/cloudify/fix_snapshot_ssh_db',
-                    tenant, orig, replace,
-                ],
-            )
+            _fix_snapshot_ssh_db(tenant, orig, replace)
