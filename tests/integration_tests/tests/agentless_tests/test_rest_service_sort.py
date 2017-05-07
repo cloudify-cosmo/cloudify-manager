@@ -50,8 +50,19 @@ class TestRestServiceListSort(AgentlessTestCase):
         for i in range(5):
             self.execute_workflow('install', deployment.id)
             self.execute_workflow('uninstall', deployment.id)
-        self._test_sort('executions',
-                        ['deployment_id', '-status'])
+
+        api = getattr(self.client, 'executions')
+        sorted_list = api.list(_sort=['-workflow_id', 'status'])
+        self.assertGreater(len(sorted_list), 0)
+
+        for i in range(5):
+            self.assertEqual(sorted_list[i]['workflow_id'], 'uninstall')
+
+        for i in range(5, 10):
+            self.assertEqual(sorted_list[i]['workflow_id'], 'install')
+
+        self.assertEqual(sorted_list[10]['workflow_id'],
+                         'create_deployment_environment')
 
     def test_nodes_sort(self):
         self.deploy(resource('dsl/sort.yaml'))
