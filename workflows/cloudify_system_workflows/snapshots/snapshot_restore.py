@@ -39,8 +39,8 @@ from . import utils
 from .agents import Agents
 from .influxdb import InfluxDB
 from .postgres import Postgres
-from .credentials import restore
 from .es_snapshot import ElasticSearch
+from .credentials import restore as restore_credentials
 from .constants import METADATA_FILENAME, M_VERSION, ARCHIVE_CERT_DIR
 
 
@@ -127,6 +127,7 @@ class SnapshotRestore(object):
             to_archive=False,
             new_tenant=new_tenant
         )
+        ctx.logger.info('Successfully restored archive files')
 
     def _restore_db(self, postgres):
         ctx.logger.info('Restoring database')
@@ -148,6 +149,7 @@ class SnapshotRestore(object):
                 self._tempdir,
                 tenant_name
             )
+        ctx.logger.info('Successfully restored database')
 
     def _should_clean_old_db_for_3_x_snapshot(self):
         """The one case in which the DB should be cleared is when restoring
@@ -226,6 +228,7 @@ class SnapshotRestore(object):
                 'package_name': plugin['package_name'],
                 'package_version': plugin['package_version']
             })
+        ctx.logger.info('Successfully restored plugins')
 
     @staticmethod
     def _plugin_installable_on_current_platform(plugin):
@@ -241,14 +244,17 @@ class SnapshotRestore(object):
     def _restore_influxdb(self):
         ctx.logger.info('Restoring InfluxDB metrics')
         InfluxDB.restore(self._tempdir)
+        ctx.logger.info('Successfully restored InfluxDB metrics')
 
     def _restore_credentials(self, postgres):
         ctx.logger.info('Restoring credentials')
-        restore(self._tempdir, postgres)
+        restore_credentials(self._tempdir, postgres)
+        ctx.logger.info('Successfully restored credentials')
 
     def _restore_agents(self):
         ctx.logger.info('Restoring cloudify agent data')
         Agents().restore(self._tempdir, self._tenant_client)
+        ctx.logger.info('Successfully restored cloudify agent data')
 
     def _get_tenant_client(self):
         with self._update_tenant_in_ctx():
@@ -291,6 +297,7 @@ class SnapshotRestore(object):
                 tasks_graph.execute()
                 ctx.logger.debug('Successfully created deployment environment '
                                  'for deployment {0}'.format(deployment_id))
+        ctx.logger.info('Successfully restored  deployment environments')
 
     @staticmethod
     def _get_tasks_graph(dep_ctx, blueprint, deployment):
