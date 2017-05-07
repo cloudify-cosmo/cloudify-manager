@@ -309,7 +309,7 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEquals(snapshot['status'], 'uploaded')
         self.logger.info('Snapshot uploaded and validated')
 
-    def _wait_for_execution_to_end(self, execution, timeout_seconds=30):
+    def _wait_for_execution_to_end(self, execution, timeout_seconds=60):
         """Can't use the `wait_for_execution_to_end` in the class because
          we need to be able to handle client errors
         """
