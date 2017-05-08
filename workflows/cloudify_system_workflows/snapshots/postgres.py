@@ -70,7 +70,8 @@ class Postgres(object):
 
     def dump(self, tempdir):
         destination_path = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
-        exclude_tables = ['snapshots', 'provider_context', 'roles']
+        exclude_tables = self._TABLES_TO_KEEP + ['snapshots']
+
         try:
             self._dump_to_file(destination_path, self._db_name, exclude_tables)
         except Exception as ex:
