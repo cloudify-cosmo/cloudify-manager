@@ -84,6 +84,24 @@ class TestSnapshot(AgentlessTestCase):
         execution = client.executions.get(execution.id)
         self.assertEqual(execution.status, ExecutionState.FAILED)
 
+    def test_4_0_1_snapshot_with_deployment(self):
+        """Restore a 4_0_1 snapshot with a deployment."""
+        snapshot_path = self._get_snapshot('snap_4.0.1.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+
+        # Now make sure all the resources really exist in the DB
+        self._assert_snapshot_restored(
+            blueprint_id='bp',
+            deployment_id='dep',
+            node_ids=['http_web_server', 'vm'],
+            node_instance_ids=['http_web_server_ndps9x', 'vm_qvyj1m'],
+            num_of_workflows=7,
+            num_of_inputs=4,
+            num_of_outputs=1,
+            num_of_executions=1,
+            num_of_events=4,
+        )
+
     def test_4_0_0_snapshot_with_deployment(self):
         snapshot_path = self._get_snapshot('snap_4.0.0.zip')
         self._upload_and_restore_snapshot(snapshot_path)
