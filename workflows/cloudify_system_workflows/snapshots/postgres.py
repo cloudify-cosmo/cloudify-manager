@@ -95,10 +95,19 @@ class Postgres(object):
     def restore_stage(self, tempdir):
         if not self._stage_db_exists():
             return
+        ctx.logger.info('Clearing Stage DB')
+        self._clear_stage_db()
         ctx.logger.info('Restoring Stage DB')
         stage_dump_file = os.path.join(tempdir, self._STAGE_DUMP_FILENAME)
         self._restore_dump(stage_dump_file, self._STAGE_DB_NAME)
         ctx.logger.debug('Stage DB restored')
+
+    @staticmethod
+    def _clear_stage_db():
+        """ Run the script that clears the Stage DB """
+
+        command = ['/opt/nodejs/bin/npm', 'run', 'db-migrate-clear']
+        run_shell(command, cwd='/opt/cloudify-stage/backend')
 
     def _stage_db_exists(self):
         """Return True if the stage DB exists"""
@@ -106,7 +115,7 @@ class Postgres(object):
         exists_query = "SELECT 1 FROM pg_database " \
                        "WHERE datname='{0}'".format(self._STAGE_DB_NAME)
         response = self.run_query(exists_query)
-        # Will wither be an empty list, of a list with 1 in it
+        # Will either be an empty list, or a list with 1 in it
         return bool(response['all'])
 
     def _append_delete_current_execution(self, dump_file):

@@ -136,7 +136,7 @@ def sudo(command, ignore_failures=False):
     return run(command=command, ignore_failures=ignore_failures)
 
 
-def run(command, ignore_failures=False, redirect_output_path=None):
+def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
     if isinstance(command, str):
         command = shlex.split(command)
     command_str = ' '.join(command)
@@ -148,9 +148,10 @@ def run(command, ignore_failures=False, redirect_output_path=None):
         ctx.logger.debug('Command: {0} Redirect output to: {1}'.
                          format(' '.join(command), redirect_output_path))
         with open(redirect_output_path, 'a') as output:
-            proc = subprocess.Popen(command, stdout=output, stderr=stderr)
+            proc = subprocess.Popen(command, stdout=output, stderr=stderr,
+                                    cwd=cwd)
     else:
-        proc = subprocess.Popen(command, stdout=stdout, stderr=stderr)
+        proc = subprocess.Popen(command, stdout=stdout, stderr=stderr, cwd=cwd)
 
     proc.aggr_stdout, proc.aggr_stderr = proc.communicate()
     if proc and proc.returncode != 0:
