@@ -133,7 +133,8 @@ class SnapshotRestore(object):
         ctx.logger.info('Restoring database')
         if self._snapshot_version > V_4_0_0:
             postgres.restore(self._tempdir)
-            postgres.restore_stage(self._tempdir)
+            if self._premium_enabled:
+                postgres.restore_stage(self._tempdir)
         elif self._snapshot_version == V_4_0_0:
             with utils.db_schema('333998bc1627'):
                 postgres.restore(self._tempdir)
