@@ -36,6 +36,7 @@ class Postgres(object):
     _STAGE_DUMP_FILENAME = 'stage_data'
     _STAGE_DB_NAME = 'stage'
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
+    _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots']
     _TABLES_TO_RESTORE = ['users', 'tenants']
 
     def __init__(self, config):
@@ -70,10 +71,12 @@ class Postgres(object):
 
     def dump(self, tempdir):
         destination_path = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
-        exclude_tables = self._TABLES_TO_KEEP + ['snapshots']
-
         try:
-            self._dump_to_file(destination_path, self._db_name, exclude_tables)
+            self._dump_to_file(
+                destination_path,
+                self._db_name,
+                exclude_tables=self._TABLES_TO_EXCLUDE_ON_DUMP
+            )
         except Exception as ex:
             raise NonRecoverableError('Error during dumping Postgres data, '
                                       'exception: {0}'.format(ex))
