@@ -32,6 +32,7 @@ class Postgres(object):
         postgres.restore()
     """
     _TRUNCATE_QUERY = "TRUNCATE {0} CASCADE;"
+    _LOCK_QUERY = "LOCK TABLE {0} IN ACCESS EXCLUSIVE MODE;"
     _POSTGRES_DUMP_FILENAME = 'pg_data'
     _STAGE_DUMP_FILENAME = 'stage_data'
     _STAGE_DB_NAME = 'stage'
@@ -61,6 +62,11 @@ class Postgres(object):
         # Add to the beginning of the dump queries that recreate the schema
         clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(dump_file, clear_tables_queries)
+
+        # But before that, lock all tables so that we can't run into any
+        # deadlocks while we restore most of the DB
+        lock_tables_statements = self._get_table_lock_statements()
+        dump_file = self._prepend_dump(dump_file, lock_tables_statements)
 
         # Add admin user, provider context and the current execution
         restore_admin_query = self._get_admin_user_update_query()
@@ -214,6 +220,7 @@ class Postgres(object):
         ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
         psql_bin = os.path.join(self._bin_dir, 'psql')
         command = [psql_bin,
+                   '-v', 'ON_ERROR_STOP=1',
                    '--single-transaction',
                    '--host', self._host,
                    '--port', self._port,
@@ -286,6 +293,12 @@ class Postgres(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._connection:
             self._connection.close()
+
+    def _get_table_lock_statements(self):
+        return [
+            self._LOCK_QUERY.format(table)
+            for table in self._get_all_tables()
+        ]
 
     def _get_clear_tables_queries(self, preserve_defaults=False):
         all_tables = self._get_all_tables()

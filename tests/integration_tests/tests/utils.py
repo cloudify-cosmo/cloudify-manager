@@ -235,7 +235,8 @@ def restore_snapshot(snapshot_id, tenant):
 
 
 def upload_and_restore_snapshot(snapshot_file_name, snapshot_id, tenant):
-    path_to_snapshot = get_snapshot_from_s3(snapshot_file_name)
+    #path_to_snapshot = get_snapshot_from_s3(snapshot_file_name)
+    path_to_snapshot = snapshot_file_name
 
     # This and the force setting allow multiple tests to run on the same
     # container (the default for agentless tests)
