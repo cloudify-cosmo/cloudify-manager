@@ -38,6 +38,7 @@ class Postgres(object):
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots']
     _TABLES_TO_RESTORE = ['users', 'tenants']
+    _STAGE_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
 
     def __init__(self, config):
         ctx.logger.debug('Init Postgres config: {0}'.format(config))
@@ -87,7 +88,11 @@ class Postgres(object):
             return
         destination_path = os.path.join(tempdir, self._STAGE_DUMP_FILENAME)
         try:
-            self._dump_to_file(destination_path, self._STAGE_DB_NAME)
+            self._dump_to_file(
+                destination_path=destination_path,
+                db_name=self._STAGE_DB_NAME,
+                exclude_tables=self._STAGE_TABLES_TO_EXCLUDE
+            )
         except Exception as ex:
             raise NonRecoverableError('Error during dumping Stage data, '
                                       'exception: {0}'.format(ex))
