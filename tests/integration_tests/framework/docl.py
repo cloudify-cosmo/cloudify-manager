@@ -25,8 +25,6 @@ from contextlib import contextmanager
 from functools import partial
 
 import requests.exceptions
-import pika
-import pika.exceptions
 import proxy_tools
 import sh
 import yaml
@@ -285,9 +283,7 @@ def _wait_for_services(container_ip=None):
     if container_ip is None:
         container_ip = utils.get_manager_ip()
     logger.info('Waiting for RabbitMQ')
-    _retry(func=utils.create_pika_connection,
-           exceptions=pika.exceptions.AMQPConnectionError,
-           cleanup=lambda conn: conn.close())
+    utils.create_pika_connection().close()
     logger.info('Waiting for REST service and Storage')
     rest_client = utils.create_rest_client()
     _retry(func=rest_client.blueprints.list,
