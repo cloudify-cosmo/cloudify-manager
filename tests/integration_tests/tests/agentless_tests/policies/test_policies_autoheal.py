@@ -386,16 +386,16 @@ class TestAutohealPolicies(AgentlessTestCase, PoliciesTestsBase):
         self._wait_for_terminated_execution()
 
         self.invocations = self.wait_for_invocations(
-                self.deployment.id,
-                (
-                    NODES_WITH_LIFECYCLE_OP * self.NUM_OF_INITIAL_LIFECYCLE_OP +
-                    NODES_WITH_RELATIONSHIP_OP * self.NUM_OF_LIFECYCLE_OP +
-                    NUM_OF_RELATIONSHIP_LIFECYCLES *
-                    self.NUM_OF_INITIAL_RELATIONSHIP_OP +
-                    NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH *
-                    self.NUM_OF_RELATIONSHIP_OP +
-                    2 * self.NUM_OF_RESTART_RELATIONSHIP_OP
-                )
+            self.deployment.id,
+            (
+                NODES_WITH_LIFECYCLE_OP * self.NUM_OF_INITIAL_LIFECYCLE_OP +
+                NODES_WITH_RELATIONSHIP_OP * self.NUM_OF_LIFECYCLE_OP +
+                NUM_OF_RELATIONSHIP_LIFECYCLES *
+                self.NUM_OF_INITIAL_RELATIONSHIP_OP +
+                NUM_OF_RELATIONSHIP_LIFECYCLES_IN_FAILING_SUBGRAPH *
+                self.NUM_OF_RELATIONSHIP_OP +
+                2 * self.NUM_OF_RESTART_RELATIONSHIP_OP
+            )
         )
 
         # unlink operation is executed before the source is deleted
@@ -443,12 +443,12 @@ class TestAutohealPolicies(AgentlessTestCase, PoliciesTestsBase):
 
         # configure operation is between preconfigure and postconfigure
         self._assert_op_order(
-                self.operation((self.DB, self.DB_HOST), 'preconfigure', [2, 3]),
-                self.operation((self.DB, ), 'configure', [1])
+            self.operation((self.DB, self.DB_HOST), 'preconfigure', [2, 3]),
+            self.operation((self.DB, ), 'configure', [1])
         )
         self._assert_op_order(
-                self.operation((self.DB, ), 'configure', [1]),
-                self.operation((self.DB, self.DB_HOST), 'postconfigure', [2, 3])
+            self.operation((self.DB, ), 'configure', [1]),
+            self.operation((self.DB, self.DB_HOST), 'postconfigure', [2, 3])
         )
 
         # preconfigure self.operations of both the source (DB_STATISTICS) and
@@ -497,13 +497,13 @@ class TestAutohealPolicies(AgentlessTestCase, PoliciesTestsBase):
         self._wait_for_terminated_execution()
 
         self.invocations = self.wait_for_invocations(
-                self.deployment.id,
-                (
-                    NUM_OF_NODES_WITH_OP * self.NUM_OF_INITIAL_LIFECYCLE_OP +
-                    NUM_OF_NODES_WITH_OP * self.NUM_OF_INITIAL_RELATIONSHIP_OP +
-                    NUM_OF_NODES_WITH_OP * self.NUM_OF_LIFECYCLE_OP +
-                    NUM_OF_NODES_WITH_OP * self.NUM_OF_RELATIONSHIP_OP
-                )
+            self.deployment.id,
+            (
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_INITIAL_LIFECYCLE_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_INITIAL_RELATIONSHIP_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_LIFECYCLE_OP +
+                NUM_OF_NODES_WITH_OP * self.NUM_OF_RELATIONSHIP_OP
+            )
         )
 
         # WEBSERVER_CONSOLE is installed_on WEBSERVER
