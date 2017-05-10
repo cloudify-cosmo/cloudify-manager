@@ -12,15 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import uuid
 
 from integration_tests import AgentTestWithPlugins
-from integration_tests.tests.agentless_tests import test_policies
+from integration_tests.tests.agentless_tests.policies import PoliciesTestsBase
 from integration_tests.tests.utils import get_resource as resource
 
 
-class TestPoliciesWithDiamond(AgentTestWithPlugins,
-                              test_policies.PoliciesTestsBase):
+class TestPoliciesWithDiamond(AgentTestWithPlugins, PoliciesTestsBase):
+
     def setUp(self):
         super(TestPoliciesWithDiamond, self).setUp()
         self.setup_deployment_id = str(uuid.uuid4())
