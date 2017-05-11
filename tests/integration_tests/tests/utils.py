@@ -22,6 +22,7 @@ import tempfile
 from os import path
 from contextlib import contextmanager
 
+import retrying
 import requests
 
 from cloudify.utils import setup_logger
@@ -248,12 +249,6 @@ def upload_and_restore_snapshot(snapshot_file_name, snapshot_id, tenant):
 
     execution = restore_snapshot(snapshot_id, tenant)
 
-    # If checking the workflow status immediately, we will be likely to cause
-    # a deadlock on the database and make the restore fail
-    # This may be possible to do using the cfy utility, but I've not managed
-    # to be fast enough with it to trigger the issue.
-    # NOTE: Jira should be opened for this
-    time.sleep(3)
     wait_for_execution_to_end(
         execution,
         timeout_seconds=30,
@@ -272,29 +267,38 @@ def validate_snapshot(snapshot_id, original_name):
     )
 
 
-def wait_for_execution_to_end(execution,
-                              timeout_seconds=240,
-                              tolerate_client_errors=False):
+def get_execution_status(execution):
     client = create_rest_client()
-    deadline = time.time() + timeout_seconds
-    while execution.status not in Execution.END_STATES:
-        time.sleep(0.5)
-        try:
-            execution = client.executions.get(execution.id)
-        except CloudifyClientError:
-            if tolerate_client_errors:
-                pass
-            else:
-                raise
-        if time.time() > deadline:
-            raise utils.TimeoutException(
-                    'Execution timed out: \n{0}'
-                    .format(json.dumps(execution, indent=2)))
-    if execution.status == Execution.FAILED:
+    execution = client.executions.get(execution.id)
+    return execution
+
+
+def exception_is_client_error(exc):
+    return isinstance(exc, CloudifyClientError)
+
+
+def execution_not_finished(execution):
+    status = execution.status
+    if status == Execution.FAILED:
         raise RuntimeError(
                 'Workflow execution failed: {0} [{1}]'.format(
                         execution.error,
                         execution.status))
+    return status not in Execution.END_STATES
+
+
+def wait_for_execution_to_end(execution,
+                              timeout_seconds=240,
+                              tolerate_client_errors=False):
+    exception_retry = None
+    if tolerate_client_errors:
+        exception_retry = exception_is_client_error
+    execution = retrying.retry(
+        retry_on_result=execution_not_finished,
+        retry_on_exception=exception_retry,
+        wait_fixed=500,
+        stop_max_attempt_number=timeout_seconds * 2,
+    )(get_execution_status)(execution)
     return execution
 
 
