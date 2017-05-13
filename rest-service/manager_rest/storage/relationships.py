@@ -16,15 +16,17 @@
 from .models_base import db
 
 
-def foreign_key(foreign_key_column, nullable=False):
+def foreign_key(foreign_key_column, nullable=False, index=False):
     """Return a ForeignKey object with the relevant
 
     :param foreign_key_column: Unique id column in the parent table
     :param nullable: Should the column be allowed to remain empty
+    :param index: Should the column be indexed
     """
     return db.Column(
         db.ForeignKey(foreign_key_column, ondelete='CASCADE'),
-        nullable=nullable
+        nullable=nullable,
+        index=index
     )
 
 
