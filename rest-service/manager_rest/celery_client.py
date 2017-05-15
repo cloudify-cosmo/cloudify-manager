@@ -17,6 +17,8 @@ import ssl
 
 from celery import Celery
 
+from cloudify.constants import BROKER_PORT_SSL
+
 from manager_rest import config
 
 # These are the states that may be returned from the
@@ -38,10 +40,11 @@ class CeleryClient(object):
 
         # Port not required as currently the address is provided with port and
         # vhost included.
-        amqp_uri = 'amqp://{username}:{password}@{address}'.format(
-            address=config.instance.amqp_address,
+        amqp_uri = 'amqp://{username}:{password}@{host}:{port}'.format(
+            host=config.instance.amqp_host,
             username=config.instance.amqp_username,
             password=config.instance.amqp_password,
+            port=BROKER_PORT_SSL
         )
 
         self.celery = Celery(broker=amqp_uri, backend=amqp_uri)
