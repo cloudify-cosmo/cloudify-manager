@@ -41,13 +41,21 @@ from .influxdb import InfluxDB
 from .postgres import Postgres
 from .es_snapshot import ElasticSearch
 from .credentials import restore as restore_credentials
-from .constants import METADATA_FILENAME, M_VERSION, ARCHIVE_CERT_DIR
+from .constants import (
+    ARCHIVE_CERT_DIR,
+    METADATA_FILENAME,
+    M_SCHEMA_REVISION,
+    M_VERSION,
+)
 
 
 V_4_0_0 = ManagerVersion('4.0.0')
 
 
 class SnapshotRestore(object):
+
+    SCHEMA_REVISION_4_0 = '333998bc1627'
+
     def __init__(self,
                  config,
                  snapshot_id,
@@ -79,6 +87,10 @@ class SnapshotRestore(object):
         try:
             metadata = self._extract_snapshot_archive(snapshot_path)
             self._snapshot_version = ManagerVersion(metadata[M_VERSION])
+            schema_revision = metadata.get(
+                M_SCHEMA_REVISION,
+                self.SCHEMA_REVISION_4_0,
+            )
             self._validate_snapshot()
 
             existing_plugins = self._get_existing_plugin_names()
@@ -86,7 +98,7 @@ class SnapshotRestore(object):
 
             self._restore_certificate()
             with Postgres(self._config) as postgres:
-                self._restore_db(postgres)
+                self._restore_db(postgres, schema_revision)
                 self._restore_files_to_manager()
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
@@ -129,15 +141,23 @@ class SnapshotRestore(object):
         )
         ctx.logger.info('Successfully restored archive files')
 
-    def _restore_db(self, postgres):
+    def _restore_db(self, postgres, schema_revision):
+        """Restore database from snapshot.
+
+        :param postgres: Database wrapper for snapshots
+        :type: :class:`cloudify_system_workflows.snapshots.postgres.Postgres`
+        :param schema_revision:
+            Schema revision for the dump file in the snapshot
+        :type schema_revision: str
+
+        """
         ctx.logger.info('Restoring database')
-        if self._snapshot_version > V_4_0_0:
-            postgres.restore(self._tempdir)
-            if self._premium_enabled:
-                postgres.restore_stage(self._tempdir)
-        elif self._snapshot_version == V_4_0_0:
-            with utils.db_schema('333998bc1627'):
+        if self._snapshot_version >= V_4_0_0:
+            with utils.db_schema(schema_revision):
                 postgres.restore(self._tempdir)
+
+            if self._snapshot_version > V_4_0_0 and self._premium_enabled:
+                postgres.restore_stage(self._tempdir)
         else:
             if self._should_clean_old_db_for_3_x_snapshot():
                 postgres.clean_db()
