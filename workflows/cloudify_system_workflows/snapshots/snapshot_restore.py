@@ -53,6 +53,9 @@ V_4_0_0 = ManagerVersion('4.0.0')
 
 
 class SnapshotRestore(object):
+
+    SCHEMA_REVISION_4_0 = '333998bc1627'
+
     def __init__(self,
                  config,
                  snapshot_id,
@@ -84,8 +87,10 @@ class SnapshotRestore(object):
         try:
             metadata = self._extract_snapshot_archive(snapshot_path)
             self._snapshot_version = ManagerVersion(metadata[M_VERSION])
-            # Assume 4.0 schema if metadata is missing
-            schema_revision = metadata.get(M_SCHEMA_REVISION, '333998bc1627')
+            schema_revision = metadata.get(
+                M_SCHEMA_REVISION,
+                self.SCHEMA_REVISION_4_0,
+            )
             self._validate_snapshot()
 
             existing_plugins = self._get_existing_plugin_names()
