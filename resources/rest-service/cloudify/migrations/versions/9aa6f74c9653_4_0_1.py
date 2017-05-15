@@ -35,8 +35,6 @@ def upgrade():
         'blueprints',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_blueprints_created_at', table_name='blueprints')
-    op.drop_index('ix_blueprints_id', table_name='blueprints')
     op.add_column(
         'deployment_modifications',
         sa.Column('_creator_id', sa.Integer(), nullable=False),
@@ -49,17 +47,6 @@ def upgrade():
         'deployment_modifications',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index(
-        'ix_deployment_modifications_created_at',
-        table_name='deployment_modifications',
-    )
-    op.drop_index(
-        'ix_deployment_modifications_ended_at',
-        table_name='deployment_modifications',
-    )
-    op.drop_index(
-        'ix_deployment_modifications_id',
-        table_name='deployment_modifications')
     op.create_foreign_key(
         op.f('deployment_modifications__tenant_id_fkey'),
         'deployment_modifications',
@@ -88,8 +75,6 @@ def upgrade():
         'deployment_update_steps',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index(
-        'ix_deployment_update_steps_id', table_name='deployment_update_steps')
     op.create_foreign_key(
         op.f('deployment_update_steps__tenant_id_fkey'),
         'deployment_update_steps',
@@ -118,11 +103,6 @@ def upgrade():
         'deployment_updates',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index(
-        'ix_deployment_updates_created_at',
-        table_name='deployment_updates',
-    )
-    op.drop_index('ix_deployment_updates_id', table_name='deployment_updates')
     op.create_foreign_key(
         op.f('deployment_updates__creator_id_fkey'),
         'deployment_updates',
@@ -154,8 +134,6 @@ def upgrade():
         'deployments',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_deployments_created_at', table_name='deployments')
-    op.drop_index('ix_deployments_id', table_name='deployments')
     op.create_foreign_key(
         op.f('deployments__tenant_id_fkey'),
         'deployments',
@@ -210,7 +188,6 @@ def upgrade():
         'events',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_events_id', table_name='events')
     op.create_foreign_key(
         op.f('events__tenant_id_fkey'),
         'events',
@@ -231,10 +208,6 @@ def upgrade():
         'executions',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_executions_created_at', table_name='executions')
-    op.drop_index('ix_executions_id', table_name='executions')
-    op.drop_index('ix_groups_ldap_dn', table_name='groups')
-    op.drop_index('ix_groups_name', table_name='groups')
     op.add_column(
         'logs',
         sa.Column('_creator_id', sa.Integer(), nullable=True),
@@ -273,7 +246,6 @@ def upgrade():
         'logs',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_logs_id', table_name='logs')
     op.create_foreign_key(
         op.f('logs__tenant_id_fkey'),
         'logs',
@@ -312,8 +284,6 @@ def upgrade():
         'nodes',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_nodes_id', table_name='nodes')
-    op.drop_index('ix_nodes_type', table_name='nodes')
     op.create_foreign_key(
         op.f('nodes__tenant_id_fkey'),
         'nodes',
@@ -352,7 +322,6 @@ def upgrade():
         'node_instances',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_node_instances_id', table_name='node_instances')
     op.create_foreign_key(
         op.f('node_instances__creator_id_fkey'),
         'node_instances',
@@ -373,68 +342,21 @@ def upgrade():
         'plugins',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_plugins_archive_name', table_name='plugins')
-    op.drop_index('ix_plugins_id', table_name='plugins')
-    op.drop_index('ix_plugins_package_name', table_name='plugins')
-    op.drop_index('ix_plugins_uploaded_at', table_name='plugins')
-    op.drop_index('ix_roles_name', table_name='roles')
     op.add_column(
         'secrets',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_secrets_created_at', table_name='secrets')
-    op.drop_index('ix_secrets_id', table_name='secrets')
     op.add_column(
         'snapshots',
         sa.Column('private_resource', sa.Boolean(), nullable=True),
     )
-    op.drop_index('ix_snapshots_created_at', table_name='snapshots')
-    op.drop_index('ix_snapshots_id', table_name='snapshots')
-    op.drop_index('ix_tenants_name', table_name='tenants')
-    op.drop_index('ix_users_username', table_name='users')
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    op.create_index('ix_users_username', 'users', ['username'], unique=True)
-    op.create_index('ix_tenants_name', 'tenants', ['name'], unique=True)
-    op.create_index('ix_snapshots_id', 'snapshots', ['id'], unique=False)
-    op.create_index(
-        'ix_snapshots_created_at',
-        'snapshots',
-        ['created_at'],
-        unique=False,
-    )
     op.drop_column('snapshots', 'private_resource')
-    op.create_index('ix_secrets_id', 'secrets', ['id'], unique=False)
-    op.create_index(
-        'ix_secrets_created_at',
-        'secrets',
-        ['created_at'],
-        unique=False,
-    )
     op.drop_column('secrets', 'private_resource')
-    op.create_index('ix_roles_name', 'roles', ['name'], unique=True)
-    op.create_index(
-        'ix_plugins_uploaded_at',
-        'plugins',
-        ['uploaded_at'],
-        unique=False,
-    )
-    op.create_index(
-        'ix_plugins_package_name',
-        'plugins',
-        ['package_name'],
-        unique=False,
-    )
-    op.create_index('ix_plugins_id', 'plugins', ['id'], unique=False)
-    op.create_index(
-        'ix_plugins_archive_name',
-        'plugins',
-        ['archive_name'],
-        unique=False,
-    )
     op.drop_column('plugins', 'private_resource')
     op.drop_constraint(
         op.f('node_instances__tenant_id_fkey'),
@@ -445,12 +367,6 @@ def downgrade():
         op.f('node_instances__creator_id_fkey'),
         'node_instances',
         type_='foreignkey',
-    )
-    op.create_index(
-        'ix_node_instances_id',
-        'node_instances',
-        ['id'],
-        unique=False,
     )
     op.drop_column('node_instances', 'private_resource')
     op.drop_column('node_instances', '_tenant_id')
@@ -465,8 +381,6 @@ def downgrade():
         'nodes',
         type_='foreignkey',
     )
-    op.create_index('ix_nodes_type', 'nodes', ['type'], unique=False)
-    op.create_index('ix_nodes_id', 'nodes', ['id'], unique=False)
     op.drop_column('nodes', 'private_resource')
     op.drop_column('nodes', '_tenant_id')
     op.drop_column('nodes', '_creator_id')
@@ -480,21 +394,11 @@ def downgrade():
         'logs',
         type_='foreignkey',
     )
-    op.create_index('ix_logs_id', 'logs', ['id'], unique=False)
     op.alter_column('logs', 'timestamp', server_default=None, nullable=False)
     op.drop_column('logs', 'reported_timestamp')
     op.drop_column('logs', 'private_resource')
     op.drop_column('logs', '_tenant_id')
     op.drop_column('logs', '_creator_id')
-    op.create_index('ix_groups_name', 'groups', ['name'], unique=True)
-    op.create_index('ix_groups_ldap_dn', 'groups', ['ldap_dn'], unique=True)
-    op.create_index('ix_executions_id', 'executions', ['id'], unique=False)
-    op.create_index(
-        'ix_executions_created_at',
-        'executions',
-        ['created_at'],
-        unique=False,
-    )
     op.drop_column('executions', 'private_resource')
     op.drop_constraint(
         op.f('events__creator_id_fkey'),
@@ -506,7 +410,6 @@ def downgrade():
         'events',
         type_='foreignkey',
     )
-    op.create_index('ix_events_id', 'events', ['id'], unique=False)
     op.alter_column('events', 'timestamp', server_default=None, nullable=False)
     op.drop_column('events', 'reported_timestamp')
     op.drop_column('events', 'private_resource')
@@ -517,13 +420,6 @@ def downgrade():
         op.f('deployments__tenant_id_fkey'),
         'deployments',
         type_='foreignkey',
-    )
-    op.create_index('ix_deployments_id', 'deployments', ['id'], unique=False)
-    op.create_index(
-        'ix_deployments_created_at',
-        'deployments',
-        ['created_at'],
-        unique=False,
     )
     op.drop_column('deployments', 'private_resource')
     op.drop_column('deployments', '_tenant_id')
@@ -536,18 +432,6 @@ def downgrade():
         'deployment_updates__creator_id_fkey'),
         'deployment_updates',
         type_='foreignkey',
-    )
-    op.create_index(
-        'ix_deployment_updates_id',
-        'deployment_updates',
-        ['id'],
-        unique=False,
-    )
-    op.create_index(
-        'ix_deployment_updates_created_at',
-        'deployment_updates',
-        ['created_at'],
-        unique=False,
     )
     op.drop_column('deployment_updates', 'private_resource')
     op.drop_column('deployment_updates', '_tenant_id')
@@ -562,12 +446,6 @@ def downgrade():
         'deployment_update_steps',
         type_='foreignkey',
     )
-    op.create_index(
-        'ix_deployment_update_steps_id',
-        'deployment_update_steps',
-        ['id'],
-        unique=False,
-    )
     op.drop_column('deployment_update_steps', 'private_resource')
     op.drop_column('deployment_update_steps', '_tenant_id')
     op.drop_column('deployment_update_steps', '_creator_id')
@@ -581,34 +459,9 @@ def downgrade():
         'deployment_modifications',
         type_='foreignkey',
     )
-    op.create_index(
-        'ix_deployment_modifications_id',
-        'deployment_modifications',
-        ['id'],
-        unique=False,
-    )
-    op.create_index(
-        'ix_deployment_modifications_ended_at',
-        'deployment_modifications',
-        ['ended_at'],
-        unique=False,
-    )
-    op.create_index(
-        'ix_deployment_modifications_created_at',
-        'deployment_modifications',
-        ['created_at'],
-        unique=False,
-    )
     op.drop_column('deployment_modifications', 'private_resource')
     op.drop_column('deployment_modifications', '_tenant_id')
     op.drop_column('deployment_modifications', '_creator_id')
-    op.create_index('ix_blueprints_id', 'blueprints', ['id'], unique=False)
-    op.create_index(
-        'ix_blueprints_created_at',
-        'blueprints',
-        ['created_at'],
-        unique=False,
-    )
     op.drop_column('blueprints', 'private_resource')
     op.create_table(
         'owners_deployments_users',
