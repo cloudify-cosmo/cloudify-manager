@@ -482,6 +482,16 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
 
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_when_source_plugin_with_address_exists(self):
+        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+            blueprint_file_name='deployment_with_source_address.yaml',
+            blueprint_id=id_,
+            deployment_id=id_)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_plugin_not_found_with_new_flag(self):
         id_ = str(uuid.uuid4())
         self.put_deployment(

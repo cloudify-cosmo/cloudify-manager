@@ -666,6 +666,7 @@ class ResourceManager(object):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
         try:
+
             deployment_plan = tasks.prepare_deployment_plan(plan, inputs)
         except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
@@ -732,8 +733,6 @@ class ResourceManager(object):
         if plugin['supported_platform']:
             query_parameters['supported_platform'] =\
                 plugin['supported_platform']
-        if plugin['source']:
-            query_parameters['package_source'] = plugin['source']
 
         result = self.sm.list(models.Plugin, filters=query_parameters)
         if result.metadata['pagination']['total'] == 0:
