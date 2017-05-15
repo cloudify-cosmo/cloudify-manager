@@ -184,12 +184,16 @@ class BaseServerTestCase(unittest.TestCase):
         flask_app_context.push()
         self.addCleanup(flask_app_context.pop)
 
-    def _handle_default_db_config(self, server):
+    @staticmethod
+    def _handle_default_db_config(server):
         server.db.create_all()
         admin_user = get_admin_user()
+
+        # We're mocking the AMQPManager, as we aren't really using Rabbit here
         default_tenant = create_default_user_tenant_and_roles(
             admin_username=admin_user['username'],
             admin_password=admin_user['password'],
+            amqp_manager=MagicMock()
         )
         server.app.config[constants.CURRENT_TENANT_CONFIG] = default_tenant
 
