@@ -26,7 +26,6 @@ from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
 from .models_base import (
     db,
     JSONString,
-    LocalDateTime,
     UTCDateTime,
 )
 from .relationships import foreign_key, one_to_many_relationship
@@ -195,12 +194,12 @@ class Event(SQLResourceBase):
     __tablename__ = 'events'
 
     timestamp = db.Column(
-        LocalDateTime,
+        UTCDateTime,
         server_default=func.current_timestamp(),
         nullable=False,
         index=True,
     )
-    reported_timestamp = db.Column(LocalDateTime, nullable=False)
+    reported_timestamp = db.Column(UTCDateTime, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
     event_type = db.Column(db.Text)
@@ -228,12 +227,12 @@ class Log(SQLResourceBase):
     __tablename__ = 'logs'
 
     timestamp = db.Column(
-        LocalDateTime,
+        UTCDateTime,
         server_default=func.current_timestamp(),
         nullable=False,
         index=True,
     )
-    reported_timestamp = db.Column(LocalDateTime, nullable=False)
+    reported_timestamp = db.Column(UTCDateTime, nullable=False)
     message = db.Column(db.Text)
     message_code = db.Column(db.Text)
     logger = db.Column(db.Text)
