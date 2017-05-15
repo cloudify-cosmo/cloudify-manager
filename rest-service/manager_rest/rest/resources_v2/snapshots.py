@@ -39,6 +39,11 @@ from manager_rest.upload_manager import UploadedSnapshotsManager
 from manager_rest.constants import (FILE_SERVER_SNAPSHOTS_FOLDER,
                                     FILE_SERVER_RESOURCES_FOLDER)
 
+try:
+    from cloudify_premium.ha import cluster_status, node_status
+except ImportError:
+    cluster_status, node_status = None, None
+
 
 def _get_snapshot_path(snapshot_id):
     return os.path.join(
@@ -46,6 +51,21 @@ def _get_snapshot_path(snapshot_id):
         FILE_SERVER_SNAPSHOTS_FOLDER,
         snapshot_id
     )
+
+
+def _verify_no_multi_node_cluster(action):
+    if not (cluster_status and node_status and 'initialized' in node_status):
+        return
+    if not node_status['initialized']:
+        raise manager_exceptions.IllegalActionError(
+            'Action `{0}` is not available while '
+            'initializing a cluster'.format(action)
+        )
+    if len(cluster_status.nodes) > 1:
+        raise manager_exceptions.IllegalActionError(
+            'Action `{0}` is not available on a '
+            'cluster with more than one node'.format(action)
+        )
 
 
 class Snapshots(SecuredResource):
@@ -223,6 +243,7 @@ class SnapshotsIdRestore(SecuredResource):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(models.Snapshot)
     def post(self, snapshot_id):
+        _verify_no_multi_node_cluster(action="restore snapshot")
         request_dict = rest_utils.get_json_and_verify_params(
             {'recreate_deployments_envs', 'tenant_name'}
         )
