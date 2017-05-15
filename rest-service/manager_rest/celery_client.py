@@ -17,9 +17,8 @@ import ssl
 
 from celery import Celery
 
-from cloudify.constants import BROKER_PORT_SSL
-
 from manager_rest import config
+from manager_rest.constants import BROKER_SSL_PORT
 
 # These are the states that may be returned from the
 # CeleryClient.get_task_status method
@@ -38,13 +37,11 @@ class CeleryClient(object):
             cert_path=config.instance.amqp_ca_path,
         )
 
-        # Port not required as currently the address is provided with port and
-        # vhost included.
-        amqp_uri = 'amqp://{username}:{password}@{host}:{port}'.format(
+        amqp_uri = 'amqp://{username}:{password}@{host}:{port}/'.format(
             host=config.instance.amqp_host,
             username=config.instance.amqp_username,
             password=config.instance.amqp_password,
-            port=BROKER_PORT_SSL
+            port=BROKER_SSL_PORT
         )
 
         self.celery = Celery(broker=amqp_uri, backend=amqp_uri)

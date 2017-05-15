@@ -42,7 +42,7 @@ def create_default_user_tenant_and_roles(admin_username,
                                          amqp_manager):
     """
     Create the bootstrap admin, the default tenant and the security roles,
-    as well as a RabbitMQ vhost and user corresponding to the default tenant 
+    as well as a RabbitMQ vhost and user corresponding to the default tenant
 
     :return: The default tenant
     """

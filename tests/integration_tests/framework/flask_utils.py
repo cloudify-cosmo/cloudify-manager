@@ -19,10 +19,10 @@ from path import path
 from flask_migrate import upgrade
 
 from cloudify.utils import setup_logger
-from cloudify.amqp_manager import AMQPManager
 
 import manager_rest
 from manager_rest.storage import db, models
+from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
