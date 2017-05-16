@@ -256,6 +256,10 @@ class SnapshotsIdRestore(SecuredResource):
             'force',
             request_dict['force']
         )
+        restore_certificates = rest_utils.verify_and_convert_bool(
+            'restore_certificates',
+            request_dict.get('restore_certificates', 'false')
+        )
         tenant_name = request_dict['tenant_name']
         default_timeout_sec = 300
         request_timeout = request_dict.get('timeout', default_timeout_sec)
@@ -266,6 +270,7 @@ class SnapshotsIdRestore(SecuredResource):
             force,
             bypass_maintenance,
             timeout,
-            tenant_name
+            tenant_name,
+            restore_certificates
         )
         return execution, 200
