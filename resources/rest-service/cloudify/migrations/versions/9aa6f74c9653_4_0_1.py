@@ -154,7 +154,7 @@ def upgrade():
         'events',
         sa.Column(
             'reported_timestamp',
-            manager_rest.storage.models_base.LocalDateTime(),
+            manager_rest.storage.models_base.UTCDateTime(),
             nullable=True,
         ),
     )
@@ -220,7 +220,7 @@ def upgrade():
         'logs',
         sa.Column(
             'reported_timestamp',
-            manager_rest.storage.models_base.LocalDateTime(),
+            manager_rest.storage.models_base.UTCDateTime(),
             nullable=True,
         ),
     )
