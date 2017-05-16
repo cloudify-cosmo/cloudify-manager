@@ -19,6 +19,7 @@ import shutil
 import zipfile
 import platform
 import tempfile
+import subprocess
 from contextlib import contextmanager
 
 from wagon import wagon
@@ -64,13 +65,15 @@ class SnapshotRestore(object):
                  timeout,
                  tenant_name,
                  premium_enabled,
-                 user_is_bootstrap_admin):
+                 user_is_bootstrap_admin,
+                 restore_certificates):
         self._config = utils.DictToAttributes(config)
         self._snapshot_id = snapshot_id
         self._recreate_deployments_envs = recreate_deployments_envs
         self._force = force
         self._timeout = timeout
         self._tenant_name = tenant_name
+        self._restore_certificates = restore_certificates
         self._premium_enabled = premium_enabled
         self._user_is_bootstrap_admin = user_is_bootstrap_admin
 
@@ -96,7 +99,6 @@ class SnapshotRestore(object):
             existing_plugins = self._get_existing_plugin_names()
             existing_dep_envs = self._get_existing_dep_envs()
 
-            self._restore_certificate()
             with Postgres(self._config) as postgres:
                 self._restore_db(postgres, schema_revision)
                 self._restore_files_to_manager()
@@ -105,16 +107,23 @@ class SnapshotRestore(object):
                 self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_deployment_envs(existing_dep_envs)
+            if self._restore_certificates:
+                self._restore_certificate()
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
 
     def _restore_certificate(self):
-        local_cert_dir = os.path.dirname(get_local_rest_certificate())
         archive_cert_dir = os.path.join(self._tempdir, ARCHIVE_CERT_DIR)
-        if utils.compare_cert_metadata(local_cert_dir, archive_cert_dir):
-            utils.copy_snapshot_path(archive_cert_dir,
-                                     local_cert_dir + '_from_snapshot')
+        old_cert_dir = os.path.dirname(get_local_rest_certificate())
+        new_cert_dir = old_cert_dir + '_from_snapshot'
+        if not utils.compare_cert_metadata(old_cert_dir, archive_cert_dir):
+            return
+        utils.copy_snapshot_path(archive_cert_dir, new_cert_dir)
+        time_to_wait_for_workflow_to_finish = 3
+        cmd = 'sleep {0}; rm -rf {1}; mv {2} {1}'.format(
+            time_to_wait_for_workflow_to_finish, old_cert_dir, new_cert_dir)
+        subprocess.Popen(cmd, shell=True)
 
     def _validate_snapshot(self):
         manager_version = utils.get_manager_version(self._client)

@@ -160,7 +160,8 @@ class ResourceManager(object):
                          force,
                          bypass_maintenance,
                          timeout,
-                         tenant_name):
+                         tenant_name,
+                         restore_certificates):
         # Throws error if no snapshot found
         snapshot = self.sm.get(models.Snapshot, snapshot_id)
         if snapshot.status == SnapshotState.FAILED:
@@ -182,6 +183,7 @@ class ResourceManager(object):
                 'force': force,
                 'timeout': timeout,
                 'tenant_name': tenant_name,
+                'restore_certificates': restore_certificates,
                 'premium_enabled': current_app.premium_enabled,
                 'user_is_bootstrap_admin': current_user.is_bootstrap_admin
             },
