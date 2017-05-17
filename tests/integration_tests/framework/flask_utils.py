@@ -79,7 +79,7 @@ def reset_storage():
     setup_amqp_manager()
 
     # Clear the old RabbitMQ resources
-    amqp_manager.remove_vhost_user_from_tenant(DEFAULT_TENANT_NAME)
+    amqp_manager.remove_tenant_vhost_and_user(DEFAULT_TENANT_NAME)
 
     # Rebuild the DB
     safe_drop_all(keep_tables=['roles'])

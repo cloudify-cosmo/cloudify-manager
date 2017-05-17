@@ -44,7 +44,7 @@ class AMQPManager(object):
         host_str = '{0}:{1}'.format(host, self.RABBITMQ_MANAGEMENT_PORT)
         self._client = Client(host_str, username, password)
 
-    def create_vhost_user_from_tenant(self, tenant):
+    def create_tenant_vhost_and_user(self, tenant):
         """
         Create a new RabbitMQ vhost and user, and grant the user permissions
         on the vhost
@@ -59,7 +59,7 @@ class AMQPManager(object):
         self._client.create_user(username, password)
         self._client.set_vhost_permissions(vhost, username, '.*', '.*', '.*')
 
-        # Give the user permissions on the default vhost - /
+        # TODO: Maybe won't be necessary in the future
         self._client.set_vhost_permissions('/', username, '.*', '.*', '.*')
 
         tenant.rabbitmq_vhost = vhost
@@ -76,7 +76,7 @@ class AMQPManager(object):
     def _delete_user(self, username):
         self._client.delete_user(username)
 
-    def remove_vhost_user_from_tenant(self, tenant_name):
+    def remove_tenant_vhost_and_user(self, tenant_name):
         """ Delete the vhost and user associated with a tenant name """
 
         vhost = self.VHOST_NAME_PATTERN.format(tenant_name)

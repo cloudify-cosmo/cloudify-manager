@@ -26,7 +26,7 @@ import shutil
 from flask.testing import FlaskClient
 from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
-from mock import MagicMock
+from mock import MagicMock, patch
 
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
@@ -120,6 +120,7 @@ class BaseServerTestCase(unittest.TestCase):
     def setUp(self):
         self._create_temp_files_and_folders()
         self._init_file_server()
+        self._mock_amqp_manager()
 
         server_module = self._set_config_path_and_get_server_module()
         self._create_config_and_reset_app(server_module)
@@ -127,6 +128,13 @@ class BaseServerTestCase(unittest.TestCase):
         self.client = self.create_client()
         self.sm = get_storage_manager()
         self.initialize_provider_context()
+
+    def _mock_amqp_manager(self):
+        """ Mock the pyrabbit.Client for all unittests - no RabbitMQ """
+
+        self._amqp_patcher = patch('manager_rest.amqp_manager.Client')
+        self.addCleanup(self._amqp_patcher.stop)
+        self._amqp_patcher.start()
 
     def _create_temp_files_and_folders(self):
         self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')

@@ -48,7 +48,7 @@ def create_default_user_tenant_and_roles(admin_username,
     """
     admin_role = _create_roles()
     default_tenant = _create_default_tenant()
-    amqp_manager.create_vhost_user_from_tenant(tenant=default_tenant)
+    amqp_manager.create_tenant_vhost_and_user(tenant=default_tenant)
 
     admin_user = user_datastore.create_user(
         id=constants.BOOTSTRAP_ADMIN_ID,
