@@ -66,7 +66,8 @@ class SnapshotRestore(object):
                  tenant_name,
                  premium_enabled,
                  user_is_bootstrap_admin,
-                 restore_certificates):
+                 restore_certificates,
+                 no_reboot):
         self._config = utils.DictToAttributes(config)
         self._snapshot_id = snapshot_id
         self._recreate_deployments_envs = recreate_deployments_envs
@@ -74,6 +75,7 @@ class SnapshotRestore(object):
         self._timeout = timeout
         self._tenant_name = tenant_name
         self._restore_certificates = restore_certificates
+        self._no_reboot = no_reboot
         self._premium_enabled = premium_enabled
         self._user_is_bootstrap_admin = user_is_bootstrap_admin
 
@@ -123,6 +125,8 @@ class SnapshotRestore(object):
         time_to_wait_for_workflow_to_finish = 3
         cmd = 'sleep {0}; rm -rf {1}; mv {2} {1}'.format(
             time_to_wait_for_workflow_to_finish, old_cert_dir, new_cert_dir)
+        if not self._no_reboot:
+            cmd += '; sudo shutdown -r now'
         subprocess.Popen(cmd, shell=True)
 
     def _validate_snapshot(self):

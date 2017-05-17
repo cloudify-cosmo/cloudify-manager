@@ -43,6 +43,7 @@ def restore(snapshot_id,
             timeout,
             tenant_name,
             restore_certificates,
+            no_reboot,
             premium_enabled,
             user_is_bootstrap_admin,
             **kwargs):
@@ -58,7 +59,8 @@ def restore(snapshot_id,
         tenant_name,
         premium_enabled,
         user_is_bootstrap_admin,
-        restore_certificates
+        restore_certificates,
+        no_reboot
     )
     restore_snapshot.restore()
 

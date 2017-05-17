@@ -260,6 +260,14 @@ class SnapshotsIdRestore(SecuredResource):
             'restore_certificates',
             request_dict.get('restore_certificates', 'false')
         )
+        no_reboot = rest_utils.verify_and_convert_bool(
+            'no_reboot',
+            request_dict.get('no_reboot', 'false')
+        )
+        if no_reboot and not restore_certificates:
+            raise manager_exceptions.BadParametersError(
+                '`no_reboot` is only relevant when `restore_certificates` is '
+                'activated')
         tenant_name = request_dict['tenant_name']
         default_timeout_sec = 300
         request_timeout = request_dict.get('timeout', default_timeout_sec)
@@ -271,6 +279,7 @@ class SnapshotsIdRestore(SecuredResource):
             bypass_maintenance,
             timeout,
             tenant_name,
-            restore_certificates
+            restore_certificates,
+            no_reboot
         )
         return execution, 200
