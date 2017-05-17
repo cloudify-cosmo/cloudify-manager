@@ -38,9 +38,9 @@ sudo /tmp/env/bin/pip install wheel==0.24.0 && \
 %install
 
 export REST_SERVICE_BUILD=True
-
+default_version=%{CORE_TAG_NAME}
 destination="/tmp/${RANDOM}.file"
-curl --retry 10 --fail --silent --show-error --location https://github.com/cloudify-cosmo/cloudify-manager/archive/%{CORE_TAG_NAME}.tar.gz --create-dirs --output $destination && \
+curl --retry 10 --fail --silent --show-error --location https://github.com/cloudify-cosmo/cloudify-manager/archive/$default_version.tar.gz --create-dirs --output $destination && \
 tar -xzf $destination --strip-components=1 -C "/tmp" && \
 
 mkdir -p %{buildroot}/opt/manager/resources/
