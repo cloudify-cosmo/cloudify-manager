@@ -228,7 +228,7 @@ def compare_cert_metadata(path1, path2):
 
 
 @contextlib.contextmanager
-def db_schema(revision):
+def db_schema(revision, config=None):
     """Downgrade schema to desired revision to perform operation and upgrade.
 
     Used when restoring a snapshot to make sure the restore operation happens
@@ -239,12 +239,12 @@ def db_schema(revision):
     :type revision: str
 
     """
-    db_schema_downgrade(revision)
+    db_schema_downgrade(revision, config=config)
     yield
-    db_schema_upgrade()
+    db_schema_upgrade(config=config)
 
 
-def db_schema_downgrade(revision='-1'):
+def db_schema_downgrade(revision='-1', config=None):
     """Downgrade database schema.
 
     Used before restoring a snapshot to make sure that the schema matches the
@@ -254,15 +254,10 @@ def db_schema_downgrade(revision='-1'):
     :type revision: str
 
     """
-    subprocess.check_call([
-        PYTHON_MANAGER_ENV,
-        SCHEMA_SCRIPT,
-        'downgrade',
-        revision,
-    ])
+    _schema(config, ['downgrade', revision])
 
 
-def db_schema_upgrade(revision='head'):
+def db_schema_upgrade(revision='head', config=None):
     """Upgrade database schema.
 
     Used after restoring snapshot to get an up-to-date schema.
@@ -271,28 +266,27 @@ def db_schema_upgrade(revision='head'):
     :type revision: str
 
     """
-    subprocess.check_call([
-        PYTHON_MANAGER_ENV,
-        SCHEMA_SCRIPT,
-        'upgrade',
-        revision,
-    ])
+    _schema(config, ['upgrade', revision])
 
 
-def db_schema_get_current_revision():
+def db_schema_get_current_revision(config=None):
     """Get database schema revision.
 
     :returns: Current revision
     :rtype: str
 
     """
-    output = subprocess.check_output([
-        PYTHON_MANAGER_ENV,
-        SCHEMA_SCRIPT,
-        'current',
-    ])
+    output = _schema(config, ['current'])
     revision = output.split(' ', 1)[0]
     return revision
+
+
+def _schema(config, command):
+    full_command = [PYTHON_MANAGER_ENV, SCHEMA_SCRIPT]
+    if config and config.postgresql_host:
+        full_command += ['--postgresql-host', config.postgresql_host]
+    full_command += command
+    return subprocess.check_output(full_command)
 
 
 def stage_db_schema_get_current_revision():

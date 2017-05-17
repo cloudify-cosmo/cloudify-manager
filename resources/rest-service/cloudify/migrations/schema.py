@@ -34,7 +34,7 @@ def main():
     args = parse_arguments(sys.argv[1:])
     configure_logging(args['log_level'])
 
-    setup_flask_app()
+    setup_flask_app(manager_ip=args['postgresql_host'])
 
     func = args['func']
     func(args)
@@ -65,6 +65,9 @@ def parse_arguments(argv):
 
     """
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--postgresql-host',
+                        dest='postgresql_host',
+                        help='Address the database is listening on')
     subparsers = parser.add_subparsers(help='Migration subcommands')
 
     downgrade_parser = subparsers.add_parser(

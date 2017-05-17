@@ -162,7 +162,7 @@ class SnapshotRestore(object):
         """
         ctx.logger.info('Restoring database')
         if self._snapshot_version >= V_4_0_0:
-            with utils.db_schema(schema_revision):
+            with utils.db_schema(schema_revision, config=self._config):
                 postgres.restore(self._tempdir)
 
             if self._snapshot_version > V_4_0_0 and self._premium_enabled:
