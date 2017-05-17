@@ -627,7 +627,7 @@ def upgrade():
         sa.Column('id', sa.Text(), nullable=True),
         sa.Column(
             'timestamp',
-            manager_rest.storage.models_base.LocalDateTime(),
+            manager_rest.storage.models_base.UTCDateTime(),
             nullable=False,
         ),
         sa.Column('message', sa.Text(), nullable=True),
@@ -656,7 +656,7 @@ def upgrade():
         sa.Column('id', sa.Text(), nullable=True),
         sa.Column(
             'timestamp',
-            manager_rest.storage.models_base.LocalDateTime(),
+            manager_rest.storage.models_base.UTCDateTime(),
             nullable=False,
         ),
         sa.Column('message', sa.Text(), nullable=True),
