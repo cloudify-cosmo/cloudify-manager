@@ -55,6 +55,9 @@ class Tenant(SQLModelBase):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, unique=True, index=True)
+    rabbitmq_vhost = db.Column(db.Text)
+    rabbitmq_username = db.Column(db.Text)
+    rabbitmq_password = db.Column(db.Text)
 
     def _get_identifier_dict(self):
         return OrderedDict({'name': self.name})

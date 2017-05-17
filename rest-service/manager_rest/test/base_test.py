@@ -26,7 +26,7 @@ import shutil
 from flask.testing import FlaskClient
 from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
-from mock import MagicMock
+from mock import MagicMock, patch
 
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
@@ -120,6 +120,7 @@ class BaseServerTestCase(unittest.TestCase):
     def setUp(self):
         self._create_temp_files_and_folders()
         self._init_file_server()
+        self._mock_amqp_manager()
 
         server_module = self._set_config_path_and_get_server_module()
         self._create_config_and_reset_app(server_module)
@@ -127,6 +128,13 @@ class BaseServerTestCase(unittest.TestCase):
         self.client = self.create_client()
         self.sm = get_storage_manager()
         self.initialize_provider_context()
+
+    def _mock_amqp_manager(self):
+        """ Mock the pyrabbit.Client for all unittests - no RabbitMQ """
+
+        self._amqp_patcher = patch('manager_rest.amqp_manager.Client')
+        self.addCleanup(self._amqp_patcher.stop)
+        self._amqp_patcher.start()
 
     def _create_temp_files_and_folders(self):
         self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
@@ -184,12 +192,16 @@ class BaseServerTestCase(unittest.TestCase):
         flask_app_context.push()
         self.addCleanup(flask_app_context.pop)
 
-    def _handle_default_db_config(self, server):
+    @staticmethod
+    def _handle_default_db_config(server):
         server.db.create_all()
         admin_user = get_admin_user()
+
+        # We're mocking the AMQPManager, as we aren't really using Rabbit here
         default_tenant = create_default_user_tenant_and_roles(
             admin_username=admin_user['username'],
             admin_password=admin_user['password'],
+            amqp_manager=MagicMock()
         )
         server.app.config[constants.CURRENT_TENANT_CONFIG] = default_tenant
 

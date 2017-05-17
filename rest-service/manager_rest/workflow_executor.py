@@ -18,7 +18,7 @@ from flask import current_app
 from flask_security import current_user
 
 from manager_rest import celery_client
-from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest.constants import CURRENT_TENANT_CONFIG, MGMTWORKER_QUEUE
 
 
 def execute_workflow(name,
@@ -31,7 +31,6 @@ def execute_workflow(name,
                      bypass_maintenance=None):
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
-    task_queue = 'cloudify.management'
 
     plugin_name = workflow['plugin']
     plugin = [p for p in workflow_plugins if p['name'] == plugin_name][0]
@@ -40,7 +39,6 @@ def execute_workflow(name,
         'type': 'workflow',
         'task_name': task_name,
         'task_id': execution_id,
-        'task_target': task_queue,
         'workflow_id': name,
         'blueprint_id': blueprint_id,
         'deployment_id': deployment_id,
@@ -52,8 +50,7 @@ def execute_workflow(name,
             'package_version': plugin.get('package_version')
         }
     }
-    return _execute_task(task_queue=task_queue,
-                         execution_id=execution_id,
+    return _execute_task(execution_id=execution_id,
                          execution_parameters=execution_parameters,
                          context=context)
 
@@ -66,14 +63,10 @@ def execute_system_workflow(wf_id,
                             bypass_maintenance=None,
                             update_execution_status=True):
     execution_parameters = execution_parameters or {}
-    # task_id is not generated here since for system workflows,
-    # the task id is equivalent to the execution id
-    task_queue = 'cloudify.management'
     context = {
         'type': 'workflow',
         'task_id': task_id,
         'task_name': task_mapping,
-        'task_target': task_queue,
         'execution_id': task_id,
         'workflow_id': wf_id,
         'bypass_maintenance': bypass_maintenance,
@@ -84,19 +77,19 @@ def execute_system_workflow(wf_id,
         context['blueprint_id'] = deployment.blueprint_id
         context['deployment_id'] = deployment.id
 
-    return _execute_task(task_queue=task_queue,
-                         execution_id=context['task_id'],
+    return _execute_task(execution_id=context['task_id'],
                          execution_parameters=execution_parameters,
                          context=context)
 
 
-def _execute_task(task_queue, execution_id, execution_parameters, context):
+def _execute_task(execution_id, execution_parameters, context):
     context['rest_token'] = current_user.get_auth_token()
     context['tenant_name'] = current_app.config[CURRENT_TENANT_CONFIG].name
+    context['task_target'] = MGMTWORKER_QUEUE
     execution_parameters['__cloudify_context'] = context
     celery = celery_client.get_client()
     try:
-        return celery.execute_task(task_queue=task_queue,
+        return celery.execute_task(task_queue=MGMTWORKER_QUEUE,
                                    task_id=execution_id,
                                    kwargs=execution_parameters)
     finally:

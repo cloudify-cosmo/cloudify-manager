@@ -22,11 +22,13 @@ from cloudify.utils import setup_logger
 
 import manager_rest
 from manager_rest.storage import db, models
+from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
-from manager_rest.constants import PROVIDER_CONTEXT_ID, CURRENT_TENANT_CONFIG
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
-
+from manager_rest.constants import (PROVIDER_CONTEXT_ID,
+                                    CURRENT_TENANT_CONFIG,
+                                    DEFAULT_TENANT_NAME)
 from integration_tests.framework import utils
 from integration_tests.framework.postgresql import safe_drop_all
 from integration_tests.framework.docl import read_file as read_manager_file
@@ -35,6 +37,7 @@ from integration_tests.tests.constants import PROVIDER_NAME, PROVIDER_CONTEXT
 logger = setup_logger('Flask Utils', logging.INFO)
 
 security_config = None
+amqp_manager = None
 
 # This is a hacky way to get to the migrations folder
 base_dir = path(manager_rest.__file__).parent.parent.parent
@@ -57,9 +60,26 @@ def setup_flask_app():
     )
 
 
+def setup_amqp_manager():
+    global amqp_manager
+    if not amqp_manager:
+        conf_file_str = read_manager_file('/opt/manager/cloudify-rest.conf')
+        config = yaml.load(conf_file_str)
+        amqp_manager = AMQPManager(
+            host=config['amqp_host'],
+            username=config['amqp_username'],
+            password=config['amqp_password']
+        )
+    return amqp_manager
+
+
 def reset_storage():
     logger.info('Resetting PostgreSQL DB')
     app = setup_flask_app()
+    setup_amqp_manager()
+
+    # Clear the old RabbitMQ resources
+    amqp_manager.remove_tenant_vhost_and_user(DEFAULT_TENANT_NAME)
 
     # Rebuild the DB
     safe_drop_all(keep_tables=['roles'])
@@ -105,5 +125,7 @@ def _add_defaults(app):
     default_tenant = create_default_user_tenant_and_roles(
         admin_username=utils.get_manager_username(),
         admin_password=utils.get_manager_password(),
+        amqp_manager=amqp_manager
     )
     app.config[CURRENT_TENANT_CONFIG] = default_tenant
+    return default_tenant
