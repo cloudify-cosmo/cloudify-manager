@@ -17,8 +17,8 @@ import os
 from mock import patch
 from nose.plugins.attrib import attr
 
-from manager_rest import manager_exceptions
 from manager_rest.test import base_test
+from manager_rest import manager_exceptions
 from manager_rest.test.base_test import BaseServerTestCase
 
 from cloudify_rest_client import exceptions
@@ -31,9 +31,9 @@ OLD_TEST_PACKAGE_VERSION = '1.1'
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class PluginsTest(BaseServerTestCase):
+    """Test plugins upload and download.
     """
-    Test plugins upload and download.
-    """
+
     def test_get_plugin_by_id(self):
         put_plugin_response = self.upload_plugin(TEST_PACKAGE_NAME,
                                                  TEST_PACKAGE_VERSION).json
@@ -129,7 +129,7 @@ class PluginsTest(BaseServerTestCase):
         plugin_id = self.client.plugins.list()[0].id
         self.client.plugins.delete(plugin_id=plugin_id)
         executions = self.client.executions.list(
-                include_system_workflows=True).items
+            include_system_workflows=True).items
         self.assertEqual(2, len(executions))
         if executions[0] != execution:
             execution = executions[0]
@@ -214,7 +214,7 @@ class PluginsTest(BaseServerTestCase):
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_progress(self):
-        tmp_file_path = self.create_wheel('wagon', '0.3.2')
+        tmp_file_path = self.create_wheel('wagon', '0.6.0')
         total_size = os.path.getsize(tmp_file_path)
 
         progress_func = generate_progress_func(
@@ -231,7 +231,7 @@ class PluginsTest(BaseServerTestCase):
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_download_progress(self):
-        tmp_file_path = self.create_wheel('wagon', '0.3.2')
+        tmp_file_path = self.create_wheel('wagon', '0.6.0')
         tmp_local_path = '/tmp/plugin.whl'
 
         try:

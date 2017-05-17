@@ -13,23 +13,23 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import unittest
+import os
 import json
+import time
+import uuid
+import shutil
 import urllib
 import urllib2
 import tempfile
-import time
-import uuid
-import os
-import shutil
+import unittest
 
-from flask.testing import FlaskClient
-from nose.plugins.attrib import attr
-from wagon.wagon import Wagon
+import wagon
 from mock import MagicMock
+from nose.plugins.attrib import attr
+from flask.testing import FlaskClient
 
-from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
+from manager_rest import utils, config, constants, archiving
 from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
 from manager_rest.storage.storage_utils import \
@@ -52,6 +52,7 @@ class TestClient(FlaskClient):
     """A helper class that overrides flask's default testing.FlaskClient
     class for the purpose of adding authorization headers to all rest calls
     """
+
     def open(self, *args, **kwargs):
         kwargs = kwargs or {}
         admin = get_admin_user()
@@ -147,7 +148,6 @@ class BaseServerTestCase(unittest.TestCase):
         right after the import the log path is set normally like the rest
         of the variables (used in the reset_state)
         """
-
         with open(self.tmp_conf_file, 'w') as f:
             json.dump({'rest_service_log_path': self.rest_service_log,
                        'rest_service_log_file_size_MB': 1,
@@ -421,9 +421,11 @@ class BaseServerTestCase(unittest.TestCase):
 
     def create_wheel(self, package_name, package_version):
         module_src = '{0}=={1}'.format(package_name, package_version)
-        wagon_client = Wagon(module_src)
-        return wagon_client.create(
-            archive_destination_dir=tempfile.gettempdir(), force=True)
+        return wagon.create(
+            source=module_src,
+            archive_destination_dir=tempfile.gettempdir(),
+            force=True,
+            archive_format='tar.gz')
 
     def wait_for_url(self, url, timeout=5):
         end = time.time() + timeout
