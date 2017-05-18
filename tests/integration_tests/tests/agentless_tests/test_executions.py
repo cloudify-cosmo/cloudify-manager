@@ -122,7 +122,8 @@ class ExecutionsTest(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
-        self.client.deployments.create(blueprint_id, deployment_id)
+        self.client.deployments.create(blueprint_id, deployment_id,
+                                       skip_plugins_validation=True)
         do_retries(verify_deployment_environment_creation_complete, 60,
                    deployment_id=deployment_id)
         execution_parameters = {
@@ -194,7 +195,8 @@ class ExecutionsTest(AgentlessTestCase):
         blueprint_id = 'blueprint_{0}'.format(_id)
         deployment_id = 'deployment_{0}'.format(_id)
         self.client.blueprints.upload(dsl_path, blueprint_id)
-        self.client.deployments.create(blueprint_id, deployment_id)
+        self.client.deployments.create(blueprint_id, deployment_id,
+                                       skip_plugins_validation=True)
         do_retries(verify_deployment_environment_creation_complete, 30,
                    deployment_id=deployment_id)
         execution = self.client.executions.start(

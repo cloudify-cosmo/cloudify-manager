@@ -31,8 +31,8 @@ class TestStorage(AgentlessTestCase):
         self.assertTrue(
             len(inputs['install_agent']['description']) > 0)
         deployment_id = str(uuid.uuid4())
-        deployment = self.client.deployments.create(blueprint.id,
-                                                    deployment_id)
+        deployment = self.client.deployments.create(
+            blueprint.id, deployment_id, skip_plugins_validation=True)
         self.assertEqual(1, len(deployment.inputs))
         self.assertTrue('install_agent' in deployment.inputs)
         self.assertFalse(deployment.inputs['install_agent'])
@@ -47,4 +47,5 @@ class TestStorage(AgentlessTestCase):
             resource("dsl/two_nodes_different_inputs.yaml"),
             blueprint_id)
         deployment_id = str(uuid.uuid4())
-        self.client.deployments.create(blueprint.id, deployment_id)
+        self.client.deployments.create(
+            blueprint.id, deployment_id, skip_plugins_validation=True)
