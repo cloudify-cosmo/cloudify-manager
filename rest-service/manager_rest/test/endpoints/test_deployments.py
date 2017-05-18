@@ -472,7 +472,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
     @attr(client_min_version=3.1,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_creation_success_when_source_plugin_exists_on_manager(self):
-        self.upload_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
+        self.upload_cdplugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION).json
         id_ = str(uuid.uuid4())
         self.put_deployment(
             blueprint_file_name='deployment_with_'
