@@ -1,0 +1,20 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+description: this is my blueprint's description
+
+imports:
+  - cloudify/types/types.yaml
+
+plugins:
+  plugin:
+    executor: central_deployment_agent
+    package_name: cloudify-script-plugin
+    package_version: '1.2'
+    source: https://github.com/cloudify-cosmo/cloudify-openstack-plugin/archive/master.tar.gz
+
+node_templates:
+  vm:
+    type: cloudify.nodes.Compute
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start: plugin.package.module.func
