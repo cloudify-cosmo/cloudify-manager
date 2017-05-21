@@ -8,9 +8,15 @@ node_templates:
         type: cloudify.nodes.Compute
         interfaces:
             test:
-                op1: scripts/operations/op1.py
-                op2: scripts/operations/op2.sh
-                op3: scripts/operations/op3.py
+                op1:
+                  implementation: scripts/operations/op1.py
+                  executor: central_deployment_agent
+                op2:
+                  implementation: scripts/operations/op2.sh
+                  executor: central_deployment_agent
+                op3:
+                  implementation: scripts/operations/op3.py
+                  executor: central_deployment_agent
 
 workflows:
     workflow: scripts/workflows/workflow.py

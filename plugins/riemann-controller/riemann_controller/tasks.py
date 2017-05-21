@@ -87,8 +87,9 @@ def _publish_configuration_event(state, deployment_config_dir_path):
 
     broker_ip = broker_config.broker_hostname
 
-    ssl_options = utils.internal.get_broker_ssl_and_port(
-        cert_path=broker_config.broker_cert_path,
+    ssl_options = utils.internal.get_broker_ssl_options(
+        ssl_enabled=broker_config.broker_ssl_enabled,
+        cert_path=broker_config.broker_cert_path
     )
 
     credentials = pika.credentials.PlainCredentials(
