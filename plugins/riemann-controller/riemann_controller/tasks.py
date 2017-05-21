@@ -29,6 +29,7 @@ from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError, HttpException
 from cloudify.manager import get_resource_from_manager
 from cloudify import broker_config, utils
+from cloudify.constants import BROKER_PORT_SSL
 
 from riemann_controller import config
 
@@ -86,8 +87,7 @@ def _publish_configuration_event(state, deployment_config_dir_path):
 
     broker_ip = broker_config.broker_hostname
 
-    broker_port, ssl_options = utils.internal.get_broker_ssl_and_port(
-        ssl_enabled=broker_config.broker_ssl_enabled,
+    ssl_options = utils.internal.get_broker_ssl_and_port(
         cert_path=broker_config.broker_cert_path,
     )
 
@@ -98,9 +98,9 @@ def _publish_configuration_event(state, deployment_config_dir_path):
 
     connection = pika.BlockingConnection(
         pika.ConnectionParameters(host=broker_ip,
-                                  port=broker_port,
+                                  port=BROKER_PORT_SSL,
                                   credentials=credentials,
-                                  ssl=broker_config.broker_ssl_enabled,
+                                  ssl=True,
                                   ssl_options=ssl_options)
     )
 

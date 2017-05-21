@@ -55,7 +55,6 @@ class SecuredBrokerManagerTests(ManagerTestCase):
     def _test_verify_cert(self):
         conn = self._can_get_broker_connection(
             port=5671,
-            ssl_enabled=True,
             cert_path=self.cert_path,
         )
         # If we got a connection we can close it
@@ -65,7 +64,6 @@ class SecuredBrokerManagerTests(ManagerTestCase):
         try:
             self._can_get_broker_connection(
                 port=5671,
-                ssl_enabled=True,
                 cert_path='',
             )
             self.fail('SSL connection should fail without cert')
@@ -76,7 +74,6 @@ class SecuredBrokerManagerTests(ManagerTestCase):
         try:
             self._can_get_broker_connection(
                 port=5671,
-                ssl_enabled=True,
                 cert_path=self.wrong_cert_path,
             )
             self.fail('SSL connection should fail with wrong cert')
@@ -128,7 +125,6 @@ class SecuredBrokerManagerTests(ManagerTestCase):
         # and start a new one with mounted user code, so it is possible the
         # container will get a different ip address, which is bad.
         self.bootstrap_prepared_container(inputs={
-            'rabbitmq_ssl_enabled': True,
             'rabbitmq_cert_public': public_cert,
             'rabbitmq_cert_private': private_key,
             'rabbitmq_username': self.rabbitmq_username,

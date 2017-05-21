@@ -33,7 +33,6 @@ class CeleryClient(object):
 
     def __init__(self):
         ssl_settings = self._get_broker_ssl_settings(
-            ssl_enabled=config.instance.amqp_ssl_enabled,
             cert_path=config.instance.amqp_ca_path,
         )
 
@@ -48,8 +47,7 @@ class CeleryClient(object):
         self.celery.conf.update(
             CELERY_TASK_SERIALIZER="json",
             CELERY_TASK_RESULT_EXPIRES=600)
-        if config.instance.amqp_ssl_enabled:
-            self.celery.conf.update(BROKER_USE_SSL=ssl_settings)
+        self.celery.conf.update(BROKER_USE_SSL=ssl_settings)
 
     def close(self):
         if self.celery:
@@ -91,26 +89,20 @@ class CeleryClient(object):
         return async_result.result
 
     @staticmethod
-    def _get_broker_ssl_settings(ssl_enabled, cert_path):
+    def _get_broker_ssl_settings(cert_path):
         # Input vars may be None if not set. Explicitly defining defaults.
-        ssl_enabled = ssl_enabled or False
         cert_path = cert_path or ''
 
-        if ssl_enabled:
-            if not cert_path:
-                raise ValueError(
-                    "Broker SSL enabled but no SSL cert was provided. "
-                    "If rabbitmq_ssl_enabled is True in the inputs, "
-                    "rabbitmq_cert_public (and private) must be populated."
-                )
-            ssl_options = {
-                'ca_certs': cert_path,
-                'cert_reqs': ssl.CERT_REQUIRED,
-            }
-        else:
-            ssl_options = {}
+        if not cert_path:
+            raise ValueError(
+                "Broker SSL enabled but no SSL cert was provided. "
+                "rabbitmq_cert_public (and private) must be populated."
+            )
 
-        return ssl_options
+        return {
+            'ca_certs': cert_path,
+            'cert_reqs': ssl.CERT_REQUIRED,
+        }
 
 
 def get_client():

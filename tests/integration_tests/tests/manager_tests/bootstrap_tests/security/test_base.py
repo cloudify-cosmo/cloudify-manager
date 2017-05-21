@@ -73,7 +73,7 @@ class TestSecuredRestBase(ManagerTestCase):
         return overrides
 
     def is_ssl_enabled(self):
-        return False
+        return True
 
     def get_rest_plugins(self):
         return None

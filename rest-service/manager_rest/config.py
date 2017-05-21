@@ -30,7 +30,6 @@ class Config(object):
         self.amqp_host = 'localhost'
         self.amqp_username = 'guest'
         self.amqp_password = 'guest'
-        self.amqp_ssl_enabled = False
         self.amqp_ca_path = ''
         self.ldap_server = None
         self.ldap_username = None

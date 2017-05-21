@@ -75,8 +75,7 @@ class CertsLocationTestBase(TestSSLRestBase):
             cert_content = f.read()
         with open(key_path) as f:
             key_content = f.read()
-        inputs.update({'rabbitmq_ssl_enabled': True,
-                       'rabbitmq_cert_public': cert_content,
+        inputs.update({'rabbitmq_cert_public': cert_content,
                        'rabbitmq_cert_private': key_content})
         return inputs
 
