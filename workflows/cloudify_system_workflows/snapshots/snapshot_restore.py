@@ -37,6 +37,7 @@ from cloudify_system_workflows.deployment_environment import \
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from . import utils
+from .npm import Npm
 from .agents import Agents
 from .influxdb import InfluxDB
 from .postgres import Postgres
@@ -46,6 +47,7 @@ from .constants import (
     ARCHIVE_CERT_DIR,
     METADATA_FILENAME,
     M_SCHEMA_REVISION,
+    M_STAGE_SCHEMA_REVISION,
     M_VERSION,
 )
 
@@ -68,6 +70,7 @@ class SnapshotRestore(object):
                  user_is_bootstrap_admin,
                  restore_certificates,
                  no_reboot):
+        self._npm = Npm()
         self._config = utils.DictToAttributes(config)
         self._snapshot_id = snapshot_id
         self._recreate_deployments_envs = recreate_deployments_envs
@@ -96,13 +99,17 @@ class SnapshotRestore(object):
                 M_SCHEMA_REVISION,
                 self.SCHEMA_REVISION_4_0,
             )
+            stage_revision = metadata.get(
+                M_STAGE_SCHEMA_REVISION,
+                None,
+            )
             self._validate_snapshot()
 
             existing_plugins = self._get_existing_plugin_names()
             existing_dep_envs = self._get_existing_dep_envs()
 
             with Postgres(self._config) as postgres:
-                self._restore_db(postgres, schema_revision)
+                self._restore_db(postgres, schema_revision, stage_revision)
                 self._restore_files_to_manager()
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
@@ -154,7 +161,7 @@ class SnapshotRestore(object):
         )
         ctx.logger.info('Successfully restored archive files')
 
-    def _restore_db(self, postgres, schema_revision):
+    def _restore_db(self, postgres, schema_revision, stage_revision):
         """Restore database from snapshot.
 
         :param postgres: Database wrapper for snapshots
@@ -168,9 +175,7 @@ class SnapshotRestore(object):
         if self._snapshot_version >= V_4_0_0:
             with utils.db_schema(schema_revision, config=self._config):
                 postgres.restore(self._tempdir)
-
-            if self._snapshot_version > V_4_0_0 and self._premium_enabled:
-                postgres.restore_stage(self._tempdir)
+            self._restore_stage(postgres, self._tempdir, stage_revision)
         else:
             if self._should_clean_old_db_for_3_x_snapshot():
                 postgres.clean_db()
@@ -184,6 +189,16 @@ class SnapshotRestore(object):
                 tenant_name
             )
         ctx.logger.info('Successfully restored database')
+
+    def _restore_stage(self, postgres, tempdir, migration_version):
+        if not (self._snapshot_version > V_4_0_0 and self._premium_enabled):
+            return
+        ctx.logger.info('Restoring stage DB')
+        self._npm.clear_db()
+        self._npm.downgrade_stage_db(migration_version)
+        postgres.restore_stage(tempdir)
+        self._npm.upgrade_stage_db()
+        ctx.logger.debug('Stage DB restored')
 
     def _should_clean_old_db_for_3_x_snapshot(self):
         """The one case in which the DB should be cleared is when restoring
