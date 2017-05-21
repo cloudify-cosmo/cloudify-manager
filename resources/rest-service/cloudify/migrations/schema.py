@@ -67,7 +67,8 @@ def parse_arguments(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--postgresql-host',
                         dest='postgresql_host',
-                        help='Address the database is listening on')
+                        help='Address the database is listening on',
+                        default='localhost')
     subparsers = parser.add_subparsers(help='Migration subcommands')
 
     downgrade_parser = subparsers.add_parser(
