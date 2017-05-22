@@ -312,6 +312,7 @@ class Events(SecuredResource):
             db.session.query(
                 select_column('id'),
                 select_column('timestamp'),
+                select_column('reported_timestamp'),
                 Blueprint.id.label('blueprint_id'),
                 Deployment.id.label('deployment_id'),
                 Execution.id.label('execution_id'),
