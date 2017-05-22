@@ -12,36 +12,17 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-#
 
-from .blueprints import (           # noqa
-    Blueprints,
-    BlueprintsId,
-)
+from .. import resources_v1
 
-from .deployments import (          # noqa
-    Deployments,
-    DeploymentModifications,
-)
 
-from .executions import Executions  # noqa
+class DeploymentsId(resources_v1.DeploymentsId):
 
-from .events import Events          # noqa
+    def create_request_schema(self):
+        request_schema = super(DeploymentsId, self).create_request_schema()
+        request_schema['skip_plugins_validation'] = {
+            'optional': True, 'type': bool}
+        return request_schema
 
-from .nodes import (                # noqa
-    Nodes,
-    NodeInstances,
-)
-
-from .plugins import (              # noqa
-    Plugins,
-    PluginsArchive,
-    PluginsId,
-)
-
-from .snapshots import (            # noqa
-    Snapshots,
-    SnapshotsId,
-    SnapshotsIdArchive,
-    SnapshotsIdRestore,
-)
+    def get_skip_plugin_validation_flag(self, request_dict):
+        return request_dict.get('skip_plugins_validation', False)

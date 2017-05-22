@@ -12,17 +12,5 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-#
-from . import resources_v1
 
-
-class DeploymentsId(resources_v1.DeploymentsId):
-
-    def create_request_schema(self):
-        request_schema = super(DeploymentsId, self).create_request_schema()
-        request_schema['skip_plugins_validation'] = {
-            'optional': True, 'type': bool}
-        return request_schema
-
-    def get_skip_plugin_validation_flag(self, request_dict):
-        return request_dict.get('skip_plugins_validation', False)
+from .deployments import DeploymentsId      # noqa

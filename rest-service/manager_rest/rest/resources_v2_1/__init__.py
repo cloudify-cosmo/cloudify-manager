@@ -14,34 +14,9 @@
 #  * limitations under the License.
 #
 
-from .blueprints import (           # noqa
-    Blueprints,
-    BlueprintsId,
-)
-
-from .deployments import (          # noqa
-    Deployments,
-    DeploymentModifications,
-)
-
-from .executions import Executions  # noqa
-
-from .events import Events          # noqa
-
-from .nodes import (                # noqa
-    Nodes,
-    NodeInstances,
-)
-
-from .plugins import (              # noqa
-    Plugins,
-    PluginsArchive,
-    PluginsId,
-)
-
-from .snapshots import (            # noqa
-    Snapshots,
-    SnapshotsId,
-    SnapshotsIdArchive,
-    SnapshotsIdRestore,
-)
+from .plugins import PluginsId                      # noqa
+from .maintenance import (MaintenanceMode,          # noqa
+                          MaintenanceModeAction)
+from .deployment_update import (DeploymentUpdate,   # noqa
+                                DeploymentUpdateId,
+                                DeploymentUpdates)
