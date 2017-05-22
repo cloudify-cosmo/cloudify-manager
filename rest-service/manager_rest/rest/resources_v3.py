@@ -668,7 +668,6 @@ class Events(v2_Events):
             attr: getattr(sql_event, attr)
             for attr in sql_event.keys()
         }
-        event['reported_timestamp'] = event['timestamp']
 
         for unused_field in Events.UNUSED_FIELDS:
             if unused_field in event:
