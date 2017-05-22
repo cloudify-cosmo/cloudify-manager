@@ -457,6 +457,7 @@ class Events(SecuredResource):
             for attr in sql_event.keys()
         }
         event['@timestamp'] = event['timestamp']
+        del event['reported_timestamp']
 
         event['message'] = {
             'text': event['message']
