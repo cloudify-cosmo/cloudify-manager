@@ -30,6 +30,7 @@ class MapEventToDictTestV3(TestCase):
         """Map event as returned by SQL query to elasticsearch style output."""
         sql_event = EventResult(
             timestamp='2016-12-09T00:00Z',
+            reported_timestamp='2017-05-22T00:00Z',
             deployment_id='<deployment_id>',
             execution_id='<execution_id>',
             workflow_id='<workflow_id>',
@@ -53,7 +54,7 @@ class MapEventToDictTestV3(TestCase):
             'node_name': '<node_name>',
             'event_type': '<event_type>',
             'timestamp': '2016-12-09T00:00Z',
-            'reported_timestamp': '2016-12-09T00:00Z',
+            'reported_timestamp': '2017-05-22T00:00Z',
             'message': '<message>',
             'type': 'cloudify_event',
         }
@@ -65,6 +66,7 @@ class MapEventToDictTestV3(TestCase):
         """Map log as returned by SQL query to elasticsearch style output."""
         sql_log = EventResult(
             timestamp='2016-12-09T00:00Z',
+            reported_timestamp='2017-05-22T00:00Z',
             deployment_id='<deployment_id>',
             execution_id='<execution_id>',
             workflow_id='<workflow_id>',
@@ -88,7 +90,7 @@ class MapEventToDictTestV3(TestCase):
             'node_name': '<node_name>',
             'level': '<level>',
             'timestamp': '2016-12-09T00:00Z',
-            'reported_timestamp': '2016-12-09T00:00Z',
+            'reported_timestamp': '2017-05-22T00:00Z',
             'message': '<message>',
             'type': 'cloudify_log',
             'logger': '<logger>',

@@ -41,6 +41,7 @@ EventResultTuple = namedtuple(
     'EventResult',
     [
         'timestamp',
+        'reported_timestamp',
         'deployment_id',
         'execution_id',
         'workflow_id',
@@ -936,7 +937,8 @@ class MapEventToDictTestV1(TestCase):
     def test_map_event(self):
         """Map event as returned by SQL query to elasticsearch style output."""
         sql_event = EventResult(
-            timestamp='2016-12-09T00:00Z',
+            timestamp='2017-05-22T00:00Z',
+            reported_timestamp='2016-12-09T00:00Z',
             deployment_id='<deployment_id>',
             execution_id='<execution_id>',
             workflow_id='<workflow_id>',
@@ -961,8 +963,8 @@ class MapEventToDictTestV1(TestCase):
                 'node_name': '<node_name>',
             },
             'event_type': '<event_type>',
-            'timestamp': '2016-12-09T00:00Z',
-            '@timestamp': '2016-12-09T00:00Z',
+            'timestamp': '2017-05-22T00:00Z',
+            '@timestamp': '2017-05-22T00:00Z',
             'message': {
                 'arguments': None,
                 'text': '<message>',
@@ -977,7 +979,8 @@ class MapEventToDictTestV1(TestCase):
     def test_map_log(self):
         """Map log as returned by SQL query to elasticsearch style output."""
         sql_log = EventResult(
-            timestamp='2016-12-09T00:00Z',
+            timestamp='2017-05-22T00:00Z',
+            reported_timestamp='2016-12-09T00:00Z',
             deployment_id='<deployment_id>',
             execution_id='<execution_id>',
             workflow_id='<workflow_id>',
@@ -1002,8 +1005,8 @@ class MapEventToDictTestV1(TestCase):
                 'node_name': '<node_name>',
             },
             'level': '<level>',
-            'timestamp': '2016-12-09T00:00Z',
-            '@timestamp': '2016-12-09T00:00Z',
+            'timestamp': '2017-05-22T00:00Z',
+            '@timestamp': '2017-05-22T00:00Z',
             'message': {'text': '<message>'},
             'message_code': None,
             'type': 'cloudify_log',
