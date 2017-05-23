@@ -23,7 +23,7 @@ import zipfile
 
 from cloudify import constants, manager
 from cloudify.workflows import ctx
-from .constants import ARCHIVE_CERT_DIR
+from . import constants as snapshot_constants
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 # Path to python binary in the manager environment
@@ -86,7 +86,8 @@ def copy_files_between_manager_and_snapshot(archive_root,
 
     local_cert_dir = os.path.dirname(get_local_rest_certificate())
     if to_archive:
-        data_to_copy.append((local_cert_dir, ARCHIVE_CERT_DIR))
+        data_to_copy.append((local_cert_dir,
+                             snapshot_constants.ARCHIVE_CERT_DIR))
 
     for (p1, p2) in data_to_copy:
         # first expand relative paths
