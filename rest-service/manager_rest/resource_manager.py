@@ -717,7 +717,7 @@ class ResourceManager(object):
         """
         # if the plugin is 'diamond' we don't want it to be installed
         # (since it's already installed as part of agent package)
-        if plugin['package_name'] == 'diamond':
+        if plugin['package_name'] == 'cloudify-diamond-plugin':
             plugin['install'] = False
 
         if not plugin['install']:
