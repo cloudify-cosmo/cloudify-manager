@@ -547,3 +547,33 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                  '_source_plugin_host_agent.yaml',
              blueprint_id=id_,
              deployment_id=id_)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_when_diamond_plugin_in_blueprint(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+             blueprint_file_name='deployment_with_'
+                                 'diamond_as_source_plugin.yaml',
+             blueprint_id=id_,
+             deployment_id=id_)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_when_diamond_as_host_agent_in_blueprint(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+             blueprint_file_name='deployment_with_'
+                                 'diamond_as_host_agent.yaml',
+             blueprint_id=id_,
+             deployment_id=id_)
+
+    @attr(client_min_version=3.1,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_creation_success_when_install_plugin_is_False(self):
+        id_ = str(uuid.uuid4())
+        self.put_deployment(
+             blueprint_file_name='deployment_with_'
+                                 'install_plugin_False.yaml',
+             blueprint_id=id_,
+             deployment_id=id_)
