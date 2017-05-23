@@ -103,6 +103,39 @@ def copy_files_between_manager_and_snapshot(archive_root,
         copy_snapshot_path(p1, p2)
 
 
+def copy_stage_files(archive_root):
+    """Copy Cloudify Stage files into the snapshot"""
+    stage_data = [
+        snapshot_constants.STAGE_CONFIG_FOLDER,
+        snapshot_constants.STAGE_WIDGETS_FOLDER,
+        snapshot_constants.STAGE_TEMPLATES_FOLDER
+    ]
+    for folder in stage_data:
+        copy_snapshot_path(
+            os.path.join(snapshot_constants.STAGE_BASE_FOLDER, folder),
+            os.path.join(archive_root, 'stage', folder))
+
+
+def restore_stage_files(archive_root):
+    """Copy Cloudify Stage files from the snapshot archive to stage folder.
+
+    Note that only the stage user can write into the stage directory,
+    so we use sudo to run a script (created during bootstrap) that copies
+    the restored files.
+    """
+    # let's not give everyone full read access to the snapshot, instead,
+    # copy only the stage-related parts and give the stage user read access
+    # to those
+    stage_tempdir = '{0}_stage'.format(archive_root)
+    shutil.copytree(os.path.join(archive_root, 'stage'), stage_tempdir)
+    run(['/bin/chmod', 'a+r', '-R', stage_tempdir])
+    try:
+        sudo([snapshot_constants.STAGE_RESTORE_SCRIPT, stage_tempdir],
+             user=snapshot_constants.STAGE_USER)
+    finally:
+        shutil.rmtree(stage_tempdir)
+
+
 def copy_snapshot_path(source, destination):
         # source doesn't need to exist, then ignore
         if not os.path.exists(source):

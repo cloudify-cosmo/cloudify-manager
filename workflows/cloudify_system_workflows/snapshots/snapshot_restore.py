@@ -152,6 +152,7 @@ class SnapshotRestore(object):
             to_archive=False,
             new_tenant=new_tenant
         )
+        utils.restore_stage_files(self._tempdir)
         ctx.logger.info('Successfully restored archive files')
 
     def _restore_db(self, postgres, schema_revision):
