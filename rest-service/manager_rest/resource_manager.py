@@ -715,8 +715,11 @@ class ResourceManager(object):
         if not - raises an appropriate exception.
         :param plugin: A plugin from the blueprint
         """
+        # if the plugin is 'diamond' we don't want it to be installed
+        # (since it's already installed as part of agent package)
+        if plugin['package_name'] == 'diamond':
+            plugin['install'] = False
 
-        # if plugin['install']==False we don't need to install this plugin
         if not plugin['install']:
             return
         query_parameters = {
@@ -740,7 +743,7 @@ class ResourceManager(object):
             raise manager_exceptions.\
                 DeploymentPluginNotFound(
                     'Required plugin {}, version {} is not installed '
-                    'on the manager'.format(plugin['name'],
+                    'on the manager'.format(plugin['package_name'],
                                             plugin['package_version']))
 
     def start_deployment_modification(self,
