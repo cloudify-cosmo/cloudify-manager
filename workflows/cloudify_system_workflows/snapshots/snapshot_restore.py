@@ -240,8 +240,9 @@ class SnapshotRestore(object):
 
     def _get_existing_plugin_names(self):
         ctx.logger.debug('Collecting existing plugins')
-        existing_plugins = self._client.plugins.list()
-        return set(p.archive_name for p in existing_plugins)
+        existing_plugins = self._client.plugins.list(_all_tenants=True)
+        return set((p.archive_name, p['tenant_name'])
+                   for p in existing_plugins)
 
     def _get_existing_dep_envs(self):
         return [dep.id for dep in self._client.deployments.list()]
@@ -254,11 +255,14 @@ class SnapshotRestore(object):
         :param existing_plugins: Names of already installed plugins
         """
         def should_install(plugin):
-            return plugin.archive_name not in existing_plugins \
+            return (plugin.archive_name, plugin['tenant_name']) \
+                   not in existing_plugins \
                    and self._plugin_installable_on_current_platform(plugin)
 
         ctx.logger.debug('Looking for plugins to install')
-        all_plugins = self._client.plugins.list()
+        all_plugins = self._client.plugins.list(_all_tenants=True)
+        ctx.logger.debug('Found {0} plugins in total'
+                         .format(len(all_plugins)))
         plugins_to_install = [p for p in all_plugins if should_install(p)]
         ctx.logger.debug('Found {0} plugins to install'
                          .format(len(plugins_to_install)))
@@ -272,11 +276,13 @@ class SnapshotRestore(object):
         ctx.logger.info('Restoring plugins')
         plugins_to_install = self._get_plugins_to_install(existing_plugins)
         for plugin in plugins_to_install:
-            plugins.install(ctx=ctx, plugin={
-                'name': plugin['package_name'],
-                'package_name': plugin['package_name'],
-                'package_version': plugin['package_version']
-            })
+            self._tenant_name = plugin['tenant_name']
+            with self._update_tenant_in_ctx():
+                plugins.install(ctx=ctx, plugin={
+                    'name': plugin['package_name'],
+                    'package_name': plugin['package_name'],
+                    'package_version': plugin['package_version']
+                })
         ctx.logger.info('Successfully restored plugins')
 
     @staticmethod
