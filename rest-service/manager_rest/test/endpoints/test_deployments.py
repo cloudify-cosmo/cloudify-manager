@@ -577,5 +577,3 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                                  'install_plugin_False.yaml',
              blueprint_id=id_,
              deployment_id=id_)
-
-
