@@ -130,10 +130,13 @@ def copy(source, destination):
     sudo(['cp', '-rp', source, destination])
 
 
-def sudo(command, ignore_failures=False):
+def sudo(command, user=None, ignore_failures=False):
     if isinstance(command, str):
         command = shlex.split(command)
-    command.insert(0, 'sudo')
+    if user is not None:
+        command = ['sudo', '-u', user] + command
+    else:
+        command.insert(0, 'sudo')
     return run(command=command, ignore_failures=ignore_failures)
 
 
