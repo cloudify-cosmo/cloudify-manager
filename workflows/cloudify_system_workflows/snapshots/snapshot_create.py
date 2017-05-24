@@ -88,6 +88,7 @@ class SnapshotCreate(object):
             self._config,
             to_archive=True
         )
+        utils.copy_stage_files(self._tempdir)
 
     def _dump_postgres(self):
         ctx.logger.info('Dumping Postgres data')

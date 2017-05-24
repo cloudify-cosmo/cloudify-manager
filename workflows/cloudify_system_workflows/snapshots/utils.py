@@ -23,7 +23,7 @@ import zipfile
 
 from cloudify import constants, manager
 from cloudify.workflows import ctx
-from .constants import ARCHIVE_CERT_DIR
+from . import constants as snapshot_constants
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 # Path to python binary in the manager environment
@@ -86,7 +86,8 @@ def copy_files_between_manager_and_snapshot(archive_root,
 
     local_cert_dir = os.path.dirname(get_local_rest_certificate())
     if to_archive:
-        data_to_copy.append((local_cert_dir, ARCHIVE_CERT_DIR))
+        data_to_copy.append((local_cert_dir,
+                             snapshot_constants.ARCHIVE_CERT_DIR))
 
     for (p1, p2) in data_to_copy:
         # first expand relative paths
@@ -100,6 +101,39 @@ def copy_files_between_manager_and_snapshot(archive_root,
             p1, p2 = p2, p1
 
         copy_snapshot_path(p1, p2)
+
+
+def copy_stage_files(archive_root):
+    """Copy Cloudify Stage files into the snapshot"""
+    stage_data = [
+        snapshot_constants.STAGE_CONFIG_FOLDER,
+        snapshot_constants.STAGE_WIDGETS_FOLDER,
+        snapshot_constants.STAGE_TEMPLATES_FOLDER
+    ]
+    for folder in stage_data:
+        copy_snapshot_path(
+            os.path.join(snapshot_constants.STAGE_BASE_FOLDER, folder),
+            os.path.join(archive_root, 'stage', folder))
+
+
+def restore_stage_files(archive_root):
+    """Copy Cloudify Stage files from the snapshot archive to stage folder.
+
+    Note that only the stage user can write into the stage directory,
+    so we use sudo to run a script (created during bootstrap) that copies
+    the restored files.
+    """
+    # let's not give everyone full read access to the snapshot, instead,
+    # copy only the stage-related parts and give the stage user read access
+    # to those
+    stage_tempdir = '{0}_stage'.format(archive_root)
+    shutil.copytree(os.path.join(archive_root, 'stage'), stage_tempdir)
+    run(['/bin/chmod', 'a+r', '-R', stage_tempdir])
+    try:
+        sudo([snapshot_constants.STAGE_RESTORE_SCRIPT, stage_tempdir],
+             user=snapshot_constants.STAGE_USER)
+    finally:
+        shutil.rmtree(stage_tempdir)
 
 
 def copy_snapshot_path(source, destination):
@@ -129,10 +163,13 @@ def copy(source, destination):
     sudo(['cp', '-rp', source, destination])
 
 
-def sudo(command, ignore_failures=False):
+def sudo(command, user=None, ignore_failures=False):
     if isinstance(command, str):
         command = shlex.split(command)
-    command.insert(0, 'sudo')
+    if user is not None:
+        command = ['sudo', '-u', user] + command
+    else:
+        command.insert(0, 'sudo')
     return run(command=command, ignore_failures=ignore_failures)
 
 
