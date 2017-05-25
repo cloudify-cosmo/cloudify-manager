@@ -57,6 +57,6 @@ class TestMultiInstanceApplication(AgentlessTestCase):
     def test_deploy_multi_large_scale(self):
         dsl_path = resource('dsl/multi_instance_large_scale.yaml')
         start = time.time()
-        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=900)
+        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=1200)
         self.logger.info('All done! execution took {} seconds'
                          .format(time.time() - start))
