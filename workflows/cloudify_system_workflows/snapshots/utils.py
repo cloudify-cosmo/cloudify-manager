@@ -123,11 +123,16 @@ def restore_stage_files(archive_root):
     so we use sudo to run a script (created during bootstrap) that copies
     the restored files.
     """
+    stage_archive = os.path.join(archive_root, 'stage')
+    if not os.path.exists(stage_archive):
+        # no stage files in the snapshot archive - nothing to do
+        # (perhaps the snapshot was made before stage was included in it?)
+        return
     # let's not give everyone full read access to the snapshot, instead,
     # copy only the stage-related parts and give the stage user read access
     # to those
     stage_tempdir = '{0}_stage'.format(archive_root)
-    shutil.copytree(os.path.join(archive_root, 'stage'), stage_tempdir)
+    shutil.copytree(stage_archive, stage_tempdir)
     run(['/bin/chmod', 'a+r', '-R', stage_tempdir])
     try:
         sudo([snapshot_constants.STAGE_RESTORE_SCRIPT, stage_tempdir],
