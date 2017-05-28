@@ -668,6 +668,7 @@ class ResourceManager(object):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
         try:
+
             deployment_plan = tasks.prepare_deployment_plan(plan, inputs)
         except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(

@@ -230,6 +230,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         # verifying a deletion of a new deployment, i.e. one which hasn't
         # been installed yet, and therefore all its nodes are still in
         # 'uninitialized' state.
+
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
