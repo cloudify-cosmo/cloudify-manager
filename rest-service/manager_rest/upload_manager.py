@@ -382,6 +382,9 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
 
                 for file_name in files:
                     source_file = os.path.join(source_dir, file_name)
+
+                    # Give R/W permissions in order to be able to copy the file~
+                    os.chmod(source_file, 666)
                     relative_dest_path = os.path.relpath(source_file,
                                                          app_root_dir)
                     dest_file = os.path.join(file_server_deployment_root,
