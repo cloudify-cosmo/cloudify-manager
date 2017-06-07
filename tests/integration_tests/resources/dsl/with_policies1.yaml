@@ -11,7 +11,9 @@ node_templates:
         type: cloudify.nodes.Root
         interfaces:
             test:
-                op1: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                op1:
+                  implementation: testmockoperations.testmockoperations.tasks.mock_operation_from_custom_workflow
+                  executor: central_deployment_agent
 
 groups:
     some_group:

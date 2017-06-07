@@ -82,9 +82,16 @@ def execute_system_workflow(wf_id,
                          context=context)
 
 
+def _get_tenant_dict():
+    current_tenant = current_app.config[CURRENT_TENANT_CONFIG]
+    tenant_dict = current_tenant.to_dict()
+    tenant_dict.pop('id')
+    return tenant_dict
+
+
 def _execute_task(execution_id, execution_parameters, context):
     context['rest_token'] = current_user.get_auth_token()
-    context['tenant_name'] = current_app.config[CURRENT_TENANT_CONFIG].name
+    context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
     execution_parameters['__cloudify_context'] = context
     celery = celery_client.get_client()

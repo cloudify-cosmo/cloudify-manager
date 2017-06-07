@@ -18,66 +18,6 @@ from integration_tests.tests.utils import get_resource as resource
 
 
 class TestInstallWorkflowBackwards(AgentlessTestCase):
-
-    def test_deploy_with_agent_worker_3_2(self):
-        dsl_path = resource('dsl/with_agent_worker_3_2.yaml')
-        deployment, _ = self.deploy_application(dsl_path, timeout_seconds=500)
-        deployment_nodes = self.client.node_instances.list(
-            deployment_id=deployment.id
-        )
-
-        webserver_nodes = filter(lambda node: 'host' not in node.node_id,
-                                 deployment_nodes)
-        self.assertEquals(1, len(webserver_nodes))
-        webserver_node = webserver_nodes[0]
-        invocations = self.get_plugin_data(
-            plugin_name='mock_agent_plugin',
-            deployment_id=deployment.id
-        )[webserver_node.id]
-
-        agent_installer_data = self.get_plugin_data(
-            plugin_name='agent_installer',
-            deployment_id=deployment.id
-        )
-
-        self.assertEqual(
-            agent_installer_data[webserver_node.host_id]['states'],
-            ['created', 'configured', 'started'])
-
-        plugin_installer_data = self.get_plugin_data(
-            plugin_name='plugin_installer',
-            deployment_id=deployment.id
-        )
-
-        self.assertEqual(
-            plugin_installer_data[
-                webserver_node.host_id
-            ]['mock_agent_plugin'],
-            ['installed'])
-
-        expected_invocations = ['create', 'start']
-        self.assertListEqual(invocations, expected_invocations)
-
-        self.undeploy_application(deployment_id=deployment.id)
-        invocations = self.get_plugin_data(
-            plugin_name='mock_agent_plugin',
-            deployment_id=deployment.id
-        )[webserver_node.id]
-
-        expected_invocations = ['create', 'start', 'stop', 'delete']
-        self.assertListEqual(invocations, expected_invocations)
-
-        # agent on host should have also
-        # been stopped and uninstalled
-        agent_installer_data = self.get_plugin_data(
-            plugin_name='agent_installer',
-            deployment_id=deployment.id
-        )
-        self.assertEqual(
-            agent_installer_data[webserver_node.host_id]['states'],
-            ['created', 'configured', 'started',
-             'stopped', 'deleted'])
-
     def test_deploy_with_agent_worker_windows_3_2(self):
         dsl_path = resource('dsl/with_agent_worker_windows_3_2.yaml')
         deployment, _ = self.deploy_application(dsl_path, timeout_seconds=500)

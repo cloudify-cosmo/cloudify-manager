@@ -47,5 +47,6 @@ def stop(ctx, **kwargs):
 def delete(ctx, **kwargs):
     with update_storage(ctx) as data:
         data[ctx.instance.id] = data.get(ctx.instance.id, {})
-        data[ctx.instance.id]['stop'] = data[ctx.instance.id].get('stop', {})
-        data[ctx.instance.id]['stop'] = {'target': ctx.task_target}
+        data[ctx.instance.id]['delete'] = data[
+            ctx.instance.id].get('delete', {})
+        data[ctx.instance.id]['delete'] = {'target': ctx.task_target}
