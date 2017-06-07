@@ -34,8 +34,6 @@ from cloudify_system_workflows import plugins
 from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
 
-from cloudify_rest_client.exceptions import CloudifyClientError
-
 from . import utils
 from .npm import Npm
 from .agents import Agents
@@ -157,8 +155,10 @@ class SnapshotRestore(object):
         validator.validate()
 
     def _restore_files_to_manager(self):
-        new_tenant = self._tenant_name \
-            if self._snapshot_version < V_4_0_0 else ''
+        if self._snapshot_version < V_4_0_0:
+            new_tenant = self._tenant_name or ''
+        else:
+            new_tenant = ''
         ctx.logger.info('Restoring files from the archive to the manager')
         utils.copy_files_between_manager_and_snapshot(
             self._tempdir,
@@ -191,7 +191,7 @@ class SnapshotRestore(object):
             # If no tenant name was passed, we can assume that we're working
             # with the community edition (due to the validations we've made)
             tenant_name = self._tenant_name or \
-                self._config['default_tenant_name']
+                self._config.default_tenant_name
             ElasticSearch.restore_db_from_pre_4_version(
                 self._tempdir,
                 tenant_name
@@ -436,37 +436,14 @@ class SnapshotRestoreValidator(object):
 
     def _validate_v_3_snapshot(self):
         if self._tenant_name:
-            if self._is_premium_enabled:
-                self._assert_tenant_does_not_exist()
-            else:
+            if not self._is_premium_enabled:
                 raise NonRecoverableError(
                     'Passing a tenant name when restoring a snapshot is a '
                     'feature that exists only in the premium edition of '
                     'Cloudify. \nPlease contact sales for additional info.'
                 )
         else:
-            if self._is_premium_enabled:
-                raise NonRecoverableError(
-                    'Tenant name was not provided when restoring a snapshot '
-                    'of version {0}. Tenant name must be provided when '
-                    'restoring versions prior to {1}'.format(
-                        self._snapshot_version,
-                        V_4_0_0
-                    ))
-            else:
-                self._assert_clean_db()
-
-    def _assert_tenant_does_not_exist(self):
-        try:
-            self._client.tenants.get(self._tenant_name)
-            raise NonRecoverableError(
-                'Tenant `{0}` already exists on the manager. A *new* tenant '
-                'name must be provided when restoring a snapshot of version '
-                'prior to {1}'.format(self._tenant_name, V_4_0_0)
-            )
-        except CloudifyClientError:
-            # We're expecting a client error here if the tenant does not exist
-            pass
+            self._assert_clean_db()
 
     def _assert_clean_db(self):
         if self._client.blueprints.list(_all_tenants=True).items:
