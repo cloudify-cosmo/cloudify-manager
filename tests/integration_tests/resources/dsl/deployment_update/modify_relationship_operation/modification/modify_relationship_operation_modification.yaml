@@ -11,7 +11,9 @@ relationships:
     derived_from: cloudify.relationships.connected_to
     source_interfaces:
       custom_lifecycle:
-        custom_operation: decrement.sh
+        custom_operation:
+          implementation: decrement.sh
+          executor: central_deployment_agent
 
 node_templates:
   site1:

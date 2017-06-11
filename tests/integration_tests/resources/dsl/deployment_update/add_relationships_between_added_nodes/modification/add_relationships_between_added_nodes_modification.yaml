@@ -11,61 +11,93 @@ node_templates:
     type: cloudify.nodes.WebServer
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: increment_a.sh
-        configure: increment_a.sh
-        start: increment_a.sh
+        create:
+          implementation: increment_a.sh
+          executor: central_deployment_agent
+        configure:
+          implementation: increment_a.sh
+          executor: central_deployment_agent
+        start:
+          implementation: increment_a.sh
+          executor: central_deployment_agent
 
     relationships:
       - type: cloudify.relationships.contained_in
         target: site_c
         target_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: remote_increment.sh
+            establish:
+              implementation: remote_increment.sh
+              executor: central_deployment_agent
 
   site_b:
     type: cloudify.nodes.WebServer
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: increment_b.sh
-        configure: increment_b.sh
-        start: increment_b.sh
+        create:
+          implementation: increment_b.sh
+          executor: central_deployment_agent
+        configure:
+          implementation: increment_b.sh
+          executor: central_deployment_agent
+        start:
+          implementation: increment_b.sh
+          executor: central_deployment_agent
 
     relationships:
       - type: cloudify.relationships.contained_in
         target: site_c
         target_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: source_increment_b.sh
+            establish:
+              implementation: source_increment_b.sh
+              executor: central_deployment_agent
 
   site_c:
     type: cloudify.nodes.WebServer
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: increment_c.sh
-        configure: increment_c.sh
-        start: increment_c.sh
+        create:
+          implementation: increment_c.sh
+          executor: central_deployment_agent
+        configure:
+          implementation: increment_c.sh
+          executor: central_deployment_agent
+        start:
+          implementation: increment_c.sh
+          executor: central_deployment_agent
 
     relationships:
       - type: cloudify.relationships.contained_in
         target: site_e
         target_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: remote_increment.sh
+            establish:
+              implementation: remote_increment.sh
+              executor: central_deployment_agent
 
   site_d:
     type: cloudify.nodes.WebServer
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: increment_d.sh
-        configure: increment_d.sh
-        start: increment_d.sh
+        create:
+          implementation: increment_d.sh
+          executor: central_deployment_agent
+        configure:
+          implementation: increment_d.sh
+          executor: central_deployment_agent
+        start:
+          implementation: increment_d.sh
+          executor: central_deployment_agent
 
     relationships:
       - type: cloudify.relationships.contained_in
         target: site_e
         target_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: source_increment_d.sh
+            establish:
+              implementation: source_increment_d.sh
+              executor: central_deployment_agent
 
   site_e:
     type: cloudify.nodes.Compute

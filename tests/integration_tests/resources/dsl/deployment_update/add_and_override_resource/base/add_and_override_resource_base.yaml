@@ -17,6 +17,12 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: morphing_resource.sh
-          postconfigure: morphing_resource.sh
-          establish: morphing_resource.sh
+          preconfigure:
+            implementation: morphing_resource.sh
+            executor: central_deployment_agent
+          postconfigure:
+            implementation: morphing_resource.sh
+            executor: central_deployment_agent
+          establish:
+            implementation: morphing_resource.sh
+            executor: central_deployment_agent

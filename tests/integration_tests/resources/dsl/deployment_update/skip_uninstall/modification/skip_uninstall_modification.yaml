@@ -17,4 +17,6 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          establish: remote_install_inc.sh
+          establish:
+            implementation: remote_install_inc.sh
+            executor: central_deployment_agent

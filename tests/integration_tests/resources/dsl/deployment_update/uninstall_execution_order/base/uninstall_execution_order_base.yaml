@@ -11,7 +11,9 @@ node_types:
     derived_from: cloudify.nodes.WebServer
     interfaces:
       cloudify.interfaces.lifecycle:
-        stop: flag_and_assert.py
+        stop:
+          implementation: flag_and_assert.py
+          executor: central_deployment_agent
 
 node_templates:
   site1:
@@ -32,4 +34,6 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          unlink: copy_state_to_host.py
+          unlink:
+            implementation: copy_state_to_host.py
+            executor: central_deployment_agent

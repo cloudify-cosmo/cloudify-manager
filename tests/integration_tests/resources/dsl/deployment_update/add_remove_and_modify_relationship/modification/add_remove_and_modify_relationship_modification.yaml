@@ -15,23 +15,31 @@ node_templates:
         target: site6
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: increment.sh
+            establish:
+              implementation: increment.sh
+              executor: central_deployment_agent
       - type: cloudify.relationships.connected_to
         target: site4
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: increment.sh
+            establish:
+              implementation: increment.sh
+              executor: central_deployment_agent
         # New rel
       - type: cloudify.relationships.connected_to
         target: site2B
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: increment.sh
+            establish:
+              implementation: increment.sh
+              executor: central_deployment_agent
       - type: cloudify.relationships.connected_to
         target: site3
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: increment.sh
+            establish:
+              implementation: increment.sh
+              executor: central_deployment_agent
 
 
   site2B:

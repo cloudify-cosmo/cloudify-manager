@@ -11,7 +11,9 @@ node_templates:
     type: cloudify.nodes.Compute
     interfaces:
       custom_lifecycle:
-        custom_operation: push_into_props.py
+        custom_operation:
+          implementation: push_into_props.py
+          executor: central_deployment_agent
 
 workflows:
   custom_workflow:

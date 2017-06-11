@@ -11,7 +11,9 @@ node_types:
     derived_from: cloudify.nodes.Compute
     interfaces:
       custom_lifecycle:
-        custom_operation: increment.sh
+        custom_operation:
+          implementation: increment.sh
+          executor: central_deployment_agent
 
 node_templates:
   site1:

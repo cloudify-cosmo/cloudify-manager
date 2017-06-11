@@ -11,7 +11,9 @@ node_types:
     derived_from: cloudify.nodes.WebServer
     interfaces:
       cloudify.interfaces.lifecycle:
-        create: flag_and_assert.py
+        create:
+          implementation: flag_and_assert.py
+          executor: central_deployment_agent
 
 node_templates:
   site1:

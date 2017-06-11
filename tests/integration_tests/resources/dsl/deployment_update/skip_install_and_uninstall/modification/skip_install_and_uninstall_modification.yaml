@@ -20,4 +20,6 @@ node_templates:
       target: site2
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: target_install_inc.sh
+          preconfigure:
+            implementation: target_install_inc.sh
+            executor: central_deployment_agent
