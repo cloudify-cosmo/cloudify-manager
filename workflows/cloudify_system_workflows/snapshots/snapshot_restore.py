@@ -20,7 +20,6 @@ import zipfile
 import platform
 import tempfile
 import subprocess
-from contextlib import contextmanager
 
 from wagon import wagon
 
@@ -30,7 +29,6 @@ from cloudify.manager import get_rest_client
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 
-from cloudify_system_workflows import plugins
 from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
 
@@ -155,16 +153,11 @@ class SnapshotRestore(object):
         validator.validate()
 
     def _restore_files_to_manager(self):
-        if self._snapshot_version < V_4_0_0:
-            new_tenant = self._tenant_name or ''
-        else:
-            new_tenant = ''
         ctx.logger.info('Restoring files from the archive to the manager')
         utils.copy_files_between_manager_and_snapshot(
             self._tempdir,
             self._config,
             to_archive=False,
-            new_tenant=new_tenant
         )
         utils.restore_stage_files(self._tempdir)
         ctx.logger.info('Successfully restored archive files')
@@ -188,13 +181,9 @@ class SnapshotRestore(object):
             if self._should_clean_old_db_for_3_x_snapshot():
                 postgres.clean_db()
 
-            # If no tenant name was passed, we can assume that we're working
-            # with the community edition (due to the validations we've made)
-            tenant_name = self._tenant_name or \
-                self._config.default_tenant_name
             ElasticSearch.restore_db_from_pre_4_version(
                 self._tempdir,
-                tenant_name
+                ctx.tenant_name,
             )
         ctx.logger.info('Successfully restored database')
 
@@ -249,8 +238,19 @@ class SnapshotRestore(object):
     def _get_existing_plugin_names(self):
         ctx.logger.debug('Collecting existing plugins')
         existing_plugins = self._client.plugins.list(_all_tenants=True)
-        return set((p.archive_name, p['tenant_name'])
+        return set(self._get_plugin_archive_path_id_and_tenant(p)
                    for p in existing_plugins)
+
+    def _get_plugin_archive_path_id_and_tenant(self, plugin):
+        return {
+            'path': os.path.join(
+                '/opt/manager/resources/plugins',
+                plugin['id'],
+                plugin.archive_name
+            ),
+            'id': plugin['id'],
+            'tenant': plugin['tenant_name'],
+        }
 
     def _get_existing_dep_envs(self):
         return [dep.id for dep in self._client.deployments.list()]
@@ -263,17 +263,29 @@ class SnapshotRestore(object):
         :param existing_plugins: Names of already installed plugins
         """
         def should_install(plugin):
-            return (plugin.archive_name, plugin['tenant_name']) \
-                   not in existing_plugins \
-                   and self._plugin_installable_on_current_platform(plugin)
+            # Can't just do 'not in' as plugin is a dict
+            hashable_existing = (frozenset(p) for p in existing_plugins)
+            return frozenset(plugin.items()) not in hashable_existing
 
         ctx.logger.debug('Looking for plugins to install')
         all_plugins = self._client.plugins.list(_all_tenants=True)
+        installable_plugins = [
+            self._get_plugin_archive_path_id_and_tenant(plugin)
+            for plugin in all_plugins
+            if self._plugin_installable_on_current_platform(plugin)
+        ]
         ctx.logger.debug('Found {0} plugins in total'
                          .format(len(all_plugins)))
-        plugins_to_install = [p for p in all_plugins if should_install(p)]
-        ctx.logger.debug('Found {0} plugins to install'
-                         .format(len(plugins_to_install)))
+        plugins_to_install = {}
+        for plugin in installable_plugins:
+            if should_install(plugin):
+                tenant = plugin['tenant']
+                if tenant in plugins_to_install.keys():
+                    plugins_to_install[tenant].append(plugin)
+                else:
+                    plugins_to_install[tenant] = [plugin]
+        ctx.logger.debug('Found plugins to install by tenant: {p}'
+                         .format(p=plugins_to_install))
         return plugins_to_install
 
     def _restore_plugins(self, existing_plugins):
@@ -283,14 +295,23 @@ class SnapshotRestore(object):
         """
         ctx.logger.info('Restoring plugins')
         plugins_to_install = self._get_plugins_to_install(existing_plugins)
-        for plugin in plugins_to_install:
-            self._tenant_name = plugin['tenant_name']
-            with self._update_tenant_in_ctx():
-                plugins.install(ctx=ctx, plugin={
-                    'name': plugin['package_name'],
-                    'package_name': plugin['package_name'],
-                    'package_version': plugin['package_version']
-                })
+        for tenant, plugins in plugins_to_install.items():
+            client = get_rest_client(tenant=tenant)
+            plugins_tmp = tempfile.mkdtemp()
+            for plugin in plugins:
+                wagon_name = os.path.basename(plugin['path'])
+                ctx.logger.info(
+                    'Installing plugin {plugin} for {tenant}'.format(
+                        plugin=wagon_name,
+                        tenant=tenant,
+                    )
+                )
+                temp_plugin = os.path.join(plugins_tmp, wagon_name)
+                shutil.copyfile(plugin['path'], temp_plugin)
+                client.plugins.delete(plugin['id'], force=True)
+                client.plugins.upload(temp_plugin)
+                os.remove(temp_plugin)
+            os.rmdir(plugins_tmp)
         ctx.logger.info('Successfully restored plugins')
 
     @staticmethod
@@ -316,25 +337,8 @@ class SnapshotRestore(object):
 
     def _restore_agents(self):
         ctx.logger.info('Restoring cloudify agent data')
-        Agents().restore(self._tempdir, self._tenant_client)
+        Agents().restore(self._tempdir, self._client)
         ctx.logger.info('Successfully restored cloudify agent data')
-
-    def _get_tenant_client(self):
-        with self._update_tenant_in_ctx():
-            return get_rest_client()
-
-    @contextmanager
-    def _update_tenant_in_ctx(self):
-        """Temporarily change the tenant in the current context to be the
-        tenant passed in the restore command
-        """
-        curr_tenant = ctx.tenant_name
-        tenant_name = self._tenant_name if self._tenant_name else curr_tenant
-        try:
-            ctx._context['tenant_name'] = tenant_name
-            yield
-        finally:
-            ctx._context['tenant_name'] = curr_tenant
 
     def _restore_deployment_envs(self, existing_dep_envs):
         """Restore any deployment environments on the manager that didn't
@@ -345,16 +349,21 @@ class SnapshotRestore(object):
         """
         if not self._recreate_deployments_envs:
             return
+        for tenant in ('restoretenant', 'restoretenant2'):
+            client = get_rest_client(tenant=tenant)
+            client.snapshots.restore(snapshot_id='snapshot41fake',
+                                     recreate_deployment_envs_for=tenant)
+
+    def recreate_deployment_envs_for(self):
         ctx.logger.info('Restoring deployment environments')
-        with self._update_tenant_in_ctx():
-            deployments_contexts = ctx.deployments_contexts
+        deployments_contexts = ctx.deployments_contexts
 
         for deployment_id, dep_ctx in deployments_contexts.iteritems():
             if deployment_id in existing_dep_envs:
                 continue
             with dep_ctx:
-                dep = self._tenant_client.deployments.get(deployment_id)
-                blueprint = self._tenant_client.blueprints.get(
+                dep = self._client.deployments.get(deployment_id)
+                blueprint = self._client.blueprints.get(
                     dep_ctx.blueprint.id)
                 tasks_graph = self._get_tasks_graph(dep_ctx, blueprint, dep)
                 tasks_graph.execute()
@@ -417,12 +426,10 @@ class SnapshotRestoreValidator(object):
     def _validate_v_4_snapshot(self):
         if self._tenant_name:
             raise NonRecoverableError(
-                'Tenant name `{0}` passed when restoring snapshot of version '
-                '{1}. Tenant name should only be passed when restoring '
-                'versions prior to {2}'.format(
-                    self._tenant_name,
-                    self._snapshot_version,
-                    V_4_0_0
+                'Tenant name `{tenant}` passed when restoring snapshot of '
+                'version {version}.'.format(
+                    tenant=self._tenant_name,
+                    version=self._snapshot_version,
                 )
             )
 
@@ -436,12 +443,14 @@ class SnapshotRestoreValidator(object):
 
     def _validate_v_3_snapshot(self):
         if self._tenant_name:
-            if not self._is_premium_enabled:
-                raise NonRecoverableError(
-                    'Passing a tenant name when restoring a snapshot is a '
-                    'feature that exists only in the premium edition of '
-                    'Cloudify. \nPlease contact sales for additional info.'
+            raise NonRecoverableError(
+                'Passing a tenant name when restoring a snapshot is no '
+                'longer supported. Please switch to the "{tenant}" tenant '
+                'and re-upload then perform the restore from that '
+                'tenant.'.format(
+                    tenant=self._tenant_name,
                 )
+            )
         else:
             self._assert_clean_db()
 
