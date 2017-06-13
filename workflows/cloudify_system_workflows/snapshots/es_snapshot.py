@@ -22,7 +22,7 @@ from elasticsearch import helpers as elasticsearch_helpers
 
 from cloudify.workflows import ctx
 
-from .constants import M_HAS_CLOUDIFY_EVENTS
+from .constants import M_HAS_CLOUDIFY_EVENTS, MANAGER_PYTHON
 
 
 class ElasticSearch(object):
@@ -32,11 +32,10 @@ class ElasticSearch(object):
     @staticmethod
     def restore_db_from_pre_4_version(tempdir, tenant_name):
         ctx.logger.info('Restoring DB from version prior to 4 (Elastic)')
-        python_bin = '/opt/manager/env/bin/python'
         dir_path = os.path.dirname(os.path.realpath(__file__))
         script_path = os.path.join(dir_path, 'estopg.py')
         es_dump_path = os.path.join(tempdir, 'es_data')
-        command = [python_bin, script_path, es_dump_path, tenant_name]
+        command = [MANAGER_PYTHON, script_path, es_dump_path, tenant_name]
         result = utils.run(command)
         if result and hasattr(result, 'aggr_stdout'):
             ctx.logger.debug('Process result: \n{0}'

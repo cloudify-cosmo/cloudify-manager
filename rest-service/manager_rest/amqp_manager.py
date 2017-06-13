@@ -51,9 +51,11 @@ class AMQPManager(object):
         :param tenant: An SQLAlchemy Tenant object
         :return: The updated tenant object
         """
-        vhost = self.VHOST_NAME_PATTERN.format(tenant.name)
-        username = self.USERNAME_PATTERN.format(tenant.name)
-        password = str(uuid4())
+        vhost = tenant.rabbitmq_vhost or \
+            self.VHOST_NAME_PATTERN.format(tenant.name)
+        username = tenant.rabbitmq_username or \
+            self.USERNAME_PATTERN.format(tenant.name)
+        password = tenant.rabbitmq_password or str(uuid4())
 
         self._client.create_vhost(vhost)
         self._client.create_user(username, password)
