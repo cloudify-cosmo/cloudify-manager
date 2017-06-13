@@ -66,8 +66,7 @@ class SnapshotRestore(object):
                  premium_enabled,
                  user_is_bootstrap_admin,
                  restore_certificates,
-                 no_reboot,
-                 recreate_deployment_envs_for):
+                 no_reboot):
         self._npm = Npm()
         self._config = utils.DictToAttributes(config)
         self._snapshot_id = snapshot_id
@@ -83,15 +82,8 @@ class SnapshotRestore(object):
         self._tempdir = None
         self._snapshot_version = None
         self._client = get_rest_client()
-        self._recreate_deployment_envs_for = recreate_deployment_envs_for
 
     def restore(self):
-        if self._recreate_deployment_envs_for:
-            # To avoid having to try to modify the ctx in interesting ways,
-            # the deployment envs are restored with a call per tenant
-            self._recreate_deployment_envs()
-            return
-
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         snapshot_path = self._get_snapshot_path()
         ctx.logger.debug('Going to restore snapshot, '
