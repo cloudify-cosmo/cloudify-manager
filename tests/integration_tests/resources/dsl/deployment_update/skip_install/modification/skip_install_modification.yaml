@@ -18,7 +18,12 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: remote_install_inc.sh
-          establish: remote_install_inc.sh
-          postconfigure: remote_install_inc.sh
-
+          preconfigure:
+            implementation: remote_install_inc.sh
+            executor: central_deployment_agent
+          establish:
+            implementation: remote_install_inc.sh
+            executor: central_deployment_agent
+          postconfigure:
+            implementation: remote_install_inc.sh
+            executor: central_deployment_agent

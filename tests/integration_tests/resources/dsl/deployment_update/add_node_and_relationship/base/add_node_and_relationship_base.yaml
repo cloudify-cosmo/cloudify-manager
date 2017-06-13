@@ -17,6 +17,12 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: increment.sh
-          postconfigure: increment.sh
-          establish: increment.sh
+          preconfigure:
+            implementation: increment.sh
+            executor: central_deployment_agent
+          postconfigure:
+            implementation: increment.sh
+            executor: central_deployment_agent
+          establish:
+            implementation: increment.sh
+            executor: central_deployment_agent

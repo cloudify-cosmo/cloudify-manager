@@ -17,16 +17,28 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: increment.sh
-          postconfigure: increment.sh
-          establish: increment.sh
+          preconfigure:
+            implementation: increment.sh
+            executor: central_deployment_agent
+          postconfigure:
+            implementation: increment.sh
+            executor: central_deployment_agent
+          establish:
+            implementation: increment.sh
+            executor: central_deployment_agent
     - type: cloudify.relationships.connected_to
       target: site3
       source_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: increment.sh
-          postconfigure: increment.sh
-          establish: increment.sh
+          preconfigure:
+            implementation: increment.sh
+            executor: central_deployment_agent
+          postconfigure:
+            implementation: increment.sh
+            executor: central_deployment_agent
+          establish:
+            implementation: increment.sh
+            executor: central_deployment_agent
 
   site3:
     type: cloudify.nodes.Compute
@@ -35,6 +47,12 @@ node_templates:
       target: site1
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          preconfigure: increment.sh
-          postconfigure: increment.sh
-          establish: increment.sh
+          preconfigure:
+            implementation: increment.sh
+            executor: central_deployment_agent
+          postconfigure:
+            implementation: increment.sh
+            executor: central_deployment_agent
+          establish:
+            implementation: increment.sh
+            executor: central_deployment_agent

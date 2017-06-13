@@ -14,7 +14,9 @@ node_templates:
       target: site2
       target_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          unlink: target_uninstall_inc.sh
+          unlink:
+            implementation: target_uninstall_inc.sh
+            executor: central_deployment_agent
 
   site2:
     type: cloudify.nodes.Compute

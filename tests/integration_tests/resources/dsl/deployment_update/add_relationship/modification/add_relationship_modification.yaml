@@ -11,14 +11,26 @@ relationships:
     derived_from: cloudify.relationships.connected_to
     source_interfaces:
       cloudify.interfaces.relationship_lifecycle:
-        preconfigure: additional_scripts/increment.sh
-        postconfigure: additional_scripts/increment.sh
-        establish: additional_scripts/increment.sh
+        preconfigure:
+          implementation: additional_scripts/increment.sh
+          executor: central_deployment_agent
+        postconfigure:
+          implementation: additional_scripts/increment.sh
+          executor: central_deployment_agent
+        establish:
+          implementation: additional_scripts/increment.sh
+          executor: central_deployment_agent
     target_interfaces:
       cloudify.interfaces.relationship_lifecycle:
-        preconfigure: scripts/remote_increment.sh
-        postconfigure: scripts/remote_increment.sh
-        establish: scripts/remote_increment.sh
+        preconfigure:
+          implementation: scripts/remote_increment.sh
+          executor: central_deployment_agent
+        postconfigure:
+          implementation: scripts/remote_increment.sh
+          executor: central_deployment_agent
+        establish:
+          implementation: scripts/remote_increment.sh
+          executor: central_deployment_agent
 
 node_templates:
   site1:
@@ -34,6 +46,8 @@ node_templates:
         target: site1
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: scripts/remote_increment.sh
+            establish:
+              implementation: scripts/remote_increment.sh
+              executor: central_deployment_agent
       - type: new_relationship_type       # New relationship instance
         target: site2

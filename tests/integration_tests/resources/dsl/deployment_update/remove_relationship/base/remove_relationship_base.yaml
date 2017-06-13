@@ -11,7 +11,9 @@ relationships:
     derived_from: cloudify.relationships.connected_to
     target_interfaces:
       cloudify.interfaces.relationship_lifecycle:
-        unlink: remote_increment.sh
+        unlink:
+          implementation: remote_increment.sh
+          executor: central_deployment_agent
 
 node_templates:
   site1:

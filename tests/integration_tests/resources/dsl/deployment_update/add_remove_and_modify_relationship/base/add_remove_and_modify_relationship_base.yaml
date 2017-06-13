@@ -14,31 +14,41 @@ node_templates:
         target: site1
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            unlink: increment.sh
+            unlink:
+              implementation: increment.sh
+              executor: central_deployment_agent
 
       - type: cloudify.relationships.connected_to
         target: site2
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            unlink: increment.sh
+            unlink:
+              implementation: increment.sh
+              executor: central_deployment_agent
 
       - type: cloudify.relationships.connected_to
         target: site3
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: increment.sh
+            establish:
+              implementation: increment.sh
+              executor: central_deployment_agent
 
       - type: cloudify.relationships.connected_to
         target: site4
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: increment.sh
+            establish:
+              implementation: increment.sh
+              executor: central_deployment_agent
 
       - type: cloudify.relationships.connected_to
         target: site5
         source_interfaces:
           cloudify.interfaces.relationship_lifecycle:
-            establish: increment.sh
+            establish:
+              implementation: increment.sh
+              executor: central_deployment_agent
   site1:
     type: cloudify.nodes.Compute
 

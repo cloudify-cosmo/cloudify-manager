@@ -20,4 +20,6 @@ node_templates:
       target: site1
       source_interfaces:
         cloudify.interfaces.relationship_lifecycle:
-          establish: scripts/remote_increment.sh
+          establish:
+            implementation: scripts/remote_increment.sh
+            executor: central_deployment_agent
