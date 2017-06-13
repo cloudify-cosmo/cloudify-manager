@@ -21,7 +21,6 @@ import argparse
 
 from manager_rest import manager_exceptions
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.constants import CURRENT_TENANT_CONFIG, DEFAULT_TENANT_NAME
 from manager_rest.storage import models, get_storage_manager
 
 format_str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
