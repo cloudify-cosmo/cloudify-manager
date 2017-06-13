@@ -31,3 +31,4 @@ STAGE_USER = 'stage_user'
 
 # created during bootstrap
 STAGE_RESTORE_SCRIPT = '/opt/cloudify/stage/restore-snapshot.py'
+MANAGER_PYTHON = '/opt/manager/env/bin/python'

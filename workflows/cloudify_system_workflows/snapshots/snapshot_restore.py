@@ -49,6 +49,7 @@ from .constants import (
     M_SCHEMA_REVISION,
     M_STAGE_SCHEMA_REVISION,
     M_VERSION,
+    MANAGER_PYTHON
 )
 
 
@@ -116,11 +117,17 @@ class SnapshotRestore(object):
                 self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_deployment_envs(existing_dep_envs)
+                self._restore_amqp_vhosts_and_users()
             if self._restore_certificates:
                 self._restore_certificate()
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
+
+    def _restore_amqp_vhosts_and_users(self):
+        script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                   'restore_amqp.py')
+        subprocess.check_call([MANAGER_PYTHON, script_path])
 
     def _restore_certificate(self):
         archive_cert_dir = os.path.join(self._tempdir, ARCHIVE_CERT_DIR)
