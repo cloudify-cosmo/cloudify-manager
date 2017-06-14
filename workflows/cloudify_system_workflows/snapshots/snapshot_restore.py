@@ -279,10 +279,7 @@ class SnapshotRestore(object):
         for plugin in installable_plugins:
             if should_install(plugin):
                 tenant = plugin['tenant']
-                if tenant in plugins_to_install.keys():
-                    plugins_to_install[tenant].append(plugin)
-                else:
-                    plugins_to_install[tenant] = [plugin]
+                plugins_to_install.setdefault(tenant, []).append(plugin)
         ctx.logger.debug('Found plugins to install by tenant: {p}'
                          .format(p=plugins_to_install))
         return plugins_to_install
