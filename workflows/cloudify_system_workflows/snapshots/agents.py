@@ -17,7 +17,7 @@ import os
 import json
 
 from cloudify.workflows import ctx
-from cloudify.context import BootstrapContext
+from cloudify import broker_config
 from cloudify.utils import get_broker_ssl_cert_path
 
 from .utils import is_compute
@@ -26,6 +26,10 @@ from .utils import is_compute
 class Agents(object):
     _AGENTS_FILE = 'agents.json'
 
+    def __init__(self):
+        with open(get_broker_ssl_cert_path(), 'r') as f:
+            self._broker_ssl_cert = f.read()
+
     def restore(self, tempdir, client):
         with open(os.path.join(tempdir, self._AGENTS_FILE)) as agents_file:
             agents = json.load(agents_file)
@@ -33,12 +37,11 @@ class Agents(object):
 
     def dump(self, tempdir, client, manager_version):
         result = {}
-        defaults = self._get_defaults(manager_version)
+        self._manager_version = manager_version
         for deployment in client.deployments.list():
             deployment_result = self._get_deployment_result(
                 client,
                 deployment.id,
-                defaults
             )
             result[deployment.id] = deployment_result
 
@@ -49,49 +52,51 @@ class Agents(object):
         with open(agents_file_path, 'w') as out:
             out.write(json.dumps(result))
 
-    @staticmethod
-    def _get_defaults(manager_version):
-        broker_config = BootstrapContext(ctx.bootstrap_context).broker_config()
-        if not broker_config.get('broker_ssl_cert'):
-            with open(get_broker_ssl_cert_path(), 'r') as f:
-                broker_config['broker_ssl_cert'] = f.read()
-
-        return {
-            'version': str(manager_version),
-            'broker_config': broker_config
-        }
-
-    def _get_deployment_result(self, client, deployment_id, defaults):
+    def _get_deployment_result(self, client, deployment_id):
         deployment_result = {}
         for node in client.nodes.list(deployment_id=deployment_id):
             if is_compute(node):
                 node_result = self._get_node_result(
                     client,
                     deployment_id,
-                    node.id,
-                    defaults
+                    node.id
                 )
                 deployment_result[node.id] = node_result
         return deployment_result
 
-    def _get_node_result(self, client, deployment_id, node_id, defaults):
+    def _get_node_result(self, client, deployment_id, node_id):
         node_result = {}
         for node_instance in client.node_instances.list(
                 deployment_id=deployment_id,
                 node_name=node_id):
             node_instance_result = self._get_node_instance_result(
-                node_instance,
-                defaults)
+                node_instance)
             node_result[node_instance.id] = node_instance_result
         return node_result
 
-    @staticmethod
-    def _get_node_instance_result(node_instance, defaults):
-        node_instance_result = {}
-        current = node_instance.runtime_properties.get('cloudify_agent', {})
-        for k, v in defaults.iteritems():
-            node_instance_result[k] = current.get(k, v)
-        return node_instance_result
+    def _get_node_instance_result(self, node_instance):
+        """
+        Fill in the broker config info from the cloudify_agent dict, using
+        the info from the bootstrap context as the fallback defaults
+        """
+        agent = node_instance.runtime_properties.get('cloudify_agent', {})
+        tenant = agent.get('rest_tenant', {})
+
+        broker_conf = {
+            'broker_ip': agent.get('broker_ip', broker_config.broker_hostname),
+            'broker_ssl_cert': self._broker_ssl_cert,
+            'broker_ssl_enabled': True,
+            'broker_user': tenant.get('rabbitmq_username',
+                                      broker_config.broker_username),
+            'broker_pass': tenant.get('rabbitmq_password',
+                                      broker_config.broker_password),
+            'broker_vhost': tenant.get('broker_vhost',
+                                       broker_config.broker_vhost)
+        }
+        return {
+            'version': str(self._manager_version),
+            'broker_config': broker_conf
+        }
 
     def _insert_agents_data(self, client, agents):
         for deployment_id, nodes in agents.iteritems():
