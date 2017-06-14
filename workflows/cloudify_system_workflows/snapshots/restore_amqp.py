@@ -36,5 +36,4 @@ with app.app_context():
     )
     tenants = storage_manager.list(models.Tenant)
 
-for tenant in tenants:
-    amqp_manager.create_tenant_vhost_and_user(tenant)
+amqp_manager.sync_metadata(tenants)
