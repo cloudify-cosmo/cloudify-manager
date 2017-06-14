@@ -90,7 +90,7 @@ class Agents(object):
                                       broker_config.broker_username),
             'broker_pass': tenant.get('rabbitmq_password',
                                       broker_config.broker_password),
-            'broker_vhost': tenant.get('broker_vhost',
+            'broker_vhost': tenant.get('rabbitmq_vhost',
                                        broker_config.broker_vhost)
         }
         return {
