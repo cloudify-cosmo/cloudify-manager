@@ -20,6 +20,7 @@ from flask_migrate import Migrate
 from flask_security import Security
 
 from manager_rest import config
+from manager_rest.config import instance as manager_config
 from manager_rest.storage import user_datastore, db
 
 
@@ -51,24 +52,26 @@ def _get_postgres_db_uri(manager_ip, driver):
     """Get a valid SQLA DB URI
     """
     dialect = 'postgresql+{0}'.format(driver) if driver else 'postgres'
-    conf = get_postgres_conf()
+    conf = get_postgres_conf(manager_ip)
     return '{dialect}://{username}:{password}@{host}/{db_name}'.format(
         dialect=dialect,
         username=conf.username,
         password=conf.password,
-        host=manager_ip,
+        host=conf.host,
         db_name=conf.db_name
     )
 
 
-def get_postgres_conf():
+def get_postgres_conf(manager_ip='localhost'):
     """Return a namedtuple with info used to connect to cloudify's PG DB
     """
-    conf = namedtuple('PGConf', 'username password db_name')
+    manager_config.load_configuration()
+    conf = namedtuple('PGConf', 'host username password db_name')
     return conf(
-        username='cloudify',
-        password='cloudify',
-        db_name='cloudify_db'
+        host=manager_config.postgresql_host or manager_ip,
+        username=manager_config.postgresql_username or 'cloudify',
+        password=manager_config.postgresql_password or 'cloudify',
+        db_name=manager_config.postgresql_db_name or 'cloudify_db',
     )
 
 
