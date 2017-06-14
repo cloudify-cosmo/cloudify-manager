@@ -13,7 +13,9 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from uuid import uuid4
+import random
+import string
+
 from functools import wraps
 
 from pyrabbit.api import Client
@@ -55,7 +57,10 @@ class AMQPManager(object):
             self.VHOST_NAME_PATTERN.format(tenant.name)
         username = tenant.rabbitmq_username or \
             self.USERNAME_PATTERN.format(tenant.name)
-        password = tenant.rabbitmq_password or str(uuid4())
+        password = (
+            tenant.rabbitmq_password or
+            AMQPManager._generate_user_password()
+        )
 
         self._client.create_vhost(vhost)
         self._client.create_user(username, password)
@@ -103,6 +108,22 @@ class AMQPManager(object):
         # Create vhosts and users present in the database
         for tenant in tenants:
             self.create_tenant_vhost_and_user(tenant)
+
+    @staticmethod
+    def _generate_user_password(password_length=32):
+        """Generate random string to use as user password."""
+        system_random = random.SystemRandom()
+        allowed_characters = (
+            string.letters +
+            string.digits +
+            string.punctuation
+        )
+
+        password = ''.join(
+            system_random.choice(allowed_characters)
+            for _ in xrange(password_length)
+        )
+        return password
 
     @ignore_not_found
     def _delete_vhost(self, vhost):
