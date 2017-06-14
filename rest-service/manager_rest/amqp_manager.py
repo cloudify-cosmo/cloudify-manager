@@ -70,6 +70,40 @@ class AMQPManager(object):
 
         return tenant
 
+    def sync_metadata(self, tenants):
+        """Synchronize database tenants with rabbitmq metadata.
+
+        :param tenants: Tenants currently available in the database
+        :type tentans: list(manager_rest.storage.management_models.Tenant)
+
+        """
+        # Remove vhosts in rabbitmq not present in the database
+        expected_vhosts = set(tenant.rabbitmq_vhost for tenant in tenants)
+        current_vhosts = set(
+            vhost
+            for vhost in self._client.get_vhost_names()
+            if vhost.startswith(self.VHOST_NAME_PATTERN[:-3])
+        )
+        extra_vhosts = current_vhosts - expected_vhosts
+        for vhost in extra_vhosts:
+            self._client.delete_vhost(vhost)
+
+        # Remove users in rabbitmq not present in the database
+        expected_usernames = set(
+            tenant.rabbitmq_username for tenant in tenants)
+        current_usernames = set(
+            user['name']
+            for user in self._client.get_users()
+            if user['name'].startswith(self.USERNAME_PATTERN[:-3])
+        )
+        extra_usernames = current_usernames - expected_usernames
+        for username in extra_usernames:
+            self._client.delete_user(username)
+
+        # Create vhosts and users present in the database
+        for tenant in tenants:
+            self.create_tenant_vhost_and_user(tenant)
+
     @ignore_not_found
     def _delete_vhost(self, vhost):
         self._client.delete_vhost(vhost)
