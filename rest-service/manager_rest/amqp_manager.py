@@ -116,7 +116,7 @@ class AMQPManager(object):
         allowed_characters = (
             string.letters +
             string.digits +
-            string.punctuation
+            '-_'
         )
 
         password = ''.join(
