@@ -347,19 +347,75 @@ class SnapshotRestore(object):
             return
 
         ctx.logger.info('Restoring deployment environments')
-        deployments_contexts = ctx.deployments_contexts
 
-        for deployment_id, dep_ctx in deployments_contexts.iteritems():
+        import subprocess
+        from proxy_tools import proxy
+        tenants_info = subprocess.check_output([
+            'psql', 'cloudify_db', '-t', '-U', 'cloudify', '-h', 'localhost', '-c', "select name, rabbitmq_username, rabbitmq_password, rabbitmq_vhost from tenants;"
+        ])
+        tenants_info = [line.split('|') for line in tenants_info.strip().splitlines()]
+        tenants_info = [
+            {
+                'name': line[0].strip(),
+                'rabbit_username': line[1].strip(),
+                'rabbit_password': line[2].strip(),
+                'rabbit_vhost': line[3].strip(),
+            }
+            for line in tenants_info
+        ]
+        #original_tenant = ctx._context['tenant']
+        with open('/tmp/ilikecake', 'w') as fh:
+            fh.write('%s\n' % tenants_info)
+            fh.write('==========================================\n')
+            fh.write('%s\n' % ctx.deployments_contexts)
+            for t in tenants_info:
+                fh.write('------------------------------------------------\n')
+                fh.write('%s\n' % t['name'])
+                #ctx._context['tenant'] = t
+                #fh.write('%s\n' % ctx.deployments_contexts)
+                #fh.write('%s\n' % ctx.tenant_name)
+                #ctx._context['tenant'] = original_tenant
+
+
+                dep_contexts = {}
+                rest = get_rest_client(tenant=t['name'])
+                for dep in rest.deployments.list():
+                    dep_ctx = ctx._context.copy()
+                    dep_ctx['deployment_id'] = dep.id
+                    fh.write('depid: %s\n' % dep.id)
+                    dep_ctx['blueprint_id'] = dep.blueprint_id
+                    dep_ctx['tenant'] = t
+
+                    def lazily_loaded_ctx(dep_ctx):
+                        def lazy_ctx():
+                            if not hasattr(lazy_ctx, '_cached_ctx'):
+                                lazy_ctx._cached_ctx = \
+                                    ctx._ManagedCloudifyWorkflowContext(dep_ctx)
+                            return lazy_ctx._cached_ctx
+
+                        return proxy(lazy_ctx)
+
+                    dep_contexts[dep.id] = lazily_loaded_ctx(dep_ctx)
+                fh.write('%s\n' % dep_contexts)
+        #ctx._context['tenant'] = original_tenant
+
+        for deployment_id, dep_ctx in dep_contexts.iteritems():
             if deployment_id in existing_dep_envs:
                 continue
             with dep_ctx:
-                dep = self._client.deployments.get(deployment_id)
-                blueprint = self._client.blueprints.get(
+                client = get_rest_client(tenant=dep_ctx.tenant_name)
+                dep = client.deployments.get(deployment_id)
+                blueprint = client.blueprints.get(
                     dep_ctx.blueprint.id)
                 tasks_graph = self._get_tasks_graph(dep_ctx, blueprint, dep)
                 tasks_graph.execute()
-                ctx.logger.debug('Successfully created deployment environment '
-                                 'for deployment {0}'.format(deployment_id))
+                ctx.logger.info(
+                    'Successfully created deployment environment for tenant '
+                    '{tenant} for deployment {dep}'.format(
+                        dep=deployment_id,
+                        tenant=dep_ctx.tenant_name,
+                    )
+                )
         ctx.logger.info('Successfully restored  deployment environments')
 
     @staticmethod
