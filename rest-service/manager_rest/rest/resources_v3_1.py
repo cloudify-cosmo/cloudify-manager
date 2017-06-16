@@ -13,6 +13,16 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 #
+from manager_rest.maintenance import is_bypass_maintenance_mode
+from manager_rest.resource_manager import get_resource_manager
+from manager_rest.rest import (
+    rest_decorators,
+)
+from manager_rest.storage import models
+
+from flask_restful_swagger import swagger
+from manager_rest.security import SecuredResource
+
 from . import resources_v1
 
 
@@ -26,3 +36,17 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
     def get_skip_plugin_validation_flag(self, request_dict):
         return request_dict.get('skip_plugins_validation', False)
+
+
+class SnapshotsDepEnvRestore(SecuredResource):
+    @swagger.operation(
+        nickname='_restoreDepEnvs',
+        notes='DO NOT USE, used during snapshot restores.'
+    )
+    @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(models.Execution)
+    def post(self):
+        execution = get_resource_manager().restore_deployment_environments(
+            bypass_maintenance=is_bypass_maintenance_mode()
+        )
+        return execution, 200
