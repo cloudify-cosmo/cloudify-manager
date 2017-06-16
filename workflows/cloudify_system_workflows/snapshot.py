@@ -17,7 +17,10 @@ from cloudify.workflows import ctx
 from cloudify.decorators import workflow
 
 from .snapshots.snapshot_create import SnapshotCreate
-from .snapshots.snapshot_restore import SnapshotRestore
+from .snapshots.snapshot_restore import (
+    SnapshotRestore,
+    _restore_deployment_envs,
+)
 
 
 @workflow(system_wide=True)
@@ -65,3 +68,10 @@ def restore(snapshot_id,
     restore_snapshot.restore()
 
     ctx.logger.info('Successfully restored snapshot `{0}`'.format(snapshot_id))
+
+
+@workflow(system_wide=True)
+def restore_deployment_envs(**kwargs):
+    ctx.logger.info('Restoring deployment environments')
+    _restore_deployment_envs()
+    ctx.logger.info('Successfully restored deployment environments.')

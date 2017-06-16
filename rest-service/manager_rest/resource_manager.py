@@ -193,6 +193,25 @@ class ResourceManager(object):
         )
         return execution
 
+    def restore_deployment_environments(self, bypass_maintenance):
+        """
+            To be invoked during snapshot restores, per tenant.
+            Restores deployment envs for the tenant invoking it.
+        """
+        if not current_user.is_admin:
+            raise manager_exceptions.UnauthorizedError(
+                '{0} is not admin. Only admins are allowed to restore '
+                'snapshots'.format(current_user)
+            )
+        _, execution = self._execute_system_workflow(
+            wf_id='restore_deployment_environments',
+            task_mapping=(
+                'cloudify_system_workflows.snapshot.restore_deployment_envs'
+            ),
+            bypass_maintenance=bypass_maintenance,
+        )
+        return execution
+
     def install_plugin(self, plugin):
         if utils.plugin_installable_on_current_platform(plugin):
             self._execute_system_workflow(
