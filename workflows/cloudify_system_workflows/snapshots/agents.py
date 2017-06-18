@@ -21,16 +21,19 @@ from cloudify import broker_config
 from cloudify.utils import get_broker_ssl_cert_path
 
 from .utils import is_compute
+from .constants import BROKER_DEFAULT_VHOST
 
 
 class Agents(object):
     _AGENTS_FILE = 'agents.json'
 
     def __init__(self):
+        self._tenant_name = None
         with open(get_broker_ssl_cert_path(), 'r') as f:
             self._broker_ssl_cert = f.read()
 
-    def restore(self, tempdir, client):
+    def restore(self, tempdir, client, tenant_name):
+        self._tenant_name = tenant_name
         with open(os.path.join(tempdir, self._AGENTS_FILE)) as agents_file:
             agents = json.load(agents_file)
         self._insert_agents_data(client, agents)
@@ -107,6 +110,17 @@ class Agents(object):
                                    'deployment {0}'.format(deployment_id),
                                    exc_info=True)
 
+    def _create_rest_tenant(self, old_agent, broker_config):
+        old_rest_tenant = old_agent.get('rest_tenant', self._tenant_name)
+        if isinstance(old_rest_tenant, dict):
+            return old_rest_tenant
+        return {
+            'rabbitmq_vhost': broker_config['broker_vhost'],
+            'rabbitmq_username': broker_config['broker_user'],
+            'rabbitmq_password': broker_config['broker_pass'],
+            'name': old_rest_tenant
+        }
+
     def _create_agent(self, client, nodes):
         for node_instances in nodes.itervalues():
             for node_instance_id, agent in node_instances.iteritems():
@@ -117,6 +131,10 @@ class Agents(object):
                 if not broker_config.get('broker_ip'):
                     broker_config['broker_ip'] = \
                         old_agent.get('manager_ip', '')
+                broker_config['broker_vhost'] = \
+                    broker_config.get('broker_vhost', BROKER_DEFAULT_VHOST)
+                agent['rest_tenant'] = self._create_rest_tenant(old_agent,
+                                                                broker_config)
                 agent['broker_config'] = broker_config
                 old_agent.update(agent)
                 runtime_properties['cloudify_agent'] = old_agent

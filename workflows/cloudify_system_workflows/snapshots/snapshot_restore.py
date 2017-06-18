@@ -283,6 +283,7 @@ class SnapshotRestore(object):
         """
         ctx.logger.info('Restoring plugins')
         plugins_to_install = self._get_plugins_to_install(existing_plugins)
+        original_tenant_name = self._tenant_name
         for plugin in plugins_to_install:
             self._tenant_name = plugin['tenant_name']
             with self._update_tenant_in_ctx():
@@ -291,6 +292,7 @@ class SnapshotRestore(object):
                     'package_name': plugin['package_name'],
                     'package_version': plugin['package_version']
                 })
+        self._tenant_name = original_tenant_name
         ctx.logger.info('Successfully restored plugins')
 
     @staticmethod
@@ -316,7 +318,7 @@ class SnapshotRestore(object):
 
     def _restore_agents(self):
         ctx.logger.info('Restoring cloudify agent data')
-        Agents().restore(self._tempdir, self._tenant_client)
+        Agents().restore(self._tempdir, self._tenant_client, self._tenant_name)
         ctx.logger.info('Successfully restored cloudify agent data')
 
     def _get_tenant_client(self):
