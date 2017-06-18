@@ -20,6 +20,8 @@ M_STAGE_SCHEMA_REVISION = 'stage_schema_revision'
 M_HAS_CLOUDIFY_EVENTS = 'has_cloudify_events'
 ARCHIVE_CERT_DIR = 'ssl'
 
+BROKER_DEFAULT_VHOST = '/'
+
 SECRET_STORE_AGENT_KEY_PREFIX = 'cfyagent_key__'
 
 STAGE_BASE_FOLDER = '/opt/cloudify-stage'
