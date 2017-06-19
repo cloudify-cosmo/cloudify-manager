@@ -21,6 +21,9 @@ from functools import wraps
 from pyrabbit.api import Client
 from pyrabbit.http import HTTPError
 
+from manager_rest.storage.models import Tenant
+from manager_rest.storage import get_storage_manager
+
 
 def ignore_not_found(func):
     """ Helper decorator to ignore not found errors """
@@ -45,6 +48,7 @@ class AMQPManager(object):
     def __init__(self, host, username, password):
         host_str = '{0}:{1}'.format(host, self.RABBITMQ_MANAGEMENT_PORT)
         self._client = Client(host_str, username, password)
+        self._storage_manager = get_storage_manager()
 
     def create_tenant_vhost_and_user(self, tenant):
         """
@@ -75,15 +79,29 @@ class AMQPManager(object):
 
         return tenant
 
-    def sync_metadata(self, tenants):
-        """Synchronize database tenants with rabbitmq metadata.
+    def sync_metadata(self):
+        """Synchronize database tenants with rabbitmq metadata"""
 
-        :param tenants: Tenants currently available in the database
-        :type tentans: list(manager_rest.storage.management_models.Tenant)
+        tenants = self._storage_manager.list(Tenant)
+        self._clear_extra_vhosts(tenants)
+        self._clear_extra_users(tenants)
+        self._add_missing_vhosts_and_users(tenants)
 
-        """
-        # Remove vhosts in rabbitmq not present in the database
-        expected_vhosts = set(tenant.rabbitmq_vhost for tenant in tenants)
+    def _add_missing_vhosts_and_users(self, tenants):
+        """Create vhosts and users present in the database"""
+
+        for tenant in tenants:
+            t = self.create_tenant_vhost_and_user(tenant)
+            self._storage_manager.update(t)
+
+    def _clear_extra_vhosts(self, tenants):
+        """Remove vhosts in rabbitmq not present in the database"""
+
+        expected_vhosts = set(
+            tenant.rabbitmq_vhost
+            for tenant in tenants
+            if tenant.rabbitmq_vhost  # Ignore None values
+        )
         current_vhosts = set(
             vhost
             for vhost in self._client.get_vhost_names()
@@ -93,9 +111,14 @@ class AMQPManager(object):
         for vhost in extra_vhosts:
             self._client.delete_vhost(vhost)
 
-        # Remove users in rabbitmq not present in the database
+    def _clear_extra_users(self, tenants):
+        """Remove users in rabbitmq not present in the database"""
+
         expected_usernames = set(
-            tenant.rabbitmq_username for tenant in tenants)
+            tenant.rabbitmq_username
+            for tenant in tenants
+            if tenant.rabbitmq_username  # Ignore None values
+        )
         current_usernames = set(
             user['name']
             for user in self._client.get_users()
@@ -104,10 +127,6 @@ class AMQPManager(object):
         extra_usernames = current_usernames - expected_usernames
         for username in extra_usernames:
             self._client.delete_user(username)
-
-        # Create vhosts and users present in the database
-        for tenant in tenants:
-            self.create_tenant_vhost_and_user(tenant)
 
     @staticmethod
     def _generate_user_password(password_length=32):
