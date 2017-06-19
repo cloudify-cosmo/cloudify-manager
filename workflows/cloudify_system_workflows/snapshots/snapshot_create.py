@@ -125,7 +125,7 @@ class SnapshotCreate(object):
 
     def _dump_agents(self, manager_version):
         ctx.logger.info('Dumping agents data')
-        Agents().dump(self._tempdir, self._client, manager_version)
+        Agents().dump(self._tempdir, manager_version)
 
     def _create_archive(self):
         snapshot_archive_name = self._get_snapshot_archive_name()

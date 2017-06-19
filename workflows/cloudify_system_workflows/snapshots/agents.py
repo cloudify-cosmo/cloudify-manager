@@ -18,37 +18,49 @@ import json
 
 from cloudify.workflows import ctx
 from cloudify import broker_config
+from cloudify.manager import get_rest_client
 from cloudify.utils import get_broker_ssl_cert_path
 
 from .utils import is_compute
-from .constants import BROKER_DEFAULT_VHOST
+from .constants import BROKER_DEFAULT_VHOST, DEFAULT_TENANT_NAME
 
 
 class Agents(object):
     _AGENTS_FILE = 'agents.json'
 
     def __init__(self):
-        self._tenant_name = None
         with open(get_broker_ssl_cert_path(), 'r') as f:
             self._broker_ssl_cert = f.read()
 
-    def restore(self, tempdir, client, tenant_name):
-        self._tenant_name = tenant_name
+    def restore(self, tempdir, tenant_name, is_older_than_4_1_0):
         with open(os.path.join(tempdir, self._AGENTS_FILE)) as agents_file:
             agents = json.load(agents_file)
-        self._insert_agents_data(client, agents)
+        if is_older_than_4_1_0:
+            self._insert_agents_data(agents, tenant_name)
+            return
+        for tenant_name, deployments in agents.iteritems():
+            self._insert_agents_data(agents[tenant_name], tenant_name)
 
-    def dump(self, tempdir, client, manager_version):
-        result = {}
+    def dump(self, tempdir, manager_version):
         self._manager_version = manager_version
-        for deployment in client.deployments.list():
-            deployment_result = self._get_deployment_result(
-                client,
-                deployment.id,
-            )
-            result[deployment.id] = deployment_result
-
+        result = {}
+        for tenant_name in self._get_tenants_list():
+            result[tenant_name] = {}
+            tenant_client = get_rest_client(tenant_name)
+            tenant_deployments = tenant_client.deployments.list()
+            for deployment in tenant_deployments:
+                result[tenant_name][deployment.id] = \
+                    self._get_deployment_result(tenant_client, deployment.id)
         self._dump_result_to_file(tempdir, result)
+
+    @staticmethod
+    def _get_tenants_list():
+        client = get_rest_client(DEFAULT_TENANT_NAME)
+        version = client.manager.get_version()
+        if version['edition'] != 'premium':
+            return [DEFAULT_TENANT_NAME]
+        tenants = client.tenants.list().items
+        return [tenant.name for tenant in tenants]
 
     def _dump_result_to_file(self, tempdir, result):
         agents_file_path = os.path.join(tempdir, self._AGENTS_FILE)
@@ -59,22 +71,16 @@ class Agents(object):
         deployment_result = {}
         for node in client.nodes.list(deployment_id=deployment_id):
             if is_compute(node):
-                node_result = self._get_node_result(
-                    client,
-                    deployment_id,
-                    node.id
-                )
-                deployment_result[node.id] = node_result
+                deployment_result[node.id] = self._get_node_result(
+                    client, deployment_id, node.id)
         return deployment_result
 
     def _get_node_result(self, client, deployment_id, node_id):
         node_result = {}
         for node_instance in client.node_instances.list(
-                deployment_id=deployment_id,
-                node_name=node_id):
-            node_instance_result = self._get_node_instance_result(
+                deployment_id=deployment_id, node_name=node_id):
+            node_result[node_instance.id] = self._get_node_instance_result(
                 node_instance)
-            node_result[node_instance.id] = node_instance_result
         return node_result
 
     def _get_node_instance_result(self, node_instance):
@@ -84,7 +90,6 @@ class Agents(object):
         """
         agent = node_instance.runtime_properties.get('cloudify_agent', {})
         tenant = agent.get('rest_tenant', {})
-
         broker_conf = {
             'broker_ip': agent.get('broker_ip', broker_config.broker_hostname),
             'broker_ssl_cert': self._broker_ssl_cert,
@@ -101,17 +106,18 @@ class Agents(object):
             'broker_config': broker_conf
         }
 
-    def _insert_agents_data(self, client, agents):
+    def _insert_agents_data(self, agents, tenant_name):
         for deployment_id, nodes in agents.iteritems():
             try:
-                self._create_agent(client, nodes)
+                self._create_agent(nodes, tenant_name)
             except Exception:
-                ctx.logger.warning('Failed restoring agents for '
-                                   'deployment {0}'.format(deployment_id),
-                                   exc_info=True)
+                ctx.logger.warning(
+                    'Failed restoring agents for deployment `{0}` in tenant '
+                    '`{1}`'.format(deployment_id, tenant_name),
+                    exc_info=True)
 
-    def _create_rest_tenant(self, old_agent, broker_config):
-        old_rest_tenant = old_agent.get('rest_tenant', self._tenant_name)
+    def _create_rest_tenant(self, old_agent, broker_config, tenant_name):
+        old_rest_tenant = old_agent.get('rest_tenant', tenant_name)
         if isinstance(old_rest_tenant, dict):
             return old_rest_tenant
         return {
@@ -121,10 +127,30 @@ class Agents(object):
             'name': old_rest_tenant
         }
 
-    def _create_agent(self, client, nodes):
+    @classmethod
+    def _get_tenant_name(cls, node_instance_id):
+        """
+        When restoring a snapshot from versions 4.0.0/4.0.1 the tenant name is
+        not defined and the only way to `guess` it is by finding the
+        node_instance from the agents.json file in the DB and checking its
+        tenant.
+        :param node_instance_id: a node instance from the agents.json file
+        :return: the tenant of the given node instance
+        """
+        client = get_rest_client()
+        node_instances = client.node_instances.list(_all_tenants=True).items
+        for node_instance in node_instances:
+            if node_instance['id'] == node_instance_id:
+                return node_instance['tenant_name']
+
+    def _create_agent(self, nodes, tenant_name):
+        client = None
         for node_instances in nodes.itervalues():
             for node_instance_id, agent in node_instances.iteritems():
                 broker_config = self._get_broker_config(agent)
+                tenant_name = tenant_name or self._get_tenant_name(
+                    node_instance_id)
+                client = client or get_rest_client(tenant_name)
                 node_instance = client.node_instances.get(node_instance_id)
                 runtime_properties = node_instance.runtime_properties
                 old_agent = runtime_properties.get('cloudify_agent', {})
@@ -133,8 +159,8 @@ class Agents(object):
                         old_agent.get('manager_ip', '')
                 broker_config['broker_vhost'] = \
                     broker_config.get('broker_vhost', BROKER_DEFAULT_VHOST)
-                agent['rest_tenant'] = self._create_rest_tenant(old_agent,
-                                                                broker_config)
+                agent['rest_tenant'] = self._create_rest_tenant(
+                    old_agent, broker_config, tenant_name)
                 agent['broker_config'] = broker_config
                 old_agent.update(agent)
                 runtime_properties['cloudify_agent'] = old_agent
