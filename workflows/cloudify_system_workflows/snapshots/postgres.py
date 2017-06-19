@@ -62,9 +62,8 @@ class Postgres(object):
         clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(dump_file, clear_tables_queries)
 
-        # Add admin user, provider context and the current execution
-        restore_admin_query = self._get_admin_user_update_query()
-        self._append_dump(dump_file, restore_admin_query)
+        # Add the admin user and the current execution
+        self._append_dump(dump_file, self._get_admin_user_update_query())
         self._append_dump(dump_file, self._get_execution_restore_query())
 
         self._restore_dump(dump_file, self._db_name)
