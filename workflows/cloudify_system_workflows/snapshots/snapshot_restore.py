@@ -54,6 +54,7 @@ from .constants import (
 
 
 V_4_0_0 = ManagerVersion('4.0.0')
+V_4_1_0 = ManagerVersion('4.1.0')
 
 
 class SnapshotRestore(object):
@@ -318,12 +319,14 @@ class SnapshotRestore(object):
 
     def _restore_agents(self):
         ctx.logger.info('Restoring cloudify agent data')
-        Agents().restore(self._tempdir, self._tenant_client, self._tenant_name)
+        Agents().restore(self._tempdir,
+                         self._tenant_name,
+                         is_older_than_4_1_0=self._snapshot_version < V_4_1_0)
         ctx.logger.info('Successfully restored cloudify agent data')
 
     def _get_tenant_client(self):
         with self._update_tenant_in_ctx():
-            return get_rest_client()
+            return get_rest_client(self._tenant_name)
 
     @contextmanager
     def _update_tenant_in_ctx(self):
