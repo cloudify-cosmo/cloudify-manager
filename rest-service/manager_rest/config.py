@@ -47,7 +47,7 @@ class Config(object):
         self.test_mode = False
         self.insecure_endpoints_disabled = True
         self.max_results = 1000
-        self.min_available_memory_mb = 256
+        self.min_available_memory_mb = None
 
         self.security_hash_salt = None
         self.security_secret_key = None
