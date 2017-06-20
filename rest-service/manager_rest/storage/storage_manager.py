@@ -413,9 +413,11 @@ class SQLStorageManager(object):
     def _validate_available_memory():
         """Validate minimal available memory in manager
         """
+        min_available_memory_mb = config.instance.min_available_memory_mb
+        if min_available_memory_mb == 0:
+            return
         memory_status = psutil.virtual_memory()
         available_mb = memory_status.available / 1024 / 1024
-        min_available_memory_mb = config.instance.min_available_memory_mb
         if available_mb < min_available_memory_mb:
             raise manager_exceptions.InsufficientMemoryError(
                 'Insufficient memory in manager, '
