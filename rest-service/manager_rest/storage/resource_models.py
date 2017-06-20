@@ -13,8 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from datetime import datetime
+
 from flask_restful import fields as flask_fields
-from sqlalchemy import func
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -195,7 +196,7 @@ class Event(SQLResourceBase):
 
     timestamp = db.Column(
         UTCDateTime,
-        server_default=func.current_timestamp(),
+        default=datetime.utcnow,
         nullable=False,
         index=True,
     )
@@ -228,7 +229,7 @@ class Log(SQLResourceBase):
 
     timestamp = db.Column(
         UTCDateTime,
-        server_default=func.current_timestamp(),
+        default=datetime.utcnow,
         nullable=False,
         index=True,
     )
