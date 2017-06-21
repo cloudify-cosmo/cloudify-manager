@@ -17,7 +17,7 @@ function create_resources_tar() {
     local repo=$3
     local build=$4
 
-    curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${REPO_TAG}.tar.gz > /vagrant/${REPO}.tar.gz
+    curl -L -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://github.com/cloudify-cosmo/${REPO}/archive/${REPO_BRANCH}.tar.gz > /vagrant/${REPO}.tar.gz
     tar -zxvf /vagrant/${REPO}.tar.gz -C /vagrant
 
     echo "Creating resource directory..."
@@ -25,10 +25,10 @@ function create_resources_tar() {
     cd /tmp
     pushd /tmp/cloudify-manager-resources
         echo "Downloading manager component packages..."
-        download_resources '/vagrant/'${REPO}'-'${REPO_TAG}'/packages-urls/manager-packages.yaml'
+        download_resources '/vagrant/'${REPO}'-'${CORE_BRANCH}'/packages-urls/manager-packages.yaml'
         pushd agents
             echo "Downloading agent packages..."
-            download_resources '/vagrant/'${REPO}'-'${REPO_TAG}'/packages-urls/agent-packages.yaml'
+            download_resources '/vagrant/'${REPO}'-'${CORE_BRANCH}'/packages-urls/agent-packages.yaml'
         popd
     popd
 
@@ -39,21 +39,17 @@ function create_resources_tar() {
 }
 
 
-export CORE_TAG_NAME="4.3.dev1-build"
+export CORE_TAG_NAME="4.3.dev1"
+export CORE_BRANCH="4.3.dev1-build"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export REPO=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
-if [ $REPO == "cloudify-versions" ];then
-    REPO_TAG="master"
-else
-    REPO_TAG=$CORE_TAG_NAME
-fi
-curl -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/${REPO}/${REPO_TAG}/packages-urls/common_build_env.sh -o ./common_build_env.sh &&
+curl -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/${REPO}/${CORE_BRANCH}/packages-urls/common_build_env.sh -o ./common_build_env.sh &&
 source common_build_env.sh &&
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${REPO_TAG}/common/provision.sh -o ./common-provision.sh &&
+curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${CORE_BRANCH}/common/provision.sh -o ./common-provision.sh &&
 source common-provision.sh
 
 echo "AWS_S3_PATH=$AWS_S3_PATH"
