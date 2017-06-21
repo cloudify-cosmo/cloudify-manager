@@ -11,6 +11,7 @@ function build_rpm() {
         --define "PRERELEASE $PRERELEASE" \
         --define "BUILD $BUILD" \
         --define "CORE_TAG_NAME $CORE_TAG_NAME" \
+        --define "CORE_BRANCH $CORE_BRANCH" \
         --define "REPO $REPO" \
         --define "GITHUB_USERNAME $GITHUB_USERNAME" \
         --define "GITHUB_PASSWORD $GITHUB_PASSWORD"
@@ -24,11 +25,12 @@ function build_rpm() {
 
 
 # VERSION/PRERELEASE are exported to follow with our standard of exposing them as env vars. They are not used.
-export CORE_TAG_NAME="4.3.dev1-build"
+export CORE_TAG_NAME="4.3.dev1"
+export CORE_BRANCH="4.3.dev1-build"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
 export REPO=$3
-export REPO_TAG="4.3.dev1-build"
+export REPO_TAG=$CORE_BRANCH
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
