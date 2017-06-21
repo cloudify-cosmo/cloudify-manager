@@ -722,10 +722,9 @@ class ResourceManager(object):
 
         if not plugin['install']:
             return
-        query_parameters = {
-            'package_name': plugin['package_name'],
-            'package_version': plugin['package_version']
-        }
+        query_parameters = {'package_name': plugin['package_name']}
+        if plugin['package_version']:
+            query_parameters['package_version'] = plugin['package_version']
         if plugin['distribution']:
             query_parameters['distribution'] = plugin['distribution']
         if plugin['distribution_version']:
@@ -743,8 +742,9 @@ class ResourceManager(object):
             raise manager_exceptions.\
                 DeploymentPluginNotFound(
                     'Required plugin {}, version {} is not installed '
-                    'on the manager'.format(plugin['package_name'],
-                                            plugin['package_version']))
+                    'on the manager'.format(
+                        plugin['package_name'],
+                        plugin['package_version'] or '`any`'))
 
     def start_deployment_modification(self,
                                       deployment_id,
