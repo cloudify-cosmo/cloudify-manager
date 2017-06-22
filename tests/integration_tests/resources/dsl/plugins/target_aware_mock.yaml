@@ -2,4 +2,4 @@ plugins:
     target_aware_mock:
         executor: host_agent
         package_name: target_aware_mock
-        package_version: 4.1a2
+        package_version: '4.1'
