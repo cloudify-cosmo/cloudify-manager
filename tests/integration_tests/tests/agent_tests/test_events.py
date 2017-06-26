@@ -75,8 +75,10 @@ class TimezoneTest(AgentTestWithPlugins):
         stop_timestamp = datetime.utcnow().isoformat()
 
         all_events = list(deploy_events) + list(undeploy_events)
-        timestamps = [event['timestamp'] for event in all_events]
-        self.assertTrue(all(
-            start_timestamp < timestamp < stop_timestamp
-            for timestamp in timestamps
-        ))
+
+        for field_name in ['timestamp', 'reported_timestamp']:
+            timestamps = [event[field_name] for event in all_events]
+            self.assertTrue(all(
+                start_timestamp < timestamp < stop_timestamp
+                for timestamp in timestamps
+            ))
