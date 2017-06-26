@@ -49,6 +49,7 @@ class Status(SecuredResource):
                             'rabbitmq-server': 'RabbitMQ',
                             'celeryd-cloudify-management': 'Celery Management',
                             'cloudify-ui': 'Cloudify UI',
+                            'cloudify-composer': 'Cloudify Composer',
                             'logstash': 'Logstash',
                             'nginx': 'Webserver',
                             'rest-service': 'Manager Rest-Service',
@@ -66,6 +67,7 @@ class Status(SecuredResource):
                             'cloudify-rabbitmq.service': 'RabbitMQ',
                             'cloudify-riemann.service': 'Riemann',
                             'cloudify-stage.service': 'Cloudify Stage',
+                            'cloudify-composer.service': 'Cloudify Composer',
                             'logstash.service': 'Logstash',
                             'nginx.service': 'Webserver',
                             'postgresql-9.5.service': 'PostgreSQL'
