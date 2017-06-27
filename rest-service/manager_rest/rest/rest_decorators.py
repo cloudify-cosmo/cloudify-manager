@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import pytz
+
 from functools import wraps
 from collections import OrderedDict
 
@@ -253,6 +255,15 @@ def rangeable(func):
             parsed_datetime = parse_datetime(datetime)
         except Exception:
             raise Invalid('Datetime parsing error')
+
+        # Make sure timestamp is in UTC, but doesn't have any timezone info.
+        # Passing timezone aware timestamp to PosgreSQL through SQLAlchemy
+        # doesn't seem to work well in manual tests
+        if parsed_datetime.tzinfo:
+            parsed_datetime = (
+                parsed_datetime.astimezone(pytz.timezone('UTC'))
+                .replace(tzinfo=None)
+            )
 
         return parsed_datetime
 
