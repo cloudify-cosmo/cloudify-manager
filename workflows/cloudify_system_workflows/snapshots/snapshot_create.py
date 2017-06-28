@@ -53,6 +53,8 @@ class SnapshotCreate(object):
                 config=self._config)
             stage_schema_revision = \
                 utils.stage_db_schema_get_current_revision()
+            composer_schema_revision = \
+                utils.composer_db_schema_get_current_revision()
 
             self._dump_files()
             self._dump_postgres()
@@ -61,7 +63,8 @@ class SnapshotCreate(object):
             self._dump_metadata(metadata,
                                 manager_version,
                                 schema_revision,
-                                stage_schema_revision)
+                                stage_schema_revision,
+                                composer_schema_revision)
             self._dump_agents(manager_version)
 
             self._create_archive()
@@ -89,6 +92,7 @@ class SnapshotCreate(object):
             to_archive=True
         )
         utils.copy_stage_files(self._tempdir)
+        utils.copy_composer_files(self._tempdir)
 
     def _dump_postgres(self):
         ctx.logger.info('Dumping Postgres data')
@@ -110,12 +114,16 @@ class SnapshotCreate(object):
                        metadata,
                        manager_version,
                        schema_revision,
-                       stage_schema_revision):
+                       stage_schema_revision,
+                       composer_schema_revision):
         ctx.logger.info('Dumping metadata')
         metadata[constants.M_VERSION] = str(manager_version)
         metadata[constants.M_SCHEMA_REVISION] = schema_revision
         if stage_schema_revision:
             metadata[constants.M_STAGE_SCHEMA_REVISION] = stage_schema_revision
+        if composer_schema_revision:
+            metadata[constants.M_COMPOSER_SCHEMA_REVISION] = \
+                composer_schema_revision
         metadata_filename = os.path.join(
             self._tempdir,
             constants.METADATA_FILENAME
