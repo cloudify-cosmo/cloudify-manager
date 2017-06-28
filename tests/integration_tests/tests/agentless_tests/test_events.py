@@ -38,18 +38,31 @@ class EventsTest(AgentlessTestCase):
 
     def test_timestamp_range(self):
         """Filter events by timestamp range."""
-        all_events = self._events_list(_sort='@timestamp')
-        min_time = all_events[0]['timestamp']
+        all_events = self._events_list(
+            _sort='@timestamp',
+            include_logs=True,
+        )
+        all_timestamps = [event['timestamp'] for event in all_events]
 
-        expected_event_count, max_time = next(
-            (index, event['timestamp'])
-            for index, event in enumerate(all_events)
-            if event['timestamp'] > min_time
+        min_time = all_timestamps[0]
+        max_time = next(
+            timestamp
+            for timestamp in all_timestamps
+            if timestamp > min_time
+        )
+        expected_event_count = sum([
+            min_time <= timestamp < max_time
+            for timestamp in all_timestamps
+        ])
+
+        ranged_events = self._events_list(
+            _sort='@timestamp',
+            include_logs=True,
+            from_datetime=min_time,
+            to_datetime=max_time,
+            skip_assertion=True,
         )
 
-        # get only half of the events by timestamp
-        ranged_events = self._events_list(
-            from_datetime=min_time, to_datetime=max_time)
         self.assertEquals(len(ranged_events), expected_event_count)
 
     def test_sorted_events(self):
