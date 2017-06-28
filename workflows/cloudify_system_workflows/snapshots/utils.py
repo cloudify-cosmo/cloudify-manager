@@ -141,6 +141,36 @@ def restore_stage_files(archive_root):
         shutil.rmtree(stage_tempdir)
 
 
+def copy_composer_files(archive_root):
+    """Copy Cloudify Composer files into the snapshot"""
+    composer_data = [
+        snapshot_constants.COMPOSER_CONFIG_FOLDER,
+        snapshot_constants.COMPOSER_BLUEPRINTS_FOLDER,
+    ]
+    for folder in composer_data:
+        copy_snapshot_path(
+            os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER, folder),
+            os.path.join(archive_root, 'composer', folder))
+
+
+def restore_composer_files(archive_root):
+    """Copy Composer files from the snapshot archive to Composer folder.
+    """
+    composer_archive = os.path.join(archive_root, 'composer')
+    if not os.path.exists(composer_archive):
+        # no composer files in the snapshot archive - nothing to do
+        # (perhaps the snapshot was made before composer was included in it?)
+        return
+    composer_data = [
+        snapshot_constants.COMPOSER_CONFIG_FOLDER,
+        snapshot_constants.COMPOSER_BLUEPRINTS_FOLDER,
+    ]
+    for folder in composer_data:
+        copy_snapshot_path(
+            os.path.join(archive_root, 'composer', folder),
+            os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER, folder))
+
+
 def copy_snapshot_path(source, destination):
         # source doesn't need to exist, then ignore
         if not os.path.exists(source):
@@ -348,4 +378,27 @@ def stage_db_schema_get_current_revision():
         'current',
     ])
     revision = output.strip()
+    return revision
+
+
+def composer_db_schema_get_current_revision():
+    """Get composer database schema revision.
+
+    :returns: Current revision
+    :rtype: str
+
+    """
+    client = manager.get_rest_client()
+    version = client.manager.get_version()
+    if version['edition'] != 'premium':
+        return None
+    output = subprocess.check_output([
+        '/opt/nodejs/bin/npm',
+        'run',
+        '--prefix', snapshot_constants.COMPOSER_BASE_FOLDER,
+        'db-migrate-current'
+    ])
+    # the revision is in the last line of the output
+    # (it's actually -2, because -1 is just an empty line)
+    revision = output.split('\n')[-2].strip()
     return revision
