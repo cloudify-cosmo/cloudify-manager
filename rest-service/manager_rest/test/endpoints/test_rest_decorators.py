@@ -115,7 +115,9 @@ class RangeableTest(TestCase):
         with patch('manager_rest.rest.rest_decorators.request') as request:
             for valid_datetime_str in valid_datetime_strs:
                 valid_value = 'field,{0},{0}'.format(valid_datetime_str)
-                valid_datetime = parse_datetime(valid_datetime_str)
+                valid_datetime = (
+                    parse_datetime(valid_datetime_str).replace(tzinfo=None)
+                )
                 expected_value = {
                     'field': {
                         'from': valid_datetime,
@@ -130,7 +132,9 @@ class RangeableTest(TestCase):
         """From/to are optional and validation passes if one is missing."""
 
         valid_datetime_str = '2016-09-12T00:00:00.0Z'
-        valid_datetime = parse_datetime(valid_datetime_str)
+        valid_datetime = (
+            parse_datetime(valid_datetime_str).replace(tzinfo=None)
+        )
 
         with patch('manager_rest.rest.rest_decorators.request') as request:
             data = [
@@ -156,7 +160,9 @@ class RangeableTest(TestCase):
         """Unicode values pass validation."""
 
         valid_datetime_str = '2016-09-12T00:00:00.0Z'
-        valid_datetime = parse_datetime(valid_datetime_str)
+        valid_datetime = (
+            parse_datetime(valid_datetime_str).replace(tzinfo=None)
+        )
 
         with patch('manager_rest.rest.rest_decorators.request') as request:
             data = [
