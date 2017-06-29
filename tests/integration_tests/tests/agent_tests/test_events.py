@@ -17,6 +17,10 @@ import uuid
 
 from datetime import datetime
 
+import pytz
+
+from dateutil.parser import parse as parse_datetime
+
 from integration_tests import AgentTestWithPlugins
 from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
@@ -54,31 +58,26 @@ class TimezoneTest(AgentTestWithPlugins):
         super(TimezoneTest, self).setUp()
 
     def test_event_timezone(self):
-        """Create deployment with agent and delete it afterwards."""
+        """Check timestamp values in agent machine.
+
+        The goal of this test case is to verify that when the agent is running
+        in a machine where the timezone configuration has been updated, the
+        timestamp values are still in the expected range.
+
+        """
         deployment_id = str(uuid.uuid4())
-        blueprint = 'dsl/with_agent.yaml'
+        blueprint = 'dsl/dockercompute_timezone.yaml'
         dsl_path = resource(blueprint)
 
-        start_timestamp = datetime.utcnow().isoformat()
-        _, execution_id = self.deploy_application(
-            dsl_path, deployment_id=deployment_id)
-        deploy_events = self.client.events.list(
-            execution_id=execution_id, include_logs=True)
+        start_timestamp = '{}Z'.format(datetime.utcnow().isoformat()[:-3])
+        self.deploy_application(dsl_path, deployment_id=deployment_id)
+        stop_timestamp = '{}Z'.format(datetime.utcnow().isoformat()[:-3])
 
-        # TBD: Update timezone in agent container
-        # rm -f /etc/localtime
-        # ln -s /usr/share/zoneinfo/Asia/Jerusalem /etc/localtime
-
-        execution_id = self.undeploy_application(deployment_id)
-        undeploy_events = self.client.events.list(
-            execution_id=execution_id, include_logs=True)
-        stop_timestamp = datetime.utcnow().isoformat()
-
-        all_events = list(deploy_events) + list(undeploy_events)
-
+        logs = self.client.events.list(
+            include_logs=True,
+            message='Date after timezone configuration:%',
+        )
+        self.assertEqual(len(logs), 1)
+        log = logs[0]
         for field_name in ['timestamp', 'reported_timestamp']:
-            timestamps = [event[field_name] for event in all_events]
-            self.assertTrue(all(
-                start_timestamp < timestamp < stop_timestamp
-                for timestamp in timestamps
-            ))
+            self.assertTrue(start_timestamp < log[field_name] < stop_timestamp)

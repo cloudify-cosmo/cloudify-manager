@@ -1,0 +1,28 @@
+# In this blueprint:
+# - a docker container is created
+# - the agents is installed in the docker container
+# - timezone configuration is updated in the container
+# - a log is generated after timezone configuration updated
+#
+# The goal is to verify if the timestamp in the logs change after the timezone
+# in the container is updated
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - cloudify/types/types.yaml
+    - plugins/dockercompute.yaml
+
+node_templates:
+  agent_host:
+    type: cloudify.nodes.docker.Compute
+    properties:
+      install_agent: true
+
+  timezone_configurator:
+    type: cloudify.nodes.SoftwareComponent
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: agent_host
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        configure: scripts/operations/timezone_configure.sh
