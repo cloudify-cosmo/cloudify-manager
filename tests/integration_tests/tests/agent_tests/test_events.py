@@ -17,10 +17,6 @@ import uuid
 
 from datetime import datetime
 
-import pytz
-
-from dateutil.parser import parse as parse_datetime
-
 from integration_tests import AgentTestWithPlugins
 from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
