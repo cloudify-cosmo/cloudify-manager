@@ -21,7 +21,7 @@ import argparse
 
 from manager_rest import manager_exceptions
 from manager_rest.flask_utils import setup_flask_app
-from manager_rest.constants import CURRENT_TENANT_CONFIG, DEFAULT_TENANT_NAME
+from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.storage import models, get_storage_manager
 
 format_str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
@@ -49,7 +49,7 @@ class EsToPg(object):
         app = setup_flask_app()
         admin = self._set_current_user(app)
         storage_manager = get_storage_manager()
-        tenant = self._get_or_create_tenant(tenant_name)
+        tenant = self._get_tenant(tenant_name)
         self._set_tenant_in_app(tenant, app, storage_manager, admin)
         return storage_manager
 
@@ -63,16 +63,15 @@ class EsToPg(object):
         app.config[CURRENT_TENANT_CONFIG] = tenant
 
     @staticmethod
-    def _get_or_create_tenant(tenant_name):
-        """Get the default tenant if using community edition, or
+    def _get_tenant(tenant_name):
+        """Get the tenant name, or fail noisily.
         """
         tenant = models.Tenant.query.filter_by(name=tenant_name).first()
-        if tenant_name != DEFAULT_TENANT_NAME:
-            assert not tenant, 'Attempted to restore into an ' \
-                               'existing {0}:'.format(tenant)
-            tenant = models.Tenant(name=tenant_name)
-        else:
-            assert tenant.name == DEFAULT_TENANT_NAME
+        if not tenant:
+            raise Exception(
+                'Could not restore into tenant "{name}" as this tenant does '
+                'not exist.'.format(name=tenant_name)
+            )
         return tenant
 
     @staticmethod

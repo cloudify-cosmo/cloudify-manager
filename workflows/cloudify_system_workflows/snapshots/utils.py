@@ -50,8 +50,7 @@ class DictToAttributes(object):
 
 def copy_files_between_manager_and_snapshot(archive_root,
                                             config,
-                                            to_archive=True,
-                                            new_tenant=''):
+                                            to_archive=True):
     """
     Copy files/dirs between snapshot/manager and manager/snapshot.
 
@@ -59,9 +58,6 @@ def copy_files_between_manager_and_snapshot(archive_root,
     :param config: Config of manager.
     :param to_archive: If True then copying is from manager to snapshot,
         otherwise from snapshot to manager.
-    :param new_tenant: a tenant to which the snapshot is restored.
-        Relevant only in the case of restoring a snapshot from a manager
-        of a version older than 4.0.0
     """
     ctx.logger.info('Copying files/directories...')
 
@@ -71,25 +67,22 @@ def copy_files_between_manager_and_snapshot(archive_root,
     # in manager) and snapshot archive (path in snapshot). If paths are
     # absolute then should point to proper data in manager/snapshot archive
     data_to_copy = [
-        (os.path.join(
-            constants.FILE_SERVER_BLUEPRINTS_FOLDER, new_tenant),
-         constants.FILE_SERVER_BLUEPRINTS_FOLDER),
-        (os.path.join(
-            constants.FILE_SERVER_DEPLOYMENTS_FOLDER, new_tenant),
-         constants.FILE_SERVER_DEPLOYMENTS_FOLDER),
-        (os.path.join(
-            constants.FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER, new_tenant),
-         constants.FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER),
-        (constants.FILE_SERVER_PLUGINS_FOLDER,
-         constants.FILE_SERVER_PLUGINS_FOLDER)
+        constants.FILE_SERVER_BLUEPRINTS_FOLDER,
+        constants.FILE_SERVER_DEPLOYMENTS_FOLDER,
+        constants.FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+        constants.FILE_SERVER_PLUGINS_FOLDER,
     ]
+
+    # To work with cert dir logic for archiving
+    data_to_copy = [(path, path) for path in data_to_copy]
 
     local_cert_dir = os.path.dirname(get_local_rest_certificate())
     if to_archive:
         data_to_copy.append((local_cert_dir,
                              snapshot_constants.ARCHIVE_CERT_DIR))
 
-    for (p1, p2) in data_to_copy:
+    ctx.logger.info(str(data_to_copy))
+    for p1, p2 in data_to_copy:
         # first expand relative paths
         if p1[0] != '/':
             p1 = os.path.join(config.file_server_root, p1)
@@ -172,18 +165,18 @@ def restore_composer_files(archive_root):
 
 
 def copy_snapshot_path(source, destination):
-        # source doesn't need to exist, then ignore
-        if not os.path.exists(source):
-            return
-        ctx.logger.debug(
-            'Copying from dump: {0} to: {1}..'.format(source, destination))
-        # copy data
-        if os.path.isfile(source):
-            shutil.copy(source, destination)
-        else:
-            if os.path.exists(destination):
-                shutil.rmtree(destination)
-            shutil.copytree(source, destination)
+    # source doesn't need to exist, then ignore
+    if not os.path.exists(source):
+        return
+    ctx.logger.debug(
+        'Copying from dump: {0} to: {1}..'.format(source, destination))
+    # copy data
+    if os.path.isfile(source):
+        shutil.copy(source, destination)
+    else:
+        if os.path.exists(destination):
+            shutil.rmtree(destination)
+        shutil.copytree(source, destination)
 
 
 def copy(source, destination):
