@@ -38,13 +38,6 @@ class TestSnapshot(AgentlessTestCase):
     def test_v_4_snapshot_restore_validation(self):
         snapshot = self._get_snapshot('snap_4.0.0.zip')
         self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
-        self._try_restore_snapshot(
-            snapshot_id=self.SNAPSHOT_ID,
-            error_msg='Tenant name should only be passed when '
-            'restoring versions prior to 4.0.0',
-            tenant_name='tenant'
-        )
-
         username = 'username'
         password = 'password'
         self.client.users.create(username, password, role=ADMIN_ROLE)
@@ -65,7 +58,10 @@ class TestSnapshot(AgentlessTestCase):
         self.client.tenants.create('tenant')
         self._try_restore_snapshot(
             snapshot_id=self.SNAPSHOT_ID,
-            error_msg='Tenant `tenant` already exists on the manager',
+            error_msg='Passing a tenant name when restoring a snapshot is no '
+                      'longer supported. Please switch to the "tenant" tenant '
+                      'and re-upload then perform the restore from '
+                      'that tenant.',
             tenant_name='tenant'
         )
 
@@ -126,6 +122,7 @@ class TestSnapshot(AgentlessTestCase):
     def test_3_4_0_snapshot_with_deployment(self):
         snapshot_path = self._get_snapshot('snap_3.4.0.zip')
         tenant_name = 'tenant'
+        self.client.tenants.create(tenant_name)
         self._upload_and_restore_snapshot(snapshot_path, tenant_name)
         # Now make sure all the resources really exist in the DB
         self._assert_3_4_0_snapshot_restored(tenant_name)
@@ -151,6 +148,7 @@ class TestSnapshot(AgentlessTestCase):
     def test_3_3_1_snapshot_with_plugin(self):
         snapshot_path = self._get_snapshot('snap_3.3.1_with_plugin.zip')
         tenant_name = 'tenant'
+        self.client.tenants.create(tenant_name)
         self._upload_and_restore_snapshot(snapshot_path, tenant_name)
 
         # Now make sure all the resources really exist in the DB
@@ -183,6 +181,8 @@ class TestSnapshot(AgentlessTestCase):
         snapshot_2_id = 'snapshot_2'
         snapshot_1_path = self._get_snapshot('snap_3.4.0.zip')
         snapshot_2_path = self._get_snapshot('snap_3.3.1_with_plugin.zip')
+        self.client.tenants.create(tenant_1_name)
+        self.client.tenants.create(tenant_2_name)
         self._upload_and_restore_snapshot(
             snapshot_1_path,
             tenant_1_name,
@@ -306,32 +306,36 @@ class TestSnapshot(AgentlessTestCase):
 
     def _upload_and_restore_snapshot(self,
                                      snapshot_path,
-                                     tenant_name=None,
+                                     tenant_name=DEFAULT_TENANT_NAME,
                                      snapshot_id=None):
         """Upload the snapshot and launch the restore workflow
         """
         snapshot_id = snapshot_id or self.SNAPSHOT_ID
-        self._upload_and_validate_snapshot(snapshot_path, snapshot_id)
+        rest_client = utils.create_rest_client(tenant=tenant_name)
+        self._upload_and_validate_snapshot(snapshot_path,
+                                           snapshot_id,
+                                           rest_client)
         self.logger.debug('Restoring snapshot...')
-        execution = self.client.snapshots.restore(
-            snapshot_id,
-            tenant_name=tenant_name
-        )
-        execution = self._wait_for_execution_to_end(execution)
+        execution = rest_client.snapshots.restore(snapshot_id)
+        execution = self._wait_for_execution_to_end(execution, rest_client)
         if execution.status == Execution.FAILED:
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(Execution.TERMINATED, execution.status)
 
-    def _upload_and_validate_snapshot(self, snapshot_path, snapshot_id):
+    def _upload_and_validate_snapshot(self,
+                                      snapshot_path,
+                                      snapshot_id,
+                                      rest_client):
         self.logger.debug('Uploading snapshot: {0}'.format(snapshot_path))
-        self.client.snapshots.upload(snapshot_path, snapshot_id)
-        snapshot = self.client.snapshots.get(snapshot_id)
+        rest_client.snapshots.upload(snapshot_path, snapshot_id)
+        snapshot = rest_client.snapshots.get(snapshot_id)
         self.logger.debug('Retrieved snapshot: {0}'.format(snapshot))
         self.assertEquals(snapshot['id'], snapshot_id)
         self.assertEquals(snapshot['status'], 'uploaded')
         self.logger.info('Snapshot uploaded and validated')
 
-    def _wait_for_execution_to_end(self, execution, timeout_seconds=60):
+    def _wait_for_execution_to_end(
+            self, execution, rest_client, timeout_seconds=60):
         """Can't use the `wait_for_execution_to_end` in the class because
          we need to be able to handle client errors
         """
@@ -341,7 +345,7 @@ class TestSnapshot(AgentlessTestCase):
             # This might fail due to the fact that we're changing the DB in
             # real time - it's OK. Just try again
             try:
-                execution = self.client.executions.get(execution.id)
+                execution = rest_client.executions.get(execution.id)
             except CloudifyClientError:
                 pass
             if time.time() > deadline:
