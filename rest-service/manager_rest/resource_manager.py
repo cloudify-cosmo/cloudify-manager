@@ -29,6 +29,7 @@ from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest.constants import DEFAULT_TENANT_NAME
+from manager_rest.dsl_functions import get_secret_method
 from manager_rest.storage import get_storage_manager, models, get_node
 from manager_rest.storage.models_states import (SnapshotState,
                                                 ExecutionState,
@@ -668,12 +669,18 @@ class ResourceManager(object):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
         plan = blueprint.plan
         try:
-            deployment_plan = tasks.prepare_deployment_plan(plan, inputs)
+            deployment_plan = tasks.prepare_deployment_plan(
+                plan, get_secret_method(), inputs)
         except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))
         except parser_exceptions.UnknownInputError, e:
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
+        except parser_exceptions.UnknownSecretError, e:
+            raise manager_exceptions.UnknownDeploymentSecretError(str(e))
+        except parser_exceptions.UnsupportedGetSecretError, e:
+            raise manager_exceptions.UnsupportedDeploymentGetSecretError(
+                str(e))
 
         #  validate plugins exists on manager when
         #  skip_plugins_validation is False
