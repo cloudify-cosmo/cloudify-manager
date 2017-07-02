@@ -22,6 +22,7 @@ from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest import config
+from manager_rest.dsl_functions import get_secret_method
 from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest import app_context, manager_exceptions
 from manager_rest.storage import get_storage_manager, models
@@ -126,12 +127,19 @@ class DeploymentUpdateManager(object):
 
         # applying intrinsic functions
         try:
-            prepared_plan = tasks.prepare_deployment_plan(plan, inputs=inputs)
+            prepared_plan = tasks.prepare_deployment_plan(plan,
+                                                          get_secret_method(),
+                                                          inputs=inputs)
         except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))
         except parser_exceptions.UnknownInputError, e:
             raise manager_exceptions.UnknownDeploymentInputError(str(e))
+        except parser_exceptions.UnknownSecretError, e:
+            raise manager_exceptions.UnknownDeploymentSecretError(str(e))
+        except parser_exceptions.UnsupportedGetSecretError, e:
+            raise manager_exceptions.UnsupportedDeploymentGetSecretError(
+                str(e))
 
         deployment_update_id = '{0}-{1}'.format(deployment.id, uuid.uuid4())
         deployment_update = models.DeploymentUpdate(

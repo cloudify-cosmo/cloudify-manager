@@ -300,6 +300,30 @@ class UnknownDeploymentInputError(ManagerException):
         )
 
 
+class UnknownDeploymentSecretError(ManagerException):
+    ERROR_CODE = 'unknown_deployment_secret_error'
+
+    def __init__(self, *args, **kwargs):
+        super(UnknownDeploymentSecretError, self).__init__(
+            400,
+            UnknownDeploymentSecretError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
+class UnsupportedDeploymentGetSecretError(ManagerException):
+    ERROR_CODE = 'unknown_deployment_secret_error'
+
+    def __init__(self, *args, **kwargs):
+        super(UnsupportedDeploymentGetSecretError, self).__init__(
+            400,
+            UnsupportedDeploymentGetSecretError.ERROR_CODE,
+            *args,
+            **kwargs
+        )
+
+
 class DeploymentOutputsEvaluationError(ManagerException):
     ERROR_CODE = 'deployment_outputs_evaluation_error'
 

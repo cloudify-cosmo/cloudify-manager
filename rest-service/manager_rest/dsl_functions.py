@@ -54,6 +54,12 @@ def evaluate_deployment_outputs(deployment_id):
         raise DeploymentOutputsEvaluationError(str(e))
 
 
+def get_secret_method():
+    sm = get_storage_manager()
+    methods = _get_methods(None, sm)
+    return methods['get_secret_method']
+
+
 def _get_methods(deployment_id, storage_manager):
     """Retrieve a dict of all the callbacks necessary for function evaluation
     """
