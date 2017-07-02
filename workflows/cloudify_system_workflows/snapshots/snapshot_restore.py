@@ -385,7 +385,7 @@ class SnapshotRestore(object):
         ctx.logger.info('Restoring cloudify agent data')
         Agents().restore(
             self._tempdir,
-            self._client,
+            self._tenant_name,
             is_older_than_4_1_0=self._snapshot_version < V_4_1_0,
         )
         ctx.logger.info('Successfully restored cloudify agent data')
