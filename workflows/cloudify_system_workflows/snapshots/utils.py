@@ -231,6 +231,15 @@ def get_manager_version(client):
     return ManagerVersion(client.manager.get_version()['version'])
 
 
+def get_tenants_list():
+    client = manager.get_rest_client(snapshot_constants.DEFAULT_TENANT_NAME)
+    version = client.manager.get_version()
+    if version['edition'] != 'premium':
+        return [snapshot_constants.DEFAULT_TENANT_NAME]
+    tenants = client.tenants.list().items
+    return [tenant.name for tenant in tenants]
+
+
 def is_compute(node):
     return constants.COMPUTE_NODE_TYPE in node.type_hierarchy
 
