@@ -21,8 +21,8 @@ from cloudify import broker_config
 from cloudify.manager import get_rest_client
 from cloudify.utils import get_broker_ssl_cert_path
 
-from .utils import is_compute
-from .constants import BROKER_DEFAULT_VHOST, DEFAULT_TENANT_NAME
+from .constants import BROKER_DEFAULT_VHOST
+from .utils import is_compute, get_tenants_list
 
 
 class Agents(object):
@@ -32,11 +32,11 @@ class Agents(object):
         with open(get_broker_ssl_cert_path(), 'r') as f:
             self._broker_ssl_cert = f.read()
 
-    def restore(self, tempdir, tenant_name, is_older_than_4_1_0):
+    def restore(self, tempdir, is_older_than_4_1_0):
         with open(os.path.join(tempdir, self._AGENTS_FILE)) as agents_file:
             agents = json.load(agents_file)
         if is_older_than_4_1_0:
-            self._insert_agents_data(agents, tenant_name)
+            self._insert_agents_data(agents)
             return
         for tenant_name, deployments in agents.iteritems():
             self._insert_agents_data(agents[tenant_name], tenant_name)
@@ -44,7 +44,7 @@ class Agents(object):
     def dump(self, tempdir, manager_version):
         self._manager_version = manager_version
         result = {}
-        for tenant_name in self._get_tenants_list():
+        for tenant_name in get_tenants_list():
             result[tenant_name] = {}
             tenant_client = get_rest_client(tenant_name)
             tenant_deployments = tenant_client.deployments.list()
@@ -52,15 +52,6 @@ class Agents(object):
                 result[tenant_name][deployment.id] = \
                     self._get_deployment_result(tenant_client, deployment.id)
         self._dump_result_to_file(tempdir, result)
-
-    @staticmethod
-    def _get_tenants_list():
-        client = get_rest_client(DEFAULT_TENANT_NAME)
-        version = client.manager.get_version()
-        if version['edition'] != 'premium':
-            return [DEFAULT_TENANT_NAME]
-        tenants = client.tenants.list().items
-        return [tenant.name for tenant in tenants]
 
     def _dump_result_to_file(self, tempdir, result):
         agents_file_path = os.path.join(tempdir, self._AGENTS_FILE)
@@ -106,7 +97,7 @@ class Agents(object):
             'broker_config': broker_conf
         }
 
-    def _insert_agents_data(self, agents, tenant_name):
+    def _insert_agents_data(self, agents, tenant_name=None):
         for deployment_id, nodes in agents.iteritems():
             try:
                 self._create_agent(nodes, tenant_name)

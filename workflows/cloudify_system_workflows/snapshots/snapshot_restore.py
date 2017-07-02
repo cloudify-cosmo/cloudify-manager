@@ -25,7 +25,7 @@ from wagon import wagon
 
 from cloudify.workflows import ctx
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
-from cloudify.utils import internal as internal_utils
+from cloudify.utils import get_tenant_name, internal as internal_utils
 from cloudify.manager import get_rest_client
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
@@ -121,11 +121,12 @@ class SnapshotRestore(object):
 
     def _restore_deployment_envs(self):
         deps = {}
-        for tenant in self._client.tenants.list():
+        tenants = [get_tenant_name()] if self._snapshot_version < V_4_0_0 \
+            else utils.get_tenants_list()
+        for tenant_name in tenants:
             # Temporarily assign the context a different tenant name so that
             # we can retrieve that tenant's deployment contexts
-            tenant_name = tenant['name']
-            with internal_utils._change_tenant(ctx, tenant['name']):
+            with internal_utils._change_tenant(ctx, tenant_name):
                 # We have to zero this out each time or the cached version for
                 # the previous tenant will be used
                 ctx._dep_contexts = None
@@ -383,11 +384,8 @@ class SnapshotRestore(object):
 
     def _restore_agents(self):
         ctx.logger.info('Restoring cloudify agent data')
-        Agents().restore(
-            self._tempdir,
-            self._tenant_name,
-            is_older_than_4_1_0=self._snapshot_version < V_4_1_0,
-        )
+        Agents().restore(self._tempdir,
+                         is_older_than_4_1_0=self._snapshot_version < V_4_1_0)
         ctx.logger.info('Successfully restored cloudify agent data')
 
     @staticmethod
@@ -471,10 +469,11 @@ class SnapshotRestoreValidator(object):
                 )
             )
         else:
-            self._assert_clean_db()
+            # validate only for the snapshot's tenant
+            self._assert_clean_db(all_tenants=False)
 
-    def _assert_clean_db(self):
-        if self._client.blueprints.list(_all_tenants=True).items:
+    def _assert_clean_db(self, all_tenants=True):
+        if self._client.blueprints.list(_all_tenants=all_tenants).items:
             if self._force:
                 ctx.logger.warning(
                     "Forcing snapshot restoration on a non-empty manager. "
