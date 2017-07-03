@@ -52,19 +52,6 @@ class TestSnapshot(AgentlessTestCase):
             client=admin_client
         )
 
-    def test_v_3_snapshot_restore_validation(self):
-        snapshot = self._get_snapshot('snap_3.4.0.zip')
-        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
-        self.client.tenants.create('tenant')
-        self._try_restore_snapshot(
-            snapshot_id=self.SNAPSHOT_ID,
-            error_msg='Passing a tenant name when restoring a snapshot is no '
-                      'longer supported. Please switch to the "tenant" tenant '
-                      'and re-upload then perform the restore from '
-                      'that tenant.',
-            tenant_name='tenant'
-        )
-
     def _try_restore_snapshot(self,
                               snapshot_id,
                               error_msg,

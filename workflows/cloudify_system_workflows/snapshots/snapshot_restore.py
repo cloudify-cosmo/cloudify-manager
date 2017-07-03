@@ -462,18 +462,8 @@ class SnapshotRestoreValidator(object):
         self._assert_clean_db()
 
     def _validate_v_3_snapshot(self):
-        if self._tenant_name:
-            raise NonRecoverableError(
-                'Passing a tenant name when restoring a snapshot is no '
-                'longer supported. Please switch to the "{tenant}" tenant '
-                'and re-upload then perform the restore from that '
-                'tenant.'.format(
-                    tenant=self._tenant_name,
-                )
-            )
-        else:
-            # validate only for the snapshot's tenant
-            self._assert_clean_db(all_tenants=False)
+        # validate only for the snapshot's tenant
+        self._assert_clean_db(all_tenants=False)
 
     def _assert_clean_db(self, all_tenants=True):
         if self._client.blueprints.list(_all_tenants=all_tenants).items:
