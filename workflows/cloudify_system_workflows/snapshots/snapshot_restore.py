@@ -207,6 +207,9 @@ class SnapshotRestore(object):
             self._tempdir,
             self._config,
             to_archive=False,
+            tenant_name=(
+                ctx.tenant_name if self._snapshot_version < V_4_0_0 else None
+            ),
         )
         utils.restore_stage_files(self._tempdir)
         utils.restore_composer_files(self._tempdir)

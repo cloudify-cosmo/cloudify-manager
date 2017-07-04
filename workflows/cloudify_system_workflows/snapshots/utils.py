@@ -50,7 +50,8 @@ class DictToAttributes(object):
 
 def copy_files_between_manager_and_snapshot(archive_root,
                                             config,
-                                            to_archive=True):
+                                            to_archive=True,
+                                            tenant_name=None):
     """
     Copy files/dirs between snapshot/manager and manager/snapshot.
 
@@ -58,14 +59,11 @@ def copy_files_between_manager_and_snapshot(archive_root,
     :param config: Config of manager.
     :param to_archive: If True then copying is from manager to snapshot,
         otherwise from snapshot to manager.
+    :param tenant_name: If passed, will restore files to this tenant name.
+        Expected to be used only for 3.x upgrades.
     """
     ctx.logger.info('Copying files/directories...')
 
-    # Files/dirs with constant relative/absolute paths,
-    # where first path is path in manager, second is path in snapshot.
-    # If paths are relative then should be relative to file server (path
-    # in manager) and snapshot archive (path in snapshot). If paths are
-    # absolute then should point to proper data in manager/snapshot archive
     data_to_copy = [
         constants.FILE_SERVER_BLUEPRINTS_FOLDER,
         constants.FILE_SERVER_DEPLOYMENTS_FOLDER,
@@ -74,7 +72,24 @@ def copy_files_between_manager_and_snapshot(archive_root,
     ]
 
     # To work with cert dir logic for archiving
-    data_to_copy = [(path, path) for path in data_to_copy]
+    if tenant_name:
+        # This is a 3.x install, files go in tenant folders
+        data_to_copy = [
+            (
+                # The root path to copy the files to in the manager for each
+                # type of restored file
+                # e.g. blueprints/<tenant_name>/
+                os.path.join(path, tenant_name)
+                # Plugins are an exception as they are all stored in one path
+                # under UUIDs without tenant names
+                if path != constants.FILE_SERVER_PLUGINS_FOLDER else path,
+                # The path of the file type in the snapshot
+                path,
+            ) for path in data_to_copy
+        ]
+    else:
+        # This is a 4.x+ install, files go where they went.
+        data_to_copy = [(path, path) for path in data_to_copy]
 
     local_cert_dir = os.path.dirname(get_local_rest_certificate())
     if to_archive:
