@@ -18,6 +18,8 @@ import os
 import shutil
 import errno
 
+from retrying import retry
+
 from cloudify.decorators import workflow
 from cloudify.workflows import tasks as workflow_tasks
 from cloudify.workflows import workflow_context
@@ -172,12 +174,21 @@ def _ignore_task_on_fail_and_send_event(task, ctx):
     task.on_failure = failure_handler
 
 
+def _retry_if_file_already_exists(exception):
+    """Retry if file already exist exception raised."""
+    return (
+        isinstance(exception, OSError) and
+        exception.errno == errno.EEXIST
+    )
+
+
 @workflow_context.task_config(send_task_events=False)
+@retry(retry_on_exception=_retry_if_file_already_exists, stop_max_delay=60000)
 def _create_deployment_workdir(deployment_id, logger, tenant):
     deployment_workdir = _workdir(deployment_id, tenant)
     try:
         os.makedirs(deployment_workdir)
-    except os.error as e:
+    except OSError as e:
         if e.errno == errno.EEXIST:
             logger.error('Failed creating directory {0}. '
                          'Current directory content: {1}'.format(
