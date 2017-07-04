@@ -692,6 +692,9 @@ class ResourceManager(object):
             deployment_plan
         )
         new_deployment.set_blueprint(blueprint)
+        # The creator of the deployment is the current user (can be someone
+        # other than the creator of the blueprint)
+        new_deployment.creator = current_user
         # The deployment is private if either the blueprint was
         # private, or the user passed the `private_resource` flag
         private_resource = private_resource or blueprint.private_resource
