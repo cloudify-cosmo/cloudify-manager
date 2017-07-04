@@ -183,7 +183,7 @@ def _retry_if_file_already_exists(exception):
 
 
 @workflow_context.task_config(send_task_events=False)
-@retry(retry_on_exception=_retry_if_file_already_exists)
+@retry(retry_on_exception=_retry_if_file_already_exists, stop_max_delay=60000)
 def _create_deployment_workdir(deployment_id, logger, tenant):
     deployment_workdir = _workdir(deployment_id, tenant)
     try:
