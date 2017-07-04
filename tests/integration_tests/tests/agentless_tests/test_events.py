@@ -13,11 +13,18 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+from datetime import datetime
+
 from integration_tests import AgentlessTestCase
+from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
+
+from manager_rest.flask_utils import get_postgres_conf
 
 
 class EventsTest(AgentlessTestCase):
+
+    """Events test cases using the default database timezone (UTC)."""
 
     def setUp(self):
         super(EventsTest, self).setUp()
@@ -31,18 +38,31 @@ class EventsTest(AgentlessTestCase):
 
     def test_timestamp_range(self):
         """Filter events by timestamp range."""
-        all_events = self._events_list(_sort='@timestamp')
-        min_time = all_events[0]['timestamp']
+        all_events = self._events_list(
+            _sort='@timestamp',
+            include_logs=True,
+        )
+        all_timestamps = [event['timestamp'] for event in all_events]
 
-        expected_event_count, max_time = next(
-            (index, event['timestamp'])
-            for index, event in enumerate(all_events)
-            if event['timestamp'] > min_time
+        min_time = all_timestamps[0]
+        max_time = next(
+            timestamp
+            for timestamp in all_timestamps
+            if timestamp > min_time
+        )
+        expected_event_count = sum([
+            min_time <= timestamp < max_time
+            for timestamp in all_timestamps
+        ])
+
+        ranged_events = self._events_list(
+            _sort='@timestamp',
+            include_logs=True,
+            from_datetime=min_time,
+            to_datetime=max_time,
+            skip_assertion=True,
         )
 
-        # get only half of the events by timestamp
-        ranged_events = self._events_list(
-            from_datetime=min_time, to_datetime=max_time)
         self.assertEquals(len(ranged_events), expected_event_count)
 
     def test_sorted_events(self):
@@ -132,3 +152,53 @@ class EventsTest(AgentlessTestCase):
         dsl_path = resource('dsl/basic_event_and_log.yaml')
         test_deployment, _ = self.deploy_application(dsl_path)
         return test_deployment.id
+
+
+class EventsAlternativeTimezoneTest(EventsTest):
+
+    """Events test cases using an alternative timezone (Asia/Jerusalem)."""
+
+    TIMEZONE = 'Asia/Jerusalem'
+
+    @classmethod
+    def setUpClass(cls):
+        """Configure database timezone."""
+        super(EventsAlternativeTimezoneTest, cls).setUpClass()
+
+        # Container is launched once per unittest.TestCase class.
+        # Timezone configuration just needs to updated at the class level.
+        # Between tests cases tables are re-created,
+        # but timezone configuration is preserved.
+        postgres_conf = get_postgres_conf()
+        run_query(
+            "ALTER USER {} SET TIME ZONE '{}'"
+            .format(postgres_conf.username, cls.TIMEZONE)
+        )
+
+    def setUp(self):
+        """Update postgres timezone and create a deployment."""
+        # Make sure that database timezone is correctly set
+        query_result = run_query('SHOW TIME ZONE')
+        self.assertEqual(query_result['all'][0][0], self.TIMEZONE)
+
+        self.start_timestamp = datetime.utcnow().isoformat()
+        super(EventsAlternativeTimezoneTest, self).setUp()
+        self.stop_timestamp = datetime.utcnow().isoformat()
+
+    def test_timestamp_in_utc(self):
+        """Make sure events timestamp field is in UTC."""
+        events = self._events_list()
+        timestamps = [event['timestamp'] for event in events]
+        self.assertTrue(all(
+            self.start_timestamp < timestamp < self.stop_timestamp
+            for timestamp in timestamps
+        ))
+
+    def test_reported_timestamp_in_utc(self):
+        """Make sure events reported_timestamp field is in UTC."""
+        events = self._events_list()
+        reported_timestamps = [event['reported_timestamp'] for event in events]
+        self.assertTrue(all(
+            self.start_timestamp < reported_timestamp < self.stop_timestamp
+            for reported_timestamp in reported_timestamps
+        ))
