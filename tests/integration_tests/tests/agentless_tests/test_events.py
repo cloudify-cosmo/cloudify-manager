@@ -194,11 +194,8 @@ class EventsAlternativeTimezoneTest(EventsTest):
                 for timestamp in timestamps
                 if not self.start_timestamp < timestamp < self.stop_timestamp
         ]
-        self.assertTrue(
-            all(
-                self.start_timestamp < timestamp < self.stop_timestamp
-                for timestamp in timestamps
-            ),
+        self.assertFalse(
+            out_of_range_timestamps,
             'Timestamp values out of range [{} - {}]: {}'
             .format(
                 self.start_timestamp,
