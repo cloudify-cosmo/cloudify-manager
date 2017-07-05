@@ -1,0 +1,2 @@
+cloudify-dsl-parser
+cloudify-rest-client

@@ -1,0 +1,2 @@
+cloudify-rest-client
+cloudify-plugins-common
