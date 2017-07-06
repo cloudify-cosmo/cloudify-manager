@@ -189,10 +189,20 @@ class EventsAlternativeTimezoneTest(EventsTest):
         """Make sure events timestamp field is in UTC."""
         events = self._events_list()
         timestamps = [event['timestamp'] for event in events]
-        self.assertTrue(all(
-            self.start_timestamp < timestamp < self.stop_timestamp
-            for timestamp in timestamps
-        ))
+        out_of_range_timestamps = [
+                timestamp
+                for timestamp in timestamps
+                if not self.start_timestamp < timestamp < self.stop_timestamp
+        ]
+        self.assertFalse(
+            out_of_range_timestamps,
+            'Timestamp values out of range [{} - {}]: {}'
+            .format(
+                self.start_timestamp,
+                self.stop_timestamp,
+                out_of_range_timestamps,
+            )
+        )
 
     def test_reported_timestamp_in_utc(self):
         """Make sure events reported_timestamp field is in UTC."""
