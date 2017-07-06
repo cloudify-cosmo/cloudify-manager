@@ -162,7 +162,6 @@ class ResourceManager(object):
                          force,
                          bypass_maintenance,
                          timeout,
-                         tenant_name,
                          restore_certificates,
                          no_reboot):
         # Throws error if no snapshot found
@@ -185,7 +184,6 @@ class ResourceManager(object):
                 'config': self._get_conf_for_snapshots_wf(),
                 'force': force,
                 'timeout': timeout,
-                'tenant_name': tenant_name,
                 'restore_certificates': restore_certificates,
                 'no_reboot': no_reboot,
                 'premium_enabled': current_app.premium_enabled,

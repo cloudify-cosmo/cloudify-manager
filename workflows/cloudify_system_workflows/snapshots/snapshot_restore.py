@@ -64,7 +64,6 @@ class SnapshotRestore(object):
                  recreate_deployments_envs,
                  force,
                  timeout,
-                 tenant_name,
                  premium_enabled,
                  user_is_bootstrap_admin,
                  restore_certificates,
@@ -74,7 +73,6 @@ class SnapshotRestore(object):
         self._snapshot_id = snapshot_id
         self._force = force
         self._timeout = timeout
-        self._tenant_name = tenant_name
         self._restore_certificates = restore_certificates
         self._no_reboot = no_reboot
         self._premium_enabled = premium_enabled
@@ -196,7 +194,6 @@ class SnapshotRestore(object):
             self._premium_enabled,
             self._user_is_bootstrap_admin,
             self._client,
-            self._tenant_name,
             self._force
         )
         validator.validate()
@@ -417,7 +414,6 @@ class SnapshotRestoreValidator(object):
                  is_premium_enabled,
                  is_user_bootstrap_admin,
                  client,
-                 tenant_name,
                  force):
         self._snapshot_version = snapshot_version
         self._manager_version = manager_version
@@ -425,7 +421,6 @@ class SnapshotRestoreValidator(object):
         self._is_user_bootstrap_admin = is_user_bootstrap_admin
         self._client = client
         self._force = force
-        self._tenant_name = tenant_name
 
         ctx.logger.info('Validating snapshot\n'
                         'Manager version = {0}, snapshot version = {1}'
@@ -444,15 +439,6 @@ class SnapshotRestoreValidator(object):
             self._validate_v_3_snapshot()
 
     def _validate_v_4_snapshot(self):
-        if self._tenant_name:
-            raise NonRecoverableError(
-                'Tenant name `{tenant}` passed when restoring snapshot of '
-                'version {version}.'.format(
-                    tenant=self._tenant_name,
-                    version=self._snapshot_version,
-                )
-            )
-
         if not self._is_user_bootstrap_admin:
             raise NonRecoverableError(
                 'The current user is not authorized to restore v4 snapshots. '
@@ -462,18 +448,8 @@ class SnapshotRestoreValidator(object):
         self._assert_clean_db()
 
     def _validate_v_3_snapshot(self):
-        if self._tenant_name:
-            raise NonRecoverableError(
-                'Passing a tenant name when restoring a snapshot is no '
-                'longer supported. Please switch to the "{tenant}" tenant '
-                'and re-upload then perform the restore from that '
-                'tenant.'.format(
-                    tenant=self._tenant_name,
-                )
-            )
-        else:
-            # validate only for the snapshot's tenant
-            self._assert_clean_db(all_tenants=False)
+        # validate only for the snapshot's tenant
+        self._assert_clean_db(all_tenants=False)
 
     def _assert_clean_db(self, all_tenants=True):
         if self._client.blueprints.list(_all_tenants=all_tenants).items:

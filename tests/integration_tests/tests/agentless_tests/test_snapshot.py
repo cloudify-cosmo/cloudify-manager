@@ -48,21 +48,7 @@ class TestSnapshot(AgentlessTestCase):
             snapshot_id=self.SNAPSHOT_ID,
             error_msg='Only the bootstrap admin is allowed '
                       'to perform this action',
-            tenant_name=None,
             client=admin_client
-        )
-
-    def test_v_3_snapshot_restore_validation(self):
-        snapshot = self._get_snapshot('snap_3.4.0.zip')
-        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
-        self.client.tenants.create('tenant')
-        self._try_restore_snapshot(
-            snapshot_id=self.SNAPSHOT_ID,
-            error_msg='Passing a tenant name when restoring a snapshot is no '
-                      'longer supported. Please switch to the "tenant" tenant '
-                      'and re-upload then perform the restore from '
-                      'that tenant.',
-            tenant_name='tenant'
         )
 
     def _try_restore_snapshot(self,
@@ -71,8 +57,7 @@ class TestSnapshot(AgentlessTestCase):
                               tenant_name=None,
                               client=None):
         client = client or self.client
-        execution = client.snapshots.restore(snapshot_id,
-                                             tenant_name=tenant_name)
+        execution = client.snapshots.restore(snapshot_id)
         try:
             self.wait_for_execution_to_end(execution)
         except RuntimeError, e:
@@ -121,13 +106,12 @@ class TestSnapshot(AgentlessTestCase):
 
     def test_3_4_0_snapshot_with_deployment(self):
         snapshot_path = self._get_snapshot('snap_3.4.0.zip')
-        tenant_name = 'tenant'
-        self.client.tenants.create(tenant_name)
-        self._upload_and_restore_snapshot(snapshot_path, tenant_name)
+        self._upload_and_restore_snapshot(snapshot_path)
         # Now make sure all the resources really exist in the DB
-        self._assert_3_4_0_snapshot_restored(tenant_name)
+        self._assert_3_4_0_snapshot_restored()
 
-    def _assert_3_4_0_snapshot_restored(self, tenant_name):
+    def _assert_3_4_0_snapshot_restored(self,
+                                        tenant_name=DEFAULT_TENANT_NAME):
         self._assert_snapshot_restored(
             blueprint_id='nodecellar',
             deployment_id='nodecellar',
@@ -147,15 +131,14 @@ class TestSnapshot(AgentlessTestCase):
 
     def test_3_3_1_snapshot_with_plugin(self):
         snapshot_path = self._get_snapshot('snap_3.3.1_with_plugin.zip')
-        tenant_name = 'tenant'
-        self.client.tenants.create(tenant_name)
-        self._upload_and_restore_snapshot(snapshot_path, tenant_name)
+        self._upload_and_restore_snapshot(snapshot_path)
 
         # Now make sure all the resources really exist in the DB
-        self._assert_3_3_1_snapshot_restored(tenant_name)
-        self._assert_3_3_1_plugins_restored(tenant_name)
+        self._assert_3_3_1_snapshot_restored()
+        self._assert_3_3_1_plugins_restored()
 
-    def _assert_3_3_1_snapshot_restored(self, tenant_name):
+    def _assert_3_3_1_snapshot_restored(self,
+                                        tenant_name=DEFAULT_TENANT_NAME):
         self._assert_snapshot_restored(
             blueprint_id='hello-world-app',
             deployment_id='hello-world-app',
@@ -171,7 +154,7 @@ class TestSnapshot(AgentlessTestCase):
             num_of_outputs=1,
             num_of_executions=1,
             num_of_events=97,
-            tenant_name=tenant_name
+            tenant_name=tenant_name,
         )
 
     def test_restore_2_snapshots(self):
@@ -183,16 +166,18 @@ class TestSnapshot(AgentlessTestCase):
         snapshot_2_path = self._get_snapshot('snap_3.3.1_with_plugin.zip')
         self.client.tenants.create(tenant_1_name)
         self.client.tenants.create(tenant_2_name)
-        self._upload_and_restore_snapshot(
-            snapshot_1_path,
-            tenant_1_name,
-            snapshot_1_id
-        )
-        self._upload_and_restore_snapshot(
-            snapshot_2_path,
-            tenant_2_name,
-            snapshot_2_id
-        )
+        with self.client_using_tenant(self.client, tenant_1_name):
+            self._upload_and_restore_snapshot(
+                snapshot_1_path,
+                tenant_1_name,
+                snapshot_1_id,
+            )
+        with self.client_using_tenant(self.client, tenant_2_name):
+            self._upload_and_restore_snapshot(
+                snapshot_2_path,
+                tenant_2_name,
+                snapshot_2_id,
+            )
 
         self._assert_3_4_0_snapshot_restored(tenant_1_name)
         self._assert_3_3_1_snapshot_restored(tenant_2_name)
@@ -236,7 +221,7 @@ class TestSnapshot(AgentlessTestCase):
             for node_instance_id in node_instance_ids:
                 self.client.node_instances.get(node_instance_id)
 
-    def _assert_3_3_1_plugins_restored(self, tenant_name):
+    def _assert_3_3_1_plugins_restored(self, tenant_name=DEFAULT_TENANT_NAME):
         with self.client_using_tenant(self.client, tenant_name):
             plugins = self.client.plugins.list()
         self.assertEqual(len(plugins), 8)
@@ -350,6 +335,8 @@ class TestSnapshot(AgentlessTestCase):
                 pass
             if time.time() > deadline:
                 raise utils.TimeoutException(
-                        'Execution timed out: \n{0}'
-                        .format(json.dumps(execution, indent=2)))
+                    'Execution timed out: \n{0}'.format(
+                        json.dumps(execution, indent=2)
+                    )
+                )
         return execution

@@ -245,7 +245,7 @@ class SnapshotsIdRestore(SecuredResource):
     def post(self, snapshot_id):
         _verify_no_multi_node_cluster(action="restore snapshot")
         request_dict = rest_utils.get_json_and_verify_params(
-            {'recreate_deployments_envs', 'tenant_name'}
+            {'recreate_deployments_envs'}
         )
         recreate_deployments_envs = rest_utils.verify_and_convert_bool(
             'recreate_deployments_envs',
@@ -268,7 +268,6 @@ class SnapshotsIdRestore(SecuredResource):
             raise manager_exceptions.BadParametersError(
                 '`no_reboot` is only relevant when `restore_certificates` is '
                 'activated')
-        tenant_name = request_dict['tenant_name']
         default_timeout_sec = 300
         request_timeout = request_dict.get('timeout', default_timeout_sec)
         timeout = rest_utils.convert_to_int(request_timeout)
@@ -278,7 +277,6 @@ class SnapshotsIdRestore(SecuredResource):
             force,
             bypass_maintenance,
             timeout,
-            tenant_name,
             restore_certificates,
             no_reboot
         )
