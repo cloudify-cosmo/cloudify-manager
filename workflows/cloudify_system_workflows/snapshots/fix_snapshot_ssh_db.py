@@ -14,18 +14,13 @@
 #    * limitations under the License.
 
 
-import argparse
 import os
+import argparse
+from copy import deepcopy
 
-import manager_rest.storage.storage_manager as stor
-from manager_rest.storage.resource_models import (
-    Deployment,
-    Node,
-    NodeInstance,
-)
-from manager_rest.storage.management_models import (
-    Tenant,
-)
+from manager_rest import flask_utils
+from manager_rest.storage.models import Deployment
+from manager_rest.storage import get_storage_manager
 
 # These vars need to be loaded before the rest server is imported
 # We're not currently sourcing anything else (such as rest port) to avoid
@@ -36,23 +31,6 @@ os.environ["MANAGER_REST_CONFIG_PATH"] = (
 os.environ["MANAGER_REST_SECURITY_CONFIG_PATH"] = (
     "/opt/manager/rest-security.conf"
 )
-
-from manager_rest.server import app  # noqa
-
-
-class FakeUser(object):
-    is_authenticated = True
-    is_active = True
-    is_anonymous = False
-    is_admin = True
-
-    @staticmethod
-    def get_id(*args, **kwargs):
-        return '0'
-
-
-class FakeTenant(object):
-    id = 0
 
 
 def replace_ssh_keys(input_dict, original_string, secret_name):
@@ -66,18 +44,6 @@ def replace_ssh_keys(input_dict, original_string, secret_name):
             input_dict[k] = {'get_secret': secret_name}
             changed = True
     return changed
-
-
-def commit_changes(storage_manager, item_class, item, update):
-    """
-        Commit changes to the DB for a given entity.
-    """
-    # Using the storage manager's update and refresh resulted in no updates
-    storage_manager.db.session.query(item_class).filter_by(
-        id=item.id,
-    ).update(update)
-    storage_manager.db.session.commit()
-    storage_manager.db.session.refresh(item)
 
 
 def update_agent_properties(input_dict, original_string, secret_name):
@@ -113,7 +79,7 @@ def fix_fabric_env(input_dict, original_string, secret_name):
     return changed
 
 
-def main(tenant, original_string, secret_name):
+def main(original_string, secret_name):
     """
         For a given tenant, replace the SSH key path with the specified
         get_secret call in the top levels of all dicts where it is found.
@@ -123,70 +89,64 @@ def main(tenant, original_string, secret_name):
           - Deployment operation inputs.
           - Deployment node properties (including agent configuration).
     """
-    with app.app_context():
-        sm = stor.SQLStorageManager()
+    sm = get_storage_manager()
 
-        try:
-            tenant_id = int(tenant)
-        except ValueError:
-            tenant_id = stor.db.session.query(Tenant).filter_by(
-                name=tenant,
-            ).one().id
-        FakeTenant.id = tenant_id
-
-        res = sm.list(model_class=Deployment)
-        for deployment in res:
-            for node in deployment.nodes:
-                for node_instance in node.node_instances:
-                    runtime_properties = node_instance.runtime_properties
-                    changed = update_agent_properties(runtime_properties,
-                                                      original_string,
-                                                      secret_name)
-                    if changed:
-                        print('Changing runtime properties to: %s' % (
-                            str(runtime_properties)
-                        ))
-                        commit_changes(
-                            stor,
-                            NodeInstance,
-                            node_instance,
-                            {'runtime_properties': runtime_properties},
-                        )
-                        print('Updated')
-                    else:
-                        print('No changes')
-
-                ops = node.operations
-                changed = False
-                for op in ops:
-                    inputs = ops[op].get('inputs', {})
-                    key_changed = replace_ssh_keys(inputs,
-                                                   original_string,
-                                                   secret_name)
-                    fabric_changed = fix_fabric_env(inputs,
-                                                    original_string,
-                                                    secret_name)
-                    changed = changed or key_changed or fabric_changed
-                props = node.properties
-                new_changed = replace_ssh_keys(props,
-                                               original_string,
-                                               secret_name)
-                changed = changed or new_changed
-                new_changed = update_agent_properties(props,
-                                                      original_string,
-                                                      secret_name)
-                changed = changed or new_changed
+    res = sm.list(model_class=Deployment)
+    for deployment in res:
+        for node in deployment.nodes:
+            for node_instance in node.node_instances:
+                runtime_properties = node_instance.runtime_properties
+                changed = update_agent_properties(runtime_properties,
+                                                  original_string,
+                                                  secret_name)
                 if changed:
-                    print('Changing operations to: %s' % str(ops))
-                    commit_changes(
-                        stor,
-                        Node,
-                        node,
-                        {'operations': ops, 'properties': props},
+                    print('Changing runtime properties for `{0}`'.format(
+                        node_instance.id
+                    ))
+                    node_instance.runtime_properties = deepcopy(
+                        runtime_properties
                     )
+                    sm.update(node_instance)
                     print('Updated')
                 else:
                     print('No changes')
+
+            ops = node.operations
+            changed = False
+            for op in ops:
+                inputs = ops[op].get('inputs', {})
+                key_changed = replace_ssh_keys(inputs,
+                                               original_string,
+                                               secret_name)
+                fabric_changed = fix_fabric_env(inputs,
+                                                original_string,
+                                                secret_name)
+                changed = changed or key_changed or fabric_changed
+            props = node.properties
+            new_changed = replace_ssh_keys(props,
+                                           original_string,
+                                           secret_name)
+            changed = changed or new_changed
+            new_changed = update_agent_properties(props,
+                                                  original_string,
+                                                  secret_name)
+            changed = changed or new_changed
+            if changed:
+                print('Changing operations/properties for node '
+                      '`{0}` on dep `{1}`'.format(node.id, deployment.id))
+                node.operations = deepcopy(ops)
+                node.properties = deepcopy(props)
+                sm.update(node)
+                print('Updated')
+            else:
+                print('No changes')
+
+
+def setup_flask_app(tenant_name):
+    app = flask_utils.setup_flask_app()
+    flask_utils.set_admin_current_user(app)
+    tenant = flask_utils.get_tenant_by_name(tenant_name)
+    flask_utils.set_tenant_in_app(app, tenant)
 
 
 if __name__ == '__main__':
@@ -212,10 +172,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    tenant = args.tenant
+    tenant_name = args.tenant
     original_string = args.key_path
     secret_name = args.secret_name
-    stor.current_user = FakeUser
-    app.config['current_tenant'] = FakeTenant
 
-    main(tenant, original_string, secret_name)
+    setup_flask_app(tenant_name)
+    main(original_string, secret_name)

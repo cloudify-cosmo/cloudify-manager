@@ -150,8 +150,6 @@ class SnapshotRestore(object):
                 )
             )
 
-
-
     def _restore_amqp_vhosts_and_users(self):
         script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                    'restore_amqp.py')

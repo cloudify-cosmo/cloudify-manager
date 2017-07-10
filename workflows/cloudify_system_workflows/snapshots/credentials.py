@@ -43,12 +43,13 @@ DEPLOYMENTS_QUERY = """
 
 class Credentials(object):
     _CRED_KEY_NAME = 'agent_key'
+    _ARCHIVE_CRED_PATH = None
 
     def dump(self, tempdir, version):
-        archive_cred_path = os.path.join(tempdir, CRED_DIR)
-        ctx.logger.debug('Dumping credentials data, '
-                         'archive_cred_path: {0}'.format(archive_cred_path))
-        os.makedirs(archive_cred_path)
+        self._ARCHIVE_CRED_PATH = os.path.join(tempdir, CRED_DIR)
+        ctx.logger.debug('Dumping credentials data, archive_cred_path: '
+                         '{0}'.format(self._ARCHIVE_CRED_PATH))
+        os.makedirs(self._ARCHIVE_CRED_PATH)
 
         for tenant, value in self._get_hosts(version):
             for dep_id, nodes in value.iteritems():
@@ -56,12 +57,10 @@ class Credentials(object):
                     agent_config = get_agent_config(node.properties)
                     agent_key = agent_config.get('key')
                     if agent_key:
-                        agent_key_id = _get_agent_node_id(
+                        agent_dirname = _get_agent_dirname(
                             version, tenant, dep_id, node.id
                         )
-                        self._dump_agent_key(agent_key_id,
-                                             agent_key,
-                                             archive_cred_path)
+                        self._dump_agent_key(agent_dirname, agent_key)
 
     @staticmethod
     def _get_hosts(version):
@@ -79,13 +78,13 @@ class Credentials(object):
                         deps.append(node)
         return hosts.iteritems()
 
-    def _dump_agent_key(self, node_id, agent_key, archive_cred_path):
+    def _dump_agent_key(self, agent_dirname, agent_key):
         """Copy an agent key from its location on the manager to the snapshot
         dump
         """
-        os.makedirs(os.path.join(archive_cred_path, node_id))
+        os.makedirs(os.path.join(self._ARCHIVE_CRED_PATH, agent_dirname))
         source = os.path.expanduser(agent_key)
-        destination = os.path.join(archive_cred_path, node_id,
+        destination = os.path.join(self._ARCHIVE_CRED_PATH, agent_dirname,
                                    self._CRED_KEY_NAME)
         ctx.logger.debug('Dumping credentials data, '
                          'copy from: {0} to {1}'
@@ -128,7 +127,7 @@ def _fix_snapshot_ssh_db(tenant, orig, replace):
                          .format(res.aggr_stdout))
 
 
-def _get_agent_node_id(version, tenant, dep_id, node_id):
+def _get_agent_dirname(version, tenant, dep_id, node_id):
     if version >= V_4_1_0:
         return '{tenant}_{dep_id}_{node_id}'.format(
             tenant=tenant, dep_id=dep_id, node_id=node_id
@@ -180,15 +179,13 @@ def restore(tempdir, postgres, version):
             if not agent_key:
                 continue
 
-            dir_name = _get_agent_node_id(version,
+            dir_name = _get_agent_dirname(version,
                                           tenant,
                                           deployment_id,
                                           node_id)
 
             if not isinstance(agent_key, basestring):
                 ctx.logger.info('key for {} is not a path'.format(dir_name))
-                ctx.logger.warning('type: {0}'.format(type(agent_key)))
-                ctx.logger.warning('key: {0}'.format(agent_key))
                 continue
             if re.search('BEGIN .* PRIVATE KEY', agent_key):
                 ctx.logger.info('key for {} is bare key'.format(dir_name))

@@ -129,4 +129,3 @@ def set_admin_current_user(app):
     # And then load the admin as the currently active user
     app.extensions['security'].login_manager.reload_user(admin)
     return admin
-
