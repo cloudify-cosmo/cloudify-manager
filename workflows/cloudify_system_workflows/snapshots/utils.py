@@ -25,6 +25,7 @@ from cloudify import constants, manager
 from cloudify.workflows import ctx
 from . import constants as snapshot_constants
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
+from cloudify.utils import get_tenant_name, internal as internal_utils
 
 # Path to python binary in the manager environment
 PYTHON_MANAGER_ENV = '/opt/manager/env/bin/python'
@@ -253,6 +254,23 @@ def get_tenants_list():
         return [snapshot_constants.DEFAULT_TENANT_NAME]
     tenants = client.tenants.list().items
     return [tenant.name for tenant in tenants]
+
+
+def get_dep_contexts(version):
+    deps = {}
+    tenants = [get_tenant_name()] if version < snapshot_constants.V_4_0_0 \
+        else get_tenants_list()
+    for tenant_name in tenants:
+        # Temporarily assign the context a different tenant name so that
+        # we can retrieve that tenant's deployment contexts
+        with internal_utils._change_tenant(ctx, tenant_name):
+            # We have to zero this out each time or the cached version for
+            # the previous tenant will be used
+            ctx._dep_contexts = None
+
+            # Get deployment contexts for this tenant
+            deps[tenant_name] = ctx.deployments_contexts
+    return deps.items()
 
 
 def is_compute(node):
