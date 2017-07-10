@@ -23,8 +23,8 @@ import string
 from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
-from .constants import SECRET_STORE_AGENT_KEY_PREFIX
-from .utils import is_compute, run
+from .utils import is_compute, run, get_dep_contexts
+from .constants import SECRET_STORE_AGENT_KEY_PREFIX, V_4_1_0
 
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
@@ -44,30 +44,40 @@ DEPLOYMENTS_QUERY = """
 class Credentials(object):
     _CRED_KEY_NAME = 'agent_key'
 
-    def dump(self, tempdir):
+    def dump(self, tempdir, version):
         archive_cred_path = os.path.join(tempdir, CRED_DIR)
         ctx.logger.debug('Dumping credentials data, '
                          'archive_cred_path: {0}'.format(archive_cred_path))
         os.makedirs(archive_cred_path)
 
-        for deployment_id, n in self._get_hosts():
-            props = n.properties
-            agent_config = get_agent_config(props)
-            if 'key' in agent_config:
-                node_id = deployment_id + '_' + n.id
-                agent_key = agent_config['key']
-                self._dump_agent_key(
-                    node_id,
-                    agent_key,
-                    archive_cred_path
-                )
+        for tenant, value in self._get_hosts(version):
+            for dep_id, nodes in value.iteritems():
+                for node in nodes:
+                    agent_config = get_agent_config(node.properties)
+                    agent_key = agent_config.get('key')
+                    if agent_key:
+                        agent_key_id = _get_agent_node_id(
+                            version, tenant, dep_id, node.id
+                        )
+                        self._dump_agent_key(agent_key_id,
+                                             agent_key,
+                                             archive_cred_path)
 
     @staticmethod
-    def _get_hosts():
-        return [(deployment_id, node)
-                for deployment_id, wctx in ctx.deployments_contexts.iteritems()
-                for node in wctx.nodes
-                if is_compute(node)]
+    def _get_hosts(version):
+        """
+        Return a dict with tenants as keys, and dicts as values, in which
+        deployment IDs are keys and a list of nodes is the value
+        """
+        hosts = {}
+        for tenant, deployments in get_dep_contexts(version):
+            for deployment_id, dep_ctx in deployments.iteritems():
+                for node in dep_ctx.nodes:
+                    if is_compute(node):
+                        tenant_hosts = hosts.setdefault(tenant, {})
+                        deps = tenant_hosts.setdefault(deployment_id, [])
+                        deps.append(node)
+        return hosts.iteritems()
 
     def _dump_agent_key(self, node_id, agent_key, archive_cred_path):
         """Copy an agent key from its location on the manager to the snapshot
@@ -118,7 +128,16 @@ def _fix_snapshot_ssh_db(tenant, orig, replace):
                          .format(res.aggr_stdout))
 
 
-def restore(tempdir, postgres):
+def _get_agent_node_id(version, tenant, dep_id, node_id):
+    if version >= V_4_1_0:
+        return '{tenant}_{dep_id}_{node_id}'.format(
+            tenant=tenant, dep_id=dep_id, node_id=node_id
+        )
+    else:
+        return '{dep_id}_{node_id}'.format(dep_id=dep_id, node_id=node_id)
+
+
+def restore(tempdir, postgres, version):
     dump_cred_dir = os.path.join(tempdir, CRED_DIR)
     if not os.path.isdir(dump_cred_dir):
         ctx.logger.info('Missing credentials dir: '
@@ -156,15 +175,20 @@ def restore(tempdir, postgres):
             deployment_id = elem[1]
             node_properties = pickle.loads(elem[2])
             agent_config = get_agent_config(node_properties)
+            agent_key = agent_config.get('key')
 
-            if 'key' not in agent_config:
+            if not agent_key:
                 continue
 
-            agent_key = agent_config['key']
-            dir_name = deployment_id + '_' + node_id
+            dir_name = _get_agent_node_id(version,
+                                          tenant,
+                                          deployment_id,
+                                          node_id)
 
             if not isinstance(agent_key, basestring):
                 ctx.logger.info('key for {} is not a path'.format(dir_name))
+                ctx.logger.warning('type: {0}'.format(type(agent_key)))
+                ctx.logger.warning('key: {0}'.format(agent_key))
                 continue
             if re.search('BEGIN .* PRIVATE KEY', agent_key):
                 ctx.logger.info('key for {} is bare key'.format(dir_name))
