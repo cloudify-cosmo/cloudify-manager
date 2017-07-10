@@ -20,8 +20,10 @@ from flask_migrate import Migrate
 from flask_security import Security
 
 from manager_rest import config
-from manager_rest.config import instance as manager_config
 from manager_rest.storage import user_datastore, db
+from manager_rest.storage.models import User, Tenant
+from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest.config import instance as manager_config
 
 
 def setup_flask_app(manager_ip='localhost',
@@ -94,3 +96,37 @@ def set_flask_security_config(app, hash_salt=None, secret_key=None):
     app.config['SECURITY_PASSWORD_SALT'] = hash_salt
     app.config['SECURITY_REMEMBER_SALT'] = hash_salt
     app.config['SECRET_KEY'] = secret_key
+
+
+def set_tenant_in_app(app, tenant):
+    """Set the tenant as the current tenant in the flask app"""
+
+    app.config[CURRENT_TENANT_CONFIG] = tenant
+
+
+def get_tenant_by_name(tenant_name):
+    """Get the tenant name, or fail noisily.
+    """
+    tenant = Tenant.query.filter_by(name=tenant_name).first()
+    if not tenant:
+        raise Exception(
+            'Could not restore into tenant "{name}" as this tenant does '
+            'not exist.'.format(name=tenant_name)
+        )
+    return tenant
+
+
+def set_admin_current_user(app):
+    """Set the admin as the current user in the flask app
+
+    :return: The admin user
+    """
+    admin = User.query.get(0)
+    # This line is necessary for the `reload_user` method - we add a mock
+    # request context to the flask stack
+    app.test_request_context().push()
+
+    # And then load the admin as the currently active user
+    app.extensions['security'].login_manager.reload_user(admin)
+    return admin
+
