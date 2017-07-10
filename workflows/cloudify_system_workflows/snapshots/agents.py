@@ -21,8 +21,8 @@ from cloudify import broker_config
 from cloudify.manager import get_rest_client
 from cloudify.utils import get_broker_ssl_cert_path
 
-from .constants import BROKER_DEFAULT_VHOST
 from .utils import is_compute, get_tenants_list
+from .constants import BROKER_DEFAULT_VHOST, V_4_1_0
 
 
 class Agents(object):
@@ -32,10 +32,10 @@ class Agents(object):
         with open(get_broker_ssl_cert_path(), 'r') as f:
             self._broker_ssl_cert = f.read()
 
-    def restore(self, tempdir, is_older_than_4_1_0):
+    def restore(self, tempdir, version):
         with open(os.path.join(tempdir, self._AGENTS_FILE)) as agents_file:
             agents = json.load(agents_file)
-        if is_older_than_4_1_0:
+        if version < V_4_1_0:
             self._insert_agents_data(agents)
             return
         for tenant_name, deployments in agents.iteritems():

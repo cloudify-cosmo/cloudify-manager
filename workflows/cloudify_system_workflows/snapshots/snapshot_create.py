@@ -59,7 +59,7 @@ class SnapshotCreate(object):
             self._dump_files()
             self._dump_postgres()
             self._dump_influxdb()
-            self._dump_credentials()
+            self._dump_credentials(manager_version)
             self._dump_metadata(metadata,
                                 manager_version,
                                 schema_revision,
@@ -105,10 +105,10 @@ class SnapshotCreate(object):
         if self._include_metrics:
             InfluxDB.dump(self._tempdir)
 
-    def _dump_credentials(self):
+    def _dump_credentials(self, manager_version):
         ctx.logger.info('Dumping credentials data')
         if self._include_credentials:
-            Credentials().dump(self._tempdir)
+            Credentials().dump(self._tempdir, manager_version)
 
     def _dump_metadata(self,
                        metadata,
