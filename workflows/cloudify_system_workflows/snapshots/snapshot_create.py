@@ -48,8 +48,10 @@ class SnapshotCreate(object):
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         metadata = dict()
         try:
-            manager_version = utils.get_manager_version(self._client)
-            schema_revision = utils.db_schema_get_current_revision()
+            manager_version = '4.1.0-p3-{0}'.format(
+                utils.get_manager_version(self._client))
+            schema_revision = utils.db_schema_get_current_revision(
+                config=self._config)
             stage_schema_revision = \
                 utils.stage_db_schema_get_current_revision()
 

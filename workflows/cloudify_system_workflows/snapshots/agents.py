@@ -17,10 +17,11 @@ import os
 import json
 
 from cloudify.workflows import ctx
+from cloudify.manager import get_rest_client
 from cloudify.context import BootstrapContext
 from cloudify.utils import get_broker_ssl_cert_path
 
-from .utils import is_compute
+from .utils import is_compute, get_tenants_list
 
 
 class Agents(object):
@@ -34,14 +35,16 @@ class Agents(object):
     def dump(self, tempdir, client, manager_version):
         result = {}
         defaults = self._get_defaults(manager_version)
-        for deployment in client.deployments.list():
-            deployment_result = self._get_deployment_result(
-                client,
-                deployment.id,
-                defaults
-            )
-            result[deployment.id] = deployment_result
-
+        for tenant_name in get_tenants_list():
+            result[tenant_name] = {}
+            tenant_client = get_rest_client(tenant_name)
+            for deployment in tenant_client.deployments.list():
+                deployment_result = self._get_deployment_result(
+                    tenant_client,
+                    deployment.id,
+                    defaults
+                )
+                result[tenant_name][deployment.id] = deployment_result
         self._dump_result_to_file(tempdir, result)
 
     def _dump_result_to_file(self, tempdir, result):

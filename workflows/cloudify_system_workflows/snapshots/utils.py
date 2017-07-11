@@ -103,18 +103,18 @@ def copy_files_between_manager_and_snapshot(archive_root,
 
 
 def copy_snapshot_path(source, destination):
-        # source doesn't need to exist, then ignore
-        if not os.path.exists(source):
-            return
-        ctx.logger.debug(
-            'Copying from dump: {0} to: {1}..'.format(source, destination))
-        # copy data
-        if os.path.isfile(source):
-            shutil.copy(source, destination)
-        else:
-            if os.path.exists(destination):
-                shutil.rmtree(destination)
-            shutil.copytree(source, destination)
+    # source doesn't need to exist, then ignore
+    if not os.path.exists(source):
+        return
+    ctx.logger.debug(
+        'Copying from dump: {0} to: {1}..'.format(source, destination))
+    # copy data
+    if os.path.isfile(source):
+        shutil.copy(source, destination)
+    else:
+        if os.path.exists(destination):
+            shutil.rmtree(destination)
+        shutil.copytree(source, destination)
 
 
 def copy(source, destination):
@@ -160,6 +160,15 @@ def run(command, ignore_failures=False, redirect_output_path=None, cwd=None):
                 command_str, proc.aggr_stderr)
             raise RuntimeError(msg)
     return proc
+
+
+def get_tenants_list():
+    client = manager.get_rest_client('default_tenant')
+    version = client.manager.get_version()
+    if version['edition'] != 'premium':
+        return ['default_tenant']
+    tenants = client.tenants.list().items
+    return [tenant.name for tenant in tenants]
 
 
 def get_manager_version(client):
@@ -228,7 +237,7 @@ def compare_cert_metadata(path1, path2):
 
 
 @contextlib.contextmanager
-def db_schema(revision):
+def db_schema(revision, config=None):
     """Downgrade schema to desired revision to perform operation and upgrade.
 
     Used when restoring a snapshot to make sure the restore operation happens
@@ -239,12 +248,12 @@ def db_schema(revision):
     :type revision: str
 
     """
-    db_schema_downgrade(revision)
+    db_schema_downgrade(revision, config=config)
     yield
-    db_schema_upgrade()
+    db_schema_upgrade(config=config)
 
 
-def db_schema_downgrade(revision='-1'):
+def db_schema_downgrade(revision='-1', config=None):
     """Downgrade database schema.
 
     Used before restoring a snapshot to make sure that the schema matches the
@@ -254,15 +263,10 @@ def db_schema_downgrade(revision='-1'):
     :type revision: str
 
     """
-    subprocess.check_call([
-        PYTHON_MANAGER_ENV,
-        SCHEMA_SCRIPT,
-        'downgrade',
-        revision,
-    ])
+    _schema(config, ['downgrade', revision])
 
 
-def db_schema_upgrade(revision='head'):
+def db_schema_upgrade(revision='head', config=None):
     """Upgrade database schema.
 
     Used after restoring snapshot to get an up-to-date schema.
@@ -271,28 +275,27 @@ def db_schema_upgrade(revision='head'):
     :type revision: str
 
     """
-    subprocess.check_call([
-        PYTHON_MANAGER_ENV,
-        SCHEMA_SCRIPT,
-        'upgrade',
-        revision,
-    ])
+    _schema(config, ['upgrade', revision])
 
 
-def db_schema_get_current_revision():
+def db_schema_get_current_revision(config=None):
     """Get database schema revision.
 
     :returns: Current revision
     :rtype: str
 
     """
-    output = subprocess.check_output([
-        PYTHON_MANAGER_ENV,
-        SCHEMA_SCRIPT,
-        'current',
-    ])
+    output = _schema(config, ['current'])
     revision = output.split(' ', 1)[0]
     return revision
+
+
+def _schema(config, command):
+    full_command = [PYTHON_MANAGER_ENV, SCHEMA_SCRIPT]
+    if config and config.postgresql_host:
+        full_command += ['--postgresql-host', config.postgresql_host]
+    full_command += command
+    return subprocess.check_output(full_command)
 
 
 def stage_db_schema_get_current_revision():
