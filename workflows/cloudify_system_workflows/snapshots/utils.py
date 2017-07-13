@@ -20,7 +20,7 @@ import shutil
 import subprocess
 import zipfile
 
-from cloudify import constants
+from cloudify import constants, manager
 from cloudify.workflows import ctx
 from cloudify.utils import ManagerVersion
 
@@ -145,6 +145,15 @@ def run(command, ignore_failures=False, redirect_output_path=None):
                 command_str, proc.aggr_stderr)
             raise RuntimeError(msg)
     return proc
+
+
+def get_tenants_list():
+    client = manager.get_rest_client('default_tenant')
+    version = client.manager.get_version()
+    if version['edition'] != 'premium':
+        return ['default_tenant']
+    tenants = client.tenants.list().items
+    return [tenant.name for tenant in tenants]
 
 
 def get_manager_version(client):

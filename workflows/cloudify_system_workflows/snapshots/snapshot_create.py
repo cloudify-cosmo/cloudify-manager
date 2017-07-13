@@ -48,7 +48,8 @@ class SnapshotCreate(object):
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
         metadata = dict()
         try:
-            manager_version = utils.get_manager_version(self._client)
+            manager_version = '4.1.0-p1-{0}'.format(
+                utils.get_manager_version(self._client))
 
             self._dump_files()
             self._dump_postgres()
