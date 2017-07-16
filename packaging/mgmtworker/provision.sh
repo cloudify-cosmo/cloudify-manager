@@ -1,5 +1,10 @@
 #/bin/bash -e
 
+function install_deps() {
+		sudo yum -y update &&
+		sudo yum install libffi-devel openssl-devel -y
+}
+
 function build_rpm() {
     echo "Building RPM..."
     sudo yum install -y rpm-build redhat-rpm-config
@@ -39,6 +44,7 @@ source common-provision.sh
 
 
 install_common_prereqs &&
+install_deps &&
 build_rpm &&
 cd /tmp/x86_64 && create_md5 "rpm" &&
 [ -z ${AWS_ACCESS_KEY} ] || upload_to_s3 "rpm" && upload_to_s3 "md5"
