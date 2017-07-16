@@ -25,7 +25,6 @@ from wagon import wagon
 
 from cloudify.workflows import ctx
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
-from cloudify.utils import get_tenant_name, internal as internal_utils
 from cloudify.manager import get_rest_client
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
@@ -46,12 +45,9 @@ from .constants import (
     M_SCHEMA_REVISION,
     M_STAGE_SCHEMA_REVISION,
     M_VERSION,
-    MANAGER_PYTHON
+    MANAGER_PYTHON,
+    V_4_0_0
 )
-
-
-V_4_0_0 = ManagerVersion('4.0.0')
-V_4_1_0 = ManagerVersion('4.1.0')
 
 
 class SnapshotRestore(object):
@@ -118,21 +114,8 @@ class SnapshotRestore(object):
             shutil.rmtree(self._tempdir)
 
     def _restore_deployment_envs(self):
-        deps = {}
-        tenants = [get_tenant_name()] if self._snapshot_version < V_4_0_0 \
-            else utils.get_tenants_list()
-        for tenant_name in tenants:
-            # Temporarily assign the context a different tenant name so that
-            # we can retrieve that tenant's deployment contexts
-            with internal_utils._change_tenant(ctx, tenant_name):
-                # We have to zero this out each time or the cached version for
-                # the previous tenant will be used
-                ctx._dep_contexts = None
-
-                # Get deployment contexts for this tenant
-                deps[tenant_name] = ctx.deployments_contexts
-
-        for tenant, deployments in deps.iteritems():
+        deps = utils.get_dep_contexts(self._snapshot_version)
+        for tenant, deployments in deps:
             ctx.logger.info(
                 'Restoring deployment environments for {tenant}'.format(
                     tenant=tenant,
@@ -379,13 +362,12 @@ class SnapshotRestore(object):
 
     def _restore_credentials(self, postgres):
         ctx.logger.info('Restoring credentials')
-        restore_credentials(self._tempdir, postgres)
+        restore_credentials(self._tempdir, postgres, self._snapshot_version)
         ctx.logger.info('Successfully restored credentials')
 
     def _restore_agents(self):
         ctx.logger.info('Restoring cloudify agent data')
-        Agents().restore(self._tempdir,
-                         is_older_than_4_1_0=self._snapshot_version < V_4_1_0)
+        Agents().restore(self._tempdir, self._snapshot_version)
         ctx.logger.info('Successfully restored cloudify agent data')
 
     @staticmethod

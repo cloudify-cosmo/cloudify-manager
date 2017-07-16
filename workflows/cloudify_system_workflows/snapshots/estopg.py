@@ -20,7 +20,7 @@ import logging
 import argparse
 
 from manager_rest import manager_exceptions
-from manager_rest.flask_utils import setup_flask_app
+from manager_rest import flask_utils
 from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.storage import models, get_storage_manager
 
@@ -46,10 +46,10 @@ class EsToPg(object):
         self._logs_path = '{0}.logs'.format(es_dump_path)
 
     def _get_storage_manager(self, tenant_name):
-        app = setup_flask_app()
-        admin = self._set_current_user(app)
+        app = flask_utils.setup_flask_app()
+        admin = flask_utils.set_admin_current_user(app)
         storage_manager = get_storage_manager()
-        tenant = self._get_tenant(tenant_name)
+        tenant = flask_utils.get_tenant_by_name(tenant_name)
         self._set_tenant_in_app(tenant, app, storage_manager, admin)
         return storage_manager
 
@@ -61,33 +61,6 @@ class EsToPg(object):
         tenant.users.append(admin_user)
         storage_manager.put(tenant)
         app.config[CURRENT_TENANT_CONFIG] = tenant
-
-    @staticmethod
-    def _get_tenant(tenant_name):
-        """Get the tenant name, or fail noisily.
-        """
-        tenant = models.Tenant.query.filter_by(name=tenant_name).first()
-        if not tenant:
-            raise Exception(
-                'Could not restore into tenant "{name}" as this tenant does '
-                'not exist.'.format(name=tenant_name)
-            )
-        return tenant
-
-    @staticmethod
-    def _set_current_user(app):
-        """Set the admin as the current user in the flask app
-
-        :return: The admin user
-        """
-        admin = models.User.query.get(0)
-        # This line is necessary for the `reload_user` method - we add a mock
-        # request context to the flask stack
-        app.test_request_context().push()
-
-        # And then load the admin as the currently active user
-        app.extensions['security'].login_manager.reload_user(admin)
-        return admin
 
     def restore_es(self):
         logger.debug('Restoring elastic search..')

@@ -13,6 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
+from cloudify.utils import ManagerVersion
+
 METADATA_FILENAME = 'metadata.json'
 M_VERSION = 'snapshot_version'
 M_SCHEMA_REVISION = 'schema_revision'
@@ -34,3 +36,6 @@ MANAGER_PYTHON = '/opt/manager/env/bin/python'
 COMPOSER_BASE_FOLDER = '/opt/cloudify-composer'
 COMPOSER_CONFIG_FOLDER = 'backend/conf'
 COMPOSER_BLUEPRINTS_FOLDER = 'backend/dev'
+
+V_4_0_0 = ManagerVersion('4.0.0')
+V_4_1_0 = ManagerVersion('4.1.0')
