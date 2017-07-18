@@ -14,6 +14,7 @@
 #  * limitations under the License.
 #
 
+import os
 import uuid
 
 from . import resources_v1
@@ -45,8 +46,16 @@ class AgentInstallLink(SecuredResource):
 
     @exceptions_handled
     def post(self):
-        filename = '{}.py'.format(uuid.uuid4())
-        return (
-            '{}/cloudify-agent/{}'.
-            format(config.file_server_url, filename)
+        """Render agent installation script and return a link to it."""
+        script_filename = '{}.py'.format(uuid.uuid4())
+        script_relpath = os.path.join('cloudify_agent', script_filename)
+        script_path = os.path.join(config.file_server_root, script_relpath)
+        script_url = (
+            '{}/{}'.
+            format(config.file_server_url, script_relpath)
         )
+
+        with open(script_path, 'w') as script_file:
+            script_file.write("print('TBD')")
+
+        return script_url
