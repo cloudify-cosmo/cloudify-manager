@@ -45,4 +45,7 @@ class AgentInstallLink(SecuredResource):
 
     @exceptions_handled
     def post(self):
-        return '{}/{}'.format(config.file_server_url, uuid.uuid4())
+        return (
+            '{}/cloudify-agent/{}'.
+            format(config.file_server_url, uuid.uuid4())
+        )
