@@ -176,8 +176,6 @@ class SnapshotRestore(object):
         archive_cert_dir = os.path.join(self._tempdir, ARCHIVE_CERT_DIR)
         old_cert_dir = os.path.dirname(get_local_rest_certificate())
         new_cert_dir = old_cert_dir + '_from_snapshot'
-        if not utils.compare_cert_metadata(old_cert_dir, archive_cert_dir):
-            return
         utils.copy_snapshot_path(archive_cert_dir, new_cert_dir)
         time_to_wait_for_workflow_to_finish = 3
         cmd = 'sleep {0}; rm -rf {1}; mv {2} {1}'.format(
