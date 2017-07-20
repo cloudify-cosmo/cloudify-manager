@@ -321,19 +321,6 @@ def make_zip64_archive(zip_filename, directory):
                     zip_file.write(path, os.path.relpath(path, base_dir))
 
 
-def compare_cert_metadata(path1, path2):
-    metadata_filename = 'certificate_metadata'
-    path1 = os.path.join(path1, metadata_filename)
-    path2 = os.path.join(path2, metadata_filename)
-    if not os.path.exists(path1) or not os.path.exists(path2):
-        return False
-    with open(path1) as f:
-        content1 = f.read()
-    with open(path2) as f:
-        content2 = f.read()
-    return content1 == content2
-
-
 @contextlib.contextmanager
 def db_schema(revision, config=None):
     """Downgrade schema to desired revision to perform operation and upgrade.
