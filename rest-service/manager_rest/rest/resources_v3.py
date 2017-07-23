@@ -427,6 +427,17 @@ class ClusterNodesId(ClusterResourceBase):
         return cluster.add_node(details)
 
     @rest_decorators.exceptions_handled
+    @rest_decorators.marshal_with(ClusterState)
+    def patch(self, node_id, cluster):
+        """
+        Update the config of this cluster node.
+
+        Use this to change node-specific settings.
+        """
+        config = rest_utils.get_json_and_verify_params()
+        return cluster.update_node_config(node_id, config)
+
+    @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ClusterNode)
     def delete(self, node_id, cluster):
         """
