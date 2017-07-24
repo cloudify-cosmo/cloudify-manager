@@ -18,12 +18,7 @@ import os
 import argparse
 
 from manager_rest import flask_utils
-import manager_rest.storage.storage_manager as stor
-from manager_rest.storage.resource_models import (
-    Deployment,
-    Node,
-    NodeInstance,
-)
+from manager_rest.storage.models import Deployment
 from manager_rest.storage import get_storage_manager
 
 # These vars need to be loaded before the rest server is imported
@@ -35,18 +30,6 @@ os.environ["MANAGER_REST_CONFIG_PATH"] = (
 os.environ["MANAGER_REST_SECURITY_CONFIG_PATH"] = (
     "/opt/manager/rest-security.conf"
 )
-
-
-def commit_changes(storage_manager, item_class, item, update):
-    """
-        Commit changes to the DB for a given entity.
-    """
-    # Using the storage manager's update and refresh resulted in no updates
-    storage_manager.db.session.query(item_class).filter_by(
-        id=item.id,
-    ).update(update)
-    storage_manager.db.session.commit()
-    storage_manager.db.session.refresh(item)
 
 
 def replace_ssh_keys(input_dict, original_string, secret_name):
@@ -119,12 +102,9 @@ def main(original_string, secret_name):
                     print('Changing runtime properties for `{0}`'.format(
                         node_instance.id
                     ))
-                    commit_changes(
-                        stor,
-                        NodeInstance,
-                        node_instance,
-                        {'runtime_properties': runtime_properties},
-                    )
+                    sm.update(node_instance, modified_attrs=(
+                        'runtime_properties',
+                    ))
                     print('Updated')
                 else:
                     print('No changes')
@@ -152,12 +132,10 @@ def main(original_string, secret_name):
             if changed:
                 print('Changing operations/properties for node '
                       '`{0}` on dep `{1}`'.format(node.id, deployment.id))
-                commit_changes(
-                    stor,
-                    Node,
-                    node,
-                    {'operations': ops, 'properties': props},
-                )
+                sm.update(node, modified_attrs=(
+                    'operations',
+                    'properties',
+                ))
                 print('Updated')
             else:
                 print('No changes')
