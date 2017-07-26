@@ -25,10 +25,10 @@ from integration_tests.tests.utils import get_resource as resource
 
 class TestWorkflow(AgentTestWithPlugins):
     def test_deploy_with_agent_worker(self):
+        # In 4.2, the default (remote) agent installation path only requires
+        # the "create" operation
         install_events = [
-            "Task succeeded 'cloudify_agent.installer.operations.create'",
-            "Task succeeded 'cloudify_agent.installer.operations.configure'",
-            "Task succeeded 'cloudify_agent.installer.operations.start'"
+            "Task succeeded 'cloudify_agent.installer.operations.create'"
         ]
         uninstall_events = [
             "Task succeeded 'cloudify_agent.installer.operations.stop'",
