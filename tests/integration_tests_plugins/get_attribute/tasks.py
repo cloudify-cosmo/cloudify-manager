@@ -13,9 +13,8 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-
 from cloudify.decorators import operation
-from cloudify import context
+from cloudify import constants
 from cloudify import ctx
 
 from integration_tests_plugins.utils import update_storage
@@ -34,7 +33,7 @@ def assertEqual(left, right):
 
 @operation
 def assertion(a=None, b=None, c=None, d=None, **_):
-    if ctx.type == context.NODE_INSTANCE:
+    if ctx.type == constants.NODE_INSTANCE:
         assertEqual(a, 'a_value')
         assertEqual(b, 'b_value')
         assertEqual(c, None)

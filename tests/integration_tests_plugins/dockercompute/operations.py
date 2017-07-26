@@ -31,14 +31,15 @@ DOCKER_CONF_PATH = '/etc/cloudify/dockercompute/docker_conf.json'
 
 
 @operation
-def start(image=IMAGE, label=('marker=test',), **_):
+def start(image=IMAGE, label=('marker=test',), install_agent=True, **_):
     container_id = _start_container(image=image, label=label)
     _extract_container_ip(container_id)
-    install_agent_script = ctx.agent.init_script({'user': 'root'})
-    if install_agent_script:
-        _init_script_agent_setup(container_id, install_agent_script)
-    else:
-        _remote_agent_setup(container_id)
+    if install_agent:
+        install_agent_script = ctx.agent.init_script({'user': 'root'})
+        if install_agent_script:
+            _init_script_agent_setup(container_id, install_agent_script)
+        else:
+            _remote_agent_setup(container_id)
 
 
 @operation
@@ -51,6 +52,20 @@ def delete(**_):
     key_path = _key_path()
     if os.path.exists(key_path):
         os.remove(key_path)
+
+
+@operation
+def install_agent_from_download_link(**_):
+    container_id = ctx.instance.runtime_properties['container_id']
+    with ctx.agent.install_script_download_link() as download_link:
+        ctx.logger.info('Download link: {0}'.format(download_link))
+        _docker_exec(
+            container_id,
+            'curl -L -o agent_installer.sh {0} --insecure'.format(
+                download_link
+            ))
+        _docker_exec(container_id, 'chmod +x agent_installer.sh')
+        _docker_exec(container_id, './agent_installer.sh')
 
 
 def _start_container(image, label):

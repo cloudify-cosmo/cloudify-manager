@@ -22,7 +22,7 @@ from contextlib import contextmanager
 import retrying
 import sh
 
-from cloudify import context
+from cloudify import constants
 from cloudify_rest_client.exceptions import CloudifyClientError
 from cloudify_rest_client.executions import Execution
 
@@ -430,10 +430,10 @@ class BasicWorkflowsTest(AgentlessTestCase):
         invocations = data['invocations']
         self.assertEqual(2, len([
             i for i in invocations
-            if i == context.RELATIONSHIP_INSTANCE]))
+            if i == constants.RELATIONSHIP_INSTANCE]))
         self.assertEqual(1, len([
             i for i in invocations
-            if i == context.NODE_INSTANCE]))
+            if i == constants.NODE_INSTANCE]))
 
     def test_riemann_core_started_with_policies(self):
         """A riemann core is started if the blueprint defines policies
