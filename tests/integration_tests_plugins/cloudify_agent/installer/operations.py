@@ -14,7 +14,7 @@
 #    * limitations under the License.
 
 from cloudify.decorators import operation
-from cloudify import context
+from cloudify import constants
 from cloudify import ctx
 
 from integration_tests_plugins.cloudify_agent.installer import consumer
@@ -76,7 +76,7 @@ def delete(cloudify_agent=None, **_):
         data[worker_name]['states'] = data[worker_name].get('states', [])
         data[worker_name]['states'].append('deleted')
 
-    if ctx.type == context.NODE_INSTANCE:
+    if ctx.type == constants.NODE_INSTANCE:
         del ctx.instance.runtime_properties['cloudify_agent']
 
 
@@ -96,12 +96,12 @@ def get_backend(cloudify_agent=None):
         cloudify_agent = {}
     if _is_workflows_worker(cloudify_agent):
         cloudify_agent['name'] = '{0}_workflows'.format(ctx.deployment.id)
-    elif ctx.type == context.DEPLOYMENT:
+    elif ctx.type == constants.DEPLOYMENT:
         cloudify_agent['name'] = ctx.deployment.id
     else:
         cloudify_agent['name'] = ctx.instance.id
     cloudify_agent['queue'] = cloudify_agent['name']
-    if ctx.type == context.NODE_INSTANCE:
+    if ctx.type == constants.NODE_INSTANCE:
         ctx.instance.runtime_properties['cloudify_agent'] = cloudify_agent
     return consumer.ConsumerBackedAgentInstaller(cloudify_agent)
 
