@@ -16,7 +16,6 @@
 
 import os
 import argparse
-from copy import deepcopy
 
 from manager_rest import flask_utils
 from manager_rest.storage.models import Deployment
@@ -103,10 +102,9 @@ def main(original_string, secret_name):
                     print('Changing runtime properties for `{0}`'.format(
                         node_instance.id
                     ))
-                    node_instance.runtime_properties = deepcopy(
-                        runtime_properties
-                    )
-                    sm.update(node_instance)
+                    sm.update(node_instance, modified_attrs=(
+                        'runtime_properties',
+                    ))
                     print('Updated')
                 else:
                     print('No changes')
@@ -134,9 +132,10 @@ def main(original_string, secret_name):
             if changed:
                 print('Changing operations/properties for node '
                       '`{0}` on dep `{1}`'.format(node.id, deployment.id))
-                node.operations = deepcopy(ops)
-                node.properties = deepcopy(props)
-                sm.update(node)
+                sm.update(node, modified_attrs=(
+                    'operations',
+                    'properties',
+                ))
                 print('Updated')
             else:
                 print('No changes')

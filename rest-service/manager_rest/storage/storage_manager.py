@@ -26,6 +26,7 @@ from manager_rest.constants import CURRENT_TENANT_CONFIG
 
 from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.attributes import flag_modified
 from sqlite3 import DatabaseError as SQLiteDBError
 
 try:
@@ -476,16 +477,24 @@ class SQLStorageManager(object):
         self._safe_commit()
         return instance
 
-    def update(self, instance, log=True):
+    def update(self, instance, log=True, modified_attrs=()):
         """Add `instance` to the DB session, and attempt to commit
 
         :param instance: Instance to be updated in the DB
         :param log: Should the update message be logged
+        :param modified_attrs: Names of attributes that have been modified.
+                               This is only required for some nested
+                               attributes (e.g. when sub-keys of a runtime
+                               properties dict that have been modified).
+                               If DB updates aren't happening but no errors
+                               are reported then you probably need this.
         :return: The updated instance
         """
         if log:
             current_app.logger.debug('Update {0}'.format(instance))
         db.session.add(instance)
+        for attr in modified_attrs:
+            flag_modified(instance, attr)
         self._safe_commit()
         return instance
 
