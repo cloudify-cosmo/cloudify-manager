@@ -250,6 +250,12 @@ def copy_file_to_manager(source, target, container_id=None):
                        container_id=container_id)
 
 
+def copy_file_from_manager(source, target, container_id=None):
+    container_id = container_id or default_container_id
+    return _quiet_docl('cp', ':{0}'.format(source), target,
+                       container_id=container_id)
+
+
 def install_docker(container_id=None):
     container_id = container_id or default_container_id
     return _docl('install-docker', container_id=container_id)

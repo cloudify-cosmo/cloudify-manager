@@ -80,6 +80,7 @@ def setup_resources(api):
         'ClusterNodesId': 'cluster/nodes/<string:node_id>',
         'FileServerAuth': 'file-server-auth',
         'LdapAuthentication': 'ldap',
+        'SSLConfig': 'ssl',
         'Secrets': 'secrets',
         'SecretsKey': 'secrets/<string:key>'
     }
