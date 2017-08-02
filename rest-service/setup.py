@@ -38,7 +38,8 @@ install_requires = [
     'python-dateutil==2.5.3',
     'voluptuous==0.9.3',
     'toolz==0.8.2',
-    'pyrabbit==1.1.0'
+    'pyrabbit==1.1.0',
+    'signxml==2.4.0'
 ]
 
 
