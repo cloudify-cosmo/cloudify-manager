@@ -25,6 +25,7 @@ SUPPORTED_API_VERSIONS = [('v1', resources_v1),
 
 def setup_resources(api):
     resources_endpoints = {
+        'AgentInstallLink': 'agent-install-link',
         'Blueprints': 'blueprints',
         'BlueprintsId': 'blueprints/<string:blueprint_id>',
         'BlueprintsIdArchive': 'blueprints/<string:blueprint_id>/archive',
