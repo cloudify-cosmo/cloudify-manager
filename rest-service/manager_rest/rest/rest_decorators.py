@@ -21,6 +21,7 @@ from collections import OrderedDict
 from dateutil.parser import parse as parse_datetime
 from flask_restful import marshal
 from flask_restful.utils import unpack
+from flask_security import current_user
 from flask import request, current_app
 from sqlalchemy.util._collections import _LW as sql_alchemy_collection
 from toolz import (
@@ -462,6 +463,22 @@ def create_filters(response_class=None):
             return f(filters=filters, *args, **kw)
         return some_func
     return create_filters_dec
+
+
+def verify_user_is_admin(func):
+    """
+    Decorator that verifies if current user is admin.
+    """
+    @wraps(func)
+    def is_admin(*args, **kwargs):
+        if not current_user.is_admin:
+            raise manager_exceptions.UnauthorizedError(
+                '{0} is not admin. Only admins are allowed to use the '
+                'snapshots command'.format(current_user)
+            )
+        return func(*args, **kwargs)
+    return is_admin
+
 
 # endregion
 

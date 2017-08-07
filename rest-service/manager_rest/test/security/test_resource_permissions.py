@@ -61,27 +61,6 @@ class ResourcePermissionTests(SecurityTestBase):
                                                 private_resource=private)
         return plugin.id
 
-    def _upload_snapshot(self, private=False):
-        snapshot_path = self.create_wheel('psutil', '3.3.0')
-        snapshot_id = 'snapshot_id'
-
-        with self.use_secured_client(username='bob',
-                                     password='bob_password'):
-            self.client.snapshots.upload(snapshot_path,
-                                         snapshot_id,
-                                         private_resource=private)
-        return snapshot_id
-
-    def _create_snapshot(self, username, password, private=False):
-        snapshot_id = 'snapshot_id'
-
-        with self.use_secured_client(username=username, password=password):
-            self.client.snapshots.create(snapshot_id=snapshot_id,
-                                         include_metrics=False,
-                                         include_credentials=False,
-                                         private_resource=private)
-        return snapshot_id
-
     def test_private_blueprint(self):
         blueprint_id = self._upload_blueprint(private=True)
 
@@ -125,25 +104,6 @@ class ResourcePermissionTests(SecurityTestBase):
             list_func_getter=lambda client: client.plugins.list
         )
 
-    def test_private_snapshot_upload(self):
-        snapshot_id = self._upload_snapshot(private=True)
-        self._test_snapshots_get_and_list(snapshot_id)
-
-    def test_private_snapshot_create(self):
-        # Only admin are allowed to create snapshots, so bob should fail
-        self.assertRaises(
-            CloudifyClientError,
-            self._create_snapshot,
-            'bob',
-            'bob_password'
-        )
-        snapshot_id = self._create_snapshot(
-            'alice',
-            'alice_password',
-            private=True
-        )
-        self._test_snapshots_get_and_list(snapshot_id)
-
     def test_cant_view_private_blueprint(self):
         blueprint_id = self._upload_blueprint(private=True)
         self._test_cant_view_private_resource(
@@ -158,14 +118,6 @@ class ResourcePermissionTests(SecurityTestBase):
             resource_id=plugin_id,
             resource_name='Plugin',
             get_func_getter=lambda client: client.plugins.get
-        )
-
-    def test_cant_view_private_snapshot(self):
-        snapshot_id = self._upload_snapshot(private=True)
-        self._test_cant_view_private_resource(
-            resource_id=snapshot_id,
-            resource_name='Snapshot',
-            get_func_getter=lambda client: client.snapshots.get
         )
 
     def test_cant_view_private_deployment(self):
