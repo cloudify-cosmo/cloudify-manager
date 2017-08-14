@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import json
 
 from flask import current_app
 from itsdangerous import BadSignature, SignatureExpired
@@ -47,6 +48,10 @@ def user_loader(request):
     if api_token:
         user, user_token_key = extract_api_token(api_token)
         return user
+    if current_app.okta and \
+            current_app.okta.okta_saml_inside(request):
+        user = get_okta_user(request.data)
+        return user
     return None
 
 
@@ -59,6 +64,12 @@ def extract_api_token(api_token):
     except NotFoundError:
         return None, None
     return user, user_token_key
+
+
+def get_okta_user(request_data, logger=None):
+    data = json.loads(request_data)
+    okta_token = data.get(current_app.okta.SAML_RESPONSE_KEY)
+    return current_app.okta.get_user(okta_token, logger)
 
 
 def get_user_from_auth(auth):

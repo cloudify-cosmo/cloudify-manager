@@ -33,7 +33,7 @@ from manager_rest.app_logging import setup_logger, log_request, log_response
 from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
 
 try:
-    from cloudify_premium import configure_ldap
+    from cloudify_premium import configure_ldap, configure_okta
     premium_enabled = True
 except ImportError:
     configure_ldap = None
@@ -54,8 +54,10 @@ class CloudifyFlaskApp(Flask):
         self.premium_enabled = premium_enabled
         if self.premium_enabled:
             self.ldap = configure_ldap()
+            self.okta = configure_okta()
         else:
             self.ldap = None
+            self.okta = None
 
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)

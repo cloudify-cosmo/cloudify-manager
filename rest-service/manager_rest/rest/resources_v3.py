@@ -489,7 +489,7 @@ class LdapAuthentication(SecuredResource):
     def post(self):
         ldap_config = self._validate_set_ldap_request()
 
-        from cloudify_premium.multi_tenancy.ldap_authentication \
+        from cloudify_premium.authentication.ldap_authentication \
             import LdapAuthentication
 
         # update current configuration
