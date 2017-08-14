@@ -40,3 +40,19 @@ class Tokens(SecuredResourceSkipTenantAuth):
         """
         token = current_user.get_auth_token()
         return dict(value=token, role=current_user.role)
+
+    @swagger.operation(
+        responseClass=responses.Tokens,
+        nickname="get auth token for the request user",
+        notes="Generate authentication token for the request user",
+    )
+    @exceptions_handled
+    @marshal_with(responses.Tokens)
+    def post(self, **kwargs):
+        """
+        Get authentication token
+        It's the same as the GET request,
+        but supports authenticating via saml-response in the body
+        """
+        token = current_user.get_auth_token()
+        return dict(value=token, role=current_user.role)

@@ -19,10 +19,9 @@ from collections import namedtuple
 from flask import current_app
 from flask_security.utils import verify_password, md5
 
+from . import user_handler
 from manager_rest.storage import user_datastore
 from manager_rest.app_logging import raise_unauthorized_user_error
-
-from . import user_handler
 
 
 Authorization = namedtuple('Authorization', 'username password')
@@ -38,10 +37,11 @@ class Authentication(object):
         return current_app.ldap
 
     def authenticate(self, request):
+        user = None
         auth = request.authorization
         token = user_handler.get_token_from_request(request)
         api_token = user_handler.get_api_token_from_request(request)
-        if auth:            # User + Password authentication
+        if auth:            # Basic authentication (User + Password)
             user = user_handler.get_user_from_auth(auth)
             user = self._authenticate_password(user, auth)
         elif token:         # Token authentication
@@ -51,10 +51,14 @@ class Authentication(object):
             if not user or user.api_token_key != user_token_key:
                 raise_unauthorized_user_error(
                     'API token authentication failed')
-        else:
-            raise_unauthorized_user_error('No authentication '
-                                          'info provided')
-
+        elif current_app.okta and \
+                current_app.okta.okta_saml_inside(request):
+            user = user_handler.get_okta_user(request.data, logger=self.logger)
+            if not user:
+                raise_unauthorized_user_error('OKTA authentication failed')
+        if not user:
+            raise_unauthorized_user_error('No authentication info provided')
+        self.logger.info('Authenticated user: {0}'.format(user))
         user.last_login_at = datetime.now()
         user_datastore.commit()
         return user
