@@ -14,22 +14,21 @@
 #  * limitations under the License.
 
 import unittest
-
 from os import path
 from nose.plugins.attrib import attr
 
-from cloudify_rest_client.exceptions import UserUnauthorizedError
-
+from .test_base import SecurityTestBase
 from manager_rest.storage import models
 from manager_rest.test.base_test import LATEST_API_VERSION
 from manager_rest.storage.models_states import ExecutionState
-
-from .test_base import SecurityTestBase
+from cloudify_rest_client.exceptions import UserUnauthorizedError
 
 RUNNING_EXECUTIONS_MESSAGE = 'There are running executions for this deployment'
 UNAUTHORIZED_ERROR_MESSAGE = '401: User unauthorized'
 NOT_FOUND_ERROR_MESSAGE = '404: Requested Blueprint with ID ' \
                           '`blueprint_id` was not found'
+NOT_ADMIN_ERROR_MESSAGE = 'Only admins are allowed to use the snapshots' \
+                          ' command'
 
 
 @attr(client_min_version=1, client_max_version=LATEST_API_VERSION)
@@ -547,3 +546,106 @@ class AuthorizationTests(SecurityTestBase):
         updated_execution = self.admin_client.executions.get(
             execution_id=execution_id)
         self.assertEqual(ExecutionState.STARTED, updated_execution['status'])
+
+
+@attr(client_min_version=2, client_max_version=LATEST_API_VERSION)
+class SnapshotsAuthorizationTests(SecurityTestBase):
+
+    def setUp(self):
+        super(SnapshotsAuthorizationTests, self).setUp()
+
+        self.admin_client = self.get_secured_client(
+            username='alice', password='alice_password'
+        )
+        self.user_client = self.get_secured_client(
+            username='bob', password='bob_password'
+        )
+
+    def _test_snapshots_create(self):
+        """
+        Admin user are able to create snapshots while
+        regular users are not.
+        """
+        # admin
+        self.admin_client.snapshots.create('id1', False, False)
+
+        # user
+        try:
+            self.user_client.snapshots.create(
+                'snapshot_id2', False, False)
+        except UserUnauthorizedError as e:
+            self.assertTrue(NOT_ADMIN_ERROR_MESSAGE in e.message)
+
+    def _test_snapshots_delete(self):
+        """
+        Admin user are able to delete snapshots while
+        regular users are not.
+        """
+        # admin
+        self.admin_client.snapshots.delete('id1')
+
+        # user
+        try:
+            self.user_client.snapshots.delete('id1')
+        except UserUnauthorizedError as e:
+            self.assertTrue(NOT_ADMIN_ERROR_MESSAGE in e.message)
+
+    def _test_snapshots_upload(self):
+        """
+        Admin user are able to upload snapshots while
+        regular users are not.
+        """
+        tmp_file_path = self.create_wheel('wagon', '0.3.2')
+        # admin
+        self.admin_client.snapshots.upload(tmp_file_path, snapshot_id='0')
+
+        # user
+        try:
+            self.user_client.snapshots.upload(
+                tmp_file_path, snapshot_id='0')
+        except UserUnauthorizedError as e:
+            self.assertTrue(NOT_ADMIN_ERROR_MESSAGE in e.message)
+        finally:
+            self.quiet_delete(tmp_file_path)
+
+    def _test_snapshots_list(self):
+        """
+        Admin user are able to list snapshots while
+        regular users are not.
+        """
+        # admin
+        self.admin_client.snapshots.list()
+
+        # user
+        try:
+            self.user_client.snapshots.list()
+        except UserUnauthorizedError as e:
+            self.assertTrue(NOT_ADMIN_ERROR_MESSAGE in e.message)
+
+    def _test_snapshots_download(self):
+        """
+        Admin user are able to download snapshots while
+        regular users are not.
+        """
+        tmp_file_path = self.create_wheel('wagon', '0.3.2')
+        tmp_local_path = '/tmp/snapshot.sn'
+        # admin
+        self.admin_client.snapshots.upload(tmp_file_path, '2')
+        self.admin_client.snapshots.download('2', tmp_local_path)
+
+        # user
+        try:
+            self.admin_client.snapshots.upload(tmp_file_path, '1')
+            self.user_client.snapshots.download('1', tmp_local_path)
+        except UserUnauthorizedError as e:
+            self.assertTrue(NOT_ADMIN_ERROR_MESSAGE in e.message)
+        finally:
+            self.quiet_delete(tmp_file_path)
+            self.quiet_delete(tmp_local_path)
+
+    def test_snapshots_commands(self):
+        self._test_snapshots_create()
+        self._test_snapshots_delete()
+        self._test_snapshots_list()
+        self._test_snapshots_upload()
+        self._test_snapshots_download()

@@ -131,11 +131,6 @@ class ResourceManager(object):
                         include_credentials,
                         bypass_maintenance,
                         private_resource=False):
-        if not current_user.is_admin:
-            raise manager_exceptions.UnauthorizedError(
-                '{0} is not admin. Only admins are allowed to create '
-                'snapshots'.format(current_user)
-            )
         self.create_snapshot_model(snapshot_id,
                                    private_resource=private_resource)
         try:
@@ -171,11 +166,7 @@ class ResourceManager(object):
             raise manager_exceptions.SnapshotActionError(
                 'Failed snapshot cannot be restored'
             )
-        if not current_user.is_admin:
-            raise manager_exceptions.UnauthorizedError(
-                '{0} is not admin. Only admins are allowed to restore '
-                'snapshots'.format(current_user)
-            )
+
         _, execution = self._execute_system_workflow(
             wf_id='restore_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.restore',
