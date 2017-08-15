@@ -72,6 +72,7 @@ def setup_resources(api):
         'UserGroups': 'user-groups',
         'UserGroupsId': 'user-groups/<string:group_name>',
         'UserGroupsUsers': 'user-groups/users',
+        'User': 'user',
         'Users': 'users',
         'UsersId': 'users/<string:username>',
         'UsersActive': 'users/active/<string:username>',
