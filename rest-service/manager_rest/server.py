@@ -36,7 +36,7 @@ try:
     from cloudify_premium import configure_ldap, configure_okta
     premium_enabled = True
 except ImportError:
-    configure_ldap = None
+    configure_ldap, configure_okta = None, None
     premium_enabled = False
 
 SQL_DIALECT = 'postgresql'
