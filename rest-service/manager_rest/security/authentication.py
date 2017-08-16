@@ -36,6 +36,14 @@ class Authentication(object):
     def ldap(self):
         return current_app.ldap
 
+    @property
+    def okta_configured(self):
+        return current_app.okta and current_app.okta.is_configured()
+
+    @property
+    def external_authentication(self):
+        return current_app.ldap or self.okta_configured
+
     def authenticate(self, request):
         user = None
         auth = request.authorization
@@ -51,7 +59,7 @@ class Authentication(object):
             if not user or user.api_token_key != user_token_key:
                 raise_unauthorized_user_error(
                     'API token authentication failed')
-        elif current_app.okta and \
+        elif self.okta_configured and \
                 current_app.okta.okta_saml_inside(request):
             user = user_handler.get_okta_user(request.data, logger=self.logger)
             if not user:

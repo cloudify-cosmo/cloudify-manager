@@ -48,7 +48,7 @@ def user_loader(request):
     if api_token:
         user, user_token_key = extract_api_token(api_token)
         return user
-    if current_app.okta and \
+    if current_app.okta and current_app.okta.is_configured() and \
             current_app.okta.okta_saml_inside(request):
         user = get_okta_user(request.data)
         return user

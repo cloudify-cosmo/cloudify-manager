@@ -495,16 +495,17 @@ def evaluate_functions(func):
     return wrapper
 
 
-def no_ldap(action):
-    def no_ldap_dec(func):
+def no_external_authenticator(action):
+    def no_external_authenticator_dec(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if authenticator.ldap:
+            if authenticator.external_authentication:
                 raise manager_exceptions.IllegalActionError(
-                    'Action `{0}` is not available in ldap mode'.format(action)
+                    'Action `{0}` is not available when '
+                    'using external authentication'.format(action)
                 )
             return func(*args, **kwargs)
         return wrapper
-    return no_ldap_dec
+    return no_external_authenticator_dec
 
 # endregion
