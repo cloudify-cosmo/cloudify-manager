@@ -24,7 +24,7 @@ from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
 
 from manager_rest import config
 from manager_rest.dsl_functions import evaluate_intrinsic_functions
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import models, get_storage_manager, user_datastore
 from manager_rest.security import (SecuredResource,
                                    SecuredResourceSkipTenantAuth,
                                    MissingPremiumFeatureResource)
@@ -41,21 +41,21 @@ from .resources_v2 import (
     Events as v2_Events,
     Nodes as v2_Nodes,
 )
-from .responses_v3 import BaseResponse, ResourceID, SecretsListResponse
+from .responses_v3 import (
+    BaseResponse, ResourceID, SecretsListResponse, UserResponse)
 
 try:
     from cloudify_premium import (TenantResponse,
                                   GroupResponse,
                                   LdapResponse,
-                                  UserResponse,
                                   SecuredMultiTenancyResource,
                                   ClusterResourceBase,
                                   ClusterState,
                                   ClusterNode,
                                   SecuredMultiTenancyResourceSkipTenantAuth)
 except ImportError:
-    TenantResponse, GroupResponse, UserResponse, ClusterNode, LdapResponse,\
-        ClusterState = (BaseResponse, ) * 6
+    TenantResponse, GroupResponse, ClusterNode, LdapResponse,\
+        ClusterState = (BaseResponse, ) * 5
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
     ClusterResourceBase = MissingPremiumFeatureResource
     SecuredMultiTenancyResourceSkipTenantAuth = MissingPremiumFeatureResource
@@ -217,14 +217,14 @@ class UserGroupsId(SecuredMultiTenancyResource):
         return multi_tenancy.delete_group(group_name)
 
 
-class User(SecuredMultiTenancyResource):
+class User(SecuredResourceSkipTenantAuth):
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(UserResponse)
-    def get(self, multi_tenancy):
+    def get(self):
         """
         Get details for the current user
         """
-        return multi_tenancy.get_current_user()
+        return user_datastore.get_user(current_user.username)
 
 
 class Users(SecuredMultiTenancyResource):
@@ -296,7 +296,7 @@ class UsersId(SecuredMultiTenancyResource):
 
         # allow user that queries about himself to avoid admin authorization
         if username == current_user.username:
-            return multi_tenancy.get_current_user()
+            return user_datastore.get_user(current_user.username)
         return multi_tenancy.get_user(username)
 
     @rest_decorators.exceptions_handled
