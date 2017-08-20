@@ -49,3 +49,24 @@ class SecretsListResponse(BaseResponse):
         self.permission = kwargs.get('permission')
         self.tenant_name = kwargs.get('tenant_name')
         self.created_by = kwargs.get('created_by')
+
+
+@swagger.model
+class UserResponse(object):
+
+    resource_fields = {
+        'username': fields.String,
+        'tenants': fields.Raw,
+        'groups': fields.Raw,
+        'role': fields.String,
+        'active': fields.Boolean,
+        'last_login_at': fields.String
+    }
+
+    def __init__(self, **kwargs):
+        self.username = kwargs.get('username')
+        self.tenants = kwargs.get('tenants')
+        self.groups = kwargs.get('groups')
+        self.role = kwargs.get('role')
+        self.active = kwargs.get('active')
+        self.last_login_at = kwargs.get('last_login_at')
