@@ -302,7 +302,8 @@ class TestSnapshot(AgentlessTestCase):
                                            rest_client)
         self.logger.debug('Restoring snapshot...')
         execution = rest_client.snapshots.restore(snapshot_id)
-        execution = self._wait_for_execution_to_end(execution, rest_client)
+        execution = self._wait_for_restore_execution_to_end(
+            execution, rest_client)
         if execution.status == Execution.FAILED:
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(Execution.TERMINATED, execution.status)
@@ -319,7 +320,7 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEquals(snapshot['status'], 'uploaded')
         self.logger.info('Snapshot uploaded and validated')
 
-    def _wait_for_execution_to_end(
+    def _wait_for_restore_execution_to_end(
             self, execution, rest_client, timeout_seconds=60):
         """Can't use the `wait_for_execution_to_end` in the class because
          we need to be able to handle client errors
