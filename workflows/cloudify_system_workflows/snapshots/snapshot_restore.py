@@ -41,6 +41,9 @@ from .es_snapshot import ElasticSearch
 from .credentials import restore as restore_credentials
 from .constants import (
     ARCHIVE_CERT_DIR,
+    INTERNAL_CERT_FILENAME,
+    INTERNAL_KEY_FILENAME,
+    INTERNAL_P12_FILENAME,
     METADATA_FILENAME,
     M_SCHEMA_REVISION,
     M_STAGE_SCHEMA_REVISION,
@@ -158,11 +161,30 @@ class SnapshotRestore(object):
     def _restore_certificate(self):
         archive_cert_dir = os.path.join(self._tempdir, ARCHIVE_CERT_DIR)
         old_cert_dir = os.path.dirname(get_local_rest_certificate())
-        new_cert_dir = old_cert_dir + '_from_snapshot'
-        utils.copy_snapshot_path(archive_cert_dir, new_cert_dir)
+        new_cert_dir = '{0}_from_snapshot_{1}'.format(old_cert_dir,
+                                                      self._snapshot_id)
+        old_cert = os.path.join(old_cert_dir, INTERNAL_CERT_FILENAME)
+        old_key = os.path.join(old_cert_dir, INTERNAL_KEY_FILENAME)
+        old_p12 = os.path.join(old_cert_dir, INTERNAL_P12_FILENAME)
+        new_cert = os.path.join(new_cert_dir, INTERNAL_CERT_FILENAME)
+        new_key = os.path.join(new_cert_dir, INTERNAL_KEY_FILENAME)
+        new_p12 = os.path.join(new_cert_dir, INTERNAL_P12_FILENAME)
         time_to_wait_for_workflow_to_finish = 3
-        cmd = 'sleep {0}; rm -rf {1}; mv {2} {1}'.format(
-            time_to_wait_for_workflow_to_finish, old_cert_dir, new_cert_dir)
+        cmd = 'sleep {time}; ' \
+              'rm -rf {old_cert} {old_key} {old_p12}; ' \
+              'mv {new_cert} {old_cert}; ' \
+              'mv {new_key} {old_key}; ' \
+              'mv {new_p12} {old_p12}'.format(
+                time=time_to_wait_for_workflow_to_finish,
+                old_cert=old_cert,
+                old_key=old_key,
+                old_p12=old_p12,
+                new_cert=new_cert,
+                new_key=new_key,
+                new_p12=new_p12
+                )
+
+        utils.copy_snapshot_path(archive_cert_dir, new_cert_dir)
         if not self._no_reboot:
             cmd += '; sudo shutdown -r now'
         subprocess.Popen(cmd, shell=True)
