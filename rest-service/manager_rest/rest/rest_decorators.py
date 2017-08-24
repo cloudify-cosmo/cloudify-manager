@@ -374,7 +374,7 @@ def sortable(response_class=None):
 
 def all_tenants(func):
     """
-    Decorator for enabling sort
+    Decorator for including all tenants associated with the user
     """
     @wraps(func)
     def is_all_tenants(*args, **kw):
