@@ -52,8 +52,9 @@ class Executions(resources_v1.Executions):
     @rest_decorators.create_filters(models.Execution)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Execution)
+    @rest_decorators.all_tenants
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+            sort=None, all_tenants=None, **kwargs):
         """
         List executions
         """
@@ -62,7 +63,8 @@ class Executions(resources_v1.Executions):
             get_storage_manager().get(
                 models.Deployment,
                 deployment_id,
-                include=['id']
+                include=['id'],
+                all_tenants=all_tenants
             )
         is_include_system_workflows = rest_utils.verify_and_convert_bool(
             '_include_system_workflows',
@@ -73,5 +75,6 @@ class Executions(resources_v1.Executions):
             pagination=pagination,
             sort=sort,
             is_include_system_workflows=is_include_system_workflows,
-            include=_include
+            include=_include,
+            all_tenants=all_tenants
         )
