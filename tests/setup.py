@@ -39,7 +39,8 @@ setup(
     ],
     entry_points={
         'nose.plugins.0.10': [
-            'suitesplitter = integration_tests.suite_splitter:SuiteSplitter',
+            'suitesplitter = integration_tests.framework.'
+            'suite_splitter:SuiteSplitter',
         ]
     },
 )
