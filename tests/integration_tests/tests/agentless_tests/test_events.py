@@ -21,6 +21,7 @@ from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
 from integration_tests.framework import utils
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.flask_utils import get_postgres_conf
 
@@ -185,9 +186,8 @@ class EventsTest(AgentlessTestCase):
         """
 
         deadline = time.time() + timeout_seconds
-
-        while message not in [e['message'] for e
-                              in self.client.events.list(include_logs=True)]:
+        all_events = []
+        while message not in [e['message'] for e in all_events]:
             time.sleep(0.5)
             if time.time() > deadline:
                 raise utils.TimeoutException(
@@ -195,7 +195,12 @@ class EventsTest(AgentlessTestCase):
                         json.dumps(execution, indent=2)
                     )
                 )
-        return True
+            # This might fail due to the fact that we're changing the DB in
+            # real time - it's OK. Just try again
+            try:
+                all_events = self.client.events.list(include_logs=True)
+            except CloudifyClientError:
+                pass
 
 
 class EventsAlternativeTimezoneTest(EventsTest):
