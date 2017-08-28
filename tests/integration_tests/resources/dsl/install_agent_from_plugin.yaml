@@ -9,7 +9,7 @@ node_templates:
     type: cloudify.nodes.docker.Compute
     properties:
       agent_config:
-        install_method: provided
+        install_method: plugin
         user: root
     interfaces:
       cloudify.interfaces.lifecycle:

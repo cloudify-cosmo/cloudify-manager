@@ -516,6 +516,8 @@ data_types:
           * remote - An agent will be installed using SSH on linux hosts and WinRM on windows hosts.
           * init_script - An agent will be installed via a script that will run on the host when it gets created.
                           This method is only supported for specific IaaS plugins.
+          * plugin - An agent will be installed via a plugin which will run a script on the host.
+                     This method is only supported for specific IaaS plugins.
           * provided - An agent is assumed to already be installed on the host image.
                        That agent will be configured and started via a script that will run on the host when it gets created.
                        This method is only supported for specific IaaS plugins.
