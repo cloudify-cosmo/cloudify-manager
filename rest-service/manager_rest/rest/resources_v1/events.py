@@ -327,18 +327,18 @@ class Events(SecuredResource):
                 Node.id.label('node_name'),
                 select_column('logger'),
                 select_column('level'),
-                literal_column(
-                    "'cloudify_{}'".format(model.__name__.lower()))
+                literal_column("'cloudify_{}'".format(model.__name__.lower()))
                 .label('type'),
             )
-            .filter(
-                model._execution_fk == Execution._storage_id,
-                Execution._deployment_fk == Deployment._storage_id,
-                Deployment._blueprint_fk == Blueprint._storage_id,
-                model._tenant_id == tenant_id
-            )
+            .filter(model._tenant_id == tenant_id)
+
             .outerjoin(NodeInstance, NodeInstance.id == model.node_id)
             .outerjoin(Node, Node._storage_id == NodeInstance._node_fk)
+            .outerjoin(Execution, Execution._storage_id == model._execution_fk)
+            .outerjoin(Deployment,
+                       Deployment._storage_id == Execution._deployment_fk)
+            .outerjoin(
+                Blueprint, Blueprint._storage_id == Deployment._blueprint_fk)
         )
 
         query = Events._apply_filters(query, model, filters)
