@@ -537,6 +537,13 @@ data_types:
           'cloudify.nodes.Compute.cloudify_agent.name'.
         type: string
         required: false
+      networks:
+        description: >
+          A list of network names and IP addresses associated with them.
+          By default, there is only a "default" network, with the manager's
+          private IP associated with it. This network can be overwritten
+          (type: list)
+        required: false
       user:
         description: >
           For host agents, the agent will be installed for this user.
