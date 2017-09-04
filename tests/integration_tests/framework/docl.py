@@ -15,19 +15,21 @@
 
 from __future__ import absolute_import
 
-import copy
 import os
-import socket
-import sys
-import time
-import tempfile
-from contextlib import contextmanager
-from functools import partial
-
-import requests.exceptions
-import proxy_tools
 import sh
+import sys
 import yaml
+import copy
+import time
+import socket
+import tempfile
+
+from functools import partial
+from contextlib import contextmanager
+
+import proxy_tools
+import requests.exceptions
+from pika.exceptions import AMQPConnectionError
 
 import cloudify_rest_client.exceptions
 import cloudify.utils
@@ -289,7 +291,9 @@ def _wait_for_services(container_ip=None):
     if container_ip is None:
         container_ip = utils.get_manager_ip()
     logger.info('Waiting for RabbitMQ')
-    utils.create_pika_connection().close()
+    _retry(func=utils.create_pika_connection,
+           exceptions=AMQPConnectionError,
+           cleanup=lambda conn: conn.close())
     logger.info('Waiting for REST service and Storage')
     rest_client = utils.create_rest_client()
     _retry(func=rest_client.blueprints.list,
