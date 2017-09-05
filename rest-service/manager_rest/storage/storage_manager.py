@@ -390,16 +390,14 @@ class SQLStorageManager(object):
             element_id,
             include=None,
             filters=None,
-            locking=False,
-            all_tenants=None):
+            locking=False):
         """Return a single result based on the model class and element ID
         """
         current_app.logger.debug(
             'Get `{0}` with ID `{1}`'.format(model_class.__name__, element_id)
         )
         filters = filters or {'id': element_id}
-        query = self._get_query(
-            model_class, include, filters, all_tenants=all_tenants)
+        query = self._get_query(model_class, include, filters)
         if locking:
             query = query.with_for_update()
         result = query.first()
