@@ -1,5 +1,5 @@
 #########
-# Copyright (c) 2017 GigaSpaces Technologies Ltd. All rights reserved
+# Copyright (c) 2016 GigaSpaces Technologies Ltd. All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,34 +12,20 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-#
 
 from subprocess import check_call, Popen
 
-from flask_security import current_user
+from flask_login import current_user
+
 from manager_rest.app_logging import raise_unauthorized_user_error
-
-from . import resources_v1
-from manager_rest.rest import rest_utils
 from manager_rest.security import SecuredResource
-from manager_rest.rest.rest_decorators import exceptions_handled
 
+from .. import rest_utils
+from ..rest_decorators import exceptions_handled
 
 DEFAULT_CONF_PATH = '/etc/nginx/conf.d/default.conf'
 HTTP_PATH = '/etc/nginx/conf.d/http-external-rest-server.cloudify'
 HTTPS_PATH = '/etc/nginx/conf.d/https-external-rest-server.cloudify'
-
-
-class DeploymentsId(resources_v1.DeploymentsId):
-
-    def create_request_schema(self):
-        request_schema = super(DeploymentsId, self).create_request_schema()
-        request_schema['skip_plugins_validation'] = {
-            'optional': True, 'type': bool}
-        return request_schema
-
-    def get_skip_plugin_validation_flag(self, request_dict):
-        return request_dict.get('skip_plugins_validation', False)
 
 
 class SSLConfig(SecuredResource):
