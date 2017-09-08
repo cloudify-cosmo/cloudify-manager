@@ -1,0 +1,81 @@
+{
+  "manager": {
+    "set_manager_ip_on_boot": false,
+    "security": {
+      "ssl_enabled": false
+    }
+  },
+  "agent": {
+    "networks": null,
+    "broker_ip": null
+  },
+  "rest": {
+    "internal_endpoint_private": true
+  },
+  "packages": {
+    "manager_resources_package": "http://repository.cloudifysource.org/cloudify/4.2.0/.dev1-release/cloudify-manager-resources_4.2.0-.dev1.tar.gz"
+  },
+  "log_level": "info",
+  "influxdb": {
+    "influxdb_endpoint_ip": null
+  },
+  "rabbitmq": {
+    "username": "cloudify",
+    "password": "c10udify",
+    "fd_limit": 102400,
+    "sources": {
+      "erlang_rpm_source_url": "erlang-17.4-1.el6.x86_64.rpm",
+      "rabbitmq_rpm_source_url": "rabbitmq-server-3.5.3-1.noarch.rpm"
+    },
+    "policy_metrics": {
+      "events_queue_message_ttl": 60000,
+      "events_queue_length_limit": 1000000,
+      "logs_queue_message_ttl": 60000,
+      "logs_queue_length_limit": 1000000,
+      "metrics_queue_message_ttl": 60000,
+      "metrics_queue_length_limit": 1000000
+    }
+  },
+  "postgresql":
+  {
+    "sources": {
+      "libxslt_rpm_url": "libxslt-1.1.28-5.el7.x86_64.rpm",
+      "ps_libs_rpm_url": "postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm",
+      "ps_rpm_url": "postgresql95-9.5.3-2PGDG.rhel7.x86_64.rpm",
+      "ps_contrib_rpm_url": "postgresql95-contrib-9.5.3-2PGDG.rhel7.x86_64.rpm",
+      "ps_server_rpm_url": "postgresql95-server-9.5.3-2PGDG.rhel7.x86_64.rpm",
+      "ps_devel_rpm_url": "postgresql95-devel-9.5.3-2PGDG.rhel7.x86_64.rpm",
+      "psycopg2_rpm_url": "python-psycopg2-2.5.1-3.el7.x86_64.rpm"
+    },
+    "db_name": "cloudify_db",
+    "host": "localhost",
+    "username": "cloudify",
+    "password": "cloudify"
+  },
+  "java": {
+    "sources": {
+      "java_source_url": "jre1.8.0_45-1.8.0_45-fcs.x86_64.rpm"
+    }
+  },
+  "logstash": {
+    "sources": {
+      "logstash_source_url": "logstash-1.5.0-1.noarch.rpm",
+      "logstash_filter_json_encode_plugin_url": "logstash-filter-json_encode-0.1.5.gem",
+      "logstash_output_jdbc_plugin_url": "logstash-output-jdbc-0.2.10.gem",
+      "postgresql_jdbc_driver_url": "postgresql-9.4.1212.jar"
+    }
+  },
+  "restservice": {
+    "sources": {
+      "restservice_source_url": "cloudify-rest-service-*.x86_64.rpm"
+    }
+  },
+  "validations": {
+    "ignore_bootstrap_validations": false,
+    "minimum_required_total_physical_memory_in_mb": 3790,
+    "minimum_required_available_disk_space_in_gb": 5,
+    "expected_python_version": "2.7",
+    "supported_distros": ["centos", "redhat"],
+    "supported_distro_versions": ["7"]
+  }
+}
