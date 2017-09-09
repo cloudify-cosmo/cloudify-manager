@@ -1,3 +1,4 @@
+AGENT = 'agent'
 AMQPINFLUX = 'amqpinflux'
 DEV = 'dev'
 INFLUXB = 'influxdb'
