@@ -32,8 +32,6 @@ SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, 'scripts')
 
 logger = get_logger(RESTSERVICE)
 
-REST_PORT = 8100
-
 
 def _random_alphanumeric(result_len=31):
     """
@@ -44,12 +42,9 @@ def _random_alphanumeric(result_len=31):
 
 
 def _make_paths():
-    agent_dir = join(constants.MANAGER_RESOURCES_HOME, 'cloudify_agent')
     common.mkdir(HOME_DIR)
     common.mkdir(LOG_DIR)
     common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, LOG_DIR)
-    common.mkdir(constants.MANAGER_RESOURCES_HOME)
-    common.mkdir(agent_dir)
 
     # Used in the service templates
     config[RESTSERVICE]['home_dir'] = HOME_DIR
@@ -250,10 +245,11 @@ def _verify_restservice():
     that also requires the storage backend to be up, so if it works, there's
     a good chance everything is configured correctly.
     """
-    url = 'http://{0}:{1}'.format('127.0.0.1', REST_PORT)
+    rest_port = config[RESTSERVICE]['port']
+    url = 'http://{0}:{1}'.format('127.0.0.1', rest_port)
     security = config[MANAGER]['security']
 
-    wait_for_port(REST_PORT)
+    wait_for_port(rest_port)
 
     headers = get_auth_headers(
         username=security['admin_username'],

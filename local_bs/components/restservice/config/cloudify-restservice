@@ -3,7 +3,7 @@ MANAGER_REST_CONFIG_PATH="{restservice[home_dir]}/cloudify-rest.conf"
 MANAGER_REST_SECURITY_CONFIG_PATH="{restservice[home_dir]}/rest-security.conf"
 
 # REST Service port
-REST_PORT=8100
+REST_PORT={restservice[port]}
 
 # gunicorn configuration
 WORKER_COUNT={restservice[gunicorn][worker_count]}
