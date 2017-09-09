@@ -1,8 +1,9 @@
 import os
 import re
+import json
 import tempfile
 from glob import glob
-from os.path import join
+from os.path import join, isabs
 
 from .common import move, sudo
 from .network import is_url, curl_download
@@ -47,6 +48,11 @@ def ln(source, target, params=None):
 def get_local_source_path(source_url):
     if is_url(source_url):
         return curl_download(source_url)
+    # If it's already an absolute path, just return it
+    if isabs(source_url):
+        return source_url
+
+    # Otherwise, it's a relative `sources` path
     path = join(CLOUDIFY_SOURCES_PATH, source_url)
     if '*' in path:
         matching_paths = glob(path)
@@ -61,3 +67,13 @@ def get_local_source_path(source_url):
             )
         path = matching_paths[0]
     return path
+
+
+def write_to_tempfile(contents, json_dump=False):
+    fd, file_path = tempfile.mkstemp()
+    if json_dump:
+        contents = json.dumps(contents)
+
+    os.write(fd, contents)
+    os.close(fd)
+    return file_path
