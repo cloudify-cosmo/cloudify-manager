@@ -139,3 +139,20 @@ def yum_remove(package, ignore_failures=False):
             logger.error(msg)
             raise
         logger.warn(msg)
+
+
+def pip_install(source, venv='', constraints_file=None):
+    log_message = 'Installing {0}'.format(source)
+
+    pip_cmd = '{0}/bin/pip'.format(venv) if venv else 'pip'
+    cmdline = [pip_cmd, 'install', source, '--upgrade']
+
+    if venv:
+        log_message += ' in virtualenv {0}'.format(venv)
+    if constraints_file:
+        cmdline.extend(['-c', constraints_file])
+        log_message += ' using constraints file {0}'.format(constraints_file)
+
+    logger.info(log_message)
+    sudo(cmdline)
+
