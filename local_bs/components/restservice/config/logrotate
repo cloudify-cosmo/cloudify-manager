@@ -1,0 +1,13 @@
+{restservice[log_dir]}/*.log {{
+        hourly
+        missingok
+        rotate 7
+        size 100M
+        compress
+        delaycompress
+        notifempty
+        sharedscripts
+        postrotate
+                [ -f /var/run/gunicorn.pid ] && kill -USR1 $(cat /var/run/gunicorn.pid)
+        endscript
+}}
