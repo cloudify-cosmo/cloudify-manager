@@ -1,5 +1,6 @@
 import os
 import socket
+import base64
 from time import sleep
 from tempfile import mkstemp
 from urlparse import urlparse
@@ -71,3 +72,12 @@ def curl_download(source, destination=None):
     logger.debug('Downloading: {0} into {1}'.format(source, destination))
     run(curl_cmd)
     return destination
+
+
+def get_auth_headers(username, password):
+    return {
+        'Authorization': 'Basic ' + base64.b64encode('{0}:{1}'.format(
+            username, password)
+        ),
+        'tenant': 'default_tenant'
+    }
