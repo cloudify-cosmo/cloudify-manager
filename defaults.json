@@ -5,17 +5,14 @@
       "ssl_enabled": false,
       "admin_username": "admin",
       "admin_password": "admin"
+    },
+    "sources": {
+      "manager_resources_package": "http://repository.cloudifysource.org/cloudify/4.2.0/.dev1-release/cloudify-manager-resources_4.2.0-.dev1.tar.gz"
     }
   },
   "agent": {
-    "networks": null,
+    "networks": {},
     "broker_ip": null
-  },
-  "rest": {
-    "internal_endpoint_private": true
-  },
-  "packages": {
-    "manager_resources_package": "http://repository.cloudifysource.org/cloudify/4.2.0/.dev1-release/cloudify-manager-resources_4.2.0-.dev1.tar.gz"
   },
   "log_level": "info",
   "influxdb": {
@@ -38,8 +35,7 @@
       "metrics_queue_length_limit": 1000000
     }
   },
-  "postgresql":
-  {
+  "postgresql": {
     "sources": {
       "libxslt_rpm_url": "libxslt-1.1.28-5.el7.x86_64.rpm",
       "ps_libs_rpm_url": "postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm",
@@ -90,7 +86,15 @@
       "restservice_source_url": "cloudify-rest-service-*.x86_64.rpm"
     },
     "min_available_memory_mb": 100,
-    "insecure_endpoints_disabled": true
+    "insecure_endpoints_disabled": true,
+    "port": 8100
+  },
+  "nginx": {
+    "sources": {
+      "nginx_source_url": "nginx-1.12.0-1.el7.ngx.x86_64.rpm"
+    },
+    "external_cert_path": "",
+    "external_key_path": ""
   },
   "dev_packages": {
     "pip_constraints": "",
