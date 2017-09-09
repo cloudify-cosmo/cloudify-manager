@@ -3,12 +3,14 @@ import urllib2
 import platform
 import subprocess
 
+from .service_names import VALIDATIONS
+
 from ..config import config
 from ..logger import get_logger
 
 from ..utils.network import is_url
 
-logger = get_logger('Validations')
+logger = get_logger(VALIDATIONS)
 
 _errors = []
 
@@ -49,9 +51,9 @@ def _get_available_host_disk_space():
 def _validate_supported_distros():
     logger.info('Validating supported distributions...')
     distro, version = _get_os_distro()
-    supported_distros = config['validations']['supported_distros']
+    supported_distros = config[VALIDATIONS]['supported_distros']
     supported_distro_versions = \
-        config['validations']['supported_distro_versions']
+        config[VALIDATIONS]['supported_distro_versions']
     if distro not in supported_distros:
         _errors.append(
             'Cloudify manager does not support the current distro (`{0}`),'
@@ -70,7 +72,7 @@ def _validate_python_version():
     logger.info('Validating Python version...')
     major_version, minor_version = sys.version_info[0], sys.version_info[1]
     python_version = '{0}.{1}'.format(major_version, minor_version)
-    expected_version = config['validations']['expected_python_version']
+    expected_version = config[VALIDATIONS]['expected_python_version']
     if python_version != expected_version:
         error = 'Local python version (`{0}`) does not match expected ' \
                 'version (`{1}`)'.format(python_version, expected_version)
@@ -81,7 +83,7 @@ def _validate_sufficient_memory():
     logger.info('Validating memory requirement...')
     current_memory = _get_host_total_memory()
     required_memory = \
-        config['validations']['minimum_required_total_physical_memory_in_mb']
+        config[VALIDATIONS]['minimum_required_total_physical_memory_in_mb']
     if current_memory < required_memory:
         _errors.append(
             'The provided host does not have enough memory to run '
@@ -94,7 +96,7 @@ def _validate_sufficient_disk_space():
     logger.info('Validating disk space requirement...')
     available_disk_space_in_gb = _get_available_host_disk_space()
     required_disk_space = \
-        config['validations']['minimum_required_available_disk_space_in_gb']
+        config[VALIDATIONS]['minimum_required_available_disk_space_in_gb']
 
     if available_disk_space_in_gb < required_disk_space:
         _errors.append(
@@ -123,7 +125,7 @@ def _validate_resources_package_url():
 
 
 def validate():
-    if config['validations']['ignore_bootstrap_validations']:
+    if config[VALIDATIONS]['ignore_bootstrap_validations']:
         logger.info('Skipping validations')
         return
 
