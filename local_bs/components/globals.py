@@ -2,13 +2,12 @@ from .. import constants
 from ..config import config
 from ..logger import get_logger
 
-from .service_names import RABBITMQ, MANAGER
+from .service_names import RABBITMQ, MANAGER, AGENT, NGINX
 
 logger = get_logger('Globals')
 
 
 def _set_external_port_and_protocol():
-    # TODO: Change to nginx config
     if config[MANAGER]['security']['ssl_enabled']:
         logger.info('SSL is enabled, setting rest port to 443 and '
                     'rest protocol to https...')
@@ -19,8 +18,9 @@ def _set_external_port_and_protocol():
                     'to 80 and rest protocols to http...')
         external_rest_port = 80
         external_rest_protocol = 'http'
-    config['external_rest_port'] = external_rest_port
-    config['external_rest_protocol'] = external_rest_protocol
+    config[NGINX]['external_rest_port'] = external_rest_port
+    config[NGINX]['external_rest_protocol'] = external_rest_protocol
+    config[NGINX]['internal_rest_port'] = constants.INTERNAL_REST_PORT
 
 
 def _set_rabbitmq_config():
@@ -29,17 +29,33 @@ def _set_rabbitmq_config():
 
 
 def _set_ip_config():
-    if not config['agent']['broker_ip']:
-        config['agent']['broker_ip'] = config[MANAGER]['private_ip']
+    private_ip = config[MANAGER]['private_ip']
+    if not config[AGENT]['broker_ip']:
+        config[AGENT]['broker_ip'] = private_ip
 
     config[MANAGER]['file_server_root'] = constants.MANAGER_RESOURCES_HOME
     config[MANAGER]['file_server_url'] = 'https://{0}:{1}/resources'.format(
-        config[MANAGER]['private_ip'],
+        private_ip,
         constants.INTERNAL_REST_PORT
     )
 
+    if not config[AGENT]['networks']:
+        config[AGENT]['networks'] = {'default': private_ip}
 
-def set():
+
+def _set_cert_config():
+    nginx_conf = config[NGINX]
+    nginx_conf['internal_rest_host'] = config[MANAGER]['private_ip']
+    nginx_conf['external_rest_host'] = config[MANAGER]['public_ip']
+    nginx_conf['internal_ca_cert_path'] = constants.INTERNAL_CA_CERT_PATH
+    nginx_conf['internal_cert_path'] = constants.INTERNAL_CERT_PATH
+    nginx_conf['internal_key_path'] = constants.INTERNAL_KEY_PATH
+    nginx_conf['external_cert_path'] = constants.EXTERNAL_CERT_PATH
+    nginx_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
+
+
+def set_globals():
     _set_ip_config()
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
+    _set_cert_config()

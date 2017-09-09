@@ -6,11 +6,8 @@ from contextlib import contextmanager
 from .common import sudo, remove, chown, copy
 from .files import write_to_file, write_to_tempfile
 
-from ..config import config
 from ..logger import get_logger
 from .. import constants as const
-
-from ..components.service_names import NGINX
 
 logger = get_logger('Certificates')
 
