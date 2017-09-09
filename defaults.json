@@ -12,7 +12,10 @@
   },
   "agent": {
     "networks": {},
-    "broker_ip": null
+    "broker_ip": null,
+    "broker_port": 5671,
+    "min_workers": 2,
+    "max_workers": 5
   },
   "log_level": "info",
   "influxdb": {
@@ -95,6 +98,14 @@
     },
     "external_cert_path": "",
     "external_key_path": ""
+  },
+  "mgmtworker": {
+    "sources": {
+      "mgmtworker_source_url": "cloudify-management-worker-*.x86_64.rpm"
+    },
+    "log_level": "INFO",
+    "min_workers": 2,
+    "max_workers": 100
   },
   "dev_packages": {
     "pip_constraints": "",
