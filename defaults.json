@@ -2,7 +2,9 @@
   "manager": {
     "set_manager_ip_on_boot": false,
     "security": {
-      "ssl_enabled": false
+      "ssl_enabled": false,
+      "admin_username": "admin",
+      "admin_password": "admin"
     }
   },
   "agent": {
@@ -66,9 +68,40 @@
     }
   },
   "restservice": {
+    "log": {
+      "level": "INFO",
+      "file_size": 100,
+      "files_backup_count": 20
+    },
+    "gunicorn": {
+      "worker_count": 0,
+      "max_worker_count": 12,
+      "max_requests": 1000
+    },
+    "ldap": {
+      "server": "",
+      "username": "",
+      "password": "",
+      "domain": "",
+      "is_active_directory": true,
+      "dn_extra": ""
+    },
     "sources": {
       "restservice_source_url": "cloudify-rest-service-*.x86_64.rpm"
-    }
+    },
+    "min_available_memory_mb": 100,
+    "insecure_endpoints_disabled": true
+  },
+  "dev_packages": {
+    "pip_constraints": "",
+    "cloudify_manager_source_url": "",
+    "sanity_app_source_url": "cloudify-hello-world-example-*.tar.gz",
+    "amqpinflux_source_url": "",
+    "rest_client_source_url": "",
+    "plugins_common_source_url": "",
+    "script_plugin_source_url": "",
+    "agent_source_url": "",
+    "dsl_parser_source_url": ""
   },
   "validations": {
     "ignore_bootstrap_validations": false,
