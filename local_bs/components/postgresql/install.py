@@ -1,6 +1,6 @@
 import os
-from tempfile import mkstemp, NamedTemporaryFile
-from os.path import join, isdir, islink, isfile
+from tempfile import mkstemp
+from os.path import join, isdir, islink
 
 from ..service_names import POSTGRESQL
 
@@ -9,19 +9,19 @@ from ...config import config
 from ...logger import get_logger
 
 from ...utils import common
-from ...utils.files import ln
-from ...utils.install import yum_install
 from ...utils.systemd import systemd
 from ...utils.deploy import copy_notice
+from ...utils.install import yum_install
+from ...utils.files import ln, write_to_file
 
 
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL)
 
-PGPASS_PATH = '/root/.pgpass'
 PGSQL_LIB_DIR = '/var/lib/pgsql'
 PGSQL_USR_DIR = '/usr/pgsql-9.5'
 PS_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
+PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
 
@@ -100,20 +100,15 @@ def _create_postgres_pass_file():
         user=pg_config['username'],
         password=pg_config['password']
     )
-    # .pgpass file used by mgmtworker in snapshot workflow,
-    # and will be moved and have correct ownership assigned by the
-    # management worker
-    if isfile(PGPASS_PATH):
-        common.remove(PGPASS_PATH)
-    with NamedTemporaryFile(delete=False) as temp_file:
-        temp_file.write(pgpass_content)
-
-    common.chmod('0600', temp_file.name)
-    common.move(
-        source=temp_file.name,
-        destination=PGPASS_PATH,
-        rename_only=True
+    pgpass_path = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
+    write_to_file(pgpass_content, pgpass_path)
+    common.chmod('400', pgpass_path)
+    common.chown(
+        constants.CLOUDIFY_USER,
+        constants.CLOUDIFY_GROUP,
+        pgpass_path
     )
+
     logger.debug('Postgresql pass file {0} created'.format(PGPASS_PATH))
 
 
