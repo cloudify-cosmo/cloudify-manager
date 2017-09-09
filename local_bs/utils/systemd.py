@@ -39,7 +39,7 @@ class SystemD(object):
         src_dir = join(COMPONENTS_DIR, service_dir_name, 'config')
         env_src = join(src_dir, sid)
         srv_src = join(src_dir, '{0}.service'.format(sid))
-        tmp_src = join(src_dir, '{0}.config'.format(sid))
+        tmp_src = join(src_dir, 'tmpfiles.d', '{0}.conf'.format(sid))
 
         logger.debug('Deploying systemd EnvironmentFile...')
         deploy(env_src, env_dst, render=render)
@@ -49,7 +49,7 @@ class SystemD(object):
         self.systemctl('enable', '{0}.service'.format(sid))
 
         if tmpfiles:
-            tmp_dst = "/usr/lib/tmpfiles.d/{0}.config".format(sid)
+            tmp_dst = "/usr/lib/tmpfiles.d/{0}.conf".format(sid)
             logger.debug('Deploying tmpfiles.d file...')
             deploy(tmp_src, tmp_dst, render=render)
             sudo(['systemd-tmpfiles', '--create'])
