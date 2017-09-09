@@ -1,5 +1,7 @@
 from os.path import join, basename
 
+from ..service_names import LOGSTASH
+
 from ... import constants
 from ...config import config
 from ...logger import get_logger
@@ -7,22 +9,20 @@ from ...logger import get_logger
 from ...utils import common
 from ...utils.deploy import deploy
 from ...utils.systemd import systemd
-from ...utils.yum import yum_install
+from ...utils.install import yum_install
 from ...utils.deploy import copy_notice
 from ...utils.logrotate import set_logrotate
 from ...utils.files import replace_in_file, get_local_source_path
 
-
-SERVICE_NAME = 'logstash'
-HOME_DIR = join('/opt', SERVICE_NAME)
-LOG_DIR = join(constants.BASE_LOG_DIR, SERVICE_NAME)
+HOME_DIR = join('/opt', LOGSTASH)
+LOG_DIR = join(constants.BASE_LOG_DIR, LOGSTASH)
 REMOVE_CONFIG_PATH = '/etc/logstash/conf.d'
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/logstash.service.d'
 INIT_D_FILE = '/etc/init.d/logstash'
 
-CONFIG_PATH = join(constants.COMPONENTS_DIR, SERVICE_NAME, 'config')
+CONFIG_PATH = join(constants.COMPONENTS_DIR, LOGSTASH, 'config')
 
-logger = get_logger(SERVICE_NAME)
+logger = get_logger(LOGSTASH)
 
 
 def _install_plugin(name, plugin_url):
@@ -81,7 +81,7 @@ def _install_plugins(sources):
 def _install_logstash(sources):
     """Install logstash as a systemd service."""
     logger.info('Installing Logstash...')
-    copy_notice(SERVICE_NAME)
+    copy_notice(LOGSTASH)
 
     yum_install(sources['logstash_source_url'])
 
@@ -100,7 +100,7 @@ def _install_logstash(sources):
 
 def _configure_logstash():
     logger.info('Deploying Logstash configuration...')
-    config['logstash']['log_dir'] = LOG_DIR  # Used in config files
+    config[LOGSTASH]['log_dir'] = LOG_DIR  # Used in config files
 
     # Due to a bug in the handling of configuration files,
     # configuration files with the same name cannot be deployed.
@@ -121,15 +121,15 @@ def _configure_logstash():
         '/etc/sysconfig/cloudify-logstash'
     )
 
-    set_logrotate(SERVICE_NAME)
+    set_logrotate(LOGSTASH)
     common.sudo(['/sbin/chkconfig', 'logstash', 'on'])
 
 
 def run():
-    sources = config[SERVICE_NAME]['sources']
+    sources = config[LOGSTASH]['sources']
     _install_logstash(sources)
     _configure_logstash()
 
     logger.info('Starting Logstash service...')
-    systemd.start(SERVICE_NAME, append_prefix=False)
-    systemd.verify_alive(SERVICE_NAME, append_prefix=False)
+    systemd.start(LOGSTASH, append_prefix=False)
+    systemd.verify_alive(LOGSTASH, append_prefix=False)

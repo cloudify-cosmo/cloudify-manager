@@ -1,11 +1,13 @@
 import json
 from os.path import join
 
+from ..service_names import RABBITMQ
+
 from ... import constants
 from ...config import config
 from ...logger import get_logger
 
-from ...utils.yum import yum_install
+from ...utils.install import yum_install
 from ...utils.systemd import systemd
 from ...utils.logrotate import set_logrotate
 from ...utils.deploy import deploy, copy_notice
@@ -13,19 +15,18 @@ from ...utils.common import sudo, mkdir, chown, remove
 from ...utils.network import wait_for_port, is_port_open
 
 
-SERVICE_NAME = 'rabbitmq'
-LOG_DIR = join(constants.BASE_LOG_DIR, SERVICE_NAME)
-HOME_DIR = join('/etc', SERVICE_NAME)
-CONFIG_PATH = join(constants.COMPONENTS_DIR, SERVICE_NAME, 'config')
+LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
+HOME_DIR = join('/etc', RABBITMQ)
+CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, 'config')
 
 SECURE_PORT = 5671
 INSECURE_PORT = 5672
 
-logger = get_logger(SERVICE_NAME)
+logger = get_logger(RABBITMQ)
 
 
 def _install_sources():
-    sources = config[SERVICE_NAME]['sources']
+    sources = config[RABBITMQ]['sources']
     for source in sources.values():
         yum_install(source)
 
@@ -71,7 +72,7 @@ def _init_service():
     systemd.systemctl('daemon-reload')
 
     # rabbitmq restart exits with 143 status code that is valid in this case.
-    systemd.restart(SERVICE_NAME, ignore_failure=True)
+    systemd.restart(RABBITMQ, ignore_failure=True)
     wait_for_port(INSECURE_PORT)
 
     deploy(
@@ -94,8 +95,8 @@ def _delete_guest_user():
 
 
 def _create_rabbitmq_user():
-    rabbitmq_username = config['rabbitmq']['username']
-    rabbitmq_password = config['rabbitmq']['password']
+    rabbitmq_username = config[RABBITMQ]['username']
+    rabbitmq_password = config[RABBITMQ]['password']
     if not user_exists(rabbitmq_username):
         logger.info('Creating new user and setting permissions...'.format(
             rabbitmq_username, rabbitmq_password)
@@ -118,7 +119,7 @@ def _set_rabbitmq_policy(name, expression, policy):
 
 
 def _set_policies():
-    metrics = config[SERVICE_NAME]['policy_metrics']
+    metrics = config[RABBITMQ]['policy_metrics']
     logs_queue_message_policy = {
         'message-ttl': metrics['logs_queue_message_ttl'],
         'max-length': metrics['logs_queue_length_limit']
@@ -162,18 +163,18 @@ def _set_policies():
 def _start_rabbitmq():
     logger.info("Starting RabbitMQ Service...")
     # rabbitmq restart exits with 143 status code that is valid in this case.
-    systemd.restart(SERVICE_NAME, ignore_failure=True)
+    systemd.restart(RABBITMQ, ignore_failure=True)
     # This should be done in the create script.
     # For some reason, it fails. Need to check.
 
     wait_for_port(SECURE_PORT)
     _set_policies()
-    systemd.restart(SERVICE_NAME)
+    systemd.restart(RABBITMQ)
 
 
 def _validate_rabbitmq_running():
     logger.info('Making sure RabbitMQ is live...')
-    systemd.verify_alive(SERVICE_NAME)
+    systemd.verify_alive(RABBITMQ)
 
     result = sudo(['rabbitmqctl', 'status'])
     if result.returncode != 0:
@@ -182,21 +183,19 @@ def _validate_rabbitmq_running():
     if not is_port_open(SECURE_PORT, host='127.0.0.1'):
         raise StandardError(
             '{0} error: port {1}:{2} was not open'.format(
-                SERVICE_NAME, '127.0.0.1', SECURE_PORT)
+                RABBITMQ, '127.0.0.1', SECURE_PORT)
         )
 
 
 def run():
-    config[SERVICE_NAME]['endpoint_ip'] = config['agent']['broker_ip']
-
     logger.info('Installing RabbitMQ...')
-    copy_notice(SERVICE_NAME)
+    copy_notice(RABBITMQ)
     mkdir(LOG_DIR)
-    chown('rabbitmq', 'rabbitmq', LOG_DIR)
+    chown(RABBITMQ, RABBITMQ, LOG_DIR)
 
     _install_sources()
-    set_logrotate(SERVICE_NAME)
-    systemd.configure(SERVICE_NAME)
+    set_logrotate(RABBITMQ)
+    systemd.configure(RABBITMQ)
     _deploy_resources()
     _init_service()
     _enable_plugins()

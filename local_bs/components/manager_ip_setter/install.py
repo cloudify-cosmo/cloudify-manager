@@ -1,5 +1,7 @@
 from os.path import join
 
+from ..service_names import MANAGER, MANAGER_IP_SETTER
+
 from ... import constants
 from ...config import config
 from ...logger import get_logger
@@ -8,10 +10,9 @@ from ...utils import common, sudoers
 from ...utils.systemd import systemd
 
 
-SERVICE_NAME = 'manager-ip-setter'
-MANAGER_IP_SETTER_DIR = join('/opt/cloudify', SERVICE_NAME)
+MANAGER_IP_SETTER_DIR = join('/opt/cloudify', MANAGER_IP_SETTER)
 
-logger = get_logger(SERVICE_NAME)
+logger = get_logger(MANAGER_IP_SETTER)
 
 
 def deploy_cert_script():
@@ -36,7 +37,7 @@ def deploy_sudo_scripts():
         sudoers.deploy_sudo_command_script(
             script,
             description,
-            component=SERVICE_NAME,
+            component=MANAGER_IP_SETTER,
             render=False
         )
 
@@ -47,15 +48,11 @@ def install_manager_ip_setter():
     deploy_sudo_scripts()
 
 
-def enable_manager_ip_setter():
-    systemd.configure(SERVICE_NAME)
-
-
 def run():
     # Always install the ip setter, but only
     # install the scripts if flag is true
     install_manager_ip_setter()
-    if config['manager']['set_manager_ip_on_boot']:
-        enable_manager_ip_setter()
+    if config[MANAGER]['set_manager_ip_on_boot']:
+        systemd.configure(MANAGER_IP_SETTER)
     else:
         logger.info('Set manager ip on boot is disabled.')

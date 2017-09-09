@@ -2,20 +2,21 @@ import os
 from tempfile import mkstemp, NamedTemporaryFile
 from os.path import join, isdir, islink, isfile
 
+from ..service_names import POSTGRESQL
+
 from ... import constants
 from ...config import config
 from ...logger import get_logger
 
 from ...utils import common
 from ...utils.files import ln
-from ...utils.yum import yum_install
+from ...utils.install import yum_install
 from ...utils.systemd import systemd
 from ...utils.deploy import copy_notice
 
 
-SERVICE_NAME = 'postgresql'
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
-LOG_DIR = join(constants.BASE_LOG_DIR, 'postgresql')
+LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL)
 
 PGPASS_PATH = '/root/.pgpass'
 PGSQL_LIB_DIR = '/var/lib/pgsql'
@@ -24,12 +25,12 @@ PS_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
 
 PG_PORT = 5432
 
-logger = get_logger(SERVICE_NAME)
+logger = get_logger(POSTGRESQL)
 
 
 def _install_postgresql():
     logger.info('Installing PostgreSQL...')
-    sources = config[SERVICE_NAME]['sources']
+    sources = config[POSTGRESQL]['sources']
     for source in sources.values():
         yum_install(source)
 
@@ -91,7 +92,7 @@ def _update_configuration():
 
 def _create_postgres_pass_file():
     logger.info('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
-    pg_config = config[SERVICE_NAME]
+    pg_config = config[POSTGRESQL]
     pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
         host=pg_config['host'],
         port=PG_PORT,
@@ -117,13 +118,13 @@ def _create_postgres_pass_file():
 
 
 def _create_default_db():
-    pg_config = config[SERVICE_NAME]
+    pg_config = config[POSTGRESQL]
     logger.info(
         'Creating default PostgreSQL DB: {0}...'.format(pg_config['db_name'])
     )
     script_path = join(
         constants.COMPONENTS_DIR,
-        SERVICE_NAME,
+        POSTGRESQL,
         'scripts',
         'create_default_db.sh'
     )
@@ -139,7 +140,7 @@ def _create_default_db():
 
 
 def run():
-    copy_notice(SERVICE_NAME)
+    copy_notice(POSTGRESQL)
     _install_postgresql()
     _init_postgresql()
     _update_configuration()
