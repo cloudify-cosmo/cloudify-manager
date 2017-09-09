@@ -77,3 +77,10 @@ def write_to_tempfile(contents, json_dump=False):
     os.write(fd, contents)
     os.close(fd)
     return file_path
+
+
+def write_to_file(contents, destination, json_dump=False):
+    """ Used to write files to locations that require sudo to access """
+
+    temp_path = write_to_tempfile(contents, json_dump=json_dump)
+    move(temp_path, destination)
