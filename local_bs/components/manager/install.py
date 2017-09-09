@@ -1,5 +1,8 @@
 import os
 import subprocess
+from os.path import join
+
+from ..service_names import MANAGER
 
 from ... import constants
 from ...config import config
@@ -11,7 +14,7 @@ from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.files import replace_in_file, get_local_source_path
 
-logger = get_logger('Manager')
+logger = get_logger(MANAGER)
 
 
 def _create_cloudify_user():
@@ -36,7 +39,7 @@ def _create_sudoers_file_and_disable_sudo_requiretty():
 
 def _extract_single_tar():
     logger.info('Extracting Cloudify manager resources archive...')
-    single_tar_url = config['packages']['manager_resources_package']
+    single_tar_url = config[MANAGER]['sources']['manager_resources_package']
     local_single_tar_path = get_local_source_path(single_tar_url)
     common.mkdir(constants.CLOUDIFY_SOURCES_PATH)
     common.untar(
@@ -99,6 +102,14 @@ def _set_selinux_permissive():
         logger.debug('SELinux is not enforced.')
 
 
+def _create_manager_resources_dirs():
+    resources_root = constants.MANAGER_RESOURCES_HOME
+    common.mkdir(resources_root)
+    common.mkdir(join(resources_root, 'cloudify_agent'))
+    common.mkdir(join(resources_root, 'packages', 'scripts'))
+    common.mkdir(join(resources_root, 'packages', 'templates'))
+
+
 def run():
     _create_cloudify_user()
     _create_sudoers_file_and_disable_sudo_requiretty()
@@ -106,3 +117,4 @@ def run():
     setup_logrotate()
     _extract_single_tar()
     _normalize_agent_names()
+    _create_manager_resources_dirs()
