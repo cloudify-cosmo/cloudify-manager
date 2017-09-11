@@ -16,7 +16,7 @@ from ...utils.files import replace_in_file, get_local_source_path
 
 HOME_DIR = join('/opt', LOGSTASH)
 LOG_DIR = join(constants.BASE_LOG_DIR, LOGSTASH)
-REMOVE_CONFIG_PATH = '/etc/logstash/conf.d'
+REMOTE_CONFIG_PATH = '/etc/logstash/conf.d'
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/logstash.service.d'
 INIT_D_FILE = '/etc/init.d/logstash'
 
@@ -102,6 +102,12 @@ def _configure_logstash():
     logger.info('Deploying Logstash configuration...')
     config[LOGSTASH]['log_dir'] = LOG_DIR  # Used in config files
 
+    deploy(
+        join(CONFIG_PATH, 'logstash.conf'),
+        join(REMOTE_CONFIG_PATH, 'logstash.conf')
+    )
+    common.chown(LOGSTASH, LOGSTASH, REMOTE_CONFIG_PATH)
+
     # Due to a bug in the handling of configuration files,
     # configuration files with the same name cannot be deployed.
     # Since the logrotate config file is called `logstash`,
@@ -131,5 +137,5 @@ def run():
     _configure_logstash()
 
     logger.info('Starting Logstash service...')
-    systemd.start(LOGSTASH, append_prefix=False)
+    systemd.restart(LOGSTASH, append_prefix=False)
     systemd.verify_alive(LOGSTASH, append_prefix=False)
