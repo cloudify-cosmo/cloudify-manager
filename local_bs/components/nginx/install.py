@@ -136,7 +136,7 @@ def _deploy_nginx_config_files():
 def _start_and_verify_service():
     logger.info('Starting NGINX service...')
     systemd.enable(NGINX, append_prefix=False)
-    systemd.start(NGINX, append_prefix=False)
+    systemd.restart(NGINX, append_prefix=False)
 
     logger.info('Verifying NGINX service is up...')
     systemd.verify_alive(NGINX, append_prefix=False)
