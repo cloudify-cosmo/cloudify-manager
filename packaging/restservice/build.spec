@@ -62,7 +62,7 @@ sudo -E /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --fin
 
 export REST_SERVICE_BUILD=True
 
-pip install --use-wheel --no-index --find-links=/var/wheels/%{name} virtualenv && \
+pip install --use-wheel --no-index --find-links=/var/wheels/%{name} --upgrade virtualenv && \
 if [ ! -d "/opt/manager/env" ]; then virtualenv /opt/manager/env; fi && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-dsl-parser --pre && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} ldappy --pre && \
