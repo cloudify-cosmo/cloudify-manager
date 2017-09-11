@@ -107,6 +107,11 @@
     "min_workers": 2,
     "max_workers": 100
   },
+  "cli": {
+    "sources": {
+      "cli_source_url": "http://gigaspaces-repository-eu.s3.amazonaws.com/cloudify/4.2.0/.dev1-release/cloudify-4.2.0~.dev1.el6.x86_64.rpm"
+    }
+  },
   "dev_packages": {
     "pip_constraints": "",
     "cloudify_manager_source_url": "",

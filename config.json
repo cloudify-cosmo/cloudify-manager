@@ -6,5 +6,10 @@
   "packages": {
     "manager_resources_package": "/tmp/manager_single_tar.tar.gz"
   },
+  "cli": {
+    "sources": {
+      "cli_source_url": "cloudify-4.2.0~.dev1.el6.x86_64.rpm"
+    }
+  },
   "log_level": "info"
 }
