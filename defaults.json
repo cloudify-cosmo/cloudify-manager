@@ -112,10 +112,14 @@
       "cli_source_url": "http://gigaspaces-repository-eu.s3.amazonaws.com/cloudify/4.2.0/.dev1-release/cloudify-4.2.0~.dev1.el6.x86_64.rpm"
     }
   },
+  "sanity": {
+    "sources": {
+      "sanity_source_url": "cloudify-hello-world-example-*.tar.gz"
+    }
+  },
   "dev_packages": {
     "pip_constraints": "",
     "cloudify_manager_source_url": "",
-    "sanity_app_source_url": "cloudify-hello-world-example-*.tar.gz",
     "amqpinflux_source_url": "",
     "rest_client_source_url": "",
     "plugins_common_source_url": "",

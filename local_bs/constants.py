@@ -18,7 +18,7 @@ INTERNAL_REST_PORT = 53333
 BASE_DIR = up(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 
-SSL_CERTS_TARGET_DIR = '/etc/cloudify/ssl'
+SSL_CERTS_TARGET_DIR = join(CLOUDIFY_HOME_DIR, 'ssl')
 
 INTERNAL_CERT_FILENAME = 'cloudify_internal_cert.pem'
 INTERNAL_KEY_FILENAME = 'cloudify_internal_key.pem'

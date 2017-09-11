@@ -11,5 +11,10 @@
       "cli_source_url": "cloudify-4.2.0~.dev1.el6.x86_64.rpm"
     }
   },
+  "restservice": {
+    "log": {
+      "level": "DEBUG"
+    }
+  },
   "log_level": "info"
 }
