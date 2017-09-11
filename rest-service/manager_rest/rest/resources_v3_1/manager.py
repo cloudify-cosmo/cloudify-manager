@@ -13,7 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from subprocess import check_call, Popen
+from subprocess import check_call
 
 from flask_login import current_user
 
@@ -44,12 +44,8 @@ class SSLConfig(SecuredResource):
         status = 'enabled' if state else 'disabled'
         if state == SSLConfig._is_enabled():
             return 'SSL is already {0} on the manager'.format(status)
-        source = HTTP_PATH if state else HTTPS_PATH
-        target = HTTPS_PATH if state else HTTP_PATH
-        cmd = 'sudo sed -i "s~{0}~{1}~g" {2}'.format(
-            source, target, DEFAULT_CONF_PATH)
-        check_call(cmd, shell=True)
-        Popen('sleep 1; sudo systemctl restart nginx', shell=True)
+        flag = '--ssl-enabled' if state else '--ssl-disabled'
+        check_call(['/opt/cloudify/restservice/set-manager-ssl.py', flag])
         return 'SSL is now {0} on the manager'.format(status)
 
     @exceptions_handled
