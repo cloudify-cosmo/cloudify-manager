@@ -124,7 +124,7 @@ def _validate_resources_package_url():
                 single_tar_url, ex.args))
 
 
-def validate():
+def validate_machine():
     if config[VALIDATIONS]['ignore_bootstrap_validations']:
         logger.info('Skipping validations')
         return
