@@ -22,6 +22,11 @@ from manager_rest.security import SecuredResource
 
 from .. import rest_utils
 from ..rest_decorators import exceptions_handled
+try:
+    from cloudify_premium.ha import cluster_status, options
+except ImportError:
+    cluster_status, options = None, None
+
 
 DEFAULT_CONF_PATH = '/etc/nginx/conf.d/default.conf'
 HTTP_PATH = '/etc/nginx/conf.d/http-external-rest-server.cloudify'
@@ -44,8 +49,10 @@ class SSLConfig(SecuredResource):
         status = 'enabled' if state else 'disabled'
         if state == SSLConfig._is_enabled():
             return 'SSL is already {0} on the manager'.format(status)
-        flag = '--ssl-enabled' if state else '--ssl-disabled'
-        check_call(['/opt/cloudify/restservice/set-manager-ssl.py', flag])
+        if rest_utils.is_clustered():
+            self._cluster_set_ssl_state(state)
+        else:
+            self._set_ssl_state(state)
         return 'SSL is now {0} on the manager'.format(status)
 
     @exceptions_handled
@@ -61,3 +68,13 @@ class SSLConfig(SecuredResource):
         with open(DEFAULT_CONF_PATH) as f:
             content = f.read()
         return content.find(HTTPS_PATH) >= 0
+
+    @staticmethod
+    def _set_ssl_state(state):
+        flag = '--ssl-enabled' if state else '--ssl-disabled'
+        check_call(['sudo', '/opt/cloudify/restservice/set-manager-ssl.py',
+                    flag])
+
+    @staticmethod
+    def _cluster_set_ssl_state(state):
+        cluster_status.cluster_options[options.CLUSTER_SSL_ENABLED] = state
