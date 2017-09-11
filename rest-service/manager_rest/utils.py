@@ -31,6 +31,7 @@ from flask_restful import abort
 
 from manager_rest import constants, config
 
+
 CLOUDIFY_AUTH_HEADER = 'Authorization'
 CLOUDIFY_AUTH_TOKEN_HEADER = 'Authentication-Token'
 CLOUDIFY_API_AUTH_TOKEN_HEADER = 'API-Authentication-Token'
@@ -113,7 +114,7 @@ def get_plugin_archive_path(plugin_id, archive_name):
 
 def plugin_installable_on_current_platform(plugin):
     dist, _, release = platform.linux_distribution(
-            full_distribution_name=False)
+        full_distribution_name=False)
     dist, release = dist.lower(), release.lower()
 
     # Mac OSX is a special case, in which plugin.distribution and
@@ -134,7 +135,7 @@ def get_formatted_timestamp():
     return '{0}Z'.format(datetime.now().isoformat()[:-3])
 
 
-class classproperty(object):
+class classproperty(object):  # NOQA  # class CapWords
     """A class that acts a a decorator for class-level properties
 
     class A(object):
