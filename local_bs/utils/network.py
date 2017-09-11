@@ -57,9 +57,10 @@ def curl_download(source, destination=None):
 
     """
     if not destination:
-        fd, destination = mkstemp()
+        suffix = '.{0}'.format(source.split('.')[-1])
+        fd, destination = mkstemp(suffix=suffix)
         os.close(fd)
-        # This will make sure the
+        # This will make sure the temp file will be removed in the end
         config.add_temp_files_to_clean(destination)
 
     curl_cmd = [
