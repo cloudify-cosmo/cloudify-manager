@@ -8,7 +8,7 @@ import urlparse
 import subprocess
 from os.path import join, islink, isdir
 
-from ..service_names import RESTSERVICE, MANAGER, RABBITMQ, POSTGRESQL
+from ..service_names import RESTSERVICE, MANAGER, RABBITMQ, POSTGRESQL, AGENT
 
 from ... import constants
 from ...config import config
@@ -188,6 +188,7 @@ def _configure_restservice():
 
 
 def _create_db_tables_and_add_defaults():
+    # TODO: Separate into its own component
     logger.info('Creating SQL tables and adding default values...')
     script_name = 'create_tables_and_add_defaults.py'
     script_path = join(SCRIPTS_PATH, script_name)
@@ -202,6 +203,7 @@ def _create_db_tables_and_add_defaults():
         'amqp_username': config[RABBITMQ]['username'],
         'amqp_password': config[RABBITMQ]['password'],
         'postgresql_host': config[POSTGRESQL]['host'],
+        'provider_context': {'cloudify': config[AGENT]},
         'db_migrate_dir': join(
             constants.MANAGER_RESOURCES_HOME,
             'cloudify',
@@ -247,16 +249,11 @@ def _verify_restservice():
     """
     rest_port = config[RESTSERVICE]['port']
     url = 'http://{0}:{1}'.format('127.0.0.1', rest_port)
-    security = config[MANAGER]['security']
 
     wait_for_port(rest_port)
 
-    headers = get_auth_headers(
-        username=security['admin_username'],
-        password=security['admin_password']
-    )
     blueprints_url = urlparse.urljoin(url, 'api/v2.1/blueprints')
-    req = urllib2.Request(blueprints_url, headers=headers)
+    req = urllib2.Request(blueprints_url, headers=get_auth_headers())
 
     try:
         response = urllib2.urlopen(req)

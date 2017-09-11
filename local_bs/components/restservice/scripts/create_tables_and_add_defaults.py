@@ -19,7 +19,7 @@ import json
 
 from flask_migrate import upgrade
 
-from manager_rest.storage import db
+from manager_rest.storage import db, models, get_storage_manager
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.storage.storage_utils import \
@@ -59,6 +59,16 @@ def _get_amqp_manager(config):
     )
 
 
+def _add_provider_context(config):
+    sm = get_storage_manager()
+    provider_context = models.ProviderContext(
+        id='CONTEXT',
+        name='provider',
+        context=config['provider_context']
+    )
+    sm.put(provider_context)
+
+
 if __name__ == '__main__':
     # We're expecting to receive as an argument the path to the config file
     assert len(sys.argv) == 2, 'No config file path was provided'
@@ -67,4 +77,5 @@ if __name__ == '__main__':
     _init_db_tables(config)
     amqp_manager = _get_amqp_manager(config)
     _add_default_user_and_tenant(config, amqp_manager)
-    print 'Finished creating bootstrap admin and default tenant'
+    _add_provider_context(config)
+    print 'Finished creating bootstrap admin, default tenant and provider ctx'
