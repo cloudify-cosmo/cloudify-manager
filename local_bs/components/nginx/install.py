@@ -1,7 +1,7 @@
 from os.path import join
 from collections import namedtuple
 
-from ..service_names import NGINX
+from ..service_names import NGINX, AGENT
 
 from ... import constants
 from ...config import config
@@ -38,7 +38,7 @@ def _deploy_unit_override():
 
 def _generate_internal_certs(internal_rest_host):
     logger.info('Creating internal certificate...')
-    networks = config['agent']['networks']
+    networks = config[AGENT]['networks']
 
     certificates.store_cert_metadata(internal_rest_host, networks)
     cert_ips = [internal_rest_host] + list(networks.values())

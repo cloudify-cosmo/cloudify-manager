@@ -1,10 +1,10 @@
 {
   "manager": {
     "private_ip": "10.0.0.77",
-    "public_ip": "10.239.3.194"
-  },
-  "packages": {
-    "manager_resources_package": "/tmp/manager_single_tar.tar.gz"
+    "public_ip": "10.239.3.194",
+    "sources": {
+      "manager_resources_package": "/tmp/manager_single_tar.tar.gz"
+    }
   },
   "cli": {
     "sources": {

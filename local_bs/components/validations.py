@@ -107,7 +107,7 @@ def _validate_sufficient_disk_space():
 
 
 def _validate_resources_package_url():
-    single_tar_url = config[MANAGER]['source']['manager_resources_package']
+    single_tar_url = config[MANAGER]['sources']['manager_resources_package']
     if not single_tar_url or not is_url(single_tar_url):
         return
     try:
