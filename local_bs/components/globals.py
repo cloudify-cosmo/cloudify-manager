@@ -39,8 +39,9 @@ def _set_ip_config():
         constants.INTERNAL_REST_PORT
     )
 
-    if not config[AGENT]['networks']:
-        config[AGENT]['networks'] = {'default': private_ip}
+    networks = config[AGENT]['networks']
+    if not networks or 'default' not in networks:
+        networks['default'] = private_ip
 
 
 def _set_cert_config():
