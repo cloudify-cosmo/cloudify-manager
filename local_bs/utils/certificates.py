@@ -222,3 +222,6 @@ def generate_ca_cert():
         '-inkey', const.INTERNAL_CA_KEY_PATH,
         '-password', 'pass:cloudify',
     ])
+    logger.info('Generated CA certificate: {0} and key: {1}'.format(
+        const.INTERNAL_CA_CERT_PATH, const.INTERNAL_CA_KEY_PATH
+    ))

@@ -164,9 +164,6 @@ def _start_rabbitmq():
     logger.info("Starting RabbitMQ Service...")
     # rabbitmq restart exits with 143 status code that is valid in this case.
     systemd.restart(RABBITMQ, ignore_failure=True)
-    # This should be done in the create script.
-    # For some reason, it fails. Need to check.
-
     wait_for_port(SECURE_PORT)
     _set_policies()
     systemd.restart(RABBITMQ)
