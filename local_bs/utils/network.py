@@ -6,6 +6,8 @@ from time import sleep
 from tempfile import mkstemp
 from urlparse import urlparse
 
+from ..components.service_names import MANAGER
+
 from .common import run
 from ..config import config
 from ..logger import get_logger
@@ -76,7 +78,10 @@ def curl_download(source, destination=None):
     return destination
 
 
-def get_auth_headers(username, password):
+def get_auth_headers():
+    security = config[MANAGER]['security']
+    username = security['admin_username']
+    password = security['admin_password']
     return {
         'Authorization': 'Basic ' + base64.b64encode('{0}:{1}'.format(
             username, password)
