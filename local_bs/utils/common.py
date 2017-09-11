@@ -10,11 +10,12 @@ logger = get_logger(__name__)
 
 
 def run(command, retries=0, stdin=b'', ignore_failures=False,
-        globx=False, shell=False, env=None):
+        globx=False, shell=False, env=None, stdout=None):
+    # TODO: add ability to *log* output, instead of just printing to stdout
     if isinstance(command, str) and not shell:
         command = shlex.split(command)
     stderr = subprocess.PIPE
-    stdout = subprocess.PIPE
+    stdout = stdout or subprocess.PIPE
     if globx:
         glob_command = []
         for arg in command:
