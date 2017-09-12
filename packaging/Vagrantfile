@@ -18,8 +18,6 @@
 
 AWS_ACCESS_KEY_ID = ENV['AWS_ACCESS_KEY_ID']
 AWS_ACCESS_KEY = ENV['AWS_ACCESS_KEY']
-AWS_ACCESS_KEY_ID_UPLOAD_TEMP = ENV['AWS_ACCESS_KEY_ID_UPLOAD_TEMP']
-AWS_ACCESS_KEY_UPLOAD_TEMP = ENV['AWS_ACCESS_KEY_UPLOAD_TEMP']
 MANAGER_BRANCH = ENV['tag']
 PACKAGER_BRANCH = ENV['PACKAGER_BRANCH']
 REPO = ENV['REPO']
@@ -48,7 +46,7 @@ Vagrant.configure('2') do |config|
     end
     rest.vm.provision "shell" do |s|
       s.path = "restservice/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
+      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
       s.privileged = false
     end
   end
@@ -72,7 +70,7 @@ Vagrant.configure('2') do |config|
     end
     mgmtworker.vm.provision "shell" do |s|
       s.path = "mgmtworker/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
+      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
       s.privileged = false
     end
   end
@@ -96,7 +94,7 @@ Vagrant.configure('2') do |config|
     end
     mgr.vm.provision "shell" do |s|
       s.path = "manager/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
+      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
       s.privileged = false
     end
   end
@@ -120,7 +118,7 @@ Vagrant.configure('2') do |config|
     end
     restservice_embedded_python.vm.provision "shell" do |s|
       s.path = "restservice/provision_embedded_python.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{MANAGER_BRANCH} #{PACKAGER_BRANCH}"
+      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{MANAGER_BRANCH} #{PACKAGER_BRANCH}"
       s.privileged = false
     end
   end
@@ -144,7 +142,7 @@ Vagrant.configure('2') do |config|
     end
     mgmtworker_embedded_python.vm.provision "shell" do |s|
       s.path = "mgmtworker/provision_embedded_python.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID_UPLOAD_TEMP} #{AWS_ACCESS_KEY_UPLOAD_TEMP} #{MANAGER_BRANCH} #{PACKAGER_BRANCH}"
+      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{MANAGER_BRANCH} #{PACKAGER_BRANCH}"
       s.privileged = false
     end
   end
