@@ -105,10 +105,6 @@ class UsersId(SecuredMultiTenancyResource):
         Get details for a single user
         """
         rest_utils.validate_inputs({'username': username})
-
-        # allow user that queries about himself to avoid admin authorization
-        if username == current_user.username:
-            return user_datastore.get_user(current_user.username)
         return multi_tenancy.get_user(username)
 
     @rest_decorators.exceptions_handled
