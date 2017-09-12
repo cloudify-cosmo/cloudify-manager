@@ -89,6 +89,12 @@
       "composer_source_url": "cloudify-blueprint-composer-*.tgz"
     }
   },
+  "python": {
+    "install_python_compilers": false,
+    "sources": {
+      "pip_source_url": "python-pip-7.1.0-1.el7.noarch.rpm"
+    }
+  },
   "restservice": {
     "log": {
       "level": "INFO",
