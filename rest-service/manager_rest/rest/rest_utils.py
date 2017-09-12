@@ -24,6 +24,10 @@ from contextlib import contextmanager
 
 from manager_rest import manager_exceptions
 from manager_rest.constants import REST_SERVICE_NAME
+try:
+    from cloudify_premium.ha import node_status
+except ImportError:
+    node_status = {'initialized': False}
 
 
 @contextmanager
@@ -159,3 +163,7 @@ def validate_and_decode_password(password):
         )
 
     return password
+
+
+def is_clustered():
+    return node_status.get('initialized')

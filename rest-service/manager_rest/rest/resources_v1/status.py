@@ -18,16 +18,12 @@ import os
 
 from flask_restful_swagger import swagger
 
-from manager_rest.rest import responses
+from manager_rest.rest import responses, rest_utils
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
 )
 from manager_rest.security import SecuredResource
-try:
-    from cloudify_premium.ha import node_status
-except ImportError:
-    node_status = {'initialized': False}
 
 
 class Status(SecuredResource):
@@ -73,7 +69,7 @@ class Status(SecuredResource):
                             'postgresql-9.5.service': 'PostgreSQL'
                             }
 
-                if self._is_clustered():
+                if rest_utils.is_clustered():
                     # clustered postgresql service is named differently -
                     # the old service is not used in a clustered manager,
                     # so we can ignore its status
@@ -95,7 +91,3 @@ class Status(SecuredResource):
     @staticmethod
     def _is_docker_env():
         return os.getenv('DOCKER_ENV') is not None
-
-    @staticmethod
-    def _is_clustered():
-        return node_status.get('initialized')
