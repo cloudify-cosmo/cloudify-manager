@@ -8,6 +8,7 @@ from .components import stage
 from .components import sanity
 from .components import consul
 from .components import manager
+from .components import composer
 from .components import logstash
 from .components import rabbitmq
 from .components import influxdb
@@ -41,8 +42,9 @@ def main():
     # postgresql.run()
     # java.run()
     # consul.run()
-    syncthing.run()
+    # syncthing.run()
     # stage.run()
+    composer.run()
     # logstash.run()
     # restservice.run()
     # mgmtworker.run()

@@ -1,0 +1,21 @@
+[Unit]
+Description=Cloudify Composer Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+RestartSec=10
+EnvironmentFile=/etc/sysconfig/cloudify-composer
+User={composer[service_user]}
+Group={composer[service_group]}
+WorkingDirectory=/opt/cloudify-composer/backend
+ExecStart=/opt/nodejs/bin/node /opt/cloudify-composer/server.js
+
+# Umask 002 will make files created by composer (blueprints) be group-writable,
+# which is required for replication (and possibly snapshot restore)
+UMask=0002
+
+[Install]
+WantedBy=multi-user.target

@@ -83,6 +83,12 @@
       "stage_source_url": "cloudify-stage-*.tgz"
     }
   },
+  "composer": {
+    "skip_installation": false,
+    "sources": {
+      "composer_source_url": "cloudify-blueprint-composer-*.tgz"
+    }
+  },
   "restservice": {
     "log": {
       "level": "INFO",
