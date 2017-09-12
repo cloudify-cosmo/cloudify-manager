@@ -55,11 +55,16 @@ class Config(object):
         self.security_encoding_block_size = None
         self.security_encoding_min_length = None
 
+        self.authorization_roles = None
+        self.authorization_permissions = None
+
         self.warnings = []
 
     def load_configuration(self):
         self._load_config('MANAGER_REST_CONFIG_PATH')
         self._load_config('MANAGER_REST_SECURITY_CONFIG_PATH', 'security')
+        self._load_config('MANAGER_REST_AUTHORIZATION_CONFIG_PATH',
+                          'authorization')
 
     def _load_config(self, env_var_name, namespace=''):
         if env_var_name in os.environ:
