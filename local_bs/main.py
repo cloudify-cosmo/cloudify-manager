@@ -11,6 +11,7 @@ from .components import manager
 from .components import logstash
 from .components import rabbitmq
 from .components import influxdb
+from .components import syncthing
 from .components import mgmtworker
 from .components import postgresql
 from .components import restservice
@@ -39,7 +40,8 @@ def main():
     # rabbitmq.run()
     # postgresql.run()
     # java.run()
-    consul.run()
+    # consul.run()
+    syncthing.run()
     # stage.run()
     # logstash.run()
     # restservice.run()

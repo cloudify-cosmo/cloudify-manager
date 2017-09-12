@@ -105,4 +105,3 @@ def run():
     _run_db_migrate()
     _start_and_validate_stage()
     logger.notice('Stage installed successfully')
-
