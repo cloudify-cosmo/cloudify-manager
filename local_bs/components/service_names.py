@@ -1,6 +1,7 @@
 AGENT = 'agent'
 AMQPINFLUX = 'amqpinflux'
 CLI = 'cli'
+CONSUL = 'consul'
 DEV = 'dev'
 INFLUXB = 'influxdb'
 JAVA = 'java'

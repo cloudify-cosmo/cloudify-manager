@@ -6,6 +6,7 @@ from .components import java
 from .components import nginx
 from .components import stage
 from .components import sanity
+from .components import consul
 from .components import manager
 from .components import logstash
 from .components import rabbitmq
@@ -38,7 +39,8 @@ def main():
     # rabbitmq.run()
     # postgresql.run()
     # java.run()
-    stage.run()
+    consul.run()
+    # stage.run()
     # logstash.run()
     # restservice.run()
     # mgmtworker.run()

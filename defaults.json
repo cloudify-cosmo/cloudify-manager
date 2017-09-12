@@ -66,6 +66,11 @@
       "postgresql_jdbc_driver_url": "postgresql-9.4.1212.jar"
     }
   },
+  "consul": {
+    "sources": {
+      "consul_source_url": "consul_0.7.2_linux_amd64.zip"
+    }
+  },
   "stage": {
     "skip_installation": false,
     "sources": {
