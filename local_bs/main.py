@@ -4,6 +4,7 @@ from pprint import pformat
 from .components import cli
 from .components import java
 from .components import nginx
+from .components import stage
 from .components import sanity
 from .components import manager
 from .components import logstash
@@ -26,23 +27,24 @@ logger = get_logger('Bootstrap')
 
 def main():
     logger.info('Starting Bootstrap')
-    validate_machine()
+    # validate_machine()
     set_globals()
 
-    manager.run()
-    manager_ip_setter.run()
+    # manager.run()
+    # manager_ip_setter.run()
     # TODO: Fix influxDB
     # influxdb.run()
-    nginx.run()
-    rabbitmq.run()
-    postgresql.run()
-    java.run()
-    logstash.run()
-    restservice.run()
-    mgmtworker.run()
-    cli.run()
+    # nginx.run()
+    # rabbitmq.run()
+    # postgresql.run()
+    # java.run()
+    stage.run()
+    # logstash.run()
+    # restservice.run()
+    # mgmtworker.run()
+    # cli.run()
 
-    sanity.run()
+    # sanity.run()
     logger.debug(pformat(config))
     logger.info('Bootstrap complete!')
 

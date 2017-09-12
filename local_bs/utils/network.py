@@ -73,7 +73,7 @@ def curl_download(source, destination=None):
         '--create-dir',
         '--output', destination,
     ]
-    logger.debug('Downloading: {0} into {1}'.format(source, destination))
+    logger.info('Downloading: {0} into {1}'.format(source, destination))
     run(curl_cmd)
     return destination
 

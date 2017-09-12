@@ -66,6 +66,13 @@
       "postgresql_jdbc_driver_url": "postgresql-9.4.1212.jar"
     }
   },
+  "stage": {
+    "skip_installation": false,
+    "sources": {
+      "nodejs_source_url": "node-v4.4.5-linux-x64.tar.gz",
+      "stage_source_url": "cloudify-stage-*.tgz"
+    }
+  },
   "restservice": {
     "log": {
       "level": "INFO",
