@@ -41,6 +41,7 @@ node_types:
         default:
           install_method: remote
           port: 22
+          network: default
 
       # DEPRECATED
       install_agent:
@@ -537,12 +538,12 @@ data_types:
           'cloudify.nodes.Compute.cloudify_agent.name'.
         type: string
         required: false
-      networks:
+      network:
         description: >
-          A dict of network names and IP addresses associated with them.
-          By default, there is only a "default" network, with the manager's
-          private IP associated with it. This network can be overwritten
-          (type: dict)
+          The name of the manager network to which the agent should be
+          connected. By default, the value will be `default` (which is the
+          manager's private IP, by default)
+        type: string
         required: false
       user:
         description: >
