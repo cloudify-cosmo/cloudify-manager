@@ -291,6 +291,7 @@ def _start_restservice():
 
 
 def run():
+    logger.notice('Installing RestService...')
     copy_notice(RESTSERVICE)
     _make_paths()
     _install_restservice()
@@ -300,3 +301,4 @@ def run():
     systemd.configure(RESTSERVICE, tmpfiles=True)
     _create_db_tables_and_add_defaults()
     _start_restservice()
+    logger.notice('RestService installed successfully')

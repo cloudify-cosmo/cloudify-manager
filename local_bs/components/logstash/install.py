@@ -132,6 +132,7 @@ def _configure_logstash():
 
 
 def run():
+    logger.notice('Installing Logstash...')
     sources = config[LOGSTASH]['sources']
     _install_logstash(sources)
     _configure_logstash()
@@ -139,3 +140,4 @@ def run():
     logger.info('Starting Logstash service...')
     systemd.restart(LOGSTASH, append_prefix=False)
     systemd.verify_alive(LOGSTASH, append_prefix=False)
+    logger.notice('Logstash installed successfully')

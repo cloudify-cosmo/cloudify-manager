@@ -1,6 +1,6 @@
 import sys
 
-from logging import getLogger, Formatter, StreamHandler
+from logging import getLogger, Formatter, StreamHandler, addLevelName, Logger
 
 from .config import config
 
@@ -18,6 +18,7 @@ BOLD_SEQ = "\033[1;%dm"
 LEVEL_COLORS = {
     'WARNING': BOLD_SEQ % YELLOW,
     'INFO': BOLD_SEQ % WHITE,
+    'NOTICE': BOLD_SEQ % GREEN,
     'DEBUG': BOLD_SEQ % BLUE,
     'CRITICAL': BOLD_SEQ % YELLOW,
     'ERROR': BOLD_SEQ % RED
@@ -26,10 +27,27 @@ LEVEL_COLORS = {
 MSG_LEVEL_COLORS = {
     'WARNING': COLOR_SEQ % YELLOW,
     'INFO': COLOR_SEQ % WHITE,
+    'NOTICE': COLOR_SEQ % GREEN,
     'DEBUG': COLOR_SEQ % BLUE,
     'CRITICAL': COLOR_SEQ % YELLOW,
     'ERROR': COLOR_SEQ % RED
 }
+
+
+# region notice log level
+
+# Custom code that adds another log level (notice) in a green color
+NOTICE_LOG_LEVEL = 25
+addLevelName(NOTICE_LOG_LEVEL, 'NOTICE')
+
+
+def notice(self, message, *args, **kws):
+    if self.isEnabledFor(NOTICE_LOG_LEVEL):
+        self._log(NOTICE_LOG_LEVEL, message, args, **kws)
+
+Logger.notice = notice
+
+# endregion
 
 
 class ColoredFormatter(Formatter):

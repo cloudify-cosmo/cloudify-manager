@@ -149,6 +149,7 @@ def _start_and_verify_service():
 
 
 def run():
+    logger.notice('Installing NGINX...')
     common.mkdir(LOG_DIR)
     copy_notice(NGINX)
     _install_nginx()
@@ -157,3 +158,4 @@ def run():
     _create_certs()
     _deploy_nginx_config_files()
     _start_and_verify_service()
+    logger.notice('NGINX installed successfully')

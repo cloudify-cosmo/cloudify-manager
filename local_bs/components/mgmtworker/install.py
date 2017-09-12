@@ -124,6 +124,7 @@ def _start_and_verify_mgmtworker():
 
 
 def run():
+    logger.notice('Installing Management Worker...')
     copy_notice(MGMTWORKER)
     _make_paths()
     _install_mgmtworker()
@@ -136,3 +137,4 @@ def run():
     _configure_logging()
     _prepare_snapshot_permissions()
     _start_and_verify_mgmtworker()
+    logger.notice('Management Worker installed successfully')

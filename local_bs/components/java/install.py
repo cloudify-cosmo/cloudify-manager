@@ -17,7 +17,6 @@ LOG_DIR = join(constants.BASE_LOG_DIR, JAVA)
 
 
 def _install_java():
-    logger.info('Installing Java...')
     java_source_url = config[JAVA]['sources']['java_source_url']
     yum_install(java_source_url)
 
@@ -37,6 +36,8 @@ def _validate_java_installed():
 
 
 def run():
+    logger.notice('Installing Java...')
     copy_notice(JAVA)
     _install_java()
     _validate_java_installed()
+    logger.notice('Java installed successfully')

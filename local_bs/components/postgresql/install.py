@@ -135,6 +135,7 @@ def _create_default_db():
 
 
 def run():
+    logger.notice('Installing PostgreSQL...')
     copy_notice(POSTGRESQL)
     _install_postgresql()
     _init_postgresql()
@@ -145,3 +146,4 @@ def run():
     systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     _create_default_db()
+    logger.notice('PostgreSQL installed successfully')

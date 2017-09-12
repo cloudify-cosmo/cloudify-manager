@@ -11,7 +11,6 @@ logger = get_logger(CLI)
 
 
 def _install_cli():
-    logger.info('Installing Cloudify CLI...')
     source_url = config[CLI]['sources']['cli_source_url']
     yum_install(source_url)
 
@@ -33,5 +32,7 @@ def _configure_cli():
 
 
 def run():
+    logger.info('Installing Cloudify CLI...')
     _install_cli()
     _configure_cli()
+    logger.info('Cloudify CLI successfully installed')

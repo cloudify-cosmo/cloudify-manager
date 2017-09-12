@@ -19,8 +19,6 @@ logger = get_logger(CONSUL)
 
 
 def _install_consul():
-    logger.info('Installing consul...')
-
     common.mkdir(HOME_DIR)
     common.mkdir(CONFIG_DIR)
 
@@ -45,6 +43,7 @@ def _verify_consul():
 
 
 def run():
+    logger.notice('Installing Consul...')
     _install_consul()
     _verify_consul()
-    logger.info('Consul installed successfully')
+    logger.notice('Consul installed successfully')

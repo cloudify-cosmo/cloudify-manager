@@ -35,8 +35,8 @@ def _install_stage():
     try:
         stage_tar = get_local_source_path(stage_source_url)
     except StandardError:
-        logger.info('Stage package not found in manager resources '
-                    'package. Stage will not be installed.')
+        logger.info('Stage package not found in manager resources package')
+        logger.notice('Stage will not be installed.')
         config[STAGE]['skip_installation'] = True
         return
 
@@ -92,6 +92,7 @@ def _start_and_validate_stage():
 
 
 def run():
+    logger.notice('Installing Stage...')
     _install_stage()
     if config[STAGE]['skip_installation']:
         return
@@ -103,4 +104,5 @@ def run():
     _deploy_restore_snapshot_script()
     _run_db_migrate()
     _start_and_validate_stage()
+    logger.notice('Stage installed successfully')
 

@@ -185,7 +185,7 @@ def _validate_rabbitmq_running():
 
 
 def run():
-    logger.info('Installing RabbitMQ...')
+    logger.notice('Installing RabbitMQ...')
     copy_notice(RABBITMQ)
     mkdir(LOG_DIR)
     chown(RABBITMQ, RABBITMQ, LOG_DIR)
@@ -201,4 +201,4 @@ def run():
     _start_rabbitmq()
     _validate_rabbitmq_running()
 
-    logger.info('RabbitMQ is up and running!')
+    logger.notice('RabbitMQ installed successfully')

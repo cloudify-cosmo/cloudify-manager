@@ -103,8 +103,10 @@ def _clean_sanity():
 
 
 def run():
+    logger.notice('Running Sanity...')
     ssh_key_path = _create_ssh_key()
     _run_sanity(ssh_key_path)
     _verify_sanity()
     _clean_sanity()
     _remove_sanity_ssh()
+    logger.notice('Sanity completed successfully')

@@ -16,7 +16,7 @@ INFLUXDB_ENDPOINT_PORT = 8086
 logger = get_logger(INFLUXB)
 
 
-def run():
+def _install_influxdb():
     influxdb_endpoint_ip = config[INFLUXB]['influxdb_endpoint_ip']
 
     if influxdb_endpoint_ip:
@@ -35,3 +35,9 @@ def run():
         _configure_influxdb(influxdb_endpoint_ip, INFLUXDB_ENDPOINT_PORT)
 
         systemd.stop(INFLUXB)
+
+
+def run():
+    logger.notice('Installing InfluxDB...')
+    _install_influxdb()
+    logger.notice('InfluxDB installed successfully')
