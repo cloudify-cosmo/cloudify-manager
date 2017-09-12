@@ -40,6 +40,8 @@ def _install_stage():
         config[STAGE]['skip_installation'] = True
         return
 
+    _create_paths()
+
     logger.info('Installing Cloudify Stage (UI)...')
     common.untar(stage_tar, HOME_DIR)
 
@@ -62,9 +64,7 @@ def _install_nodejs():
 
 def _deploy_restore_snapshot_script():
     # Used in the script template
-    config[STAGE]['service_user'] = STAGE_USER
-    config[STAGE]['service_group'] = STAGE_GROUP
-
+    config[STAGE]['home_dir'] = HOME_DIR
     script_name = 'restore-snapshot.py'
     deploy_sudo_command_script(
         script_name,
@@ -85,8 +85,12 @@ def _run_db_migrate():
 
 
 def _start_and_validate_stage():
-    logger.info('Starting Stage service...')
+    # Used in the service template
+    config[STAGE]['service_user'] = STAGE_USER
+    config[STAGE]['service_group'] = STAGE_GROUP
     systemd.configure(STAGE)
+
+    logger.info('Starting Stage service...')
     systemd.restart(STAGE)
     wait_for_port(8088)
 
@@ -96,7 +100,6 @@ def run():
     _install_stage()
     if config[STAGE]['skip_installation']:
         return
-    _create_paths()
     copy_notice(STAGE)
     set_logrotate(STAGE)
     _create_user_and_set_permissions()
