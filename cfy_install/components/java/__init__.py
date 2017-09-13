@@ -1,1 +1,1 @@
-from .java import install  # NOQA
+from .java import install, configure  # NOQA

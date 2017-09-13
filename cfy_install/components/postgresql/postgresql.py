@@ -46,7 +46,7 @@ def _init_postgresql():
 
     logger.debug('Installing PostgreSQL service...')
     systemd.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
-    systemd.start(SYSTEMD_SERVICE_NAME, append_prefix=False)
+    systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     logger.info('Setting PostgreSQL logs path...')
     ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')

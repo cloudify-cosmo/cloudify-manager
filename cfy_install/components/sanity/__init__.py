@@ -1,1 +1,1 @@
-from .sanity import install  # NOQA
+from .sanity import install, configure  # NOQA

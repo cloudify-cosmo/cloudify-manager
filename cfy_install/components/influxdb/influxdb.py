@@ -41,3 +41,7 @@ def install():
     logger.notice('Installing InfluxDB...')
     _install()
     logger.notice('InfluxDB installed successfully')
+
+
+def configure():
+    pass

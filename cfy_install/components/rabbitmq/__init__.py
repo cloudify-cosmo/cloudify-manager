@@ -1,1 +1,1 @@
-from .rabbitmq import install  # NOQA
+from .rabbitmq import install, configure  # NOQA

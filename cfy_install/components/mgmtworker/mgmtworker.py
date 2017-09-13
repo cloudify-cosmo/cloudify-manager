@@ -112,7 +112,7 @@ def _check_worker_running():
 
 
 def _start_and_verify_mgmtworker():
-    systemd.start(MGMTWORKER)
+    systemd.restart(MGMTWORKER)
     systemd.verify_alive(MGMTWORKER)
     _check_worker_running()
 

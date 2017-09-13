@@ -1,1 +1,1 @@
-from .mgmtworker import install  # NOQA
+from .mgmtworker import install, configure  # NOQA
