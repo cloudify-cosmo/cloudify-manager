@@ -159,6 +159,7 @@
     }
   },
   "sanity": {
+    "skip_sanity": false,
     "sources": {
       "sanity_source_url": "cloudify-hello-world-example-*.tar.gz"
     }

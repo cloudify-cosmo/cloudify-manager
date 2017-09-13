@@ -105,6 +105,10 @@ def _clean_sanity():
 
 
 def install():
+    if config[SANITY]['skip_sanity']:
+        logger.info('Skipping sanity check...')
+        return
+
     logger.notice('Running Sanity...')
     ssh_key_path = _create_ssh_key()
     _run_sanity(ssh_key_path)
