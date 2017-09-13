@@ -39,6 +39,7 @@
     }
   },
   "postgresql": {
+    "create_db": true,
     "sources": {
       "libxslt_rpm_url": "libxslt-1.1.28-5.el7.x86_64.rpm",
       "ps_libs_rpm_url": "postgresql95-libs-9.5.3-2PGDG.rhel7.x86_64.rpm",

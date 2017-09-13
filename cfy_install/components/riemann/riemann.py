@@ -34,7 +34,7 @@ def _create_paths():
     common.chown(RIEMANN, RIEMANN, LOG_DIR)
 
 
-def _install_riemann():
+def _install():
     sources = config[RIEMANN]['sources']
 
     tmp_langohr_jar_path = get_local_source_path(sources['langohr_source_url'])
@@ -86,14 +86,24 @@ def _create_user():
     config[RIEMANN]['service_group'] = RIEMANN
 
 
-def install():
-    logger.notice('Installing Riemann...')
+def _configure():
     copy_notice(RIEMANN)
     _create_user()
     _create_paths()
     set_logrotate(RIEMANN)
-    _install_riemann()
     _configure_riemann()
     _deploy_riemann_config()
     _start_and_verify_service()
+
+
+def install():
+    logger.notice('Installing Riemann...')
+    _install()
+    _configure()
     logger.notice('Riemann installed successfully')
+
+
+def configure():
+    logger.notice('Configuring Riemann...')
+    _configure()
+    logger.notice('Riemann configured successfully')

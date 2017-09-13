@@ -25,7 +25,7 @@ INSECURE_PORT = 5672
 logger = get_logger(RABBITMQ)
 
 
-def _install_sources():
+def _install():
     sources = config[RABBITMQ]['sources']
     for source in sources.values():
         yum_install(source)
@@ -184,13 +184,10 @@ def _validate_rabbitmq_running():
         )
 
 
-def install():
-    logger.notice('Installing RabbitMQ...')
+def _configure():
     copy_notice(RABBITMQ)
     mkdir(LOG_DIR)
     chown(RABBITMQ, RABBITMQ, LOG_DIR)
-
-    _install_sources()
     set_logrotate(RABBITMQ)
     systemd.configure(RABBITMQ)
     _deploy_resources()
@@ -201,4 +198,15 @@ def install():
     _start_rabbitmq()
     _validate_rabbitmq_running()
 
+
+def install():
+    logger.notice('Installing RabbitMQ...')
+    _install()
+    _configure()
     logger.notice('RabbitMQ installed successfully')
+
+
+def configure():
+    logger.notice('Configuring RabbitMQ...')
+    _configure()
+    logger.notice('RabbitMQ configured successfully')

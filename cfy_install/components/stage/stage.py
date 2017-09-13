@@ -30,7 +30,7 @@ def _create_paths():
     common.mkdir(LOG_DIR)
 
 
-def _install_stage():
+def _install():
     stage_source_url = config[STAGE]['sources']['stage_source_url']
     try:
         stage_tar = get_local_source_path(stage_source_url)
@@ -95,11 +95,7 @@ def _start_and_validate_stage():
     wait_for_port(8088)
 
 
-def install():
-    logger.notice('Installing Stage...')
-    _install_stage()
-    if config[STAGE]['skip_installation']:
-        return
+def _configure():
     copy_notice(STAGE)
     set_logrotate(STAGE)
     _create_user_and_set_permissions()
@@ -107,4 +103,18 @@ def install():
     _deploy_restore_snapshot_script()
     _run_db_migrate()
     _start_and_validate_stage()
+
+
+def install():
+    logger.notice('Installing Stage...')
+    _install()
+    if config[STAGE]['skip_installation']:
+        return
+    _configure()
     logger.notice('Stage installed successfully')
+
+
+def configure():
+    logger.notice('Configuring Stage...')
+    _configure()
+    logger.notice('Stage configured successfully')

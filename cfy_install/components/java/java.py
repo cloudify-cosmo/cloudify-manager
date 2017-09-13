@@ -16,10 +16,12 @@ HOME_DIR = join('/opt', JAVA)
 LOG_DIR = join(constants.BASE_LOG_DIR, JAVA)
 
 
-def _install_java():
+def _install():
     java_source_url = config[JAVA]['sources']['java_source_url']
     yum_install(java_source_url)
 
+
+def _move_java_log():
     mkdir(LOG_DIR)
 
     # Java install log is dropped in /var/log.
@@ -35,9 +37,20 @@ def _validate_java_installed():
         raise StandardError('Java runtime error: java was not installed')
 
 
+def _configure():
+    copy_notice(JAVA)
+    _move_java_log()
+    _validate_java_installed()
+
+
 def install():
     logger.notice('Installing Java...')
-    copy_notice(JAVA)
-    _install_java()
-    _validate_java_installed()
+    _install()
+    _configure()
     logger.notice('Java installed successfully')
+
+
+def configure():
+    logger.info('Configuring Java...')
+    _configure()
+    logger.info('Java successfully configured')

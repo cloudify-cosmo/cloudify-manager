@@ -28,7 +28,7 @@ PG_PORT = 5432
 logger = get_logger(POSTGRESQL)
 
 
-def _install_postgresql():
+def _install():
     logger.info('Installing PostgreSQL...')
     sources = config[POSTGRESQL]['sources']
     for source in sources.values():
@@ -114,6 +114,8 @@ def _create_postgres_pass_file():
 
 def _create_default_db():
     pg_config = config[POSTGRESQL]
+    if not pg_config['create_db']:
+        return
     logger.info(
         'Creating default PostgreSQL DB: {0}...'.format(pg_config['db_name'])
     )
@@ -134,10 +136,8 @@ def _create_default_db():
     )
 
 
-def install():
-    logger.notice('Installing PostgreSQL...')
+def _configure():
     copy_notice(POSTGRESQL)
-    _install_postgresql()
     _init_postgresql()
     _update_configuration()
     _create_postgres_pass_file()
@@ -146,4 +146,16 @@ def install():
     systemd.verify_alive(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     _create_default_db()
+
+
+def install():
+    logger.notice('Installing PostgreSQL...')
+    _install()
+    _configure()
     logger.notice('PostgreSQL installed successfully')
+
+
+def configure():
+    logger.notice('Configuring PostgreSQL...')
+    _configure()
+    logger.notice('PostgreSQL configured successfully')

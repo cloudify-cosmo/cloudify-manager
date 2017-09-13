@@ -30,7 +30,7 @@ def _create_paths():
     common.mkdir(LOG_DIR)
 
 
-def _install_composer():
+def _install():
     composer_source_url = config[COMPOSER]['sources']['composer_source_url']
     try:
         composer_tar = get_local_source_path(composer_source_url)
@@ -79,14 +79,25 @@ def _create_user_and_set_permissions():
     common.chmod('g+w', dirname(CONF_DIR))
 
 
-def install():
-    logger.notice('Installing Composer...')
-    _install_composer()
-    if config[COMPOSER]['skip_installation']:
-        return
+def _configure():
     copy_notice(COMPOSER)
     set_logrotate(COMPOSER)
     _create_user_and_set_permissions()
     _run_db_migrate()
     _start_and_validate_composer()
-    logger.notice('Composer installed successfully')
+
+
+def install():
+    logger.notice('Installing Cloudify Composer...')
+    _install()
+    if config[COMPOSER]['skip_installation']:
+        return
+    _configure()
+    logger.notice('Cloudify Composer installed successfully')
+
+
+def configure():
+    logger.info('Configuring Cloudify Composer...')
+    _configure()
+    logger.info('Cloudify Composer successfully configured')
+

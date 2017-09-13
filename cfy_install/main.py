@@ -75,7 +75,6 @@ def configure():
 
 def remove():
     logger.info('Removing Cloudify Manager')
-    # validate_machine()
     set_globals()
 
     for component in COMPONENTS:

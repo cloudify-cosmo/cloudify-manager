@@ -87,7 +87,7 @@ def _configure_dbus():
         logger.warn('Could not find dbus install, cfy status will not work')
 
 
-def _install_restservice():
+def _install():
     logger.info('Installing REST Service...')
     source_url = config[RESTSERVICE]['sources']['restservice_source_url']
     yum_install(source_url)
@@ -290,15 +290,25 @@ def _start_restservice():
     _verify_restservice()
 
 
-def install():
-    logger.notice('Installing RestService...')
+def _configure():
     copy_notice(RESTSERVICE)
     _make_paths()
-    _install_restservice()
     set_logrotate(RESTSERVICE)
     _deploy_sudo_commands()
     _configure_restservice()
     systemd.configure(RESTSERVICE, tmpfiles=True)
     _create_db_tables_and_add_defaults()
     _start_restservice()
-    logger.notice('RestService installed successfully')
+
+
+def install():
+    logger.notice('Installing Rest Service...')
+    _install()
+    _configure()
+    logger.notice('Rest Service installed successfully')
+
+
+def configure():
+    logger.notice('Configuring Rest Service...')
+    _configure()
+    logger.notice('Rest Service configured successfully')

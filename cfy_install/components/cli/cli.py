@@ -10,12 +10,12 @@ from ...utils.install import yum_install
 logger = get_logger(CLI)
 
 
-def _install_cli():
+def _install():
     source_url = config[CLI]['sources']['cli_source_url']
     yum_install(source_url)
 
 
-def _configure_cli():
+def _configure():
     username = config[MANAGER]['security']['admin_username']
     password = config[MANAGER]['security']['admin_password']
 
@@ -33,6 +33,12 @@ def _configure_cli():
 
 def install():
     logger.info('Installing Cloudify CLI...')
-    _install_cli()
-    _configure_cli()
+    _install()
+    _configure()
     logger.info('Cloudify CLI successfully installed')
+
+
+def configure():
+    logger.info('Configuring Cloudify CLI...')
+    _configure()
+    logger.info('Cloudify CLI successfully configured')

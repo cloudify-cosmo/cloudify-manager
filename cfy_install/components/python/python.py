@@ -10,7 +10,7 @@ from ...utils.install import yum_install
 logger = get_logger(PYTHON)
 
 
-def _install_python_requirements():
+def _install():
     yum_install(config[PYTHON]['sources']['pip_source_url'])
 
     if config[PYTHON]['install_python_compilers']:
@@ -28,9 +28,19 @@ def _validate_pip_installed():
                             'pip was not installed')
 
 
+def _configure():
+    copy_notice(PYTHON)
+    _validate_pip_installed()
+
+
 def install():
     logger.notice('Installing Python dependencies...')
-    copy_notice(PYTHON)
-    _install_python_requirements()
-    _validate_pip_installed()
+    _install()
+    _configure()
     logger.notice('Python dependencies installed successfully')
+
+
+def configure():
+    logger.notice('Configuring Python dependencies...')
+    _configure()
+    logger.notice('Python dependencies configured successfully')

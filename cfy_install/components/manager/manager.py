@@ -110,11 +110,27 @@ def _create_manager_resources_dirs():
     common.mkdir(join(resources_root, 'packages', 'templates'))
 
 
-def install():
+def _install():
+    _extract_single_tar()
+    _normalize_agent_names()
+
+
+def _configure():
     _create_cloudify_user()
     _create_sudoers_file_and_disable_sudo_requiretty()
     _set_selinux_permissive()
     setup_logrotate()
-    _extract_single_tar()
-    _normalize_agent_names()
     _create_manager_resources_dirs()
+
+
+def install():
+    logger.notice('Installing Cloudify Manager resources...')
+    _install()
+    _configure()
+    logger.notice('Cloudify Manager resources installed successfully')
+
+
+def configure():
+    logger.notice('Configuring Cloudify Manager resources...')
+    _configure()
+    logger.notice('Cloudify Manager resources configured...')

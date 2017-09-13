@@ -21,7 +21,7 @@ CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, 'config')
 logger = get_logger(NGINX)
 
 
-def _install_nginx():
+def _install():
     nginx_source_url = config[NGINX]['sources']['nginx_source_url']
     yum_install(nginx_source_url)
 
@@ -148,14 +148,24 @@ def _start_and_verify_service():
         raise StandardError('Could not verify Nginx service is alive')
 
 
-def install():
-    logger.notice('Installing NGINX...')
+def _configure():
     common.mkdir(LOG_DIR)
     copy_notice(NGINX)
-    _install_nginx()
     _deploy_unit_override()
     set_logrotate(NGINX)
     _create_certs()
     _deploy_nginx_config_files()
     _start_and_verify_service()
+
+
+def install():
+    logger.notice('Installing NGINX...')
+    _install()
+    _configure()
     logger.notice('NGINX installed successfully')
+
+
+def configure():
+    logger.notice('Configuring NGINX...')
+    _configure()
+    logger.notice('NGINX configured successfully')

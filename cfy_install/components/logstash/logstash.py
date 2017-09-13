@@ -78,27 +78,16 @@ def _install_plugins(sources):
     _install_postgresql_jdbc_driver(sources)
 
 
-def _install_logstash(sources):
+def _install():
     """Install logstash as a systemd service."""
     logger.info('Installing Logstash...')
-    copy_notice(LOGSTASH)
+    sources = config[LOGSTASH]['sources']
 
     yum_install(sources['logstash_source_url'])
-
     _install_plugins(sources)
 
-    common.mkdir(LOG_DIR)
-    common.chown('logstash', 'logstash', LOG_DIR)
 
-    logger.debug('Creating systemd unit override...')
-    common.mkdir(UNIT_OVERRIDE_PATH)
-    common.copy(
-        join(CONFIG_PATH, 'restart.conf'),
-        join(UNIT_OVERRIDE_PATH, 'restart.conf')
-    )
-
-
-def _configure_logstash():
+def _deploy_logstash_config():
     logger.info('Deploying Logstash configuration...')
     config[LOGSTASH]['log_dir'] = LOG_DIR  # Used in config files
 
@@ -108,6 +97,22 @@ def _configure_logstash():
     )
     common.chown(LOGSTASH, LOGSTASH, REMOTE_CONFIG_PATH)
 
+
+def _deploy_systemd_unit_override():
+    logger.debug('Creating systemd unit override...')
+    common.mkdir(UNIT_OVERRIDE_PATH)
+    deploy(
+        join(CONFIG_PATH, 'restart.conf'),
+        join(UNIT_OVERRIDE_PATH, 'restart.conf')
+    )
+
+
+def _create_log_dir():
+    common.mkdir(LOG_DIR)
+    common.chown('logstash', 'logstash', LOG_DIR)
+
+
+def _edit_init_d_file():
     # Due to a bug in the handling of configuration files,
     # configuration files with the same name cannot be deployed.
     # Since the logrotate config file is called `logstash`,
@@ -121,23 +126,41 @@ def _configure_logstash():
     common.chmod('755', INIT_D_FILE)
     common.chown('root', 'root', INIT_D_FILE)
 
-    logger.debug('Deploying Logstash sysconfig...')
+
+def _deploy_logstash_sysconfig():
     deploy(
         join(CONFIG_PATH, 'cloudify-logstash'),
         '/etc/sysconfig/cloudify-logstash'
     )
 
-    set_logrotate(LOGSTASH)
+
+def _start_and_validate_logstash():
+    logger.debug('Checking logstash config...')
     common.sudo(['/sbin/chkconfig', 'logstash', 'on'])
+    logger.info('Starting Logstash service...')
+    systemd.restart(LOGSTASH, append_prefix=False)
+    systemd.verify_alive(LOGSTASH, append_prefix=False)
+
+
+def _configure():
+    _create_log_dir()
+    _deploy_systemd_unit_override()
+    _deploy_logstash_config()
+    _edit_init_d_file()
+    _deploy_logstash_sysconfig()
+    set_logrotate(LOGSTASH)
+    copy_notice(LOGSTASH)
+    _start_and_validate_logstash()
 
 
 def install():
     logger.notice('Installing Logstash...')
-    sources = config[LOGSTASH]['sources']
-    _install_logstash(sources)
-    _configure_logstash()
-
-    logger.info('Starting Logstash service...')
-    systemd.restart(LOGSTASH, append_prefix=False)
-    systemd.verify_alive(LOGSTASH, append_prefix=False)
+    _install()
+    _configure()
     logger.notice('Logstash installed successfully')
+
+
+def configure():
+    logger.info('Configuring Logstash...')
+    _configure()
+    logger.info('Logstash successfully configured')

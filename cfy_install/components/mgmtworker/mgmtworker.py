@@ -22,7 +22,7 @@ CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, 'config')
 logger = get_logger(MGMTWORKER)
 
 
-def _install_mgmtworker():
+def _install():
     logger.info('Installing Management Worker...')
     source_url = config[MGMTWORKER]['sources']['mgmtworker_source_url']
     yum_install(source_url)
@@ -35,26 +35,20 @@ def _install_mgmtworker():
     # utils.chmod('770', riemann_dir)
 
 
-def _make_paths():
+def _create_paths():
     common.mkdir(HOME_DIR)
     common.mkdir(join(HOME_DIR, 'config'))
     common.mkdir(join(HOME_DIR, 'work'))
     common.mkdir(LOG_DIR)
 
+    common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, LOG_DIR)
+    common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, HOME_DIR)
+
     config[MGMTWORKER]['home_dir'] = HOME_DIR
     config[MGMTWORKER]['log_dir'] = LOG_DIR
 
 
-def _chown_paths():
-    for path in (HOME_DIR, LOG_DIR):
-        common.chown(
-            const.CLOUDIFY_USER,
-            const.CLOUDIFY_GROUP,
-            path
-        )
-
-
-def _configure_mgmtworker():
+def _deploy_mgmtworker_config():
     logger.info('Configuring Management worker...')
 
     config[MGMTWORKER]['service_user'] = const.CLOUDIFY_USER
@@ -123,18 +117,25 @@ def _start_and_verify_mgmtworker():
     _check_worker_running()
 
 
-def install():
-    logger.notice('Installing Management Worker...')
+def _configure():
     copy_notice(MGMTWORKER)
-    _make_paths()
-    _install_mgmtworker()
-    _chown_paths()
-    _configure_mgmtworker()
-
+    _create_paths()
+    _deploy_mgmtworker_config()
     systemd.configure(MGMTWORKER)
     set_logrotate(MGMTWORKER)
-
     _configure_logging()
     _prepare_snapshot_permissions()
     _start_and_verify_mgmtworker()
+
+
+def install():
+    logger.notice('Installing Management Worker...')
+    _install()
+    _configure()
     logger.notice('Management Worker installed successfully')
+
+
+def configure():
+    logger.notice('Configuring Management Worker...')
+    _configure()
+    logger.notice('Management Worker configured successfully')

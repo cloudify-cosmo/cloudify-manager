@@ -18,7 +18,7 @@ CONFIG_DIR = '/etc/consul.d'
 logger = get_logger(CONSUL)
 
 
-def _install_consul():
+def _install():
     common.mkdir(HOME_DIR)
     common.mkdir(CONFIG_DIR)
 
@@ -36,7 +36,8 @@ def _install_consul():
         common.remove(temp_dir)
 
 
-def _verify_consul():
+def _verify():
+    logger.info('Verifying consul is installed')
     result = common.run([CONSUL_BINARY, 'version'])
     if 'Consul' not in result.aggr_stdout:
         raise StandardError('Could not verify consul installation')
@@ -44,6 +45,12 @@ def _verify_consul():
 
 def install():
     logger.notice('Installing Consul...')
-    _install_consul()
-    _verify_consul()
+    _install()
+    _verify()
     logger.notice('Consul installed successfully')
+
+
+def configure():
+    logger.info('Configuring Consul...')
+    _verify()
+    logger.info('Consul successfully configured')

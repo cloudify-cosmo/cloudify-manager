@@ -110,3 +110,7 @@ def install():
     _clean_sanity()
     _remove_sanity_ssh()
     logger.notice('Sanity completed successfully')
+
+
+def configure():
+    pass

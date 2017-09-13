@@ -42,17 +42,23 @@ def deploy_sudo_scripts():
         )
 
 
-def install_manager_ip_setter():
+def _install():
     common.mkdir(MANAGER_IP_SETTER_DIR)
     deploy_cert_script()
     deploy_sudo_scripts()
 
 
-def install():
-    # Always install the ip setter, but only
-    # install the scripts if flag is true
-    install_manager_ip_setter()
+def _configure():
     if config[MANAGER]['set_manager_ip_on_boot']:
         systemd.configure(MANAGER_IP_SETTER)
     else:
         logger.info('Set manager ip on boot is disabled.')
+
+
+def install():
+    _install()
+    _configure()
+
+
+def configure():
+    _configure()

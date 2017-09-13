@@ -12,7 +12,7 @@ logger = get_logger(SYNCTHING)
 HOME_DIR = join('/opt', SYNCTHING)
 
 
-def _install_syncthing():
+def _install():
     syncthing_source_url = config[SYNCTHING]['sources']['syncthing_source_url']
     syncthing_package = get_local_source_path(syncthing_source_url)
     mkdir(HOME_DIR)
@@ -21,5 +21,9 @@ def _install_syncthing():
 
 def install():
     logger.notice('Installing Syncthing...')
-    _install_syncthing()
+    _install()
     logger.notice('Syncthing installed successfully')
+
+
+def configure():
+    pass
