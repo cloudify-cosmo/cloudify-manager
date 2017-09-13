@@ -1,5 +1,7 @@
 from os.path import join, dirname as up
 
+CLOUDIFY_BOOTSTRAP_DIR = '/opt/cloudify-bootstrap'
+
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
 CLOUDIFY_HOME_DIR = '/etc/cloudify'

@@ -6,7 +6,7 @@ import subprocess
 
 from ..logger import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger('utils')
 
 
 def run(command, retries=0, stdin=b'', ignore_failures=False,
