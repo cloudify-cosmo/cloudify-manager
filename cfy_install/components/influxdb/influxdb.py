@@ -25,7 +25,7 @@ INIT_D_PATH = join('/etc', 'init.d', INFLUXB)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, INFLUXB, 'config')
 
 
-def _configure_influxdb(host, port):
+def _configure_database(host, port):
     db_user = "root"
     db_pass = "root"
     db_name = "cloudify"
@@ -76,8 +76,7 @@ def _configure_influxdb(host, port):
     except Exception as ex:
         raise StandardError('Failed to create: {0} ({1}).'.format(db_name, ex))
 
-    # verify db created
-    logger.info('Verifying database create successfully...')
+    logger.info('Verifying database created successfully...')
     db_list = eval(urllib2.urlopen(urllib2.Request(url_for_list)).read())
     try:
         assert any(d.get('name') == db_name for d in db_list)
@@ -95,16 +94,15 @@ def _install():
     influxdb_endpoint_ip = config[INFLUXB]['endpoint_ip']
 
     if influxdb_endpoint_ip:
-        config[INFLUXB]['external'] = True
+        config[INFLUXB]['is_internal'] = False
         logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
             influxdb_endpoint_ip))
     else:
-        config[INFLUXB]['external'] = False
+        config[INFLUXB]['is_internal'] = True
         influxdb_endpoint_ip = config[MANAGER]['private_ip']
         config[INFLUXB]['endpoint_ip'] = influxdb_endpoint_ip
 
         _install_influxdb()
-        systemd.restart(INFLUXB)
 
 
 def _create_paths():
@@ -162,10 +160,15 @@ def _start_and_verify_alive():
 
 def _configure():
     influxdb_endpoint_ip = config[INFLUXB]['endpoint_ip']
-    wait_for_port(INFLUXDB_ENDPOINT_PORT, influxdb_endpoint_ip)
-    _configure_influxdb(influxdb_endpoint_ip, INFLUXDB_ENDPOINT_PORT)
-    if not config[INFLUXB]['external']:
+    is_internal = config[INFLUXB]['is_internal']
+    if is_internal:
         _configure_local_influxdb()
+        systemd.restart(INFLUXB)
+
+    wait_for_port(INFLUXDB_ENDPOINT_PORT, influxdb_endpoint_ip)
+    _configure_database(influxdb_endpoint_ip, INFLUXDB_ENDPOINT_PORT)
+
+    if is_internal:
         _start_and_verify_alive()
 
 
