@@ -4,7 +4,8 @@ echo "#############################################################"
 echo "Installing cloudify manager installer..."
 echo "#############################################################"
 
-sudo chown $USER:$USER -R /opt/cloudify-bootstrap
+# Using $SUDO_USER instead of $USER here because fpm runs the script as sudo
+sudo chown $SUDO_USER:$SUDO_USER -R /opt/cloudify-bootstrap
 pushd /opt/cloudify-bootstrap
     sudo python get-pip.py
     sudo pip install ./cloudify-local-bootstrap
