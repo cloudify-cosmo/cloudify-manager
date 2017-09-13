@@ -1,18 +1,40 @@
-from setuptools import setup
+import os
+from os.path import join
+
+from setuptools import setup, find_packages
+
+
+# This makes sure to include all the config/scripts directories
+# in the python package
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            if filename.endswith('.pyc'):
+                continue
+            paths.append(join('..', path, filename))
+    return paths
+
+extra_files = package_files('cfy_install')
+extra_files.append(join('..', 'config.json'))
+extra_files.append(join('..', 'defaults.json'))
+
 
 setup(
     name='cloudify-local-bootstrap',
     version='0.1',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
-    packages=['cfy_install'],
+    packages=find_packages(),
     license='LICENSE',
     description='Local bootstrap of a cloudify manager',
     entry_points={
         'console_scripts': [
-            'cfy_install = local_bs.main:install',
-            'cfy_remove = local_bs.main:remove',
-            'cfy_config = local_bs.main:configure'
+            'cfy_install = cfy_install.main:install',
+            'cfy_remove = cfy_install.main:remove',
+            'cfy_config = cfy_install.main:configure'
         ]
-    }
+    },
+    zip_safe=False,
+    package_data={'': extra_files},
 )
