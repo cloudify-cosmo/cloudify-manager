@@ -15,6 +15,7 @@ def package_files(directory):
             paths.append(join('..', path, filename))
     return paths
 
+
 extra_files = package_files('cfy_install')
 extra_files.append(join('..', 'config.json'))
 extra_files.append(join('..', 'defaults.json'))

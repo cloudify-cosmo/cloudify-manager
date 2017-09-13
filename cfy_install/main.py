@@ -53,7 +53,7 @@ COMPONENTS = [
 
 def install():
     logger.info('Installing Cloudify Manager')
-    # validate_machine()
+    validate_machine()
     set_globals()
 
     for component in COMPONENTS:

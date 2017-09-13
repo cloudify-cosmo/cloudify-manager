@@ -155,4 +155,3 @@ def pip_install(source, venv='', constraints_file=None):
 
     logger.info(log_message)
     sudo(cmdline)
-

@@ -45,6 +45,7 @@ def notice(self, message, *args, **kws):
     if self.isEnabledFor(NOTICE_LOG_LEVEL):
         self._log(NOTICE_LOG_LEVEL, message, args, **kws)
 
+
 Logger.notice = notice
 
 # endregion

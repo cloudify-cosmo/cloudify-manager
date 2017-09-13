@@ -62,4 +62,5 @@ def _get_config():
         _config = Config()
     return _config
 
+
 config = _get_config()

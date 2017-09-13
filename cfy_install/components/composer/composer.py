@@ -100,4 +100,3 @@ def configure():
     logger.info('Configuring Cloudify Composer...')
     _configure()
     logger.info('Cloudify Composer successfully configured')
-
