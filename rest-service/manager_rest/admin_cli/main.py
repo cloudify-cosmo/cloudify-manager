@@ -1,6 +1,7 @@
 import os
 
 from . import logger, acfy
+from .commands import agents
 
 os.environ['MANAGER_REST_CONFIG_PATH'] = '/opt/manager/cloudify-rest.conf'
 
@@ -13,7 +14,7 @@ def _acfy(verbose):
 
 
 def _register_commands():
-    pass
+    _acfy.add_command(agents)
 
 
 _register_commands()
