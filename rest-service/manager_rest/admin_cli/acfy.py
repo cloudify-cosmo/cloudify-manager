@@ -10,6 +10,16 @@ CLICK_CONTEXT_SETTINGS = dict(
     token_normalize_func=lambda param: param.lower())
 
 
+def pass_context(func):
+    """Make click context Cloudify specific
+
+    This exists purely for aesthetic reasons, otherwise
+    Some decorators are called `@click.something` instead of
+    `@cfy.something`
+    """
+    return click.pass_context(func)
+
+
 def pass_logger(func):
     """Simply passes the logger to a command."""
     @wraps(func)

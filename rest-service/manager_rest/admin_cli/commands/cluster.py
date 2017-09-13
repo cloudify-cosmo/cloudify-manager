@@ -1,7 +1,7 @@
 from functools import wraps
 
 try:
-    from cloudify_premium.ha import cluster_status
+    from cloudify_premium.ha import cluster_status, commands
 except ImportError:
     cluster_status = None
 
@@ -51,3 +51,9 @@ def get_settings(node_name, logger):
         _get_node_settings(node_name, logger)
     else:
         _get_cluster_settings(logger)
+
+
+@cluster.command(name='start')
+@acfy.pass_context
+def start(ctx):
+    ctx.invoke(commands.start_cluster_node)
