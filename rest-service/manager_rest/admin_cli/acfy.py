@@ -75,6 +75,9 @@ class Options(object):
         self.node_name = click.option(
             '--node-name',
             help=helptexts.NODE_NAME)
+        self.host_ip = click.option(
+            '--host-ip',
+            help=helptexts.HOST_IP)
 
     @staticmethod
     def verbose(expose_value=False):

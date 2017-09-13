@@ -6,3 +6,4 @@ VERSION = (
     "also show)"
 )
 NODE_NAME = 'Name of a cluster node'
+HOST_IP = 'IP of the machine'

@@ -54,6 +54,12 @@ def get_settings(node_name, logger):
 
 
 @cluster.command(name='start')
+@acfy.options.node_name
+@acfy.options.host_ip
 @acfy.pass_context
-def start(ctx):
-    ctx.invoke(commands.start_cluster_node)
+def start(ctx, host_ip, node_name):
+    ctx.invoke(commands.create_cluster_node, config={
+        'host_ip': host_ip,
+        'node_name': node_name,
+        'bootstrap_cluster': True
+    })
