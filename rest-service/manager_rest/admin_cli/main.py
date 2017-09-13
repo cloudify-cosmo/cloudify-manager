@@ -3,7 +3,7 @@ import os
 from manager_rest.config import instance
 
 from . import logger, acfy
-from .commands import agents, cluster, context, ldap
+from .commands import agents, cluster, context, ldap, ssl
 
 
 @acfy.group(name='acfy')
@@ -24,6 +24,7 @@ def _register_commands():
     _acfy.add_command(cluster.cluster)
     _acfy.add_command(context.context)
     _acfy.add_command(ldap.ldap)
+    _acfy.add_command(ssl.ssl)
 
 _register_commands()
 logger.configure_loggers()
