@@ -22,7 +22,7 @@ class SystemD(object):
         """This configures systemd for a specific service.
 
         It requires that two files are present for each service one containing
-        the environment variables and one contains the systemd config.
+        the environment variables and one containing the systemd config.
         All env files will be named "cloudify-SERVICENAME".
         All systemd config files will be named "cloudify-SERVICENAME.service".
 

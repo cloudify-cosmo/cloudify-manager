@@ -5,11 +5,12 @@ import tempfile
 from glob import glob
 from os.path import join, isabs
 
-from .common import move, sudo
+from .common import move, sudo, remove
 from .network import is_url, curl_download
 
 from ..logger import get_logger
 from ..constants import CLOUDIFY_SOURCES_PATH
+from ..config import config
 
 
 logger = get_logger('Files')
@@ -69,18 +70,27 @@ def get_local_source_path(source_url):
     return path
 
 
-def write_to_tempfile(contents, json_dump=False):
+def write_to_tempfile(contents, json_dump=False, cleanup=True):
     fd, file_path = tempfile.mkstemp()
     if json_dump:
         contents = json.dumps(contents)
 
     os.write(fd, contents)
     os.close(fd)
+    if cleanup:
+        config.add_temp_files_to_clean(file_path)
     return file_path
 
 
 def write_to_file(contents, destination, json_dump=False):
     """ Used to write files to locations that require sudo to access """
 
-    temp_path = write_to_tempfile(contents, json_dump=json_dump)
+    temp_path = write_to_tempfile(contents, json_dump=json_dump, cleanup=False)
     move(temp_path, destination)
+
+
+def remove_temp_files():
+    logger.debug('Cleaning temporary files...')
+    for path in config['temp_paths_to_remove']:
+        remove(path)
+    logger.debug('Cleaned temporary files')

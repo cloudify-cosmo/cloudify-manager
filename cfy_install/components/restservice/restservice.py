@@ -20,7 +20,7 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install
 from ...utils.logrotate import set_logrotate
 from ...utils.deploy import copy_notice, deploy
-from ...utils.files import ln, write_to_tempfile
+from ...utils.files import ln, write_to_tempfile, write_to_file
 from ...utils.network import get_auth_headers, wait_for_port
 
 
@@ -134,10 +134,8 @@ def _deploy_security_configuration():
         constants.CLOUDIFY_GROUP,
         constants.MANAGER_RESOURCES_HOME
     )
-
-    temp_path = write_to_tempfile(security_configuration, json_dump=True)
     rest_security_path = join(HOME_DIR, 'rest-security.conf')
-    common.move(temp_path, rest_security_path)
+    write_to_file(security_configuration, rest_security_path, json_dump=True)
     common.chown(
         constants.CLOUDIFY_USER,
         constants.CLOUDIFY_GROUP,
@@ -221,7 +219,6 @@ def _create_db_tables_and_add_defaults():
     result = common.sudo([python_path, script_path, args_json_path])
 
     _log_results(result)
-    common.remove(args_json_path)
 
 
 def _log_results(result):

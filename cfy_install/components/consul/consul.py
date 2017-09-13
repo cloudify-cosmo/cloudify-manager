@@ -26,14 +26,13 @@ def _install():
     consul_package = get_local_source_path(consul_source_url)
 
     temp_dir = mkdtemp()
-    try:
-        with ZipFile(consul_package) as consul_archive:
-            consul_archive.extractall(temp_dir)
+    config.add_temp_files_to_clean(temp_dir)
 
-        common.move(join(temp_dir, 'consul'), CONSUL_BINARY)
-        common.chmod('+x', CONSUL_BINARY)
-    finally:
-        common.remove(temp_dir)
+    with ZipFile(consul_package) as consul_archive:
+        consul_archive.extractall(temp_dir)
+
+    common.move(join(temp_dir, 'consul'), CONSUL_BINARY)
+    common.chmod('+x', CONSUL_BINARY)
 
 
 def _verify():

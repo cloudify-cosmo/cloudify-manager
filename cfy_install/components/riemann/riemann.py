@@ -37,9 +37,10 @@ def _create_paths():
 def _install():
     sources = config[RIEMANN]['sources']
 
-    tmp_langohr_jar_path = get_local_source_path(sources['langohr_source_url'])
+    langohr_resource_path = \
+        get_local_source_path(sources['langohr_source_url'])
     langohr_jar_path = join(LANGOHR_HOME, 'langohr.jar')
-    common.copy(tmp_langohr_jar_path, langohr_jar_path)
+    common.copy(langohr_resource_path, langohr_jar_path)
     common.chmod('644', langohr_jar_path)
 
     yum_install(sources['daemonize_source_url'])
@@ -59,7 +60,6 @@ def _configure_riemann():
         'riemann_controller', 'resources', 'manager.config'
     )
     common.move(config_src_path, join(CONFIG_PATH, 'conf.d', 'manager.config'))
-    common.remove(manager_dir)
 
 
 def _deploy_riemann_config():

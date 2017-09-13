@@ -54,8 +54,6 @@ def _install_cloudify_manager_pip_packages(pip_constraints):
     logger.info('Deploying Required Manager Resources...')
     common.move(resources_dir, constants.MANAGER_RESOURCES_HOME)
 
-    common.remove(tmp_dir)
-
 
 def _install_optional_pip_packages(pip_constraints):
     rest_venv = config[RESTSERVICE]['venv']

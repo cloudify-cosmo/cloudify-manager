@@ -12,7 +12,7 @@ from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.deploy import copy_notice
 from ...utils.install import yum_install
-from ...utils.files import ln, write_to_file
+from ...utils.files import ln, write_to_file, write_to_tempfile
 
 
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
@@ -69,13 +69,11 @@ def _init_postgresql():
 
 
 def _read_hba_lines():
-    fd, temp_hba_path = mkstemp()
-    os.close(fd)
+    temp_hba_path = write_to_tempfile('')
     common.copy(PS_HBA_CONF, temp_hba_path)
     common.chmod('777', temp_hba_path)
     with open(temp_hba_path, 'r') as f:
         lines = f.readlines()
-    common.remove(temp_hba_path)
     return lines
 
 

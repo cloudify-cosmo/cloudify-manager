@@ -1,4 +1,4 @@
-from os.path import join, dirname as up
+from os.path import join, dirname
 
 CLOUDIFY_BOOTSTRAP_DIR = '/opt/cloudify-bootstrap'
 
@@ -17,7 +17,7 @@ BASE_LOG_DIR = '/var/log/cloudify'
 
 INTERNAL_REST_PORT = 53333
 
-BASE_DIR = up(__file__)
+BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 
 SSL_CERTS_TARGET_DIR = join(CLOUDIFY_HOME_DIR, 'ssl')

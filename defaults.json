@@ -178,7 +178,7 @@
   },
   "validations": {
     "ignore_bootstrap_validations": false,
-    "minimum_required_total_physical_memory_in_mb": 3790,
+    "minimum_required_total_physical_memory_in_mb": 3700,
     "minimum_required_available_disk_space_in_gb": 5,
     "expected_python_version": "2.7",
     "supported_distros": ["centos", "redhat"],

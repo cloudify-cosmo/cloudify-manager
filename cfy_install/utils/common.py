@@ -5,6 +5,7 @@ import tempfile
 import subprocess
 
 from ..logger import get_logger
+from ..config import config
 
 logger = get_logger('utils')
 
@@ -85,12 +86,14 @@ def untar(source,
           unique_tmp_dir=False):
     if not destination:
         destination = tempfile.mkdtemp() if unique_tmp_dir else '/tmp'
+        config.add_temp_files_to_clean(destination)
     logger.debug('Extracting {0} to {1}...'.format(
         source, destination))
     tar_command = ['tar', '-xzvf', source, '-C', destination, '--strip=1']
     if skip_old_files:
         tar_command.append('--skip-old-files')
     sudo(tar_command)
+
     return destination
 
 
