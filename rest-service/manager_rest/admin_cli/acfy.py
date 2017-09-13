@@ -38,7 +38,9 @@ def argument(*args, **kwargs):
 
 
 def show_version(ctx, param, value):
-    logger.get_logger().info('version')
+    if value:
+        logger.get_logger().info('version')
+        ctx.exit()
 
 
 class Options(object):
