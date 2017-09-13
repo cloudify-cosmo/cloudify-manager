@@ -5,3 +5,4 @@ VERSION = (
     "Display the version and exit (if a manager is used, its version will "
     "also show)"
 )
+NODE_NAME = 'Name of a cluster node'
