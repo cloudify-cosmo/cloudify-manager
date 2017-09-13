@@ -14,7 +14,7 @@ def _acfy(verbose):
 
 
 def _register_commands():
-    _acfy.add_command(agents)
+    _acfy.add_command(agents.agents)
 
 
 _register_commands()
