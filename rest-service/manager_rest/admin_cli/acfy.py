@@ -1,7 +1,7 @@
 
 import click
 
-from . import helptexts
+from . import helptexts, logger
 
 
 CLICK_CONTEXT_SETTINGS = dict(
@@ -37,10 +37,20 @@ def argument(*args, **kwargs):
     return click.argument(*args, **kwargs)
 
 
+def show_version(ctx, param, value):
+    logger.get_logger().info('version')
+
+
 class Options(object):
     def __init__(self):
-        # put options here
-        pass
+        self.version = click.option(
+            '--version',
+            is_flag=True,
+            callback=show_version,
+            expose_value=False,
+            is_eager=True,
+            help=helptexts.VERSION)
+
 
     @staticmethod
     def verbose(expose_value=False):
