@@ -1,5 +1,8 @@
+import os
 
 from . import logger, acfy
+
+os.environ['MANAGER_REST_CONFIG_PATH'] = '/opt/manager/cloudify-rest.conf'
 
 
 @acfy.group(name='acfy')
