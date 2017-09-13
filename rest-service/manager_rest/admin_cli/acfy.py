@@ -113,5 +113,55 @@ class Options(object):
             is_eager=True,
             help=helptexts.VERBOSE)
 
+    @staticmethod
+    def ldap_server():
+        return click.option(
+            '-s',
+            '--ldap-server',
+            required=True,
+            help=helptexts.LDAP_SERVER)
+
+    @staticmethod
+    def ldap_username():
+        return click.option(
+            '-u',
+            '--ldap-username',
+            required=True,
+            help=helptexts.LDAP_USERNAME)
+
+    @staticmethod
+    def ldap_password():
+        return click.option(
+            '-p',
+            '--ldap-password',
+            required=True,
+            help=helptexts.LDAP_PASSWORD)
+
+    @staticmethod
+    def ldap_domain():
+        return click.option(
+            '-d',
+            '--ldap-domain',
+            required=False,
+            help=helptexts.LDAP_DOMAIN)
+
+    @staticmethod
+    def ldap_is_active_directory():
+        return click.option(
+            '-a',
+            '--ldap-is-active-directory',
+            required=False,
+            is_flag=True,
+            default=False,
+            help=helptexts.LDAP_IS_ACTIVE_DIRECTORY)
+
+    @staticmethod
+    def ldap_dn_extra():
+        return click.option(
+            '-e',
+            '--ldap-dn-extra',
+            required=False,
+            help=helptexts.LDAP_DN_EXTRA)
+
 
 options = Options()
