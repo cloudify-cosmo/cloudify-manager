@@ -1,8 +1,23 @@
-from .. import acfy, exceptions
+from functools import wraps
+
 try:
     from cloudify_premium.ha import cluster_status
 except ImportError:
     cluster_status = None
+
+from .. import acfy, exceptions
+
+
+def _validate_cluster(f):
+    @wraps(f)
+    def _inner(*args, **kwargs):
+        try:
+            if len(cluster_status.nodes) < 1:
+                raise ValueError('No cluster nodes')
+        except Exception:
+            raise exceptions.CloudifyACliError('Cluster has not been started')
+        return f(*args, **kwargs)
+    return _inner
 
 
 @acfy.group(name='cluster')
@@ -30,6 +45,7 @@ def _get_node_settings(node_name, logger):
 @settings.command(name='get')
 @acfy.options.node_name
 @acfy.pass_logger
+@_validate_cluster
 def get_settings(node_name, logger):
     if node_name:
         _get_node_settings(node_name, logger)
