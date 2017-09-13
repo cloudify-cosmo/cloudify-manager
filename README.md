@@ -1,4 +1,6 @@
-# cloudify-local-bootstrap
+# Cloudify Local Bootstrap
+[![Circle CI](https://circleci.com/gh/mcouthon/cloudify-local-bootstrap/tree/master.svg?style=shield)](https://circleci.com/gh/mcouthon/cloudify-local-bootstrap/tree/master)
+
 A new, simpler, way to bootstrap a Cloudify manager.
 Runs in half the time, with a fraction of the frustration.
 1000% satisfaction guaranteed.
