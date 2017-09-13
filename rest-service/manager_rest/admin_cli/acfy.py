@@ -78,6 +78,22 @@ class Options(object):
         self.host_ip = click.option(
             '--host-ip',
             help=helptexts.HOST_IP)
+        self.manager_username = click.option(
+            '-u',
+            '--manager-username',
+            required=False,
+            help=helptexts.MANAGER_USERNAME
+        )
+        self.manager_password = click.option(
+            '-p',
+            '--manager-password',
+            required=False,
+            help=helptexts.MANAGER_PASSWORD)
+        self.master_ip = click.option(
+            '-m',
+            '--master-ip',
+            required=True,
+            help=helptexts.MASTER_IP)
 
     @staticmethod
     def verbose(expose_value=False):

@@ -1,3 +1,4 @@
+import requests
 from functools import wraps
 
 try:
@@ -62,4 +63,30 @@ def start(ctx, host_ip, node_name):
         'host_ip': host_ip,
         'node_name': node_name,
         'bootstrap_cluster': True
+    })
+
+
+@cluster.command(name='join')
+@acfy.options.node_name
+@acfy.options.host_ip
+@acfy.options.master_ip
+@acfy.options.manager_username
+@acfy.options.manager_password
+@acfy.pass_context
+def join(ctx, host_ip, node_name, master_ip, manager_username,
+         manager_password):
+    protocol = 'http'
+    data = {'host_ip': host_ip, 'node_name': node_name}
+    response = requests.put('{0}://{1}/api/v3/cluster/nodes/{2}'
+                            .format(protocol, master_ip, node_name),
+                            verify=False, json=data,
+                            auth=(manager_username, manager_password))
+    response_data = response.json()
+    credentials = response_data['credentials']
+    ctx.invoke(commands.create_cluster_node, config={
+        'host_ip': host_ip,
+        'node_name': node_name,
+        'bootstrap_cluster': False,
+        'credentials': credentials,
+        'join_addrs': [master_ip]
     })
