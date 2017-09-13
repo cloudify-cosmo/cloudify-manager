@@ -1,1 +1,1 @@
-from .python import run  # NOQA
+from .python import install  # NOQA

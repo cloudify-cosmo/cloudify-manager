@@ -1,1 +1,1 @@
-from .postgresql import run  # NOQA
+from .postgresql import install  # NOQA

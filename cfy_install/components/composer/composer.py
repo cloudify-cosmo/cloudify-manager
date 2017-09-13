@@ -79,7 +79,7 @@ def _create_user_and_set_permissions():
     common.chmod('g+w', dirname(CONF_DIR))
 
 
-def run():
+def install():
     logger.notice('Installing Composer...')
     _install_composer()
     if config[COMPOSER]['skip_installation']:

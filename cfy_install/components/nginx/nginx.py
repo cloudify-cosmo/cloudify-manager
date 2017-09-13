@@ -148,7 +148,7 @@ def _start_and_verify_service():
         raise StandardError('Could not verify Nginx service is alive')
 
 
-def run():
+def install():
     logger.notice('Installing NGINX...')
     common.mkdir(LOG_DIR)
     copy_notice(NGINX)

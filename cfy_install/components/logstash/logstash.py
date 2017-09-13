@@ -131,7 +131,7 @@ def _configure_logstash():
     common.sudo(['/sbin/chkconfig', 'logstash', 'on'])
 
 
-def run():
+def install():
     logger.notice('Installing Logstash...')
     sources = config[LOGSTASH]['sources']
     _install_logstash(sources)

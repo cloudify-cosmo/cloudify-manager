@@ -86,7 +86,7 @@ def _create_user():
     config[RIEMANN]['service_group'] = RIEMANN
 
 
-def run():
+def install():
     logger.notice('Installing Riemann...')
     copy_notice(RIEMANN)
     _create_user()

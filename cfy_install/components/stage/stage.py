@@ -95,7 +95,7 @@ def _start_and_validate_stage():
     wait_for_port(8088)
 
 
-def run():
+def install():
     logger.notice('Installing Stage...')
     _install_stage()
     if config[STAGE]['skip_installation']:

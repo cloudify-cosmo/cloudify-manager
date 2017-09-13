@@ -1,1 +1,1 @@
-from .nginx import run  # NOQA
+from .nginx import install  # NOQA

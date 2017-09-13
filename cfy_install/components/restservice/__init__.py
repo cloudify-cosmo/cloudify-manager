@@ -1,1 +1,1 @@
-from .restservice import run  # NOQA
+from .restservice import install  # NOQA

@@ -134,7 +134,7 @@ def _create_default_db():
     )
 
 
-def run():
+def install():
     logger.notice('Installing PostgreSQL...')
     copy_notice(POSTGRESQL)
     _install_postgresql()

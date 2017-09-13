@@ -19,7 +19,7 @@ def _install_syncthing():
     untar(syncthing_package, destination=HOME_DIR)
 
 
-def run():
+def install():
     logger.notice('Installing Syncthing...')
     _install_syncthing()
     logger.notice('Syncthing installed successfully')

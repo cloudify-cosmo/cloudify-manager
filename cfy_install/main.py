@@ -57,7 +57,7 @@ def install():
     set_globals()
 
     for component in COMPONENTS:
-        component.run()
+        component.install()
 
     logger.debug(pformat(config))
     logger.info('Cloudify Manager installation complete!')

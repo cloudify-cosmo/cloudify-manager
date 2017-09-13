@@ -1,1 +1,1 @@
-from .manager import run  # NOQA
+from .manager import install  # NOQA

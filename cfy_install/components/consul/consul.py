@@ -42,7 +42,7 @@ def _verify_consul():
         raise StandardError('Could not verify consul installation')
 
 
-def run():
+def install():
     logger.notice('Installing Consul...')
     _install_consul()
     _verify_consul()

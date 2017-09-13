@@ -28,7 +28,7 @@ def _validate_pip_installed():
                             'pip was not installed')
 
 
-def run():
+def install():
     logger.notice('Installing Python dependencies...')
     copy_notice(PYTHON)
     _install_python_requirements()

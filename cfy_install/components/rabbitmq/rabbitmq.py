@@ -184,7 +184,7 @@ def _validate_rabbitmq_running():
         )
 
 
-def run():
+def install():
     logger.notice('Installing RabbitMQ...')
     copy_notice(RABBITMQ)
     mkdir(LOG_DIR)

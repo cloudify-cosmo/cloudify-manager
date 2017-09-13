@@ -1,1 +1,1 @@
-from .syncthing import run  # NOQA
+from .syncthing import install  # NOQA

@@ -1,1 +1,1 @@
-from .manager_ip_setter import run  # NOQA
+from .manager_ip_setter import install  # NOQA

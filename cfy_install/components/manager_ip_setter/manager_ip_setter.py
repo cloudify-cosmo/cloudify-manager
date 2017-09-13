@@ -48,7 +48,7 @@ def install_manager_ip_setter():
     deploy_sudo_scripts()
 
 
-def run():
+def install():
     # Always install the ip setter, but only
     # install the scripts if flag is true
     install_manager_ip_setter()

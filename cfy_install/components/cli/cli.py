@@ -31,7 +31,7 @@ def _configure_cli():
     common.run(root_cmd)
 
 
-def run():
+def install():
     logger.info('Installing Cloudify CLI...')
     _install_cli()
     _configure_cli()

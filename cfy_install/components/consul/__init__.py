@@ -1,1 +1,1 @@
-from .consul import run  # NOQA
+from .consul import install  # NOQA

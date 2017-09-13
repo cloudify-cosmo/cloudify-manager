@@ -290,7 +290,7 @@ def _start_restservice():
     _verify_restservice()
 
 
-def run():
+def install():
     logger.notice('Installing RestService...')
     copy_notice(RESTSERVICE)
     _make_paths()

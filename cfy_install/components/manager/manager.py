@@ -110,7 +110,7 @@ def _create_manager_resources_dirs():
     common.mkdir(join(resources_root, 'packages', 'templates'))
 
 
-def run():
+def install():
     _create_cloudify_user()
     _create_sudoers_file_and_disable_sudo_requiretty()
     _set_selinux_permissive()

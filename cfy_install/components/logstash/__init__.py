@@ -1,1 +1,1 @@
-from .logstash import run  # NOQA
+from .logstash import install  # NOQA

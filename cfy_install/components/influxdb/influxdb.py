@@ -37,7 +37,7 @@ def _install_influxdb():
         systemd.stop(INFLUXB)
 
 
-def run():
+def install():
     logger.notice('Installing InfluxDB...')
     _install_influxdb()
     logger.notice('InfluxDB installed successfully')

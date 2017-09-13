@@ -123,7 +123,7 @@ def _start_and_verify_mgmtworker():
     _check_worker_running()
 
 
-def run():
+def install():
     logger.notice('Installing Management Worker...')
     copy_notice(MGMTWORKER)
     _make_paths()

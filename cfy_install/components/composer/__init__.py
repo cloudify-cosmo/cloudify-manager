@@ -1,1 +1,1 @@
-from .composer import run  # NOQA
+from .composer import install  # NOQA

@@ -102,7 +102,7 @@ def _clean_sanity():
                stdout=sys.stdout)
 
 
-def run():
+def install():
     logger.notice('Running Sanity...')
     ssh_key_path = _create_ssh_key()
     _run_sanity(ssh_key_path)

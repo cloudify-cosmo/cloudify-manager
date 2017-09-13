@@ -35,7 +35,7 @@ def _validate_java_installed():
         raise StandardError('Java runtime error: java was not installed')
 
 
-def run():
+def install():
     logger.notice('Installing Java...')
     copy_notice(JAVA)
     _install_java()
