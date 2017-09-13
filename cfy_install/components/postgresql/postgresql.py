@@ -29,10 +29,20 @@ logger = get_logger(POSTGRESQL)
 
 
 def _install():
-    logger.info('Installing PostgreSQL...')
     sources = config[POSTGRESQL]['sources']
-    for source in sources.values():
-        yum_install(source)
+
+    logger.info('Installing PostgreSQL dependencies...')
+    yum_install(sources['libxslt_rpm_url'])
+
+    logger.info('Installing PostgreSQL...')
+    yum_install(sources['ps_libs_rpm_url'])
+    yum_install(sources['ps_rpm_url'])
+    yum_install(sources['ps_contrib_rpm_url'])
+    yum_install(sources['ps_server_rpm_url'])
+    yum_install(sources['ps_devel_rpm_url'])
+
+    logger.info('Installing python libs for PostgreSQL...')
+    yum_install(sources['psycopg2_rpm_url'])
 
 
 def _init_postgresql():
