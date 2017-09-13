@@ -7,7 +7,7 @@
       "admin_password": "admin"
     },
     "sources": {
-      "manager_resources_package": "http://repository.cloudifysource.org/cloudify/4.2.0/.dev1-release/cloudify-manager-resources_4.2.0-.dev1.tar.gz"
+      "manager_resources_package": "/opt/cloudify-bootstrap/cloudify-manager-resources_4.2.0-.dev1.tar.gz"
     }
   },
   "agent": {
