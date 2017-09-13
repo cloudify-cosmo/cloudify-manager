@@ -78,6 +78,7 @@ def set_logger_level(level):
     handler = logger.handlers[0]
     handler.setLevel(level)
 
+
 _setup_logger()
 
 
