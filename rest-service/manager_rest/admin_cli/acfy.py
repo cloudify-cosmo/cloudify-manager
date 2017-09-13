@@ -1,5 +1,6 @@
 
 import click
+from functools import wraps
 
 from . import helptexts, logger
 
@@ -7,6 +8,15 @@ from . import helptexts, logger
 CLICK_CONTEXT_SETTINGS = dict(
     help_option_names=['-h', '--help'],
     token_normalize_func=lambda param: param.lower())
+
+
+def pass_logger(func):
+    """Simply passes the logger to a command."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        new_logger = logger.get_logger()
+        return func(logger=new_logger, *args, **kwargs)
+    return wrapper
 
 
 def group(name):
