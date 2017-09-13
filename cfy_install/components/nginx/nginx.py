@@ -13,7 +13,6 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install
 from ...utils.logrotate import set_logrotate
 from ...utils.deploy import copy_notice, deploy
-from ...utils.network import check_http_response
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, 'config')
@@ -137,15 +136,15 @@ def _start_and_verify_service():
     logger.info('Starting NGINX service...')
     systemd.enable(NGINX, append_prefix=False)
     systemd.restart(NGINX, append_prefix=False)
-
-    logger.info('Verifying NGINX service is up...')
     systemd.verify_alive(NGINX, append_prefix=False)
 
-    nginx_url = 'https://127.0.0.1:{0}/api/v2.1/version'.format(
-        config[NGINX]['internal_rest_port'])
-    response = check_http_response(nginx_url)
-    if response.code not in (200, 401):
-        raise StandardError('Could not verify Nginx service is alive')
+    # TODO: See if it's OK to remove this part
+    # logger.info('Verifying NGINX service is up...')
+    # nginx_url = 'https://127.0.0.1:{0}/api/v2.1/version'.format(
+    #     config[NGINX]['internal_rest_port'])
+    # response = check_http_response(nginx_url)
+    # if response.code not in (200, 401):
+    #     raise StandardError('Could not verify Nginx service is alive')
 
 
 def _configure():
