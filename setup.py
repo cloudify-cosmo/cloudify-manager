@@ -10,7 +10,9 @@ setup(
     description='Local bootstrap of a cloudify manager',
     entry_points={
         'console_scripts': [
-            'local_bs = local_bs.main:main',
+            'cfy_install = local_bs.main:install',
+            'cfy_remove = local_bs.main:remove',
+            'cfy_config = local_bs.main:configure'
         ]
     }
 )

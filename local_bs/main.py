@@ -51,8 +51,8 @@ COMPONENTS = [
 ]
 
 
-def main():
-    logger.info('Starting Bootstrap')
+def install():
+    logger.info('Installing Cloudify Manager')
     # validate_machine()
     set_globals()
 
@@ -60,8 +60,29 @@ def main():
         component.run()
 
     logger.debug(pformat(config))
-    logger.info('Bootstrap complete!')
+    logger.info('Cloudify Manager installation complete!')
+
+
+def configure():
+    logger.info('Configuring Cloudify Manager')
+    set_globals()
+
+    for component in COMPONENTS:
+        component.configure()
+
+    logger.info('Cloudify Manager configuration complete!')
+
+
+def remove():
+    logger.info('Removing Cloudify Manager')
+    # validate_machine()
+    set_globals()
+
+    for component in COMPONENTS:
+        component.remove()
+
+    logger.info('Cloudify Manager uninstallation complete!')
 
 
 if __name__ == '__main__':
-    main()
+    install()
