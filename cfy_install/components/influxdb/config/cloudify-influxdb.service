@@ -1,0 +1,15 @@
+[Unit]
+Description=InfluxDB Service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+TimeoutStartSec=0
+Restart=on-failure
+EnvironmentFile=-/etc/sysconfig/cloudify-influxdb
+User={influxdb[service_user]}
+Group={influxdb[service_group]}
+ExecStart=/usr/bin/influxdb -config=${{INFLUXDB_CONFIG_PATH}}
+
+[Install]
+WantedBy=multi-user.target
