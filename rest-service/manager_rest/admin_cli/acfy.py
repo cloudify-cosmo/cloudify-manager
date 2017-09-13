@@ -62,6 +62,9 @@ class Options(object):
             expose_value=False,
             is_eager=True,
             help=helptexts.VERSION)
+        self.node_name = click.option(
+            '--node-name',
+            help=helptexts.NODE_NAME)
 
     @staticmethod
     def verbose(expose_value=False):
