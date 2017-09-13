@@ -15,7 +15,7 @@ logger = get_logger(DEV)
 
 
 def _install_packages(packages, venv, pip_constraints):
-    sources = config[DEV]
+    sources = config[DEV]['sources']
     # this allows to upgrade modules if necessary.
     logger.info(
         'Installing Optional Packages in {0} venv...'.format(venv)
@@ -30,7 +30,7 @@ def _install_cloudify_manager_pip_packages(pip_constraints):
     rest_venv = config[RESTSERVICE]['venv']
     mgmtworker_venv = config[MGMTWORKER]['venv']
 
-    cloudify_manager_url = config[DEV]['cloudify_manager_source_url']
+    cloudify_manager_url = config[DEV]['sources']['cloudify_resources_url']
     if not cloudify_manager_url:
         return
 
