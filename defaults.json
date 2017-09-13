@@ -95,6 +95,14 @@
       "pip_source_url": "python-pip-7.1.0-1.el7.noarch.rpm"
     }
   },
+  "riemann": {
+    "sources": {
+      "langohr_source_url": "langohr.jar",
+      "daemonize_source_url": "daemonize-1.7.3-7.el7.x86_64.rpm",
+      "riemann_source_url": "riemann-0.2.6-1.noarch.rpm",
+      "cloudify_resources_url": "cloudify-manager-*.tar.gz"
+    }
+  },
   "restservice": {
     "log": {
       "level": "INFO",
@@ -146,15 +154,17 @@
       "sanity_source_url": "cloudify-hello-world-example-*.tar.gz"
     }
   },
-  "dev_packages": {
+  "dev": {
     "pip_constraints": "",
-    "cloudify_manager_source_url": "",
-    "amqpinflux_source_url": "",
-    "rest_client_source_url": "",
-    "plugins_common_source_url": "",
-    "script_plugin_source_url": "",
-    "agent_source_url": "",
-    "dsl_parser_source_url": ""
+    "sources": {
+      "cloudify_resources_url": "",
+      "amqpinflux_source_url": "",
+      "rest_client_source_url": "",
+      "plugins_common_source_url": "",
+      "script_plugin_source_url": "",
+      "agent_source_url": "",
+      "dsl_parser_source_url": ""
+    }
   },
   "validations": {
     "ignore_bootstrap_validations": false,
