@@ -11,12 +11,12 @@ from .commands import agents, cluster
 @acfy.options.version
 def _acfy(verbose):
     logger.set_global_verbosity_level(verbose)
+    # TODO figure out a better way to pass this config path
+    os.environ['MANAGER_REST_CONFIG_PATH'] = '/opt/manager/cloudify-rest.conf'
     try:
-        os.environ['MANAGER_REST_CONFIG_PATH'] = '/opt/manager/cloudify-rest.conf'
         instance.load_configuration()
     except IOError:
         pass
-    # TODO figure out a better way to pass this config path
 
 
 def _register_commands():
