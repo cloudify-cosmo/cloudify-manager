@@ -1,1 +1,1 @@
-from .install import run  # NOQA
+from .influxdb import run  # NOQA

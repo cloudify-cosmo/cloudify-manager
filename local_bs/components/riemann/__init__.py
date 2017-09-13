@@ -1,1 +1,1 @@
-from .install import run  # NOQA
+from .riemann import run  # NOQA

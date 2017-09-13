@@ -1,1 +1,1 @@
-from .install import run  # NOQA
+from .mgmtworker import run  # NOQA

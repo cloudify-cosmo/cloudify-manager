@@ -1,1 +1,1 @@
-from .install import run  # NOQA
+from .cli import run  # NOQA

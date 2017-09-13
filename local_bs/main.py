@@ -9,6 +9,7 @@ from .components import sanity
 from .components import consul
 from .components import python
 from .components import manager
+from .components import riemann
 from .components import composer
 from .components import logstash
 from .components import rabbitmq
@@ -28,31 +29,36 @@ from .logger import get_logger
 
 logger = get_logger('Bootstrap')
 
+COMPONENTS = [
+    manager,
+    manager_ip_setter,
+    # influxdb,
+    nginx,
+    python,
+    rabbitmq,
+    postgresql,
+    riemann,
+    java,
+    consul,
+    syncthing,
+    stage,
+    composer,
+    logstash,
+    restservice,
+    mgmtworker,
+    cli,
+    sanity
+]
+
 
 def main():
     logger.info('Starting Bootstrap')
     # validate_machine()
     set_globals()
 
-    # manager.run()
-    # manager_ip_setter.run()
-    # TODO: Fix influxDB
-    # influxdb.run()
-    # nginx.run()
-    python.run()
-    # rabbitmq.run()
-    # postgresql.run()
-    # java.run()
-    # consul.run()
-    # syncthing.run()
-    # stage.run()
-    # composer.run()
-    # logstash.run()
-    # restservice.run()
-    # mgmtworker.run()
-    # cli.run()
+    for component in COMPONENTS:
+        component.run()
 
-    # sanity.run()
     logger.debug(pformat(config))
     logger.info('Bootstrap complete!')
 

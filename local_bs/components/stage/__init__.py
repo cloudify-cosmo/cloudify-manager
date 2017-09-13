@@ -1,1 +1,1 @@
-from .install import run  # NOQA
+from .stage import run  # NOQA

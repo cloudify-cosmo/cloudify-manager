@@ -9,7 +9,6 @@ from ...logger import get_logger
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install
-from ...utils.network import wait_for_port
 from ...utils.logrotate import set_logrotate
 from ...utils.users import create_service_user
 from ...utils.deploy import copy_notice, deploy
@@ -77,7 +76,6 @@ def _start_and_verify_service():
     systemd.configure(RIEMANN)
     systemd.restart(RIEMANN)
     systemd.verify_alive(RIEMANN)
-    wait_for_port(5555)
 
 
 def _create_user():
