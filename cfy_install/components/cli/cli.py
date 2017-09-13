@@ -32,13 +32,13 @@ def _configure():
 
 
 def install():
-    logger.info('Installing Cloudify CLI...')
+    logger.notice('Installing Cloudify CLI...')
     _install()
     _configure()
-    logger.info('Cloudify CLI successfully installed')
+    logger.notice('Cloudify CLI successfully installed')
 
 
 def configure():
-    logger.info('Configuring Cloudify CLI...')
+    logger.notice('Configuring Cloudify CLI...')
     _configure()
-    logger.info('Cloudify CLI successfully configured')
+    logger.notice('Cloudify CLI successfully configured')

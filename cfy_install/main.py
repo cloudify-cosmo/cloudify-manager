@@ -15,6 +15,7 @@ from .components import logstash
 from .components import rabbitmq
 from .components import influxdb
 from .components import syncthing
+from .components import amqpinflux
 from .components import mgmtworker
 from .components import postgresql
 from .components import restservice
@@ -32,12 +33,13 @@ logger = get_logger('Bootstrap')
 COMPONENTS = [
     manager,
     manager_ip_setter,
-    # influxdb,
     nginx,
     python,
     postgresql,
     rabbitmq,
     restservice,
+    influxdb,
+    amqpinflux,
     riemann,
     java,
     consul,
