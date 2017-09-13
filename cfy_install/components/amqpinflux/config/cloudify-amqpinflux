@@ -1,0 +1,7 @@
+AMQP_HOST="{rabbitmq[endpoint_ip]}"
+INFLUXDB_HOST="{influxdb[endpoint_ip]}"
+AMQP_USERNAME="{rabbitmq[username]}"
+AMQP_PASSWORD="{rabbitmq[password]}"
+AMQP_CA_CERT_PATH="{rabbitmq[broker_cert_path]}"
+AMQPINFLUX_HOME="/opt/amqpinflux"
+AMQPINFLUX_VIRTUALENV_DIR="/opt/amqpinflux/env"

@@ -17,9 +17,17 @@
     "min_workers": 2,
     "max_workers": 5
   },
+  "amqpinflux": {
+    "sources": {
+      "amqpinflux_source_url": "cloudify-amqp-influx-*.x86_64.rpm"
+    }
+  },
   "log_level": "info",
   "influxdb": {
-    "influxdb_endpoint_ip": null
+    "endpoint_ip": null,
+    "sources": {
+      "influxdb_source_url": "influxdb-0.8.8-1.x86_64.rpm"
+    }
   },
   "rabbitmq": {
     "username": "cloudify",
