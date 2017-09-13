@@ -63,7 +63,7 @@ def _yum_install(package, package_name=None):
 
 def _install_rpm(rpm_path):
     rpm_handler = RpmPackageHandler(rpm_path)
-    logger.info(
+    logger.debug(
         'Checking whether {0} is already '
         'installed...'.format(rpm_handler.package_name)
     )

@@ -44,10 +44,10 @@ def install():
     logger.notice('Installing AMQP-Influx...')
     _install()
     _configure()
-    logger.notice('AMQP-Influx successfully installed')
+    logger.notice('AMQP-Influx installed successfully')
 
 
 def configure():
     logger.notice('Configuring AMQP-Influx...')
     _configure()
-    logger.notice('AMQP-Influx successfully configured')
+    logger.notice('AMQP-Influx configured successfully')
