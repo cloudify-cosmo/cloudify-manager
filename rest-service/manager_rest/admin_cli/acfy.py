@@ -2,6 +2,8 @@ import yaml
 import click
 from functools import wraps
 
+from functools import wraps
+
 from . import helptexts, logger
 
 
@@ -63,6 +65,18 @@ def show_version(ctx, param, value):
         ctx.exit()
 
 
+def pass_logger(func):
+    """Simply passes the logger to a command.
+    """
+    # Wraps here makes sure the original docstring propagates to click
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        new_logger = logger.get_logger()
+        return func(logger=new_logger, *args, **kwargs)
+
+    return wrapper
+
+
 class Options(object):
     def __init__(self):
         self.version = click.option(
@@ -102,6 +116,33 @@ class Options(object):
             '--parameters',
             type=click.File('rb'),
             callback=lambda ctx, param, value: yaml.load(value))
+
+        self.without_deployment_envs = click.option(
+            '--without-deployment-envs',
+            is_flag=True,
+            help=helptexts.RESTORE_SNAPSHOT_EXCLUDE_EXISTING_DEPLOYMENTS)
+
+        self.restore_certificates = click.option(
+            '--restore-certificates',
+            required=False,
+            is_flag=True,
+            default=False,
+            help=helptexts.RESTORE_CERTIFICATES)
+
+        self.no_reboot = click.option(
+            '--no-reboot',
+            required=False,
+            is_flag=True,
+            default=False,
+            help=helptexts.NO_REBOOT)
+
+    @staticmethod
+    def force(help):
+        return click.option(
+            '-f',
+            '--force',
+            is_flag=True,
+            help=help)
 
     @staticmethod
     def verbose(expose_value=False):
