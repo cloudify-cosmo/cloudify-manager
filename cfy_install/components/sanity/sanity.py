@@ -34,6 +34,8 @@ def _add_ssh_key_to_authorized(ssh_key_path):
     public_ssh = '{0}.pub'.format(ssh_key_path)
     if isfile(AUTHORIZED_KEYS_PATH):
         logger.debug('Adding sanity SSH key to current authorized_keys...')
+        # Add a newline to the SSH file
+        common.run(['echo >> {0}'.format(AUTHORIZED_KEYS_PATH)], shell=True)
         common.run(
             ['cat {0} >> {1}'.format(public_ssh, AUTHORIZED_KEYS_PATH)],
             shell=True
