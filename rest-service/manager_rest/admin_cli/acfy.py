@@ -51,7 +51,6 @@ class Options(object):
             is_eager=True,
             help=helptexts.VERSION)
 
-
     @staticmethod
     def verbose(expose_value=False):
         return click.option(
