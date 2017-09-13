@@ -1,4 +1,4 @@
-
+import yaml
 import click
 from functools import wraps
 
@@ -94,6 +94,14 @@ class Options(object):
             '--master-ip',
             required=True,
             help=helptexts.MASTER_IP)
+        self.with_manager_deployment = click.option(
+            '--with-manager-deployment/--without-manager-deployment',
+            help=helptexts.WITH_MANAGER_DEPLOYMENT)
+        self.parameters = click.option(
+            '-p',
+            '--parameters',
+            type=click.File('rb'),
+            callback=lambda ctx, param, value: yaml.load(value))
 
     @staticmethod
     def verbose(expose_value=False):

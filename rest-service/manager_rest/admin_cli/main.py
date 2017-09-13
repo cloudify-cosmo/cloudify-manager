@@ -3,7 +3,7 @@ import os
 from manager_rest.config import instance
 
 from . import logger, acfy
-from .commands import agents, cluster
+from .commands import agents, cluster, context
 
 
 @acfy.group(name='acfy')
@@ -22,6 +22,7 @@ def _acfy(verbose):
 def _register_commands():
     _acfy.add_command(agents.agents)
     _acfy.add_command(cluster.cluster)
+    _acfy.add_command(context.context)
 
 
 _register_commands()
