@@ -2,8 +2,6 @@ import sys
 
 from logging import getLogger, Formatter, StreamHandler, addLevelName, Logger
 
-from .config import config
-
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
 
 # The background is set with 40 plus the number of the color,
@@ -62,18 +60,23 @@ class ColoredFormatter(Formatter):
 
 
 def _setup_logger():
-    log_level = config['log_level'].upper()
     logger = getLogger()
-    logger.setLevel(log_level)
+    logger.setLevel('INFO')
 
     ch = StreamHandler(sys.stdout)
-    ch.setLevel(log_level)
+    ch.setLevel('INFO')
     formatter = ColoredFormatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
+
+def set_logger_level(level):
+    logger = getLogger()
+    logger.setLevel(level)
+    handler = logger.handlers[0]
+    handler.setLevel(level)
 
 _setup_logger()
 
