@@ -1,3 +1,4 @@
+import os
 import yaml
 import click
 from functools import wraps
@@ -8,6 +9,23 @@ from . import helptexts, logger
 CLICK_CONTEXT_SETTINGS = dict(
     help_option_names=['-h', '--help'],
     token_normalize_func=lambda param: param.lower())
+
+
+SSL_CERTS_TARGET_DIR = '/etc/cloudify/ssl'
+CERT_METADATA_FILE_PATH = os.path.join(SSL_CERTS_TARGET_DIR,
+                                       'certificate_metadata')
+INTERNAL_SSL_CA_CERT_FILENAME = 'cloudify_internal_ca_cert.pem'
+INTERNAL_SSL_CA_KEY_FILENAME = 'cloudify_internal_ca_key.pem'
+INTERNAL_CA_CERT_PATH = os.path.join(SSL_CERTS_TARGET_DIR,
+                                     INTERNAL_SSL_CA_CERT_FILENAME)
+INTERNAL_CA_KEY_PATH = os.path.join(SSL_CERTS_TARGET_DIR,
+                                    INTERNAL_SSL_CA_KEY_FILENAME)
+INTERNAL_SSL_CERT_FILENAME = 'cloudify_internal_cert.pem'
+INTERNAL_SSL_KEY_FILENAME = 'cloudify_internal_key.pem'
+INTERNAL_CERT_PATH = os.path.join(SSL_CERTS_TARGET_DIR,
+                                  INTERNAL_SSL_CERT_FILENAME)
+INTERNAL_KEY_PATH = os.path.join(SSL_CERTS_TARGET_DIR,
+                                 INTERNAL_SSL_KEY_FILENAME)
 
 
 def pass_context(func):
@@ -102,6 +120,22 @@ class Options(object):
             '--parameters',
             type=click.File('rb'),
             callback=lambda ctx, param, value: yaml.load(value))
+        self.ca_cert_path = click.option(
+            '--ca-cert',
+            default=INTERNAL_CA_CERT_PATH,
+            type=click.Path())
+        self.ca_key_path = click.option(
+            '--ca-key',
+            default=INTERNAL_CA_KEY_PATH,
+            type=click.Path())
+        self.internal_cert_path = click.option(
+            '--internal-cert',
+            default=INTERNAL_CERT_PATH,
+            type=click.Path())
+        self.internal_key_path = click.option(
+            '--internal-key',
+            default=INTERNAL_KEY_PATH,
+            type=click.Path())
 
     @staticmethod
     def verbose(expose_value=False):
