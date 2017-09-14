@@ -155,7 +155,7 @@
   },
   "cli": {
     "sources": {
-      "cli_source_url": "http://gigaspaces-repository-eu.s3.amazonaws.com/cloudify/4.2.0/.dev1-release/cloudify-4.2.0~.dev1.el6.x86_64.rpm"
+      "cli_source_url": "cloudify-cli-*.x86_64.rpm"
     }
   },
   "sanity": {
