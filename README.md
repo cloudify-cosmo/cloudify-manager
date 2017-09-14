@@ -13,7 +13,7 @@ Runs in half the time, with a fraction of the frustration.
 1. Edit `config.json` in `/opt/cloudify-bootstrap/config.json`
 (only `private_ip` and `public_ip` params are required).
 1. Run `cfy_install`.
-1. Profit.
+1. Profit. No need to thank us (though you'll probably want to).
 
 ### Configuration
 If you wish to change some configuration after install, just edit
@@ -23,7 +23,8 @@ All the available configurations can be found in
 
 
 ### Teardown
-Sick of cloudify? No problem, just run `cfy_remove`, and go to the
+Sick of cloudify? Well that's just insane, look up a mental health institute.
+Done with this manager installation? No problem, just run `cfy_remove`, and go to the
 beach.
 
 ### Creating the RPM
