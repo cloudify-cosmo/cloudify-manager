@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from time import time
 from pprint import pformat
 
 from .components import cli
@@ -52,6 +53,16 @@ COMPONENTS = [
     sanity
 ]
 
+START_TIME = time()
+
+
+def _print_time():
+    running_time = time() - START_TIME
+    m, s = divmod(running_time, 60)
+    logger.notice(
+        'Finished in {0} minutes and {1} seconds'.format(int(m), int(s))
+    )
+
 
 def _init(bootstrap=True):
     if bootstrap:
@@ -75,6 +86,7 @@ def install():
     logger.debug(pformat(config))
     config.dump_config()
     logger.info('Cloudify Manager installation complete!')
+    _print_time()
 
 
 def configure():
@@ -87,6 +99,7 @@ def configure():
         component.configure()
 
     logger.info('Cloudify Manager configuration complete!')
+    _print_time()
 
 
 def remove():
@@ -99,6 +112,7 @@ def remove():
         component.remove()
 
     logger.info('Cloudify Manager uninstallation complete!')
+    _print_time()
 
 
 if __name__ == '__main__':
