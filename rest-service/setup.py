@@ -19,8 +19,9 @@ from setuptools import setup
 
 
 install_requires = [
+    'click==4.0',
     'Flask==0.10.1',
-    'flask-restful==0.2.5',
+    'flask-restful==0.2.12',
     'flask-restful-swagger==0.12',
     'flask-sqlalchemy==2.1',
     'flask-security==1.7.5',
@@ -67,9 +68,15 @@ setup(
         'manager_rest.deployment_update',
         'manager_rest.storage',
         'manager_rest.security',
+        'manager_rest.admin_cli',
     ],
     package_data={'manager_rest': ['VERSION']},
     license='LICENSE',
     description='Cloudify manager rest service',
+    entry_points={
+        'console_scripts': [
+            'acfy = manager_rest.admin_cli.main:_acfy'
+        ]
+    },
     zip_safe=False,
     install_requires=install_requires)
