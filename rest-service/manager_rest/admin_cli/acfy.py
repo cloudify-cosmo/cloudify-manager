@@ -1,6 +1,6 @@
+
 import yaml
 import click
-from functools import wraps
 
 from functools import wraps
 
@@ -63,18 +63,6 @@ def show_version(ctx, param, value):
     if value:
         logger.get_logger().info('version')
         ctx.exit()
-
-
-def pass_logger(func):
-    """Simply passes the logger to a command.
-    """
-    # Wraps here makes sure the original docstring propagates to click
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        new_logger = logger.get_logger()
-        return func(logger=new_logger, *args, **kwargs)
-
-    return wrapper
 
 
 class Options(object):
