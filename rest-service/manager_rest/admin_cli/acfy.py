@@ -1,6 +1,7 @@
 import os
 import yaml
 import click
+
 from functools import wraps
 
 from . import helptexts, logger
@@ -136,6 +137,33 @@ class Options(object):
             '--internal-key',
             default=INTERNAL_KEY_PATH,
             type=click.Path())
+
+        self.without_deployment_envs = click.option(
+            '--without-deployment-envs',
+            is_flag=True,
+            help=helptexts.RESTORE_SNAPSHOT_EXCLUDE_EXISTING_DEPLOYMENTS)
+
+        self.restore_certificates = click.option(
+            '--restore-certificates',
+            required=False,
+            is_flag=True,
+            default=False,
+            help=helptexts.RESTORE_CERTIFICATES)
+
+        self.no_reboot = click.option(
+            '--no-reboot',
+            required=False,
+            is_flag=True,
+            default=False,
+            help=helptexts.NO_REBOOT)
+
+    @staticmethod
+    def force(help):
+        return click.option(
+            '-f',
+            '--force',
+            is_flag=True,
+            help=help)
 
     @staticmethod
     def verbose(expose_value=False):
