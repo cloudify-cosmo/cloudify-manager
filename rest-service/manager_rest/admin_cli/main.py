@@ -30,6 +30,7 @@ def _register_commands():
     _acfy.add_command(ssl.ssl)
     _acfy.add_command(snapshots.snapshots)
 
+
 _register_commands()
 logger.configure_loggers()
 
