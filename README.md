@@ -1,5 +1,6 @@
 # Cloudify Local Bootstrap
 [![Circle CI](https://circleci.com/gh/mcouthon/cloudify-local-bootstrap/tree/master.svg?style=shield)](https://circleci.com/gh/mcouthon/cloudify-local-bootstrap/tree/master)
+[![Code Health](https://landscape.io/github/mcouthon/cloudify-local-bootstrap/master/landscape.svg?style=flat)](https://landscape.io/github/mcouthon/cloudify-local-bootstrap/master)
 
 A new, simpler, way to bootstrap a Cloudify manager.
 Runs in half the time, with a fraction of the frustration.
