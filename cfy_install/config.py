@@ -2,7 +2,6 @@ import json
 import collections
 from os.path import join, dirname as up
 
-from .utils.common import run
 from .constants import CLOUDIFY_BOOTSTRAP_DIR
 
 _config = None
@@ -50,9 +49,6 @@ class Config(dict):
     def dump_config(self):
         with open(self.BS_CONFIG_PATH, 'w') as f:
             json.dump(self, f)
-
-        # Make the bootstrap config file readonly
-        run(['chmod', '-wx', self.BS_CONFIG_PATH])
 
     def load_bootstrap_config(self):
         defaults_path = join(up(up(__file__)), 'defaults.json')
