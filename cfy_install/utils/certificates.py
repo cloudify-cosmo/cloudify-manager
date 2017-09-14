@@ -178,7 +178,7 @@ def deploy_or_generate_external_ssl_cert(ips, cn, cert_path, key_path):
         )
         return const.EXTERNAL_CERT_PATH, const.EXTERNAL_KEY_PATH
     else:
-        logger.info(
+        logger.debug(
             'Generating SSL certificate `{0}` and SSL private '
             'key `{1}`'.format(
                 const.EXTERNAL_CERT_FILENAME,

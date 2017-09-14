@@ -56,3 +56,6 @@ print_line "Creating rpm..."
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-bootstrap: The directory from which the rpm will be created
 fpm -s dir -t rpm -n cloudify-bootstrap -v 1.0 -x "*.pyc" -x ".*" -x "*tests" --prefix /opt --after-install cloudify-bootstrap/cloudify-local-bootstrap/install.sh cloudify-bootstrap/cloudify-local-bootstrap/config.json=cloudify-bootstrap/config.json cloudify-bootstrap
+
+print_line "Cleaning up..."
+rm -rf cloudify-bootstrap
