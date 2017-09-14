@@ -30,7 +30,7 @@ function set_manager_ip() {
   /opt/manager/env/bin/python /opt/cloudify/manager-ip-setter/update-provider-context.py ${ip}
 
   echo "Creating internal SSL certificates.."
-  /opt/mgmtworker/env/bin/python /opt/cloudify/manager-ip-setter/create-internal-ssl-certs.py ${ip}
+  python /opt/cloudify/manager-ip-setter/create-internal-ssl-certs.py ${ip}
   
   echo "Done!"
 
