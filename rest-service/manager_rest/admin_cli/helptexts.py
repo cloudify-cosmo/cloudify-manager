@@ -38,3 +38,5 @@ RESTORE_CERTIFICATES = 'Restore the certificates from the snapshot, using ' \
 NO_REBOOT = 'Do not perform an automatic reboot to the Manager VM after ' \
             'restoring certificates a from snapshot (not recommended). ' \
             'Only relevant if the `--restore-certificates` flag was supplied'
+CERT_PATH = 'Path to the certificate file'
+KEY_PATH = 'Path to the key file'

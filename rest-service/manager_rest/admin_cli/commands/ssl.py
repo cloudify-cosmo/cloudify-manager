@@ -1,8 +1,13 @@
+
 import os
 import json
 import socket
 import tempfile
-import subprocess
+
+from os import remove
+from shutil import copy
+from os.path import isfile
+from subprocess import check_call
 from contextlib import contextmanager
 
 from .. import acfy
@@ -13,16 +18,28 @@ from manager_rest.rest.resources_v3_1.manager import (
     HTTPS_PATH)
 
 
+KEY_PATH = '/etc/cloudify/ssl/cloudify_external_key.pem'
+CERT_PATH = '/etc/cloudify/ssl/cloudify_external_cert.pem'
+
+
 @acfy.group(name='ssl')
 def ssl():
+    """Handle the manager's external ssl
+    """
     pass
 
 
-@ssl.command(name='status')
+@ssl.command(name='status', short_help='Show SSL status')
 @acfy.pass_logger
 def ssl_status(logger):
+    """Show SSL status on the manager (enabled/disabled).
+    """
     logger.info('SSL {0}'.format(
                 'enabled' if SSLConfig._is_enabled() else 'disabled'))
+
+
+def _restart_nginx():
+    check_call(['systemctl', 'restart', 'nginx'])
 
 
 def _set_nginx_ssl(enabled):
@@ -34,16 +51,45 @@ def _set_nginx_ssl(enabled):
         config = config.replace(HTTPS_PATH, HTTP_PATH)
     with open(DEFAULT_CONF_PATH, 'w') as f:
         f.write(config)
+    _restart_nginx()
 
 
-@ssl.command(name='enable')
-def ssl_enable():
+@ssl.command(name='enable', short_help='Enables SSL')
+@acfy.pass_logger
+def ssl_enable(logger):
+    """Enable SSL on the manager.
+    """
     _set_nginx_ssl(True)
+    logger.info('SSL enabled')
 
 
-@ssl.command(name='disable')
-def ssl_disable():
+@ssl.command(name='disable', short_help='Disable SSL')
+@acfy.pass_logger
+def ssl_disable(logger):
+    """Disable SSL on the manager.
+    """
     _set_nginx_ssl(False)
+    logger.info('SSL disabled')
+
+
+@ssl.command(name='replace', short_help='Replace certificate and key')
+@acfy.options.certificate_path
+@acfy.options.key_path
+@acfy.pass_logger
+def ssl_replace_certificate(logger, certificate_path, key_path):
+    """Replace the manager's external ssl certificate and key.
+    """
+    if not isfile(certificate_path) or not isfile(key_path):
+        logger.error('Both certificate and key paths must be valid paths '
+                     'to required files')
+        return
+    remove(CERT_PATH)
+    remove(KEY_PATH)
+    copy(certificate_path, CERT_PATH)
+    copy(key_path, KEY_PATH)
+    logger.info('certificate and key replaced, restarting nginx...')
+    _restart_nginx()
+    logger.info('nginx restarted')
 
 
 def _load_cert_metadata():
@@ -133,7 +179,7 @@ def _generate_ssl_certificate(ips,
     csr_path = '{0}.csr'.format(cert_path)
 
     with _csr_config(cn, cert_metadata) as conf_path:
-        subprocess.check_call([
+        check_call([
             'openssl', 'req',
             '-newkey', 'rsa:2048',
             '-nodes',
@@ -160,7 +206,7 @@ def _generate_ssl_certificate(ips,
             x509_command += [
                 '-signkey', key_path
             ]
-        subprocess.check_call(x509_command)
+        check_call(x509_command)
         os.unlink(csr_path)
     return cert_path, key_path
 
@@ -186,6 +232,5 @@ def create_internal_certs(host_ip, ca_cert, ca_key,
         internal_cert, internal_key
     ))
     logger.info('Restarting nginx and RabbitMQ...')
-    subprocess.check_call(['systemctl', 'restart', 'nginx',
-                           'cloudify-rabbitmq'])
+    check_call(['systemctl', 'restart', 'nginx', 'cloudify-rabbitmq'])
     logger.info('Done!')

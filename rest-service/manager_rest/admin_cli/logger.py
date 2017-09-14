@@ -14,14 +14,13 @@
 # limitations under the License.
 ############
 
-
 import os
 import copy
 import logging
 import logging.config
 
-# DEFAULT_LOG_FILE = os.path.join('/var', 'log', 'cloudify', 'admin_cli.log')
-DEFAULT_LOG_FILE = os.path.join('/tmp', 'admin_cli.log')
+
+DEFAULT_LOG_FILE = os.path.join('/var', 'log', 'cloudify', 'admin_cli.log')
 
 VERBOSE = 1
 NO_VERBOSE = 0

@@ -1,4 +1,7 @@
+
 import subprocess
+
+from .. import acfy, exceptions
 from manager_rest.config import instance
 from manager_rest.manager_exceptions import UnauthorizedError
 
@@ -7,8 +10,6 @@ try:
         import LdapAuthentication
 except ImportError:
     LdapAuthentication = None
-
-from .. import acfy, exceptions
 
 
 @acfy.group(name='ldap')

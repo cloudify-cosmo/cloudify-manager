@@ -108,6 +108,16 @@ class Options(object):
             '--manager-password',
             required=False,
             help=helptexts.MANAGER_PASSWORD)
+        self.certificate_path = click.option(
+            '-c',
+            '--certificate-path',
+            required=True,
+            help=helptexts.CERT_PATH)
+        self.key_path = click.option(
+            '-k',
+            '--key-path',
+            required=True,
+            help=helptexts.KEY_PATH)
         self.master_ip = click.option(
             '-m',
             '--master-ip',

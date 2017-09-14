@@ -1,12 +1,14 @@
+
 import requests
+
 from functools import wraps
+
+from .. import acfy, exceptions
 
 try:
     from cloudify_premium.ha import cluster_status, commands
 except ImportError:
     cluster_status = None
-
-from .. import acfy, exceptions
 
 
 def _validate_cluster(f):

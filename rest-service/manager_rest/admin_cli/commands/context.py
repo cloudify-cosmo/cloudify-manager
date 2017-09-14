@@ -1,11 +1,12 @@
+
 import yaml
+
 from sqlalchemy.orm.attributes import flag_modified
 
-from manager_rest.storage import get_storage_manager, models
+from .. import acfy, exceptions
 from manager_rest.flask_utils import setup_flask_app
 from manager_rest.constants import PROVIDER_CONTEXT_ID
-
-from .. import acfy, exceptions
+from manager_rest.storage import get_storage_manager, models
 
 
 @acfy.group(name='context')
