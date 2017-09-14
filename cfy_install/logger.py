@@ -1,6 +1,9 @@
 import sys
+from os.path import join
 
-from logging import getLogger, Formatter, StreamHandler, addLevelName, Logger
+import logging
+
+from .constants import CLOUDIFY_BOOTSTRAP_DIR
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
 
@@ -31,12 +34,14 @@ MSG_LEVEL_COLORS = {
     'ERROR': COLOR_SEQ % RED
 }
 
+FORMAT_MESSAGE = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
 
 # region notice log level
 
 # Custom code that adds another log level (notice) in a green color
 NOTICE_LOG_LEVEL = 25
-addLevelName(NOTICE_LOG_LEVEL, 'NOTICE')
+logging.addLevelName(NOTICE_LOG_LEVEL, 'NOTICE')
 
 
 def notice(self, message, *args, **kws):
@@ -44,43 +49,49 @@ def notice(self, message, *args, **kws):
         self._log(NOTICE_LOG_LEVEL, message, args, **kws)
 
 
-Logger.notice = notice
+logging.Logger.notice = notice
 
 # endregion
 
 
-class ColoredFormatter(Formatter):
+class ColoredFormatter(logging.Formatter):
     def format(self, record):
         level_color = LEVEL_COLORS[record.levelname]
         msg_color = MSG_LEVEL_COLORS[record.levelname]
         record.levelname = level_color + record.levelname + RESET_SEQ
         record.name = BOLD_SEQ % BLUE + record.name + RESET_SEQ
         record.msg = msg_color + record.msg + RESET_SEQ
-        return Formatter.format(self, record)
+        return logging.Formatter.format(self, record)
 
 
 def _setup_logger():
-    logger = getLogger()
-    logger.setLevel('INFO')
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
-    ch = StreamHandler(sys.stdout)
-    ch.setLevel('INFO')
-    formatter = ColoredFormatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
+    # The handler that outputs to file is added first
+    fh = logging.FileHandler(join(CLOUDIFY_BOOTSTRAP_DIR, 'log.txt'))
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter(FORMAT_MESSAGE))
+    logger.addHandler(fh)
+
+    # The handler that outputs to console is added second
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(ColoredFormatter(FORMAT_MESSAGE))
+    logger.addHandler(sh)
 
 
 def set_logger_level(level):
-    logger = getLogger()
-    logger.setLevel(level)
-    handler = logger.handlers[0]
-    handler.setLevel(level)
+    """ Set the log level of the handler that outputs to console """
+
+    logger = logging.getLogger()
+
+    # Getting the second handler - the StreamHandler
+    logger.handlers[1].setLevel(level)
 
 
 _setup_logger()
 
 
 def get_logger(logger_name):
-    return getLogger('[{0}]'.format(logger_name.upper()))
+    return logging.getLogger('[{0}]'.format(logger_name.upper()))
