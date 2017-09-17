@@ -42,3 +42,4 @@ user!). Just like that. Because we like you.
 * Want to reconfigure the manager, but don't want to drop the DB?
 We've got you covered. Just set `postgresql[create_db]` to `false`
 in the config.
+* Working in offline mode? No problem. cfy_install can be used as is. We got you covered.
