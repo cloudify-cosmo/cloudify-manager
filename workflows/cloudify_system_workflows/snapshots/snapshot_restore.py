@@ -37,6 +37,7 @@ from .npm import Npm
 from .agents import Agents
 from .influxdb import InfluxDB
 from .postgres import Postgres
+from .networks import Networks
 from .es_snapshot import ElasticSearch
 from .credentials import restore as restore_credentials
 from .constants import (
@@ -49,7 +50,8 @@ from .constants import (
     M_STAGE_SCHEMA_REVISION,
     M_VERSION,
     MANAGER_PYTHON,
-    V_4_0_0
+    V_4_0_0,
+    V_4_2_0
 )
 
 
@@ -190,14 +192,13 @@ class SnapshotRestore(object):
         subprocess.Popen(cmd, shell=True)
 
     def _validate_snapshot(self):
-        manager_version = utils.get_manager_version(self._client)
         validator = SnapshotRestoreValidator(
             self._snapshot_version,
-            manager_version,
             self._premium_enabled,
             self._user_is_bootstrap_admin,
             self._client,
-            self._force
+            self._force,
+            self._tempdir
         )
         validator.validate()
 
@@ -412,21 +413,22 @@ class SnapshotRestore(object):
 class SnapshotRestoreValidator(object):
     def __init__(self,
                  snapshot_version,
-                 manager_version,
                  is_premium_enabled,
                  is_user_bootstrap_admin,
                  client,
-                 force):
+                 force,
+                 tempdir):
         self._snapshot_version = snapshot_version
-        self._manager_version = manager_version
+        self._client = client
+        self._manager_version = utils.get_manager_version(self._client)
         self._is_premium_enabled = is_premium_enabled
         self._is_user_bootstrap_admin = is_user_bootstrap_admin
-        self._client = client
         self._force = force
+        self._tempdir = tempdir
 
         ctx.logger.info('Validating snapshot\n'
                         'Manager version = {0}, snapshot version = {1}'
-                        .format(manager_version, snapshot_version))
+                        .format(self._manager_version, snapshot_version))
 
     def validate(self):
         if self._snapshot_version > self._manager_version:
@@ -448,6 +450,8 @@ class SnapshotRestoreValidator(object):
             )
 
         self._assert_clean_db()
+        if self._snapshot_version >= V_4_2_0:
+            self._assert_manager_networks()
 
     def _validate_v_3_snapshot(self):
         # validate only for the snapshot's tenant
@@ -465,3 +469,22 @@ class SnapshotRestoreValidator(object):
                     "permitted. Pass the --force flag to force the restore "
                     "and delete existing data from the manager"
                 )
+
+    def _assert_manager_networks(self):
+        net = Networks()
+        current_networks = net.get_networks_from_provider_context(self._client)
+        old_networks = Networks.get_networks_from_snapshot(self._tempdir)
+        active_networks = old_networks['active_networks']
+
+        # Get all the networks with live agents that don't appear in the
+        # provider context
+        missing_networks = [
+            n for n in active_networks if n not in current_networks
+        ]
+        if missing_networks:
+            raise NonRecoverableError(
+                'Networks `{0}` do not appear in the provider context, '
+                'but have live agents connected to them. Upgrade is not '
+                'allowed!\nAll the above networks need to be set during '
+                'bootstrap'.format(missing_networks)
+            )
