@@ -76,7 +76,7 @@ def _init(bootstrap=True):
 def install():
     _init()
 
-    logger.info('Installing Cloudify Manager')
+    logger.notice('Installing Cloudify Manager...')
     validate_machine()
     set_globals()
 
@@ -86,34 +86,35 @@ def install():
     logger.debug(pformat(config))
     config.dump_config()
     remove_temp_files()
-    logger.info('Cloudify Manager installation complete!')
+    logger.notice('Cloudify Manager successfully installed!')
     _print_time()
 
 
 def configure():
     _init()
 
-    logger.info('Configuring Cloudify Manager')
+    logger.notice('Configuring Cloudify Manager...')
     set_globals()
 
     for component in COMPONENTS:
         component.configure()
 
     remove_temp_files()
-    logger.info('Cloudify Manager configuration complete!')
+    logger.notice('Cloudify Manager successfully configured!')
     _print_time()
 
 
 def remove():
     _init(bootstrap=False)
 
-    logger.info('Removing Cloudify Manager')
+    logger.notice('Removing Cloudify Manager...')
     set_globals()
 
     for component in COMPONENTS:
+        # Remove files, users, groups and packages
         component.remove()
 
-    logger.info('Cloudify Manager uninstallation complete!')
+    logger.notice('Cloudify Manager successfully removed!')
     _print_time()
 
 

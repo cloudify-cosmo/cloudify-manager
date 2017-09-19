@@ -1,1 +1,1 @@
-from .stage import install, configure  # NOQA
+from .stage import install, configure, remove  # NOQA

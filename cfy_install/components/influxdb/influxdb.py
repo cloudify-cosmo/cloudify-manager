@@ -9,10 +9,10 @@ from ...logger import get_logger
 
 from ...utils import common
 from ...utils.systemd import systemd
-from ...utils.deploy import copy_notice
-from ...utils.install import yum_install
-from ...utils.logrotate import set_logrotate
+from ...utils.install import yum_install, yum_remove
+from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.network import wait_for_port, check_http_response
+from ...utils.files import copy_notice, remove_notice, remove_files
 
 logger = get_logger(INFLUXB)
 
@@ -76,13 +76,13 @@ def _configure_database(host, port):
     except Exception as ex:
         raise StandardError('Failed to create: {0} ({1}).'.format(db_name, ex))
 
-    logger.info('Verifying database created successfully...')
+    logger.debug('Verifying database created successfully...')
     db_list = eval(urllib2.urlopen(urllib2.Request(url_for_list)).read())
     try:
         assert any(d.get('name') == db_name for d in db_list)
     except AssertionError:
         raise StandardError('Verification failed!')
-    logger.info('Databased {0} created successfully.'.format(db_name))
+    logger.info('Databased {0} successfully created'.format(db_name))
 
 
 def _install_influxdb():
@@ -176,10 +176,20 @@ def install():
     logger.notice('Installing InfluxDB...')
     _install()
     _configure()
-    logger.notice('InfluxDB installed successfully')
+    logger.notice('InfluxDB successfully installed')
 
 
 def configure():
     logger.notice('Configuring InfluxDB...')
     _configure()
     logger.notice('InfluxDB successfully configured')
+
+
+def remove():
+    logger.notice('Removing Influxdb...')
+    remove_notice(INFLUXB)
+    remove_logrotate(INFLUXB)
+    systemd.remove(INFLUXB)
+    remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
+    yum_remove(INFLUXB)
+    logger.notice('InfluxDB successfully removed')

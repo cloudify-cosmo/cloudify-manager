@@ -1,15 +1,16 @@
-from os.path import join
+from os.path import join, exists
 
 from ..service_names import SYNCTHING
 
 from ...config import config
 from ...logger import get_logger
-from ...utils.common import mkdir, untar
-from ...utils.files import get_local_source_path
+from ...utils.common import mkdir, untar, sudo
+from ...utils.files import get_local_source_path, remove_files
 
 logger = get_logger(SYNCTHING)
 
 HOME_DIR = join('/opt', SYNCTHING)
+CLUSTER_DELETE_SCRIPT = '/opt/cloudify/delete_cluster.py'
 
 
 def _install():
@@ -22,8 +23,19 @@ def _install():
 def install():
     logger.notice('Installing Syncthing...')
     _install()
-    logger.notice('Syncthing installed successfully')
+    logger.notice('Syncthing successfully installed')
 
 
 def configure():
     pass
+
+
+def remove():
+    logger.notice('Removing Syncthing...')
+    if exists(CLUSTER_DELETE_SCRIPT):
+        sudo([
+            '/usr/bin/env', 'python', CLUSTER_DELETE_SCRIPT,
+            '--component', SYNCTHING
+        ])
+    remove_files([HOME_DIR])
+    logger.notice('Syncthing successfully removed')

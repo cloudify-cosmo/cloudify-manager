@@ -7,17 +7,18 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
-from ...utils.install import yum_install
 from ...utils.systemd import systemd
-from ...utils.logrotate import set_logrotate
-from ...utils.deploy import deploy, copy_notice
-from ...utils.common import sudo, mkdir, chown, remove
+from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
+from ...utils.logrotate import set_logrotate, remove_logrotate
+from ...utils.common import sudo, mkdir, chown, remove as remove_file
+from ...utils.files import copy_notice, remove_notice, remove_files, deploy
 
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, 'config')
+FD_LIMIT_PATH = '/etc/security/limits.d/rabbitmq.conf'
 
 SECURE_PORT = 5671
 INSECURE_PORT = 5672
@@ -34,7 +35,7 @@ def _install():
 def _deploy_resources():
     deploy(
         src=join(CONFIG_PATH, 'rabbitmq_ulimit.conf'),
-        dst='/etc/security/limits.d/rabbitmq.conf'
+        dst=FD_LIMIT_PATH
     )
     deploy(
         src=join(CONFIG_PATH, 'rabbitmq-definitions.json'),
@@ -67,8 +68,8 @@ def _init_service():
     rabbit_config_path = join(HOME_DIR, 'rabbitmq.config')
 
     # Delete old mnesia node
-    remove('/var/lib/rabbitmq/mnesia')
-    remove(rabbit_config_path)
+    remove_file('/var/lib/rabbitmq/mnesia')
+    remove_file(rabbit_config_path)
     systemd.systemctl('daemon-reload')
 
     # rabbitmq restart exits with 143 status code that is valid in this case.
@@ -203,10 +204,27 @@ def install():
     logger.notice('Installing RabbitMQ...')
     _install()
     _configure()
-    logger.notice('RabbitMQ installed successfully')
+    logger.notice('RabbitMQ successfully installed')
 
 
 def configure():
     logger.notice('Configuring RabbitMQ...')
     _configure()
-    logger.notice('RabbitMQ configured successfully')
+    logger.notice('RabbitMQ successfully configured')
+
+
+def remove():
+    logger.notice('Removing RabbitMQ...')
+    remove_notice(RABBITMQ)
+    remove_logrotate(RABBITMQ)
+    systemd.remove(RABBITMQ)
+    remove_files([
+        HOME_DIR,
+        LOG_DIR,
+        FD_LIMIT_PATH,
+        join('/var/lib', RABBITMQ),
+        join('/usr/lib', RABBITMQ),
+        join('/var/log', RABBITMQ)
+    ])
+    yum_remove('erlang')
+    logger.notice('RabbitMQ successfully removed')

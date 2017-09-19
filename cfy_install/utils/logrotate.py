@@ -1,6 +1,6 @@
 from os.path import join, isfile, isdir
 
-from .deploy import deploy
+from .files import deploy
 from .common import chown, mkdir, chmod, remove, move
 
 from ..logger import get_logger

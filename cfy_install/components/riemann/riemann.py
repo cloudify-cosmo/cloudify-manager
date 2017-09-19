@@ -6,13 +6,13 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
-from ...utils import common
+from ...utils import common, files
 from ...utils.systemd import systemd
-from ...utils.install import yum_install
-from ...utils.logrotate import set_logrotate
-from ...utils.users import create_service_user
-from ...utils.deploy import copy_notice, deploy
-from ...utils.files import get_local_source_path
+from ...utils.install import yum_install, yum_remove
+from ...utils.logrotate import set_logrotate, remove_logrotate
+from ...utils.users import (create_service_user,
+                            delete_service_user,
+                            delete_group)
 
 logger = get_logger(RIEMANN)
 
@@ -20,6 +20,7 @@ HOME_DIR = join('/opt', RIEMANN)
 CONFIG_PATH = join('/etc', RIEMANN)
 LOG_DIR = join(constants.BASE_LOG_DIR, RIEMANN)
 LANGOHR_HOME = '/opt/lib'
+LANGOHR_JAR_PATH = join(LANGOHR_HOME, 'langohr.jar')
 
 
 def _create_paths():
@@ -38,23 +39,22 @@ def _install():
     sources = config[RIEMANN]['sources']
 
     langohr_resource_path = \
-        get_local_source_path(sources['langohr_source_url'])
-    langohr_jar_path = join(LANGOHR_HOME, 'langohr.jar')
-    common.copy(langohr_resource_path, langohr_jar_path)
-    common.chmod('644', langohr_jar_path)
+        files.get_local_source_path(sources['langohr_source_url'])
+    common.copy(langohr_resource_path, LANGOHR_JAR_PATH)
+    common.chmod('644', LANGOHR_JAR_PATH)
 
     yum_install(sources['daemonize_source_url'])
     yum_install(sources['riemann_source_url'])
 
 
 def _configure_riemann():
-    logger.info('Getting manager repo archive...')
+    logger.debug('Getting manager repo archive...')
     cloudify_resources_url = \
         config[RIEMANN]['sources']['cloudify_resources_url']
-    local_tar_path = get_local_source_path(cloudify_resources_url)
+    local_tar_path = files.get_local_source_path(cloudify_resources_url)
     manager_dir = common.untar(local_tar_path, unique_tmp_dir=True)
 
-    logger.info('Deploying Riemann manager.config...')
+    logger.debug('Deploying Riemann manager.config...')
     config_src_path = join(
         manager_dir, 'plugins', 'riemann-controller',
         'riemann_controller', 'resources', 'manager.config'
@@ -63,8 +63,8 @@ def _configure_riemann():
 
 
 def _deploy_riemann_config():
-    logger.info('Deploying Riemann conf...')
-    deploy(
+    logger.info('Deploying Riemann config...')
+    files.deploy(
         src=join(constants.COMPONENTS_DIR, RIEMANN, 'config', 'main.clj'),
         dst=join(CONFIG_PATH, 'main.clj')
     )
@@ -72,7 +72,7 @@ def _deploy_riemann_config():
 
 
 def _start_and_verify_service():
-    logger.info('Starting Riemann Service...')
+    logger.info('Starting Riemann service...')
     systemd.configure(RIEMANN)
     systemd.restart(RIEMANN)
     systemd.verify_alive(RIEMANN)
@@ -87,7 +87,7 @@ def _create_user():
 
 
 def _configure():
-    copy_notice(RIEMANN)
+    files.copy_notice(RIEMANN)
     _create_user()
     _create_paths()
     set_logrotate(RIEMANN)
@@ -100,10 +100,27 @@ def install():
     logger.notice('Installing Riemann...')
     _install()
     _configure()
-    logger.notice('Riemann installed successfully')
+    logger.notice('Riemann successfully installed')
 
 
 def configure():
     logger.notice('Configuring Riemann...')
     _configure()
-    logger.notice('Riemann configured successfully')
+    logger.notice('Riemann successfully configured')
+
+
+def remove():
+    logger.notice('Removing Riemann...')
+    files.remove_notice(RIEMANN)
+    systemd.remove(RIEMANN)
+    remove_logrotate(RIEMANN)
+    delete_service_user(RIEMANN)
+    delete_group(RIEMANN)
+    files.remove_files([
+        HOME_DIR,
+        CONFIG_PATH,
+        LOG_DIR,
+        LANGOHR_JAR_PATH,
+    ])
+    yum_remove(RIEMANN)
+    logger.notice('Riemann successfully removed')

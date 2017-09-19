@@ -6,9 +6,11 @@ from ...logger import get_logger
 
 from ...utils import common
 from ...utils.systemd import systemd
-from ...utils.deploy import copy_notice
-from ...utils.install import yum_install
-from ...utils.users import create_service_user
+from ...utils.install import yum_install, yum_remove
+from ...utils.files import remove_files, remove_notice, copy_notice
+from ...utils.users import (create_service_user,
+                            delete_service_user,
+                            delete_group)
 
 
 logger = get_logger(AMQPINFLUX)
@@ -44,10 +46,21 @@ def install():
     logger.notice('Installing AMQP-Influx...')
     _install()
     _configure()
-    logger.notice('AMQP-Influx installed successfully')
+    logger.notice('AMQP-Influx successfully installed')
 
 
 def configure():
     logger.notice('Configuring AMQP-Influx...')
     _configure()
-    logger.notice('AMQP-Influx configured successfully')
+    logger.notice('AMQP-Influx successfully configured')
+
+
+def remove():
+    logger.notice('Removing AMQP-Influx...')
+    systemd.remove(AMQPINFLUX)
+    remove_notice(AMQPINFLUX)
+    remove_files([HOME_DIR])
+    yum_remove('cloudify-amqp-influx')
+    delete_service_user(AMQPINFLUX)
+    delete_group(AMQPINFLUX)
+    logger.notice('AMQP-Influx successfully removed')

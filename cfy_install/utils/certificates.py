@@ -149,7 +149,7 @@ def _generate_ssl_certificate(ips,
         ])
         remove(csr_path)
 
-    logger.info('Generated SSL certificate: {0} and key: {1}'.format(
+    logger.debug('Generated SSL certificate: {0} and key: {1}'.format(
         cert_path, key_path
     ))
     return cert_path, key_path
@@ -169,7 +169,7 @@ def deploy_or_generate_external_ssl_cert(ips, cn, cert_path, key_path):
         copy(cert_path, const.EXTERNAL_CERT_PATH)
         copy(key_path, const.EXTERNAL_KEY_PATH)
 
-        logger.info(
+        logger.debug(
             'Deployed user-provided SSL certificate `{0}` and SSL private '
             'key `{1}`'.format(
                 const.EXTERNAL_CERT_FILENAME,
@@ -222,6 +222,6 @@ def generate_ca_cert():
         '-inkey', const.INTERNAL_CA_KEY_PATH,
         '-password', 'pass:cloudify',
     ])
-    logger.info('Generated CA certificate: {0} and key: {1}'.format(
+    logger.debug('Generated CA certificate: {0} and key: {1}'.format(
         const.INTERNAL_CA_CERT_PATH, const.INTERNAL_CA_KEY_PATH
     ))

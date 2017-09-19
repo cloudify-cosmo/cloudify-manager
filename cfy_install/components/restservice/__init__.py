@@ -1,1 +1,1 @@
-from .restservice import install, configure  # NOQA
+from .restservice import install, configure, remove  # NOQA

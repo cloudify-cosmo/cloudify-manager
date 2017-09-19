@@ -1,7 +1,7 @@
+from ..logger import get_logger
+
 from .common import run, sudo
 from .files import get_local_source_path
-
-from ..logger import get_logger
 
 logger = get_logger('yum')
 

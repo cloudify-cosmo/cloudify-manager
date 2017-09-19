@@ -10,12 +10,13 @@ from ...logger import get_logger
 from ...utils import common
 from ...utils import certificates
 from ...utils.systemd import systemd
-from ...utils.install import yum_install
-from ...utils.logrotate import set_logrotate
-from ...utils.deploy import copy_notice, deploy
+from ...utils.install import yum_install, yum_remove
+from ...utils.logrotate import set_logrotate, remove_logrotate
+from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
 CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, 'config')
+UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 
 logger = get_logger(NGINX)
 
@@ -26,7 +27,7 @@ def _install():
 
 
 def _deploy_unit_override():
-    logger.info('Creating systemd unit override...')
+    logger.debug('Creating systemd unit override...')
     unit_override_path = '/etc/systemd/system/nginx.service.d'
     common.mkdir(unit_override_path)
     deploy(
@@ -161,10 +162,25 @@ def install():
     logger.notice('Installing NGINX...')
     _install()
     _configure()
-    logger.notice('NGINX installed successfully')
+    logger.notice('NGINX successfully installed')
 
 
 def configure():
     logger.notice('Configuring NGINX...')
     _configure()
-    logger.notice('NGINX configured successfully')
+    logger.notice('NGINX successfully configured')
+
+
+def remove():
+    logger.notice('Removing NGINX...')
+    remove_notice(NGINX)
+    remove_logrotate(NGINX)
+    remove_files([
+        join('/etc', NGINX),
+        join('/var/log', NGINX),
+        join('/var/cache', NGINX),
+        LOG_DIR,
+        UNIT_OVERRIDE_PATH
+    ])
+    yum_remove(NGINX)
+    logger.notice('NGINX successfully removed')

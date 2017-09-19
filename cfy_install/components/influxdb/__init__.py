@@ -1,1 +1,1 @@
-from .influxdb import install, configure  # NOQA
+from .influxdb import install, configure, remove  # NOQA

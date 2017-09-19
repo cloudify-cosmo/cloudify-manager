@@ -4,7 +4,7 @@ from ...config import config
 from ...logger import get_logger
 
 from ...utils import common
-from ...utils.install import yum_install
+from ...utils.install import yum_install, yum_remove
 
 
 logger = get_logger(CLI)
@@ -35,10 +35,16 @@ def install():
     logger.notice('Installing Cloudify CLI...')
     _install()
     _configure()
-    logger.notice('Cloudify CLI installed successfully')
+    logger.notice('Cloudify CLI successfully installed')
 
 
 def configure():
     logger.notice('Configuring Cloudify CLI...')
     _configure()
-    logger.notice('Cloudify CLI configured successfully')
+    logger.notice('Cloudify CLI successfully configured')
+
+
+def remove():
+    logger.notice('Removing Cloudify CLI...')
+    yum_remove('cloudify')
+    logger.notice('Cloudify CLI successfully removed')

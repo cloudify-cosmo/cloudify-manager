@@ -3,15 +3,15 @@ import re
 import json
 import tempfile
 from glob import glob
+from tempfile import mkstemp
 from os.path import join, isabs
 
-from .common import move, sudo, remove
 from .network import is_url, curl_download
+from .common import move, sudo, copy, remove
 
-from ..logger import get_logger
-from ..constants import CLOUDIFY_SOURCES_PATH
 from ..config import config
-
+from ..logger import get_logger
+from ..constants import CLOUDIFY_SOURCES_PATH, COMPONENTS_DIR
 
 logger = get_logger('Files')
 
@@ -94,3 +94,36 @@ def remove_temp_files():
     for path in config['temp_paths_to_remove']:
         remove(path)
     logger.debug('Cleaned temporary files')
+
+
+def remove_files(file_list, ignore_failure=False):
+    for path in file_list:
+        logger.debug('Removing {0}...'.format(path))
+        sudo(['rm', '-rf', path], ignore_failures=ignore_failure)
+
+
+def deploy(src, dst, render=True):
+    if render:
+        with open(src, 'r') as f:
+            content = f.read()
+        content = content.format(**config)
+        fd, temp_dst = mkstemp()
+        os.close(fd)
+        with open(temp_dst, 'w') as f:
+            f.write(content)
+        move(temp_dst, dst)
+    else:
+        copy(src, dst)
+
+
+def _get_notice_path(service_name):
+    return join('/opt', '{0}_NOTICE.txt'.format(service_name))
+
+
+def copy_notice(service_name):
+    src = join(COMPONENTS_DIR, service_name, 'NOTICE.txt')
+    copy(src, _get_notice_path(service_name))
+
+
+def remove_notice(service_name):
+    remove(_get_notice_path(service_name))

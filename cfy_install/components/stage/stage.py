@@ -2,17 +2,17 @@ from os.path import join
 
 from ..service_names import STAGE
 
-from ...utils import common
 from ...config import config
 from ...logger import get_logger
+from ...utils import common, files
 from ...utils.systemd import systemd
-from ...utils.deploy import copy_notice
 from ...utils.network import wait_for_port
-from ...utils.logrotate import set_logrotate
-from ...utils.users import create_service_user
-from ...utils.files import get_local_source_path
+from ...utils.users import (create_service_user,
+                            delete_service_user,
+                            delete_group)
 from ...utils.sudoers import deploy_sudo_command_script
 from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH
+from ...utils.logrotate import set_logrotate, remove_logrotate
 
 logger = get_logger(STAGE)
 
@@ -33,7 +33,7 @@ def _create_paths():
 def _install():
     stage_source_url = config[STAGE]['sources']['stage_source_url']
     try:
-        stage_tar = get_local_source_path(stage_source_url)
+        stage_tar = files.get_local_source_path(stage_source_url)
     except StandardError:
         logger.info('Stage package not found in manager resources package')
         logger.notice('Stage will not be installed.')
@@ -49,7 +49,7 @@ def _install():
 def _create_user_and_set_permissions():
     create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
 
-    logger.info('Fixing permissions...')
+    logger.debug('Fixing permissions...')
     common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
     common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
     common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
@@ -58,7 +58,7 @@ def _create_user_and_set_permissions():
 def _install_nodejs():
     logger.info('Installing NodeJS...')
     nodejs_source_url = config[STAGE]['sources']['nodejs_source_url']
-    nodejs = get_local_source_path(nodejs_source_url)
+    nodejs = files.get_local_source_path(nodejs_source_url)
     common.untar(nodejs, NODEJS_DIR)
 
 
@@ -96,7 +96,7 @@ def _start_and_validate_stage():
 
 
 def _configure():
-    copy_notice(STAGE)
+    files.copy_notice(STAGE)
     set_logrotate(STAGE)
     _create_user_and_set_permissions()
     _install_nodejs()
@@ -111,10 +111,21 @@ def install():
     if config[STAGE]['skip_installation']:
         return
     _configure()
-    logger.notice('Stage installed successfully')
+    logger.notice('Stage successfully installed')
 
 
 def configure():
     logger.notice('Configuring Stage...')
     _configure()
-    logger.notice('Stage configured successfully')
+    logger.notice('Stage successfully configured')
+
+
+def remove():
+    logger.notice('Removing Stage...')
+    files.remove_notice(STAGE)
+    remove_logrotate(STAGE)
+    systemd.remove(STAGE)
+    delete_service_user(STAGE_USER)
+    delete_group(STAGE_GROUP)
+    files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
+    logger.notice('Stage successfully removed')

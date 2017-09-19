@@ -129,7 +129,7 @@ def validate_machine():
         logger.info('Skipping validations')
         return
 
-    logger.info('Validating local machine')
+    logger.notice('Validating local machine...')
     _validate_python_version()
     _validate_supported_distros()
     _validate_sufficient_memory()
@@ -140,4 +140,4 @@ def validate_machine():
         printable_error = 'Validation error(s):\n' \
                           '{0}'.format('\n'.join(_errors))
         raise StandardError(printable_error)
-    logger.info('All validations passed successfully!')
+    logger.notice('All validations passed successfully!')

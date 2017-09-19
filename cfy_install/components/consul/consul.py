@@ -6,10 +6,8 @@ from ..service_names import CONSUL
 
 from ...config import config
 from ...logger import get_logger
-
 from ...utils import common
-from ...utils.files import get_local_source_path
-
+from ...utils.files import get_local_source_path, remove_files
 
 HOME_DIR = join('/opt', CONSUL)
 CONSUL_BINARY = join(HOME_DIR, 'consul')
@@ -46,10 +44,16 @@ def install():
     logger.notice('Installing Consul...')
     _install()
     _verify()
-    logger.notice('Consul installed successfully')
+    logger.notice('Consul successfully installed')
 
 
 def configure():
-    logger.info('Configuring Consul...')
+    logger.notice('Configuring Consul...')
     _verify()
-    logger.info('Consul successfully configured')
+    logger.notice('Consul successfully configured')
+
+
+def remove():
+    logger.notice('Removing Cloudify Consul...')
+    remove_files([HOME_DIR, CONFIG_DIR])
+    logger.notice('Consul successfully removed')

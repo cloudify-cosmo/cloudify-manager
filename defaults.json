@@ -100,6 +100,7 @@
   },
   "python": {
     "install_python_compilers": false,
+    "remove_on_teardown": false,
     "sources": {
       "pip_source_url": "python-pip-7.1.0-1.el7.noarch.rpm"
     }

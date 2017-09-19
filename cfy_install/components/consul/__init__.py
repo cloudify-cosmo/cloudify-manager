@@ -1,1 +1,1 @@
-from .consul import install, configure  # NOQA
+from .consul import install, configure, remove  # NOQA

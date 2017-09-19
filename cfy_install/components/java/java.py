@@ -6,10 +6,9 @@ from ... import constants
 from ...logger import get_logger
 from ...config import config
 
-from ...utils.install import yum_install
-from ...utils.deploy import copy_notice
 from ...utils.common import move, mkdir, sudo
-
+from ...utils.install import yum_install, yum_remove
+from ...utils.files import remove_files, copy_notice, remove_notice
 
 logger = get_logger(JAVA)
 HOME_DIR = join('/opt', JAVA)
@@ -47,10 +46,18 @@ def install():
     logger.notice('Installing Java...')
     _install()
     _configure()
-    logger.notice('Java installed successfully')
+    logger.notice('Java successfully installed')
 
 
 def configure():
     logger.info('Configuring Java...')
     _configure()
     logger.info('Java successfully configured')
+
+
+def remove():
+    logger.notice('Removing Java...')
+    remove_notice(JAVA)
+    remove_files([LOG_DIR])
+    yum_remove(JAVA)
+    logger.notice('Java successfully removed')

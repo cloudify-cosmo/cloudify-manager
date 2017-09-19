@@ -1,6 +1,6 @@
 from os.path import join
 
-from .deploy import deploy
+from .files import deploy
 from .common import sudo, remove
 
 from ..logger import get_logger

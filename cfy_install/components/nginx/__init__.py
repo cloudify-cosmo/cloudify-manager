@@ -1,1 +1,1 @@
-from .nginx import install, configure  # NOQA
+from .nginx import install, configure, remove  # NOQA

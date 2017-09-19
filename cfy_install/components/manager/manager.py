@@ -1,20 +1,28 @@
 import os
 import subprocess
 from os.path import join
+from tempfile import gettempdir
 
 from ..service_names import MANAGER
 
 from ... import constants
+from ...utils import common
 from ...config import config
 from ...logger import get_logger
-
-from ...utils import common
-from ...utils.users import create_service_user
+from ...utils.users import (create_service_user,
+                            delete_service_user,
+                            delete_group)
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
-from ...utils.files import replace_in_file, get_local_source_path
+from ...utils.files import (replace_in_file,
+                            get_local_source_path,
+                            remove_files)
 
 logger = get_logger(MANAGER)
+
+
+def _get_exec_tempdir():
+    return os.environ.get(constants.CFY_EXEC_TEMPDIR_ENVVAR) or gettempdir()
 
 
 def _create_cloudify_user():
@@ -90,9 +98,9 @@ def _set_selinux_permissive():
     and systemwide.
     """
     selinux_state = subprocess.check_output('getenforce').rstrip('\n\r')
-    logger.info('Checking whether SELinux in enforced...')
+    logger.debug('Checking whether SELinux in enforced...')
     if selinux_state == 'Enforcing':
-        logger.debug('SELinux is enforcing, setting permissive state...')
+        logger.info('SELinux is enforcing, setting permissive state...')
         common.sudo(['setenforce', 'permissive'])
         replace_in_file(
             'SELINUX=enforcing',
@@ -127,10 +135,23 @@ def install():
     logger.notice('Installing Cloudify Manager resources...')
     _install()
     _configure()
-    logger.notice('Cloudify Manager resources installed successfully')
+    logger.notice('Cloudify Manager resources successfully installed')
 
 
 def configure():
     logger.notice('Configuring Cloudify Manager resources...')
     _configure()
-    logger.notice('Cloudify Manager resources configured...')
+    logger.notice('Cloudify Manager resources successfully configured...')
+
+
+def remove():
+    logger.notice('Removing Cloudify Manager resources...')
+    delete_service_user(constants.CLOUDIFY_USER)
+    delete_group(constants.CLOUDIFY_GROUP)
+    remove_files([
+        constants.BASE_RESOURCES_PATH,
+        constants.CLOUDIFY_HOME_DIR,
+        constants.BASE_LOG_DIR,
+        join(_get_exec_tempdir(), 'cloudify-ctx')
+    ])
+    logger.notice('Cloudify Manager resources successfully removed')

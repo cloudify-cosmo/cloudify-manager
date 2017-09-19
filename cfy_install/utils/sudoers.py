@@ -3,7 +3,7 @@ from os.path import join
 from .. import constants
 from ..logger import get_logger
 
-from .deploy import deploy
+from .files import deploy
 from .common import sudo, chmod, chown
 
 logger = get_logger('sudoers')

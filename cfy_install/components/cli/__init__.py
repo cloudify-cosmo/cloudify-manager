@@ -1,1 +1,1 @@
-from .cli import install, configure  # NOQA
+from .cli import install, configure, remove  # NOQA

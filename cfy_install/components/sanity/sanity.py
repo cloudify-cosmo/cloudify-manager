@@ -120,3 +120,7 @@ def install():
 
 def configure():
     pass
+
+
+def remove():
+    pass

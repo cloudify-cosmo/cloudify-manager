@@ -14,14 +14,13 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
-from ...utils import common
-from ...utils import sudoers
+from ...utils import common, sudoers
 from ...utils.systemd import systemd
-from ...utils.install import yum_install
-from ...utils.logrotate import set_logrotate
-from ...utils.deploy import copy_notice, deploy
-from ...utils.files import ln, write_to_tempfile, write_to_file
+from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
+from ...utils.files import deploy, remove_notice, copy_notice
+from ...utils.logrotate import set_logrotate, remove_logrotate
+from ...utils.files import ln, write_to_tempfile, remove_files, write_to_file
 
 
 HOME_DIR = '/opt/manager'
@@ -88,7 +87,6 @@ def _configure_dbus():
 
 
 def _install():
-    logger.info('Installing REST Service...')
     source_url = config[RESTSERVICE]['sources']['restservice_source_url']
     yum_install(source_url)
 
@@ -302,10 +300,20 @@ def install():
     logger.notice('Installing Rest Service...')
     _install()
     _configure()
-    logger.notice('Rest Service installed successfully')
+    logger.notice('Rest Service successfully installed')
 
 
 def configure():
     logger.notice('Configuring Rest Service...')
     _configure()
-    logger.notice('Rest Service configured successfully')
+    logger.notice('Rest Service successfully configured')
+
+
+def remove():
+    logger.notice('Removing Restservice...')
+    remove_notice(RESTSERVICE)
+    remove_logrotate(RESTSERVICE)
+    systemd.remove(RESTSERVICE)
+    remove_files([HOME_DIR, LOG_DIR])
+    yum_remove('cloudify-rest-service')
+    logger.notice('Rest Service successfully installed')

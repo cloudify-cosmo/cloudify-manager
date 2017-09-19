@@ -5,9 +5,9 @@ from ..service_names import MANAGER, MANAGER_IP_SETTER
 from ... import constants
 from ...config import config
 from ...logger import get_logger
-
 from ...utils import common, sudoers
 from ...utils.systemd import systemd
+from ...utils.files import remove_files
 
 
 MANAGER_IP_SETTER_DIR = join('/opt/cloudify', MANAGER_IP_SETTER)
@@ -56,9 +56,20 @@ def _configure():
 
 
 def install():
+    logger.notice('Installing Manager IP Setter...')
     _install()
     _configure()
+    logger.notice('Manager IP Setter successfully installed')
 
 
 def configure():
+    logger.notice('Configuring Manager IP Setter...')
     _configure()
+    logger.notice('Manager IP Setter successfully configured')
+
+
+def remove():
+    logger.notice('Removing Manager IP Setter...')
+    remove_files([MANAGER_IP_SETTER_DIR])
+    systemd.remove(MANAGER_IP_SETTER)
+    logger.notice('Manager IP Setter successfully removed')

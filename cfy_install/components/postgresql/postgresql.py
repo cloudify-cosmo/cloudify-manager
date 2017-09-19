@@ -8,11 +8,9 @@ from ... import constants
 from ...config import config
 from ...logger import get_logger
 
-from ...utils import common
+from ...utils import common, files
 from ...utils.systemd import systemd
-from ...utils.deploy import copy_notice
-from ...utils.install import yum_install
-from ...utils.files import ln, write_to_file, write_to_tempfile
+from ...utils.install import yum_install, yum_remove
 
 
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
@@ -31,22 +29,22 @@ logger = get_logger(POSTGRESQL)
 def _install():
     sources = config[POSTGRESQL]['sources']
 
-    logger.info('Installing PostgreSQL dependencies...')
+    logger.debug('Installing PostgreSQL dependencies...')
     yum_install(sources['libxslt_rpm_url'])
 
-    logger.info('Installing PostgreSQL...')
+    logger.debug('Installing PostgreSQL...')
     yum_install(sources['ps_libs_rpm_url'])
     yum_install(sources['ps_rpm_url'])
     yum_install(sources['ps_contrib_rpm_url'])
     yum_install(sources['ps_server_rpm_url'])
     yum_install(sources['ps_devel_rpm_url'])
 
-    logger.info('Installing python libs for PostgreSQL...')
+    logger.debug('Installing python libs for PostgreSQL...')
     yum_install(sources['psycopg2_rpm_url'])
 
 
 def _init_postgresql():
-    logger.info('Initializing PostreSQL DATA folder...')
+    logger.debug('Initializing PostreSQL DATA folder...')
     postgresql95_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup')
     try:
         common.sudo(command=[postgresql95_setup, 'initdb'])
@@ -58,18 +56,18 @@ def _init_postgresql():
     systemd.enable(SYSTEMD_SERVICE_NAME, append_prefix=False)
     systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
-    logger.info('Setting PostgreSQL logs path...')
+    logger.debug('Setting PostgreSQL logs path...')
     ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
     common.mkdir(LOG_DIR)
     if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
-        ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
+        files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
 
     logger.info('Starting PostgreSQL service...')
     systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
 
 def _read_hba_lines():
-    temp_hba_path = write_to_tempfile('')
+    temp_hba_path = files.write_to_tempfile('')
     common.copy(PS_HBA_CONF, temp_hba_path)
     common.chmod('777', temp_hba_path)
     with open(temp_hba_path, 'r') as f:
@@ -99,7 +97,7 @@ def _update_configuration():
 
 
 def _create_postgres_pass_file():
-    logger.info('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
+    logger.debug('Creating postgresql pgpass file: {0}'.format(PGPASS_PATH))
     pg_config = config[POSTGRESQL]
     pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
         host=pg_config['host'],
@@ -109,7 +107,7 @@ def _create_postgres_pass_file():
         password=pg_config['password']
     )
     pgpass_path = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
-    write_to_file(pgpass_content, pgpass_path)
+    files.write_to_file(pgpass_content, pgpass_path)
     common.chmod('400', pgpass_path)
     common.chown(
         constants.CLOUDIFY_USER,
@@ -145,7 +143,7 @@ def _create_default_db():
 
 
 def _configure():
-    copy_notice(POSTGRESQL)
+    files.copy_notice(POSTGRESQL)
     _init_postgresql()
     _update_configuration()
     _create_postgres_pass_file()
@@ -160,10 +158,20 @@ def install():
     logger.notice('Installing PostgreSQL...')
     _install()
     _configure()
-    logger.notice('PostgreSQL installed successfully')
+    logger.notice('PostgreSQL successfully installed')
 
 
 def configure():
     logger.notice('Configuring PostgreSQL...')
     _configure()
-    logger.notice('PostgreSQL configured successfully')
+    logger.notice('PostgreSQL successfully configured')
+
+
+def remove():
+    logger.notice('Removing PostgreSQL...')
+    files.remove_notice(POSTGRESQL)
+    systemd.remove(SYSTEMD_SERVICE_NAME)
+    files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
+    yum_remove('postgresql95')
+    yum_remove('postgresql95-libs')
+    logger.notice('PostgreSQL successfully removed')

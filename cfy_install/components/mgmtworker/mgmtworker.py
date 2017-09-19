@@ -9,10 +9,9 @@ from ...logger import get_logger
 
 from ...utils import common
 from ...utils.systemd import systemd
-from ...utils.install import yum_install
 from ...utils.logrotate import set_logrotate
-from ...utils.deploy import copy_notice, deploy
-
+from ...utils.install import yum_install, yum_remove
+from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
 HOME_DIR = '/opt/mgmtworker'
 MGMTWORKER_VENV = join(HOME_DIR, 'env')
@@ -23,7 +22,6 @@ logger = get_logger(MGMTWORKER)
 
 
 def _install():
-    logger.info('Installing Management Worker...')
     source_url = config[MGMTWORKER]['sources']['mgmtworker_source_url']
     yum_install(source_url)
 
@@ -49,8 +47,6 @@ def _create_paths():
 
 
 def _deploy_mgmtworker_config():
-    logger.info('Configuring Management worker...')
-
     config[MGMTWORKER]['service_user'] = const.CLOUDIFY_USER
     config[MGMTWORKER]['service_group'] = const.CLOUDIFY_GROUP
 
@@ -132,10 +128,19 @@ def install():
     logger.notice('Installing Management Worker...')
     _install()
     _configure()
-    logger.notice('Management Worker installed successfully')
+    logger.notice('Management Worker successfully installed')
 
 
 def configure():
     logger.notice('Configuring Management Worker...')
     _configure()
-    logger.notice('Management Worker configured successfully')
+    logger.notice('Management Worker successfully configured')
+
+
+def remove():
+    logger.notice('Removing Management Worker...')
+    remove_notice(MGMTWORKER)
+    systemd.remove(MGMTWORKER)
+    remove_files([HOME_DIR, LOG_DIR])
+    yum_remove('cloudify-management-worker')
+    logger.notice('Management Worker successfully removed')

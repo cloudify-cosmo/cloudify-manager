@@ -2,15 +2,15 @@ from os.path import join, dirname
 
 from ..service_names import COMPOSER
 
-from ...utils import common
 from ...config import config
 from ...logger import get_logger
+from ...utils import common, files
 from ...utils.systemd import systemd
-from ...utils.deploy import copy_notice
 from ...utils.network import wait_for_port
-from ...utils.logrotate import set_logrotate
-from ...utils.users import create_service_user
-from ...utils.files import get_local_source_path
+from ...utils.logrotate import set_logrotate, remove_logrotate
+from ...utils.users import (create_service_user,
+                            delete_service_user,
+                            delete_group)
 from ...constants import BASE_LOG_DIR, CLOUDIFY_USER
 
 logger = get_logger(COMPOSER)
@@ -33,7 +33,7 @@ def _create_paths():
 def _install():
     composer_source_url = config[COMPOSER]['sources']['composer_source_url']
     try:
-        composer_tar = get_local_source_path(composer_source_url)
+        composer_tar = files.get_local_source_path(composer_source_url)
     except StandardError:
         logger.info('Composer package not found in manager resources package')
         logger.notice('Composer will not be installed.')
@@ -71,7 +71,7 @@ def _create_user_and_set_permissions():
     # replication and snapshots
     common.sudo(['usermod', '-aG', COMPOSER_GROUP, CLOUDIFY_USER])
 
-    logger.info('Fixing permissions...')
+    logger.debug('Fixing permissions...')
     common.chown(COMPOSER_USER, COMPOSER_GROUP, HOME_DIR)
     common.chown(COMPOSER_USER, COMPOSER_GROUP, LOG_DIR)
 
@@ -80,7 +80,7 @@ def _create_user_and_set_permissions():
 
 
 def _configure():
-    copy_notice(COMPOSER)
+    files.copy_notice(COMPOSER)
     set_logrotate(COMPOSER)
     _create_user_and_set_permissions()
     _run_db_migrate()
@@ -93,10 +93,21 @@ def install():
     if config[COMPOSER]['skip_installation']:
         return
     _configure()
-    logger.notice('Cloudify Composer installed successfully')
+    logger.notice('Cloudify Composer successfully installed')
 
 
 def configure():
-    logger.info('Configuring Cloudify Composer...')
+    logger.notice('Configuring Cloudify Composer...')
     _configure()
-    logger.info('Cloudify Composer successfully configured')
+    logger.notice('Cloudify Composer successfully configured')
+
+
+def remove():
+    logger.notice('Removing Cloudify Composer...')
+    files.remove_notice(COMPOSER)
+    remove_logrotate(COMPOSER)
+    systemd.remove(COMPOSER)
+    delete_service_user(COMPOSER_USER)
+    delete_group(COMPOSER_GROUP)
+    files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
+    logger.notice('Cloudify Composer successfully removed')
