@@ -3,6 +3,7 @@ from os.path import join
 
 import logging
 
+from .config import config
 from .constants import CLOUDIFY_BOOTSTRAP_DIR
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
@@ -68,26 +69,18 @@ def _setup_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    # The handler that outputs to file is added first
+    # The handler that outputs to file always outputs DEBUG
     fh = logging.FileHandler(join(CLOUDIFY_BOOTSTRAP_DIR, 'log.txt'))
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(logging.Formatter(FORMAT_MESSAGE))
     logger.addHandler(fh)
 
-    # The handler that outputs to console is added second
+    # The console log level is determined by the user in the config
+    log_level = config['log_level'].upper()
     sh = logging.StreamHandler(sys.stdout)
-    sh.setLevel(logging.INFO)
+    sh.setLevel(log_level)
     sh.setFormatter(ColoredFormatter(FORMAT_MESSAGE))
     logger.addHandler(sh)
-
-
-def set_logger_level(level):
-    """ Set the log level of the handler that outputs to console """
-
-    logger = logging.getLogger()
-
-    # Getting the second handler - the StreamHandler
-    logger.handlers[1].setLevel(level)
 
 
 _setup_logger()
