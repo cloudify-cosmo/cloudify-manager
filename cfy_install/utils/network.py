@@ -62,7 +62,7 @@ def curl_download(source, destination=None):
         suffix = '.{0}'.format(source.split('.')[-1])
         fd, destination = mkstemp(suffix=suffix)
         os.close(fd)
-        config.add_temp_files_to_clean(destination)
+        config.add_temp_path_to_clean(destination)
 
     curl_cmd = [
         'curl',

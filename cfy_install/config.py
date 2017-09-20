@@ -28,23 +28,9 @@ def dict_merge(dct, merge_dct):
 class Config(dict):
     BS_CONFIG_PATH = join(CLOUDIFY_BOOTSTRAP_DIR, 'bs_config.json')
 
-    def _add_files_to_clean(self, key, new_paths_to_remove):
-        if not isinstance(new_paths_to_remove, (list, tuple)):
-            new_paths_to_remove = [new_paths_to_remove]
-        paths_to_remove = self.setdefault(key, [])
-        paths_to_remove.extend(new_paths_to_remove)
-
-    def add_temp_files_to_clean(self, new_paths_to_remove):
-        self._add_files_to_clean(
-            'temp_paths_to_remove',
-            new_paths_to_remove
-        )
-
-    def add_teardown_files_to_clean(self, new_paths_to_remove):
-        self._add_files_to_clean(
-            'teardown_paths_to_remove',
-            new_paths_to_remove
-        )
+    def add_temp_path_to_clean(self, new_path_to_remove):
+        paths_to_remove = self.setdefault('temp_paths_to_remove', [])
+        paths_to_remove.append(new_path_to_remove)
 
     def dump_config(self):
         with open(self.BS_CONFIG_PATH, 'w') as f:

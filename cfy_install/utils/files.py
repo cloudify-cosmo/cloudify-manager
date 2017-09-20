@@ -78,7 +78,7 @@ def write_to_tempfile(contents, json_dump=False, cleanup=True):
     os.write(fd, contents)
     os.close(fd)
     if cleanup:
-        config.add_temp_files_to_clean(file_path)
+        config.add_temp_path_to_clean(file_path)
     return file_path
 
 
@@ -91,7 +91,7 @@ def write_to_file(contents, destination, json_dump=False):
 
 def remove_temp_files():
     logger.debug('Cleaning temporary files...')
-    for path in config['temp_paths_to_remove']:
+    for path in config.get('temp_paths_to_remove', []):
         remove(path)
     logger.debug('Cleaned temporary files')
 

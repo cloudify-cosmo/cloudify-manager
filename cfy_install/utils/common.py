@@ -86,7 +86,7 @@ def untar(source,
           unique_tmp_dir=False):
     if not destination:
         destination = tempfile.mkdtemp() if unique_tmp_dir else '/tmp'
-        config.add_temp_files_to_clean(destination)
+        config.add_temp_path_to_clean(destination)
     logger.debug('Extracting {0} to {1}...'.format(
         source, destination))
     tar_command = ['tar', '-xzvf', source, '-C', destination, '--strip=1']

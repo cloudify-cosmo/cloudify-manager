@@ -26,7 +26,7 @@ def _install():
     consul_package = get_local_source_path(consul_source_url)
 
     temp_dir = mkdtemp()
-    config.add_temp_files_to_clean(temp_dir)
+    config.add_temp_path_to_clean(temp_dir)
 
     with ZipFile(consul_package) as consul_archive:
         consul_archive.extractall(temp_dir)
