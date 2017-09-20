@@ -1,14 +1,12 @@
 from .. import constants
 from ..config import config
 from ..logger import get_logger
-from ..exceptions import ValidationError
 
 from .service_names import RABBITMQ, MANAGER, AGENT, NGINX
 
-from . import PRIVATE_IP, ENDPOINT_IP, SECURITY
+from . import PRIVATE_IP, PUBLIC_IP, ENDPOINT_IP, SECURITY
 
 BROKER_IP = 'broker_ip'
-PUBLIC_IP = 'public_ip'
 
 logger = get_logger('Globals')
 
@@ -61,20 +59,7 @@ def _set_cert_config():
     nginx_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
 
 
-def _validate_inputs():
-    for key in (PRIVATE_IP, PUBLIC_IP):
-        ip = config[MANAGER].get(key)
-        if not ip:
-            raise ValidationError(
-                '{0} not set in the config.\n'
-                'Edit {1}/config.json to set it'.format(
-                    key, constants.CLOUDIFY_BOOTSTRAP_DIR
-                )
-            )
-
-
 def set_globals():
-    _validate_inputs()
     _set_ip_config()
     _set_rabbitmq_config()
     _set_external_port_and_protocol()

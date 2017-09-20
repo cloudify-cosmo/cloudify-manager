@@ -22,7 +22,7 @@ from .components import restservice
 from .components import manager_ip_setter
 
 from .components.globals import set_globals
-from .components.validations import validate_machine
+from .components.validations import validate
 
 from .logger import get_logger
 from .utils.files import remove_temp_files
@@ -64,7 +64,7 @@ def _print_time():
 
 def install():
     logger.notice('Installing Cloudify Manager...')
-    validate_machine()
+    validate()
     set_globals()
 
     for component in COMPONENTS:

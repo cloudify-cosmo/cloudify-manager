@@ -3,13 +3,14 @@ import urllib2
 import platform
 import subprocess
 
-from . import SOURCES
+from . import SOURCES, PRIVATE_IP, PUBLIC_IP
 
 from .service_names import VALIDATIONS, MANAGER
 
 from ..config import config
 from ..logger import get_logger
 from ..exceptions import ValidationError
+from ..constants import USER_CONFIG_PATH
 
 from ..utils.network import is_url
 
@@ -127,7 +128,22 @@ def _validate_resources_package_url():
                 single_tar_url, ex.args))
 
 
-def validate_machine():
+def _validate_inputs():
+    for key in (PRIVATE_IP, PUBLIC_IP):
+        ip = config[MANAGER].get(key)
+        if not ip:
+            raise ValidationError(
+                '{0} not set in the config.\n'
+                'Edit {1} to set it'.format(
+                    key, USER_CONFIG_PATH
+                )
+            )
+
+
+def validate():
+    # Inputs always need to be validated, otherwise the bootstrap won't work
+    _validate_inputs()
+
     if config[VALIDATIONS]['ignore_bootstrap_validations']:
         logger.info('Skipping validations')
         return

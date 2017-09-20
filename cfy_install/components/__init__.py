@@ -14,6 +14,7 @@ LOG_DIR_KEY = 'log_dir'
 VENV = 'venv'
 
 PRIVATE_IP = 'private_ip'
+PUBLIC_IP = 'public_ip'
 ENDPOINT_IP = 'endpoint_ip'
 SECURITY = 'security'
 
