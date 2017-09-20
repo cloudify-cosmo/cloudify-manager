@@ -1,5 +1,7 @@
 #!/usr/bin/env python
+import sys
 from time import time
+from traceback import format_exception
 
 from .components import cli
 from .components import java
@@ -25,6 +27,7 @@ from .components.globals import set_globals
 from .components.validations import validate
 
 from .logger import get_logger
+
 from .utils.files import remove_temp_files
 
 logger = get_logger('Bootstrap')
@@ -60,6 +63,20 @@ def _print_time():
     logger.notice(
         'Finished in {0} minutes and {1} seconds'.format(int(m), int(s))
     )
+
+
+def _exception_handler(type_, value, traceback):
+    remove_temp_files()
+
+    error = type_.__name__
+    if str(value):
+        error = '{0}: {1}'.format(error, str(value))
+    logger.error(error)
+    debug_traceback = ''.join(format_exception(type_, value, traceback))
+    logger.debug(debug_traceback)
+
+
+sys.excepthook = _exception_handler
 
 
 def install():

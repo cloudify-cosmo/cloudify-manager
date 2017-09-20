@@ -134,7 +134,7 @@ def yum_remove(package, ignore_failures=False):
     try:
         sudo(['yum', 'remove', '-y', package])
     except BaseException:
-        msg = 'Package `{0}` may not been removed successfully!'
+        msg = 'Package `{0}` may not been removed successfully'.format(package)
         if not ignore_failures:
             logger.error(msg)
             raise
