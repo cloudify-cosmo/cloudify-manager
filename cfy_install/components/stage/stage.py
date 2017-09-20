@@ -11,6 +11,9 @@ from ..service_names import STAGE
 
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import FileError
+from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH
+
 from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
@@ -18,7 +21,6 @@ from ...utils.users import (create_service_user,
                             delete_service_user,
                             delete_group)
 from ...utils.sudoers import deploy_sudo_command_script
-from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
 logger = get_logger(STAGE)
@@ -41,7 +43,7 @@ def _install():
     stage_source_url = config[STAGE][SOURCES]['stage_source_url']
     try:
         stage_tar = files.get_local_source_path(stage_source_url)
-    except StandardError:
+    except FileError:
         logger.info('Stage package not found in manager resources package')
         logger.notice('Stage will not be installed.')
         config[STAGE]['skip_installation'] = True

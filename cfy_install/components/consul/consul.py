@@ -8,6 +8,8 @@ from ..service_names import CONSUL
 
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import ValidationError
+
 from ...utils import common
 from ...utils.files import get_local_source_path, remove_files
 
@@ -39,7 +41,7 @@ def _verify():
     logger.info('Verifying consul is installed')
     result = common.run([CONSUL_BINARY, 'version'])
     if 'Consul' not in result.aggr_stdout:
-        raise StandardError('Could not verify consul installation')
+        raise ValidationError('Could not verify consul installation')
 
 
 def install():

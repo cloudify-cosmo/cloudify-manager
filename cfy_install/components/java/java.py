@@ -5,8 +5,9 @@ from .. import SOURCES
 from ..service_names import JAVA
 
 from ... import constants
-from ...logger import get_logger
 from ...config import config
+from ...logger import get_logger
+from ...exceptions import ValidationError
 
 from ...utils.common import move, mkdir, sudo
 from ...utils.install import yum_install, yum_remove
@@ -35,7 +36,7 @@ def _move_java_log():
 def _validate_java_installed():
     java_result = sudo(['java', '-version'], ignore_failures=True)
     if java_result.returncode != 0:
-        raise StandardError('Java runtime error: java was not installed')
+        raise ValidationError('Java runtime error: java was not installed')
 
 
 def _configure():

@@ -15,6 +15,7 @@ from ..service_names import INFLUXB, MANAGER
 from ... import constants
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import ValidationError, BootstrapError
 
 from ...utils import common
 from ...utils.systemd import systemd
@@ -83,14 +84,14 @@ def _configure_database(host, port):
         common.remove('/tmp/retention.json')
 
     except Exception as ex:
-        raise StandardError('Failed to create: {0} ({1}).'.format(db_name, ex))
+        raise BootstrapError('Failed to create: {0} ({1}).'.format(db_name, ex))
 
     logger.debug('Verifying database created successfully...')
     db_list = eval(urllib2.urlopen(urllib2.Request(url_for_list)).read())
     try:
         assert any(d.get('name') == db_name for d in db_list)
     except AssertionError:
-        raise StandardError('Verification failed!')
+        raise ValidationError('Verification failed!')
     logger.info('Databased {0} successfully created'.format(db_name))
 
 
@@ -156,7 +157,7 @@ def _check_response():
     # InfluxDB normally responds with a 404 on GET to /, but also allow other
     # non-server-error response codes to allow for that behaviour to change.
     if response.code >= 500:
-        raise StandardError('Could not validate InfluxDB')
+        raise ValidationError('Could not validate InfluxDB')
 
 
 def _start_and_verify_alive():

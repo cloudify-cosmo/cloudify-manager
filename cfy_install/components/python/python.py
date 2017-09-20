@@ -4,6 +4,7 @@ from ..service_names import PYTHON
 
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import ValidationError
 
 from ...utils.common import sudo
 from ...utils.install import yum_install, yum_remove
@@ -26,8 +27,9 @@ def _validate_pip_installed():
     logger.info('Validating pip installation...')
     pip_result = sudo(['pip'], ignore_failures=True)
     if pip_result.returncode != 0:
-        raise StandardError('Python runtime installation error: '
-                            'pip was not installed')
+        raise ValidationError(
+            'Python runtime installation error: pip was not installed'
+        )
 
 
 def _configure():

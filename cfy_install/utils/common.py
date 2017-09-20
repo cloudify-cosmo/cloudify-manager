@@ -4,8 +4,9 @@ import shlex
 import tempfile
 import subprocess
 
-from ..logger import get_logger
 from ..config import config
+from ..logger import get_logger
+from ..exceptions import BootstrapError
 
 logger = get_logger('utils')
 
@@ -35,7 +36,7 @@ def run(command, retries=0, stdin=b'', ignore_failures=False,
         elif not ignore_failures:
             msg = 'Failed running command: {0} ({1}).'.format(
                 command_str, proc.aggr_stderr)
-            raise RuntimeError(msg)
+            raise BootstrapError(msg)
     return proc
 
 

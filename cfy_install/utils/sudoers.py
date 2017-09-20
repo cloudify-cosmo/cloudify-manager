@@ -2,6 +2,7 @@ from os.path import join
 
 from .. import constants
 from ..logger import get_logger
+from ..exceptions import ValidationError
 
 from .files import deploy
 from .common import sudo, chmod, chown
@@ -25,7 +26,7 @@ def add_entry_to_sudoers(entry, description):
         ignore_failures=False,
     )
     if valid.returncode != 0:
-        raise StandardError(
+        raise ValidationError(
             "Generated sudoers entry containing \"{entry}\" was "
             "invalid.".format(entry=entry)
         )

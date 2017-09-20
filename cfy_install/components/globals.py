@@ -1,6 +1,7 @@
 from .. import constants
 from ..config import config
 from ..logger import get_logger
+from ..exceptions import ValidationError
 
 from .service_names import RABBITMQ, MANAGER, AGENT, NGINX
 
@@ -64,7 +65,7 @@ def _validate_inputs():
     for key in (PRIVATE_IP, PUBLIC_IP):
         ip = config[MANAGER].get(key)
         if not ip:
-            raise StandardError(
+            raise ValidationError(
                 '{0} not set in the config.\n'
                 'Edit {1}/config.json to set it'.format(
                     key, constants.CLOUDIFY_BOOTSTRAP_DIR

@@ -5,6 +5,7 @@ from .common import sudo, remove
 
 from ..logger import get_logger
 from ..constants import COMPONENTS_DIR
+from ..exceptions import ValidationError
 
 logger = get_logger('SystemD')
 
@@ -132,7 +133,7 @@ class SystemD(object):
         if self.is_alive(service_name, append_prefix):
             logger.debug('{0} is running'.format(service_name))
         else:
-            raise StandardError('{0} is not running'.format(service_name))
+            raise ValidationError('{0} is not running'.format(service_name))
 
     @staticmethod
     def _get_full_service_name(service_name, append_prefix):

@@ -6,6 +6,7 @@ from time import sleep
 from tempfile import mkstemp
 from urlparse import urlparse
 
+from ..exceptions import NetworkError
 from ..components.service_names import MANAGER
 
 from .common import run
@@ -42,7 +43,7 @@ def wait_for_port(port, host='localhost'):
             continue
         logger.info('{0}:{1} is open!'.format(host, port))
         return
-    raise StandardError(
+    raise NetworkError(
         'Failed to connect to {0}:{1}...'.format(host, port)
     )
 

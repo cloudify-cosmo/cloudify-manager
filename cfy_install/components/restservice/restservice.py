@@ -26,6 +26,7 @@ from ..service_names import RESTSERVICE, MANAGER, RABBITMQ, POSTGRESQL, AGENT
 from ... import constants
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import BootstrapError, NetworkError
 
 from ...utils import common, sudoers
 from ...utils.systemd import systemd
@@ -270,15 +271,15 @@ def _verify_restservice():
     except urllib2.HTTPError as e:
         response = e
     except urllib2.URLError as e:
-        raise StandardError(
+        raise NetworkError(
             'REST service returned an invalid response: {0}'.format(e))
     if response.code == 401:
-        raise StandardError(
+        raise NetworkError(
             'Could not connect to the REST service: '
             '401 unauthorized. Possible access control misconfiguration'
         )
     if response.code != 200:
-        raise StandardError(
+        raise NetworkError(
             'REST service returned an unexpected response: '
             '{0}'.format(response.code)
         )
@@ -286,7 +287,7 @@ def _verify_restservice():
     try:
         json.load(response)
     except ValueError as e:
-        raise StandardError(
+        raise BootstrapError(
             'REST service returned malformed JSON: {0}'.format(e))
 
 

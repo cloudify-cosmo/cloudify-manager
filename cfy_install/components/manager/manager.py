@@ -8,9 +8,11 @@ from .. import SOURCES
 from ..service_names import MANAGER
 
 from ... import constants
-from ...utils import common
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import FileError
+
+from ...utils import common
 from ...utils.users import (create_service_user,
                             delete_service_user,
                             delete_group)
@@ -70,7 +72,7 @@ def _normalize_agent_names():
         elif filename.endswith('.exe'):
             return '.exe'
         else:
-            raise StandardError(
+            raise FileError(
                 'Unknown agent format for {0}. '
                 'Must be either tar.gz or exe'.format(filename))
 

@@ -8,6 +8,7 @@ from ..service_names import RABBITMQ
 from ... import constants
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import ValidationError, NetworkError
 
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
@@ -180,10 +181,10 @@ def _validate_rabbitmq_running():
 
     result = sudo([RABBITMQ_CTL, 'status'])
     if result.returncode != 0:
-        raise StandardError('Rabbitmq failed to start')
+        raise ValidationError('Rabbitmq failed to start')
 
     if not is_port_open(SECURE_PORT, host='127.0.0.1'):
-        raise StandardError(
+        raise NetworkError(
             '{0} error: port {1}:{2} was not open'.format(
                 RABBITMQ, '127.0.0.1', SECURE_PORT)
         )

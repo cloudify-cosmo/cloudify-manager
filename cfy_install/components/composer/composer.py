@@ -6,6 +6,9 @@ from ..service_names import COMPOSER
 
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import FileError
+from ...constants import BASE_LOG_DIR, CLOUDIFY_USER
+
 from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
@@ -13,7 +16,6 @@ from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.users import (create_service_user,
                             delete_service_user,
                             delete_group)
-from ...constants import BASE_LOG_DIR, CLOUDIFY_USER
 
 logger = get_logger(COMPOSER)
 
@@ -36,7 +38,7 @@ def _install():
     composer_source_url = config[COMPOSER][SOURCES]['composer_source_url']
     try:
         composer_tar = files.get_local_source_path(composer_source_url)
-    except StandardError:
+    except FileError:
         logger.info('Composer package not found in manager resources package')
         logger.notice('Composer will not be installed.')
         config[COMPOSER]['skip_installation'] = True

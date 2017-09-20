@@ -11,6 +11,7 @@ from .common import move, sudo, copy, remove
 
 from ..config import config
 from ..logger import get_logger
+from ..exceptions import FileError
 from ..constants import CLOUDIFY_SOURCES_PATH, COMPONENTS_DIR
 
 logger = get_logger('Files')
@@ -58,11 +59,11 @@ def get_local_source_path(source_url):
     if '*' in path:
         matching_paths = glob(path)
         if not matching_paths:
-            raise StandardError(
+            raise FileError(
                 'Could not locate source matching {0}'.format(source_url)
             )
         if len(matching_paths) > 1:
-            raise StandardError(
+            raise FileError(
                 'Expected to find single source matching '
                 '{0}, but found: {1}'.format(source_url, matching_paths)
             )

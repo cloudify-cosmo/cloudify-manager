@@ -12,9 +12,10 @@ from .. import (
 
 from ..service_names import MGMTWORKER
 
-from ... import constants as const
 from ...config import config
 from ...logger import get_logger
+from ... import constants as const
+from ...exceptions import ValidationError
 
 from ...utils import common
 from ...utils.systemd import systemd
@@ -113,7 +114,7 @@ def _check_worker_running():
             logger.info('Celery is up')
             return
         sleep(1)
-    raise StandardError('Could not validate that celery is running')
+    raise ValidationError('Could not validate that celery is running')
 
 
 def _start_and_verify_mgmtworker():

@@ -9,6 +9,7 @@ from .service_names import VALIDATIONS, MANAGER
 
 from ..config import config
 from ..logger import get_logger
+from ..exceptions import ValidationError
 
 from ..utils.network import is_url
 
@@ -141,5 +142,5 @@ def validate_machine():
     if _errors:
         printable_error = 'Validation error(s):\n' \
                           '{0}'.format('\n'.join(_errors))
-        raise StandardError(printable_error)
+        raise ValidationError(printable_error)
     logger.notice('All validations passed successfully!')

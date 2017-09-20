@@ -7,11 +7,12 @@ from .. import SOURCES, PRIVATE_IP
 
 from ..service_names import SANITY, MANAGER
 
-from ...utils import common
 from ...config import config
 from ...logger import get_logger
-from ...utils.network import wait_for_port
 from ...constants import CLOUDIFY_HOME_DIR
+
+from ...utils import common
+from ...utils.network import wait_for_port
 from ...utils.files import get_local_source_path
 
 logger = get_logger(SANITY)
