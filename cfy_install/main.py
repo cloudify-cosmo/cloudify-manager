@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from time import time
-from pprint import pformat
 
 from .components import cli
 from .components import java
@@ -83,7 +82,6 @@ def install():
     for component in COMPONENTS:
         component.install()
 
-    logger.debug(pformat(config))
     config.dump_config()
     remove_temp_files()
     logger.notice('Cloudify Manager successfully installed!')
