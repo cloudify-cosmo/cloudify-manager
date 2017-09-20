@@ -55,7 +55,7 @@ def _install_postgresql_jdbc_driver(sources):
     jar_path = join(HOME_DIR, 'vendor', 'jar')
     jdbc_path = join(jar_path, 'jdbc')
     common.mkdir(jdbc_path)
-    common.chown('logstash', 'logstash', jar_path)
+    common.chown(LOGSTASH, LOGSTASH, jar_path)
     driver_path = get_local_source_path(jdbc_driver_url)
     common.run([
         'sudo', '-u', 'logstash',
@@ -107,7 +107,7 @@ def _deploy_systemd_unit_override():
 
 def _create_log_dir():
     common.mkdir(LOG_DIR)
-    common.chown('logstash', 'logstash', LOG_DIR)
+    common.chown(LOGSTASH, LOGSTASH, LOG_DIR)
 
 
 def _edit_init_d_file():

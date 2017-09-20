@@ -10,7 +10,7 @@ from ...utils import common
 from ...utils.files import get_local_source_path, remove_files
 
 HOME_DIR = join('/opt', CONSUL)
-CONSUL_BINARY = join(HOME_DIR, 'consul')
+CONSUL_BINARY = join(HOME_DIR, CONSUL)
 CONFIG_DIR = '/etc/consul.d'
 
 logger = get_logger(CONSUL)
@@ -29,7 +29,7 @@ def _install():
     with ZipFile(consul_package) as consul_archive:
         consul_archive.extractall(temp_dir)
 
-    common.move(join(temp_dir, 'consul'), CONSUL_BINARY)
+    common.move(join(temp_dir, CONSUL), CONSUL_BINARY)
     common.chmod('+x', CONSUL_BINARY)
 
 

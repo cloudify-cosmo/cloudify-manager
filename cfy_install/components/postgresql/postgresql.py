@@ -14,6 +14,7 @@ from ...utils.install import yum_install, yum_remove
 
 
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
+POSTGRES_USER = 'postgres'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL)
 
 PGSQL_LIB_DIR = '/var/lib/pgsql'
@@ -93,7 +94,7 @@ def _update_configuration():
     lines = _read_hba_lines()
     temp_hba_path = _write_new_hba_file(lines)
     common.move(temp_hba_path, PS_HBA_CONF)
-    common.chown('postgres', 'postgres', PS_HBA_CONF)
+    common.chown(POSTGRES_USER, POSTGRES_USER, PS_HBA_CONF)
 
 
 def _create_postgres_pass_file():
