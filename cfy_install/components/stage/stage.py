@@ -49,7 +49,7 @@ def _install():
 
     _create_paths()
 
-    logger.info('Installing Cloudify Stage (UI)...')
+    logger.info('Extracting Stage package...')
     common.untar(stage_tar, HOME_DIR)
 
 
