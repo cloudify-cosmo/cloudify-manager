@@ -1,5 +1,7 @@
 from os.path import join
 
+from .. import SOURCES, CONFIG, SERVICE_USER, SERVICE_GROUP
+
 from ..service_names import RIEMANN
 
 from ... import constants
@@ -36,7 +38,7 @@ def _create_paths():
 
 
 def _install():
-    sources = config[RIEMANN]['sources']
+    sources = config[RIEMANN][SOURCES]
 
     langohr_resource_path = \
         files.get_local_source_path(sources['langohr_source_url'])
@@ -49,8 +51,7 @@ def _install():
 
 def _configure_riemann():
     logger.debug('Getting manager repo archive...')
-    cloudify_resources_url = \
-        config[RIEMANN]['sources']['cloudify_resources_url']
+    cloudify_resources_url = config[RIEMANN][SOURCES]['cloudify_resources_url']
     local_tar_path = files.get_local_source_path(cloudify_resources_url)
     manager_dir = common.untar(local_tar_path, unique_tmp_dir=True)
 
@@ -65,7 +66,7 @@ def _configure_riemann():
 def _deploy_riemann_config():
     logger.info('Deploying Riemann config...')
     files.deploy(
-        src=join(constants.COMPONENTS_DIR, RIEMANN, 'config', 'main.clj'),
+        src=join(constants.COMPONENTS_DIR, RIEMANN, CONFIG, 'main.clj'),
         dst=join(CONFIG_PATH, 'main.clj')
     )
     common.chown(RIEMANN, RIEMANN, CONFIG_PATH)
@@ -82,8 +83,8 @@ def _create_user():
     create_service_user(RIEMANN, RIEMANN, home=constants.CLOUDIFY_HOME_DIR)
 
     # Used in the service template
-    config[RIEMANN]['service_user'] = RIEMANN
-    config[RIEMANN]['service_group'] = RIEMANN
+    config[RIEMANN][SERVICE_USER] = RIEMANN
+    config[RIEMANN][SERVICE_GROUP] = RIEMANN
 
 
 def _configure():

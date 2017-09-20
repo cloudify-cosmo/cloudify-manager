@@ -1,5 +1,12 @@
 from os.path import join
 
+from .. import (
+    SOURCES,
+    SERVICE_USER,
+    SERVICE_GROUP,
+    HOME_DIR_KEY
+)
+
 from ..service_names import STAGE
 
 from ...config import config
@@ -31,7 +38,7 @@ def _create_paths():
 
 
 def _install():
-    stage_source_url = config[STAGE]['sources']['stage_source_url']
+    stage_source_url = config[STAGE][SOURCES]['stage_source_url']
     try:
         stage_tar = files.get_local_source_path(stage_source_url)
     except StandardError:
@@ -57,14 +64,14 @@ def _create_user_and_set_permissions():
 
 def _install_nodejs():
     logger.info('Installing NodeJS...')
-    nodejs_source_url = config[STAGE]['sources']['nodejs_source_url']
+    nodejs_source_url = config[STAGE][SOURCES]['nodejs_source_url']
     nodejs = files.get_local_source_path(nodejs_source_url)
     common.untar(nodejs, NODEJS_DIR)
 
 
 def _deploy_restore_snapshot_script():
     # Used in the script template
-    config[STAGE]['home_dir'] = HOME_DIR
+    config[STAGE][HOME_DIR_KEY] = HOME_DIR
     script_name = 'restore-snapshot.py'
     deploy_sudo_command_script(
         script_name,
@@ -86,8 +93,8 @@ def _run_db_migrate():
 
 def _start_and_validate_stage():
     # Used in the service template
-    config[STAGE]['service_user'] = STAGE_USER
-    config[STAGE]['service_group'] = STAGE_GROUP
+    config[STAGE][SERVICE_USER] = STAGE_USER
+    config[STAGE][SERVICE_GROUP] = STAGE_GROUP
     systemd.configure(STAGE)
 
     logger.info('Starting Stage service...')

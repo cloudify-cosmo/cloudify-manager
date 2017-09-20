@@ -1,5 +1,7 @@
 from os.path import join
 
+from . import SOURCES, VENV
+
 from .service_names import DEV, RESTSERVICE, MGMTWORKER, AMQPINFLUX
 
 from .. import constants
@@ -15,7 +17,7 @@ logger = get_logger(DEV)
 
 
 def _install_packages(packages, venv, pip_constraints):
-    sources = config[DEV]['sources']
+    sources = config[DEV][SOURCES]
     # this allows to upgrade modules if necessary.
     logger.info(
         'Installing Optional Packages in {0} venv...'.format(venv)
@@ -27,10 +29,10 @@ def _install_packages(packages, venv, pip_constraints):
 
 
 def _install_cloudify_manager_pip_packages(pip_constraints):
-    rest_venv = config[RESTSERVICE]['venv']
-    mgmtworker_venv = config[MGMTWORKER]['venv']
+    rest_venv = config[RESTSERVICE][VENV]
+    mgmtworker_venv = config[MGMTWORKER][VENV]
 
-    cloudify_manager_url = config[DEV]['sources']['cloudify_resources_url']
+    cloudify_manager_url = config[DEV][SOURCES]['cloudify_resources_url']
     if not cloudify_manager_url:
         return
 
@@ -56,9 +58,9 @@ def _install_cloudify_manager_pip_packages(pip_constraints):
 
 
 def _install_optional_pip_packages(pip_constraints):
-    rest_venv = config[RESTSERVICE]['venv']
-    mgmtworker_venv = config[MGMTWORKER]['venv']
-    amqpinflux_venv = config[AMQPINFLUX]['venv']
+    rest_venv = config[RESTSERVICE][VENV]
+    mgmtworker_venv = config[MGMTWORKER][VENV]
+    amqpinflux_venv = config[AMQPINFLUX][VENV]
 
     mgmtworker_packages = [
         'rest_client_source_url',

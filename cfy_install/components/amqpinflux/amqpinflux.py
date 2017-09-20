@@ -1,4 +1,7 @@
 from os.path import join
+
+from .. import SOURCES, SERVICE_USER, SERVICE_GROUP
+
 from ..service_names import AMQPINFLUX
 
 from ...config import config
@@ -20,7 +23,7 @@ AMQPINFLUX_VENV = join(HOME_DIR, 'env')
 
 
 def _install():
-    source_url = config[AMQPINFLUX]['sources']['amqpinflux_source_url']
+    source_url = config[AMQPINFLUX][SOURCES]['amqpinflux_source_url']
     yum_install(source_url)
 
 
@@ -32,8 +35,8 @@ def _start_and_verify():
 
 
 def _configure():
-    config[AMQPINFLUX]['service_user'] = AMQPINFLUX
-    config[AMQPINFLUX]['service_group'] = AMQPINFLUX
+    config[AMQPINFLUX][SERVICE_USER] = AMQPINFLUX
+    config[AMQPINFLUX][SERVICE_GROUP] = AMQPINFLUX
 
     copy_notice(AMQPINFLUX)
     common.mkdir(HOME_DIR)

@@ -2,6 +2,8 @@ from os.path import join
 from zipfile import ZipFile
 from tempfile import mkdtemp
 
+from .. import SOURCES
+
 from ..service_names import CONSUL
 
 from ...config import config
@@ -20,7 +22,7 @@ def _install():
     common.mkdir(HOME_DIR)
     common.mkdir(CONFIG_DIR)
 
-    consul_source_url = config[CONSUL]['sources']['consul_source_url']
+    consul_source_url = config[CONSUL][SOURCES]['consul_source_url']
     consul_package = get_local_source_path(consul_source_url)
 
     temp_dir = mkdtemp()

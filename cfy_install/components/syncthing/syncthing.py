@@ -1,5 +1,7 @@
 from os.path import join, exists
 
+from .. import SOURCES
+
 from ..service_names import SYNCTHING
 
 from ...config import config
@@ -14,7 +16,7 @@ CLUSTER_DELETE_SCRIPT = '/opt/cloudify/delete_cluster.py'
 
 
 def _install():
-    syncthing_source_url = config[SYNCTHING]['sources']['syncthing_source_url']
+    syncthing_source_url = config[SYNCTHING][SOURCES]['syncthing_source_url']
     syncthing_package = get_local_source_path(syncthing_source_url)
     mkdir(HOME_DIR)
     untar(syncthing_package, destination=HOME_DIR)

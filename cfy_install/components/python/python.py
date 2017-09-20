@@ -1,3 +1,5 @@
+from .. import SOURCES
+
 from ..service_names import PYTHON
 
 from ...config import config
@@ -11,7 +13,7 @@ logger = get_logger(PYTHON)
 
 
 def _install():
-    yum_install(config[PYTHON]['sources']['pip_source_url'])
+    yum_install(config[PYTHON][SOURCES]['pip_source_url'])
 
     if config[PYTHON]['install_python_compilers']:
         logger.info('Installing Compilers...')

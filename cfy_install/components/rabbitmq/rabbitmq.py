@@ -1,6 +1,8 @@
 import json
 from os.path import join
 
+from .. import SOURCES, CONFIG
+
 from ..service_names import RABBITMQ
 
 from ... import constants
@@ -17,7 +19,7 @@ from ...utils.files import copy_notice, remove_notice, remove_files, deploy
 
 LOG_DIR = join(constants.BASE_LOG_DIR, RABBITMQ)
 HOME_DIR = join('/etc', RABBITMQ)
-CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, 'config')
+CONFIG_PATH = join(constants.COMPONENTS_DIR, RABBITMQ, CONFIG)
 FD_LIMIT_PATH = '/etc/security/limits.d/rabbitmq.conf'
 
 SECURE_PORT = 5671
@@ -29,7 +31,7 @@ logger = get_logger(RABBITMQ)
 
 
 def _install():
-    sources = config[RABBITMQ]['sources']
+    sources = config[RABBITMQ][SOURCES]
     for source in sources.values():
         yum_install(source)
 

@@ -4,11 +4,16 @@ from ..logger import get_logger
 
 from .service_names import RABBITMQ, MANAGER, AGENT, NGINX
 
+from . import PRIVATE_IP, ENDPOINT_IP, SECURITY
+
+BROKER_IP = 'broker_ip'
+PUBLIC_IP = 'public_ip'
+
 logger = get_logger('Globals')
 
 
 def _set_external_port_and_protocol():
-    if config[MANAGER]['security']['ssl_enabled']:
+    if config[MANAGER][SECURITY]['ssl_enabled']:
         logger.info('SSL is enabled, setting rest port to 443 and '
                     'rest protocol to https...')
         external_rest_port = 443
@@ -24,14 +29,14 @@ def _set_external_port_and_protocol():
 
 
 def _set_rabbitmq_config():
-    config[RABBITMQ]['endpoint_ip'] = config['agent']['broker_ip']
+    config[RABBITMQ][ENDPOINT_IP] = config[AGENT][BROKER_IP]
     config[RABBITMQ]['broker_cert_path'] = constants.INTERNAL_CA_CERT_PATH
 
 
 def _set_ip_config():
-    private_ip = config[MANAGER]['private_ip']
-    if not config[AGENT]['broker_ip']:
-        config[AGENT]['broker_ip'] = private_ip
+    private_ip = config[MANAGER][PRIVATE_IP]
+    if not config[AGENT][BROKER_IP]:
+        config[AGENT][BROKER_IP] = private_ip
 
     config[MANAGER]['file_server_root'] = constants.MANAGER_RESOURCES_HOME
     config[MANAGER]['file_server_url'] = 'https://{0}:{1}/resources'.format(
@@ -46,8 +51,8 @@ def _set_ip_config():
 
 def _set_cert_config():
     nginx_conf = config[NGINX]
-    nginx_conf['internal_rest_host'] = config[MANAGER]['private_ip']
-    nginx_conf['external_rest_host'] = config[MANAGER]['public_ip']
+    nginx_conf['internal_rest_host'] = config[MANAGER][PRIVATE_IP]
+    nginx_conf['external_rest_host'] = config[MANAGER][PUBLIC_IP]
     nginx_conf['internal_ca_cert_path'] = constants.INTERNAL_CA_CERT_PATH
     nginx_conf['internal_cert_path'] = constants.INTERNAL_CERT_PATH
     nginx_conf['internal_key_path'] = constants.INTERNAL_KEY_PATH
@@ -56,7 +61,7 @@ def _set_cert_config():
 
 
 def _validate_inputs():
-    for key in ('private_ip', 'public_ip'):
+    for key in (PRIVATE_IP, PUBLIC_IP):
         ip = config[MANAGER].get(key)
         if not ip:
             raise StandardError(

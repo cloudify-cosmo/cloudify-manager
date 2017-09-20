@@ -8,6 +8,19 @@ import urlparse
 import subprocess
 from os.path import join, islink, isdir
 
+from .. import (
+    SOURCES,
+    CONFIG,
+    SCRIPTS,
+    HOME_DIR_KEY,
+    LOG_DIR_KEY,
+    VENV,
+    SERVICE_USER,
+    SERVICE_GROUP,
+    SECURITY,
+    ENDPOINT_IP
+)
+
 from ..service_names import RESTSERVICE, MANAGER, RABBITMQ, POSTGRESQL, AGENT
 
 from ... import constants
@@ -26,8 +39,8 @@ from ...utils.files import ln, write_to_tempfile, remove_files, write_to_file
 HOME_DIR = '/opt/manager'
 REST_VENV = join(HOME_DIR, 'env')
 LOG_DIR = join(constants.BASE_LOG_DIR, 'rest')
-CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, 'config')
-SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, 'scripts')
+CONFIG_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, CONFIG)
+SCRIPTS_PATH = join(constants.COMPONENTS_DIR, RESTSERVICE, SCRIPTS)
 
 logger = get_logger(RESTSERVICE)
 
@@ -46,9 +59,9 @@ def _make_paths():
     common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, LOG_DIR)
 
     # Used in the service templates
-    config[RESTSERVICE]['home_dir'] = HOME_DIR
-    config[RESTSERVICE]['log_dir'] = LOG_DIR
-    config[RESTSERVICE]['venv'] = REST_VENV
+    config[RESTSERVICE][HOME_DIR_KEY] = HOME_DIR
+    config[RESTSERVICE][LOG_DIR_KEY] = LOG_DIR
+    config[RESTSERVICE][VENV] = REST_VENV
 
 
 def _deploy_sudo_commands():
@@ -87,7 +100,7 @@ def _configure_dbus():
 
 
 def _install():
-    source_url = config[RESTSERVICE]['sources']['restservice_source_url']
+    source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
     yum_install(source_url)
 
     _configure_dbus()
@@ -123,7 +136,7 @@ def _deploy_security_configuration():
         'encoding_block_size': 24,
         'encoding_min_length': 5
     }
-    config[RESTSERVICE]['security'] = security_configuration
+    config[RESTSERVICE][SECURITY] = security_configuration
 
     # Pre-creating paths so permissions fix can work correctly in mgmtworker
     _pre_create_snapshot_paths()
@@ -175,8 +188,8 @@ def _calculate_worker_count():
 
 
 def _configure_restservice():
-    config[RESTSERVICE]['service_user'] = constants.CLOUDIFY_USER
-    config[RESTSERVICE]['service_group'] = constants.CLOUDIFY_GROUP
+    config[RESTSERVICE][SERVICE_USER] = constants.CLOUDIFY_USER
+    config[RESTSERVICE][SERVICE_GROUP] = constants.CLOUDIFY_GROUP
     _calculate_worker_count()
     _deploy_rest_configuration()
     _deploy_security_configuration()
@@ -191,11 +204,11 @@ def _create_db_tables_and_add_defaults():
 
     # A dictionary with all the information necessary for the script to run
     args_dict = {
-        'hash_salt': config[RESTSERVICE]['security']['hash_salt'],
-        'secret_key': config[RESTSERVICE]['security']['secret_key'],
-        'admin_username': config[MANAGER]['security']['admin_username'],
-        'admin_password': config[MANAGER]['security']['admin_password'],
-        'amqp_host': config[RABBITMQ]['endpoint_ip'],
+        'hash_salt': config[RESTSERVICE][SECURITY]['hash_salt'],
+        'secret_key': config[RESTSERVICE][SECURITY]['secret_key'],
+        'admin_username': config[MANAGER][SECURITY]['admin_username'],
+        'admin_password': config[MANAGER][SECURITY]['admin_password'],
+        'amqp_host': config[RABBITMQ][ENDPOINT_IP],
         'amqp_username': config[RABBITMQ]['username'],
         'amqp_password': config[RABBITMQ]['password'],
         'postgresql_host': config[POSTGRESQL]['host'],

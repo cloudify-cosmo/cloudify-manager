@@ -1,6 +1,15 @@
 from time import sleep
 from os.path import join, dirname
 
+from .. import (
+    SOURCES,
+    CONFIG,
+    HOME_DIR_KEY,
+    LOG_DIR_KEY,
+    SERVICE_USER,
+    SERVICE_GROUP
+)
+
 from ..service_names import MGMTWORKER
 
 from ... import constants as const
@@ -16,13 +25,13 @@ from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 HOME_DIR = '/opt/mgmtworker'
 MGMTWORKER_VENV = join(HOME_DIR, 'env')
 LOG_DIR = join(const.BASE_LOG_DIR, MGMTWORKER)
-CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, 'config')
+CONFIG_PATH = join(const.COMPONENTS_DIR, MGMTWORKER, CONFIG)
 
 logger = get_logger(MGMTWORKER)
 
 
 def _install():
-    source_url = config[MGMTWORKER]['sources']['mgmtworker_source_url']
+    source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
     yum_install(source_url)
 
     # TODO: Take care of this
@@ -42,13 +51,13 @@ def _create_paths():
     common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, LOG_DIR)
     common.chown(const.CLOUDIFY_USER, const.CLOUDIFY_GROUP, HOME_DIR)
 
-    config[MGMTWORKER]['home_dir'] = HOME_DIR
-    config[MGMTWORKER]['log_dir'] = LOG_DIR
+    config[MGMTWORKER][HOME_DIR_KEY] = HOME_DIR
+    config[MGMTWORKER][LOG_DIR_KEY] = LOG_DIR
 
 
 def _deploy_mgmtworker_config():
-    config[MGMTWORKER]['service_user'] = const.CLOUDIFY_USER
-    config[MGMTWORKER]['service_group'] = const.CLOUDIFY_GROUP
+    config[MGMTWORKER][SERVICE_USER] = const.CLOUDIFY_USER
+    config[MGMTWORKER][SERVICE_GROUP] = const.CLOUDIFY_GROUP
 
     celery_work_dir = join(HOME_DIR, 'work')
     broker_config_dst = join(celery_work_dir, 'broker_config.json')

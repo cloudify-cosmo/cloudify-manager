@@ -1,5 +1,7 @@
 from os.path import join, basename
 
+from .. import SOURCES, CONFIG, LOG_DIR_KEY
+
 from ..service_names import LOGSTASH
 
 from ... import constants
@@ -19,7 +21,7 @@ REMOTE_CONFIG_PATH = '/etc/logstash/conf.d'
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/logstash.service.d'
 INIT_D_FILE = '/etc/init.d/logstash'
 
-CONFIG_PATH = join(constants.COMPONENTS_DIR, LOGSTASH, 'config')
+CONFIG_PATH = join(constants.COMPONENTS_DIR, LOGSTASH, CONFIG)
 
 logger = get_logger(LOGSTASH)
 
@@ -38,7 +40,7 @@ def _install_plugin(name, plugin_url):
 
     # Use /dev/urandom to get entropy faster while installing plugins
     common.run([
-        'sudo', '-u', 'logstash',
+        'sudo', '-u', LOGSTASH,
         'sh', '-c',
         (
             'export JRUBY_OPTS=-J-Djava.security.egd=file:/dev/urandom; '
@@ -58,7 +60,7 @@ def _install_postgresql_jdbc_driver(sources):
     common.chown(LOGSTASH, LOGSTASH, jar_path)
     driver_path = get_local_source_path(jdbc_driver_url)
     common.run([
-        'sudo', '-u', 'logstash',
+        'sudo', '-u', LOGSTASH,
         'cp',
         driver_path,
         join(jdbc_path, basename(jdbc_driver_url)),
@@ -79,7 +81,7 @@ def _install_plugins(sources):
 
 def _install():
     """Install logstash as a systemd service."""
-    sources = config[LOGSTASH]['sources']
+    sources = config[LOGSTASH][SOURCES]
 
     yum_install(sources['logstash_source_url'])
     _install_plugins(sources)
@@ -87,7 +89,7 @@ def _install():
 
 def _deploy_logstash_config():
     logger.info('Deploying Logstash configuration...')
-    config[LOGSTASH]['log_dir'] = LOG_DIR  # Used in config files
+    config[LOGSTASH][LOG_DIR_KEY] = LOG_DIR  # Used in config files
 
     deploy(
         join(CONFIG_PATH, 'logstash.conf'),

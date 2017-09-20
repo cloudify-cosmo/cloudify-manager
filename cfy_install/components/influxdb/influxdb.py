@@ -1,6 +1,15 @@
 import json
 from os.path import join
 
+from .. import (
+    SOURCES,
+    SERVICE_USER,
+    SERVICE_GROUP,
+    CONFIG,
+    ENDPOINT_IP,
+    PRIVATE_IP
+)
+
 from ..service_names import INFLUXB, MANAGER
 
 from ... import constants
@@ -22,7 +31,7 @@ INFLUXDB_ENDPOINT_PORT = 8086
 HOME_DIR = join('/opt', INFLUXB)
 LOG_DIR = join(constants.BASE_LOG_DIR, INFLUXB)
 INIT_D_PATH = join('/etc', 'init.d', INFLUXB)
-CONFIG_PATH = join(constants.COMPONENTS_DIR, INFLUXB, 'config')
+CONFIG_PATH = join(constants.COMPONENTS_DIR, INFLUXB, CONFIG)
 
 
 def _configure_database(host, port):
@@ -86,12 +95,12 @@ def _configure_database(host, port):
 
 
 def _install_influxdb():
-    source_url = config[INFLUXB]['sources']['influxdb_source_url']
+    source_url = config[INFLUXB][SOURCES]['influxdb_source_url']
     yum_install(source_url)
 
 
 def _install():
-    influxdb_endpoint_ip = config[INFLUXB]['endpoint_ip']
+    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
 
     if influxdb_endpoint_ip:
         config[INFLUXB]['is_internal'] = False
@@ -99,8 +108,8 @@ def _install():
             influxdb_endpoint_ip))
     else:
         config[INFLUXB]['is_internal'] = True
-        influxdb_endpoint_ip = config[MANAGER]['private_ip']
-        config[INFLUXB]['endpoint_ip'] = influxdb_endpoint_ip
+        influxdb_endpoint_ip = config[MANAGER][PRIVATE_IP]
+        config[INFLUXB][ENDPOINT_IP] = influxdb_endpoint_ip
 
         _install_influxdb()
 
@@ -124,8 +133,8 @@ def _deploy_config_file():
 
 
 def _configure_local_influxdb():
-    config[INFLUXB]['service_user'] = INFLUXB
-    config[INFLUXB]['service_group'] = INFLUXB
+    config[INFLUXB][SERVICE_USER] = INFLUXB
+    config[INFLUXB][SERVICE_GROUP] = INFLUXB
 
     _create_paths()
     copy_notice(INFLUXB)
@@ -137,7 +146,7 @@ def _configure_local_influxdb():
 
 
 def _check_response():
-    influxdb_endpoint_ip = config[INFLUXB]['endpoint_ip']
+    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
     influxdb_url = 'http://{0}:{1}'.format(
         influxdb_endpoint_ip,
         INFLUXDB_ENDPOINT_PORT
@@ -159,7 +168,7 @@ def _start_and_verify_alive():
 
 
 def _configure():
-    influxdb_endpoint_ip = config[INFLUXB]['endpoint_ip']
+    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
     is_internal = config[INFLUXB]['is_internal']
     if is_internal:
         _configure_local_influxdb()

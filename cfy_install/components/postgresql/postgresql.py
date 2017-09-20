@@ -2,6 +2,8 @@ import os
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
+from .. import SOURCES, SCRIPTS
+
 from ..service_names import POSTGRESQL
 
 from ... import constants
@@ -28,7 +30,7 @@ logger = get_logger(POSTGRESQL)
 
 
 def _install():
-    sources = config[POSTGRESQL]['sources']
+    sources = config[POSTGRESQL][SOURCES]
 
     logger.debug('Installing PostgreSQL dependencies...')
     yum_install(sources['libxslt_rpm_url'])
@@ -129,7 +131,7 @@ def _create_default_db():
     script_path = join(
         constants.COMPONENTS_DIR,
         POSTGRESQL,
-        'scripts',
+        SCRIPTS,
         'create_default_db.sh'
     )
     tmp_script_path = common.temp_copy(script_path)

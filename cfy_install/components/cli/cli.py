@@ -1,3 +1,5 @@
+from .. import SOURCES, SECURITY
+
 from ..service_names import CLI, MANAGER
 
 from ...config import config
@@ -11,13 +13,13 @@ logger = get_logger(CLI)
 
 
 def _install():
-    source_url = config[CLI]['sources']['cli_source_url']
+    source_url = config[CLI][SOURCES]['cli_source_url']
     yum_install(source_url)
 
 
 def _configure():
-    username = config[MANAGER]['security']['admin_username']
-    password = config[MANAGER]['security']['admin_password']
+    username = config[MANAGER][SECURITY]['admin_username']
+    password = config[MANAGER][SECURITY]['admin_password']
 
     cmd = [
         'cfy', 'profiles', 'use', 'localhost', '-u', username,

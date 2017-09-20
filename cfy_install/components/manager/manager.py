@@ -3,6 +3,8 @@ import subprocess
 from os.path import join
 from tempfile import gettempdir
 
+from .. import SOURCES
+
 from ..service_names import MANAGER
 
 from ... import constants
@@ -47,7 +49,7 @@ def _create_sudoers_file_and_disable_sudo_requiretty():
 
 def _extract_single_tar():
     logger.info('Extracting Cloudify manager resources archive...')
-    single_tar_url = config[MANAGER]['sources']['manager_resources_package']
+    single_tar_url = config[MANAGER][SOURCES]['manager_resources_package']
     local_single_tar_path = get_local_source_path(single_tar_url)
     common.mkdir(constants.CLOUDIFY_SOURCES_PATH)
     common.untar(

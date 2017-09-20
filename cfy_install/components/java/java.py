@@ -1,5 +1,7 @@
 from os.path import join, isfile
 
+from .. import SOURCES
+
 from ..service_names import JAVA
 
 from ... import constants
@@ -16,7 +18,7 @@ LOG_DIR = join(constants.BASE_LOG_DIR, JAVA)
 
 
 def _install():
-    java_source_url = config[JAVA]['sources']['java_source_url']
+    java_source_url = config[JAVA][SOURCES]['java_source_url']
     yum_install(java_source_url)
 
 

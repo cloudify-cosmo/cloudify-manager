@@ -1,5 +1,7 @@
 from os.path import join, dirname
 
+from .. import SOURCES, SERVICE_USER, SERVICE_GROUP
+
 from ..service_names import COMPOSER
 
 from ...config import config
@@ -31,7 +33,7 @@ def _create_paths():
 
 
 def _install():
-    composer_source_url = config[COMPOSER]['sources']['composer_source_url']
+    composer_source_url = config[COMPOSER][SOURCES]['composer_source_url']
     try:
         composer_tar = files.get_local_source_path(composer_source_url)
     except StandardError:
@@ -48,8 +50,8 @@ def _install():
 
 def _start_and_validate_composer():
     # Used in the service template
-    config[COMPOSER]['service_user'] = COMPOSER_USER
-    config[COMPOSER]['service_group'] = COMPOSER_GROUP
+    config[COMPOSER][SERVICE_USER] = COMPOSER_USER
+    config[COMPOSER][SERVICE_GROUP] = COMPOSER_GROUP
     systemd.configure(COMPOSER)
 
     logger.info('Starting Composer service...')

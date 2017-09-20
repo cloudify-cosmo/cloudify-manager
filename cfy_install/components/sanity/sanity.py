@@ -3,6 +3,8 @@ import getpass
 from tempfile import mkdtemp
 from os.path import join, isfile, expanduser, dirname
 
+from .. import SOURCES, PRIVATE_IP
+
 from ..service_names import SANITY, MANAGER
 
 from ...utils import common
@@ -54,7 +56,7 @@ def _remove_sanity_ssh():
 
 def _upload_blueprint():
     logger.info('Uploading sanity blueprint...')
-    sanity_source_url = config[SANITY]['sources']['sanity_source_url']
+    sanity_source_url = config[SANITY][SOURCES]['sanity_source_url']
     sanity_blueprint = get_local_source_path(sanity_source_url)
     common.run(['cfy', 'blueprints', 'upload', sanity_blueprint, '-n',
                 'no-monitoring-singlehost-blueprint.yaml', '-b', SANITY],
@@ -63,7 +65,7 @@ def _upload_blueprint():
 
 def _deploy_app(ssh_key_path):
     logger.info('Deploying sanity app...')
-    manager_ip = config[MANAGER]['private_ip']
+    manager_ip = config[MANAGER][PRIVATE_IP]
     ssh_user = getpass.getuser()
     common.run(['cfy', 'deployments', 'create', '-b', SANITY, SANITY,
                 '-i', 'server_ip={0}'.format(manager_ip),

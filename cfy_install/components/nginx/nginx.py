@@ -1,6 +1,8 @@
 from os.path import join
 from collections import namedtuple
 
+from .. import SOURCES, CONFIG
+
 from ..service_names import NGINX, AGENT
 
 from ... import constants
@@ -15,14 +17,14 @@ from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
 LOG_DIR = join(constants.BASE_LOG_DIR, NGINX)
-CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, 'config')
+CONFIG_PATH = join(constants.COMPONENTS_DIR, NGINX, CONFIG)
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/nginx.service.d'
 
 logger = get_logger(NGINX)
 
 
 def _install():
-    nginx_source_url = config[NGINX]['sources']['nginx_source_url']
+    nginx_source_url = config[NGINX][SOURCES]['nginx_source_url']
     yum_install(nginx_source_url)
 
 
