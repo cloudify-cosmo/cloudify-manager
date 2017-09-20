@@ -24,9 +24,8 @@ from .components import manager_ip_setter
 from .components.globals import set_globals
 from .components.validations import validate_machine
 
-from .config import config
+from .logger import get_logger
 from .utils.files import remove_temp_files
-from .logger import get_logger, set_logger_level
 
 logger = get_logger('Bootstrap')
 
@@ -63,18 +62,7 @@ def _print_time():
     )
 
 
-def _init(bootstrap=True):
-    if bootstrap:
-        config.load_bootstrap_config()
-    else:
-        config.load_teardown_config()
-
-    set_logger_level(config['log_level'].upper())
-
-
 def install():
-    _init()
-
     logger.notice('Installing Cloudify Manager...')
     validate_machine()
     set_globals()
@@ -82,15 +70,12 @@ def install():
     for component in COMPONENTS:
         component.install()
 
-    config.dump_config()
     remove_temp_files()
     logger.notice('Cloudify Manager successfully installed!')
     _print_time()
 
 
 def configure():
-    _init()
-
     logger.notice('Configuring Cloudify Manager...')
     set_globals()
 
@@ -103,8 +88,6 @@ def configure():
 
 
 def remove():
-    _init(bootstrap=False)
-
     logger.notice('Removing Cloudify Manager...')
 
     for component in COMPONENTS:
