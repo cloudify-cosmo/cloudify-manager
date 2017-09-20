@@ -106,10 +106,8 @@ def remove():
     _init(bootstrap=False)
 
     logger.notice('Removing Cloudify Manager...')
-    set_globals()
 
     for component in COMPONENTS:
-        # Remove files, users, groups and packages
         component.remove()
 
     logger.notice('Cloudify Manager successfully removed!')
