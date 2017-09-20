@@ -1,6 +1,11 @@
 from os.path import join, dirname
 
+BASE_DIR = dirname(__file__)
+COMPONENTS_DIR = join(BASE_DIR, 'components')
+
 CLOUDIFY_BOOTSTRAP_DIR = '/opt/cloudify-bootstrap'
+USER_CONFIG_PATH = join(CLOUDIFY_BOOTSTRAP_DIR, 'config.json')
+DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'defaults.json')
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
@@ -16,9 +21,6 @@ AGENT_ARCHIVES_PATH = '{0}/packages/agents'.format(MANAGER_RESOURCES_HOME)
 BASE_LOG_DIR = '/var/log/cloudify'
 
 INTERNAL_REST_PORT = 53333
-
-BASE_DIR = dirname(__file__)
-COMPONENTS_DIR = join(BASE_DIR, 'components')
 
 SSL_CERTS_TARGET_DIR = join(CLOUDIFY_HOME_DIR, 'ssl')
 

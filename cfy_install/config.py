@@ -1,8 +1,8 @@
 import json
 import collections
-from os.path import join, dirname as up
+from os.path import isfile
 
-from .constants import CLOUDIFY_BOOTSTRAP_DIR
+from .constants import USER_CONFIG_PATH, DEFAULT_CONFIG_PATH
 
 _config = None
 
@@ -26,30 +26,21 @@ def dict_merge(dct, merge_dct):
 
 
 class Config(dict):
-    BS_CONFIG_PATH = join(CLOUDIFY_BOOTSTRAP_DIR, 'bs_config.json')
+    def __init__(self, *args, **kwargs):
+        super(Config, self).__init__(*args, **kwargs)
+
+        with open(DEFAULT_CONFIG_PATH, 'r') as f:
+            self.update(json.load(f))
+
+        # Allow `config.json` not to exist - this is normal for teardown
+        if isfile(USER_CONFIG_PATH):
+            # Override any default values with values from config.json
+            with open(USER_CONFIG_PATH, 'r') as f:
+                dict_merge(self, json.load(f))
 
     def add_temp_path_to_clean(self, new_path_to_remove):
         paths_to_remove = self.setdefault('temp_paths_to_remove', [])
         paths_to_remove.append(new_path_to_remove)
-
-    def dump_config(self):
-        with open(self.BS_CONFIG_PATH, 'w') as f:
-            json.dump(self, f)
-
-    def load_bootstrap_config(self):
-        defaults_path = join(up(up(__file__)), 'defaults.json')
-        config_path = join(CLOUDIFY_BOOTSTRAP_DIR, 'config.json')
-
-        with open(defaults_path, 'r') as f:
-            self.update(json.load(f))
-
-        # Override any default values with values from config.json
-        with open(config_path, 'r') as f:
-            dict_merge(self, json.load(f))
-
-    def load_teardown_config(self):
-        with open(self.BS_CONFIG_PATH, 'r') as f:
-            self.update(json.load(f))
 
 
 def _get_config():
