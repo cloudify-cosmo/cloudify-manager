@@ -41,6 +41,8 @@ from .es_snapshot import ElasticSearch
 from .credentials import restore as restore_credentials
 from .constants import (
     ARCHIVE_CERT_DIR,
+    INTERNAL_CA_CERT_FILENAME,
+    INTERNAL_CA_KEY_FILENAME,
     INTERNAL_CERT_FILENAME,
     INTERNAL_KEY_FILENAME,
     INTERNAL_P12_FILENAME,
@@ -160,34 +162,43 @@ class SnapshotRestore(object):
 
     def _restore_certificate(self):
         archive_cert_dir = os.path.join(self._tempdir, ARCHIVE_CERT_DIR)
-        old_cert_dir = os.path.dirname(get_local_rest_certificate())
-        new_cert_dir = '{0}_from_snapshot_{1}'.format(old_cert_dir,
-                                                      self._snapshot_id)
-        old_cert = os.path.join(old_cert_dir, INTERNAL_CERT_FILENAME)
-        old_key = os.path.join(old_cert_dir, INTERNAL_KEY_FILENAME)
-        old_p12 = os.path.join(old_cert_dir, INTERNAL_P12_FILENAME)
-        new_cert = os.path.join(new_cert_dir, INTERNAL_CERT_FILENAME)
-        new_key = os.path.join(new_cert_dir, INTERNAL_KEY_FILENAME)
-        new_p12 = os.path.join(new_cert_dir, INTERNAL_P12_FILENAME)
-        time_to_wait_for_workflow_to_finish = 3
-        cmd = 'sleep {time}; ' \
-              'rm -rf {old_cert} {old_key} {old_p12}; ' \
-              'mv {new_cert} {old_cert}; ' \
-              'mv {new_key} {old_key}; ' \
-              'mv {new_p12} {old_p12}'.format(
-                time=time_to_wait_for_workflow_to_finish,
-                old_cert=old_cert,
-                old_key=old_key,
-                old_p12=old_p12,
-                new_cert=new_cert,
-                new_key=new_key,
-                new_p12=new_p12
-                )
+        existing_cert_dir = os.path.dirname(get_local_rest_certificate())
+        restored_cert_dir = '{0}_from_snapshot_{1}'.format(existing_cert_dir,
+                                                           self._snapshot_id)
 
-        utils.copy_snapshot_path(archive_cert_dir, new_cert_dir)
+        # Put the certificates where we need them
+        utils.copy_snapshot_path(archive_cert_dir, restored_cert_dir)
+
+        # The last thing the workflow does is delete the tempdir.
+        command = 'while [[ -d {tempdir} ]]; do sleep 0.5; done; '.format(
+            tempdir=self._tempdir,
+        )
+        # Give a short delay afterwards for the workflow to be marked as
+        # completed, in case of any delays that might be upset by certs being
+        # messed around with while running.
+        command += 'sleep 3; '
+
+        certs = [
+            INTERNAL_CA_CERT_FILENAME,
+            INTERNAL_CA_KEY_FILENAME,
+            INTERNAL_CERT_FILENAME,
+            INTERNAL_KEY_FILENAME,
+            INTERNAL_P12_FILENAME,
+        ]
+        # Restore each cert from the snapshot over the current manager one
+        for cert in certs:
+            subcommand = (
+                'mv -f {source_dir}/{cert} {dest_dir}/{cert}; '
+            ).format(
+                dest_dir=existing_cert_dir,
+                source_dir=restored_cert_dir,
+                cert=cert,
+            )
+            command += subcommand
+
         if not self._no_reboot:
-            cmd += '; sudo shutdown -r now'
-        subprocess.Popen(cmd, shell=True)
+            command += 'sudo shutdown -r now'
+        subprocess.Popen(command, shell=True)
 
     def _validate_snapshot(self):
         manager_version = utils.get_manager_version(self._client)
