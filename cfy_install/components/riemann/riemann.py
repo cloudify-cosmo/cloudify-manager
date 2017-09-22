@@ -34,6 +34,7 @@ def _create_paths():
 
     # Need to allow access to mgmtworker (thus cfyuser)
     common.chown(RIEMANN, constants.CLOUDIFY_GROUP, HOME_DIR)
+    common.chmod('770', HOME_DIR)
     common.chown(RIEMANN, RIEMANN, LOG_DIR)
 
 
