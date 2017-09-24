@@ -102,8 +102,8 @@ def _generate_ssl_certificate(ips,
                               cn,
                               cert_path,
                               key_path,
-                              sign_cert=const.INTERNAL_CA_CERT_PATH,
-                              sign_key=const.INTERNAL_CA_KEY_PATH):
+                              sign_cert=None,
+                              sign_key=None):
     """Generate a public SSL certificate and a private SSL key
 
     :param ips: the ips (or names) to be used for subjectAltNames
@@ -136,17 +136,26 @@ def _generate_ssl_certificate(ips,
             '-out', csr_path,
             '-keyout', key_path,
         ])
-        sudo([
+        x509_command = [
             'openssl', 'x509',
             '-days', '3650',
             '-req', '-in', csr_path,
-            '-CA', sign_cert,
-            '-CAkey', sign_key,
             '-out', cert_path,
-            '-CAcreateserial',
             '-extensions', 'server_req_extensions',
             '-extfile', conf_path
-        ])
+        ]
+
+        if sign_cert and sign_key:
+            x509_command += [
+                '-CA', sign_cert,
+                '-CAkey', sign_key,
+                '-CAcreateserial'
+            ]
+        else:
+            x509_command += [
+                '-signkey', key_path
+            ]
+        sudo(x509_command)
         remove(csr_path)
 
     logger.debug('Generated SSL certificate: {0} and key: {1}'.format(
@@ -160,7 +169,9 @@ def generate_internal_ssl_cert(ips, name):
         ips,
         name,
         const.INTERNAL_CERT_PATH,
-        const.INTERNAL_KEY_PATH
+        const.INTERNAL_KEY_PATH,
+        sign_cert=const.INTERNAL_CA_CERT_PATH,
+        sign_key=const.INTERNAL_CA_KEY_PATH
     )
 
 
