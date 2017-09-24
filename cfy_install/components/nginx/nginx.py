@@ -137,6 +137,9 @@ def _deploy_nginx_config_files():
 
 
 def _verify_nginx():
+    # TODO: This code requires the restservice to be installed, but
+    # restservice depends on rabbitmq, which in turn requires the certificates
+    # created in nginx (here). So we need to find an other way to validate it
     logger.info('Verifying NGINX service is up...')
     nginx_url = 'https://127.0.0.1:{0}/api/v2.1/version'.format(
         config[NGINX]['internal_rest_port']
@@ -158,7 +161,7 @@ def _start_and_verify_service():
     systemd.enable(NGINX, append_prefix=False)
     systemd.restart(NGINX, append_prefix=False)
     systemd.verify_alive(NGINX, append_prefix=False)
-    _verify_nginx()
+    # _verify_nginx()
 
 
 def _configure():
