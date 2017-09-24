@@ -8,6 +8,7 @@ from ..service_names import NGINX, AGENT
 from ... import constants
 from ...config import config
 from ...logger import get_logger
+from ...exceptions import ValidationError
 
 from ...utils import common
 from ...utils import certificates
@@ -135,19 +136,29 @@ def _deploy_nginx_config_files():
         deploy(resource.src, resource.dst)
 
 
+def _verify_nginx():
+    logger.info('Verifying NGINX service is up...')
+    nginx_url = 'https://127.0.0.1:{0}/api/v2.1/version'.format(
+        config[NGINX]['internal_rest_port']
+    )
+    output = common.run([
+        'curl',
+        nginx_url,
+        '--cacert', constants.INTERNAL_CA_CERT_PATH,
+        # only output the http code
+        '-o', '/dev/null',
+        '-w', '%{http_code}'
+    ])
+    if output.aggr_stdout.strip() not in {'200', '401'}:
+        raise ValidationError('Nginx HTTP check error: {0}'.format(output))
+
+
 def _start_and_verify_service():
     logger.info('Starting NGINX service...')
     systemd.enable(NGINX, append_prefix=False)
     systemd.restart(NGINX, append_prefix=False)
     systemd.verify_alive(NGINX, append_prefix=False)
-
-    # TODO: See if it's OK to remove this part
-    # logger.info('Verifying NGINX service is up...')
-    # nginx_url = 'https://127.0.0.1:{0}/api/v2.1/version'.format(
-    #     config[NGINX]['internal_rest_port'])
-    # response = check_http_response(nginx_url)
-    # if response.code not in (200, 401):
-    #     raise StandardError('Could not verify Nginx service is alive')
+    _verify_nginx()
 
 
 def _configure():
