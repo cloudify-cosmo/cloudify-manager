@@ -71,12 +71,14 @@ def _deploy_sudo_commands():
         description='Run systemctl'
     )
     sudoers.deploy_sudo_command_script(
-        script='/usr/bin/sed',
-        description='Run sed command'
-    )
-    sudoers.deploy_sudo_command_script(
         script='/usr/sbin/shutdown',
         description='Perform shutdown (reboot)'
+    )
+    sudoers.deploy_sudo_command_script(
+        'set-manager-ssl.py',
+        'Script for setting manager SSL',
+        component=RESTSERVICE,
+        render=False
     )
 
 
