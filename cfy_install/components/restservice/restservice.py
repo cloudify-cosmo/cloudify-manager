@@ -116,6 +116,13 @@ def _deploy_rest_configuration():
     common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, conf_path)
 
 
+def _deploy_authorization_configuration():
+    logger.info('Deploying REST authorization configuration file...')
+    conf_path = join(HOME_DIR, 'authorization.conf')
+    deploy(join(CONFIG_PATH, 'authorization.conf'), conf_path)
+    common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, conf_path)
+
+
 def _pre_create_snapshot_paths():
     for resource_dir in (
             'blueprints',
@@ -196,6 +203,7 @@ def _configure_restservice():
     _calculate_worker_count()
     _deploy_rest_configuration()
     _deploy_security_configuration()
+    _deploy_authorization_configuration
     _allow_creating_cluster()
 
 
