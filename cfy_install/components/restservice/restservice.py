@@ -4,7 +4,6 @@ import random
 import string
 import base64
 import urllib2
-import urlparse
 import subprocess
 from os.path import join, islink, isdir
 
@@ -203,7 +202,7 @@ def _configure_restservice():
     _calculate_worker_count()
     _deploy_rest_configuration()
     _deploy_security_configuration()
-    _deploy_authorization_configuration
+    _deploy_authorization_configuration()
     _allow_creating_cluster()
 
 
@@ -267,12 +266,10 @@ def _verify_restservice():
     a good chance everything is configured correctly.
     """
     rest_port = config[RESTSERVICE]['port']
-    url = 'http://{0}:{1}'.format('127.0.0.1', rest_port)
+    url = 'http://{0}:{1}/api/v2.1/blueprints'.format('127.0.0.1', rest_port)
 
     wait_for_port(rest_port)
-
-    blueprints_url = urlparse.urljoin(url, 'api/v2.1/blueprints')
-    req = urllib2.Request(blueprints_url, headers=get_auth_headers())
+    req = urllib2.Request(url, headers=get_auth_headers())
 
     try:
         response = urllib2.urlopen(req)
