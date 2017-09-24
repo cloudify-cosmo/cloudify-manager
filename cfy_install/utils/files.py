@@ -1,13 +1,12 @@
 import os
 import re
 import json
-import tempfile
 from glob import glob
 from tempfile import mkstemp
 from os.path import join, isabs
 
 from .network import is_url, curl_download
-from .common import move, sudo, copy, remove
+from .common import move, sudo, copy, remove, chmod
 
 from ..config import config
 from ..logger import get_logger
@@ -17,20 +16,20 @@ from ..constants import CLOUDIFY_SOURCES_PATH, COMPONENTS_DIR
 logger = get_logger('Files')
 
 
+def _read(path):
+    with open(path, 'r') as f:
+        return f.read()
+
+
 def replace_in_file(this, with_this, in_here):
     """Replaces all occurrences of the regex in all matches
     from a file with a specific value.
     """
     logger.debug('Replacing {0} with {1} in {2}...'.format(
         this, with_this, in_here))
-    with open(in_here) as f:
-        content = f.read()
+    content = _read(in_here)
     new_content = re.sub(this, with_this, content)
-    fd, temp_file = tempfile.mkstemp()
-    os.close(fd)
-    with open(temp_file, 'w') as f:
-        f.write(new_content)
-    move(temp_file, in_here)
+    write_to_file(new_content, in_here)
 
 
 def ln(source, target, params=None):
@@ -72,12 +71,17 @@ def get_local_source_path(source_url):
 
 
 def write_to_tempfile(contents, json_dump=False, cleanup=True):
-    fd, file_path = tempfile.mkstemp()
+    fd, file_path = mkstemp()
+    os.close(fd)
     if json_dump:
         contents = json.dumps(contents)
 
-    os.write(fd, contents)
-    os.close(fd)
+    with open(file_path, 'w') as f:
+        f.write(contents)
+
+    # By default, tempfiles are created with a permission of 600
+    chmod('644', file_path)
+
     if cleanup:
         config.add_temp_path_to_clean(file_path)
     return file_path
@@ -105,14 +109,9 @@ def remove_files(file_list, ignore_failure=False):
 
 def deploy(src, dst, render=True):
     if render:
-        with open(src, 'r') as f:
-            content = f.read()
+        content = _read(src)
         content = content.format(**config)
-        fd, temp_dst = mkstemp()
-        os.close(fd)
-        with open(temp_dst, 'w') as f:
-            f.write(content)
-        move(temp_dst, dst)
+        write_to_file(content, dst)
     else:
         copy(src, dst)
 
@@ -128,3 +127,9 @@ def copy_notice(service_name):
 
 def remove_notice(service_name):
     remove(_get_notice_path(service_name))
+
+
+def temp_copy(source):
+    """ Create a copy at a temporary location """
+    content = _read(source)
+    return write_to_tempfile(content)

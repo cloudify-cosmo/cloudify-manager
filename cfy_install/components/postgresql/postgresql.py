@@ -134,7 +134,7 @@ def _create_default_db():
         SCRIPTS,
         'create_default_db.sh'
     )
-    tmp_script_path = common.temp_copy(script_path)
+    tmp_script_path = files.temp_copy(script_path)
     common.chmod('+x', tmp_script_path)
     common.sudo(
         'su - postgres -c "{cmd} {db} {user} {password}"'.format(

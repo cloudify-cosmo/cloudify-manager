@@ -22,7 +22,7 @@ from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.network import wait_for_port, check_http_response
-from ...utils.files import copy_notice, remove_notice, remove_files
+from ...utils.files import copy_notice, remove_notice, remove_files, temp_copy
 
 logger = get_logger(INFLUXB)
 
@@ -64,7 +64,7 @@ def _configure_database(host, port):
         return
 
     try:
-        tmp_path = common.temp_copy(join(CONFIG_PATH, 'retention.json'))
+        tmp_path = temp_copy(join(CONFIG_PATH, 'retention.json'))
 
         with open(tmp_path) as policy_file:
             retention_policy = policy_file.read()

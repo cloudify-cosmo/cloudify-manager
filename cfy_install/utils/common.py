@@ -115,11 +115,3 @@ def move(source, destination, rename_only=False):
     else:
         copy(source, destination)
         remove(source)
-
-
-def temp_copy(source):
-    """ Create a copy at a temporary location """
-    fd, temp_dest = tempfile.mkstemp()
-    os.close(fd)
-    copy(source, temp_dest)
-    return temp_dest
