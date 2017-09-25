@@ -92,6 +92,14 @@ def copy_files_between_manager_and_snapshot(archive_root,
         # This is a 4.x+ install, files go where they went.
         data_to_copy = [(path, path) for path in data_to_copy]
 
+    # Include roles configuration file in snapshot
+    data_to_copy.append(
+        (
+            '/opt/manager/authorization.conf',
+            'authorization.conf',
+        ),
+    )
+
     local_cert_dir = os.path.dirname(get_local_rest_certificate())
     if to_archive:
         data_to_copy.append((local_cert_dir,
