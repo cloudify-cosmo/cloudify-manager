@@ -183,6 +183,7 @@ def restore_composer_files(archive_root):
 def copy_snapshot_path(source, destination):
     # source doesn't need to exist, then ignore
     if not os.path.exists(source):
+        ctx.logger.warning('Source not found: {0}. Skipping...'.format(source))
         return
     ctx.logger.debug(
         'Copying from dump: {0} to: {1}..'.format(source, destination))
