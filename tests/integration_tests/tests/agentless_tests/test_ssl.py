@@ -16,7 +16,9 @@
 from time import sleep
 from os.path import join
 
-from requests.exceptions import ConnectionError, SSLError
+from requests.exceptions import ConnectionError
+
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests.framework import docl
 from integration_tests import AgentlessTestCase
@@ -38,7 +40,7 @@ class TestSsl(AgentlessTestCase):
         # change to ssl - now only ssl client works
         self.client.manager.set_ssl(True)
         sleep(2)
-        self.assertRaises(SSLError, self.client.manager.ssl_status)
+        self.assertRaises(CloudifyClientError, self.client.manager.ssl_status)
         self.assertEquals('SSL enabled', ssl_client.manager.ssl_status())
 
         # change back to non-ssl - now only non-ssl client works
