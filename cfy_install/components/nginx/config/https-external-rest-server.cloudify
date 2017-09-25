@@ -12,26 +12,14 @@ server {{
   # serve the UI
   include "/etc/nginx/conf.d/ui-locations.cloudify";
 
+  # serve the Composer
+  include "/etc/nginx/conf.d/composer-location.cloudify";
+
   # Serves the Rest Service (backed by the cloudify-rest upstream).
   include "/etc/nginx/conf.d/rest-location.cloudify";
 
   # Serves the File Server (backed by the cloudify-resources upstream).
   include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
-}}
-
-# Composer external server
-server {{
-  # server listening for external requests
-  listen              8443 ssl;
-  server_name         {nginx[external_rest_host]};
-
-  ssl_certificate     {nginx[external_cert_path]};
-  ssl_certificate_key {nginx[external_key_path]};
-  error_page 497 =307 https://$host:$server_port$request_uri;
-
-  # serve the Composer
-  include "/etc/nginx/conf.d/composer-location.cloudify";
-
 }}
 
 server {{

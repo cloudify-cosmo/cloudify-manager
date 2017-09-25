@@ -1,4 +1,4 @@
-location / {{
+location ~ ^/composer {{
   proxy_pass         http://cloudify-composer;
   proxy_read_timeout 90;
   proxy_buffering    off;
