@@ -105,17 +105,16 @@ def _create_postgres_pass_file():
     pgpass_content = '{host}:{port}:{db_name}:{user}:{password}'.format(
         host=pg_config['host'],
         port=PG_PORT,
-        db_name=pg_config['db_name'],
+        db_name='*',  # Allowing for the multiple DBs we have
         user=pg_config['username'],
         password=pg_config['password']
     )
-    pgpass_path = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
-    files.write_to_file(pgpass_content, pgpass_path)
-    common.chmod('400', pgpass_path)
+    files.write_to_file(pgpass_content, PGPASS_PATH)
+    common.chmod('400', PGPASS_PATH)
     common.chown(
         constants.CLOUDIFY_USER,
         constants.CLOUDIFY_GROUP,
-        pgpass_path
+        PGPASS_PATH
     )
 
     logger.debug('Postgresql pass file {0} created'.format(PGPASS_PATH))
