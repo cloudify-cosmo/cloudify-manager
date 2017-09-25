@@ -31,6 +31,9 @@ function set_manager_ip() {
 
   echo "Creating internal SSL certificates.."
   python /opt/cloudify/manager-ip-setter/create-internal-ssl-certs.py ${ip}
+
+  echo "Updating logstash config..."
+  /usr/bin/sed -i -e 's/host => ".*"/host => "'"${ip}"'"/g' /etc/logstash/conf.d/logstash.conf
   
   echo "Done!"
 
