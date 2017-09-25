@@ -197,12 +197,28 @@ class BaseServerTestCase(unittest.TestCase):
         server.db.create_all()
         admin_user = get_admin_user()
 
-        # We're mocking the AMQPManager, as we aren't really using Rabbit here
-        default_tenant = create_default_user_tenant_and_roles(
-            admin_username=admin_user['username'],
-            admin_password=admin_user['password'],
-            amqp_manager=MagicMock()
-        )
+        auth_dict = {
+            'roles': [
+                {'name': 'admin', 'description': ''},
+                {'name': 'user', 'description': ''}
+            ]
+        }
+        fd, temp_auth_file = tempfile.mkstemp()
+        os.close(fd)
+        with open(temp_auth_file, 'w') as f:
+            json.dump(auth_dict, f)
+
+        try:
+            # We're mocking the AMQPManager, we aren't really using Rabbit here
+            default_tenant = create_default_user_tenant_and_roles(
+                admin_username=admin_user['username'],
+                admin_password=admin_user['password'],
+                amqp_manager=MagicMock(),
+                authorization_file_path=temp_auth_file
+            )
+        finally:
+            os.remove(temp_auth_file)
+
         server.app.config[constants.CURRENT_TENANT_CONFIG] = default_tenant
 
     @staticmethod

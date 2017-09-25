@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import yaml
 import logging
 from path import path
@@ -33,6 +34,8 @@ from integration_tests.framework import utils
 from integration_tests.framework.postgresql import safe_drop_all
 from integration_tests.framework.docl import read_file as read_manager_file
 from integration_tests.tests.constants import PROVIDER_NAME, PROVIDER_CONTEXT
+from integration_tests.framework.constants import AUTHORIZATION_FILE_LOCATION
+
 
 logger = setup_logger('Flask Utils', logging.INFO)
 
@@ -125,7 +128,8 @@ def _add_defaults(app):
     default_tenant = create_default_user_tenant_and_roles(
         admin_username=utils.get_manager_username(),
         admin_password=utils.get_manager_password(),
-        amqp_manager=amqp_manager
+        amqp_manager=amqp_manager,
+        authorization_file_path=AUTHORIZATION_FILE_LOCATION
     )
     app.config[CURRENT_TENANT_CONFIG] = default_tenant
     return default_tenant

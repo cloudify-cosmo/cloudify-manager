@@ -36,8 +36,6 @@ DEFAULT_TENANT_ID = 0
 ADMIN_ROLE = 'admin'
 USER_ROLE = 'user'
 
-ALL_ROLES = [ADMIN_ROLE, USER_ROLE]
-
 REST_SERVICE_NAME = 'cloudify-restservice'
 MGMTWORKER_QUEUE = 'cloudify.management'
 
