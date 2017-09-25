@@ -25,12 +25,12 @@ from flask_security import Security
 
 from manager_rest import config
 from manager_rest.storage import db, user_datastore
-from manager_rest.flask_utils import set_flask_security_config
 from manager_rest.security.user_handler import user_loader
 from manager_rest.maintenance import maintenance_mode_handler
 from manager_rest.rest.endpoint_mapper import setup_resources
-from manager_rest.app_logging import setup_logger, log_request, log_response
 from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
+from manager_rest.app_logging import setup_logger, log_request, log_response
+from manager_rest.flask_utils import set_flask_security_config, setup_flask_app
 
 try:
     from cloudify_premium import configure_ldap, configure_okta
@@ -66,6 +66,17 @@ class CloudifyFlaskApp(Flask):
         self._set_exception_handlers()
         self._set_sql_alchemy()
         self._set_flask_security()
+
+        setup_flask_app(
+            manager_ip=config.instance.postgresql_host,
+            hash_salt=config.instance.security_hash_salt,
+            secret_key=config.instance.security_secret_key
+        )
+        roles = config.instance.authorization_roles
+        if roles:
+            for role in roles:
+                user_datastore.find_or_create_role(name=role['name'])
+            user_datastore.commit()
 
         setup_resources(Api(self))
 

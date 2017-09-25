@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from json import load
+
 from flask_security.utils import encrypt_password
 
 from manager_rest import constants
@@ -39,14 +41,15 @@ def get_node(deployment_id, node_id):
 
 def create_default_user_tenant_and_roles(admin_username,
                                          admin_password,
-                                         amqp_manager):
+                                         amqp_manager,
+                                         authorization_file_path):
     """
     Create the bootstrap admin, the default tenant and the security roles,
     as well as a RabbitMQ vhost and user corresponding to the default tenant
 
     :return: The default tenant
     """
-    admin_role = _create_roles()
+    admin_role = _create_roles(authorization_file_path)
     default_tenant = _create_default_tenant()
     amqp_manager.create_tenant_vhost_and_user(tenant=default_tenant)
 
@@ -61,8 +64,11 @@ def create_default_user_tenant_and_roles(admin_username,
     return default_tenant
 
 
-def _create_roles():
-    for role in constants.ALL_ROLES:
+def _create_roles(authorization_file_path):
+    with open(authorization_file_path) as f:
+        content = load(f)
+    roles = [role['name'] for role in content['roles']]
+    for role in roles:
         user_datastore.find_or_create_role(name=role)
     return user_datastore.find_role(constants.ADMIN_ROLE)
 
