@@ -37,7 +37,7 @@ build do
              "install", "--build=#{project_dir}/dev-requirements",
              "-r", "./workflows/dev-requirements.txt"]
     command ["#{install_dir}/embedded/bin/pip",
-             "install", "https://github.com/cloudify-cosmo/wagon/archive/0.3.1.zip"]
+             "install", "https://github.com/cloudify-cosmo/wagon/archive/0.6.0.zip"]
     command ["#{install_dir}/embedded/bin/pip",
              "install", "psutil==2.1.1"]
 end

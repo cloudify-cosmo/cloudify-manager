@@ -26,7 +26,7 @@ from base64 import urlsafe_b64encode
 from datetime import datetime
 from os import path, makedirs
 
-import wagon.utils
+import wagon
 from flask_restful import abort
 
 from manager_rest import constants, config
@@ -124,7 +124,7 @@ def plugin_installable_on_current_platform(plugin):
         release = release or None
 
     return (plugin.supported_platform == 'any' or all([
-        plugin.supported_platform == wagon.utils.get_platform(),
+        plugin.supported_platform == wagon.get_platform(),
         plugin.distribution == dist,
         plugin.distribution_release == release
     ]))

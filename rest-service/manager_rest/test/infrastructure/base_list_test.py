@@ -18,7 +18,7 @@ import shutil
 
 from manager_rest.test.base_test import BaseServerTestCase
 
-from wagon.wagon import Wagon
+import wagon
 
 
 class BaseListTest(BaseServerTestCase):
@@ -54,8 +54,7 @@ class BaseListTest(BaseServerTestCase):
             with open(os.path.join(tmpdir, 'setup.py'), 'w') as f:
                 f.write('from setuptools import setup\n')
                 f.write('setup(name="some-package", version={0})'.format(i))
-            wagon = Wagon(tmpdir)
-            plugin_path = wagon.create(archive_destination_dir=tmpdir)
+            plugin_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
             self.post_file('/plugins', plugin_path)
             shutil.rmtree(tmpdir)
 

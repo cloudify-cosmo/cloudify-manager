@@ -19,7 +19,7 @@ import tarfile
 import tempfile
 import uuid
 
-from wagon.wagon import Wagon
+import wagon
 
 from integration_tests import ManagerTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -67,9 +67,11 @@ class DownloadInstallPluginTest(ManagerTestCase):
     def _create_test_wagon(self):
         source_dir = resource('plugins/{0}'.format(TEST_PACKAGE_NAME))
         target_dir = tempfile.mkdtemp(dir=self.workdir)
-        wagon_client = Wagon(source_dir)
-        return wagon_client.create(archive_destination_dir=target_dir,
-                                   force=True)
+        return wagon.create(
+            source_dir,
+            archive_destination_dir=target_dir,
+            force=True
+        )
 
     def _verify_plugin_can_be_used_in_blueprint(self):
         blueprint_path = resource('dsl/managed_plugins.yaml')
