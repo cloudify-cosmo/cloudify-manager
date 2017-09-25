@@ -84,7 +84,9 @@ def _configure_database(host, port):
         common.remove('/tmp/retention.json')
 
     except Exception as ex:
-        raise BootstrapError('Failed to create: {0} ({1}).'.format(db_name, ex))
+        raise BootstrapError(
+            'Failed to create: {0} ({1}).'.format(db_name, ex)
+        )
 
     logger.debug('Verifying database created successfully...')
     db_list = eval(urllib2.urlopen(urllib2.Request(url_for_list)).read())
