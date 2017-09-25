@@ -25,6 +25,7 @@ from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
 from . import utils
 from . import constants
 from .agents import Agents
+from .networks import Networks
 from .influxdb import InfluxDB
 from .postgres import Postgres
 from .credentials import Credentials
@@ -59,6 +60,7 @@ class SnapshotCreate(object):
             self._dump_files()
             self._dump_postgres()
             self._dump_influxdb()
+            self._dump_networks()
             self._dump_credentials(manager_version)
             self._dump_metadata(metadata,
                                 manager_version,
@@ -134,6 +136,10 @@ class SnapshotCreate(object):
     def _dump_agents(self, manager_version):
         ctx.logger.info('Dumping agents data')
         Agents().dump(self._tempdir, manager_version)
+
+    def _dump_networks(self):
+        ctx.logger.info('Dumping network data')
+        Networks().dump(self._tempdir, self._client)
 
     def _create_archive(self):
         snapshot_archive_name = self._get_snapshot_archive_name()
