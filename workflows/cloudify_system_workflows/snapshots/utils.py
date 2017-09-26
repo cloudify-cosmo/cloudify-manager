@@ -92,6 +92,14 @@ def copy_files_between_manager_and_snapshot(archive_root,
         # This is a 4.x+ install, files go where they went.
         data_to_copy = [(path, path) for path in data_to_copy]
 
+    # Include roles configuration file in snapshot
+    data_to_copy.append(
+        (
+            '/opt/manager/authorization.conf',
+            'authorization.conf',
+        ),
+    )
+
     local_cert_dir = os.path.dirname(get_local_rest_certificate())
     if to_archive:
         data_to_copy.append((local_cert_dir,
@@ -183,6 +191,7 @@ def restore_composer_files(archive_root):
 def copy_snapshot_path(source, destination):
     # source doesn't need to exist, then ignore
     if not os.path.exists(source):
+        ctx.logger.warning('Source not found: {0}. Skipping...'.format(source))
         return
     ctx.logger.debug(
         'Copying from dump: {0} to: {1}..'.format(source, destination))
