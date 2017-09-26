@@ -13,8 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from json import load
-
+from yaml import load
 from flask_security.utils import encrypt_password
 
 from manager_rest import constants

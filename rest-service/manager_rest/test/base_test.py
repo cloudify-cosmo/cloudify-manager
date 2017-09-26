@@ -23,6 +23,8 @@ import uuid
 import os
 import shutil
 
+import yaml
+
 from flask.testing import FlaskClient
 from nose.plugins.attrib import attr
 from wagon.wagon import Wagon
@@ -206,7 +208,7 @@ class BaseServerTestCase(unittest.TestCase):
         fd, temp_auth_file = tempfile.mkstemp()
         os.close(fd)
         with open(temp_auth_file, 'w') as f:
-            json.dump(auth_dict, f)
+            yaml.dump(auth_dict, f)
 
         try:
             # We're mocking the AMQPManager, we aren't really using Rabbit here
