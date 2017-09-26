@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .deployments import DeploymentsId  # NOQA
+from .deployments import DeploymentsId      # NOQA
 
-from .manager import SSLConfig          # NOQA
+from .manager import SSLConfig              # NOQA
+
+from .manager_config import ManagerConfig   # NOQA

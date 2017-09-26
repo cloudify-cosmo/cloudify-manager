@@ -83,7 +83,8 @@ def setup_resources(api):
         'LdapAuthentication': 'ldap',
         'SSLConfig': 'ssl',
         'Secrets': 'secrets',
-        'SecretsKey': 'secrets/<string:key>'
+        'SecretsKey': 'secrets/<string:key>',
+        'ManagerConfig': 'config',
     }
 
     # Set version endpoint as a non versioned endpoint
