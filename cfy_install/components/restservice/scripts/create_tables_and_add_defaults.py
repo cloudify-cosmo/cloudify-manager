@@ -47,7 +47,8 @@ def _add_default_user_and_tenant(config, amqp_manager):
     create_default_user_tenant_and_roles(
         admin_username=config['admin_username'],
         admin_password=config['admin_password'],
-        amqp_manager=amqp_manager
+        amqp_manager=amqp_manager,
+        authorization_file_path=config['authorization_file_path']
     )
 
 

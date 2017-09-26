@@ -223,6 +223,7 @@ def _create_db_tables_and_add_defaults():
         'amqp_password': config[RABBITMQ]['password'],
         'postgresql_host': config[POSTGRESQL]['host'],
         'provider_context': {'cloudify': {'cloudify_agent': config[AGENT]}},
+        'authorization_file_path': join(HOME_DIR, 'authorization.conf'),
         'db_migrate_dir': join(
             constants.MANAGER_RESOURCES_HOME,
             'cloudify',
