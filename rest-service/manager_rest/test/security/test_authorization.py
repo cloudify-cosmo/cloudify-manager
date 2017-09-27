@@ -595,7 +595,7 @@ class SnapshotsAuthorizationTests(SecurityTestBase):
         Admin user are able to upload snapshots while
         regular users are not.
         """
-        tmp_file_path = self.create_wheel('wagon', '0.6.0')
+        tmp_file_path = self.create_wheel('wagon', '0.6.1')
         # admin
         self.admin_client.snapshots.upload(tmp_file_path, snapshot_id='0')
 
@@ -627,7 +627,7 @@ class SnapshotsAuthorizationTests(SecurityTestBase):
         Admin user are able to download snapshots while
         regular users are not.
         """
-        tmp_file_path = self.create_wheel('wagon', '0.6.0')
+        tmp_file_path = self.create_wheel('wagon', '0.6.1')
         tmp_local_path = '/tmp/snapshot.sn'
         # admin
         self.admin_client.snapshots.upload(tmp_file_path, '2')
