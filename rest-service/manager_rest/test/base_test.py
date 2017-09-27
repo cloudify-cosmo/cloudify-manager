@@ -27,7 +27,7 @@ import yaml
 
 from flask.testing import FlaskClient
 from nose.plugins.attrib import attr
-from wagon.wagon import Wagon
+import wagon
 from mock import MagicMock, patch
 
 from manager_rest import utils, config, constants, archiving
@@ -451,9 +451,11 @@ class BaseServerTestCase(unittest.TestCase):
 
     def create_wheel(self, package_name, package_version):
         module_src = '{0}=={1}'.format(package_name, package_version)
-        wagon_client = Wagon(module_src)
-        return wagon_client.create(
-            archive_destination_dir=tempfile.gettempdir(), force=True)
+        return wagon.create(
+            module_src,
+            archive_destination_dir=tempfile.gettempdir(),
+            force=True
+        )
 
     def wait_for_url(self, url, timeout=5):
         end = time.time() + timeout

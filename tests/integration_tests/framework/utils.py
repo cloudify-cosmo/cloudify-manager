@@ -29,7 +29,7 @@ import influxdb
 import pika
 import sh
 
-from wagon import wagon
+import wagon
 
 import constants
 
@@ -172,10 +172,11 @@ def _create_mock_wagon(package_name, package_version):
             f.write('from setuptools import setup\n')
             f.write('setup(name="{0}", version={1})'.format(
                 package_name, package_version))
-        wagon_client = wagon.Wagon(module_src)
-        result = wagon_client.create(
+        result = wagon.create(
+            module_src,
             archive_destination_dir=tempfile.gettempdir(),
-            force=True)
+            force=True
+        )
     finally:
         shutil.rmtree(module_src)
     return result

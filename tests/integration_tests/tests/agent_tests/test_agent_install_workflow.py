@@ -17,7 +17,7 @@ import os
 import uuid
 import tempfile
 
-from wagon.wagon import Wagon
+import wagon
 
 from integration_tests import AgentTestWithPlugins, BaseTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -83,9 +83,11 @@ class TestWorkflow(AgentTestWithPlugins):
     def _create_test_wagon(self, plugin_name):
         source_dir = resource('plugins/{0}'.format(plugin_name))
         target_dir = tempfile.mkdtemp(dir=self.workdir)
-        wagon_client = Wagon(source_dir)
-        return wagon_client.create(archive_destination_dir=target_dir,
-                                   force=True)
+        return wagon.create(
+            source_dir,
+            archive_destination_dir=target_dir,
+            force=True
+        )
 
     def _upload_mock_plugin(self):
         wagon_path = self._create_test_wagon('target_aware_mock')

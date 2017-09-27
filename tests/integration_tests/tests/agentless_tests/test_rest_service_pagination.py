@@ -18,7 +18,7 @@ import tempfile
 import shutil
 from functools import partial
 
-from wagon.wagon import Wagon
+import wagon
 
 from manager_rest import config
 from integration_tests import AgentlessTestCase
@@ -97,8 +97,7 @@ class TestRestServiceListPagination(AgentlessTestCase):
             with open(os.path.join(tmpdir, 'setup.py'), 'w') as f:
                 f.write('from setuptools import setup\n')
                 f.write('setup(name="some-package", version={0})'.format(i))
-            wagon = Wagon(tmpdir)
-            plugin_path = wagon.create(archive_destination_dir=tmpdir)
+            plugin_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
             self.client.plugins.upload(plugin_path)
             shutil.rmtree(tmpdir)
         self._test_pagination(self.client.plugins.list)

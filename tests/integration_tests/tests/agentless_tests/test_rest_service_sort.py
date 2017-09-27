@@ -17,7 +17,7 @@ import os
 import tempfile
 import shutil
 
-from wagon.wagon import Wagon
+import wagon
 
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
@@ -78,8 +78,7 @@ class TestRestServiceListSort(AgentlessTestCase):
             with open(os.path.join(tmpdir, 'setup.py'), 'w') as f:
                 f.write('from setuptools import setup\n')
                 f.write('setup(name="some-package", version={0})'.format(i))
-            wagon = Wagon(tmpdir)
-            plugin_path = wagon.create(archive_destination_dir=tmpdir)
+            plugin_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
             self.client.plugins.upload(plugin_path)
             shutil.rmtree(tmpdir)
         self._test_sort('plugins', 'id')

@@ -16,11 +16,12 @@
 import os
 import json
 import uuid
+
+import wagon
 import yaml
 import urllib
 import shutil
 import zipfile
-import tarfile
 import tempfile
 import contextlib
 from os import path
@@ -660,37 +661,10 @@ class UploadedPluginsManager(UploadedDataManager):
         )
 
     @staticmethod
-    def _load_plugin_package_json(tar_source):
-
-        if not tarfile.is_tarfile(tar_source):
+    def _load_plugin_package_json(wagon_source):
+        if wagon.validate(wagon_source):
+            # wagon returns a list of validation issues.
             raise manager_exceptions.InvalidPluginError(
-                'the provided tar archive can not be read.')
+                'the provided wagon can not be read.')
 
-        with tarfile.open(tar_source) as tar:
-            tar_members = tar.getmembers()
-            # a wheel plugin will contain exactly one sub directory
-            if not tar_members:
-                raise manager_exceptions.InvalidPluginError(
-                    'archive file structure malformed. expecting exactly one '
-                    'sub directory; got none.')
-            package_json_path = os.path.join(tar_members[0].name,
-                                             'package.json')
-            try:
-                package_member = tar.getmember(package_json_path)
-            except KeyError:
-                raise manager_exceptions. \
-                    InvalidPluginError("'package.json' was not found under {0}"
-                                       .format(package_json_path))
-            try:
-                package_json = tar.extractfile(package_member)
-            except (tarfile.ExtractError, EnvironmentError) as e:
-                raise manager_exceptions. \
-                    InvalidPluginError(str(e))
-            try:
-                return json.load(package_json)
-            except ValueError as e:
-                raise manager_exceptions. \
-                    InvalidPluginError("'package.json' is not a valid json: "
-                                       "{json_str}. error is {error}"
-                                       .format(json_str=package_json.read(),
-                                               error=str(e)))
+        return wagon.show(wagon_source)
