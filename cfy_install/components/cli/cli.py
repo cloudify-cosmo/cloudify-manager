@@ -1,3 +1,5 @@
+from os.path import join, expanduser
+
 from .. import SOURCES, SECURITY
 
 from ..service_names import CLI, MANAGER
@@ -17,6 +19,19 @@ def _install():
     yum_install(source_url)
 
 
+def _set_colors(is_root):
+    """ Makes sure colors are enabled by default in cloudify logs via CLI """
+
+    home_dir = '/root' if is_root else expanduser('~')
+    sed_cmd = 's/colors: false/colors: true/g'
+    config_path = join(home_dir, '.cloudify', 'config.yaml')
+    cmd = "/usr/bin/sed -i -e '{0}' {1}".format(sed_cmd, config_path)
+
+    # Adding sudo manually, because common.sudo doesn't work well with sed
+    cmd = "sudo {0}".format(cmd) if is_root else cmd
+    common.run([cmd], shell=True)
+
+
 def _configure():
     username = config[MANAGER][SECURITY]['admin_username']
     password = config[MANAGER][SECURITY]['admin_password']
@@ -27,10 +42,12 @@ def _configure():
     ]
     logger.info('Setting CLI for default user...')
     common.run(cmd)
+    _set_colors(is_root=False)
 
     logger.info('Setting CLI for root user...')
     root_cmd = ['sudo', '-u', 'root'] + cmd
     common.run(root_cmd)
+    _set_colors(is_root=True)
 
 
 def install():
