@@ -15,10 +15,8 @@
 
 from subprocess import check_call
 
-from flask_login import current_user
-
-from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 
 from .. import rest_utils
 from ..rest_decorators import exceptions_handled
@@ -35,14 +33,11 @@ HTTPS_PATH = '/etc/nginx/conf.d/https-external-rest-server.cloudify'
 
 class SSLConfig(SecuredResource):
     @exceptions_handled
+    @authorize('ssl_set')
     def post(self):
         """
         Enable/Disable SSL
         """
-        if not current_user.is_admin:
-            raise_unauthorized_user_error(
-                '{0} does not have privileges to set SSL mode'.format(
-                    current_user))
         request_dict = rest_utils.get_json_and_verify_params({'state'})
         state = rest_utils.verify_and_convert_bool('state',
                                                    request_dict.get('state'))
@@ -56,6 +51,7 @@ class SSLConfig(SecuredResource):
         return 'SSL is now {0} on the manager'.format(status)
 
     @exceptions_handled
+    @authorize('ssl_get')
     def get(self):
         """
         Get ssl state (enabled/disabled)

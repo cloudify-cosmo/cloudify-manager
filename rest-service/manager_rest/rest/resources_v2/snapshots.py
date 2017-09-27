@@ -30,6 +30,7 @@ from manager_rest.rest import (
     rest_utils,
 )
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -76,7 +77,7 @@ class Snapshots(SecuredResource):
         notes='Returns a list of existing snapshots.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.verify_user_is_admin
+    @authorize('snapshot_list')
     @rest_decorators.marshal_with(models.Snapshot)
     @rest_decorators.create_filters(models.Snapshot)
     @rest_decorators.paginate
@@ -102,7 +103,7 @@ class SnapshotsId(SecuredResource):
         notes='Returns a snapshot by its id.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.verify_user_is_admin
+    @authorize('snapshot_get')
     @rest_decorators.marshal_with(models.Snapshot)
     def get(self, snapshot_id, _include=None, **kwargs):
         return get_storage_manager().get(
@@ -120,7 +121,7 @@ class SnapshotsId(SecuredResource):
         ]
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.verify_user_is_admin
+    @authorize('snapshot_create')
     @rest_decorators.marshal_with(models.Execution)
     def put(self, snapshot_id):
         request_dict = rest_utils.get_json_and_verify_params()
@@ -153,7 +154,7 @@ class SnapshotsId(SecuredResource):
         notes='Delete existing snapshot.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.verify_user_is_admin
+    @authorize('snapshot_delete')
     @rest_decorators.marshal_with(models.Snapshot)
     def delete(self, snapshot_id):
         sm = get_storage_manager()
@@ -164,7 +165,7 @@ class SnapshotsId(SecuredResource):
         return snapshot, 200
 
     @rest_decorators.exceptions_handled
-    @rest_decorators.verify_user_is_admin
+    @authorize('snapshot_status_update')
     def patch(self, snapshot_id):
         """Update snapshot status by id
         """
@@ -204,7 +205,7 @@ class SnapshotsIdArchive(SecuredResource):
         ]
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.verify_user_is_admin
+    @authorize('snapshot_upload')
     @rest_decorators.marshal_with(models.Snapshot)
     def put(self, snapshot_id):
         return UploadedSnapshotsManager().receive_uploaded_data(snapshot_id)
@@ -214,7 +215,7 @@ class SnapshotsIdArchive(SecuredResource):
         notes='Downloads snapshot as an archive.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.verify_user_is_admin
+    @authorize('snapshot_download')
     def get(self, snapshot_id):
         snap = get_storage_manager().get(models.Snapshot, snapshot_id)
         if snap.status == SnapshotState.FAILED:
@@ -249,7 +250,7 @@ class SnapshotsIdRestore(SecuredResource):
         notes='Restore existing snapshot.'
     )
     @rest_decorators.exceptions_handled
-    @rest_decorators.verify_user_is_admin
+    @authorize('snapshot_restore')
     @rest_decorators.marshal_with(models.Snapshot)
     def post(self, snapshot_id):
         _verify_no_multi_node_cluster(action="restore snapshot")

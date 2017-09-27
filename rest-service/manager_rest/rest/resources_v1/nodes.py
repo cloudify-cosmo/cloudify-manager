@@ -31,6 +31,7 @@ from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
 )
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -52,6 +53,7 @@ class Nodes(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
+    @authorize('node_list')
     @marshal_with(models.Node)
     def get(self, _include=None, **kwargs):
         """
@@ -101,6 +103,7 @@ class NodeInstances(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
+    @authorize('node_instance_list')
     @marshal_with(models.NodeInstance)
     def get(self, _include=None, **kwargs):
         """
@@ -144,6 +147,7 @@ class NodeInstancesId(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
+    @authorize('node_instance_get')
     @marshal_with(models.NodeInstance)
     def get(self, node_instance_id, _include=None, **kwargs):
         """
@@ -194,6 +198,7 @@ class NodeInstancesId(SecuredResource):
         consumes=["application/json"]
     )
     @exceptions_handled
+    @authorize('node_instance_update')
     @marshal_with(models.NodeInstance)
     def patch(self, node_instance_id, **kwargs):
         """Update node instance by id."""

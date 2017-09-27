@@ -30,6 +30,7 @@ from nose.plugins.attrib import attr
 import wagon
 from mock import MagicMock, patch
 
+from manager_rest.security import authorization
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest.storage.models_states import ExecutionState
@@ -43,8 +44,11 @@ from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
+from .mocks import (
+    MockHTTPClient, CLIENT_API_VERSION, build_query_string, mock_authorize)
 
+
+authorization.authorize = mock_authorize
 
 FILE_SERVER_PORT = 53229
 LATEST_API_VERSION = 3.1  # to be used by max_client_version test attribute

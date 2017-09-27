@@ -31,6 +31,7 @@ from manager_rest.rest import (
     rest_utils,
 )
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -53,6 +54,7 @@ class Plugins(SecuredResource):
         )
     )
     @rest_decorators.exceptions_handled
+    @authorize('plugin_list')
     @rest_decorators.marshal_with(models.Plugin)
     @rest_decorators.create_filters(models.Plugin)
     @rest_decorators.paginate
@@ -98,6 +100,7 @@ class Plugins(SecuredResource):
         consumes=["application/octet-stream"]
     )
     @rest_decorators.exceptions_handled
+    @authorize('plugin_upload')
     @rest_decorators.marshal_with(models.Plugin)
     def post(self, **kwargs):
         """
@@ -132,6 +135,7 @@ class PluginsArchive(SecuredResource):
         notes="download a plugin archive according to the plugin ID. "
     )
     @rest_decorators.exceptions_handled
+    @authorize('plugin_download')
     def get(self, plugin_id, **kwargs):
         """
         Download plugin archive
@@ -167,6 +171,7 @@ class PluginsId(SecuredResource):
         notes="Returns a plugin according to its ID."
     )
     @rest_decorators.exceptions_handled
+    @authorize('plugin_get')
     @rest_decorators.marshal_with(models.Plugin)
     def get(self, plugin_id, _include=None, **kwargs):
         """
@@ -184,6 +189,7 @@ class PluginsId(SecuredResource):
         notes="deletes a plugin according to its ID."
     )
     @rest_decorators.exceptions_handled
+    @authorize('plugin_delete')
     @rest_decorators.marshal_with(models.Plugin)
     def delete(self, plugin_id, **kwargs):
         """

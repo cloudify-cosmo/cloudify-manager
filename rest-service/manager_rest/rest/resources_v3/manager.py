@@ -13,20 +13,19 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask_security import current_user
 from flask import current_app, request
 
-from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
-
 from manager_rest import config
+from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import (SecuredResource,
                                    SecuredResourceSkipTenantAuth)
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError)
+from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
 
 from .. import rest_decorators, rest_utils
 from ...security.authentication import authenticator
@@ -60,6 +59,7 @@ class FileServerAuth(SecuredResourceSkipTenantAuth):
                 tenant_authorizer.authorize(user, request, uri_tenant)
 
     @rest_decorators.exceptions_handled
+    @authorize('file_server_auth')
     @rest_decorators.marshal_with(ResourceID)
     def get(self, **_):
         """
@@ -76,6 +76,7 @@ class FileServerAuth(SecuredResourceSkipTenantAuth):
 
 class LdapAuthentication(SecuredResource):
     @rest_decorators.exceptions_handled
+    @authorize('ldap_set')
     @rest_decorators.marshal_with(LdapResponse)
     def post(self):
         ldap_config = self._validate_set_ldap_request()
@@ -119,9 +120,6 @@ class LdapAuthentication(SecuredResource):
         return len(users) == 1
 
     def _validate_set_ldap_request(self):
-        if not current_user.is_admin:
-            raise UnauthorizedError('User is not authorized to set LDAP '
-                                    'configuration.')
         if not self._only_admin_in_manager():
             raise MethodNotAllowedError('LDAP Configuration may be set only on'
                                         ' a clean manager.')

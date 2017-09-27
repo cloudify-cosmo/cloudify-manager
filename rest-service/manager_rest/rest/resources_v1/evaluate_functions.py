@@ -25,6 +25,7 @@ from manager_rest.rest.rest_decorators import (
     marshal_with,
 )
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.dsl_functions import evaluate_intrinsic_functions
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 
@@ -46,6 +47,7 @@ class EvaluateFunctions(SecuredResource):
         ]
     )
     @exceptions_handled
+    @authorize('functions_evaluate')
     @marshal_with(responses.EvaluatedFunctions)
     def post(self, **kwargs):
         """

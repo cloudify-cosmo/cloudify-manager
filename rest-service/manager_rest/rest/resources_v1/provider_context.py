@@ -35,6 +35,7 @@ from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
 )
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     models,
     get_storage_manager,
@@ -49,6 +50,7 @@ class ProviderContext(SecuredResource):
         notes="Get the provider context"
     )
     @exceptions_handled
+    @authorize('provider_context_get')
     @marshal_with(models.ProviderContext)
     def get(self, **kwargs):
         """
@@ -74,6 +76,7 @@ class ProviderContext(SecuredResource):
         ]
     )
     @exceptions_handled
+    @authorize('provider_context_create')
     @marshal_with(responses.ProviderContextPostStatus)
     def post(self, **kwargs):
         """

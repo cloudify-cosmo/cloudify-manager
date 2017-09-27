@@ -13,8 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.storage import models, get_storage_manager
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
+from manager_rest.storage import models, get_storage_manager
 
 from ... import utils
 from .. import rest_decorators, rest_utils
@@ -23,6 +24,7 @@ from ..responses_v3 import SecretsListResponse
 
 class SecretsKey(SecuredResource):
     @rest_decorators.exceptions_handled
+    @authorize('secret_get')
     @rest_decorators.marshal_with(models.Secret)
     def get(self, key):
         """
@@ -33,6 +35,7 @@ class SecretsKey(SecuredResource):
         return get_storage_manager().get(models.Secret, key)
 
     @rest_decorators.exceptions_handled
+    @authorize('secret_create')
     @rest_decorators.marshal_with(models.Secret)
     def put(self, key):
         """
@@ -49,6 +52,7 @@ class SecretsKey(SecuredResource):
         ))
 
     @rest_decorators.exceptions_handled
+    @authorize('secret_update')
     @rest_decorators.marshal_with(models.Secret)
     def patch(self, key):
         """
@@ -62,6 +66,7 @@ class SecretsKey(SecuredResource):
         return get_storage_manager().update(secret)
 
     @rest_decorators.exceptions_handled
+    @authorize('secret_delete')
     @rest_decorators.marshal_with(models.Secret)
     def delete(self, key):
         """
@@ -82,6 +87,7 @@ class SecretsKey(SecuredResource):
 
 class Secrets(SecuredResource):
     @rest_decorators.exceptions_handled
+    @authorize('secret_list')
     @rest_decorators.marshal_with(SecretsListResponse)
     @rest_decorators.create_filters(models.Secret)
     @rest_decorators.paginate

@@ -17,6 +17,8 @@ import json
 import types
 import urllib
 
+from functools import wraps
+
 from cloudify_rest_client.client import HTTPClient
 from cloudify_rest_client.executions import Execution
 from manager_rest.storage import get_storage_manager, models
@@ -33,6 +35,15 @@ def build_query_string(query_params):
     if query_params and len(query_params) > 0:
         query_string += urllib.urlencode(query_params, True) + '&'
     return query_string
+
+
+def mock_authorize(action):
+    def authorize_dec(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            return func(*args, **kwargs)
+        return wrapper
+    return authorize_dec
 
 
 class MockHTTPClient(HTTPClient):

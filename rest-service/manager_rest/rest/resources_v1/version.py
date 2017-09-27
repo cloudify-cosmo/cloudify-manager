@@ -22,6 +22,7 @@ from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
 )
+from manager_rest.security.authorization import authorize
 from manager_rest.security import SecuredResourceSkipTenantAuth
 
 
@@ -33,6 +34,7 @@ class Version(SecuredResourceSkipTenantAuth):
         notes="Returns version information for this rest service"
     )
     @exceptions_handled
+    @authorize('version_get')
     @marshal_with(responses.Version)
     def get(self, **kwargs):
         """

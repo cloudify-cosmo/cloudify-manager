@@ -16,6 +16,7 @@
 from flask import current_app
 
 from manager_rest.storage import models
+from manager_rest.security.authorization import authorize
 from manager_rest.security import MissingPremiumFeatureResource
 from manager_rest.manager_exceptions import MethodNotAllowedError
 
@@ -32,6 +33,7 @@ except ImportError:
 
 class UserGroups(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
+    @authorize('user_group_list')
     @rest_decorators.marshal_with(GroupResponse)
     @rest_decorators.create_filters(models.Group)
     @rest_decorators.paginate
@@ -48,6 +50,7 @@ class UserGroups(SecuredMultiTenancyResource):
             sort)
 
     @rest_decorators.exceptions_handled
+    @authorize('user_group_create')
     @rest_decorators.marshal_with(GroupResponse)
     def post(self, multi_tenancy):
         """
@@ -63,6 +66,7 @@ class UserGroups(SecuredMultiTenancyResource):
 class UserGroupsId(SecuredMultiTenancyResource):
 
     @rest_decorators.exceptions_handled
+    @authorize('user_group_get')
     @rest_decorators.marshal_with(GroupResponse)
     def get(self, group_name, multi_tenancy):
         """
@@ -72,6 +76,7 @@ class UserGroupsId(SecuredMultiTenancyResource):
         return multi_tenancy.get_group(group_name)
 
     @rest_decorators.exceptions_handled
+    @authorize('user_group_delete')
     @rest_decorators.marshal_with(GroupResponse)
     def delete(self, group_name, multi_tenancy):
         """
@@ -83,6 +88,7 @@ class UserGroupsId(SecuredMultiTenancyResource):
 
 class UserGroupsUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
+    @authorize('user_group_add_user')
     @rest_decorators.marshal_with(GroupResponse)
     @rest_decorators.no_external_authenticator('add user to group')
     def put(self, multi_tenancy):
@@ -103,6 +109,7 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
+    @authorize('user_group_remove_user')
     @rest_decorators.marshal_with(GroupResponse)
     @rest_decorators.no_external_authenticator('remove user from group')
     def delete(self, multi_tenancy):

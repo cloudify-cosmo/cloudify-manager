@@ -35,6 +35,7 @@ from manager_rest.rest.rest_utils import (
     verify_and_convert_bool,
 )
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -64,6 +65,7 @@ class Executions(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
+    @authorize('execution_list')
     @marshal_with(models.Execution)
     def get(self, _include=None, **kwargs):
         """List executions"""
@@ -86,6 +88,7 @@ class Executions(SecuredResource):
             filters=deployment_id_filter).items
 
     @exceptions_handled
+    @authorize('execution_start')
     @marshal_with(models.Execution)
     def post(self, **kwargs):
         """Execute a workflow"""
@@ -124,6 +127,7 @@ class ExecutionsId(SecuredResource):
         notes="Returns the execution state by its id.",
     )
     @exceptions_handled
+    @authorize('execution_get')
     @marshal_with(models.Execution)
     def get(self, execution_id, _include=None, **kwargs):
         """
@@ -153,6 +157,7 @@ class ExecutionsId(SecuredResource):
         ]
     )
     @exceptions_handled
+    @authorize('execution_cancel')
     @marshal_with(models.Execution)
     def post(self, execution_id, **kwargs):
         """
@@ -195,6 +200,7 @@ class ExecutionsId(SecuredResource):
         ]
     )
     @exceptions_handled
+    @authorize('execution_status_update')
     @marshal_with(models.Execution)
     def patch(self, execution_id, **kwargs):
         """

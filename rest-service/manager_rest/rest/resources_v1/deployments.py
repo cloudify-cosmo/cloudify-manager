@@ -45,6 +45,7 @@ from manager_rest.rest.rest_utils import (
     get_json_and_verify_params,
 )
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
     models,
@@ -59,6 +60,7 @@ class Deployments(SecuredResource):
         notes="Returns a list of existing deployments."
     )
     @exceptions_handled
+    @authorize('deployment_list')
     @marshal_with(models.Deployment)
     def get(self, _include=None, **kwargs):
         """
@@ -75,6 +77,7 @@ class DeploymentsId(SecuredResource):
         notes="Returns a deployment by its id."
     )
     @exceptions_handled
+    @authorize('deployment_get')
     @marshal_with(models.Deployment)
     def get(self, deployment_id, _include=None, **kwargs):
         """
@@ -101,6 +104,7 @@ class DeploymentsId(SecuredResource):
         ]
     )
     @exceptions_handled
+    @authorize('deployment_create')
     @marshal_with(models.Deployment)
     def put(self, deployment_id, **kwargs):
         """
@@ -149,6 +153,7 @@ class DeploymentsId(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
+    @authorize('deployment_delete')
     @marshal_with(models.Deployment)
     def delete(self, deployment_id, **kwargs):
         """
@@ -193,6 +198,7 @@ class DeploymentModifications(SecuredResource):
         ]
     )
     @exceptions_handled
+    @authorize('deployment_modify')
     @marshal_with(models.DeploymentModification)
     def post(self, **kwargs):
         request_dict = get_json_and_verify_params({
@@ -220,6 +226,7 @@ class DeploymentModifications(SecuredResource):
                      'paramType': 'query'}]
     )
     @exceptions_handled
+    @authorize('deployment_modification_list')
     @marshal_with(models.DeploymentModification)
     def get(self, _include=None, **kwargs):
         args = get_args_and_verify_arguments(
@@ -242,6 +249,7 @@ class DeploymentModificationsId(SecuredResource):
         notes="Get deployment modification."
     )
     @exceptions_handled
+    @authorize('deployment_modification_get')
     @marshal_with(models.DeploymentModification)
     def get(self, modification_id, _include=None, **kwargs):
         return get_storage_manager().get(
@@ -259,6 +267,7 @@ class DeploymentModificationsIdFinish(SecuredResource):
         notes="Finish deployment modification."
     )
     @exceptions_handled
+    @authorize('deployment_modification_finish')
     @marshal_with(models.DeploymentModification)
     def post(self, modification_id, **kwargs):
         return get_resource_manager().finish_deployment_modification(
@@ -273,6 +282,7 @@ class DeploymentModificationsIdRollback(SecuredResource):
         notes="Rollback deployment modification."
     )
     @exceptions_handled
+    @authorize('deployment_modification_rollback')
     @marshal_with(models.DeploymentModification)
     def post(self, modification_id, **kwargs):
         return get_resource_manager().rollback_deployment_modification(
@@ -287,6 +297,7 @@ class DeploymentsIdOutputs(SecuredResource):
         notes="Gets a specific deployment outputs."
     )
     @exceptions_handled
+    @authorize('deployment_modification_outputs')
     @marshal_with(responses.DeploymentOutputs)
     def get(self, deployment_id, **kwargs):
         """Get deployment outputs"""

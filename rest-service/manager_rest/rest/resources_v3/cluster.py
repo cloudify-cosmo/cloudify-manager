@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from manager_rest.security.authorization import authorize
 from manager_rest.security import MissingPremiumFeatureResource
 
 from .. import rest_decorators, rest_utils
@@ -29,6 +30,7 @@ except ImportError:
 
 class Cluster(ClusterResourceBase):
     @rest_decorators.exceptions_handled
+    @authorize('cluster_status_get')
     @rest_decorators.marshal_with(ClusterState)
     @rest_decorators.create_filters()
     def get(self, cluster, _include=None, filters=None):
@@ -38,6 +40,7 @@ class Cluster(ClusterResourceBase):
         return cluster.cluster_status(_include=_include, filters=filters)
 
     @rest_decorators.exceptions_handled
+    @authorize('cluster_start_or_join')
     @rest_decorators.marshal_with(ClusterState)
     def put(self, cluster):
         """
@@ -60,6 +63,7 @@ class Cluster(ClusterResourceBase):
             return cluster.start(config)
 
     @rest_decorators.exceptions_handled
+    @authorize('cluster_config_update')
     @rest_decorators.marshal_with(ClusterState)
     def patch(self, cluster):
         """
@@ -73,6 +77,7 @@ class Cluster(ClusterResourceBase):
 
 class ClusterNodes(ClusterResourceBase):
     @rest_decorators.exceptions_handled
+    @authorize('cluster_node_list')
     @rest_decorators.marshal_with(ClusterNode)
     def get(self, cluster):
         """
@@ -86,6 +91,7 @@ class ClusterNodes(ClusterResourceBase):
 
 class ClusterNodesId(ClusterResourceBase):
     @rest_decorators.exceptions_handled
+    @authorize('cluster_node_get')
     @rest_decorators.marshal_with(ClusterNode)
     def get(self, node_id, cluster):
         """
@@ -94,6 +100,7 @@ class ClusterNodesId(ClusterResourceBase):
         return cluster.get_node(node_id)
 
     @rest_decorators.exceptions_handled
+    @authorize('cluster_node_validate')
     @rest_decorators.marshal_with(ClusterNode)
     def put(self, node_id, cluster):
         """Add a node to the cluster.
@@ -107,6 +114,7 @@ class ClusterNodesId(ClusterResourceBase):
         return cluster.add_node(details)
 
     @rest_decorators.exceptions_handled
+    @authorize('cluster_node_config_update')
     @rest_decorators.marshal_with(ClusterState)
     def patch(self, node_id, cluster):
         """
@@ -118,6 +126,7 @@ class ClusterNodesId(ClusterResourceBase):
         return cluster.update_node_config(node_id, config)
 
     @rest_decorators.exceptions_handled
+    @authorize('cluster_node_remove')
     @rest_decorators.marshal_with(ClusterNode)
     def delete(self, node_id, cluster):
         """

@@ -30,6 +30,7 @@ from manager_rest.storage.resource_models import (
     Log,
 )
 from manager_rest.storage import ListResult
+from manager_rest.security.authorization import authorize
 
 
 class Events(resources_v1.Events):
@@ -47,6 +48,7 @@ class Events(resources_v1.Events):
         notes='Returns a list of events for optionally provided filters'
     )
     @rest_decorators.exceptions_handled
+    @authorize('event_list')
     @rest_decorators.marshal_events
     @rest_decorators.create_filters()
     @rest_decorators.paginate
@@ -129,6 +131,7 @@ class Events(resources_v1.Events):
         notes='Deletes events according to a passed Deployment ID'
     )
     @rest_decorators.exceptions_handled
+    @authorize('event_delete')
     @rest_decorators.marshal_events
     @rest_decorators.create_filters()
     @rest_decorators.paginate
