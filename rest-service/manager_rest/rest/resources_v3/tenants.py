@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from manager_rest.storage import models
+from manager_rest.security.authorization import authorize
 from manager_rest.security import MissingPremiumFeatureResource
 
 from .. import rest_decorators, rest_utils
@@ -31,6 +32,7 @@ except ImportError:
 
 class Tenants(SecuredMultiTenancyResourceSkipTenantAuth):
     @rest_decorators.exceptions_handled
+    @authorize('tenant_list')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.create_filters(models.Tenant)
     @rest_decorators.paginate
@@ -45,6 +47,7 @@ class Tenants(SecuredMultiTenancyResourceSkipTenantAuth):
 
 class TenantsId(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
+    @authorize('tenant_create')
     @rest_decorators.marshal_with(TenantResponse)
     def post(self, tenant_name, multi_tenancy):
         """
@@ -54,6 +57,7 @@ class TenantsId(SecuredMultiTenancyResource):
         return multi_tenancy.create_tenant(tenant_name)
 
     @rest_decorators.exceptions_handled
+    @authorize('tenant_get')
     @rest_decorators.marshal_with(TenantResponse)
     def get(self, tenant_name, multi_tenancy):
         """
@@ -63,6 +67,7 @@ class TenantsId(SecuredMultiTenancyResource):
         return multi_tenancy.get_tenant(tenant_name)
 
     @rest_decorators.exceptions_handled
+    @authorize('tenant_delete')
     @rest_decorators.marshal_with(TenantResponse)
     def delete(self, tenant_name, multi_tenancy):
         """
@@ -74,6 +79,7 @@ class TenantsId(SecuredMultiTenancyResource):
 
 class TenantUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
+    @authorize('tenant_add_user')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('add user to tenant')
     def put(self, multi_tenancy):
@@ -89,6 +95,7 @@ class TenantUsers(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
+    @authorize('tenant_remove_user')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('remove user from tenant')
     def delete(self, multi_tenancy):
@@ -106,6 +113,7 @@ class TenantUsers(SecuredMultiTenancyResource):
 
 class TenantGroups(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
+    @authorize('tenant_add_group')
     @rest_decorators.marshal_with(TenantResponse)
     def put(self, multi_tenancy):
         """
@@ -120,6 +128,7 @@ class TenantGroups(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
+    @authorize('tenant_remove_group')
     @rest_decorators.marshal_with(TenantResponse)
     def delete(self, multi_tenancy):
         """

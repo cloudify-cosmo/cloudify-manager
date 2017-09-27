@@ -16,6 +16,7 @@
 from flask_security import current_user
 
 from manager_rest.storage import models, user_datastore
+from manager_rest.security.authorization import authorize
 from manager_rest.security import (SecuredResourceSkipTenantAuth,
                                    MissingPremiumFeatureResource)
 from manager_rest.manager_exceptions import BadParametersError
@@ -31,6 +32,7 @@ except ImportError:
 
 class User(SecuredResourceSkipTenantAuth):
     @rest_decorators.exceptions_handled
+    @authorize('user_get_self')
     @rest_decorators.marshal_with(UserResponse)
     def get(self):
         """
@@ -41,6 +43,7 @@ class User(SecuredResourceSkipTenantAuth):
 
 class Users(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
+    @authorize('user_list')
     @rest_decorators.marshal_with(UserResponse)
     @rest_decorators.create_filters(models.User)
     @rest_decorators.paginate
@@ -58,6 +61,7 @@ class Users(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
+    @authorize('user_create')
     @rest_decorators.marshal_with(UserResponse)
     @rest_decorators.no_external_authenticator('create user')
     def put(self, multi_tenancy):
@@ -80,6 +84,7 @@ class Users(SecuredMultiTenancyResource):
 
 class UsersId(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
+    @authorize('user_update')
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
         """
@@ -99,6 +104,7 @@ class UsersId(SecuredMultiTenancyResource):
             raise BadParametersError('Neither `password` nor `role` provided')
 
     @rest_decorators.exceptions_handled
+    @authorize('user_get')
     @rest_decorators.marshal_with(UserResponse)
     def get(self, username, multi_tenancy):
         """
@@ -108,6 +114,7 @@ class UsersId(SecuredMultiTenancyResource):
         return multi_tenancy.get_user(username)
 
     @rest_decorators.exceptions_handled
+    @authorize('user_delete')
     @rest_decorators.marshal_with(UserResponse)
     @rest_decorators.no_external_authenticator('delete user')
     def delete(self, username, multi_tenancy):
@@ -120,6 +127,7 @@ class UsersId(SecuredMultiTenancyResource):
 
 class UsersActive(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
+    @authorize('user_set_activated')
     @rest_decorators.marshal_with(UserResponse)
     def post(self, username, multi_tenancy):
         """

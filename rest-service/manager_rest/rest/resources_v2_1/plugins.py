@@ -17,8 +17,9 @@ import sys
 
 from flask_restful_swagger import swagger
 
-from manager_rest import manager_exceptions
 from manager_rest.storage import models
+from manager_rest import manager_exceptions
+from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 
 from .. import rest_decorators, resources_v2
@@ -33,6 +34,7 @@ class PluginsId(resources_v2.PluginsId):
         notes="deletes a plugin according to its ID."
     )
     @rest_decorators.exceptions_handled
+    @authorize('plugin_delete')
     @rest_decorators.marshal_with(models.Plugin)
     def delete(self, plugin_id, **kwargs):
         """

@@ -20,6 +20,7 @@ from manager_rest.deployment_update.constants import PHASES
 from manager_rest import manager_exceptions
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.utils import create_filter_params_list_description
 from manager_rest.upload_manager import \
     UploadedBlueprintsDeploymentUpdateManager
@@ -32,6 +33,7 @@ from ..rest_utils import verify_and_convert_bool
 
 class DeploymentUpdate(SecuredResource):
     @rest_decorators.exceptions_handled
+    @authorize('deployment_update_create')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def post(self, id, phase):
         """
@@ -111,6 +113,7 @@ class DeploymentUpdateId(SecuredResource):
             )
     )
     @rest_decorators.exceptions_handled
+    @authorize('deployment_update_get')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     def get(self, update_id):
         return \
@@ -129,6 +132,7 @@ class DeploymentUpdates(SecuredResource):
             )
     )
     @rest_decorators.exceptions_handled
+    @authorize('deployment_update_list')
     @rest_decorators.marshal_with(models.DeploymentUpdate)
     @rest_decorators.create_filters(models.DeploymentUpdate)
     @rest_decorators.paginate

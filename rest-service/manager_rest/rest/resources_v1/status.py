@@ -24,6 +24,7 @@ from manager_rest.rest.rest_decorators import (
     marshal_with,
 )
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 
 
 class Status(SecuredResource):
@@ -34,6 +35,7 @@ class Status(SecuredResource):
         notes="Returns state of running system services"
     )
     @exceptions_handled
+    @authorize('status_get')
     @marshal_with(responses.Status)
     def get(self, **kwargs):
         """

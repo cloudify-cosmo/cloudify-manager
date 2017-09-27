@@ -20,7 +20,7 @@ from flask_security import current_user
 from manager_rest import config
 from manager_rest import utils
 from manager_rest.security import SecuredResource
-from manager_rest.app_logging import raise_unauthorized_user_error
+from manager_rest.security.authorization import authorize
 from manager_rest.constants import (MAINTENANCE_MODE_ACTIVATED,
                                     MAINTENANCE_MODE_ACTIVATING,
                                     MAINTENANCE_MODE_DEACTIVATED)
@@ -35,6 +35,7 @@ from ..responses_v2_1 import MaintenanceMode as MaintenanceModeResponse
 
 class MaintenanceMode(SecuredResource):
     @rest_decorators.exceptions_handled
+    @authorize('maintenance_mode_get')
     @rest_decorators.marshal_with(MaintenanceModeResponse)
     def get(self, **_):
         maintenance_file_path = get_maintenance_file_path()
@@ -57,12 +58,9 @@ class MaintenanceMode(SecuredResource):
 
 class MaintenanceModeAction(SecuredResource):
     @rest_decorators.exceptions_handled
+    @authorize('maintenance_mode_set')
     @rest_decorators.marshal_with(MaintenanceModeResponse)
     def post(self, maintenance_action, **_):
-        if not current_user.is_admin:
-            raise_unauthorized_user_error(
-                '{0} does not have privileges to set maintenance mode'.format(
-                    current_user))
         maintenance_file_path = get_maintenance_file_path()
         if maintenance_action == 'activate':
             if os.path.isfile(maintenance_file_path):

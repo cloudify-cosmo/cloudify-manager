@@ -28,6 +28,7 @@ from manager_rest.storage import (
     get_storage_manager,
     models,
 )
+from manager_rest.security.authorization import authorize
 from manager_rest.utils import create_filter_params_list_description
 
 
@@ -49,6 +50,7 @@ class Executions(resources_v1.Executions):
         ]
     )
     @rest_decorators.exceptions_handled
+    @authorize('execution_list')
     @rest_decorators.marshal_with(models.Execution)
     @rest_decorators.create_filters(models.Execution)
     @rest_decorators.paginate

@@ -1,7 +1,6 @@
 security:
   - manager_tests/test_secured_broker.py
   - manager_tests/security/test_authentication.py
-  - manager_tests/security/test_authorization.py
   - manager_tests/security/test_cert_location.py
   - manager_tests/security/test_ldap_authentication.py
   - manager_tests/security/test_misc.py

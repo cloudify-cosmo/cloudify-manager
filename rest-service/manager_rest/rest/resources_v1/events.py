@@ -32,6 +32,7 @@ from manager_rest.rest.rest_decorators import (
 )
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.storage.models_base import db
 from manager_rest.storage.resource_models import (
     Blueprint,
@@ -573,6 +574,7 @@ class Events(SecuredResource):
         consumes=['application/json']
     )
     @exceptions_handled
+    @authorize('event_list')
     @insecure_rest_method
     def get(self, **kwargs):
         """List events using a SQL backend.
@@ -596,6 +598,7 @@ class Events(SecuredResource):
         consumes=['application/json']
     )
     @exceptions_handled
+    @authorize('event_list')
     @insecure_rest_method
     def post(self, **kwargs):
         """
