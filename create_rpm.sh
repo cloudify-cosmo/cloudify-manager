@@ -26,7 +26,7 @@ curl http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.2.0/.dev1-release/${
 
 # TODO: Remove this when the CLI is a part of the single tar
 print_line "Downloading CLI package..."
-curl http://gigaspaces-repository-eu.s3.amazonaws.com/cloudify/4.2.0/.dev1-release/cloudify-4.2.0~.dev1.el6.x86_64.rpm -o ${CLI_PACKAGE}
+curl http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.2.0/.dev1-release/cloudify-manager-resources_4.2.0-.dev1.tar.gz -o ${CLI_PACKAGE}
 
 print_line "Adding CLI package to single tar..."
 tar -xf ${MANAGER_RESOURCES_TAR}
