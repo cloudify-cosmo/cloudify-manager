@@ -20,6 +20,7 @@ from manager_rest.utils import classproperty
 
 from .models_base import db, SQLModelBase
 from .management_models import Tenant, User
+from .models_states import AvailabilityState
 from .relationships import one_to_many_relationship, foreign_key
 
 
@@ -55,7 +56,10 @@ class SQLResourceBase(SQLModelBase):
     # Some must-have columns for all resources
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
-    private_resource = db.Column(db.Boolean, default=False)
+    private_resource = db.Column(db.Boolean, default=False)  # Deprecated
+    resource_availability = db.Column(
+        db.Enum(*AvailabilityState.STATES, name='resource_availability'),
+        default=AvailabilityState.TENANT)
 
     @declared_attr
     def _tenant_id(cls):
@@ -99,4 +103,4 @@ class SQLResourceBase(SQLModelBase):
         with db.session.no_autoflush:
             self.creator = parent_instance.creator
             self.tenant = parent_instance.tenant
-            self.private_resource = parent_instance.private_resource
+            self.resource_availability = parent_instance.resource_availability

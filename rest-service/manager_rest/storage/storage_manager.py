@@ -23,6 +23,7 @@ from flask_security import current_user
 from manager_rest.storage.models_base import db
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest.storage.models_states import AvailabilityState
 
 from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
@@ -175,7 +176,7 @@ class SQLStorageManager(object):
         # Only get resources that are public - not private (note that ~ stands
         # for NOT, in SQLA), *or* those where the current user is the creator
         user_filter = sql_or(
-            ~model_class.private_resource,
+            model_class.resource_availability != AvailabilityState.PRIVATE,
             model_class.creator == current_user
         )
         return query.filter(user_filter)

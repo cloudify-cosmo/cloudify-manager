@@ -33,7 +33,8 @@ from manager_rest.dsl_functions import get_secret_method
 from manager_rest.storage import get_storage_manager, models, get_node
 from manager_rest.storage.models_states import (SnapshotState,
                                                 ExecutionState,
-                                                DeploymentModificationState)
+                                                DeploymentModificationState,
+                                                AvailabilityState)
 
 from . import utils
 from . import config
@@ -118,10 +119,11 @@ class ResourceManager(object):
                               status=SnapshotState.CREATING,
                               private_resource=False):
         now = utils.get_formatted_timestamp()
+        availability = self.get_resource_availability(private_resource)
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
                                        status=status,
-                                       private_resource=private_resource,
+                                       resource_availability=availability,
                                        error='')
         return self.sm.put(new_snapshot)
 
@@ -266,6 +268,7 @@ class ResourceManager(object):
 
         now = utils.get_formatted_timestamp()
 
+        availability = self.get_resource_availability(private_resource)
         new_blueprint = models.Blueprint(
             plan=plan,
             id=blueprint_id,
@@ -273,7 +276,7 @@ class ResourceManager(object):
             created_at=now,
             updated_at=now,
             main_file_name=application_file_name,
-            private_resource=private_resource
+            resource_availability=availability
         )
         return self.sm.put(new_blueprint)
 
@@ -695,8 +698,12 @@ class ResourceManager(object):
         new_deployment.creator = current_user
         # The deployment is private if either the blueprint was
         # private, or the user passed the `private_resource` flag
-        private_resource = private_resource or blueprint.private_resource
-        new_deployment.private_resource = private_resource
+        private_blueprint = blueprint.resource_availability == \
+            AvailabilityState.PRIVATE
+        private_resource = private_resource or private_blueprint
+        availability = self.get_resource_availability(private_resource)
+        new_deployment.resource_availability = availability
+
         self.sm.put(new_deployment)
 
         self._create_deployment_nodes(deployment_id, deployment_plan)
@@ -1244,6 +1251,10 @@ class ResourceManager(object):
         self.sm.update(context_instance)
 
         app_context.update_parser_context(context_dict['context'])
+
+    def get_resource_availability(self, private_resource):
+        return AvailabilityState.PRIVATE if private_resource \
+            else AvailabilityState.TENANT
 
 
 # What we need to access this manager in Flask
