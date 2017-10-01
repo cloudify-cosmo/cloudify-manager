@@ -161,9 +161,7 @@ class User(SQLModelBase, UserMixin):
     def groups(cls):
         return many_to_many_relationship(cls, Group)
 
-    @declared_attr
-    def tenants(cls):
-        return many_to_many_relationship(cls, Tenant)
+    tenants = db.relationship('UserTenant', backpopulates='user')
 
     @property
     def all_tenants(self):
