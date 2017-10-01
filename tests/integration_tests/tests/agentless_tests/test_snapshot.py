@@ -182,6 +182,22 @@ class TestSnapshot(AgentlessTestCase):
         self._assert_3_4_0_snapshot_restored(tenant_1_name)
         self._assert_3_3_1_snapshot_restored(tenant_2_name)
 
+    def test_restore_snapshot_with_private_resource(self):
+        """
+        Making sure the conversion from private_resource to
+        resource_availability works
+        """
+        snapshot_path = self._get_snapshot('snap_4.1.1.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+        blueprints = self.client.blueprints.list(
+            _include=['id', 'resource_availability'])
+        assert blueprints[0]['id'] == 'blueprint_1' and \
+            blueprints[0]['resource_availability'] == 'tenant'
+        assert blueprints[1]['id'] == 'blueprint_2' and \
+            blueprints[1]['resource_availability'] == 'private'
+        assert blueprints[2]['id'] == 'blueprint_3' and \
+            blueprints[2]['resource_availability'] == 'private'
+
     def _assert_snapshot_restored(self,
                                   blueprint_id,
                                   deployment_id,
