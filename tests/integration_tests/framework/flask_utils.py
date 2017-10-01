@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import yaml
 import logging
 from path import path
+from tempfile import mkstemp
+from contextlib import contextmanager
 
 from flask_migrate import upgrade
 
@@ -125,11 +128,29 @@ def _add_defaults(app):
     )
     db.session.add(provider_context)
 
-    default_tenant = create_default_user_tenant_and_roles(
-        admin_username=utils.get_manager_username(),
-        admin_password=utils.get_manager_password(),
-        amqp_manager=amqp_manager,
-        authorization_file_path=AUTHORIZATION_FILE_LOCATION
-    )
+    with _get_local_authorization_conf_path() as auth_conf_path:
+        default_tenant = create_default_user_tenant_and_roles(
+            admin_username=utils.get_manager_username(),
+            admin_password=utils.get_manager_password(),
+            amqp_manager=amqp_manager,
+            authorization_file_path=auth_conf_path
+        )
+
     app.config[CURRENT_TENANT_CONFIG] = default_tenant
     return default_tenant
+
+
+@contextmanager
+def _get_local_authorization_conf_path():
+    """ Read the auth config from the manager, and write it to a temp file """
+
+    content = read_manager_file(AUTHORIZATION_FILE_LOCATION)
+    yaml_content = yaml.load(content)
+    fd, file_path = mkstemp()
+    os.close(fd)
+    with open(file_path, 'w') as f:
+        yaml.dump(yaml_content, f)
+
+    yield file_path
+
+    os.remove(file_path)
