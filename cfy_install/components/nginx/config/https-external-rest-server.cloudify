@@ -26,12 +26,18 @@ server {{
   listen 80;
   server_name _;
 
-  location / {{
-    # Return HTTP 400 - Bad Request. We're in SSL mode, and port 80 is only
-    # open for the purpose of agent upgrades. Deny the request and, for
-    # security's sake, don't tell them what's wrong.
-
+  # For REST API requests, return HTTP 400.
+  # We don't want to automatically redirect API requests which
+  # may contain sensitive info.
+  location ~ ^/api/ {{
     return 400;
+  }}
+
+  # Other than API requests, and unless otherwise noted: redirect
+  # to HTTPS using HTTP code 308 to preserve the request's body.
+  location / {{
+    add_header Location https://$host$request_uri always;
+    return 308;
   }}
 
   location /resources/cloudify_agent {{
