@@ -107,6 +107,7 @@ class SnapshotRestore(object):
 
             with Postgres(self._config) as postgres:
                 self._restore_db(postgres, schema_revision, stage_revision)
+                self._update_resource_availability(postgres)
                 self._restore_files_to_manager()
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
@@ -251,6 +252,25 @@ class SnapshotRestore(object):
                 ctx.tenant_name,
             )
         ctx.logger.info('Successfully restored database')
+
+    def _update_resource_availability(self, postgres):
+        if self._snapshot_version >= V_4_2_0:
+            return
+        update_query = """
+                 UPDATE {0}
+                 SET resource_availability = CAST (CASE
+                     WHEN (private_resource is true) THEN {1}
+                     WHEN (private_resource is false) THEN {2}
+                 END AS resource_availability);
+             """
+
+        ctx.logger.info('Updating resource_availability')
+        resources_tables = ['blueprints', 'plugins', 'snapshots',
+                            'deployments']
+        for table in resources_tables:
+            postgres.run_query(update_query.
+                               format(table, "'private'", "'tenant'"))
+        ctx.logger.info('Successfully updated resource_availability')
 
     def _restore_stage(self, postgres, tempdir, migration_version):
         if not (self._snapshot_version > V_4_0_0 and self._premium_enabled):
