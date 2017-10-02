@@ -24,7 +24,8 @@ PROVIDER_CONTEXT = {
             {
                 'broker_ip': '',
                 'broker_user': 'cloudify',
-                'broker_pass': 'c10udify'
+                'broker_pass': 'c10udify',
+                'networks': {}
             },
     }
 }
