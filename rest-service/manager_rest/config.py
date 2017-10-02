@@ -61,24 +61,25 @@ class Config(object):
         self.warnings = []
 
     def load_configuration(self):
-        self._load_config('MANAGER_REST_CONFIG_PATH')
-        self._load_config('MANAGER_REST_SECURITY_CONFIG_PATH', 'security')
-        self._load_config('MANAGER_REST_AUTHORIZATION_CONFIG_PATH',
-                          'authorization')
+        for env_var_name, namespace in [
+                ('MANAGER_REST_CONFIG_PATH', ''),
+                ('MANAGER_REST_SECURITY_CONFIG_PATH', 'security'),
+                ('MANAGER_REST_AUTHORIZATION_CONFIG_PATH', 'authorization')]:
+            if env_var_name in os.environ:
+                self.load_from_file(os.environ[env_var_name], namespace)
 
-    def _load_config(self, env_var_name, namespace=''):
-        if env_var_name in os.environ:
-            with open(os.environ[env_var_name]) as f:
-                yaml_conf = yaml.safe_load(f.read())
-            for key, value in yaml_conf.iteritems():
-                config_key = '{0}_{1}'.format(namespace, key) if namespace \
-                    else key
-                if hasattr(self, config_key):
-                    setattr(self, config_key, value)
-                else:
-                    self.warnings.append(
-                        "Ignoring unknown key '{0}' in configuration file "
-                        "'{1}'".format(key, os.environ[env_var_name]))
+    def load_from_file(self, filename, namespace=''):
+        with open(filename) as f:
+            yaml_conf = yaml.safe_load(f.read())
+        for key, value in yaml_conf.iteritems():
+            config_key = '{0}_{1}'.format(namespace, key) if namespace \
+                else key
+            if hasattr(self, config_key):
+                setattr(self, config_key, value)
+            else:
+                self.warnings.append(
+                    "Ignoring unknown key '{0}' in configuration file "
+                    "'{1}'".format(key, filename))
 
 
 instance = Config()
