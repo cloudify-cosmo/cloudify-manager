@@ -19,7 +19,13 @@ def upgrade():
     op.add_column(
         'users_tenants',
         sa.Column('role_id', sa.Integer()),
-        sa.ForeignKeyConstraint(['role_id'], ['roles.id'], ),
+    )
+    op.create_foreign_key(
+        'users_tenants_role_id_fkey',
+        'users_tenants',
+        'roles',
+        ['role_id'],
+        ['id'],
     )
     op.create_primary_key(
         'users_tenants_pkey',
@@ -31,6 +37,10 @@ def upgrade():
 def downgrade():
     op.drop_constraint(
         'users_tenants_pkey',
+        'users_tenants',
+    )
+    op.drop_constraint(
+        'users_tenants_role_id_fkey',
         'users_tenants',
     )
     op.drop_column('users_tenants', 'role_id')
