@@ -145,6 +145,7 @@ def _deploy_security_configuration():
         'encoding_block_size': 24,
         'encoding_min_length': 5
     }
+    security_configuration.update(config[MANAGER][SECURITY])
     config[RESTSERVICE][SECURITY] = security_configuration
 
     # Pre-creating paths so permissions fix can work correctly in mgmtworker
