@@ -161,9 +161,7 @@ class User(SQLModelBase, UserMixin):
     def groups(cls):
         return many_to_many_relationship(cls, Group)
 
-    @declared_attr
-    def tenants(cls):
-        return many_to_many_relationship(cls, Tenant)
+    tenants = db.relationship('UserTenant', backpopulates='user')
 
     @property
     def all_tenants(self):
@@ -201,6 +199,23 @@ class User(SQLModelBase, UserMixin):
     @property
     def is_bootstrap_admin(self):
         return self.id == BOOTSTRAP_ADMIN_ID
+
+
+class UserTenant(SQLModelBase):
+    """Association class between users and tenants."""
+    __tablename__ = 'users_tenants'
+    user_id = db.Column(
+        db.Integer, db.ForeignKey(User.id), primary_key=True)
+    tenant_id = db.Column(
+        db.Integer, db.ForeignKey(Tenant.id), primary_key=True)
+
+    # Role is not part of the primary key
+    # because only one role for each user and tenant is allowed for now
+    role_id = db.Column(db.Integer, db.ForeignKey(Role.id))
+
+    user = db.relationship(User, backpopulates='tenants')
+    tenant = db.relationship(Tenant)
+    role = db.relationship(Role)
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
