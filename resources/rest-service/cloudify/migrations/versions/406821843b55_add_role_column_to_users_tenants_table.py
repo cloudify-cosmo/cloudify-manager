@@ -10,7 +10,7 @@ import manager_rest     # Adding this manually
 
 # revision identifiers, used by Alembic.
 revision = '406821843b55'
-down_revision = '3496c876cd1a'
+down_revision = '4dfd8797fdfa'
 branch_labels = None
 depends_on = None
 
