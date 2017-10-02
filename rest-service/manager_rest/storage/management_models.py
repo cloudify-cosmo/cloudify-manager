@@ -172,7 +172,14 @@ class User(SQLModelBase, UserMixin):
             )
             for table_name in table_names
         ]
-        secondary_table = db.Table('users_tenants', *columns)
+        constraint = db.PrimaryKeyConstraint(
+            'user_id', 'tenant_id', name='users_tenants_pkey')
+        secondary_table = db.Table(
+            'users_tenants',
+            constraint,
+            *columns
+
+        )
         return db.relationship(
             Tenant,
             secondary=secondary_table,
