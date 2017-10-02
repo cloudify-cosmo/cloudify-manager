@@ -163,24 +163,16 @@ class User(SQLModelBase, UserMixin):
 
     @declared_attr
     def tenants(cls):
-        secondary_table = db.Table(
-            'users_tenants',
+        table_names = ['users', 'tenants', 'roles']
+        columns = [
             db.Column(
-                'user_id',
+                '{0}_id'.format(table_name[:-1]),
                 db.Integer,
-                db.ForeignKey('users.id')
-            ),
-            db.Column(
-                'tenant_id',
-                db.Integer,
-                db.ForeignKey('tenants.id')
-            ),
-            db.Column(
-                'role_id',
-                db.Integer,
-                db.ForeignKey('roles.id')
-            ),
-        )
+                db.ForeignKey('{0}.id'.format(table_name))
+            )
+            for table_name in table_names
+        ]
+        secondary_table = db.Table('users_tenants', *columns)
         return db.relationship(
             Tenant,
             secondary=secondary_table,
