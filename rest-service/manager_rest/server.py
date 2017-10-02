@@ -20,7 +20,7 @@ import os
 import yaml
 
 from flask_restful import Api
-from flask import Flask, jsonify
+from flask import Flask, jsonify, Blueprint
 from flask_security import Security
 
 from manager_rest import config
@@ -40,6 +40,24 @@ except ImportError:
     premium_enabled = False
 
 SQL_DIALECT = 'postgresql'
+
+
+app_errors = Blueprint('app_errors', __name__)
+
+
+@app_errors.app_errorhandler(500)
+def internal_error(e):
+    s_traceback = StringIO.StringIO()
+    traceback.print_exc(file=s_traceback)
+
+    response = jsonify(
+        {"message":
+         "Internal error occurred in manager REST server - {0}: {1}"
+         .format(type(e).__name__, str(e)),
+         "error_code": INTERNAL_SERVER_ERROR_CODE,
+         "server_traceback": s_traceback.getvalue()})
+    response.status_code = 500
+    return response
 
 
 class CloudifyFlaskApp(Flask):
@@ -75,6 +93,7 @@ class CloudifyFlaskApp(Flask):
                 user_datastore.commit()
 
         setup_resources(Api(self))
+        self.register_blueprint(app_errors)
 
     def _set_flask_security(self):
         """Set Flask-Security specific configurations and init the extension
@@ -102,7 +121,7 @@ class CloudifyFlaskApp(Flask):
                 cfy_config.postgresql_password,
                 cfy_config.postgresql_host,
                 cfy_config.postgresql_db_name
-            )
+        )
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
 
@@ -161,21 +180,3 @@ def _detect_debug_environment():
     except BaseException, e:
         raise Exception('Failed to connect to debug server, {0}: {1}'.
                         format(type(e).__name__, str(e)))
-
-
-app = CloudifyFlaskApp()
-
-
-@app.errorhandler(500)
-def internal_error(e):
-    s_traceback = StringIO.StringIO()
-    traceback.print_exc(file=s_traceback)
-
-    response = jsonify(
-        {"message":
-         "Internal error occurred in manager REST server - {0}: {1}"
-         .format(type(e).__name__, str(e)),
-         "error_code": INTERNAL_SERVER_ERROR_CODE,
-         "server_traceback": s_traceback.getvalue()})
-    response.status_code = 500
-    return response
