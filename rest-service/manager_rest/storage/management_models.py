@@ -163,7 +163,29 @@ class User(SQLModelBase, UserMixin):
 
     @declared_attr
     def tenants(cls):
-        return many_to_many_relationship(cls, Tenant)
+        secondary_table = db.Table(
+            'users_tenants',
+            db.Column(
+                'user_id',
+                db.Integer,
+                db.ForeignKey('users.id')
+            ),
+            db.Column(
+                'tenant_id',
+                db.Integer,
+                db.ForeignKey('tenants.id')
+            ),
+            db.Column(
+                'role_id',
+                db.Integer,
+                db.ForeignKey('roles.id')
+            ),
+        )
+        return db.relationship(
+            Tenant,
+            secondary=secondary_table,
+            backref=db.backref('users'),
+        )
 
     @property
     def all_tenants(self):
