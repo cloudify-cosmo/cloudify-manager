@@ -643,6 +643,8 @@ class UploadedPluginsManager(UploadedDataManager):
                                     private_resource):
         plugin = self._load_plugin_package_json(archive_path)
         build_props = plugin.get('build_server_os_properties')
+        availability = get_resource_manager().\
+            get_resource_availability(private_resource)
         return Plugin(
             id=plugin_id,
             package_name=plugin.get('package_name'),
@@ -657,7 +659,7 @@ class UploadedPluginsManager(UploadedDataManager):
             excluded_wheels=plugin.get('excluded_wheels'),
             supported_py_versions=plugin.get('supported_python_versions'),
             uploaded_at=get_formatted_timestamp(),
-            private_resource=private_resource
+            resource_availability=availability
         )
 
     @staticmethod

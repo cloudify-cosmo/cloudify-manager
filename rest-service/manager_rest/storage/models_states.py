@@ -46,3 +46,11 @@ class ExecutionState(object):
               CANCELLING, FORCE_CANCELLING]
     END_STATES = [TERMINATED, FAILED, CANCELLED]
     ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
+
+
+class AvailabilityState(object):
+    PRIVATE = 'private'
+    TENANT = 'tenant'
+    GLOBAL = 'global'
+
+    STATES = [PRIVATE, TENANT, GLOBAL]
