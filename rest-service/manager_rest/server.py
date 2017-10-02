@@ -104,8 +104,7 @@ class CloudifyFlaskApp(Flask):
                 cfy_config.postgresql_db_name
             )
         self.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        with self.app_context():
-            db.init_app(self)  # Set the app to use the SQLAlchemy DB
+        db.init_app(self)  # Prepare the app for use with flask-sqlalchemy
 
     def _set_exception_handlers(self):
         """Set custom exception handlers for the Flask app
