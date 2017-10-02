@@ -70,7 +70,10 @@ class Networks(object):
             compute_nodes
         )
         for node_instance in active_node_instances:
-            agent_config = node_instance.runtime_properties['cloudify_agent']
+            runtime_props = node_instance.runtime_properties
+
+            # The node instance might not have an agent
+            agent_config = runtime_props.get('cloudify_agent', {})
             network = agent_config.get('network')
             if network:
                 active_networks.add(network)
