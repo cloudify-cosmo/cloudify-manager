@@ -41,7 +41,9 @@ from .networks import Networks
 from .es_snapshot import ElasticSearch
 from .credentials import restore as restore_credentials
 from .constants import (
+    ADMIN_DUMP_FILE,
     ARCHIVE_CERT_DIR,
+    HASH_SALT_FILENAME,
     INTERNAL_CA_CERT_FILENAME,
     INTERNAL_CA_KEY_FILENAME,
     INTERNAL_CERT_FILENAME,
@@ -80,6 +82,7 @@ class SnapshotRestore(object):
         self._no_reboot = no_reboot
         self._premium_enabled = premium_enabled
         self._user_is_bootstrap_admin = user_is_bootstrap_admin
+        self._post_restore_commands = []
 
         self._tempdir = None
         self._snapshot_version = None
@@ -115,8 +118,12 @@ class SnapshotRestore(object):
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
                 self._restore_deployment_envs()
+
+            self._restore_hash_salt()
+
             if self._restore_certificates:
                 self._restore_certificate()
+            self._trigger_post_restore_commands()
         finally:
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
@@ -168,18 +175,10 @@ class SnapshotRestore(object):
         existing_cert_dir = os.path.dirname(get_local_rest_certificate())
         restored_cert_dir = '{0}_from_snapshot_{1}'.format(existing_cert_dir,
                                                            self._snapshot_id)
+        command = ''
 
         # Put the certificates where we need them
         utils.copy_snapshot_path(archive_cert_dir, restored_cert_dir)
-
-        # The last thing the workflow does is delete the tempdir.
-        command = 'while [[ -d {tempdir} ]]; do sleep 0.5; done; '.format(
-            tempdir=self._tempdir,
-        )
-        # Give a short delay afterwards for the workflow to be marked as
-        # completed, in case of any delays that might be upset by certs being
-        # messed around with while running.
-        command += 'sleep 3; '
 
         certs = [
             INTERNAL_CA_CERT_FILENAME,
@@ -201,6 +200,62 @@ class SnapshotRestore(object):
 
         if not self._no_reboot:
             command += 'sudo shutdown -r now'
+
+        self._post_restore_commands.append(command)
+
+    def _restore_admin_user(self):
+        # This should only have been called if the hash salt was found, so
+        # there should be no case where this gets called but the file does not
+        # exist.
+        admin_dump_file_path = os.path.join(self._tempdir, ADMIN_DUMP_FILE)
+        with open(admin_dump_file_path) as admin_dump_handle:
+            admin_account = json.load(admin_dump_handle)
+
+        with Postgres(self._config) as postgres:
+            psql_command = ' '.join(postgres.get_psql_command())
+        psql_command += ' -c '
+
+        update_prefix = '"UPDATE users SET '
+        # Hardcoded uid as we only allow running restore on a clean manager
+        # at the moment, so admin must be the first user (ID=0)
+        update_suffix = ' WHERE users.id=0"'
+
+        # Discard the id, we don't need it
+        admin_account.pop('id')
+        updates = []
+        for column, value in admin_account.items():
+            if value:
+                updates.append("{column}='{value}'".format(
+                    column=column,
+                    value=value,
+                ))
+        updates = ','.join(updates)
+        updates = updates.replace('$', '\\$')
+
+        command = psql_command + update_prefix + updates + update_suffix
+
+        # We have to do this after the restore process or it'll break the
+        # workflow execution updating and thus cause the workflow to fail
+        self._post_restore_commands.append(command)
+
+    def _trigger_post_restore_commands(self):
+        # The last thing the workflow does is delete the tempdir.
+        command = 'while [[ -d {tempdir} ]]; do sleep 0.5; done; '.format(
+            tempdir=self._tempdir,
+        )
+        # Give a short delay afterwards for the workflow to be marked as
+        # completed, in case of any delays that might be upset by certs being
+        # messed around with while running.
+        command += 'sleep 3; '
+
+        command += '; '.join(self._post_restore_commands)
+
+        ctx.logger.info(
+            'After restore, the following commands will run: {cmds}'.format(
+                cmds=command,
+            )
+        )
+
         subprocess.Popen(command, shell=True)
 
     def _validate_snapshot(self):
@@ -239,9 +294,10 @@ class SnapshotRestore(object):
 
         """
         ctx.logger.info('Restoring database')
+        admin_user_update_command = 'echo No admin user to update.'
         if self._snapshot_version >= V_4_0_0:
             with utils.db_schema(schema_revision, config=self._config):
-                postgres.restore(self._tempdir)
+                admin_user_update_command = postgres.restore(self._tempdir)
             self._restore_stage(postgres, self._tempdir, stage_revision)
         else:
             if self._should_clean_old_db_for_3_x_snapshot():
@@ -252,6 +308,9 @@ class SnapshotRestore(object):
                 ctx.tenant_name,
             )
         ctx.logger.info('Successfully restored database')
+        # This is returned so that we can decide whether to restore the admin
+        # user depending on whether we have the hash salt
+        return admin_user_update_command
 
     def _update_resource_availability(self, postgres):
         if self._snapshot_version >= V_4_2_0:
@@ -438,6 +497,33 @@ class SnapshotRestore(object):
                 'policy_triggers': deployment['policy_triggers'],
                 'groups': deployment['groups']
             }
+        )
+
+    def _restore_hash_salt(self):
+        """Restore the hash salt so that restored users can log in.
+        """
+        try:
+            with open(os.path.join(self._tempdir,
+                                   HASH_SALT_FILENAME), 'r') as f:
+                hash_salt = json.load(f)
+        except IOError:
+            ctx.logger.warn('Hash salt not found in snapshot. '
+                            'Restored users are not expected to work without '
+                            'password resets.')
+            return
+
+        with open('/opt/manager/rest-security.conf') as security_conf_handle:
+            rest_security_conf = json.load(security_conf_handle)
+
+        rest_security_conf['hash_salt'] = hash_salt
+
+        with open('/opt/manager/rest-security.conf',
+                  'w') as security_conf_handle:
+            json.dump(rest_security_conf, security_conf_handle)
+
+        self._restore_admin_user()
+        self._post_restore_commands.append(
+            'sudo systemctl restart cloudify-restservice'
         )
 
 
