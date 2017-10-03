@@ -37,7 +37,7 @@ class SecretsListResponse(BaseResponse):
         'key': fields.String,
         'created_at': fields.String,
         'updated_at': fields.String,
-        'permission': fields.String,
+        'resource_availability': fields.String,
         'tenant_name': fields.String,
         'created_by': fields.String
     }
@@ -46,7 +46,7 @@ class SecretsListResponse(BaseResponse):
         self.key = kwargs.get('key')
         self.created_at = kwargs.get('created_at')
         self.updated_at = kwargs.get('updated_at')
-        self.permission = kwargs.get('permission')
+        self.resource_availability = kwargs.get('resource_availability')
         self.tenant_name = kwargs.get('tenant_name')
         self.created_by = kwargs.get('created_by')
 
