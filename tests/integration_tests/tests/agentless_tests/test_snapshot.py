@@ -51,6 +51,15 @@ class TestSnapshot(AgentlessTestCase):
             client=admin_client
         )
 
+    def test_v_4_2_restore_validation_networks(self):
+        snapshot = self._get_snapshot('snap_4.2.0_networks_validation.zip')
+        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
+        self._try_restore_snapshot(
+            snapshot_id=self.SNAPSHOT_ID,
+            error_msg="Networks `[u\'new_network\']` do not appear "
+                      "in the provider context",
+        )
+
     def _try_restore_snapshot(self,
                               snapshot_id,
                               error_msg,
