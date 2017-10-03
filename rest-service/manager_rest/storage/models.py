@@ -19,7 +19,7 @@ from .management_models import (User,
                                 Role,
                                 Group,
                                 Tenant,
-                                UserTenant,
+                                UserTenantAssoc,
                                 user_datastore,
                                 ProviderContext)
 
