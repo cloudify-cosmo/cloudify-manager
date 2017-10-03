@@ -121,6 +121,10 @@ def load_user(app, username=None):
 def _add_defaults(app):
     """Add default tenant, admin user and provider context to the DB
     """
+    # Add the default network to the provider context
+    networks = PROVIDER_CONTEXT['cloudify']['cloudify_agent']['networks']
+    networks['default'] = utils.get_manager_ip()
+
     provider_context = models.ProviderContext(
         id=PROVIDER_CONTEXT_ID,
         name=PROVIDER_NAME,

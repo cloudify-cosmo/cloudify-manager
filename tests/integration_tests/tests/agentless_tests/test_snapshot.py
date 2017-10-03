@@ -51,6 +51,15 @@ class TestSnapshot(AgentlessTestCase):
             client=admin_client
         )
 
+    def test_v_4_2_restore_validation_networks(self):
+        snapshot = self._get_snapshot('snap_4.2.0_networks_validation.zip')
+        self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
+        self._try_restore_snapshot(
+            snapshot_id=self.SNAPSHOT_ID,
+            error_msg="Networks `[u\'new_network\']` do not appear "
+                      "in the provider context",
+        )
+
     def _try_restore_snapshot(self,
                               snapshot_id,
                               error_msg,
@@ -64,6 +73,26 @@ class TestSnapshot(AgentlessTestCase):
             self.assertIn(error_msg, str(e))
         execution = client.executions.get(execution.id)
         self.assertEqual(execution.status, ExecutionState.FAILED)
+
+    def test_4_2_snapshot_with_deployment(self):
+        snapshot_path = self._get_snapshot('snap_4.2.0.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
+
+        # Now make sure all the resources really exist in the DB
+        self._assert_snapshot_restored(
+            blueprint_id='bp',
+            deployment_id='dep',
+            node_ids=['vm', 'http_web_server'],
+            node_instance_ids=[
+                'vm_sl3ar5',
+                'http_web_server_uwjy4j'
+            ],
+            num_of_workflows=7,
+            num_of_inputs=4,
+            num_of_outputs=1,
+            num_of_executions=2,
+            num_of_events=4,
+        )
 
     def test_4_0_1_snapshot_with_deployment(self):
         """Restore a 4_0_1 snapshot with a deployment."""
