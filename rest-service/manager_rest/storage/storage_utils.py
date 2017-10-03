@@ -59,7 +59,6 @@ def create_default_user_tenant_and_roles(admin_username,
         roles=[admin_role]
     )
     user_tenant_association = UserTenantAssoc(
-        user=admin_user,
         tenant=default_tenant,
         role_id=admin_role.id,
     )
