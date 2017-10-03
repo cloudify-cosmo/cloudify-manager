@@ -86,7 +86,13 @@ class SQLResourceBase(SQLModelBase):
         return association_proxy('creator', 'username')
 
     def to_response(self, **kwargs):
-        return {f: getattr(self, f) for f in self.response_fields}
+        fields = {f: getattr(self, f) for f in self.response_fields}
+
+        # Fix the value of the deprecated property private_resource
+        # for backwards compatibility
+        private = fields['resource_availability'] == AvailabilityState.PRIVATE
+        fields['private_resource'] = private
+        return fields
 
     def _get_identifier_dict(self):
         id_dict = super(SQLResourceBase, self)._get_identifier_dict()

@@ -163,8 +163,12 @@ class SQLStorageManager(object):
         else:
             tenant_ids = [self.current_tenant.id]
 
-        # Match any of the applicable tenant ids
-        return query.filter(model_class._tenant_id.in_(tenant_ids))
+        # Match any of the applicable tenant ids or if it's a global resource
+        tenant_filter = sql_or(
+            model_class.resource_availability == AvailabilityState.GLOBAL,
+            model_class._tenant_id.in_(tenant_ids)
+        )
+        return query.filter(tenant_filter)
 
     @staticmethod
     def _add_permissions_filter(query, model_class):
