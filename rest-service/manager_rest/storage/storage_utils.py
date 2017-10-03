@@ -18,7 +18,7 @@ from flask_security.utils import encrypt_password
 
 from manager_rest import constants
 from manager_rest.storage.models import Node
-from manager_rest.storage.management_models import Tenant, UserTenant
+from manager_rest.storage.management_models import Tenant, UserTenantAssoc
 from manager_rest.manager_exceptions import NotFoundError
 from manager_rest.storage import user_datastore, db, get_storage_manager
 
@@ -58,12 +58,12 @@ def create_default_user_tenant_and_roles(admin_username,
         password=encrypt_password(admin_password),
         roles=[admin_role]
     )
-    user_tenant = UserTenant(
+    user_tenant_association = UserTenantAssoc(
         user=admin_user,
         tenant=default_tenant,
         role_id=admin_role.id,
     )
-    admin_user.tenant_associations.append(user_tenant)
+    admin_user.tenant_associations.append(user_tenant_association)
     user_datastore.commit()
     return default_tenant
 

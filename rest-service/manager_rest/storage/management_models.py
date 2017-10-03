@@ -61,7 +61,7 @@ class Tenant(SQLModelBase):
     rabbitmq_password = db.Column(db.Text)
 
     user_associations = db.relationship(
-        'UserTenant',
+        'UserTenantAssoc',
         back_populates='tenant',
         cascade='all, delete-orphan',
     )
@@ -184,7 +184,7 @@ class User(SQLModelBase, UserMixin):
     api_token_key = db.Column(db.String(100))
 
     tenant_associations = db.relationship(
-        'UserTenant',
+        'UserTenantAssoc',
         back_populates='user',
         cascade='all, delete-orphan',
     )
@@ -248,7 +248,7 @@ class User(SQLModelBase, UserMixin):
         return self.id == BOOTSTRAP_ADMIN_ID
 
 
-class UserTenant(SQLModelBase):
+class UserTenantAssoc(SQLModelBase):
     __tablename__ = 'users_tenants'
     user_id = db.Column(
         db.Integer,
