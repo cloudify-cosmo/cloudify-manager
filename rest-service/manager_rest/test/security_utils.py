@@ -15,7 +15,7 @@
 
 from flask_security.utils import encrypt_password
 
-from manager_rest.storage.models import Tenant
+from manager_rest.storage.models import Tenant, UserTenant
 from manager_rest.storage import user_datastore
 from manager_rest.constants import (ADMIN_ROLE,
                                     USER_ROLE,
@@ -67,5 +67,10 @@ def add_users_to_db(user_list):
             roles=[role]
         )
         user_obj.active = user.get('active', True)
-        user_obj.tenants.append(default_tenant)
+        user_tenant = UserTenant(
+            user=user_obj,
+            tenant=default_tenant,
+            role_id=role.id,
+        )
+        user_obj.tenant_associations.append(user_tenant)
     user_datastore.commit()
