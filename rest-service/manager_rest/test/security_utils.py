@@ -68,7 +68,6 @@ def add_users_to_db(user_list):
         )
         user_obj.active = user.get('active', True)
         user_tenant_association = UserTenantAssoc(
-            user=user_obj,
             tenant=default_tenant,
             role_id=role.id,
         )
