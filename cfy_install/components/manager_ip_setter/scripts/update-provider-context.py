@@ -37,8 +37,8 @@ parser.add_argument('--networks', type=argparse.FileType('r'),
                     help='File containing the manager networks dict. It '
                          'should be a JSON file containing an object with a '
                          '"networks" field.')
-
-
+parser.add_argument('manager_ip',
+                    help='The IP of this machine on the default network')
 if __name__ == '__main__':
     args = parser.parse_args()
     update_provider_context(args)
