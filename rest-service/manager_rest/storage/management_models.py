@@ -60,6 +60,12 @@ class Tenant(SQLModelBase):
     rabbitmq_username = db.Column(db.Text)
     rabbitmq_password = db.Column(db.Text)
 
+    user_associations = db.relationship(
+        'UserTenant',
+        back_populates='tenant',
+        cascade='all, delete-orphan',
+    )
+    users = association_proxy('user_associations', 'user')
     group_associations = db.relationship(
         'GroupTenantAssoc',
         back_populates='tenant',
@@ -177,6 +183,13 @@ class User(SQLModelBase, UserMixin):
     password = db.Column(db.String(255))
     api_token_key = db.Column(db.String(100))
 
+    tenant_associations = db.relationship(
+        'UserTenant',
+        back_populates='user',
+        cascade='all, delete-orphan',
+    )
+    tenants = association_proxy('tenant_associations', 'tenant')
+
     def __init__(self, *args, **kwargs):
         super(User, self).__init__(*args, **kwargs)
         self.api_token_key = uuid4().hex
@@ -196,27 +209,6 @@ class User(SQLModelBase, UserMixin):
     @declared_attr
     def groups(cls):
         return many_to_many_relationship(cls, Group)
-
-    @declared_attr
-    def tenants(cls):
-        table_names = ['users', 'tenants', 'roles']
-        columns = [
-            db.Column(
-                '{0}_id'.format(table_name[:-1]),
-                db.Integer,
-                db.ForeignKey('{0}.id'.format(table_name))
-            )
-            for table_name in table_names
-        ]
-        secondary_table = db.Table('users_tenants', *columns)
-        constraint = db.PrimaryKeyConstraint(
-            'user_id', 'tenant_id', name='users_tenants_pkey')
-        secondary_table.append_constraint(constraint)
-        return db.relationship(
-            Tenant,
-            secondary=secondary_table,
-            backref=db.backref('users'),
-        )
 
     @property
     def all_tenants(self):
@@ -254,6 +246,24 @@ class User(SQLModelBase, UserMixin):
     @property
     def is_bootstrap_admin(self):
         return self.id == BOOTSTRAP_ADMIN_ID
+
+
+class UserTenant(SQLModelBase):
+    __tablename__ = 'users_tenants'
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id'),
+        primary_key=True,
+    )
+    tenant_id = db.Column(
+        db.Integer,
+        db.ForeignKey('tenants.id'),
+        primary_key=True,
+    )
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+
+    user = db.relationship('User', back_populates='tenant_associations')
+    tenant = db.relationship('Tenant', back_populates='user_associations')
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
