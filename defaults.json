@@ -1,5 +1,6 @@
 {
   "manager": {
+    "premium_edition": true,
     "set_manager_ip_on_boot": false,
     "security": {
       "ssl_enabled": false,
@@ -7,7 +8,7 @@
       "admin_password": "admin"
     },
     "sources": {
-      "manager_resources_package": "/opt/cloudify-bootstrap/cloudify-manager-resources_4.2.0-.dev1.tar.gz"
+      "manager_resources_package": "/opt/cloudify-bootstrap/cloudify-manager-resources_*.tar.gz"
     }
   },
   "agent": {
