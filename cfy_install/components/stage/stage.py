@@ -7,7 +7,7 @@ from .. import (
     HOME_DIR_KEY
 )
 
-from ..service_names import STAGE
+from ..service_names import STAGE, MANAGER
 
 from ...config import config
 from ...logger import get_logger
@@ -37,6 +37,14 @@ def _create_paths():
     common.mkdir(NODEJS_DIR)
     common.mkdir(HOME_DIR)
     common.mkdir(LOG_DIR)
+
+
+def _set_community_mode():
+    premium_edition = config[MANAGER]['premium_edition']
+    community_mode = '' if premium_edition else '-mode community'
+
+    # This is used in the stage systemd service file
+    config[STAGE]['community_mode'] = community_mode
 
 
 def _install():
@@ -94,6 +102,7 @@ def _run_db_migrate():
 
 
 def _start_and_validate_stage():
+    _set_community_mode()
     # Used in the service template
     config[STAGE][SERVICE_USER] = STAGE_USER
     config[STAGE][SERVICE_GROUP] = STAGE_GROUP

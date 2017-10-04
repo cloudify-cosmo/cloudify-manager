@@ -11,7 +11,7 @@ EnvironmentFile=/etc/sysconfig/cloudify-stage
 User={stage[service_user]}
 Group={stage[service_group]}
 WorkingDirectory=/opt/cloudify-stage/backend
-ExecStart=/opt/nodejs/bin/node /opt/cloudify-stage/backend/server.js
+ExecStart=/opt/nodejs/bin/node /opt/cloudify-stage/backend/server.js {stage[community_mode]}
 
 [Install]
 WantedBy=multi-user.target
