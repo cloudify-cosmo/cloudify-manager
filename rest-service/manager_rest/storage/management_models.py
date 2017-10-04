@@ -17,6 +17,7 @@ from uuid import uuid4
 from collections import OrderedDict
 
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
 from manager_rest.constants import (ADMIN_ROLE,
@@ -93,15 +94,18 @@ class Group(SQLModelBase):
     name = CIColumn(db.Text, unique=True, nullable=False, index=True)
     ldap_dn = CIColumn(db.Text, unique=True, nullable=True, index=True)
 
+    tenant_associations = db.relationship(
+        'GroupTenantAssoc',
+        back_populates='group',
+        cascade='all, delete-orphan',
+    )
+    tenants = association_proxy('tenant_associations', 'tenant')
+
     def _get_identifier_dict(self):
         id_dict = OrderedDict({'name': self.name})
         if self.ldap_dn:
             id_dict['ldap_dn'] = self.ldap_dn
         return id_dict
-
-    @declared_attr
-    def tenants(cls):
-        return many_to_many_relationship(cls, Tenant)
 
     def to_response(self, get_data=False):
         group_dict = super(Group, self).to_response()
