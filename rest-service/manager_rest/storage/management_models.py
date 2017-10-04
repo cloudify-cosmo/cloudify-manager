@@ -114,6 +114,31 @@ class Group(SQLModelBase):
         return group_dict
 
 
+class GroupTenantAssoc(SQLModelBase):
+    """Association between groups and tenants.
+
+    This is used to create a many-to-many relationship between groups and
+    tenants with the ability to set the role as an additional attribute to the
+    relationship.
+
+    """
+    __tablename__ = 'groups_tenants'
+    group_id = db.Column(
+        db.Integer,
+        db.ForeignKey('groups.id'),
+        primary_key=True,
+    )
+    tenant_id = db.Column(
+        db.Integer,
+        db.ForeignKey('tenants.id'),
+        primary_key=True,
+    )
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+
+    group = db.relationship('Group', back_populates='tenant_associations')
+    tenant = db.relationship('Tenant', back_populates='group_associations')
+
+
 class Role(SQLModelBase, RoleMixin):
     __tablename__ = 'roles'
 
