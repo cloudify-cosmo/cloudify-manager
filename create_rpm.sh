@@ -1,17 +1,33 @@
 #!/usr/bin/env bash
 
-CLI_PACKAGE="cloudify-cli-4.2.0~.dev1.el6.x86_64.rpm"
-MANAGER_RESOURCES_TAR="cloudify-manager-resources_4.2.0-.dev1.tar.gz"
-MANAGER_RESOURCES_DIR="cloudify-manager-resources"
-
-cd /tmp
-
 function print_line() {
   echo '-------------------------------------------------------------'
   echo $1
   echo '-------------------------------------------------------------'
 }
 
+CLOUDIFY_RELEASE_URL="http://cloudify-release-eu.s3.amazonaws.com/cloudify"
+MANAGER_RESOURCES_DIR="cloudify-manager-resources"
+
+if [ ${COMMUNITY_EDITION} ]; then
+    print_line "Working in Community edition"
+
+    CLI_PACKAGE_URL="${CLOUDIFY_RELEASE_URL}/17.10.5/release/cloudify-17.10.5~community.el6.x86_64.rpm"
+    CLI_PACKAGE="cloudify-cli-17.10.5~community.el6.x86_64.rpm"
+
+    MANAGER_RESOURCES_URL="${CLOUDIFY_RELEASE_URL}/17.10.5/release/cloudify-manager-resources_17.10.5-community.tar.gz"
+    MANAGER_RESOURCES_TAR="cloudify-manager-resources_17.10.5-community.tar.gz"
+else
+    print_line "Working in Premium edition"
+
+    CLI_PACKAGE_URL="${CLOUDIFY_RELEASE_URL}/4.2.0/.dev1-release/cloudify-4.2.0~.dev1.el6.x86_64.rpm"
+    CLI_PACKAGE="cloudify-cli-4.2.0~.dev1.el6.x86_64.rpm"
+
+    MANAGER_RESOURCES_URL="${CLOUDIFY_RELEASE_URL}/4.2.0/.dev1-release/cloudify-manager-resources_4.2.0-.dev1.tar.gz"
+    MANAGER_RESOURCES_TAR="cloudify-manager-resources_4.2.0-.dev1.tar.gz"
+fi
+
+cd /tmp
 
 print_line "Installing fpm dependencies..."
 sudo yum install -y -q ruby-devel gcc make rpm-build rubygems
@@ -22,11 +38,11 @@ gem install --no-ri --no-rdoc fpm
 mkdir -p cloudify-bootstrap
 
 print_line "Downloading cloudify manager resources tar..."
-curl http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.2.0/.dev1-release/${MANAGER_RESOURCES_TAR} -o ${MANAGER_RESOURCES_TAR}
+curl ${MANAGER_RESOURCES_URL} -o ${MANAGER_RESOURCES_TAR}
 
 # TODO: Remove this when the CLI is a part of the single tar
 print_line "Downloading CLI package..."
-curl http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.2.0/.dev1-release/cloudify-manager-resources_4.2.0-.dev1.tar.gz -o ${CLI_PACKAGE}
+curl ${CLI_PACKAGE_URL} -o ${CLI_PACKAGE}
 
 print_line "Adding CLI package to single tar..."
 tar -xf ${MANAGER_RESOURCES_TAR}
