@@ -55,16 +55,20 @@ def get_local_source_path(source_url):
 
     # Otherwise, it's a relative `sources` path
     path = join(CLOUDIFY_SOURCES_PATH, source_url)
+    return get_glob_path(path)
+
+
+def get_glob_path(path):
     if '*' in path:
         matching_paths = glob(path)
         if not matching_paths:
             raise FileError(
-                'Could not locate source matching {0}'.format(source_url)
+                'Could not locate source matching {0}'.format(path)
             )
         if len(matching_paths) > 1:
             raise FileError(
                 'Expected to find single source matching '
-                '{0}, but found: {1}'.format(source_url, matching_paths)
+                '{0}, but found: {1}'.format(path, matching_paths)
             )
         path = matching_paths[0]
     return path
