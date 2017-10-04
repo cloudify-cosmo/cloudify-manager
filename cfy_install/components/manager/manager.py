@@ -20,7 +20,8 @@ from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.files import (replace_in_file,
                             get_local_source_path,
-                            remove_files)
+                            remove_files,
+                            get_glob_path)
 
 logger = get_logger(MANAGER)
 
@@ -49,10 +50,18 @@ def _create_sudoers_file_and_disable_sudo_requiretty():
     add_entry_to_sudoers(entry, description)
 
 
+def _get_single_tar_path():
+    single_tar_url = config[MANAGER][SOURCES]['manager_resources_package']
+    if '*' in single_tar_url:
+        local_single_tar_path = get_glob_path(single_tar_url)
+    else:
+        local_single_tar_path = get_local_source_path(single_tar_url)
+    return local_single_tar_path
+
+
 def _extract_single_tar():
     logger.info('Extracting Cloudify manager resources archive...')
-    single_tar_url = config[MANAGER][SOURCES]['manager_resources_package']
-    local_single_tar_path = get_local_source_path(single_tar_url)
+    local_single_tar_path = _get_single_tar_path()
     common.mkdir(constants.CLOUDIFY_SOURCES_PATH)
     common.untar(
         local_single_tar_path,
