@@ -13,9 +13,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from manager_rest.storage import models
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.security.authorization import authorize
-from manager_rest.security import MissingPremiumFeatureResource
+from manager_rest.security import (MissingPremiumFeatureResource,
+                                   SecuredResourceSkipTenantAuth)
 
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import BaseResponse
@@ -30,19 +31,24 @@ except ImportError:
     SecuredMultiTenancyResourceSkipTenantAuth = MissingPremiumFeatureResource
 
 
-class Tenants(SecuredMultiTenancyResourceSkipTenantAuth):
+class Tenants(SecuredResourceSkipTenantAuth):
     @rest_decorators.exceptions_handled
     @authorize('tenant_list')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.create_filters(models.Tenant)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Tenant)
-    def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
+    def get(self, _include=None, filters=None, pagination=None,
             sort=None, **kwargs):
         """
         List tenants
         """
-        return multi_tenancy.list_tenants(_include, filters, pagination, sort)
+        return get_storage_manager().list(
+            models.Tenant,
+            include=_include,
+            filters=filters,
+            pagination=pagination,
+            sort=sort)
 
 
 class TenantsId(SecuredMultiTenancyResource):
