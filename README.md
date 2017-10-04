@@ -27,6 +27,10 @@ with:
 
 `chmod +x /tmp/create_rpm.sh`
 
+4. By default, a premium edition `rpm` will be created. If a community
+edition one is needed, be sure to set `export COMMUNITY_EDITION=true`
+before executing the script.
+
 5. Execute it:
 
 `/tmp/create_rpm.sh`
