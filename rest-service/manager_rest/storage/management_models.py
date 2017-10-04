@@ -249,6 +249,13 @@ class User(SQLModelBase, UserMixin):
 
 
 class UserTenantAssoc(SQLModelBase):
+    """Association between users and tenants.
+
+    This is used to create a many-to-many relationship between users and
+    tenants with the ability to set the role as an additional attribute to the
+    relationship.
+
+    """
     __tablename__ = 'users_tenants'
     user_id = db.Column(
         db.Integer,
