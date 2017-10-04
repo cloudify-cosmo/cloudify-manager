@@ -60,6 +60,13 @@ class Tenant(SQLModelBase):
     rabbitmq_username = db.Column(db.Text)
     rabbitmq_password = db.Column(db.Text)
 
+    group_associations = db.relationship(
+        'GroupTenantAssoc',
+        back_populates='tenant',
+        cascade='all, delete-orphan',
+    )
+    groups = association_proxy('group_associations', 'group')
+
     def _get_identifier_dict(self):
         return OrderedDict({'name': self.name})
 
