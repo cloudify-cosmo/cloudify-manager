@@ -4,7 +4,7 @@ from ..logger import get_logger
 
 from .service_names import RABBITMQ, MANAGER, AGENT, NGINX
 
-from . import PRIVATE_IP, PUBLIC_IP, ENDPOINT_IP, SECURITY
+from . import PRIVATE_IP, PUBLIC_IP, ENDPOINT_IP, SECURITY, SOURCES
 
 BROKER_IP = 'broker_ip'
 
@@ -59,8 +59,17 @@ def _set_cert_config():
     nginx_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
 
 
+def _set_community_edition():
+    if 'community' in config[MANAGER][SOURCES]['manager_resources_package']:
+        logger.info('Working with `Community` edition')
+        config[MANAGER]['premium_edition'] = False
+    else:
+        logger.info('Working with `Premium` edition')
+
+
 def set_globals():
     _set_ip_config()
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_cert_config()
+    _set_community_edition()
