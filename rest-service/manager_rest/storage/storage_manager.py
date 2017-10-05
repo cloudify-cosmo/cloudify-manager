@@ -17,7 +17,7 @@ import psutil
 
 from collections import OrderedDict
 
-from flask import current_app
+from flask import current_app, has_request_context
 from flask_security import current_user
 
 from manager_rest.storage.models_base import db
@@ -150,6 +150,10 @@ class SQLStorageManager(object):
         if not model_class.is_resource:
             return query
 
+        # not used from a request handler - no relevant user
+        if not has_request_context():
+            return query
+
         # If an admin passed the `all_tenants` flag, no need to filter
         if current_user.is_admin and all_tenants:
             return query
@@ -167,6 +171,10 @@ class SQLStorageManager(object):
         """Filter by the users present in either the `viewers` or `owners`
         lists
         """
+        # not used from a request handler - no relevant user
+        if not has_request_context():
+            return query
+
         # System administrators should see all resources, regardless of tenant.
         # Queries of elements that aren't resources (tenants, users, etc.),
         # shouldn't be filtered as well
