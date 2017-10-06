@@ -28,21 +28,31 @@ try:
 except ImportError:
     TenantResponse = BaseResponse
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
-    SecuredMultiTenancyResourceSkipTenantAuth = MissingPremiumFeatureResource
+
+    # SecuredResourceSkipTenantAuth instead of MissingPremiumFeatureResource
+    # since it's being used only in Tenants list,
+    # and it should use SecuredResourceSkipTenantAuth in premium edition
+    # and SecuredResourceSkipTenantAuth in the community edition
+    SecuredMultiTenancyResourceSkipTenantAuth = SecuredResourceSkipTenantAuth
 
 
-class Tenants(SecuredResourceSkipTenantAuth):
+class Tenants(SecuredMultiTenancyResourceSkipTenantAuth):
     @rest_decorators.exceptions_handled
     @authorize('tenant_list')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.create_filters(models.Tenant)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Tenant)
-    def get(self, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+    def get(self, multi_tenancy=None, _include=None, filters=None,
+            pagination=None, sort=None, **kwargs):
         """
         List tenants
         """
+        if multi_tenancy:
+            return multi_tenancy.list_tenants(_include,
+                                              filters,
+                                              pagination,
+                                              sort)
         return get_storage_manager().list(
             models.Tenant,
             include=_include,
