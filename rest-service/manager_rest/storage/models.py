@@ -18,6 +18,7 @@
 from .management_models import (User,
                                 Role,
                                 Group,
+                                GroupTenantAssoc,
                                 Tenant,
                                 UserTenantAssoc,
                                 user_datastore,
