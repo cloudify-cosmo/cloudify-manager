@@ -65,13 +65,21 @@ class Tenant(SQLModelBase):
         back_populates='tenant',
         cascade='all, delete-orphan',
     )
-    users = association_proxy('user_associations', 'user')
+    users = association_proxy(
+        'user_associations',
+        'user',
+        creator=lambda user: UserTenantAssoc(user=user),
+    )
     group_associations = db.relationship(
         'GroupTenantAssoc',
         back_populates='tenant',
         cascade='all, delete-orphan',
     )
-    groups = association_proxy('group_associations', 'group')
+    groups = association_proxy(
+        'group_associations',
+        'group',
+        creator=lambda group: GroupTenantAssoc(group=group),
+    )
 
     def _get_identifier_dict(self):
         return OrderedDict({'name': self.name})
@@ -217,12 +225,12 @@ class User(SQLModelBase, UserMixin):
 
         Note: recursive membership in groups is currently not supported
         """
-        tenant_list = self.tenants
+        all_tenants = set()
+        all_tenants.update(self.tenants)
         for group in self.groups:
-            for tenant in group.tenants:
-                tenant_list.append(tenant)
+            all_tenants.update(group.tenants)
 
-        return list(set(tenant_list))
+        return list(all_tenants)
 
     def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
