@@ -65,13 +65,21 @@ class Tenant(SQLModelBase):
         back_populates='tenant',
         cascade='all, delete-orphan',
     )
-    users = association_proxy('user_associations', 'user')
+    users = association_proxy(
+        'user_associations',
+        'user',
+        creator=lambda user: UserTenantAssoc(user=user),
+    )
     group_associations = db.relationship(
         'GroupTenantAssoc',
         back_populates='tenant',
         cascade='all, delete-orphan',
     )
-    groups = association_proxy('group_associations', 'group')
+    groups = association_proxy(
+        'group_associations',
+        'group',
+        creator=lambda group: GroupTenantAssoc(group=group),
+    )
 
     def _get_identifier_dict(self):
         return OrderedDict({'name': self.name})
