@@ -16,17 +16,17 @@
 
 from flask_restful_swagger import swagger
 
-from manager_rest import get_version_data
 from manager_rest.rest import responses
+from manager_rest import get_version_data
+from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
 )
-from manager_rest.security.authorization import authorize
-from manager_rest.security import SecuredResourceSkipTenantAuth
 
 
-class Version(SecuredResourceSkipTenantAuth):
+class Version(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.Version,

@@ -12,16 +12,19 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+
 import json
 
 from flask import current_app
 from itsdangerous import BadSignature, SignatureExpired
 
 from ..storage.idencoder import get_encoder
+
 from manager_rest.storage.models import User
 from manager_rest.manager_exceptions import NotFoundError
-from manager_rest.storage import user_datastore, get_storage_manager
 from manager_rest.utils import CLOUDIFY_API_AUTH_TOKEN_HEADER
+from manager_rest.storage import user_datastore, get_storage_manager
+
 
 ENCODED_ID_LENGTH = 5
 

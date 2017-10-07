@@ -30,7 +30,7 @@ from nose.plugins.attrib import attr
 import wagon
 from mock import MagicMock, patch
 
-from manager_rest.security import authorization
+from manager_rest.rest.resources_v3 import users
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest.storage.models_states import ExecutionState
@@ -44,14 +44,24 @@ from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
 from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from .mocks import (
-    MockHTTPClient, CLIENT_API_VERSION, build_query_string, mock_authorize)
+from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
-
-authorization.authorize = mock_authorize
 
 FILE_SERVER_PORT = 53229
 LATEST_API_VERSION = 3.1  # to be used by max_client_version test attribute
+
+auth_dict = {
+    'roles': [
+        {'name': 'sys_admin', 'description': ''},
+        {'name': 'manager', 'description': ''},
+        {'name': 'user', 'description': ''},
+        {'name': 'viewer', 'description': ''},
+        {'name': 'default', 'description': ''}
+    ],
+    'permissions': {
+        'all_tenants': ['sys_admin']
+    }
+}
 
 
 class TestClient(FlaskClient):
@@ -134,6 +144,15 @@ class BaseServerTestCase(unittest.TestCase):
         self.client = self.create_client()
         self.sm = get_storage_manager()
         self.initialize_provider_context()
+        self._mock_verify_role()
+
+    def _mock_verify_role(self):
+        self._original_verify_role = users._verify_role
+        self.addCleanup(self._restore_verify_role)
+        users._verify_role = MagicMock()
+
+    def _restore_verify_role(self):
+        users._verify_role = self._original_verify_role
 
     def _mock_amqp_manager(self):
         """ Mock the pyrabbit.Client for all unittests - no RabbitMQ """
@@ -203,12 +222,6 @@ class BaseServerTestCase(unittest.TestCase):
         server.db.create_all()
         admin_user = get_admin_user()
 
-        auth_dict = {
-            'roles': [
-                {'name': 'admin', 'description': ''},
-                {'name': 'user', 'description': ''}
-            ]
-        }
         fd, temp_auth_file = tempfile.mkstemp()
         os.close(fd)
         with open(temp_auth_file, 'w') as f:
@@ -286,6 +299,7 @@ class BaseServerTestCase(unittest.TestCase):
             'L7SMZ4XebsuIK8F6aVUBYGQtW0P12Rn'
         test_config.security_encoding_block_size = 24
         test_config.security_encoding_min_length = 5
+        test_config.authorization_permissions = auth_dict['permissions']
         return test_config
 
     def _version_url(self, url):

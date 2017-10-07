@@ -17,11 +17,11 @@ from flask import request, current_app
 
 from manager_rest import config
 from manager_rest.rest import rest_decorators
+from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.security import SecuredResourceSkipTenantAuth
 
 
-class ManagerConfig(SecuredResourceSkipTenantAuth):
+class ManagerConfig(SecuredResource):
     @rest_decorators.exceptions_handled
     @authorize('manager_config_get')
     def get(self):

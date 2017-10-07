@@ -69,11 +69,11 @@ def create_default_user_tenant_and_roles(admin_username,
 
 def _create_roles(authorization_file_path):
     with open(authorization_file_path) as f:
-        content = load(f)
-    roles = [role['name'] for role in content['roles']]
+        roles = load(f)['roles']
     for role in roles:
-        user_datastore.find_or_create_role(name=role)
-    return user_datastore.find_role(constants.ADMIN_ROLE)
+        user_datastore.find_or_create_role(name=role['name'])
+    # return the first role, which is the strongest
+    return user_datastore.find_role(roles[0]['name'])
 
 
 def _create_default_tenant():

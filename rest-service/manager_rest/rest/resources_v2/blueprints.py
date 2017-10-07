@@ -25,6 +25,7 @@ from manager_rest.storage import (
     get_storage_manager,
     models,
 )
+from manager_rest.security.authorization import authorize
 from manager_rest.utils import create_filter_params_list_description
 
 
@@ -41,6 +42,7 @@ class Blueprints(resources_v1.Blueprints):
         )
     )
     @rest_decorators.exceptions_handled
+    @authorize('blueprint_list')
     @rest_decorators.marshal_with(models.Blueprint)
     @rest_decorators.create_filters(models.Blueprint)
     @rest_decorators.paginate
@@ -69,6 +71,7 @@ class BlueprintsId(resources_v1.BlueprintsId):
         notes="Returns a blueprint by its id."
     )
     @rest_decorators.exceptions_handled
+    @authorize('blueprint_get')
     @rest_decorators.marshal_with(models.Blueprint)
     def get(self, blueprint_id, _include=None, **kwargs):
         """
@@ -115,6 +118,7 @@ class BlueprintsId(resources_v1.BlueprintsId):
 
     )
     @rest_decorators.exceptions_handled
+    @authorize('blueprint_upload')
     @rest_decorators.marshal_with(models.Blueprint)
     def put(self, blueprint_id, **kwargs):
         """
@@ -130,6 +134,7 @@ class BlueprintsId(resources_v1.BlueprintsId):
         notes="deletes a blueprint by its id."
     )
     @rest_decorators.exceptions_handled
+    @authorize('blueprint_delete')
     @rest_decorators.marshal_with(models.Blueprint)
     def delete(self, blueprint_id, **kwargs):
         """

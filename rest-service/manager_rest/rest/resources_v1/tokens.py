@@ -18,15 +18,15 @@ from flask_restful_swagger import swagger
 from flask_security import current_user
 
 from manager_rest.rest import responses
+from manager_rest.security import SecuredResource
+from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
 )
-from manager_rest.security.authorization import authorize
-from manager_rest.security import SecuredResourceSkipTenantAuth
 
 
-class Tokens(SecuredResourceSkipTenantAuth):
+class Tokens(SecuredResource):
 
     @swagger.operation(
         responseClass=responses.Tokens,

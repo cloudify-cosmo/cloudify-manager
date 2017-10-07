@@ -15,9 +15,10 @@
 
 from flask_security import current_user
 
+from manager_rest import config
 from manager_rest.storage import models, user_datastore
 from manager_rest.security.authorization import authorize
-from manager_rest.security import (SecuredResourceSkipTenantAuth,
+from manager_rest.security import (SecuredResource,
                                    MissingPremiumFeatureResource)
 from manager_rest.manager_exceptions import BadParametersError
 
@@ -30,7 +31,15 @@ except ImportError:
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
 
 
-class User(SecuredResourceSkipTenantAuth):
+def _verify_role(role):
+    valid_roles = [r['name'] for r in config.instance.authorization_roles]
+    if role not in valid_roles:
+        raise BadParametersError(
+            'Invalid role: `{0}`. Valid roles are: {1}'.format(role,
+                                                               valid_roles))
+
+
+class User(SecuredResource):
     @rest_decorators.exceptions_handled
     @authorize('user_get_self')
     @rest_decorators.marshal_with(UserResponse)
@@ -75,6 +84,7 @@ class Users(SecuredMultiTenancyResource):
         password = request_dict.pop('password')
         password = rest_utils.validate_and_decode_password(password)
         rest_utils.validate_inputs(request_dict)
+        _verify_role(request_dict['role'])
         return multi_tenancy.create_user(
             request_dict['username'],
             password,
@@ -99,6 +109,7 @@ class UsersId(SecuredMultiTenancyResource):
             password = rest_utils.validate_and_decode_password(password)
             return multi_tenancy.set_user_password(username, password)
         elif role_name:
+            _verify_role(role_name)
             return multi_tenancy.set_user_role(username, role_name)
         else:
             raise BadParametersError('Neither `password` nor `role` provided')

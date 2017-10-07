@@ -17,9 +17,11 @@ from flask_security.utils import encrypt_password
 
 from manager_rest.storage.models import Tenant, UserTenantAssoc
 from manager_rest.storage import user_datastore
-from manager_rest.constants import (ADMIN_ROLE,
-                                    USER_ROLE,
-                                    DEFAULT_TENANT_ID)
+from manager_rest.constants import DEFAULT_TENANT_ID
+
+
+ADMIN_ROLE = 'sys_admin'
+USER_ROLE = 'default'
 
 
 def get_admin_user():

@@ -28,6 +28,7 @@ from os import path, makedirs
 
 import wagon
 from flask_restful import abort
+from flask_security import current_user
 
 from manager_rest import constants, config
 
@@ -171,3 +172,8 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
     if tenant:
         headers[constants.CLOUDIFY_TENANT_HEADER] = tenant
     return headers
+
+
+def all_tenants_authorization():
+    return current_user.role \
+           in config.instance.authorization_permissions['all_tenants']
