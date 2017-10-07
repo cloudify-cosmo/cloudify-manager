@@ -16,10 +16,9 @@
 from flask import current_app, request
 
 from manager_rest import config
+from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.security import (SecuredResource,
-                                   SecuredResourceSkipTenantAuth)
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError)
@@ -29,7 +28,6 @@ from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
 
 from .. import rest_decorators, rest_utils
 from ...security.authentication import authenticator
-from ...security.tenant_authorization import tenant_authorizer
 from ..responses_v3 import BaseResponse, ResourceID
 
 try:
@@ -38,7 +36,7 @@ except ImportError:
     LdapResponse = BaseResponse
 
 
-class FileServerAuth(SecuredResourceSkipTenantAuth):
+class FileServerAuth(SecuredResource):
     @staticmethod
     def _verify_tenant(uri):
         tenanted_resources = [
@@ -53,13 +51,17 @@ class FileServerAuth(SecuredResourceSkipTenantAuth):
         # the header
         for resource in tenanted_resources:
             if uri.startswith(resource):
-                uri = uri.replace(resource, '').strip('/')
+                uri = uri.replace(resource, '', 1).strip('/')
                 uri_tenant, _ = uri.split('/', 1)
-                user = authenticator.authenticate(request)
-                tenant_authorizer.authorize(user, request, uri_tenant)
+                authenticator.authenticate(request)
+
+                @authorize('file_server_auth', uri_tenant)
+                def _authorize():
+                    pass
+
+                _authorize()
 
     @rest_decorators.exceptions_handled
-    @authorize('file_server_auth')
     @rest_decorators.marshal_with(ResourceID)
     def get(self, **_):
         """

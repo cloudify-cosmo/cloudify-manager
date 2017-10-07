@@ -27,7 +27,7 @@ class UserTestCase(base_test.BaseServerTestCase):
         response = self.get('/user')
         result = loads(response.data)
         self.assertEqual('admin', result['username'])
-        self.assertEqual('admin', result['role'])
+        self.assertEqual('sys_admin', result['role'])
         self.assertEqual(0, result['groups'])
         self.assertEqual(1, result['tenants'])
         self.assertEqual(True, result['active'])

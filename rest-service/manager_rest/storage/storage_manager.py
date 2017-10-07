@@ -13,22 +13,20 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-import psutil
-
 from collections import OrderedDict
+from sqlite3 import DatabaseError as SQLiteDBError
 
-from flask import current_app, has_request_context
+import psutil
 from flask_security import current_user
-
 from manager_rest.storage.models_base import db
+from flask import current_app, has_request_context
 from manager_rest import manager_exceptions, config
+from manager_rest.utils import all_tenants_authorization
 from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.storage.models_states import AvailabilityState
-
 from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.attributes import flag_modified
-from sqlite3 import DatabaseError as SQLiteDBError
 
 try:
     from psycopg2 import DatabaseError as Psycopg2DBError
@@ -154,8 +152,9 @@ class SQLStorageManager(object):
         if not has_request_context():
             return query
 
-        # If an admin passed the `all_tenants` flag, no need to filter
-        if current_user.is_admin and all_tenants:
+        # If a user that is allowed to get all the tenants in the system
+        # passed the `all_tenants` flag, no need to filter
+        if all_tenants_authorization() and all_tenants:
             return query
 
         if all_tenants:
@@ -179,10 +178,10 @@ class SQLStorageManager(object):
         if not has_request_context():
             return query
 
-        # System administrators should see all resources, regardless of tenant.
+        # For users that are allowed to see all resources, regardless of tenant
         # Queries of elements that aren't resources (tenants, users, etc.),
         # shouldn't be filtered as well
-        if not model_class.is_resource or current_user.is_admin:
+        if not model_class.is_resource or all_tenants_authorization():
             return query
 
         # Only get resources that are public - not private (note that ~ stands

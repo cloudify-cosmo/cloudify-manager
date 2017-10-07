@@ -15,5 +15,4 @@
 
 # Setting NOQA to avoid flake errors - these are convenience imports
 from .secured_resource import SecuredResource                   # NOQA
-from .secured_resource import SecuredResourceSkipTenantAuth     # NOQA
 from .secured_resource import MissingPremiumFeatureResource     # NOQA

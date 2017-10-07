@@ -16,27 +16,24 @@
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (MissingPremiumFeatureResource,
-                                   SecuredResourceSkipTenantAuth)
+                                   SecuredResource)
 
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import BaseResponse
 
 try:
     from cloudify_premium import (TenantResponse,
-                                  SecuredMultiTenancyResource,
-                                  SecuredMultiTenancyResourceSkipTenantAuth)
+                                  SecuredMultiTenancyResource)
+    TenantsListResource = SecuredMultiTenancyResource
 except ImportError:
     TenantResponse = BaseResponse
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
 
-    # SecuredResourceSkipTenantAuth instead of MissingPremiumFeatureResource
-    # since it's being used only in Tenants list,
-    # and it should use SecuredResourceSkipTenantAuth in premium edition
-    # and SecuredResourceSkipTenantAuth in the community edition
-    SecuredMultiTenancyResourceSkipTenantAuth = SecuredResourceSkipTenantAuth
+    # In community edition tenants list should work without multi-tenancy
+    TenantsListResource = SecuredResource
 
 
-class Tenants(SecuredMultiTenancyResourceSkipTenantAuth):
+class Tenants(TenantsListResource):
     @rest_decorators.exceptions_handled
     @authorize('tenant_list')
     @rest_decorators.marshal_with(TenantResponse)

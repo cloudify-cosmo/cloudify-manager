@@ -33,9 +33,6 @@ DEFAULT_TENANT_NAME = 'default_tenant'
 BOOTSTRAP_ADMIN_ID = 0
 DEFAULT_TENANT_ID = 0
 
-ADMIN_ROLE = 'admin'
-USER_ROLE = 'user'
-
 REST_SERVICE_NAME = 'cloudify-restservice'
 MGMTWORKER_QUEUE = 'cloudify.management'
 

@@ -30,3 +30,6 @@ PROVIDER_CONTEXT = {
     }
 }
 PROVIDER_NAME = 'integration_tests'
+
+USER_ROLE = 'default'
+ADMIN_ROLE = 'sys_admin'

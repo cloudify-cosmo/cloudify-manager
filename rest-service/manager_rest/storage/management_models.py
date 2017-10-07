@@ -23,10 +23,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 from flask_security import SQLAlchemyUserDatastore, UserMixin, RoleMixin
 
-from manager_rest.constants import (ADMIN_ROLE,
-                                    USER_ROLE,
-                                    BOOTSTRAP_ADMIN_ID,
-                                    DEFAULT_TENANT_ID)
+from manager_rest.constants import BOOTSTRAP_ADMIN_ID, DEFAULT_TENANT_ID
 
 from .idencoder import get_encoder
 from .relationships import (
@@ -253,14 +250,6 @@ class User(SQLModelBase, UserMixin):
     @property
     def role(self):
         return self.roles[0].name
-
-    @property
-    def is_default_user(self):
-        return self.role == USER_ROLE
-
-    @property
-    def is_admin(self):
-        return self.role == ADMIN_ROLE
 
     @property
     def is_bootstrap_admin(self):
