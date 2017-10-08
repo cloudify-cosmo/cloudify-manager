@@ -275,14 +275,16 @@ class BaseTestCase(unittest.TestCase):
     def execute_workflow(workflow_name, deployment_id,
                          parameters=None,
                          timeout_seconds=240,
-                         wait_for_execution=True):
+                         wait_for_execution=True,
+                         force=False):
         """
         A blocking method which runs the requested workflow
         """
         client = test_utils.create_rest_client()
 
         execution = client.executions.start(deployment_id, workflow_name,
-                                            parameters=parameters or {})
+                                            parameters=parameters or {},
+                                            force=force)
 
         if wait_for_execution:
             BaseTestCase.wait_for_execution_to_end(
