@@ -406,7 +406,10 @@ class NodeInstance(SQLResourceBase):
     runtime_properties = db.Column(db.PickleType)
     scaling_groups = db.Column(db.PickleType)
     state = db.Column(db.Text, nullable=False)
-    version = db.Column(db.Integer, default=1)
+    version = db.Column(db.Integer, nullable=False)
+
+    # This automatically increments the version on each update
+    __mapper_args__ = {'version_id_col': version}
 
     _node_fk = foreign_key(Node._storage_id)
 
