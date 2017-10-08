@@ -12,7 +12,7 @@ from ..service_names import STAGE, MANAGER
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
-from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH
+from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH, CLOUDIFY_GROUP
 
 from ...utils import common, files
 from ...utils.systemd import systemd
@@ -90,6 +90,7 @@ def _deploy_restore_snapshot_script():
         allow_as=STAGE_USER
     )
     common.chmod('a+rx', join(BASE_RESOURCES_PATH, STAGE, script_name))
+    common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
 
 
 def _run_db_migrate():

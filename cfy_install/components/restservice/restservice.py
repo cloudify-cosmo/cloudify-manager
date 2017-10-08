@@ -162,6 +162,7 @@ def _deploy_security_configuration():
         constants.CLOUDIFY_GROUP,
         rest_security_path
     )
+    common.chmod('g+r', rest_security_path)
 
 
 def _allow_creating_cluster():
