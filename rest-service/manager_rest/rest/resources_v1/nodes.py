@@ -221,11 +221,15 @@ class NodeInstancesId(SecuredResource):
             node_instance_id,
             locking=True
         )
+        if instance.version > version:
+            raise manager_exceptions.ConflictError(
+                'Node instance update conflict [current version={0}, '
+                'update version={1}]'.format(instance.version, version)
+            )
         # Only update if new values were included in the request
         instance.runtime_properties = request_dict.get(
             'runtime_properties',
             instance.runtime_properties
         )
         instance.state = request_dict.get('state', instance.state)
-        instance.version = version + 1
         return get_storage_manager().update(instance)
