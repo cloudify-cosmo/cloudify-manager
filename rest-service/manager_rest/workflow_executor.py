@@ -85,7 +85,8 @@ def execute_system_workflow(wf_id,
 def _get_tenant_dict():
     current_tenant = current_app.config[CURRENT_TENANT_CONFIG]
     tenant_dict = current_tenant.to_dict()
-    tenant_dict.pop('id')
+    for to_remove in ['id', 'users', 'groups']:
+        tenant_dict.pop(to_remove)
     return tenant_dict
 
 
