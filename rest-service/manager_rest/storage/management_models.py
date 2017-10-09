@@ -14,7 +14,10 @@
 #  * limitations under the License.
 
 from uuid import uuid4
-from collections import OrderedDict
+from collections import (
+    OrderedDict,
+    defaultdict,
+)
 
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -233,12 +236,17 @@ class User(SQLModelBase, UserMixin):
 
         Note: recursive membership in groups is currently not supported
         """
-        all_tenants = set()
-        all_tenants.update(self.tenants)
-        for group in self.groups:
-            all_tenants.update(group.tenants)
+        all_tenants = defaultdict(set)
+        for tenant_association in self.tenant_associations:
+            all_tenants[tenant_association.tenant].add(tenant_association.role)
 
-        return list(all_tenants)
+        for group in self.groups:
+            for tenant_association in group.tenant_associations:
+                # TBD: Remove this when groups have a role set by default
+                if tenant_association.role:
+                    all_tenants[tenant_association.tenant].add(
+                        tenant_association.role)
+        return all_tenants
 
     def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
