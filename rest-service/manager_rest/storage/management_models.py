@@ -279,6 +279,7 @@ class UserTenantAssoc(SQLModelBase):
 
     user = db.relationship('User', back_populates='tenant_associations')
     tenant = db.relationship('Tenant', back_populates='user_associations')
+    role = db.relationship('Role')
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
