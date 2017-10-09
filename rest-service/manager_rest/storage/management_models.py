@@ -162,6 +162,7 @@ class GroupTenantAssoc(SQLModelBase):
 
     group = db.relationship('Group', back_populates='tenant_associations')
     tenant = db.relationship('Tenant', back_populates='group_associations')
+    role = db.relationship('Role')
 
 
 class Role(SQLModelBase, RoleMixin):
