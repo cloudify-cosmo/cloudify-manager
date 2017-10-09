@@ -291,7 +291,11 @@ class UserTenantAssoc(SQLModelBase):
         db.ForeignKey('tenants.id'),
         primary_key=True,
     )
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    role_id = db.Column(
+        db.Integer,
+        db.ForeignKey('roles.id'),
+        nullable=False,
+    )
 
     user = db.relationship('User', back_populates='tenant_associations')
     tenant = db.relationship('Tenant', back_populates='user_associations')
