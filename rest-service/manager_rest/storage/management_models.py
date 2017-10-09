@@ -96,12 +96,12 @@ class Tenant(SQLModelBase):
 
     @property
     def all_users(self):
-        users_list = self.users
+        all_users = set()
+        all_users.update(self.users)
         for group in self.groups:
-            for user in group.users:
-                users_list.append(user)
+            all_users.update(group.users)
 
-        return list(set(users_list))
+        return list(all_users)
 
     @property
     def is_default_tenant(self):
