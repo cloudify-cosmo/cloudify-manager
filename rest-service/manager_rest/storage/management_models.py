@@ -281,5 +281,13 @@ class UserTenantAssoc(SQLModelBase):
     tenant = db.relationship('Tenant', back_populates='user_associations')
     role = db.relationship('Role')
 
+    def _get_identifier_dict(self):
+        """Return elements to display in object's string representation."""
+        return OrderedDict([
+            ('user', self.user.username),
+            ('tenant', self.tenant.name),
+            ('role', self.role.name),
+        ])
+
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
