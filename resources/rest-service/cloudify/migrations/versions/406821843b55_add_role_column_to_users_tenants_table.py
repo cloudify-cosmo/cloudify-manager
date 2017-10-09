@@ -32,6 +32,17 @@ def upgrade():
         'users_tenants',
         ['user_id', 'tenant_id'],
     )
+    op.execute(sa.text(
+        '''
+        UPDATE users_tenants
+        SET role_id =
+            (
+                SELECT role_id
+                FROM users_roles
+                WHERE user_id = users_tenants.user_id
+            )
+        '''
+    ))
 
 
 def downgrade():
