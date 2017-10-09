@@ -32,17 +32,26 @@ def upgrade():
         'users_tenants',
         ['user_id', 'tenant_id'],
     )
-    op.execute(sa.text(
-        '''
-        UPDATE users_tenants
-        SET role_id =
-            (
-                SELECT role_id
-                FROM users_roles
-                WHERE user_id = users_tenants.user_id
-            )
-        '''
-    ))
+
+    # Define with just the columns needed
+    # to generate the UPDATE sql expression below
+    users_tenants = sa.table(
+        'users_tenants',
+        sa.column('user_id', sa.Integer),
+        sa.column('role_id', sa.Integer),
+    )
+    users_roles = sa.table(
+        'users_roles',
+        sa.column('user_id', sa.Integer),
+        sa.column('role_id', sa.Integer),
+    )
+    op.execute(
+        users_tenants.update()
+        .values(role_id=(
+            sa.select([users_roles.c.role_id])
+            .where(users_tenants.c.user_id == users_roles.c.user_id)
+        ))
+    )
 
 
 def downgrade():
