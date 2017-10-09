@@ -52,6 +52,7 @@ def upgrade():
             .where(users_tenants.c.user_id == users_roles.c.user_id)
         ))
     )
+    op.alter_column('users_tenants', 'role_id', nullable=False)
 
 
 def downgrade():
