@@ -981,6 +981,11 @@ class ResourceManager(object):
         new_node_instance.set_node(node)
         self.sm.put(new_node_instance)
 
+        # Manually update version, because of how `version_id_col` works in
+        # SQLAlchemy (it is set to 1 automatically)
+        new_node_instance.version = instance_dict['version']
+        self.sm.update(new_node_instance)
+
         # Return the IDs to the dict for later use
         instance_dict['deployment_id'] = deployment_id
         instance_dict['node_id'] = node_id
