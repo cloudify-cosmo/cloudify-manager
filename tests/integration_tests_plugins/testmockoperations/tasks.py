@@ -474,3 +474,26 @@ def execution_logging(ctx, user_cause=False, **_):
             _, ex, tb = sys.exc_info()
             causes.append(cloudify.utils.exception_to_error_cause(ex, tb))
     raise NonRecoverableError('ERROR_MESSAGE', causes=causes)
+
+
+@operation
+def increment_counter(ctx, **_):
+    # Just a trick to have a semi-global variable inside the inner func
+    tries = [0]
+
+    def acquire_runtime_props(props, latest_props):
+        tries[0] += 1
+        old_counter = latest_props.get('counter', 0)
+        new_counter = old_counter + 1
+        ctx.logger.info(
+            'Trying to update current value: '
+            '{0} with new value: {1} [try number {2}]'.format(
+                old_counter, new_counter, tries[0])
+        )
+
+        ctx.logger.info('Sleeping for 3 seconds...')
+        time.sleep(3)
+        latest_props['counter'] = new_counter
+        return latest_props
+
+    ctx.instance.update(on_conflict=acquire_runtime_props)
