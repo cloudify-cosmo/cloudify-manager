@@ -14,7 +14,10 @@
 #  * limitations under the License.
 
 from uuid import uuid4
-from collections import OrderedDict
+from collections import (
+    OrderedDict,
+    defaultdict,
+)
 
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -96,12 +99,12 @@ class Tenant(SQLModelBase):
 
     @property
     def all_users(self):
-        users_list = self.users
+        all_users = set()
+        all_users.update(self.users)
         for group in self.groups:
-            for user in group.users:
-                users_list.append(user)
+            all_users.update(group.users)
 
-        return list(set(users_list))
+        return list(all_users)
 
     @property
     def is_default_tenant(self):
@@ -162,6 +165,14 @@ class GroupTenantAssoc(SQLModelBase):
 
     group = db.relationship('Group', back_populates='tenant_associations')
     tenant = db.relationship('Tenant', back_populates='group_associations')
+    role = db.relationship('Role')
+
+    def _get_identifier_dict(self):
+        """Return elements to display in object's string representation."""
+        return OrderedDict([
+            ('group', self.group.name),
+            ('tenant', self.tenant.name),
+        ])
 
 
 class Role(SQLModelBase, RoleMixin):
@@ -225,12 +236,17 @@ class User(SQLModelBase, UserMixin):
 
         Note: recursive membership in groups is currently not supported
         """
-        all_tenants = set()
-        all_tenants.update(self.tenants)
-        for group in self.groups:
-            all_tenants.update(group.tenants)
+        all_tenants = defaultdict(set)
+        for tenant_association in self.tenant_associations:
+            all_tenants[tenant_association.tenant].add(tenant_association.role)
 
-        return list(all_tenants)
+        for group in self.groups:
+            for tenant_association in group.tenant_associations:
+                # TBD: Remove this when groups have a role set by default
+                if tenant_association.role:
+                    all_tenants[tenant_association.tenant].add(
+                        tenant_association.role)
+        return all_tenants
 
     def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
@@ -279,6 +295,15 @@ class UserTenantAssoc(SQLModelBase):
 
     user = db.relationship('User', back_populates='tenant_associations')
     tenant = db.relationship('Tenant', back_populates='user_associations')
+    role = db.relationship('Role')
+
+    def _get_identifier_dict(self):
+        """Return elements to display in object's string representation."""
+        return OrderedDict([
+            ('user', self.user.username),
+            ('tenant', self.tenant.name),
+            ('role', self.role.name),
+        ])
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
