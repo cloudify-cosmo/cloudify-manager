@@ -164,6 +164,13 @@ class GroupTenantAssoc(SQLModelBase):
     tenant = db.relationship('Tenant', back_populates='group_associations')
     role = db.relationship('Role')
 
+    def _get_identifier_dict(self):
+        """Return elements to display in object's string representation."""
+        return OrderedDict([
+            ('group', self.group.name),
+            ('tenant', self.tenant.name),
+        ])
+
 
 class Role(SQLModelBase, RoleMixin):
     __tablename__ = 'roles'
