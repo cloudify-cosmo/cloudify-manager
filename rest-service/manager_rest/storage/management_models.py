@@ -29,7 +29,10 @@ from manager_rest.constants import (ADMIN_ROLE,
                                     DEFAULT_TENANT_ID)
 
 from .idencoder import get_encoder
-from .relationships import many_to_many_relationship
+from .relationships import (
+    foreign_key,
+    many_to_many_relationship,
+)
 from .models_base import db, SQLModelBase, UTCDateTime, CIColumn
 
 
@@ -151,17 +154,10 @@ class GroupTenantAssoc(SQLModelBase):
 
     """
     __tablename__ = 'groups_tenants'
-    group_id = db.Column(
-        db.Integer,
-        db.ForeignKey('groups.id'),
-        primary_key=True,
-    )
-    tenant_id = db.Column(
-        db.Integer,
-        db.ForeignKey('tenants.id'),
-        primary_key=True,
-    )
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    group_id = foreign_key('groups.id', primary_key=True)
+    tenant_id = foreign_key('tenants.id', primary_key=True)
+    # TBD: Set nullable=False when role set by default in the migration script
+    role_id = foreign_key('roles.id', nullable=True)
 
     group = db.relationship('Group', back_populates='tenant_associations')
     tenant = db.relationship('Tenant', back_populates='group_associations')
@@ -281,21 +277,9 @@ class UserTenantAssoc(SQLModelBase):
 
     """
     __tablename__ = 'users_tenants'
-    user_id = db.Column(
-        db.Integer,
-        db.ForeignKey('users.id'),
-        primary_key=True,
-    )
-    tenant_id = db.Column(
-        db.Integer,
-        db.ForeignKey('tenants.id'),
-        primary_key=True,
-    )
-    role_id = db.Column(
-        db.Integer,
-        db.ForeignKey('roles.id'),
-        nullable=False,
-    )
+    user_id = foreign_key('users.id', primary_key=True)
+    tenant_id = foreign_key('tenants.id', primary_key=True)
+    role_id = foreign_key('roles.id')
 
     user = db.relationship('User', back_populates='tenant_associations')
     tenant = db.relationship('Tenant', back_populates='user_associations')
