@@ -34,6 +34,27 @@ def upgrade():
         'groups_tenants',
         ['group_id', 'tenant_id'],
     )
+    # Define tables with just the columns needed
+    # to generate the UPDATE sql expression below
+    groups_tenants = sa.table(
+        'groups_tenants',
+        sa.column('group_id', sa.Integer),
+        sa.column('role_id', sa.Integer),
+    )
+    roles = sa.table(
+        'roles',
+        sa.column('id', sa.Integer),
+        sa.column('name', sa.Text),
+    )
+    # Set 'user' role as the default for every group in a tenant
+    op.execute(
+        groups_tenants.update()
+        .values(role_id=(
+            sa.select([roles.c.id])
+            .where(roles.c.name == 'user')
+        ))
+    )
+    op.alter_column('groups_tenants', 'role_id', nullable=False)
 
 
 def downgrade():
