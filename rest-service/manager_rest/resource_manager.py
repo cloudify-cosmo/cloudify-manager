@@ -203,8 +203,9 @@ class ResourceManager(object):
                 timeout=300)
 
     def remove_plugin(self, plugin_id, force):
-        # Verify plugin exists.
+        # Verify plugin exists and can be removed
         plugin = self.sm.get(models.Plugin, plugin_id)
+        self.validate_modification_permitted(plugin)
 
         # Uninstall (if applicable)
         if utils.plugin_installable_on_current_platform(plugin):
@@ -282,6 +283,7 @@ class ResourceManager(object):
 
     def delete_blueprint(self, blueprint_id):
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
+        self.validate_modification_permitted(blueprint)
 
         if len(blueprint.deployments) > 0:
             raise manager_exceptions.DependentExistsError(
@@ -1257,6 +1259,27 @@ class ResourceManager(object):
     def get_resource_availability(self, private_resource):
         return AvailabilityState.PRIVATE if private_resource \
             else AvailabilityState.TENANT
+
+    def set_global_availability(self, model_class, element_id):
+        # Check that there is no resource with the same name
+        if self.sm.count(model_class, element_id) > 1:
+            raise manager_exceptions.IllegalActionError(
+                "Can't set the availability of `{0}` to global because "
+                "there are resources with the same name".format(element_id))
+
+        # Set the resource_availability to global
+        resource = self.sm.get(model_class, element_id)
+        resource.resource_availability = AvailabilityState.GLOBAL
+        resource.updated_at = utils.get_formatted_timestamp()
+        return self.sm.update(resource)
+
+    def validate_modification_permitted(self, resource):
+        # A global resource can't be modify from outside its tenant
+        if resource.resource_availability == AvailabilityState.GLOBAL and \
+           resource.tenant_name != self.sm.current_tenant.name:
+            raise manager_exceptions.IllegalActionError(
+                "Can't modify the global resource `{0}` from outside its "
+                "tenant `{1}`".format(resource.id, resource.tenant_name))
 
 
 # What we need to access this manager in Flask

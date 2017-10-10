@@ -16,6 +16,7 @@
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
+from manager_rest.resource_manager import get_resource_manager
 
 from ... import utils
 from .. import rest_decorators, rest_utils
@@ -30,7 +31,6 @@ class SecretsKey(SecuredResource):
         """
         Get secret by key
         """
-
         rest_utils.validate_inputs({'key': key})
         return get_storage_manager().get(models.Secret, key)
 
@@ -41,7 +41,6 @@ class SecretsKey(SecuredResource):
         """
         Create a new secret
         """
-
         key, value = self._validate_secret_inputs(key)
 
         return get_storage_manager().put(models.Secret(
@@ -58,9 +57,9 @@ class SecretsKey(SecuredResource):
         """
         Update an existing secret
         """
-
         key, value = self._validate_secret_inputs(key)
         secret = get_storage_manager().get(models.Secret, key)
+        get_resource_manager().validate_modification_permitted(secret)
         secret.value = value
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret)
@@ -72,10 +71,10 @@ class SecretsKey(SecuredResource):
         """
         Delete a secret
         """
-
         rest_utils.validate_inputs({'key': key})
         storage_manager = get_storage_manager()
         secret = storage_manager.get(models.Secret, key)
+        get_resource_manager().validate_modification_permitted(secret)
         return storage_manager.delete(secret)
 
     def _validate_secret_inputs(self, key):
@@ -98,7 +97,6 @@ class Secrets(SecuredResource):
         """
         List secrets
         """
-
         return get_storage_manager().list(
             models.Secret,
             include=_include,
