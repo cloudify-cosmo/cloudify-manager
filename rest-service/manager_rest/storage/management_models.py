@@ -239,10 +239,8 @@ class User(SQLModelBase, UserMixin):
 
         for group in self.groups:
             for tenant_association in group.tenant_associations:
-                # TBD: Remove this when groups have a role set by default
-                if tenant_association.role:
-                    all_tenants[tenant_association.tenant].add(
-                        tenant_association.role)
+                all_tenants[tenant_association.tenant].add(
+                    tenant_association.role)
         return all_tenants
 
     def to_response(self, get_data=False):
