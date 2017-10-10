@@ -54,8 +54,7 @@ def upgrade():
             .where(roles.c.name == 'user')
         ))
     )
-    # TBD: Uncomment when default value is set when a group is added to tenant
-    # op.alter_column('groups_tenants', 'role_id', nullable=False)
+    op.alter_column('groups_tenants', 'role_id', nullable=False)
 
 
 def downgrade():
