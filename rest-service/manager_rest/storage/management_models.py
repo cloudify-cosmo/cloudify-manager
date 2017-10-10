@@ -168,6 +168,7 @@ class GroupTenantAssoc(SQLModelBase):
         return OrderedDict([
             ('group', self.group.name),
             ('tenant', self.tenant.name),
+            ('role', self.role.name),
         ])
 
 
