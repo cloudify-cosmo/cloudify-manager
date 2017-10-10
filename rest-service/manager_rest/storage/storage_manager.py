@@ -482,6 +482,20 @@ class SQLStorageManager(object):
         current_app.logger.debug('Returning: {0}'.format(results))
         return ListResult(items=results, metadata={'pagination': pagination})
 
+    def count(self, model_class, element_id):
+        """
+        Return the count of the same element_id in the model_class in
+        all the tenants
+        """
+        current_app.logger.debug(
+            'Count `{0}` with ID `{1}` in all tenants'
+            .format(model_class.__name__, element_id)
+        )
+        query = model_class.query
+        query = query.filter(model_class.id == element_id)
+        count = query.order_by(None).count()  # Fastest way to count
+        return count
+
     def put(self, instance):
         """Create a `model_class` instance from a serializable `model` object
 

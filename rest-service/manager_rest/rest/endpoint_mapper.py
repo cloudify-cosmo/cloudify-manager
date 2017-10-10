@@ -28,6 +28,7 @@ def setup_resources(api):
         'Blueprints': 'blueprints',
         'BlueprintsId': 'blueprints/<string:blueprint_id>',
         'BlueprintsIdArchive': 'blueprints/<string:blueprint_id>/archive',
+        'BlueprintsSetGlobal': 'blueprints/<string:blueprint_id>/set-global',
         'Snapshots': 'snapshots',
         'SnapshotsId': 'snapshots/<string:snapshot_id>',
         'SnapshotsIdArchive': 'snapshots/<string:snapshot_id>/archive',
@@ -58,6 +59,7 @@ def setup_resources(api):
         'Plugins': 'plugins',
         'PluginsId': 'plugins/<string:plugin_id>',
         'PluginsArchive': 'plugins/<string:plugin_id>/archive',
+        'PluginsSetGlobal': 'plugins/<string:plugin_id>/set-global',
         'MaintenanceMode': 'maintenance',
         'MaintenanceModeAction': 'maintenance/<string:maintenance_action>',
 
@@ -84,6 +86,7 @@ def setup_resources(api):
         'SSLConfig': 'ssl',
         'Secrets': 'secrets',
         'SecretsKey': 'secrets/<string:key>',
+        'SecretsSetGlobal': 'secrets/<string:key>/set-global',
         'ManagerConfig': 'config',
     }
 
