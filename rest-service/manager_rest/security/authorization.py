@@ -32,6 +32,7 @@ def authorize(action, request_tenant=None):
                         'Provided tenant name unknown: {0}'.format(tenant_name)
                     )
 
+            # when running unittests, there is no authorization
             if config.instance.test_mode:
                 return func(*args, **kwargs)
             user_roles = current_user.all_tenants.get(tenant_name, []) \
