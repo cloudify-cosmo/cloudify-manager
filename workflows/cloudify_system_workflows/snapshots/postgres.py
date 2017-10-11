@@ -20,6 +20,7 @@ from contextlib import closing
 from cloudify.workflows import ctx
 from cloudify.exceptions import NonRecoverableError
 
+from .constants import ADMIN_DUMP_FILE
 from .utils import run as run_shell
 
 POSTGRESQL_DEFAULT_PORT = 5432
@@ -62,20 +63,30 @@ class Postgres(object):
         clear_tables_queries = self._get_clear_tables_queries()
         dump_file = self._prepend_dump(dump_file, clear_tables_queries)
 
-        # Add the admin user and the current execution
-        self._append_dump(dump_file, self._get_admin_user_update_query())
+        # Add the current execution
         self._append_dump(dump_file, self._get_execution_restore_query())
 
+        # Don't change admin user during the restore or the workflow will
+        # fail to correctly execute (the admin user update query reverts it
+        # to the one from before the restore)
+        self._append_dump(dump_file, self._get_admin_user_update_query())
+
         self._restore_dump(dump_file, self._db_name)
+
         ctx.logger.debug('Postgres restored')
 
     def dump(self, tempdir):
         destination_path = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
+        admin_dump_path = os.path.join(tempdir, ADMIN_DUMP_FILE)
         try:
             self._dump_to_file(
                 destination_path,
                 self._db_name,
                 exclude_tables=self._TABLES_TO_EXCLUDE_ON_DUMP
+            )
+            self._dump_admin_user_to_file(
+                admin_dump_path,
+                self._db_name,
             )
         except Exception as ex:
             raise NonRecoverableError('Error during dumping Postgres data, '
@@ -198,18 +209,44 @@ class Postgres(object):
         command.extend(flags)
         run_shell(command)
 
+    def _dump_admin_user_to_file(self, destination_path, db_name):
+        ctx.logger.debug('Dumping admin account')
+        command = self.get_psql_command(db_name)
+
+        # Hardcoded uid as we only allow running restore on a clean manager
+        # at the moment, so admin must be the first user (ID=0)
+        query = (
+            'select row_to_json(row) from ('
+            'select * from users where id=0'
+            ') row;'
+        )
+        command.extend([
+            '-c', query,
+            '-t',  # Dump just the data, without extra headers, etc
+            '-o', destination_path,
+        ])
+        run_shell(command)
+
+    def get_psql_command(self, db_name=None):
+        psql_bin = os.path.join(self._bin_dir, 'psql')
+        db_name = db_name or self._db_name
+        return [
+            psql_bin,
+            '--host', self._host,
+            '--port', self._port,
+            '-U', self._username,
+            db_name,
+        ]
+
     def _restore_dump(self, dump_file, db_name):
         """Execute `psql` to restore an SQL dump into the DB
         """
         ctx.logger.debug('Restoring db dump file: {0}'.format(dump_file))
-        psql_bin = os.path.join(self._bin_dir, 'psql')
-        command = [psql_bin,
-                   '--single-transaction',
-                   '--host', self._host,
-                   '--port', self._port,
-                   '-U', self._username,
-                   db_name,
-                   '-f', dump_file]
+        command = self.get_psql_command(db_name)
+        command.extend([
+            '--single-transaction',
+            '-f', dump_file
+        ])
         run_shell(command)
 
     @staticmethod
