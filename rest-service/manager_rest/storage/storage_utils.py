@@ -58,9 +58,14 @@ def create_default_user_tenant_and_roles(admin_username,
         password=encrypt_password(admin_password),
         roles=[admin_role]
     )
+
+    # User role assigned to admin user as a member of default tenant
+    # This is the default role when adding a user is added to a tenant.
+    # Anyway, `sys_admin` will be the effective role since is the system role.
+    user_role = user_datastore.find_role('user')
     user_tenant_association = UserTenantAssoc(
         tenant=default_tenant,
-        role_id=admin_role.id,
+        role=user_role,
     )
     admin_user.tenant_associations.append(user_tenant_association)
     user_datastore.commit()
