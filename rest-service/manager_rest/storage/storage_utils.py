@@ -71,7 +71,10 @@ def _create_roles(authorization_file_path):
     with open(authorization_file_path) as f:
         roles = load(f)['roles']
     for role in roles:
-        user_datastore.find_or_create_role(name=role['name'])
+        user_datastore.find_or_create_role(
+            name=role['name'],
+            description=role.get('description'),
+        )
     # return the first role, which is the strongest
     return user_datastore.find_role(roles[0]['name'])
 
