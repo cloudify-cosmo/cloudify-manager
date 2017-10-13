@@ -15,7 +15,7 @@
 
 from flask_security import current_user
 
-from manager_rest import config
+from manager_rest import config, constants
 from manager_rest.storage import models, user_datastore
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (SecuredResource,
@@ -78,17 +78,30 @@ class Users(SecuredMultiTenancyResource):
         Create a user
         """
         request_dict = rest_utils.get_json_and_verify_params(
-            {'username', 'password', 'role'}
+            {
+                'username': {
+                    'type': unicode,
+                },
+                'password': {
+                    'type': unicode,
+                },
+                'role': {
+                    'type': unicode,
+                    'optional': True,
+                },
+            }
         )
+
         # The password shouldn't be validated here
         password = request_dict.pop('password')
         password = rest_utils.validate_and_decode_password(password)
         rest_utils.validate_inputs(request_dict)
-        _verify_role(request_dict['role'])
+        role = request_dict.get('role', constants.DEFAULT_SYSTEM_ROLE)
+        _verify_role(role)
         return multi_tenancy.create_user(
             request_dict['username'],
             password,
-            request_dict['role']
+            role,
         )
 
 
