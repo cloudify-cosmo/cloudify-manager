@@ -30,7 +30,7 @@ from nose.plugins.attrib import attr
 import wagon
 from mock import MagicMock, patch
 
-from manager_rest.rest.resources_v3 import users
+from manager_rest.rest import rest_utils
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest.storage.models_states import ExecutionState
@@ -148,12 +148,12 @@ class BaseServerTestCase(unittest.TestCase):
         self._mock_verify_role()
 
     def _mock_verify_role(self):
-        self._original_verify_role = users._verify_role
+        self._original_verify_role = rest_utils.verify_role
         self.addCleanup(self._restore_verify_role)
-        users._verify_role = MagicMock()
+        rest_utils.verify_role = MagicMock()
 
     def _restore_verify_role(self):
-        users._verify_role = self._original_verify_role
+        rest_utils.verify_role = self._original_verify_role
 
     def _mock_amqp_manager(self):
         """ Mock the pyrabbit.Client for all unittests - no RabbitMQ """

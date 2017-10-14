@@ -15,7 +15,7 @@
 
 from flask_security import current_user
 
-from manager_rest import config, constants
+from manager_rest import constants
 from manager_rest.storage import models, user_datastore
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (SecuredResource,
@@ -29,14 +29,6 @@ try:
     from cloudify_premium import SecuredMultiTenancyResource
 except ImportError:
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
-
-
-def _verify_role(role):
-    valid_roles = [r['name'] for r in config.instance.authorization_roles]
-    if role not in valid_roles:
-        raise BadParametersError(
-            'Invalid role: `{0}`. Valid roles are: {1}'.format(role,
-                                                               valid_roles))
 
 
 class User(SecuredResource):
@@ -97,7 +89,7 @@ class Users(SecuredMultiTenancyResource):
         password = rest_utils.validate_and_decode_password(password)
         rest_utils.validate_inputs(request_dict)
         role = request_dict.get('role', constants.DEFAULT_SYSTEM_ROLE)
-        _verify_role(role)
+        rest_utils.verify_role(role, is_system_role=True)
         return multi_tenancy.create_user(
             request_dict['username'],
             password,
@@ -122,7 +114,7 @@ class UsersId(SecuredMultiTenancyResource):
             password = rest_utils.validate_and_decode_password(password)
             return multi_tenancy.set_user_password(username, password)
         elif role_name:
-            _verify_role(role_name)
+            rest_utils.verify_role(role_name, is_system_role=True)
             return multi_tenancy.set_user_role(username, role_name)
         else:
             raise BadParametersError('Neither `password` nor `role` provided')
