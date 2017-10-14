@@ -115,7 +115,7 @@ class TenantUsers(SecuredMultiTenancyResource):
         rest_utils.validate_inputs(request_dict)
         role_name = request_dict.get('role')
         if role_name:
-            rest_utils.validate_role_name(role_name)
+            rest_utils.verify_role(role_name)
         else:
             role_name = constants.DEFAULT_TENANT_ROLE
 
@@ -166,7 +166,7 @@ class TenantGroups(SecuredMultiTenancyResource):
         rest_utils.validate_inputs(request_dict)
         role_name = request_dict.get('role')
         if role_name:
-            rest_utils.validate_role_name(role_name)
+            rest_utils.verify_role(role_name)
         else:
             role_name = constants.DEFAULT_TENANT_ROLE
 

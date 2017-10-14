@@ -23,12 +23,8 @@ from flask_restful.reqparse import RequestParser
 
 from contextlib import contextmanager
 
-from manager_rest import manager_exceptions
+from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
-from manager_rest.storage import (
-    get_storage_manager,
-    models,
-)
 
 try:
     from cloudify_premium.ha import node_status
@@ -171,22 +167,28 @@ def validate_and_decode_password(password):
     return password
 
 
-def validate_role_name(role_name):
-    """Make sure that role name is present in the database.
-
-    :param role_name: Role name to validate against database content.
-    :raises: BadParametersError when role is not found in the database
-
-    """
-    sm = get_storage_manager()
-    role_names = set([role.name for role in sm.list(models.Role)])
-
-    if role_name not in role_names:
-        raise manager_exceptions.BadParametersError(
-            'Invalid role name: {0}. Valid roles: {1}'
-            .format(role_name, ', '.join(sorted(role_names)))
-        )
-
-
 def is_clustered():
     return node_status.get('initialized')
+
+
+def verify_role(role, is_system_role=False):
+    """Make sure that role name is present in the system.
+
+    :param role: Role name to validate against database content.
+    :param is_system_role: True if system_role, False if tenant_role
+    :raises: BadParametersError when role is not found in the system or is
+    not from the right type
+
+    """
+    role_type = 'system_role' if is_system_role else 'tenant_role'
+    for r in config.instance.authorization_roles:
+        if r['name'] == role:
+            if r['type'] == role_type or r['type'] == 'any':
+                return
+            raise manager_exceptions.BadParametersError(
+                'Role `{0}` is a {1} and cannot be assigned as a {2}'.format(
+                    role, r['name'], role_type)
+            )
+    valid_roles = [r['name'] for r in config.instance.authorization_roles]
+    raise manager_exceptions.BadParametersError(
+        'Invalid role: `{0}`. Valid roles are: {1}'.format(role, valid_roles))
