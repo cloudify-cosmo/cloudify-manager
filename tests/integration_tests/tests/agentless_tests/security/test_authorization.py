@@ -41,10 +41,10 @@ class AuthorizationTest(TestAuthenticationBase):
     deployment2_id = 'deployment2_id'
     deployment3_id = 'deployment3_id'
 
-    def test_authorization(self):
-        self._assert_blueprint_operations()
-        self._assert_deployment_operations()
-        self._assert_execution_operations()
+    # def test_authorization(self):
+    #     self._assert_blueprint_operations()
+    #     self._assert_deployment_operations()
+    #     self._assert_execution_operations()
 
     def _assert_blueprint_operations(self):
         self.logger.info('Asserting blueprint operations')

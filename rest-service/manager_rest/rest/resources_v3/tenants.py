@@ -71,7 +71,7 @@ class TenantsId(SecuredMultiTenancyResource):
         return multi_tenancy.create_tenant(tenant_name)
 
     @rest_decorators.exceptions_handled
-    @authorize('tenant_get')
+    @authorize('tenant_get', get_tenant_from='param')
     @rest_decorators.marshal_with(TenantResponse)
     def get(self, tenant_name, multi_tenancy):
         """
@@ -93,7 +93,7 @@ class TenantsId(SecuredMultiTenancyResource):
 
 class TenantUsers(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
-    @authorize('tenant_add_user')
+    @authorize('tenant_add_user', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('add user to tenant')
     def put(self, multi_tenancy):
@@ -128,7 +128,7 @@ class TenantUsers(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
-    @authorize('tenant_remove_user')
+    @authorize('tenant_remove_user', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('remove user from tenant')
     def delete(self, multi_tenancy):
@@ -146,7 +146,7 @@ class TenantUsers(SecuredMultiTenancyResource):
 
 class TenantGroups(SecuredMultiTenancyResource):
     @rest_decorators.exceptions_handled
-    @authorize('tenant_add_group')
+    @authorize('tenant_add_group', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     def put(self, multi_tenancy):
         """
@@ -179,7 +179,7 @@ class TenantGroups(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
-    @authorize('tenant_remove_group')
+    @authorize('tenant_remove_group', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     def delete(self, multi_tenancy):
         """
