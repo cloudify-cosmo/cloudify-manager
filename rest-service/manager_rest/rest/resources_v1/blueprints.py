@@ -55,38 +55,33 @@ class BlueprintsIdArchive(SecuredResource):
         """
         Download blueprint's archive
         """
-        # Verify blueprint exists.
-        get_storage_manager().get(
-            models.Blueprint,
-            blueprint_id,
-            include=['id']
-        )
+        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
 
         for arc_type in SUPPORTED_ARCHIVE_TYPES:
             # attempting to find the archive file on the file system
             local_path = os.path.join(
                 config.instance.file_server_root,
                 FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                current_app.config[CURRENT_TENANT_CONFIG].name,
-                blueprint_id,
-                '{0}.{1}'.format(blueprint_id, arc_type))
+                blueprint.tenant.name,
+                blueprint.id,
+                '{0}.{1}'.format(blueprint.id, arc_type))
 
             if os.path.isfile(local_path):
                 archive_type = arc_type
                 break
         else:
             raise RuntimeError("Could not find blueprint's archive; "
-                               "Blueprint ID: {0}".format(blueprint_id))
+                               "Blueprint ID: {0}".format(blueprint.id))
 
         blueprint_path = '{0}/{1}/{2}/{3}/{3}.{4}'.format(
             FILE_SERVER_RESOURCES_FOLDER,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            current_app.config[CURRENT_TENANT_CONFIG].name,
-            blueprint_id,
+            blueprint.tenant.name,
+            blueprint.id,
             archive_type)
 
         return make_streaming_response(
-            blueprint_id,
+            blueprint.id,
             blueprint_path,
             os.path.getsize(local_path),
             archive_type
