@@ -8,7 +8,7 @@ from manager_rest import config
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
 from manager_rest.app_logging import raise_unauthorized_user_error
-from manager_rest.manager_exceptions import NotFoundError, UnauthorizedError
+from manager_rest.manager_exceptions import NotFoundError, ForbiddenError
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     CURRENT_TENANT_CONFIG)
 
@@ -42,7 +42,7 @@ def authorize(action, request_tenant=None):
             for user_role in user_roles:
                 if user_role in action_roles:
                     return func(*args, **kwargs)
-            raise UnauthorizedError(
+            raise ForbiddenError(
                 'User {0} is not permitted to perform the action {1}'.format(
                     current_user.username, action)
             )

@@ -122,6 +122,15 @@ class UnauthorizedError(ManagerException):
             *args, **kwargs)
 
 
+class ForbiddenError(ManagerException):
+    FORBIDDEN_ERROR_CODE = 'forbidden_error'
+
+    def __init__(self, *args, **kwargs):
+        super(ForbiddenError, self).__init__(
+            403, ForbiddenError.FORBIDDEN_ERROR_CODE,
+            *args, **kwargs)
+
+
 class UnsupportedContentTypeError(ManagerException):
     UNSUPPORTED_CONTENT_TYPE_ERROR_CODE = 'unsupported_content_type_error'
 
