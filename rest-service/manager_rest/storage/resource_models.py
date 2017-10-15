@@ -152,10 +152,6 @@ class Deployment(SQLResourceBase):
                          parameters=wf.get('parameters', dict()))
                 for wf_name, wf in deployment_workflows.iteritems()]
 
-    def set_blueprint(self, blueprint):
-        self._set_parent(blueprint)
-        self.blueprint = blueprint
-
 
 class Execution(SQLResourceBase):
     __tablename__ = 'executions'
