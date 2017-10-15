@@ -358,20 +358,36 @@ class SQLStorageManager(object):
         if not instance.is_resource or not instance.is_id_unique:
             return
 
-        filters = {'id': instance.id, '_tenant_id': self.current_tenant.id}
+        query = self._get_unique_resource_id_query(instance.__class__,
+                                                   instance.id)
+        results = query.all()
 
-        # There should be only one instance with this id on this tenant
-        if len(self.list(instance.__class__, filters=filters)) != 1:
+        # There should be only one instance with this id on this tenant or
+        # in another tenant if the resource is global
+        if len(results) != 1:
             # Delete the newly added instance, and raise an error
             db.session.delete(instance)
             self._safe_commit()
 
             raise manager_exceptions.ConflictError(
-                '{0} already exists on {1}'.format(
+                '{0} already exists on {1} or with global availability'.format(
                     instance,
                     self.current_tenant
                 )
             )
+
+    def _get_unique_resource_id_query(self, model_class, resource_id):
+        """
+        Query for all the resources with the same id of the given instance,
+        if it's in the current tenant, or if it's a global resource
+        """
+        query = self._get_query(model_class, filters={'id': resource_id})
+        unique_resource_filter = sql_or(
+            model_class._tenant_id == self.current_tenant.id,
+            model_class.resource_availability == AvailabilityState.GLOBAL
+        )
+        query = query.filter(unique_resource_filter)
+        return query
 
     def _associate_users_and_tenants(self, instance):
         """Associate, if necessary, the instance with the current tenant/user
