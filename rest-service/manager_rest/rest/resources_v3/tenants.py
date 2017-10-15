@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from manager_rest import constants
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (MissingPremiumFeatureResource,
@@ -99,12 +100,25 @@ class TenantUsers(SecuredMultiTenancyResource):
         """
         Add a user to a tenant
         """
-        request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
-                                                              'username'})
+        request_dict = rest_utils.get_json_and_verify_params(
+            {
+                'tenant_name': {
+                    'type': unicode,
+                },
+                'username': {
+                    'type': unicode,
+                },
+                'role': {
+                    'type': unicode,
+                    'optional': True,
+                },
+            },
+        )
         rest_utils.validate_inputs(request_dict)
         return multi_tenancy.add_user_to_tenant(
             request_dict['username'],
-            request_dict['tenant_name']
+            request_dict['tenant_name'],
+            request_dict.get('role', constants.DEFAULT_TENANT_ROLE)
         )
 
     @rest_decorators.exceptions_handled
