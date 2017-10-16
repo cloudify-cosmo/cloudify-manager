@@ -1261,14 +1261,22 @@ class ResourceManager(object):
             else AvailabilityState.TENANT
 
     def set_global_availability(self, model_class, element_id):
-        # Check that there is no resource with the same name
-        if self.sm.count(model_class, element_id) > 1:
+        resource = None
+        if model_class == models.Plugin:
+            resource = self.sm.get(model_class, element_id)
+            unique_filter = {model_class.package_name: resource.package_name,
+                             model_class.archive_name: resource.archive_name}
+        else:
+            unique_filter = {model_class.id: element_id}
+
+        # Check if the resource is unique
+        if self.sm.count(model_class, unique_filter) > 1:
             raise manager_exceptions.IllegalActionError(
-                "Can't set the availability of `{0}` to global because "
-                "there are resources with the same name".format(element_id))
+                "Can't set the availability of `{0}` to global because it's "
+                "also exist in other tenants".format(element_id))
 
         # Set the resource_availability to global
-        resource = self.sm.get(model_class, element_id)
+        resource = resource or self.sm.get(model_class, element_id)
         resource.resource_availability = AvailabilityState.GLOBAL
         resource.updated_at = utils.get_formatted_timestamp()
         return self.sm.update(resource)
