@@ -176,9 +176,6 @@ def validate_role_name(role_name):
     :raises: BadParametersError when role is not found in the database
 
     """
-    if role_name is None:
-        return
-
     sm = get_storage_manager()
     role_names = set([role.name for role in sm.list(models.Role)])
 
