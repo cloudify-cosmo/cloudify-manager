@@ -58,7 +58,6 @@ class EsToPg(object):
         """Create a new tenant with `tenant_name`, and set it as the current
         tenant in the flask app
         """
-        tenant.users.append(admin_user)
         storage_manager.put(tenant)
         app.config[CURRENT_TENANT_CONFIG] = tenant
 
