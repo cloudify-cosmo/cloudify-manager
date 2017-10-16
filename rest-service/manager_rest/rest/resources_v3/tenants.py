@@ -115,10 +115,16 @@ class TenantUsers(SecuredMultiTenancyResource):
             },
         )
         rest_utils.validate_inputs(request_dict)
+        role_name = request_dict.get('role')
+        if role_name:
+            rest_utils.validate_role_name(role_name)
+        else:
+            role_name = constants.DEFAULT_TENANT_ROLE
+
         return multi_tenancy.add_user_to_tenant(
             request_dict['username'],
             request_dict['tenant_name'],
-            request_dict.get('role', constants.DEFAULT_TENANT_ROLE)
+            role_name,
         )
 
     @rest_decorators.exceptions_handled
