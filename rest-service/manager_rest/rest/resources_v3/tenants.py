@@ -146,12 +146,24 @@ class TenantGroups(SecuredMultiTenancyResource):
         """
         Add a group to a tenant
         """
-        request_dict = rest_utils.get_json_and_verify_params({'tenant_name',
-                                                              'group_name'})
+        request_dict = rest_utils.get_json_and_verify_params(
+            {
+                'tenant_name': {
+                    'type': unicode,
+                },
+                'group_name': {
+                    'type': unicode,
+                },
+                'role': {
+                    'type': unicode,
+                    'optional': True,
+                },
+            })
         rest_utils.validate_inputs(request_dict)
         return multi_tenancy.add_group_to_tenant(
             request_dict['group_name'],
-            request_dict['tenant_name']
+            request_dict['tenant_name'],
+            request_dict.get('role', constants.DEFAULT_TENANT_ROLE),
         )
 
     @rest_decorators.exceptions_handled
