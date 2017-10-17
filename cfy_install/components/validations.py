@@ -117,7 +117,7 @@ def _validate_openssl_version():
     required_version = '1.0.2'
 
     try:
-        output = run(['openssl', 'version']).stdout
+        output = run(['openssl', 'version']).aggr_stdout
     except BootstrapError as e:
         _errors.append(
             'Cloudify Manager requires OpenSSL {0}, Error: {1}'.format(
