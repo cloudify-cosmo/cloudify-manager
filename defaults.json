@@ -13,7 +13,6 @@
   },
   "agent": {
     "networks": {},
-    "broker_ip": null,
     "broker_port": 5671,
     "min_workers": 2,
     "max_workers": 5
@@ -143,9 +142,7 @@
   "nginx": {
     "sources": {
       "nginx_source_url": "nginx-1.12.0-1.el7.ngx.x86_64.rpm"
-    },
-    "external_cert_path": "",
-    "external_key_path": ""
+    }
   },
   "mgmtworker": {
     "sources": {
@@ -185,5 +182,14 @@
     "expected_python_version": "2.7",
     "supported_distros": ["centos", "redhat"],
     "supported_distro_versions": ["7"]
+  },
+  "ssl_inputs":
+  {
+    "external_cert_path": "",
+    "external_key_path": "",
+    "internal_cert_path": "",
+    "internal_key_path": "",
+    "ca_cert_path": "",
+    "ca_key_path": ""
   }
 }
