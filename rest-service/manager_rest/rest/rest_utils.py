@@ -24,6 +24,10 @@ from contextlib import contextmanager
 
 from manager_rest import manager_exceptions
 from manager_rest.constants import REST_SERVICE_NAME
+from manager_rest.storage import (
+    get_storage_manager,
+    models,
+)
 try:
     from cloudify_premium.ha import node_status
 except ImportError:
@@ -163,6 +167,23 @@ def validate_and_decode_password(password):
         )
 
     return password
+
+
+def validate_role_name(role_name):
+    """Make sure that role name is present in the database.
+
+    :param role_name: Role name to validate against database content.
+    :raises: BadParametersError when role is not found in the database
+
+    """
+    sm = get_storage_manager()
+    role_names = set([role.name for role in sm.list(models.Role)])
+
+    if role_name not in role_names:
+        raise manager_exceptions.BadParametersError(
+            'Invalid role name: {0}. Valid roles: {1}'
+            .format(role, ', '.join(sorted(role_names)))
+        )
 
 
 def is_clustered():
