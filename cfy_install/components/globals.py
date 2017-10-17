@@ -2,9 +2,9 @@ from .. import constants
 from ..config import config
 from ..logger import get_logger
 
-from .service_names import RABBITMQ, MANAGER, AGENT, NGINX
+from .service_names import RABBITMQ, MANAGER, AGENT, CONSTANTS
 
-from . import PRIVATE_IP, PUBLIC_IP, ENDPOINT_IP, SECURITY, SOURCES
+from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, SOURCES
 
 BROKER_IP = 'broker_ip'
 
@@ -22,20 +22,19 @@ def _set_external_port_and_protocol():
                     'to 80 and rest protocols to http...')
         external_rest_port = 80
         external_rest_protocol = 'http'
-    config[NGINX]['external_rest_port'] = external_rest_port
-    config[NGINX]['external_rest_protocol'] = external_rest_protocol
-    config[NGINX]['internal_rest_port'] = constants.INTERNAL_REST_PORT
+
+    config[MANAGER]['external_rest_port'] = external_rest_port
+    config[MANAGER]['external_rest_protocol'] = external_rest_protocol
 
 
 def _set_rabbitmq_config():
     config[RABBITMQ][ENDPOINT_IP] = config[AGENT][BROKER_IP]
-    config[RABBITMQ]['broker_cert_path'] = constants.INTERNAL_CA_CERT_PATH
+    config[RABBITMQ]['broker_cert_path'] = constants.CA_CERT_PATH
 
 
 def _set_ip_config():
     private_ip = config[MANAGER][PRIVATE_IP]
-    if not config[AGENT][BROKER_IP]:
-        config[AGENT][BROKER_IP] = private_ip
+    config[AGENT][BROKER_IP] = private_ip
 
     config[MANAGER]['file_server_root'] = constants.MANAGER_RESOURCES_HOME
     config[MANAGER]['file_server_url'] = 'https://{0}:{1}/resources'.format(
@@ -48,15 +47,16 @@ def _set_ip_config():
         networks['default'] = private_ip
 
 
-def _set_cert_config():
-    nginx_conf = config[NGINX]
-    nginx_conf['internal_rest_host'] = config[MANAGER][PRIVATE_IP]
-    nginx_conf['external_rest_host'] = config[MANAGER][PUBLIC_IP]
-    nginx_conf['internal_ca_cert_path'] = constants.INTERNAL_CA_CERT_PATH
-    nginx_conf['internal_cert_path'] = constants.INTERNAL_CERT_PATH
-    nginx_conf['internal_key_path'] = constants.INTERNAL_KEY_PATH
-    nginx_conf['external_cert_path'] = constants.EXTERNAL_CERT_PATH
-    nginx_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
+def _set_constant_config():
+    const_conf = config.setdefault(CONSTANTS, {})
+
+    const_conf['ca_cert_path'] = constants.CA_CERT_PATH
+    const_conf['internal_cert_path'] = constants.INTERNAL_CERT_PATH
+    const_conf['internal_key_path'] = constants.INTERNAL_KEY_PATH
+    const_conf['external_cert_path'] = constants.EXTERNAL_CERT_PATH
+    const_conf['external_key_path'] = constants.EXTERNAL_KEY_PATH
+
+    const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
 
 
 def _set_community_edition():
@@ -71,5 +71,5 @@ def set_globals():
     _set_ip_config()
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
-    _set_cert_config()
+    _set_constant_config()
     _set_community_edition()
