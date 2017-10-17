@@ -2,6 +2,7 @@ import sys
 import urllib2
 import platform
 import subprocess
+from distutils.version import LooseVersion
 
 from . import SOURCES, PRIVATE_IP, PUBLIC_IP
 
@@ -9,9 +10,10 @@ from .service_names import VALIDATIONS, MANAGER
 
 from ..config import config
 from ..logger import get_logger
-from ..exceptions import ValidationError
 from ..constants import USER_CONFIG_PATH
+from ..exceptions import ValidationError, BootstrapError
 
+from ..utils.common import run
 from ..utils.network import is_url
 
 logger = get_logger(VALIDATIONS)
@@ -110,6 +112,29 @@ def _validate_sufficient_disk_space():
         )
 
 
+def _validate_openssl_version():
+    logger.info('Validating OpenSSL version...')
+    required_version = '1.0.2'
+
+    try:
+        output = run(['openssl', 'version']).stdout
+    except BootstrapError as e:
+        _errors.append(
+            'Cloudify Manager requires OpenSSL {0}, Error: {1}'.format(
+                required_version, e
+            )
+        )
+        return
+
+    # The output should look like: "LibreSSL 2.2.7"
+    version = output.split()[1]
+    if LooseVersion(version) < LooseVersion(required_version):
+        _errors.append(
+            "Cloudify Manager requires OpenSSL {0}, current version: {1}"
+            "".format(required_version, version)
+        )
+
+
 def _validate_resources_package_url():
     single_tar_url = config[MANAGER][SOURCES]['manager_resources_package']
     if not single_tar_url or not is_url(single_tar_url):
@@ -154,6 +179,7 @@ def validate():
     _validate_sufficient_memory()
     _validate_sufficient_disk_space()
     _validate_resources_package_url()
+    _validate_openssl_version()
 
     if _errors:
         printable_error = 'Validation error(s):\n' \
