@@ -164,7 +164,6 @@ def remove():
     remove_files([
         constants.BASE_RESOURCES_PATH,
         constants.CLOUDIFY_HOME_DIR,
-        constants.BASE_LOG_DIR,
         join(_get_exec_tempdir(), 'cloudify-ctx')
     ])
     logger.notice('Cloudify Manager resources successfully removed')
