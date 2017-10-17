@@ -1,4 +1,4 @@
-AGENT = 'agent'
+# Service names
 AMQPINFLUX = 'amqpinflux'
 CLI = 'cli'
 COMPOSER = 'composer'
@@ -19,4 +19,9 @@ RIEMANN = 'riemann'
 SANITY = 'sanity'
 STAGE = 'stage'
 SYNCTHING = 'syncthing'
+
+# Other config mappings
+AGENT = 'agent'
+CONSTANTS = 'constants'
+SSL_INPUTS = 'ssl_inputs'
 VALIDATIONS = 'validations'
