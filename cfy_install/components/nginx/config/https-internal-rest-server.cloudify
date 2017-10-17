@@ -1,7 +1,7 @@
 # REST and UI internal server - always SSL enabled
 server {{
   # server listening for internal requests
-  listen              {nginx[internal_rest_port]} ssl default_server;
+  listen              {constants[internal_rest_port]} ssl default_server;
   server_name         _;
 
   ssl_certificate     {constants[internal_cert_path]};
