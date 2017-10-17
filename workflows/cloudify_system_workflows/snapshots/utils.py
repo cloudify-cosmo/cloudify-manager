@@ -13,16 +13,16 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import contextlib
 import os
 import json
 import shlex
 import shutil
-import subprocess
 import zipfile
+import subprocess
+import contextlib
 
-from cloudify import constants, manager
 from cloudify.workflows import ctx
+from cloudify import constants, manager
 from . import constants as snapshot_constants
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.utils import get_tenant_name, internal as internal_utils
@@ -91,14 +91,6 @@ def copy_files_between_manager_and_snapshot(archive_root,
     else:
         # This is a 4.x+ install, files go where they went.
         data_to_copy = [(path, path) for path in data_to_copy]
-
-    # Include roles configuration file in snapshot
-    data_to_copy.append(
-        (
-            '/opt/manager/authorization.conf',
-            'authorization.conf',
-        ),
-    )
 
     local_cert_dir = os.path.dirname(get_local_rest_certificate())
     if to_archive:
