@@ -175,6 +175,19 @@ class BaseTestCase(unittest.TestCase):
         return docl.execute(command, quiet)
 
     @staticmethod
+    def clear_directory(dir_path, quiet=True):
+        """
+        Remove all contents from a directory
+        """
+        # Add a wildcard to the end, to remove everything *inside* the folder
+        command = 'rm -rf {0}/*'.format(dir_path)
+
+        # Need to invoke a shell directly, because `docker exec` ignores
+        # wildcards by default
+        command = "sh -c '{0}'".format(command)
+        return docl.execute(command, quiet)
+
+    @staticmethod
     def copy_file_to_manager(source, target, owner=None):
         """
         Copy a file to the cloudify manager filesystem
@@ -436,7 +449,18 @@ class AgentlessTestCase(BaseTestCase):
         super(AgentlessTestCase, self).setUp()
         self._setup_running_manager_attributes()
         reset_storage()
+        self._reset_file_system()
         self.addCleanup(self._save_manager_logs_after_test)
+
+    def _reset_file_system(self):
+        """ Clean up any files left on the FS from the previous test """
+
+        self.logger.info('Cleaning up the file system...')
+
+        # Remove everything *inside* the folders
+        self.clear_directory('/opt/mgmtworker/work/deployments')
+        self.clear_directory('/opt/manager/resources/blueprints')
+        self.clear_directory('/opt/manager/resources/uploaded-blueprints')
 
 
 class BaseAgentTestCase(BaseTestCase):
