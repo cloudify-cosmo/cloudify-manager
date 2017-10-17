@@ -2,7 +2,7 @@ RIEMANN_CONFIG_PATH="/etc/riemann"
 LANGOHR_HOME="/opt/lib"
 EXTRA_CLASSPATH="/opt/lib/langohr.jar"
 
-REST_HOST="{nginx[internal_rest_host]}"
+REST_HOST="{manager[private_ip]}"
 
 RABBITMQ_HOST="{rabbitmq[endpoint_ip]}"
 RABBITMQ_USER="{rabbitmq[username]}"

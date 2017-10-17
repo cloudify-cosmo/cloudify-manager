@@ -2,10 +2,10 @@
 server {{
   # server listening for external requests
   listen              443 ssl;
-  server_name         {nginx[external_rest_host]};
+  server_name         {manager[public_ip]};
 
-  ssl_certificate     {nginx[external_cert_path]};
-  ssl_certificate_key {nginx[external_key_path]};
+  ssl_certificate     {constants[external_cert_path]};
+  ssl_certificate_key {constants[external_key_path]};
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
 

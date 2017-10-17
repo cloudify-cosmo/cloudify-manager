@@ -4,8 +4,8 @@ server {{
   listen              {nginx[internal_rest_port]} ssl default_server;
   server_name         _;
 
-  ssl_certificate     {nginx[internal_cert_path]};
-  ssl_certificate_key {nginx[internal_key_path]};
+  ssl_certificate     {constants[internal_cert_path]};
+  ssl_certificate_key {constants[internal_key_path]};
 
   include "/etc/nginx/conf.d/logs-conf.cloudify";
 

@@ -9,8 +9,8 @@ server {{
         return 301 https://$server_name$request_uri;
     }}
 
-    ssl_certificate     {nginx[internal_cert_path]};
-    ssl_certificate_key {nginx[internal_key_path]};
+    ssl_certificate     {constants[internal_cert_path]};
+    ssl_certificate_key {constants[internal_key_path]};
 
     access_log    /var/log/cloudify/nginx/cloudify-files.log;
     include "/etc/nginx/conf.d/fileserver-location.cloudify";
