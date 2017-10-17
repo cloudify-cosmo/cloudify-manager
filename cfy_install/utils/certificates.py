@@ -119,12 +119,15 @@ def _generate_ssl_certificate(ips,
     :return: The path to the cert and key files on the manager
     """
     # Remove duplicates from ips
-    cert_metadata = _format_ips(ips)
-    logger.debug('Using certificate metadata: {0}'.format(cert_metadata))
+    subject_altnames = _format_ips(ips)
+    logger.debug(
+        'Generating SSL certificate {0} and key {1} with subjectAltNames: {2}'
+        .format(cert_path, key_path, subject_altnames)
+    )
 
     csr_path = '{0}.csr'.format(cert_path)
 
-    with _csr_config(cn, cert_metadata) as conf_path:
+    with _csr_config(cn, subject_altnames) as conf_path:
         sudo([
             'openssl', 'req',
             '-newkey', 'rsa:2048',
@@ -168,8 +171,17 @@ def generate_internal_ssl_cert(ips, name):
         name,
         const.INTERNAL_CERT_PATH,
         const.INTERNAL_KEY_PATH,
-        sign_cert=const.INTERNAL_CA_CERT_PATH,
-        sign_key=const.INTERNAL_CA_KEY_PATH
+        sign_cert=const.CA_CERT_PATH,
+        sign_key=const.CA_KEY_PATH
+    )
+
+
+def generate_external_ssl_cert(ips, cn):
+    return _generate_ssl_certificate(
+        ips,
+        cn,
+        const.EXTERNAL_CERT_PATH,
+        const.EXTERNAL_KEY_PATH
     )
 
 
@@ -195,12 +207,7 @@ def deploy_or_generate_external_ssl_cert(ips, cn, cert_path, key_path):
             )
         )
 
-        return _generate_ssl_certificate(
-            ips,
-            cn,
-            const.EXTERNAL_CERT_PATH,
-            const.EXTERNAL_KEY_PATH
-        )
+        return generate_external_ssl_cert(ips, cn)
 
 
 def generate_ca_cert():
@@ -211,8 +218,8 @@ def generate_ca_cert():
         '-newkey', 'rsa:2048',
         '-days', '3650',
         '-batch',
-        '-out', const.INTERNAL_CA_CERT_PATH,
-        '-keyout', const.INTERNAL_CA_KEY_PATH
+        '-out', const.CA_CERT_PATH,
+        '-keyout', const.CA_KEY_PATH
     ])
     # PKCS12 file required for riemann due to JVM
     # While we don't really want the private key in there, not having it
@@ -227,10 +234,10 @@ def generate_ca_cert():
     sudo([
         'openssl', 'pkcs12', '-export',
         '-out', pkcs12_path,
-        '-in', const.INTERNAL_CA_CERT_PATH,
-        '-inkey', const.INTERNAL_CA_KEY_PATH,
+        '-in', const.CA_CERT_PATH,
+        '-inkey', const.CA_KEY_PATH,
         '-password', 'pass:cloudify',
     ])
     logger.debug('Generated CA certificate: {0} and key: {1}'.format(
-        const.INTERNAL_CA_CERT_PATH, const.INTERNAL_CA_KEY_PATH
+        const.CA_CERT_PATH, const.CA_KEY_PATH
     ))

@@ -1,9 +1,9 @@
 from os.path import join
 from collections import namedtuple
 
-from .. import SOURCES, CONFIG
+from .. import SOURCES, CONFIG, PRIVATE_IP, PUBLIC_IP
 
-from ..service_names import NGINX, AGENT
+from ..service_names import NGINX, AGENT, MANAGER, SSL_INPUTS
 
 from ... import constants
 from ...config import config
@@ -53,13 +53,13 @@ def _generate_internal_certs(internal_rest_host):
 
 def _generate_external_certs(internal_rest_host):
     logger.info('Creating external certificate...')
-    external_rest_host = config[NGINX]['external_rest_host']
+    external_rest_host = config[MANAGER][PUBLIC_IP]
 
     certificates.deploy_or_generate_external_ssl_cert(
         ips=[external_rest_host, internal_rest_host],
         cn=external_rest_host,
-        cert_path=config[NGINX]['external_cert_path'],
-        key_path=config[NGINX]['external_key_path']
+        cert_path=config[SSL_INPUTS]['external_cert_path'],
+        key_path=config[SSL_INPUTS]['external_key_path']
     )
 
 
@@ -72,7 +72,7 @@ def _create_certs():
     logger.info('Creating CA certificate...')
     certificates.generate_ca_cert()
 
-    internal_rest_host = config[NGINX]['internal_rest_host']
+    internal_rest_host = config[MANAGER][PRIVATE_IP]
     _generate_internal_certs(internal_rest_host)
     _generate_external_certs(internal_rest_host)
 
@@ -147,7 +147,7 @@ def _verify_nginx():
     output = common.run([
         'curl',
         nginx_url,
-        '--cacert', constants.INTERNAL_CA_CERT_PATH,
+        '--cacert', constants.CA_CERT_PATH,
         # only output the http code
         '-o', '/dev/null',
         '-w', '%{http_code}'
