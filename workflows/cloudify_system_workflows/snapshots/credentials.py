@@ -56,7 +56,8 @@ class Credentials(object):
                 for node in nodes:
                     agent_config = get_agent_config(node.properties)
                     agent_key = agent_config.get('key')
-                    if agent_key:
+                    # Don't do anything with empty or {get_secret} agent keys
+                    if agent_key and isinstance(agent_key, basestring):
                         agent_dirname = _get_agent_dirname(
                             version, tenant, dep_id, node.id
                         )

@@ -117,7 +117,7 @@ class SnapshotRestore(object):
                 self._restore_credentials(postgres)
                 self._restore_agents()
                 self._restore_amqp_vhosts_and_users()
-                self._restore_deployment_envs()
+                self._restore_deployment_envs(postgres)
 
             self._restore_hash_salt()
 
@@ -128,8 +128,9 @@ class SnapshotRestore(object):
             ctx.logger.debug('Removing temp dir: {0}'.format(self._tempdir))
             shutil.rmtree(self._tempdir)
 
-    def _restore_deployment_envs(self):
+    def _restore_deployment_envs(self, postgres):
         deps = utils.get_dep_contexts(self._snapshot_version)
+        token_info = postgres.get_deployment_creator_ids_and_tokens()
         for tenant, deployments in deps:
             ctx.logger.info(
                 'Restoring deployment environments for {tenant}'.format(
@@ -141,6 +142,9 @@ class SnapshotRestore(object):
                 ctx.logger.info('Restoring deployment {dep_id}'.format(
                     dep_id=deployment_id,
                 ))
+                api_token = self._get_api_token(
+                    token_info[tenant][deployment_id]
+                )
                 with dep_ctx:
                     dep = tenant_client.deployments.get(deployment_id)
                     blueprint = tenant_client.blueprints.get(
@@ -150,6 +154,7 @@ class SnapshotRestore(object):
                         dep_ctx,
                         blueprint,
                         dep,
+                        api_token,
                     )
                     tasks_graph.execute()
                     ctx.logger.info(
@@ -166,9 +171,9 @@ class SnapshotRestore(object):
             )
 
     def _restore_amqp_vhosts_and_users(self):
-        script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                   'restore_amqp.py')
-        subprocess.check_call([MANAGER_PYTHON, script_path])
+        subprocess.check_call(
+            [MANAGER_PYTHON, self._get_script_path('restore_amqp.py')]
+        )
 
     def _restore_certificate(self):
         archive_cert_dir = os.path.join(self._tempdir, ARCHIVE_CERT_DIR)
@@ -481,8 +486,7 @@ class SnapshotRestore(object):
         Agents().restore(self._tempdir, self._snapshot_version)
         ctx.logger.info('Successfully restored cloudify agent data')
 
-    @staticmethod
-    def _get_tasks_graph(dep_ctx, blueprint, deployment):
+    def _get_tasks_graph(self, dep_ctx, blueprint, deployment, token):
         """Create a deployment creation tasks graph
         """
         blueprint_plan = blueprint['plan']
@@ -493,6 +497,7 @@ class SnapshotRestore(object):
             workflow_plugins_to_install=blueprint_plan[
                 'workflow_plugins_to_install'],
             policy_configuration={
+                'api_token': token,
                 'policy_types': deployment['policy_types'],
                 'policy_triggers': deployment['policy_triggers'],
                 'groups': deployment['groups']
@@ -525,6 +530,20 @@ class SnapshotRestore(object):
         self._post_restore_commands.append(
             'sudo systemctl restart cloudify-restservice'
         )
+
+    def _get_script_path(self, script_name):
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            script_name)
+
+    def _get_api_token(self, token_info):
+        prefix = utils.run([
+            MANAGER_PYTHON,
+            self._get_script_path('getencodeduser.py'),
+            '--user_id',
+            str(token_info['uid']),
+        ]).aggr_stdout.strip()
+
+        return prefix + token_info['token']
 
 
 class SnapshotRestoreValidator(object):

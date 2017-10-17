@@ -291,6 +291,29 @@ class Postgres(object):
                                      .format(status_message))
             return result
 
+    def get_deployment_creator_ids_and_tokens(self):
+        result = self.run_query(
+            "SELECT tenants.name, deployments.id,"
+            "users.id, users.api_token_key "
+            "FROM deployments, users, tenants "
+            "WHERE deployments._creator_id=users.id "
+            "AND tenants.id=deployments._tenant_id"
+        )
+
+        details = {}
+        # Make structure the same as the deployments:
+        # { 'tenant1': {'deploymentid': {info}, ...}, ...}
+        for row in result['all']:
+            tenant = row[0]
+            deployment = row[1]
+            if tenant not in details:
+                details[tenant] = {}
+            details[tenant][deployment] = {
+                'uid': row[2],
+                'token': row[3],
+            }
+        return details
+
     def _connect(self):
         try:
             conn = psycopg2.connect(
