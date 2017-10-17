@@ -8,6 +8,7 @@ import subprocess
 from os.path import join, islink, isdir
 
 from .. import (
+    AGENT,
     SOURCES,
     CONFIG,
     SCRIPTS,
@@ -20,7 +21,7 @@ from .. import (
     ENDPOINT_IP
 )
 
-from ..service_names import RESTSERVICE, MANAGER, RABBITMQ, POSTGRESQL, AGENT
+from ..service_names import RESTSERVICE, MANAGER, RABBITMQ, POSTGRESQL
 
 from ... import constants
 from ...config import config

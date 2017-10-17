@@ -2,9 +2,9 @@ from .. import constants
 from ..config import config
 from ..logger import get_logger
 
-from .service_names import RABBITMQ, MANAGER, AGENT, CONSTANTS
+from .service_names import RABBITMQ, MANAGER
 
-from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, SOURCES
+from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, SOURCES, AGENT, CONSTANTS
 
 BROKER_IP = 'broker_ip'
 

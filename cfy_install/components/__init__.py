@@ -19,3 +19,12 @@ ENDPOINT_IP = 'endpoint_ip'
 SECURITY = 'security'
 
 # endregion
+
+# region Config Keys
+
+AGENT = 'agent'
+CONSTANTS = 'constants'
+SSL_INPUTS = 'ssl_inputs'
+VALIDATIONS = 'validations'
+
+# endregion

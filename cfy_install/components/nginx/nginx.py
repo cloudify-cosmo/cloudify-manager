@@ -1,9 +1,9 @@
 from os.path import join
 from collections import namedtuple
 
-from .. import SOURCES, CONFIG, PRIVATE_IP, PUBLIC_IP
+from .. import SOURCES, CONFIG, PRIVATE_IP, PUBLIC_IP, AGENT, SSL_INPUTS
 
-from ..service_names import NGINX, AGENT, MANAGER, SSL_INPUTS
+from ..service_names import NGINX, MANAGER
 
 from ... import constants
 from ...config import config

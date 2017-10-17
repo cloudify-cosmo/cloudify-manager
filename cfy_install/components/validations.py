@@ -4,9 +4,9 @@ import platform
 import subprocess
 from distutils.version import LooseVersion
 
-from . import SOURCES, PRIVATE_IP, PUBLIC_IP
+from . import SOURCES, PRIVATE_IP, PUBLIC_IP, VALIDATIONS
 
-from .service_names import VALIDATIONS, MANAGER
+from .service_names import MANAGER
 
 from ..config import config
 from ..logger import get_logger
