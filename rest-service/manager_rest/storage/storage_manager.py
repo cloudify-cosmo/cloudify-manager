@@ -21,7 +21,7 @@ from flask_security import current_user
 from manager_rest.storage.models_base import db
 from flask import current_app, has_request_context
 from manager_rest import manager_exceptions, config
-from manager_rest.utils import all_tenants_authorization
+from manager_rest.utils import all_tenants_authorization, is_administrator
 from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.storage.models_states import AvailabilityState
 from sqlalchemy import or_ as sql_or, func
@@ -154,7 +154,7 @@ class SQLStorageManager(object):
 
         # If a user that is allowed to get all the tenants in the system
         # passed the `all_tenants` flag, no need to filter
-        if all_tenants_authorization() and all_tenants:
+        if is_administrator() and all_tenants_authorization() and all_tenants:
             return query
 
         if all_tenants:
@@ -181,7 +181,7 @@ class SQLStorageManager(object):
         # For users that are allowed to see all resources, regardless of tenant
         # Queries of elements that aren't resources (tenants, users, etc.),
         # shouldn't be filtered as well
-        if not model_class.is_resource or all_tenants_authorization():
+        if not model_class.is_resource or is_administrator():
             return query
 
         # Only get resources that are public - not private (note that ~ stands

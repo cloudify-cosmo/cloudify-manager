@@ -59,7 +59,8 @@ auth_dict = {
         {'name': 'default', 'description': ''}
     ],
     'permissions': {
-        'all_tenants': ['sys_admin']
+        'all_tenants': ['sys_admin', 'manager'],
+        'administrators': ['sys_admin', 'manager']
     }
 }
 

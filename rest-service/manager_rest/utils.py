@@ -180,3 +180,11 @@ def all_tenants_authorization():
         current_user.role
         in config.instance.authorization_permissions['all_tenants']
     )
+
+
+def is_administrator():
+    return (
+        current_user.id == constants.BOOTSTRAP_ADMIN_ID or
+        current_user.role
+        in config.instance.authorization_permissions['administrators']
+    )
