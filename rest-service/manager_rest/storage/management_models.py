@@ -242,7 +242,10 @@ class User(SQLModelBase, UserMixin):
 
     def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
-        user_dict['tenants'] = _get_response_data(self.all_tenants, get_data)
+        user_dict['tenants'] = {
+            tenant.name: [role.name for role in roles]
+            for tenant, roles in self.all_tenants.iteritems()
+        }
         user_dict['groups'] = _get_response_data(self.groups, get_data)
         user_dict['role'] = self.role
         return user_dict
