@@ -70,7 +70,7 @@ def _generate_internal_certs():
 
 
 def _generate_external_certs():
-    logger.info('Creating external certificate...')
+    logger.info('Generating external certificate...')
     external_rest_host = config[MANAGER][PUBLIC_IP]
     internal_rest_host = config[MANAGER][PRIVATE_IP]
 
@@ -104,6 +104,7 @@ def _handle_ca_cert():
             raise InputError('Internal CA key provided, but the internal '
                              'CA cert was not')
 
+        logger.info('Generating CA certificate...')
         certificates.generate_ca_cert()
         has_ca_key = True
 
@@ -149,7 +150,7 @@ def _handle_internal_cert(has_ca_key):
 
 
 def _handle_external_cert():
-    logger.info('Handling internal certificate...')
+    logger.info('Handling external certificate...')
     cert_deployed, key_deployed = _deploy_cert_and_key(
         cert='external_cert_path',
         key='external_key_path',
