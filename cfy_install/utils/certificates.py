@@ -1,9 +1,9 @@
 import json
 import socket
-from os.path import isfile, join
+from os.path import join
 from contextlib import contextmanager
 
-from .common import sudo, remove, chown, copy
+from .common import sudo, remove, chown
 from .files import write_to_file, write_to_tempfile
 
 from ..logger import get_logger
@@ -165,10 +165,10 @@ def _generate_ssl_certificate(ips,
     return cert_path, key_path
 
 
-def generate_internal_ssl_cert(ips, name):
+def generate_internal_ssl_cert(ips, cn):
     return _generate_ssl_certificate(
         ips,
-        name,
+        cn,
         const.INTERNAL_CERT_PATH,
         const.INTERNAL_KEY_PATH,
         sign_cert=const.CA_CERT_PATH,
@@ -183,31 +183,6 @@ def generate_external_ssl_cert(ips, cn):
         const.EXTERNAL_CERT_PATH,
         const.EXTERNAL_KEY_PATH
     )
-
-
-def deploy_or_generate_external_ssl_cert(ips, cn, cert_path, key_path):
-    if isfile(cert_path) and isfile(key_path):
-        copy(cert_path, const.EXTERNAL_CERT_PATH)
-        copy(key_path, const.EXTERNAL_KEY_PATH)
-
-        logger.debug(
-            'Deployed user-provided SSL certificate `{0}` and SSL private '
-            'key `{1}`'.format(
-                const.EXTERNAL_CERT_FILENAME,
-                const.EXTERNAL_KEY_FILENAME
-            )
-        )
-        return const.EXTERNAL_CERT_PATH, const.EXTERNAL_KEY_PATH
-    else:
-        logger.debug(
-            'Generating SSL certificate `{0}` and SSL private '
-            'key `{1}`'.format(
-                const.EXTERNAL_CERT_FILENAME,
-                const.EXTERNAL_KEY_FILENAME
-            )
-        )
-
-        return generate_external_ssl_cert(ips, cn)
 
 
 def generate_ca_cert():

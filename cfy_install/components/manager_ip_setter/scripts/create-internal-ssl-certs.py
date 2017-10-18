@@ -26,7 +26,7 @@ if __name__ == '__main__':
     cert_ips = [internal_rest_host] + list(networks.values())
     certificates.generate_internal_ssl_cert(
         ips=cert_ips,
-        name=internal_rest_host
+        cn=internal_rest_host
     )
     certificates.store_cert_metadata(
         internal_rest_host,
