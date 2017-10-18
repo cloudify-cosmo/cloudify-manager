@@ -16,6 +16,7 @@
 import os
 import psycopg2
 from contextlib import closing
+from uuid import uuid4
 
 from cloudify.workflows import ctx
 from cloudify.exceptions import NonRecoverableError
@@ -72,6 +73,8 @@ class Postgres(object):
         self._append_dump(dump_file, self._get_admin_user_update_query())
 
         self._restore_dump(dump_file, self._db_name)
+
+        self._make_api_token_keys()
 
         ctx.logger.debug('Postgres restored')
 
@@ -290,6 +293,25 @@ class Postgres(object):
                     ctx.logger.error('Running query result status: {0}'
                                      .format(status_message))
             return result
+
+    def _make_api_token_keys(self):
+        # If this is from a snapshot that precedes token keys we need to
+        # generate them
+        result = self.run_query(
+            "SELECT id, api_token_key FROM users"
+        )
+
+        for row in result['all']:
+            uid = row[0]
+            api_token_key = row[1]
+            if not api_token_key:
+                api_token_key = uuid4().hex
+                self.run_query(
+                    "UPDATE users "
+                    "SET api_token_key=%s "
+                    "WHERE id=%s",
+                    (api_token_key, uid),
+                )
 
     def get_deployment_creator_ids_and_tokens(self):
         result = self.run_query(
