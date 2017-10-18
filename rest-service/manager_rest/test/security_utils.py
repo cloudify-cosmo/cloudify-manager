@@ -22,6 +22,7 @@ from manager_rest.constants import DEFAULT_TENANT_ID
 
 ADMIN_ROLE = 'sys_admin'
 USER_ROLE = 'default'
+USER_IN_TENANT_ROLE = 'user'
 
 
 def get_admin_user():
