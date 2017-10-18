@@ -182,7 +182,7 @@ def validate_role_name(role_name):
     if role_name not in role_names:
         raise manager_exceptions.BadParametersError(
             'Invalid role name: {0}. Valid roles: {1}'
-            .format(role, ', '.join(sorted(role_names)))
+            .format(role_name, ', '.join(sorted(role_names)))
         )
 
 
