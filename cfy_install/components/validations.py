@@ -11,7 +11,7 @@ from .service_names import MANAGER
 from ..config import config
 from ..logger import get_logger
 from ..constants import USER_CONFIG_PATH
-from ..exceptions import ValidationError, BootstrapError
+from ..exceptions import ValidationError
 
 from ..utils.common import run
 from ..utils.network import is_url
@@ -118,7 +118,7 @@ def _validate_openssl_version():
 
     try:
         output = run(['openssl', 'version']).aggr_stdout
-    except BootstrapError as e:
+    except OSError as e:
         # TODO: This should be an error, after the image is fixed
         logger.warning(
             'Cloudify Manager requires OpenSSL {0}, Error: {1}'.format(
