@@ -12,3 +12,7 @@ class NetworkError(BootstrapError):
 
 class ValidationError(BootstrapError):
     pass
+
+
+class InputError(BootstrapError):
+    pass
