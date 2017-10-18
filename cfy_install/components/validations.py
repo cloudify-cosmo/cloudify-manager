@@ -119,7 +119,8 @@ def _validate_openssl_version():
     try:
         output = run(['openssl', 'version']).aggr_stdout
     except BootstrapError as e:
-        _errors.append(
+        # TODO: This should be an error, after the image is fixed
+        logger.warning(
             'Cloudify Manager requires OpenSSL {0}, Error: {1}'.format(
                 required_version, e
             )
