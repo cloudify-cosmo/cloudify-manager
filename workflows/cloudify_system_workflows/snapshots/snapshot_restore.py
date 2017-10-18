@@ -208,13 +208,18 @@ class SnapshotRestore(object):
 
         self._post_restore_commands.append(command)
 
-    def _restore_admin_user(self):
+    def _load_admin_dump(self):
         # This should only have been called if the hash salt was found, so
         # there should be no case where this gets called but the file does not
         # exist.
         admin_dump_file_path = os.path.join(self._tempdir, ADMIN_DUMP_FILE)
         with open(admin_dump_file_path) as admin_dump_handle:
             admin_account = json.load(admin_dump_handle)
+
+        return admin_account
+
+    def _restore_admin_user(self):
+        admin_account = self._load_admin_dump()
 
         with Postgres(self._config) as postgres:
             psql_command = ' '.join(postgres.get_psql_command())
@@ -242,6 +247,9 @@ class SnapshotRestore(object):
         # We have to do this after the restore process or it'll break the
         # workflow execution updating and thus cause the workflow to fail
         self._post_restore_commands.append(command)
+
+    def _get_admin_user_token(self):
+        return self._load_admin_dump()['api_token_key']
 
     def _trigger_post_restore_commands(self):
         # The last thing the workflow does is delete the tempdir.
@@ -504,9 +512,8 @@ class SnapshotRestore(object):
             }
         )
 
-    def _restore_hash_salt(self):
-        """Restore the hash salt so that restored users can log in.
-        """
+    def _load_hash_salt(self):
+        hash_salt = None
         try:
             with open(os.path.join(self._tempdir,
                                    HASH_SALT_FILENAME), 'r') as f:
@@ -515,6 +522,13 @@ class SnapshotRestore(object):
             ctx.logger.warn('Hash salt not found in snapshot. '
                             'Restored users are not expected to work without '
                             'password resets.')
+        return hash_salt
+
+    def _restore_hash_salt(self):
+        """Restore the hash salt so that restored users can log in.
+        """
+        hash_salt = self._load_hash_salt()
+        if hash_salt is None:
             return
 
         with open('/opt/manager/rest-security.conf') as security_conf_handle:
@@ -536,6 +550,15 @@ class SnapshotRestore(object):
                             script_name)
 
     def _get_api_token(self, token_info):
+        # The token info's UID here is referring to the creator of the
+        # deployment that an API token is needed for.
+        # If this is the admin user and the snapshot contains a hash salt then
+        # we will be restoring the admin user from the old manager, including
+        # its API token, so we should use that instead of the one currently in
+        # the database.
+        if token_info['uid'] == 0 and self._load_hash_salt():
+            token_info['token'] = self._get_admin_user_token()
+
         prefix = utils.run([
             MANAGER_PYTHON,
             self._get_script_path('getencodeduser.py'),
