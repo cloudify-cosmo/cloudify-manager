@@ -33,17 +33,26 @@ from .relationships import (
 from .models_base import db, SQLModelBase, UTCDateTime, CIColumn
 
 
-def _get_response_data(resource_list, get_data=False, name_attr='name'):
+def _get_response_data(resources, get_data=False, name_attr='name'):
     """Either return the sorted list of resource names or their total count
 
-    :param resource_list: A list of users/tenants/user-groups
+    :param resources: A list/dict of users/tenants/user-groups
     :param name_attr: The name attribute (name/username)
     :param get_data: If True: return the names, o/w return the count
     """
     if get_data:
-        return sorted(getattr(res, name_attr) for res in resource_list)
+        if isinstance(resources, list):
+            return sorted(getattr(res, name_attr) for res in resources)
+        elif isinstance(resources, dict):
+            return {
+                getattr(key, name_attr):
+                    sorted([getattr(value, name_attr) for value in values])
+                for key, values in resources.iteritems()
+            }
+        else:
+            raise ValueError('Unexpected resources: {0}'.format(resources))
     else:
-        return len(resource_list)
+        return len(resources)
 
 
 class ProviderContext(SQLModelBase):
@@ -242,10 +251,7 @@ class User(SQLModelBase, UserMixin):
 
     def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
-        user_dict['tenants'] = {
-            tenant.name: [role.name for role in roles]
-            for tenant, roles in self.all_tenants.iteritems()
-        }
+        user_dict['tenants'] = _get_response_data(self.all_tenants, get_data)
         user_dict['groups'] = _get_response_data(self.groups, get_data)
         user_dict['role'] = self.role
         return user_dict
