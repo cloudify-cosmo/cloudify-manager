@@ -29,5 +29,5 @@ class UserTestCase(base_test.BaseServerTestCase):
         self.assertEqual('admin', result['username'])
         self.assertEqual('sys_admin', result['role'])
         self.assertEqual(0, result['groups'])
-        self.assertDictEqual({'default_tenant': ['user']}, result['tenants'])
+        self.assertEqual(1, result['tenants'])
         self.assertEqual(True, result['active'])
