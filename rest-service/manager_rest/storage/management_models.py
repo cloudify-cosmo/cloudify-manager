@@ -99,7 +99,7 @@ class Tenant(SQLModelBase):
 
     def to_response(self, get_data=False):
         tenant_dict = super(Tenant, self).to_response()
-        tenant_dict['groups'] = _get_response_data(self.groups, get_data)
+        tenant_dict['groups'] = _get_response_data(list(self.groups), get_data)
         tenant_dict['users'] = _get_response_data(
             self.all_users,
             get_data=get_data,
@@ -143,7 +143,10 @@ class Group(SQLModelBase):
 
     def to_response(self, get_data=False):
         group_dict = super(Group, self).to_response()
-        group_dict['tenants'] = _get_response_data(self.tenants, get_data)
+        group_dict['tenants'] = _get_response_data(
+            list(self.tenants),
+            get_data,
+        )
         group_dict['users'] = _get_response_data(
             self.users,
             get_data=get_data,
