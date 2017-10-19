@@ -50,7 +50,8 @@ def _get_response_data(resources, get_data=False, name_attr='name'):
                 for key, values in resources.iteritems()
             }
         else:
-            raise ValueError('Unexpected resources: {0}'.format(resources))
+            raise ValueError(
+                'Unexpected resources type: {0}'.format(type(resources)))
     else:
         return len(resources)
 
