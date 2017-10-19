@@ -126,6 +126,34 @@ class TenantUsers(SecuredMultiTenancyResource):
         )
 
     @rest_decorators.exceptions_handled
+    @authorize('tenant_update_user', get_tenant_from='data')
+    @rest_decorators.marshal_with(TenantResponse)
+    @rest_decorators.no_external_authenticator('update user in tenant')
+    def patch(self, multi_tenancy):
+        """Update role in user tenant association."""
+        request_dict = rest_utils.get_json_and_verify_params(
+            {
+                'tenant_name': {
+                    'type': unicode,
+                },
+                'username': {
+                    'type': unicode,
+                },
+                'role': {
+                    'type': unicode,
+                },
+            },
+        )
+        rest_utils.validate_inputs(request_dict)
+        role_name = request_dict['role']
+        rest_utils.validate_role_name(role_name)
+        return multi_tenancy.update_user_in_tenant(
+            request_dict['username'],
+            request_dict['tenant_name'],
+            role_name,
+        )
+
+    @rest_decorators.exceptions_handled
     @authorize('tenant_remove_user', get_tenant_from='data')
     @rest_decorators.marshal_with(TenantResponse)
     @rest_decorators.no_external_authenticator('remove user from tenant')
