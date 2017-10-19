@@ -450,8 +450,12 @@ class ResourceManager(object):
 
         # currently, deployment env creation/deletion are not set as
         # system workflows
-        is_system_workflow = wf_id not in ('create_deployment_environment',
-                                           'delete_deployment_environment')
+        is_system_workflow = wf_id not in (
+                'create_deployment_environment',
+                'delete_deployment_environment',
+                'install_plugin',
+                'uninstall_plugin',
+                )
 
         # It means that a system-wide workflow is about to be launched
         if deployment is None and verify_no_executions:
