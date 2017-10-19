@@ -14,7 +14,8 @@
 #  * limitations under the License.
 
 from manager_rest import constants
-from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage import ListResult
+from manager_rest.storage import models
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (MissingPremiumFeatureResource,
                                    SecuredResource)
@@ -51,12 +52,9 @@ class Tenants(TenantsListResource):
                                               filters,
                                               pagination,
                                               sort)
-        return get_storage_manager().list(
-            models.Tenant,
-            include=_include,
-            filters=filters,
-            pagination=pagination,
-            sort=sort)
+        # In community edition we have only the `default_tenant`
+        return ListResult(items=['default_tenant'],
+                          metadata={'pagination': pagination})
 
 
 class TenantsId(SecuredMultiTenancyResource):
