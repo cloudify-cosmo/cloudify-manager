@@ -197,7 +197,7 @@ class TenantGroups(SecuredMultiTenancyResource):
         )
         rest_utils.validate_inputs(request_dict)
         role_name = request_dict['role']
-        rest_utils.validate_role_name(role_name)
+        rest_utils.verify_role(role_name)
         return multi_tenancy.update_group_in_tenant(
             request_dict['group_name'],
             request_dict['tenant_name'],
