@@ -44,10 +44,22 @@ def _get_response_data(resources, get_data=False, name_attr='name'):
         if isinstance(resources, list):
             return sorted(getattr(res, name_attr) for res in resources)
         elif isinstance(resources, dict):
+            def get_value_data(values):
+                """Get data for the values in a dictionary.
+
+                Values might be a set (User.tenants case) or a single value
+                (Group.tenans case).
+
+                """
+                if isinstance(values, set):
+                    return sorted([
+                        getattr(value, name_attr) for value in values])
+                else:
+                    return getattr(values, name_attr)
+
             return {
-                getattr(key, name_attr):
-                    sorted([getattr(value, name_attr) for value in values])
-                for key, values in resources.iteritems()
+                getattr(key, name_attr): get_value_data(value)
+                for key, value in resources.iteritems()
             }
         else:
             raise ValueError(
@@ -144,7 +156,10 @@ class Group(SQLModelBase):
     def to_response(self, get_data=False):
         group_dict = super(Group, self).to_response()
         group_dict['tenants'] = _get_response_data(
-            list(self.tenants),
+            {
+                tenant_association.tenant: tenant_association.role
+                for tenant_association in self.tenant_associations
+            },
             get_data,
         )
         group_dict['users'] = _get_response_data(
