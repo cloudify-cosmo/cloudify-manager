@@ -90,7 +90,7 @@ class TestWorkflow(AgentTestWithPlugins):
         )
 
     def _upload_mock_plugin(self):
-        wagon_path = self._create_test_wagon('target_aware_mock')
+        wagon_path = self._create_test_wagon('target-aware-mock')
         self.downloaded_archive_path = os.path.join(
             self.workdir, os.path.basename(wagon_path))
         self.client.plugins.upload(wagon_path)
