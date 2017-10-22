@@ -178,11 +178,14 @@ class SQLStorageManager(object):
         if not has_request_context():
             return query
 
-        # For users that are allowed to see all resources, regardless of tenant
         # Queries of elements that aren't resources (tenants, users, etc.),
-        # shouldn't be filtered as well
+        # shouldn't be filtered
+        if not model_class.is_resource:
+            return query
+
+        # For users that are allowed to see all resources, regardless of tenant
         is_admin = is_administrator(self.current_tenant)
-        if not model_class.is_resource or is_admin:
+        if is_admin:
             return query
 
         # Only get resources that are public - not private (note that ~ stands
