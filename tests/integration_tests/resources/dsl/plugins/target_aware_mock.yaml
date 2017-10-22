@@ -1,5 +1,5 @@
 plugins:
     target_aware_mock:
         executor: host_agent
-        package_name: target_aware_mock
+        package_name: target-aware-mock
         package_version: '1.0'
