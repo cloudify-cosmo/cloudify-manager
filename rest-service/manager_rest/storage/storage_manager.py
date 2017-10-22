@@ -154,7 +154,8 @@ class SQLStorageManager(object):
 
         # If a user that is allowed to get all the tenants in the system
         # passed the `all_tenants` flag, no need to filter
-        if is_administrator() and all_tenants_authorization() and all_tenants:
+        is_admin = is_administrator(self.current_tenant)
+        if is_admin and all_tenants_authorization() and all_tenants:
             return query
 
         if all_tenants:
@@ -169,8 +170,7 @@ class SQLStorageManager(object):
         )
         return query.filter(tenant_filter)
 
-    @staticmethod
-    def _add_permissions_filter(query, model_class):
+    def _add_permissions_filter(self, query, model_class):
         """Filter by the users present in either the `viewers` or `owners`
         lists
         """
@@ -181,7 +181,8 @@ class SQLStorageManager(object):
         # For users that are allowed to see all resources, regardless of tenant
         # Queries of elements that aren't resources (tenants, users, etc.),
         # shouldn't be filtered as well
-        if not model_class.is_resource or is_administrator():
+        is_admin = is_administrator(self.current_tenant)
+        if not model_class.is_resource or is_admin:
             return query
 
         # Only get resources that are public - not private (note that ~ stands
