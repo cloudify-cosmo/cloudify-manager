@@ -247,6 +247,21 @@ class User(SQLModelBase, UserMixin):
     def roles(cls):
         return many_to_many_relationship(cls, Role)
 
+    def has_role_in(self, tenant, list_of_roles):
+        user_roles = self.roles_in_tenant(tenant)
+        return any(r in user_roles for r in list_of_roles)
+
+    def roles_in_tenant(self, tenant):
+        tenant_roles = set(self.role)
+        for tenant_association in self.tenant_associations:
+            if tenant_association.tenant == tenant:
+                tenant_roles.add(tenant_association.role)
+        for group in self.groups:
+            for tenant_association in group.tenant_associations:
+                if tenant_association.tenant == tenant:
+                    tenant_roles.add(tenant_association.role)
+        return tenant_roles
+
     @declared_attr
     def groups(cls):
         return many_to_many_relationship(cls, Group)
