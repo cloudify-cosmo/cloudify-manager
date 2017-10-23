@@ -134,18 +134,21 @@ class Tenant(SQLModelBase):
         tenant_dict['users'] = _get_response_data(
             self.all_users,
             get_data=get_data,
-            name_attr='username'
+            name_attr={'key': 'username', 'value': 'name'},
         )
         return tenant_dict
 
     @property
     def all_users(self):
-        all_users = set()
-        all_users.update(self.users)
-        for group in self.groups:
-            all_users.update(group.users)
+        all_users = defaultdict(set)
+        for user_association in self.user_associations:
+            all_users[user_association.user].add(user_association.role)
 
-        return list(all_users)
+        for group_association in self.group_associations:
+            for user in group_association.group.users:
+                all_users[user].add(group_association.role)
+
+        return all_users
 
     @property
     def is_default_tenant(self):
