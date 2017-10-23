@@ -189,6 +189,11 @@ def verify_role(role, is_system_role=False):
                 'Role `{0}` is a {1} and cannot be assigned as a {2}'.format(
                     role, r['name'], role_type)
             )
-    valid_roles = [r['name'] for r in config.instance.authorization_roles]
+
+    valid_roles = [
+        r['name']
+        for r in config.instance.authorization_roles
+        if r['type'] in (role_type, 'any')
+    ]
     raise manager_exceptions.BadParametersError(
         'Invalid role: `{0}`. Valid roles are: {1}'.format(role, valid_roles))
