@@ -130,7 +130,13 @@ class Tenant(SQLModelBase):
 
     def to_response(self, get_data=False):
         tenant_dict = super(Tenant, self).to_response()
-        tenant_dict['groups'] = _get_response_data(list(self.groups), get_data)
+        tenant_dict['groups'] = _get_response_data(
+            {
+                group_association.group: group_association.role
+                for group_association in self.group_associations
+            },
+            get_data,
+        )
         tenant_dict['users'] = _get_response_data(
             self.all_users,
             get_data=get_data,
