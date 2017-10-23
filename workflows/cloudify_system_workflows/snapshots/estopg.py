@@ -31,6 +31,18 @@ logger = logging.getLogger('estopg')
 COMPUTE_NODE_TYPE = 'cloudify.nodes.Compute'
 
 
+# Make storage manager work correctly
+os.environ["MANAGER_REST_CONFIG_PATH"] = (
+    "/opt/manager/cloudify-rest.conf"
+)
+os.environ["MANAGER_REST_SECURITY_CONFIG_PATH"] = (
+    "/opt/manager/rest-security.conf"
+)
+os.environ["MANAGER_REST_AUTHORIZATION_CONFIG_PATH"] = (
+    "/opt/manager/authorization.conf"
+)
+
+
 class EsToPg(object):
     def __init__(self, es_dump_path, tenant_name):
         self._storage_manager = self._get_storage_manager(tenant_name)
