@@ -187,7 +187,7 @@ def verify_role(role, is_system_role=False):
                 return
             raise manager_exceptions.BadParametersError(
                 'Role `{0}` is a {1} and cannot be assigned as a {2}'.format(
-                    role, r['name'], role_type)
+                    role, r['type'], role_type)
             )
 
     valid_roles = [
