@@ -37,13 +37,29 @@ def _get_response_data(resources, get_data=False, name_attr='name'):
     """Either return the sorted list of resource names or their total count
 
     :param resources: A list/dict of users/tenants/user-groups
-    :param name_attr: The name attribute (name/username)
+    :param name_attr:
+        The name attribute (name/username) or a dictionary where 'key' is the
+        attribute name for the keys and 'value' is the attribute name for the
+        values.
     :param get_data: If True: return the names, o/w return the count
     """
     if get_data:
         if isinstance(resources, list):
             return sorted(getattr(res, name_attr) for res in resources)
         elif isinstance(resources, dict):
+            if isinstance(name_attr, str):
+                name_attrs = {
+                    'key': name_attr,
+                    'value': name_attr,
+                }
+            elif isinstance(name_attr, dict):
+                name_attrs = name_attr
+            else:
+                raise ValueError(
+                    'Unexpected name_attr type: {0}'
+                    .format(type(name_attr))
+                )
+
             def get_value_data(values):
                 """Get data for the values in a dictionary.
 
@@ -51,14 +67,17 @@ def _get_response_data(resources, get_data=False, name_attr='name'):
                 (Group.tenants case).
 
                 """
+
                 if isinstance(values, set):
                     return sorted([
-                        getattr(value, name_attr) for value in values])
+                        getattr(value, name_attrs['value'])
+                        for value in values
+                    ])
                 else:
-                    return getattr(values, name_attr)
+                    return getattr(values, name_attrs['value'])
 
             return {
-                getattr(key, name_attr): get_value_data(value)
+                getattr(key, name_attrs['key']): get_value_data(value)
                 for key, value in resources.iteritems()
             }
         else:
