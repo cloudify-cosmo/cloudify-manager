@@ -180,22 +180,33 @@ def verify_role(role_name, is_system_role=False):
     not from the right type
 
     """
-    role_type = 'system_role' if is_system_role else 'tenant_role'
-    for r in config.instance.authorization_roles:
-        if r['name'] == role_name:
-            if r['type'] in (role_type, 'any'):
-                return
-            raise manager_exceptions.BadParametersError(
-                'Role `{0}` is a {1} and cannot be assigned as a {2}'.format(
-                    role_name, r['type'], role_type)
-            )
+    expected_role_type = 'system_role' if is_system_role else 'tenant_role'
 
-    valid_roles = [
-        r['name']
-        for r in config.instance.authorization_roles
-        if r['type'] in (role_type, 'any')
-    ]
-    raise manager_exceptions.BadParametersError(
-        'Invalid role: `{0}`. Valid roles are: {1}'
-        .format(role_name, valid_roles)
+    # Get role by name
+    role = next(
+        (
+            r
+            for r in config.instance.authorization_roles
+            if r['name'] == role_name
+        ),
+        None
     )
+
+    # Role not found
+    if role is None:
+        valid_roles = [
+            r['name']
+            for r in config.instance.authorization_roles
+            if r['type'] in (expected_role_type, 'any')
+        ]
+        raise manager_exceptions.BadParametersError(
+            'Invalid role: `{0}`. Valid roles are: {1}'
+            .format(role_name, valid_roles)
+        )
+
+    # Role type doesn't match
+    if role['type'] not in (expected_role_type, 'any'):
+        raise manager_exceptions.BadParametersError(
+            'Role `{0}` is a {1} and cannot be assigned as a {2}'
+            .format(role_name, role['type'], expected_role_type)
+        )
