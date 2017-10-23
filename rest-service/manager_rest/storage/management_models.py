@@ -48,7 +48,7 @@ def _get_response_data(resources, get_data=False, name_attr='name'):
                 """Get data for the values in a dictionary.
 
                 Values might be a set (User.tenants case) or a single value
-                (Group.tenans case).
+                (Group.tenants case).
 
                 """
                 if isinstance(values, set):
