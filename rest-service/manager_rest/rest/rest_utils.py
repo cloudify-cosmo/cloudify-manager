@@ -183,7 +183,7 @@ def verify_role(role, is_system_role=False):
     role_type = 'system_role' if is_system_role else 'tenant_role'
     for r in config.instance.authorization_roles:
         if r['name'] == role:
-            if r['type'] == role_type or r['type'] == 'any':
+            if r['type'] in (role_type, 'any'):
                 return
             raise manager_exceptions.BadParametersError(
                 'Role `{0}` is a {1} and cannot be assigned as a {2}'.format(
