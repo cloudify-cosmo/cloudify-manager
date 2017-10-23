@@ -171,10 +171,10 @@ def is_clustered():
     return node_status.get('initialized')
 
 
-def verify_role(role, is_system_role=False):
+def verify_role(role_name, is_system_role=False):
     """Make sure that role name is present in the system.
 
-    :param role: Role name to validate against database content.
+    :param role_name: Role name to validate against database content.
     :param is_system_role: True if system_role, False if tenant_role
     :raises: BadParametersError when role is not found in the system or is
     not from the right type
@@ -182,12 +182,12 @@ def verify_role(role, is_system_role=False):
     """
     role_type = 'system_role' if is_system_role else 'tenant_role'
     for r in config.instance.authorization_roles:
-        if r['name'] == role:
+        if r['name'] == role_name:
             if r['type'] in (role_type, 'any'):
                 return
             raise manager_exceptions.BadParametersError(
                 'Role `{0}` is a {1} and cannot be assigned as a {2}'.format(
-                    role, r['type'], role_type)
+                    role_name, r['type'], role_type)
             )
 
     valid_roles = [
@@ -196,4 +196,6 @@ def verify_role(role, is_system_role=False):
         if r['type'] in (role_type, 'any')
     ]
     raise manager_exceptions.BadParametersError(
-        'Invalid role: `{0}`. Valid roles are: {1}'.format(role, valid_roles))
+        'Invalid role: `{0}`. Valid roles are: {1}'
+        .format(role_name, valid_roles)
+    )
