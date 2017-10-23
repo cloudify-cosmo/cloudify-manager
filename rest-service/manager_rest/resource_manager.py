@@ -1272,8 +1272,8 @@ class ResourceManager(object):
         # Check if the resource is unique
         if self.sm.count(model_class, unique_filter) > 1:
             raise manager_exceptions.IllegalActionError(
-                "Can't set the availability of `{0}` to global because it's "
-                "also exist in other tenants".format(element_id))
+                "Can't set the availability of `{0}` to global because it "
+                "also exists in other tenants".format(element_id))
 
         # Set the resource_availability to global
         resource = resource or self.sm.get(model_class, element_id)
