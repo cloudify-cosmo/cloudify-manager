@@ -30,6 +30,9 @@ os.environ["MANAGER_REST_CONFIG_PATH"] = (
 os.environ["MANAGER_REST_SECURITY_CONFIG_PATH"] = (
     "/opt/manager/rest-security.conf"
 )
+os.environ["MANAGER_REST_AUTHORIZATION_CONFIG_PATH"] = (
+    "/opt/manager/authorization.conf"
+)
 
 
 def replace_ssh_keys(input_dict, original_string, secret_name):
