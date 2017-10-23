@@ -35,7 +35,7 @@ SNAPSHOTS = 'http://cloudify-tests-files.s3-eu-west-1.amazonaws.com/snapshots/'
 
 class TestSnapshot(AgentlessTestCase):
     SNAPSHOT_ID = '0'
-    REST_CONFIG_PATH = '/opt/manager/rest-security.conf'
+    REST_SEC_CONFIG_PATH = '/opt/manager/rest-security.conf'
 
     def test_v_4_snapshot_restore_validation(self):
         snapshot = self._get_snapshot('snap_4.0.0.zip')
@@ -80,7 +80,7 @@ class TestSnapshot(AgentlessTestCase):
         # We keep the old security config, because the hash salt needs to be
         # restored after the snapshot restore
         tmp_config_path = os.path.join(self.workdir, 'rest-security.conf')
-        docl.copy_file_from_manager(self.REST_CONFIG_PATH, tmp_config_path)
+        docl.copy_file_from_manager(self.REST_SEC_CONFIG_PATH, tmp_config_path)
 
         try:
             snapshot_path = self._get_snapshot('snap_4.2.0.zip')
@@ -102,7 +102,11 @@ class TestSnapshot(AgentlessTestCase):
                 num_of_events=4,
             )
         finally:
-            docl.copy_file_to_manager(tmp_config_path, self.REST_CONFIG_PATH)
+            docl.copy_file_to_manager(tmp_config_path,
+                                      self.REST_SEC_CONFIG_PATH)
+            docl.execute('chown cfyuser: {securityconf}'.format(
+                securityconf=self.REST_SEC_CONFIG_PATH,
+            ))
             self.restart_service('cloudify-restservice')
 
     def test_4_0_1_snapshot_with_deployment(self):
