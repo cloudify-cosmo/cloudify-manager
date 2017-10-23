@@ -200,8 +200,8 @@ def verify_role(role_name, is_system_role=False):
             if r['type'] in (expected_role_type, 'any')
         ]
         raise manager_exceptions.BadParametersError(
-            'Invalid role: `{0}`. Valid roles are: {1}'
-            .format(role_name, valid_roles)
+            'Invalid role: `{0}`. Valid {1} roles are: {2}'
+            .format(role_name, expected_role_type, valid_roles)
         )
 
     # Role type doesn't match
