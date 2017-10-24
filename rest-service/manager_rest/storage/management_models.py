@@ -37,28 +37,47 @@ def _get_response_data(resources, get_data=False, name_attr='name'):
     """Either return the sorted list of resource names or their total count
 
     :param resources: A list/dict of users/tenants/user-groups
-    :param name_attr: The name attribute (name/username)
+    :param name_attr:
+        The name attribute (name/username) or a dictionary where 'key' is the
+        attribute name for the keys and 'value' is the attribute name for the
+        values.
     :param get_data: If True: return the names, o/w return the count
     """
     if get_data:
         if isinstance(resources, list):
             return sorted(getattr(res, name_attr) for res in resources)
         elif isinstance(resources, dict):
+            if isinstance(name_attr, str):
+                name_attrs = {
+                    'key': name_attr,
+                    'value': name_attr,
+                }
+            elif isinstance(name_attr, dict):
+                name_attrs = name_attr
+            else:
+                raise ValueError(
+                    'Unexpected name_attr type: {0}'
+                    .format(type(name_attr))
+                )
+
             def get_value_data(values):
                 """Get data for the values in a dictionary.
 
                 Values might be a set (User.tenants case) or a single value
-                (Group.tenans case).
+                (Group.tenants case).
 
                 """
+
                 if isinstance(values, set):
                     return sorted([
-                        getattr(value, name_attr) for value in values])
+                        getattr(value, name_attrs['value'])
+                        for value in values
+                    ])
                 else:
-                    return getattr(values, name_attr)
+                    return getattr(values, name_attrs['value'])
 
             return {
-                getattr(key, name_attr): get_value_data(value)
+                getattr(key, name_attrs['key']): get_value_data(value)
                 for key, value in resources.iteritems()
             }
         else:
@@ -111,22 +130,31 @@ class Tenant(SQLModelBase):
 
     def to_response(self, get_data=False):
         tenant_dict = super(Tenant, self).to_response()
-        tenant_dict['groups'] = _get_response_data(list(self.groups), get_data)
+        tenant_dict['groups'] = _get_response_data(
+            {
+                group_association.group: group_association.role
+                for group_association in self.group_associations
+            },
+            get_data,
+        )
         tenant_dict['users'] = _get_response_data(
             self.all_users,
             get_data=get_data,
-            name_attr='username'
+            name_attr={'key': 'username', 'value': 'name'},
         )
         return tenant_dict
 
     @property
     def all_users(self):
-        all_users = set()
-        all_users.update(self.users)
-        for group in self.groups:
-            all_users.update(group.users)
+        all_users = defaultdict(set)
+        for user_association in self.user_associations:
+            all_users[user_association.user].add(user_association.role)
 
-        return list(all_users)
+        for group_association in self.group_associations:
+            for user in group_association.group.users:
+                all_users[user].add(group_association.role)
+
+        return all_users
 
     @property
     def is_default_tenant(self):
