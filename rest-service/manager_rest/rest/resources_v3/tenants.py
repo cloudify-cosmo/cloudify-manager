@@ -14,21 +14,18 @@
 #  * limitations under the License.
 
 from manager_rest import constants
-from manager_rest.storage import ListResult
-from manager_rest.storage import models
+from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (MissingPremiumFeatureResource,
                                    SecuredResource)
 
 from .. import rest_decorators, rest_utils
-from ..responses_v3 import BaseResponse
+from ..responses_v3 import TenantResponse
 
 try:
-    from cloudify_premium import (TenantResponse,
-                                  SecuredMultiTenancyResource)
+    from cloudify_premium import SecuredMultiTenancyResource
     TenantsListResource = SecuredMultiTenancyResource
 except ImportError:
-    TenantResponse = BaseResponse
     SecuredMultiTenancyResource = MissingPremiumFeatureResource
 
     # In community edition tenants list should work without multi-tenancy
@@ -52,9 +49,9 @@ class Tenants(TenantsListResource):
                                               filters,
                                               pagination,
                                               sort)
-        # In community edition we have only the `default_tenant`
-        return ListResult(items=['default_tenant'],
-                          metadata={'pagination': pagination})
+        # In community edition we have only the `default_tenant`, so it
+        # should be safe to return it like this
+        return get_storage_manager().list(models.Tenant)
 
 
 class TenantsId(SecuredMultiTenancyResource):
