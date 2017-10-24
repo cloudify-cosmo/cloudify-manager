@@ -252,7 +252,7 @@ class User(SQLModelBase, UserMixin):
         return any(r in user_roles for r in list_of_roles)
 
     def roles_in_tenant(self, tenant):
-        tenant_roles = set(self.role)
+        tenant_roles = {self.role}
         for tenant_association in self.tenant_associations:
             if tenant_association.tenant == tenant:
                 tenant_roles.add(tenant_association.role)
