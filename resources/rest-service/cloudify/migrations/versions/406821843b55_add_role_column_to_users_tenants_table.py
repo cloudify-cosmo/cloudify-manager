@@ -5,8 +5,6 @@ Create Date: 2017-10-01 19:37:31.484983
 """
 from alembic import op
 import sqlalchemy as sa
-import manager_rest     # Adding this manually
-
 
 # revision identifiers, used by Alembic.
 revision = '406821843b55'
@@ -32,25 +30,29 @@ roles = sa.table(
     sa.column('name', sa.Text),
 )
 
+OLD_ADMIN_ROLE_ID = 1
+OLD_USER_ROLE_ID = 2
 
-def update_system_role(from_role, to_role):
+
+def update_system_role(from_role_id, to_role_id):
     """Helper function to update system role values.
 
     Calling this function will update the role for all users whose current role
-    is `from_role` and set it to `to_role`.
+    is `from_role_id` and set it to `to_role_id`.
 
     """
     op.execute(
         users_roles.update()
-        .where(users_roles.c.role_id == (
-            sa.select([roles.c.id])
-            .where(roles.c.name == from_role)
-        ))
-        .values(role_id=(
-            sa.select([roles.c.id])
-            .where(roles.c.name == to_role)
-        ))
+        .where(users_roles.c.role_id == from_role_id)
+        .values(role_id=to_role_id)
     )
+
+
+def _get_role_id(role_name):
+    """
+    Return a SELECT statement that retrieves a role ID from a role name
+    """
+    return sa.select([roles.c.id]).where(roles.c.name == role_name)
 
 
 def upgrade():
@@ -74,20 +76,27 @@ def upgrade():
     # Set 'user' role as the default for every user in a tenant
     op.execute(
         users_tenants.update()
-        .values(role_id=(
-            sa.select([roles.c.id])
-            .where(roles.c.name == 'user')
-        ))
+        .values(role_id=_get_role_id('user'))
     )
     op.alter_column('users_tenants', 'role_id', nullable=False)
 
-    update_system_role('user', 'default')
-    update_system_role('admin', 'sys_admin')
+    # Manually using old role IDs, because they have changed in this version.
+    # Old roles were:
+    # 1 - admin
+    # 2 - user
+    # New roles are:
+    # 1 - sys_admin
+    # 2 - manager
+    # 3 - user
+    # 4 - viewer
+    # 5 - default
+    update_system_role(OLD_USER_ROLE_ID, _get_role_id('default'))
+    update_system_role(OLD_ADMIN_ROLE_ID, _get_role_id('sys_admin'))
 
 
 def downgrade():
-    update_system_role('default', 'user')
-    update_system_role('sys_admin', 'admin')
+    update_system_role(_get_role_id('default'), OLD_USER_ROLE_ID)
+    update_system_role(_get_role_id('sys_admin'), OLD_ADMIN_ROLE_ID)
 
     op.drop_constraint(
         'users_tenants_pkey',
