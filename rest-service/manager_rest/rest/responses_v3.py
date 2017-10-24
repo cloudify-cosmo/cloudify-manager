@@ -70,3 +70,18 @@ class UserResponse(object):
         self.role = kwargs.get('role')
         self.active = kwargs.get('active')
         self.last_login_at = kwargs.get('last_login_at')
+
+
+@swagger.model
+class TenantResponse(object):
+
+    resource_fields = {
+        'name': fields.String,
+        'groups': fields.Raw,
+        'users': fields.Raw,
+    }
+
+    def __init__(self, **kwargs):
+        self.name = kwargs.get('name')
+        self.groups = kwargs.get('groups')
+        self.users = kwargs.get('users')
