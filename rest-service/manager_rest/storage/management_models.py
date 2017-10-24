@@ -74,22 +74,34 @@ class Tenant(SQLModelBase):
     def _get_identifier_dict(self):
         return OrderedDict({'name': self.name})
 
+    def _get_groups_response(self):
+        """Get groups that have been added to the tenant and their roles."""
+        return {
+            group_association.group.name: group_association.role.name
+            for group_association in self.group_associations
+        }
+
+    def _get_users_response(self):
+        """Get users that have been added to the tenant and their roles.
+
+        There are multiple possible roles because the users might have been
+        added directly and/or indirectly as members of different groups.
+
+        """
+        return {
+            user.username: sorted(list(role.name for role in user.roles))
+            for user, roles in self.all_users.iteritems()
+        }
+
     def to_response(self, get_data=False):
         tenant_dict = super(Tenant, self).to_response()
+        tenant_dict['groups'] = self._get_groups_response()
+        tenant_dict['users'] = self._get_users_response()
 
-        if get_data:
-            tenant_dict['groups'] = {
-                group_association.group.name: group_association.role.name
-                for group_association in self.group_associations
-            }
-            tenant_dict['users'] = {
-                user.username:
-                    sorted(list(role.name for role in user.roles))
-                for user, roles in self.all_users.iteritems()
-            }
-        else:
-            tenant_dict['groups'] = len(self.group_associations)
-            tenant_dict['users'] = len(self.all_users)
+        if not get_data:
+            for attr in ('groups', 'users'):
+                tenant_dict[attr] = len(tenant_dict[attr])
+
         return tenant_dict
 
     @property
@@ -129,17 +141,26 @@ class Group(SQLModelBase):
             id_dict['ldap_dn'] = self.ldap_dn
         return id_dict
 
+    def _get_tenants_response(self):
+        """Get tenants to which the group has been added and the role."""
+        return {
+            tenant_association.tenant.name: tenant_association.role.name
+            for tenant_association in self.tenant_associations
+        }
+
+    def _get_users_response(self):
+        """Get users that have been added to the group."""
+        return sorted(user.username for user in self.users)
+
     def to_response(self, get_data=False):
         group_dict = super(Group, self).to_response()
-        if get_data:
-            group_dict['tenants'] = {
-                tenant_association.tenant.name: tenant_association.role.name
-                for tenant_association in self.tenant_associations
-            }
-            group_dict['users'] = sorted(user.username for user in self.users)
-        else:
-            group_dict['tenants'] = len(self.tenant_associations)
-            group_dict['users'] = len(self.users)
+        group_dict['tenants'] = self._get_tenants_response()
+        group_dict['users'] = self._get_users_response()
+
+        if not get_data:
+            for attr in ('tenants', 'users'):
+                group_dict[attr] = len(group_dict[attr])
+
         return group_dict
 
 
@@ -256,21 +277,32 @@ class User(SQLModelBase, UserMixin):
                     tenant_association.role)
         return all_tenants
 
+    def _get_tenants_response(self):
+        """Get tenants to which the user has been added and the roles.
+
+        There are multiple possible roles because the users might have been
+        added directly and/or indirectly as members of different groups.
+
+        """
+        return {
+            tenant.name: sorted(list(role.name for role in roles))
+            for tenant, roles in self.all_tenants.iteritems()
+        }
+
+    def _get_groups_response(self):
+        """Get the groups to which this user has been added."""
+        return sorted(group.name for group in self.groups)
+
     def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
-
-        if get_data:
-            user_dict['tenants'] = {
-                tenant.name:
-                    sorted(list(role.name for role in roles))
-                for tenant, roles in self.all_tenants.iteritems()
-            }
-            user_dict['groups'] = sorted(group.name for group in self.groups)
-        else:
-            user_dict['tenants'] = len(self.all_tenants)
-            user_dict['groups'] = len(self.groups)
-
+        user_dict['tenants'] = self._get_tenants_response()
+        user_dict['groups'] = self._get_groups_response()
         user_dict['role'] = self.role
+
+        if not get_data:
+            for attr in ('tenants', 'groups'):
+                user_dict[attr] = len(user_dict[attr])
+
         return user_dict
 
     @property
