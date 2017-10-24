@@ -19,6 +19,7 @@ from manager_rest import config
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
+from manager_rest.storage.models_states import AvailabilityState
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError)
@@ -47,6 +48,10 @@ class FileServerAuth(SecuredResource):
         tenanted_resources = [r.strip('/') for r in tenanted_resources]
         uri = uri.strip('/')
 
+        # if it's global blueprint - no need or tenant verification
+        if FileServerAuth._is_global_blueprint(uri):
+            return
+
         # verifying that the only tenant that can be accessed is the one in
         # the header
         for resource in tenanted_resources:
@@ -60,6 +65,20 @@ class FileServerAuth(SecuredResource):
                     pass
 
                 _authorize()
+
+    @staticmethod
+    def _is_global_blueprint(uri):
+        try:
+            resource, tenant, resource_id, _ = uri.split('/')
+        except Exception:
+            # in case of different format of file server uri
+            return False
+        if resource not in [FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
+                            FILE_SERVER_BLUEPRINTS_FOLDER]:
+            return False
+        blueprint = get_storage_manager().get(models.Blueprint,
+                                              resource_id)
+        return blueprint.resource_availability == AvailabilityState.GLOBAL
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ResourceID)
