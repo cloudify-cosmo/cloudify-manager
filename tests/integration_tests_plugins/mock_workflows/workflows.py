@@ -175,7 +175,7 @@ def test_fail_local_task(ctx, should_fail, do_get):
         result = ctx.local_task(fail)
         if do_get:
             result.get()
-    except:
+    except Exception:
         if should_fail:
             pass
         else:
@@ -209,7 +209,7 @@ def test_fail_local_task_on_nonrecoverable_error(ctx, do_get, **_):
         result = ctx.local_task(fail)
         if do_get:
             result.get()
-    except:
+    except Exception:
         pass
     else:
         raise RuntimeError('Task should have failed')

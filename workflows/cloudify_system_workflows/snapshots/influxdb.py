@@ -80,7 +80,7 @@ class InfluxDB(object):
                     n += 1
                     yield json.dumps(obj)
                     s = s[idx:]
-            except:
+            except Exception:
                 pass
 
         # assert not n or not s

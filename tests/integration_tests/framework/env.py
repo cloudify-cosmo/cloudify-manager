@@ -80,7 +80,7 @@ class BaseTestEnvironment(object):
             cfy.init(**kwargs)
             docl.init(resources=self._build_resource_mapping())
             self.on_environment_created()
-        except:
+        except Exception:
             self.destroy()
             raise
 
