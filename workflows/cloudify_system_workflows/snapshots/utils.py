@@ -45,7 +45,7 @@ class DictToAttributes(object):
             # try to convert to json,
             # may fail on UTF-8 and stuff, don't sweat on it..
             return json.dumps(self._dict)
-        except:
+        except Exception:
             return self._dict
 
 

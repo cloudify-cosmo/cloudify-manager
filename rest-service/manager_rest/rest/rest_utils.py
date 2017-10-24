@@ -93,7 +93,7 @@ def verify_and_convert_bool(attribute_name, str_bool):
 def convert_to_int(value):
     try:
         return int(value)
-    except:
+    except Exception:
         raise manager_exceptions.BadParametersError(
             'invalid parameter, should be int, got: {0}'.format(value))
 

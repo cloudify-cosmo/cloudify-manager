@@ -68,7 +68,7 @@ class EventsPrinter(threading.Thread):
                 output = cloudify.logs.create_event_message_prefix(ev)
                 if output:
                     sys.stdout.write('{0}\n'.format(output))
-            except:
+            except Exception:
                 logger.error('event/log format error - output: {0}'
                              .format(body), exc_info=True)
 

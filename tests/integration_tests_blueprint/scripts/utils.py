@@ -30,13 +30,13 @@ def run(command, ignore_failures=False, workdir=None, out=False):
                 stdout += line
                 try:
                     ctx.logger.info(line.rstrip())
-                except:
+                except Exception:
                     ctx.logger.debug('Failed printing stdout line')
             for line in proc.stderr:
                 stderr += line
                 try:
                     ctx.logger.info(line.rstrip())
-                except:
+                except Exception:
                     ctx.logger.debug('Failed printing stderr line')
             sleep(0.1)
         ctx.logger.info(proc.stdout.read())

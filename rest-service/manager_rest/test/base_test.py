@@ -494,7 +494,7 @@ class BaseServerTestCase(unittest.TestCase):
     def quiet_delete(file_path):
         try:
             os.remove(file_path)
-        except:
+        except Exception:
             pass
 
     @staticmethod
