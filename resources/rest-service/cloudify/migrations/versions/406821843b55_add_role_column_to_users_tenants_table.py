@@ -49,6 +49,9 @@ def update_system_role(from_role_id, to_role_id):
 
 
 def _get_role_id(role_name):
+    """
+    Return a SELECT statement that retrieves a role ID from a role name
+    """
     return sa.select([roles.c.id]).where(roles.c.name == role_name)
 
 
