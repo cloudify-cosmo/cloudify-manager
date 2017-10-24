@@ -130,18 +130,20 @@ class Tenant(SQLModelBase):
 
     def to_response(self, get_data=False):
         tenant_dict = super(Tenant, self).to_response()
-        tenant_dict['groups'] = _get_response_data(
-            {
-                group_association.group: group_association.role
+
+        if get_data:
+            tenant_dict['groups'] = {
+                group_association.group.name: group_association.role.name
                 for group_association in self.group_associations
-            },
-            get_data,
-        )
-        tenant_dict['users'] = _get_response_data(
-            self.all_users,
-            get_data=get_data,
-            name_attr={'key': 'username', 'value': 'name'},
-        )
+            }
+            tenant_dict['users'] = {
+                user.username:
+                    sorted(list(role.name for role in user.roles))
+                for user, roles in self.all_users.iteritems()
+            }
+        else:
+            tenant_dict['groups'] = len(self.group_associations)
+            tenant_dict['users'] = len(self.all_users)
         return tenant_dict
 
     @property
@@ -183,18 +185,15 @@ class Group(SQLModelBase):
 
     def to_response(self, get_data=False):
         group_dict = super(Group, self).to_response()
-        group_dict['tenants'] = _get_response_data(
-            {
-                tenant_association.tenant: tenant_association.role
+        if get_data:
+            group_dict['tenants'] = {
+                tenant_association.tenant.name: tenant_association.role.name
                 for tenant_association in self.tenant_associations
-            },
-            get_data,
-        )
-        group_dict['users'] = _get_response_data(
-            self.users,
-            get_data=get_data,
-            name_attr='username'
-        )
+            }
+            group_dict['users'] = sorted(user.username for user in self.users)
+        else:
+            group_dict['tenants'] = len(self.tenant_associations)
+            group_dict['users'] = len(self.users)
         return group_dict
 
 
@@ -313,8 +312,18 @@ class User(SQLModelBase, UserMixin):
 
     def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
-        user_dict['tenants'] = _get_response_data(self.all_tenants, get_data)
-        user_dict['groups'] = _get_response_data(self.groups, get_data)
+
+        if get_data:
+            user_dict['tenants'] = {
+                tenant.name:
+                    sorted(list(role.name for role in roles))
+                for tenant, roles in self.all_tenants.iteritems()
+            }
+            user_dict['groups'] = sorted(group.name for group in self.groups)
+        else:
+            user_dict['tenants'] = len(self.all_tenants)
+            user_dict['groups'] = len(self.groups)
+
         user_dict['role'] = self.role
         return user_dict
 
