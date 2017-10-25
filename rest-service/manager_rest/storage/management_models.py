@@ -88,8 +88,16 @@ class Tenant(SQLModelBase):
         added directly and/or indirectly as members of different groups.
 
         """
+        tenant_roles = {
+            user_association.user.username: user_association.role.name
+            for user_association in self.user_associations
+        }
+
         return {
-            user.username: sorted(list(role.name for role in roles))
+            user.username: {
+                'tenant-role': tenant_roles.get(user.username),
+                'roles': sorted(list(role.name for role in roles)),
+            }
             for user, roles in self.all_users.iteritems()
         }
 
