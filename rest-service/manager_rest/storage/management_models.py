@@ -89,7 +89,7 @@ class Tenant(SQLModelBase):
 
         """
         return {
-            user.username: sorted(list(role.name for role in user.roles))
+            user.username: sorted(list(role.name for role in roles))
             for user, roles in self.all_users.iteritems()
         }
 
