@@ -98,14 +98,13 @@ class TenantUsers(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': unicode,
+                    'type': unicode
                 },
                 'username': {
-                    'type': unicode,
+                    'type': unicode
                 },
                 'role': {
-                    'type': unicode,
-                    'optional': True,
+                    'type': unicode
                 },
             },
         )
@@ -178,14 +177,13 @@ class TenantGroups(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params(
             {
                 'tenant_name': {
-                    'type': unicode,
+                    'type': unicode
                 },
                 'group_name': {
-                    'type': unicode,
+                    'type': unicode
                 },
                 'role': {
-                    'type': unicode,
-                    'optional': True,
+                    'type': unicode
                 },
             })
         rest_utils.validate_inputs(request_dict)
