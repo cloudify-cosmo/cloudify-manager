@@ -76,6 +76,7 @@ def add_users_to_db(user_list):
         default_tenant_role = user_datastore.find_role(DEFAULT_TENANT_ROLE)
         user_obj.active = user.get('active', True)
         user_tenant_association = UserTenantAssoc(
+            user=user_obj,
             tenant=default_tenant,
             role=default_tenant_role,
         )
