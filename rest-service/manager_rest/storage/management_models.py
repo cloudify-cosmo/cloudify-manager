@@ -88,8 +88,16 @@ class Tenant(SQLModelBase):
         added directly and/or indirectly as members of different groups.
 
         """
+        tenant_roles = {
+            user_association.user.username: user_association.role.name
+            for user_association in self.user_associations
+        }
+
         return {
-            user.username: sorted(list(role.name for role in roles))
+            user.username: {
+                'tenant-role': tenant_roles.get(user.username),
+                'roles': sorted(list(role.name for role in roles)),
+            }
             for user, roles in self.all_users.iteritems()
         }
 
@@ -284,8 +292,16 @@ class User(SQLModelBase, UserMixin):
         added directly and/or indirectly as members of different groups.
 
         """
+        tenant_roles = {
+            tenant_association.tenant.name: tenant_association.role.name
+            for tenant_association in self.tenant_associations
+        }
+
         return {
-            tenant.name: sorted(list(role.name for role in roles))
+            tenant.name: {
+                'tenant-role': tenant_roles.get(tenant.name),
+                'roles': sorted(list(role.name for role in roles)),
+            }
             for tenant, roles in self.all_tenants.iteritems()
         }
 
