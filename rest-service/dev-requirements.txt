@@ -1,5 +1,5 @@
-https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/4.2.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/4.2.zip
+https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/4.2
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/4.2
 
 # test dependencies
 mock
