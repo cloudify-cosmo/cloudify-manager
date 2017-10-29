@@ -17,7 +17,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-integration-tests',
-    version='4.2.dev1',
+    version='4.2',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
     packages=[

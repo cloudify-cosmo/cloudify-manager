@@ -39,7 +39,7 @@ function create_resources_tar() {
 }
 
 
-export CORE_TAG_NAME="4.2.dev1"
+export CORE_TAG_NAME="4.2"
 export CORE_BRANCH="master"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
