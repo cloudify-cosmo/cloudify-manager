@@ -24,8 +24,8 @@ from integration_tests.framework import docl
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 
-from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.storage.models_states import ExecutionState
+from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
 from cloudify_rest_client.executions import Execution
 from cloudify_rest_client.exceptions import CloudifyClientError
@@ -43,7 +43,9 @@ class TestSnapshot(AgentlessTestCase):
         username = 'username'
         password = 'password'
         self.client.users.create(username, password, role='sys_admin')
-        self.client.tenants.add_user(username, DEFAULT_TENANT_NAME)
+        self.client.tenants.add_user(username,
+                                     DEFAULT_TENANT_NAME,
+                                     DEFAULT_TENANT_ROLE)
         admin_client = utils.create_rest_client(username=username,
                                                 password=password)
         self._try_restore_snapshot(
