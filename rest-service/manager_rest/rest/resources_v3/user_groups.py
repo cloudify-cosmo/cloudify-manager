@@ -18,7 +18,10 @@ from flask import current_app
 from manager_rest.storage import models
 from manager_rest.security.authorization import authorize
 from manager_rest.security import MissingPremiumFeatureResource
-from manager_rest.manager_exceptions import MethodNotAllowedError
+from manager_rest.manager_exceptions import (
+    BadParametersError,
+    MethodNotAllowedError,
+)
 
 from .. import rest_decorators, rest_utils
 from ..responses_v3 import BaseResponse
@@ -60,6 +63,13 @@ class UserGroups(SecuredMultiTenancyResource):
         group_name = request_dict['group_name']
         ldap_group_dn = request_dict.get('ldap_group_dn')
         rest_utils.validate_inputs({'group_name': group_name})
+        if group_name == 'users':
+            raise BadParametersError(
+                '{0!r} is not allowed as a user group name '
+                "because it wouldn't be possible to remove it later due to "
+                'a conflict with the remove {0} from user group endpoint'
+                .format(str(group_name))
+            )
         return multi_tenancy.create_group(group_name, ldap_group_dn)
 
 
