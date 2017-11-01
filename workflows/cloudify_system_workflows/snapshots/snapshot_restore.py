@@ -24,10 +24,10 @@ import subprocess
 import wagon
 
 from cloudify.workflows import ctx
-from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.manager import get_rest_client
 from cloudify.exceptions import NonRecoverableError
 from cloudify.constants import FILE_SERVER_SNAPSHOTS_FOLDER
+from cloudify.utils import ManagerVersion, get_local_rest_certificate
 
 from cloudify_system_workflows.deployment_environment import \
     generate_create_dep_tasks_graph
@@ -55,7 +55,8 @@ from .constants import (
     M_VERSION,
     MANAGER_PYTHON,
     V_4_0_0,
-    V_4_2_0
+    V_4_2_0,
+    AvailabilityState
 )
 
 
@@ -340,8 +341,12 @@ class SnapshotRestore(object):
         resources_tables = ['blueprints', 'plugins', 'snapshots',
                             'deployments']
         for table in resources_tables:
-            postgres.run_query(update_query.
-                               format(table, "'private'", "'tenant'"))
+            postgres.run_query(update_query.format(
+                table,
+                "'{}'".format(AvailabilityState.PRIVATE),
+                "'{}'".format(AvailabilityState.TENANT))
+            )
+
         ctx.logger.info('Successfully updated resource_availability')
 
     def _restore_stage(self, postgres, tempdir, migration_version):
@@ -395,10 +400,9 @@ class SnapshotRestore(object):
     def _get_existing_plugin_names(self):
         ctx.logger.debug('Collecting existing plugins')
         existing_plugins = self._client.plugins.list(_all_tenants=True)
-        return [self._get_plugin_archive_path_id_and_tenant(p)
-                for p in existing_plugins]
+        return [self._get_plugin_info(p) for p in existing_plugins]
 
-    def _get_plugin_archive_path_id_and_tenant(self, plugin):
+    def _get_plugin_info(self, plugin):
         return {
             'path': os.path.join(
                 '/opt/manager/resources/plugins',
@@ -407,6 +411,7 @@ class SnapshotRestore(object):
             ),
             'id': plugin['id'],
             'tenant': plugin['tenant_name'],
+            'availability': plugin['resource_availability'],
         }
 
     def _get_plugins_to_install(self, existing_plugins):
@@ -424,8 +429,7 @@ class SnapshotRestore(object):
         ctx.logger.debug('Looking for plugins to install')
         all_plugins = self._client.plugins.list(_all_tenants=True)
         installable_plugins = [
-            self._get_plugin_archive_path_id_and_tenant(plugin)
-            for plugin in all_plugins
+            self._get_plugin_info(plugin) for plugin in all_plugins
             if self._plugin_installable_on_current_platform(plugin)
         ]
         ctx.logger.debug('Found {0} plugins in total'
@@ -459,10 +463,17 @@ class SnapshotRestore(object):
                             tenant=tenant,
                         )
                     )
+                    private_plugin = plugin['availability'] == \
+                        AvailabilityState.PRIVATE
                     temp_plugin = os.path.join(plugins_tmp, wagon_name)
                     shutil.copyfile(plugin['path'], temp_plugin)
                     client.plugins.delete(plugin['id'], force=True)
-                    client.plugins.upload(temp_plugin)
+                    new_plugin = client.plugins.upload(
+                        temp_plugin,
+                        private_resource=private_plugin
+                    )
+                    if plugin['availability'] == AvailabilityState.GLOBAL:
+                        client.plugins.set_global(new_plugin.id)
                     os.remove(temp_plugin)
             finally:
                 os.rmdir(plugins_tmp)
