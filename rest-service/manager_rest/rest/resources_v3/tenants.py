@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from manager_rest import constants
+from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.security.authorization import authorize
 from manager_rest.security import (MissingPremiumFeatureResource,
@@ -63,6 +64,13 @@ class TenantsId(SecuredMultiTenancyResource):
         Create a tenant
         """
         rest_utils.validate_inputs({'tenant_name': tenant_name})
+        if tenant_name in ('users', 'user-groups'):
+            raise BadParametersError(
+                '{0!r} is not allowed as a tenant name '
+                "because it wouldn't be possible to remove it later due to "
+                'a conflict with the remove {0} from tenant endpoint'
+                .format(str(tenant_name))
+            )
         return multi_tenancy.create_tenant(tenant_name)
 
     @rest_decorators.exceptions_handled
