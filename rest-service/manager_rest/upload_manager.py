@@ -664,9 +664,11 @@ class UploadedPluginsManager(UploadedDataManager):
 
     @staticmethod
     def _load_plugin_package_json(wagon_source):
-        if wagon.validate(wagon_source):
-            # wagon returns a list of validation issues.
-            raise manager_exceptions.InvalidPluginError(
-                'the provided wagon can not be read.')
+        # Disable validation for now - seems to break in certain
+        # circumstances.
+        # if wagon.validate(wagon_source):
+        #     # wagon returns a list of validation issues.
+        #     raise manager_exceptions.InvalidPluginError(
+        #         'the provided wagon can not be read.')
 
         return wagon.show(wagon_source)
