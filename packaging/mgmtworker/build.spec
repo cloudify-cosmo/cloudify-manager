@@ -56,7 +56,7 @@ sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-l
 %post
 
 pip install --use-wheel --no-index --find-links=/var/wheels/%{name} virtualenv && \
-if [ ! -d "/opt/mgmtworker/env" ]; then virtualenv /opt/mgmtworker/env; fi && \
+if [ ! -d "/opt/mgmtworker/env" ]; then virtualenv --no-download /opt/mgmtworker/env; fi && \
 /opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-client --pre && \
 /opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
 /opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
