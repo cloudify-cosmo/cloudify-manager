@@ -123,6 +123,15 @@ def _deploy_authorization_configuration():
     common.chown(constants.CLOUDIFY_USER, constants.CLOUDIFY_GROUP, conf_path)
 
 
+def _deploy_db_cleanup_script():
+    logger.info('Deploying Logs/Events cleanup script...')
+    script_name = 'delete_logs_and_events_from_db.py'
+    deploy(
+        join(SCRIPTS_PATH, script_name),
+        join(constants.CLOUDIFY_HOME_DIR, script_name)
+    )
+
+
 def _pre_create_snapshot_paths():
     for resource_dir in (
             'blueprints',
@@ -206,6 +215,7 @@ def _configure_restservice():
     _deploy_rest_configuration()
     _deploy_security_configuration()
     _deploy_authorization_configuration()
+    _deploy_db_cleanup_script()
     _allow_creating_cluster()
 
 
