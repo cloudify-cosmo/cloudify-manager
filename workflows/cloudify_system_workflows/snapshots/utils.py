@@ -144,10 +144,20 @@ def restore_stage_files(archive_root):
     shutil.copytree(stage_archive, stage_tempdir)
     run(['/bin/chmod', 'a+r', '-R', stage_tempdir])
     try:
+        sudo(
+            [
+                snapshot_constants.MANAGER_PYTHON,
+                snapshot_constants.STAGE_TOKEN_SCRIPT
+            ],
+            user=snapshot_constants.STAGE_USER,
+        )
         sudo([snapshot_constants.STAGE_RESTORE_SCRIPT, stage_tempdir],
              user=snapshot_constants.STAGE_USER)
     finally:
         shutil.rmtree(stage_tempdir)
+
+    sudo(['/usr/bin/systemctl', 'restart', 'cloudify-stage'],
+         ignore_failures=True)
 
 
 def copy_composer_files(archive_root):
