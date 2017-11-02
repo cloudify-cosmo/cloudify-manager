@@ -128,7 +128,8 @@ def _deploy_db_cleanup_script():
     script_name = 'delete_logs_and_events_from_db.py'
     deploy(
         join(SCRIPTS_PATH, script_name),
-        join(constants.CLOUDIFY_HOME_DIR, script_name)
+        join(constants.CLOUDIFY_HOME_DIR, script_name),
+        render=False
     )
 
 
