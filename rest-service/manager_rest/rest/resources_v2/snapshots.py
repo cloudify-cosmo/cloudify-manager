@@ -124,7 +124,17 @@ class SnapshotsId(SecuredResource):
     @authorize('snapshot_create')
     @rest_decorators.marshal_with(models.Execution)
     def put(self, snapshot_id):
-        request_dict = rest_utils.get_json_and_verify_params()
+        request_dict = rest_utils.get_json_and_verify_params({
+            'include_credentials': {
+                'optional': True,
+            },
+            'include_metrics': {
+                'optional': True,
+            },
+            'private_resource': {
+                'optional': True,
+            },
+        })
         include_metrics = rest_utils.verify_and_convert_bool(
             'include_metrics',
             request_dict.get('include_metrics', 'false')

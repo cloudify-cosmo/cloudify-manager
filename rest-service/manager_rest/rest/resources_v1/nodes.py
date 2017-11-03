@@ -202,9 +202,19 @@ class NodeInstancesId(SecuredResource):
     @marshal_with(models.NodeInstance)
     def patch(self, node_instance_id, **kwargs):
         """Update node instance by id."""
-        request_dict = get_json_and_verify_params(
-            {'version': {'type': int}}
-        )
+        request_dict = get_json_and_verify_params({
+            'runtime_properties': {
+                'type': dict,
+                'optional': True,
+            },
+            'state': {
+                'type': unicode,
+                'optional': True,
+            },
+            'version': {
+                'type': int,
+            },
+        })
 
         if not isinstance(request.json, collections.Mapping):
             raise manager_exceptions.BadParametersError(

@@ -505,7 +505,15 @@ class Events(SecuredResource):
         :rtype: dict(str)
 
         """
-        request_dict = get_json_and_verify_params()
+        request_dict = get_json_and_verify_params({
+            'from': {'type': int},
+            'query': {'type': dict},
+            'size': {
+                'type': int,
+                'optional': True,
+            },
+            'sort': {'type': list},
+        })
 
         es_query = request_dict['query']['bool']
 
