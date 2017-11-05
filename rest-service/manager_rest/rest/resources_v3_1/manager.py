@@ -73,4 +73,7 @@ class SSLConfig(SecuredResource):
 
     @staticmethod
     def _cluster_set_ssl_state(state):
-        cluster_status.cluster_options[options.CLUSTER_SSL_ENABLED] = state
+        # mutation isn't enough, need to set it for it to be saved
+        cluster_opts = cluster_status.cluster_options
+        cluster_opts[options.CLUSTER_SSL_ENABLED] = state
+        cluster_status.cluster_options = cluster_opts
