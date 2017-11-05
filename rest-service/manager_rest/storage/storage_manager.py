@@ -152,16 +152,18 @@ class SQLStorageManager(object):
         if not has_request_context():
             return query
 
+        current_tenant = self.current_tenant
+
         # If a user that is allowed to get all the tenants in the system
         # passed the `all_tenants` flag, no need to filter
-        is_admin = is_administrator(self.current_tenant)
+        is_admin = is_administrator(current_tenant)
         if is_admin and all_tenants_authorization() and all_tenants:
             return query
 
         if all_tenants:
             tenant_ids = [tenant.id for tenant in current_user.all_tenants]
         else:
-            tenant_ids = [self.current_tenant.id]
+            tenant_ids = [current_tenant.id] if current_tenant else []
 
         # Match any of the applicable tenant ids or if it's a global resource
         tenant_filter = sql_or(
@@ -386,8 +388,9 @@ class SQLStorageManager(object):
         if it's in the current tenant, or if it's a global resource
         """
         query = self._get_query(model_class, filters={'id': resource_id})
+        tenant_id = self.current_tenant.id if self.current_tenant else ''
         unique_resource_filter = sql_or(
-            model_class._tenant_id == self.current_tenant.id,
+            model_class._tenant_id == tenant_id,
             model_class.resource_availability == AvailabilityState.GLOBAL
         )
         query = query.filter(unique_resource_filter)
@@ -415,7 +418,8 @@ class SQLStorageManager(object):
     def current_tenant(self):
         """Return the tenant with which the user accessed the app
         """
-        return current_app.config[CURRENT_TENANT_CONFIG]
+        if CURRENT_TENANT_CONFIG in current_app.config:
+            return current_app.config[CURRENT_TENANT_CONFIG]
 
     def get(self,
             model_class,
