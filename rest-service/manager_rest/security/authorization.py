@@ -7,7 +7,6 @@ from flask_security import current_user
 from manager_rest import config
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
-from manager_rest.app_logging import raise_unauthorized_user_error
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.manager_exceptions import NotFoundError, ForbiddenError
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
@@ -39,8 +38,9 @@ def authorize(action, tenant_for_auth=None, get_tenant_from='header'):
                     )
                     current_app.config[CURRENT_TENANT_CONFIG] = tenant
                 except NotFoundError:
-                    raise_unauthorized_user_error(
-                        'Provided tenant name unknown: {0}'.format(tenant_name)
+                    raise ForbiddenError(
+                        'Authorization failed: Tried to authenticate with '
+                        'invalid tenant name: {0}'.format(tenant_name)
                     )
 
             # when running unittests, there is no authorization

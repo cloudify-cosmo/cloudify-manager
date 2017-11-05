@@ -22,7 +22,8 @@ from manager_rest.storage import models, get_storage_manager
 from manager_rest.storage.models_states import AvailabilityState
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
-                                             UnauthorizedError)
+                                             UnauthorizedError,
+                                             NotFoundError)
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
@@ -76,8 +77,11 @@ class FileServerAuth(SecuredResource):
         if resource not in [FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
                             FILE_SERVER_BLUEPRINTS_FOLDER]:
             return False
-        blueprint = get_storage_manager().get(models.Blueprint,
-                                              resource_id)
+        try:
+            blueprint = get_storage_manager().get(models.Blueprint,
+                                                  resource_id)
+        except NotFoundError:
+            return False
         return blueprint.resource_availability == AvailabilityState.GLOBAL
 
     @rest_decorators.exceptions_handled
