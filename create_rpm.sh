@@ -44,7 +44,10 @@ pushd cloudify-bootstrap
     # with the correct name
     mv cloudify-local-bootstrap-* cloudify-local-bootstrap
 
-    python cloudify-local-bootstrap/setup.py bdist --format=rpm
+    # The bdist_rpm needs to be executed in the same folder (for some reason)
+    pushd cloudify-local-bootstrap
+        python setup.py bdist --format=rpm
+    popd
 
     mv cloudify-local-bootstrap/dist/cloudify-local-bootstrap-*.noarch.rpm .
 
