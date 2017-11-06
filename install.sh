@@ -6,7 +6,6 @@ echo "#############################################################"
 
 # Using $SUDO_USER instead of $USER here because fpm runs the script as sudo
 sudo chown $SUDO_USER:$SUDO_USER -R /opt/cloudify-bootstrap
-sudo tar -xzf /opt/cloudify-bootstrap/cloudify-local-bootstrap-*.tar.gz -C /
 
 echo "#############################################################"
 echo "Cloudify installer is ready!"

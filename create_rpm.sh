@@ -28,6 +28,11 @@ sudo yum install -y -q ruby-devel gcc make rpm-build rubygems
 print_line "Installing fpm..."
 gem install --no-ri --no-rdoc fpm
 
+print_line "Installing pip and pex..."
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+sudo python get-pip.py
+sudo pip install pex
+
 mkdir -p cloudify-bootstrap
 
 pushd cloudify-bootstrap
@@ -35,27 +40,12 @@ pushd cloudify-bootstrap
     print_line "Downloading cloudify manager resources tar..."
     curl ${MANAGER_RESOURCES_URL} -o ${MANAGER_RESOURCES_TAR}
 
-    print_line "Downloading local bootstrap repo..."
-    curl -L https://github.com/mcouthon/cloudify-local-bootstrap/archive/master.tar.gz | tar xz
+    print_line "Creating cfy_install executable..."
+    pex https://github.com/mcouthon/cloudify-local-bootstrap/archive/master.tar.gz -o cfy_install -m cfy_install.main:install
 
-    # The root dir inside a Github tarball is in a repo-branch format
-    # (e.g. repo-master), so we move it inside our cloudify-bootstrap folder,
-    # with the correct name
-    mv cloudify-local-bootstrap-* cloudify-local-bootstrap
-
-    print_line "Creating installation package RPM"
-    # The bdist_rpm needs to be executed in the same folder (for some reason)
-    pushd cloudify-local-bootstrap
-        python setup.py bdist --format=gztar
-    popd
-
-    # Moving the only necessary parts to the top level of the RPM
-    mv cloudify-local-bootstrap/dist/cloudify-local-bootstrap-*.tar.gz .
-    mv cloudify-local-bootstrap/install.sh .
-    mv cloudify-local-bootstrap/config.json .
-
-    rm -rf cloudify-local-bootstrap
-
+    print_line "Getting install.sh and config.json from the repo..."
+    curl https://raw.githubusercontent.com/mcouthon/cloudify-local-bootstrap/master/install.sh -o install.sh
+    curl https://raw.githubusercontent.com/mcouthon/cloudify-local-bootstrap/master/config.json -o config.json
 popd
 
 print_line "Creating rpm..."
@@ -67,7 +57,7 @@ print_line "Creating rpm..."
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-bootstrap: The directory from which the rpm will be created
-fpm -s dir -t rpm -n cloudify-bootstrap -v 1.0 -x "*.pyc" -x ".*" -x "*tests" --prefix /opt --after-install cloudify-bootstrap/install.sh cloudify-bootstrap
+fpm -s dir -t rpm -n cloudify-bootstrap -v 1.0 --after-install cloudify-bootstrap/install.sh cloudify-bootstrap/cfy_install=/usr/bin/cfy_install cloudify-bootstrap/${MANAGER_RESOURCES_TAR}=/opt/cloudify-bootstrap/${MANAGER_RESOURCES_TAR} cloudify-bootstrap/config.json=/opt/cloudify-bootstrap/config.json cloudify-bootstrap
 
 print_line "Cleaning up..."
 rm -rf cloudify-bootstrap
