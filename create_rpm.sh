@@ -43,12 +43,16 @@ pushd cloudify-bootstrap
     # with the correct name
     mv cloudify-local-bootstrap-* cloudify-local-bootstrap
 
+    print_line "Creating installation package RPM"
     # The bdist_rpm needs to be executed in the same folder (for some reason)
     pushd cloudify-local-bootstrap
-        python setup.py bdist --format=rpm
+        python setup.py bdist --format=gztar
     popd
 
-    mv cloudify-local-bootstrap/dist/cloudify-local-bootstrap-*.noarch.rpm .
+    # Moving the only necessary parts to the top level of the RPM
+    mv cloudify-local-bootstrap/dist/cloudify-local-bootstrap-*.tar.gz .
+    mv cloudify-local-bootstrap/install.sh .
+    mv cloudify-local-bootstrap/config.json .
 
     rm -rf cloudify-local-bootstrap
 
@@ -63,7 +67,7 @@ print_line "Creating rpm..."
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-bootstrap: The directory from which the rpm will be created
-fpm -s dir -t rpm -n cloudify-bootstrap -v 1.0 -x "*.pyc" -x ".*" -x "*tests" --prefix /opt --after-install cloudify-bootstrap/cloudify-local-bootstrap/install.sh cloudify-bootstrap/cloudify-local-bootstrap/config.json=cloudify-bootstrap/config.json cloudify-bootstrap
+fpm -s dir -t rpm -n cloudify-bootstrap -v 1.0 -x "*.pyc" -x ".*" -x "*tests" --prefix /opt --after-install cloudify-bootstrap/install.sh cloudify-bootstrap
 
 print_line "Cleaning up..."
 rm -rf cloudify-bootstrap
