@@ -11,14 +11,13 @@ MANAGER_RESOURCES_DIR="cloudify-manager-resources"
 
 if [ ${COMMUNITY_EDITION} ]; then
     print_line "Working in Community edition"
-
-    MANAGER_RESOURCES_URL="${CLOUDIFY_RELEASE_URL}/17.10.5/release/cloudify-manager-resources_17.10.5-community.tar.gz"
-    MANAGER_RESOURCES_TAR="cloudify-manager-resources_17.10.5-community.tar.gz"
+    MANAGER_RESOURCES_URL="${CLOUDIFY_RELEASE_URL}/17.10.29/release/cloudify-manager-resources_17.10.29-community.tar.gz"
+    MANAGER_RESOURCES_TAR="cloudify-manager-resources_17.10.29-community.tar.gz"
 else
     print_line "Working in Premium edition"
 
-    MANAGER_RESOURCES_URL="${CLOUDIFY_RELEASE_URL}/4.2.0/.dev1-release/cloudify-manager-resources_4.2.0-.dev1.tar.gz"
-    MANAGER_RESOURCES_TAR="cloudify-manager-resources_4.2.0-.dev1.tar.gz"
+    MANAGER_RESOURCES_URL="${CLOUDIFY_RELEASE_URL}/4.2.0/ga-release/cloudify-manager-resources_4.2.0-ga.tar.gz"
+    MANAGER_RESOURCES_TAR="cloudify-manager-resources_4.2.0-ga.tar.gz"
 fi
 
 cd /tmp
