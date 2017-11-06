@@ -58,7 +58,7 @@ class RpmPackageHandler(object):
 def _yum_install(package, package_name=None):
     package_name = package_name or package
     logger.info('Installing {0}...'.format(package_name))
-    sudo(['yum', 'install', '-y', package])
+    sudo(['yum', 'install', '-y', '--disablerepo=*', package])
 
 
 def _install_rpm(rpm_path):
