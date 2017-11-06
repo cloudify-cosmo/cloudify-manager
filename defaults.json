@@ -103,7 +103,12 @@
     "remove_on_teardown": false,
     "sources": {
       "pip_source_url": "python-pip-7.1.0-1.el7.noarch.rpm"
-    }
+    },
+    "dependencies": [
+      "python-setuptools",
+      "python-backports",
+      "python-backports-ssl_match_hostname"
+    ]
   },
   "riemann": {
     "sources": {

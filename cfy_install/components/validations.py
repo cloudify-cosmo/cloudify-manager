@@ -6,7 +6,7 @@ from distutils.version import LooseVersion
 
 from . import SOURCES, PRIVATE_IP, PUBLIC_IP, VALIDATIONS
 
-from .service_names import MANAGER
+from .service_names import MANAGER, PYTHON
 
 from ..config import config
 from ..logger import get_logger
@@ -15,6 +15,7 @@ from ..exceptions import ValidationError
 
 from ..utils.common import run
 from ..utils.network import is_url
+from ..utils.install import RpmPackageHandler
 
 logger = get_logger(VALIDATIONS)
 
@@ -166,6 +167,22 @@ def _validate_inputs():
             )
 
 
+def _validate_python_packages():
+    dependencies = config[PYTHON]['dependencies']
+    missing_packages = []
+    for dep in dependencies:
+        logger.deubg('Validating that `{0}` is installed'.format(dep))
+        if not RpmPackageHandler.is_package_installed(dep):
+            missing_packages.append(dep)
+
+    if missing_packages:
+        _errors.append(
+            'Prerequisite packages missing: {0}.\n'
+            'Please ensure these packages are installed and try again.'
+            ''.format(missing_packages)
+        )
+
+
 def validate():
     # Inputs always need to be validated, otherwise the bootstrap won't work
     _validate_inputs()
@@ -181,6 +198,7 @@ def validate():
     _validate_sufficient_disk_space()
     _validate_resources_package_url()
     _validate_openssl_version()
+    _validate_python_packages()
 
     if _errors:
         printable_error = 'Validation error(s):\n' \
