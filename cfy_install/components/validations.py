@@ -2,6 +2,7 @@ import sys
 import urllib2
 import platform
 import subprocess
+from getpass import getuser
 from distutils.version import LooseVersion
 
 from . import SOURCES, PRIVATE_IP, PUBLIC_IP, VALIDATIONS
@@ -168,10 +169,11 @@ def _validate_inputs():
 
 
 def _validate_python_packages():
+    logger.info('Validating package prerequisites...')
     dependencies = config[PYTHON]['dependencies']
     missing_packages = []
     for dep in dependencies:
-        logger.deubg('Validating that `{0}` is installed'.format(dep))
+        logger.debug('Validating that `{0}` is installed'.format(dep))
         if not RpmPackageHandler.is_package_installed(dep):
             missing_packages.append(dep)
 
@@ -180,6 +182,21 @@ def _validate_python_packages():
             'Prerequisite packages missing: {0}.\n'
             'Please ensure these packages are installed and try again.'
             ''.format(missing_packages)
+        )
+
+
+def _validate_user_has_sudo_permissions():
+    current_user = getuser()
+    logger.info('Validating user `{0}` has sudo permissions...'.format(
+        current_user
+    ))
+    result = run(['sudo', '-n', 'true'])
+    if result.returncode != 0:
+        _errors.append(
+            "Failed executing 'sudo'. Please ensure that the "
+            "current user ({0}) is allowed to execute 'sudo' commands "
+            "and impersonate other users using "
+            "'sudo -u'. (Error: {1})".format(current_user, result.aggr_stderr)
         )
 
 
@@ -199,6 +216,7 @@ def validate():
     _validate_resources_package_url()
     _validate_openssl_version()
     _validate_python_packages()
+    _validate_user_has_sudo_permissions()
 
     if _errors:
         printable_error = 'Validation error(s):\n' \
