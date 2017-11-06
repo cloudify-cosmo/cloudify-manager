@@ -32,6 +32,7 @@ STAGE_GROUP = '{0}_group'.format(STAGE)
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, STAGE)
+RESOURCES_DIR = join(HOME_DIR, 'resources')
 STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
 
 
@@ -39,6 +40,7 @@ def _create_paths():
     common.mkdir(NODEJS_DIR)
     common.mkdir(HOME_DIR)
     common.mkdir(LOG_DIR)
+    common.mkdir(RESOURCES_DIR)
 
 
 def _set_community_mode():
