@@ -4,23 +4,24 @@ from .. import (
     SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
-    HOME_DIR_KEY
+    HOME_DIR_KEY,
+    VENV
 )
 
-from ..service_names import STAGE, MANAGER
+from ..service_names import STAGE, MANAGER, RESTSERVICE
 
 from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
 from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH, CLOUDIFY_GROUP
 
+from ...utils import sudoers
 from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.network import wait_for_port
 from ...utils.users import (create_service_user,
                             delete_service_user,
                             delete_group)
-from ...utils.sudoers import deploy_sudo_command_script
 from ...utils.logrotate import set_logrotate, remove_logrotate
 
 logger = get_logger(STAGE)
@@ -31,6 +32,7 @@ STAGE_GROUP = '{0}_group'.format(STAGE)
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
 NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, STAGE)
+STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
 
 
 def _create_paths():
@@ -79,18 +81,42 @@ def _install_nodejs():
     common.untar(nodejs, NODEJS_DIR)
 
 
-def _deploy_restore_snapshot_script():
-    # Used in the script template
-    config[STAGE][HOME_DIR_KEY] = HOME_DIR
-    script_name = 'restore-snapshot.py'
-    deploy_sudo_command_script(
+def _deploy_script(script_name, description):
+    sudoers.deploy_sudo_command_script(
         script_name,
-        'Restore stage directories from a snapshot path',
+        description,
         component=STAGE,
         allow_as=STAGE_USER
     )
-    common.chmod('a+rx', join(BASE_RESOURCES_PATH, STAGE, script_name))
+    common.chmod('a+rx', join(STAGE_RESOURCES, script_name))
     common.sudo(['usermod', '-aG', CLOUDIFY_GROUP, STAGE_USER])
+
+
+def _deploy_scripts():
+    config[STAGE][HOME_DIR_KEY] = HOME_DIR
+    _deploy_script(
+        'restore-snapshot.py',
+        'Restore stage directories from a snapshot path'
+    )
+    _deploy_script(
+        'make-auth-token.py',
+        'Update auth token for stage user'
+    )
+
+
+def _allow_snapshot_restore_to_restore_token(rest_service_python):
+    sudoers.allow_user_to_sudo_command(
+        rest_service_python,
+        'Snapshot update auth token for stage user',
+        allow_as=STAGE_USER
+    )
+
+
+def _create_auth_token(rest_service_python):
+    common.run([
+        'sudo', '-u', STAGE_USER, rest_service_python,
+        join(STAGE_RESOURCES, 'make-auth-token.py')
+    ])
 
 
 def _run_db_migrate():
@@ -119,7 +145,10 @@ def _configure():
     set_logrotate(STAGE)
     _create_user_and_set_permissions()
     _install_nodejs()
-    _deploy_restore_snapshot_script()
+    _deploy_scripts()
+    rest_service_python = join(config[RESTSERVICE][VENV], 'bin', 'python')
+    _allow_snapshot_restore_to_restore_token(rest_service_python)
+    _create_auth_token(rest_service_python)
     _run_db_migrate()
     _start_and_validate_stage()
 
