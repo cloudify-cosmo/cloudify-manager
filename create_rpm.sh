@@ -44,8 +44,11 @@ pushd cloudify-bootstrap
     # with the correct name
     mv cloudify-local-bootstrap-* cloudify-local-bootstrap
 
-    print_line "Getting pip..."
-    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    python cloudify-local-bootstrap/setup.py bdist --format=rpm
+
+    mv cloudify-local-bootstrap/dist/cloudify-local-bootstrap-*.noarch.rpm .
+
+    rm -rf cloudify-local-bootstrap
 
 popd
 
