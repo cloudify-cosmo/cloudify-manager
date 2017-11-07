@@ -17,6 +17,8 @@ def authorize(action, tenant_for_auth=None, get_tenant_from='header'):
     def authorize_dec(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+
+            # getting the tenant name
             if get_tenant_from == 'header':
                 tenant_name = tenant_for_auth or request.headers.get(
                     CLOUDIFY_TENANT_HEADER)
