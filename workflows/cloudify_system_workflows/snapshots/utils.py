@@ -185,16 +185,20 @@ def restore_composer_files(archive_root):
         snapshot_constants.COMPOSER_BLUEPRINTS_FOLDER,
     ]
     for folder in composer_data:
-        copy_snapshot_path(
+        dest_path = os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER,
+                                 folder)
+        copied = copy_snapshot_path(
             os.path.join(archive_root, 'composer', folder),
-            os.path.join(snapshot_constants.COMPOSER_BASE_FOLDER, folder))
+            dest_path)
+        if copied:
+            run(['/bin/chmod', '-R', 'g+w', dest_path])
 
 
 def copy_snapshot_path(source, destination):
     # source doesn't need to exist, then ignore
     if not os.path.exists(source):
         ctx.logger.warning('Source not found: {0}. Skipping...'.format(source))
-        return
+        return False
     ctx.logger.debug(
         'Copying from dump: {0} to: {1}..'.format(source, destination))
     # copy data
@@ -204,6 +208,7 @@ def copy_snapshot_path(source, destination):
         if os.path.exists(destination):
             shutil.rmtree(destination)
         shutil.copytree(source, destination)
+    return True
 
 
 def copy(source, destination):
