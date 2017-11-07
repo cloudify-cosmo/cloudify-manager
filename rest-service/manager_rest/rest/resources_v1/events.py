@@ -260,7 +260,10 @@ class Events(SecuredResource):
             subqueries.append(logs_query)
 
         if subqueries:
-            query = reduce(lambda left, right: left.union(right), subqueries)
+            query = reduce(
+                lambda left, right: left.union_all(right),
+                subqueries,
+            )
             query = Events._apply_sort(query, sort)
             query = (
                 query
