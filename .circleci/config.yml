@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: python:2.7.13
 
-    working_directory: ~/cloudify-local-bootstrap
+    working_directory: ~/cloudify-manager-install
 
     steps:
       - checkout

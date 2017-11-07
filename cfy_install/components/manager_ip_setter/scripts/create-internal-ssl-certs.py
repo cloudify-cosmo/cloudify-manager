@@ -1,5 +1,5 @@
 # This script has to run using the Python executable with which
-# the bootstrap was performed (the one that has cfy_install in it)
+# the install was performed (the one that has cfy_install in it)
 
 import argparse
 

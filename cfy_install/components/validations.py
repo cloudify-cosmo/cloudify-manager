@@ -201,10 +201,10 @@ def _validate_user_has_sudo_permissions():
 
 
 def validate():
-    # Inputs always need to be validated, otherwise the bootstrap won't work
+    # Inputs always need to be validated, otherwise the install won't work
     _validate_inputs()
 
-    if config[VALIDATIONS]['ignore_bootstrap_validations']:
+    if config[VALIDATIONS]['skip_validations']:
         logger.info('Skipping validations')
         return
 

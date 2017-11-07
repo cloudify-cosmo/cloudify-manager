@@ -22,13 +22,13 @@ extra_files.append(join('..', 'defaults.json'))
 
 
 setup(
-    name='cloudify-local-bootstrap',
-    version='0.1',
+    name='cloudify-manager-install',
+    version='0.2',
     author='Cloudify',
     author_email='cosmo-admin@cloudify.co',
     packages=find_packages(),
     license='LICENSE',
-    description='Local bootstrap of a cloudify manager',
+    description='Local install of a cloudify manager',
     entry_points={
         'console_scripts': [
             'cfy_install = cfy_install.main:install',

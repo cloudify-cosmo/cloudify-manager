@@ -4,7 +4,7 @@ from os.path import join
 import logging
 
 from .config import config
-from .constants import CLOUDIFY_BOOTSTRAP_DIR
+from .constants import CLOUDIFY_INSTALL_DIR
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
 
@@ -70,7 +70,7 @@ def _setup_logger():
     logger.setLevel(logging.DEBUG)
 
     # The handler that outputs to file always outputs DEBUG
-    fh = logging.FileHandler(join(CLOUDIFY_BOOTSTRAP_DIR, 'log.txt'))
+    fh = logging.FileHandler(join(CLOUDIFY_INSTALL_DIR, 'log.txt'))
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(logging.Formatter(FORMAT_MESSAGE))
     logger.addHandler(fh)

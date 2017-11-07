@@ -3,8 +3,8 @@ from os.path import join, dirname
 BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 
-CLOUDIFY_BOOTSTRAP_DIR = '/opt/cloudify-bootstrap'
-USER_CONFIG_PATH = join(CLOUDIFY_BOOTSTRAP_DIR, 'config.json')
+CLOUDIFY_INSTALL_DIR = '/opt/cloudify-manager-install'
+USER_CONFIG_PATH = join(CLOUDIFY_INSTALL_DIR, 'config.json')
 DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'defaults.json')
 
 CLOUDIFY_USER = 'cfyuser'

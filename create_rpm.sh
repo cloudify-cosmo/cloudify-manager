@@ -33,19 +33,19 @@ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 sudo python get-pip.py
 sudo pip install pex
 
-mkdir -p cloudify-bootstrap
+mkdir -p cloudify-manager-install
 
-pushd cloudify-bootstrap
+pushd cloudify-manager-install
 
     print_line "Downloading cloudify manager resources tar..."
     curl ${MANAGER_RESOURCES_URL} -o ${MANAGER_RESOURCES_TAR}
 
     print_line "Creating cfy_install executable..."
-    pex https://github.com/mcouthon/cloudify-local-bootstrap/archive/master.tar.gz -o cfy_install -m cfy_install.main:install
+    pex https://github.com/mcouthon/cloudify-manager-install/archive/master.tar.gz -o cfy_install -m cfy_install.main:install
 
     print_line "Getting install.sh and config.json from the repo..."
-    curl https://raw.githubusercontent.com/mcouthon/cloudify-local-bootstrap/master/install.sh -o install.sh
-    curl https://raw.githubusercontent.com/mcouthon/cloudify-local-bootstrap/master/config.json -o config.json
+    curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/install.sh -o install.sh
+    curl https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/config.json -o config.json
 popd
 
 print_line "Creating rpm..."
@@ -56,8 +56,8 @@ print_line "Creating rpm..."
 # --prefix /opt: The rpm will be extracted to /opt
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
-# cloudify-bootstrap: The directory from which the rpm will be created
-fpm -s dir -t rpm -n cloudify-bootstrap -v 1.0 --after-install cloudify-bootstrap/install.sh cloudify-bootstrap/cfy_install=/usr/bin/cfy_install cloudify-bootstrap/${MANAGER_RESOURCES_TAR}=/opt/cloudify-bootstrap/${MANAGER_RESOURCES_TAR} cloudify-bootstrap/config.json=/opt/cloudify-bootstrap/config.json cloudify-bootstrap
+# cloudify-manager-install: The directory from which the rpm will be created
+fpm -s dir -t rpm -n cloudify-manager-install -v 1.0 --after-install cloudify-manager-install/install.sh cloudify-manager-install/cfy_install=/usr/bin/cfy_install cloudify-manager-install/${MANAGER_RESOURCES_TAR}=/opt/cloudify-manager-install/${MANAGER_RESOURCES_TAR} cloudify-manager-install/config.json=/opt/cloudify-manager-install/config.json cloudify-manager-install
 
 print_line "Cleaning up..."
-rm -rf cloudify-bootstrap
+rm -rf cloudify-manager-install

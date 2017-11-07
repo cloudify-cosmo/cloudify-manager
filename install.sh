@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-echo "#############################################################"
+echo "###################################################################"
 echo "Installing cloudify manager installer..."
-echo "#############################################################"
+echo "###################################################################"
 
 # Using $SUDO_USER instead of $USER here because fpm runs the script as sudo
-sudo chown $SUDO_USER:$SUDO_USER -R /opt/cloudify-bootstrap
+sudo chown $SUDO_USER:$SUDO_USER -R /opt/cloudify-manager-install
 
-echo "#############################################################"
+echo "###################################################################"
 echo "Cloudify installer is ready!"
-echo "Edit /opt/cloudify-bootstrap/config.json, and run cfy_install"
-echo "#############################################################"
+echo "Edit /opt/cloudify-manager-install/config.json, and run cfy_install"
+echo "###################################################################"
