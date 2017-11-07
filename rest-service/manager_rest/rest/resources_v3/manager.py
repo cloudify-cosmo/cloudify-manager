@@ -26,7 +26,8 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              NotFoundError)
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER,
+                                    CURRENT_TENANT_CONFIG)
 
 from .. import rest_decorators, rest_utils
 from ...security.authentication import authenticator
@@ -49,10 +50,6 @@ class FileServerAuth(SecuredResource):
         tenanted_resources = [r.strip('/') for r in tenanted_resources]
         uri = uri.strip('/')
 
-        # if it's global blueprint - no need or tenant verification
-        if FileServerAuth._is_global_blueprint(uri):
-            return
-
         # verifying that the only tenant that can be accessed is the one in
         # the header
         for resource in tenanted_resources:
@@ -61,11 +58,23 @@ class FileServerAuth(SecuredResource):
                 uri_tenant, _ = uri.split('/', 1)
                 authenticator.authenticate(request)
 
+                # if it's global blueprint - no need or tenant verification
+                # first load requested tenant to config then check if global
+                tenant = get_storage_manager().get(
+                    models.Tenant,
+                    uri_tenant,
+                    filters={'name': uri_tenant}
+                )
+                current_app.config[CURRENT_TENANT_CONFIG] = tenant
+                if FileServerAuth._is_global_blueprint(uri):
+                    return
+
                 @authorize('file_server_auth', uri_tenant)
                 def _authorize():
                     pass
 
                 _authorize()
+                return
 
     @staticmethod
     def _is_global_blueprint(uri):
