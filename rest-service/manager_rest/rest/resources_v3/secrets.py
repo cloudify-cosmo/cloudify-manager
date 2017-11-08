@@ -13,10 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask_restful import types
+from flask_restful.reqparse import Argument
+
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage.models_states import AvailabilityState
 
 from ... import utils
 from .. import rest_decorators, rest_utils
@@ -42,12 +46,17 @@ class SecretsKey(SecuredResource):
         Create a new secret
         """
         key, value = self._validate_secret_inputs(key)
+        args = rest_utils.get_args_and_verify_arguments(
+            [Argument('private_resource', type=types.boolean, default=False)])
+        availability = AvailabilityState.PRIVATE if args.private_resource \
+            else AvailabilityState.TENANT
 
         return get_storage_manager().put(models.Secret(
             id=key,
             value=value,
             created_at=utils.get_formatted_timestamp(),
-            updated_at=utils.get_formatted_timestamp()
+            updated_at=utils.get_formatted_timestamp(),
+            resource_availability=availability
         ))
 
     @rest_decorators.exceptions_handled
