@@ -102,6 +102,7 @@ class SnapshotCreate(object):
         with Postgres(self._config) as postgres:
             postgres.dump(self._tempdir)
             postgres.dump_stage(self._tempdir)
+            postgres.dump_composer(self._tempdir)
 
     def _dump_influxdb(self):
         ctx.logger.info('Dumping InfluxDB data')

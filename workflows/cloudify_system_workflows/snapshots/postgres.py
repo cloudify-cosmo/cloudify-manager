@@ -35,12 +35,13 @@ class Postgres(object):
     """
     _TRUNCATE_QUERY = "TRUNCATE {0} CASCADE;"
     _POSTGRES_DUMP_FILENAME = 'pg_data'
-    _STAGE_DUMP_FILENAME = 'stage_data'
     _STAGE_DB_NAME = 'stage'
+    _COMPOSER_DB_NAME = 'composer'
     _TABLES_TO_KEEP = ['alembic_version', 'provider_context', 'roles']
     _TABLES_TO_EXCLUDE_ON_DUMP = _TABLES_TO_KEEP + ['snapshots']
     _TABLES_TO_RESTORE = ['users', 'tenants']
     _STAGE_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
+    _COMPOSER_TABLES_TO_EXCLUDE = ['"SequelizeMeta"']
 
     def __init__(self, config):
         ctx.logger.debug('Init Postgres config: {0}'.format(config))
@@ -97,32 +98,57 @@ class Postgres(object):
         self._append_delete_current_execution(destination_path)
 
     def dump_stage(self, tempdir):
-        if not self._stage_db_exists():
+        self._dump_db(
+            tempdir=tempdir,
+            database_name=self._STAGE_DB_NAME,
+            exclude_tables=self._STAGE_TABLES_TO_EXCLUDE,
+        )
+
+    def dump_composer(self, tempdir):
+        self._dump_db(
+            tempdir=tempdir,
+            database_name=self._COMPOSER_DB_NAME,
+            exclude_tables=self._COMPOSER_TABLES_TO_EXCLUDE,
+        )
+
+    def _dump_db(self, tempdir, database_name, exclude_tables=()):
+        if not self._db_exists(database_name):
             return
-        destination_path = os.path.join(tempdir, self._STAGE_DUMP_FILENAME)
+        destination_path = os.path.join(tempdir, database_name + '_data')
         try:
             self._dump_to_file(
                 destination_path=destination_path,
-                db_name=self._STAGE_DB_NAME,
-                exclude_tables=self._STAGE_TABLES_TO_EXCLUDE
+                db_name=database_name,
+                exclude_tables=exclude_tables,
             )
         except Exception as ex:
-            raise NonRecoverableError('Error during dumping Stage data, '
-                                      'exception: {0}'.format(ex))
+            raise NonRecoverableError(
+                'Error during dumping {db_name} data. Exception: '
+                '{exception}'.format(
+                    db_name=database_name,
+                    exception=ex,
+                )
+            )
+
+    def _restore_db(self, tempdir, database_name):
+        if not self._db_exists(database_name):
+            return
+        ctx.logger.info('Restoring {db} DB'.format(db=database_name))
+        dump_file = os.path.join(tempdir, database_name + '_data')
+        self._restore_dump(dump_file, database_name)
+        ctx.logger.debug('{db} DB restored'.format(db=database_name))
 
     def restore_stage(self, tempdir):
-        if not self._stage_db_exists():
-            return
-        ctx.logger.info('Restoring Stage DB')
-        stage_dump_file = os.path.join(tempdir, self._STAGE_DUMP_FILENAME)
-        self._restore_dump(stage_dump_file, self._STAGE_DB_NAME)
-        ctx.logger.debug('Stage DB restored')
+        self._restore_db(tempdir, self._STAGE_DB_NAME)
 
-    def _stage_db_exists(self):
+    def restore_composer(self, tempdir):
+        self._restore_db(tempdir, self._COMPOSER_DB_NAME)
+
+    def _db_exists(self, db_name):
         """Return True if the stage DB exists"""
 
         exists_query = "SELECT 1 FROM pg_database " \
-                       "WHERE datname='{0}'".format(self._STAGE_DB_NAME)
+                       "WHERE datname='{0}'".format(db_name)
         response = self.run_query(exists_query)
         # Will either be an empty list, or a list with 1 in it
         return bool(response['all'])

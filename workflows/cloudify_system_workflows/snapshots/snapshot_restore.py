@@ -313,6 +313,7 @@ class SnapshotRestore(object):
             with utils.db_schema(schema_revision, config=self._config):
                 admin_user_update_command = postgres.restore(self._tempdir)
             self._restore_stage(postgres, self._tempdir, stage_revision)
+            self._restore_composer(postgres, self._tempdir)
         else:
             if self._should_clean_old_db_for_3_x_snapshot():
                 postgres.clean_db()
@@ -358,6 +359,13 @@ class SnapshotRestore(object):
         postgres.restore_stage(tempdir)
         self._npm.upgrade_stage_db()
         ctx.logger.debug('Stage DB restored')
+
+    def _restore_composer(self, postgres, tempdir):
+        if not (self._snapshot_version >= V_4_2_0 and self._premium_enabled):
+            return
+        ctx.logger.info('Restoring composer DB')
+        postgres.restore_composer(tempdir)
+        ctx.logger.debug('Composer DB restored')
 
     def _should_clean_old_db_for_3_x_snapshot(self):
         """The one case in which the DB should be cleared is when restoring
