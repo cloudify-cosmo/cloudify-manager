@@ -1,2 +1,0 @@
-LS_LOG_DIR="{logstash[log_dir]}"
-LS_LOG_FILE="{logstash[log_dir]}/logstash.log"

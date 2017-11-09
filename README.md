@@ -21,7 +21,7 @@ steps 1-6).
 2. Download the [`create_rpm.sh`](create_rpm.sh) script to the machine
 with:
 
-`curl -L https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/create_rpm.sh -o /tmp/create_rpm.sh `
+`curl -L https://raw.githubusercontent.com/mcouthon/cloudify-manager-install/master/packaging/create_rpm.sh -o /tmp/create_rpm.sh `
 
 3. Give it executable permissions:
 
@@ -48,33 +48,33 @@ to ensure the `rpm` is then copied to the other machine.
 `sudo yum install -y /tmp/cloudify-manager-install-1.0-1.x86_64.rpm`
 
 8. This will put all the necessary files in `/opt/cloudify-manager-install`.
-9. Edit the config file in: `/opt/cloudify-manager-install/config.json`. Only
+9. Edit the config file in: `/opt/cloudify-manager-install/config.yaml`. Only
 the private and public IPs are required. Any other values you might
-wish to edit are set in [defaults.json](defaults.json). The format of
-the file is basic (strict) JSON format.
-10. To install the manager, execute  `cfy_install`.
+wish to edit are set in [defaults.yaml](defaults.yaml). The format of
+the file is basic YAML format.
+10. To install the manager, execute  `cfy_manager`.
 11. After the command has finished, you should have a working manager,
 with `cfy` installed for both the current user and `root`.
 
 ### Configuration
 If you wish to change some configuration after install, just edit
-`config.json` again and run `cfy_config`. It takes about a minute.
+`config.yaml` again and run `cfy_config`. It takes about a minute.
 As stated above, all the available configurations can be found in
-[defaults.json](defaults.json).
+[defaults.yaml](defaults.yaml).
 
 
 ### Teardown
 At any point, you can run `cfy_remove`, which will remove everything
 Cloudify related from the machine, except the installation code, that
-will remain in `/opt/cloudify-manager-install/config.json`, so that you will
-have the ability to run `cfy_install` again.
+will remain in `/opt/cloudify-manager-install/config.yaml`, so that you will
+have the ability to run `cfy_manager` again.
 
 
 ## Goodies
-* `cfy_install` and `cfy_config` can be run as many times as you like.
+* `cfy_manager` and `cfy_config` can be run as many times as you like.
 * Want to reconfigure the manager, but don't want to drop the DB?
 Set `"postgres": {"create_db": false}"` in the config file.
-* Working in offline mode? No problem. `cfy_install` can be used as is,
+* Working in offline mode? No problem. `cfy_manager` can be used as is,
 assuming the RPM was somehow delivered to the machine.
 * Running installs on multiple machines in parallel? It's easier than
 ever. Because you no longer need a central CLI location, parallelization
