@@ -43,6 +43,7 @@ from .credentials import restore as restore_credentials
 from .constants import (
     ADMIN_DUMP_FILE,
     ARCHIVE_CERT_DIR,
+    CERT_DIR,
     HASH_SALT_FILENAME,
     INTERNAL_CA_CERT_FILENAME,
     INTERNAL_CA_KEY_FILENAME,
@@ -203,6 +204,16 @@ class SnapshotRestore(object):
                 cert=cert,
             )
             command += subcommand
+
+        if not os.path.exists(
+                os.path.join(archive_cert_dir, INTERNAL_CA_CERT_FILENAME)):
+            for source, target in [
+                    (INTERNAL_CERT_FILENAME, INTERNAL_CA_CERT_FILENAME),
+                    (INTERNAL_KEY_FILENAME, INTERNAL_CA_KEY_FILENAME)]:
+                source = os.path.join(CERT_DIR, source)
+                target = os.path.join(CERT_DIR, target)
+                command += 'cp {source} {target};'.format(
+                    source=source, target=target)
 
         if not self._no_reboot:
             command += 'sudo shutdown -r now'
