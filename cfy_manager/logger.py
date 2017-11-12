@@ -86,14 +86,13 @@ def _setup_console_logger(logger):
 
 def _create_log_dir():
     log_dir = join(BASE_LOG_DIR, 'manager')
-    if isdir(log_dir):
-        return
-    # Need to call subprocess directly, because utils.common depends on the
-    # logger, and we'd get a cyclical import
-    check_output(['sudo', 'mkdir', '-p', log_dir])
-    check_output(['sudo', 'chown', '-R',
-                  '{0}:{1}'.format(geteuid(), getegid()),
-                  log_dir])
+    if not isdir(log_dir):
+        # Need to call subprocess directly, because utils.common depends on the
+        # logger, and we'd get a cyclical import
+        check_output(['sudo', 'mkdir', '-p', log_dir])
+        check_output(['sudo', 'chown', '-R',
+                      '{0}:{1}'.format(geteuid(), getegid()),
+                      log_dir])
     return log_dir
 
 
