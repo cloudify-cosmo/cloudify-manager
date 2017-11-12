@@ -61,11 +61,13 @@ print_line "Creating rpm..."
 # -t rpm: Output is an rpm
 # -n <>: The name of the package
 # -x <>: Files to exclude
+# -v: Version (e.g. 4.2.0)
+# --iteration: Release (e.g. dev1)
 # --prefix /opt: The rpm will be extracted to /opt
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-manager-install: The directory from which the rpm will be created
-fpm -s dir -t rpm -n cloudify-manager-install --force -v 0.3 --after-install ./tmp-install-rpm/install.sh ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager ./tmp-install-rpm/cloudify-manager-install=/opt
+fpm -s dir -t rpm -n cloudify-manager-install --force -v ${VERSION} --iteration ${PRERELEASE} --after-install ./tmp-install-rpm/install.sh ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager ./tmp-install-rpm/cloudify-manager-install=/opt
 
 print_line "Cleaning up..."
 rm -rf tmp-install-rpm

@@ -32,7 +32,7 @@ from .logger import get_logger
 from .utils.files import remove_temp_files
 from .utils.certificates import create_internal_certs
 
-logger = get_logger('Bootstrap')
+logger = get_logger('Main')
 
 COMPONENTS = [
     manager,
