@@ -1,10 +1,12 @@
 import sys
-from os.path import join
+from os import geteuid, getegid
+from os.path import join, isdir
+from subprocess import check_output
 
 import logging
 
 from .config import config
-from .constants import CLOUDIFY_INSTALL_DIR
+from .constants import BASE_LOG_DIR
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)
 
@@ -69,18 +71,40 @@ def _setup_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    # The handler that outputs to file always outputs DEBUG
-    fh = logging.FileHandler(join(CLOUDIFY_INSTALL_DIR, 'log.txt'))
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(logging.Formatter(FORMAT_MESSAGE))
-    logger.addHandler(fh)
+    _setup_console_logger(logger)
+    _setup_file_logger(logger)
 
+
+def _setup_console_logger(logger):
     # The console log level is determined by the user in the config
     log_level = config['log_level'].upper()
     sh = logging.StreamHandler(sys.stdout)
     sh.setLevel(log_level)
     sh.setFormatter(ColoredFormatter(FORMAT_MESSAGE))
     logger.addHandler(sh)
+
+
+def _create_log_dir():
+    log_dir = join(BASE_LOG_DIR, 'manager')
+    if isdir(log_dir):
+        return
+    # Need to call subprocess directly, because utils.common depends on the
+    # logger, and we'd get a cyclical import
+    check_output(['sudo', 'mkdir', '-p', log_dir])
+    check_output(['sudo', 'chown', '-R',
+                  '{0}:{1}'.format(geteuid(), getegid()),
+                  log_dir])
+    return log_dir
+
+
+def _setup_file_logger(logger):
+    log_dir = _create_log_dir()
+
+    # The handler that outputs to file always outputs DEBUG
+    fh = logging.FileHandler(join(log_dir, 'cfy_manager.log'))
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter(FORMAT_MESSAGE))
+    logger.addHandler(fh)
 
 
 _setup_logger()
