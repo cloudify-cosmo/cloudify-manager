@@ -18,21 +18,8 @@ function print_line() {
   echo -e "$COL_YELLOW $LINE $COL_RESET"
 }
 
-CLOUDIFY_RELEASE_URL="http://cloudify-release-eu.s3.amazonaws.com/cloudify"
-MANAGER_RESOURCES_DIR="cloudify-manager-resources"
-
-if [ ${COMMUNITY_EDITION} ]; then
-    print_line "Working in Community edition"
-    MANAGER_RESOURCES_URL="${CLOUDIFY_RELEASE_URL}/17.10.29/release/cloudify-manager-resources_17.10.29-community.tar.gz"
-    MANAGER_RESOURCES_TAR="cloudify-manager-resources_17.10.29-community.tar.gz"
-else
-    print_line "Working in Premium edition"
-
-    MANAGER_RESOURCES_URL="${CLOUDIFY_RELEASE_URL}/4.2.0/ga-release/cloudify-manager-resources_4.2.0-ga.tar.gz"
-    MANAGER_RESOURCES_TAR="cloudify-manager-resources_4.2.0-ga.tar.gz"
-fi
-
-cd /tmp
+MANAGER_RESOURCES_URL=$1
+BRANCH=${2:-master}
 
 print_line "Installing fpm dependencies..."
 sudo yum install -y -q ruby-devel gcc make rpm-build rubygems
@@ -40,24 +27,33 @@ sudo yum install -y -q ruby-devel gcc make rpm-build rubygems
 print_line "Installing fpm..."
 gem install --no-ri --no-rdoc fpm
 
-print_line "Installing pip and pex..."
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-sudo python get-pip.py
+print_line "Installing pex..."
 sudo pip install pex
 
-mkdir -p cloudify-manager-install
+cd /tmp
 
-pushd cloudify-manager-install
+mkdir -p tmp-install-rpm
 
-    print_line "Downloading cloudify manager resources tar..."
-    curl ${MANAGER_RESOURCES_URL} -o ${MANAGER_RESOURCES_TAR}
+pushd tmp-install-rpm
+
+    # Anything inside this inner directory will be mapped on the manager to
+    # /opt/cloudify-manager-install. Anything *outside* it needs to be
+    # mapped manually when running fpm
+    mkdir -p cloudify-manager-install
+
+    pushd cloudify-manager-install
+        print_line "Downloading cloudify manager resources tar..."
+        curl -O ${MANAGER_RESOURCES_URL}
+
+        print_line "Getting config.yaml from the repo..."
+        curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/config.yaml
+    popd
 
     print_line "Creating cfy_manager executable..."
-    pex https://github.com/cloudify-cosmo/cloudify-manager-install/archive/master.tar.gz -o cfy_manager -m cfy_manager.main --disable-cache
+    pex https://github.com/cloudify-cosmo/cloudify-manager-install/archive/${BRANCH}.tar.gz -o cfy_manager -m cfy_manager.main --disable-cache
 
-    print_line "Getting install.sh and config.yaml from the repo..."
-    curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/packaging/install.sh -o install.sh
-    curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/config.yaml -o config.yaml
+    print_line "Getting install.sh from the repo..."
+    curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/packaging/install.sh
 popd
 
 print_line "Creating rpm..."
@@ -69,7 +65,7 @@ print_line "Creating rpm..."
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-manager-install: The directory from which the rpm will be created
-fpm -s dir -t rpm -n cloudify-manager-install --force -v 0.3 --after-install cloudify-manager-install/install.sh cloudify-manager-install/cfy_manager=/usr/bin/cfy_manager cloudify-manager-install/${MANAGER_RESOURCES_TAR}=/opt/cloudify-manager-install/${MANAGER_RESOURCES_TAR} cloudify-manager-install/config.yaml=/opt/cloudify-manager-install/config.yaml cloudify-manager-install
+fpm -s dir -t rpm -n cloudify-manager-install --force -v 0.3 --after-install ./tmp-install-rpm/install.sh ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager ./tmp-install-rpm/cloudify-manager-install=/opt
 
 print_line "Cleaning up..."
-rm -rf cloudify-manager-install
+rm -rf tmp-install-rpm
