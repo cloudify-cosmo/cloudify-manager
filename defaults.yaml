@@ -21,6 +21,27 @@ manager:
   sources:
     manager_resources_package: /opt/cloudify-manager-install/cloudify-manager-resources_*.tar.gz
 
+provider_context:
+  workflows:
+    # Sets the number of times a failed task will be retried on recoverable error.
+    task_retries: 60
+
+    # Sets the interval between retry attempts in seconds.
+    task_retry_interval: 15
+
+  policy_engine:
+    start_timeout: 30
+
+  # An imported URL is prefix-matched against the key in each entry. If a match is found,
+  # then the URL prefix is replaced with the value of the corresponding entry.
+  # That allows serving YAML files from within the manager, even when the imported URL
+  # points to the external network.
+  import_resolver:
+    parameters:
+      rules:
+        - {'http://www.getcloudify.org/spec': 'file:///opt/manager/resources/spec'}
+        - {'http://cloudify.co/spec': 'file:///opt/manager/resources/spec'}
+
 agent:
   # A dict of network names and IP addresses associated with them.
   # By default, there is only a "default" network, with the manager's

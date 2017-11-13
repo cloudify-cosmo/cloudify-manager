@@ -26,5 +26,6 @@ AGENT = 'agent'
 CONSTANTS = 'constants'
 SSL_INPUTS = 'ssl_inputs'
 VALIDATIONS = 'validations'
+PROVIDER_CONTEXT = 'provider_context'
 
 # endregion

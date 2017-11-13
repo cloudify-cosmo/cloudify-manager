@@ -18,7 +18,8 @@ from .. import (
     SERVICE_USER,
     SERVICE_GROUP,
     SECURITY,
-    ENDPOINT_IP
+    ENDPOINT_IP,
+    PROVIDER_CONTEXT
 )
 
 from ..service_names import RESTSERVICE, MANAGER, RABBITMQ, POSTGRESQL
@@ -220,6 +221,12 @@ def _configure_restservice():
     _allow_creating_cluster()
 
 
+def _get_provider_context():
+    context = {'cloudify': config[PROVIDER_CONTEXT]}
+    context['cloudify']['cloudify_agent'] = config[AGENT]
+    return context
+
+
 def _create_db_tables_and_add_defaults():
     # TODO: Separate into its own component
     logger.info('Creating SQL tables and adding default values...')
@@ -236,7 +243,7 @@ def _create_db_tables_and_add_defaults():
         'amqp_username': config[RABBITMQ]['username'],
         'amqp_password': config[RABBITMQ]['password'],
         'postgresql_host': config[POSTGRESQL]['host'],
-        'provider_context': {'cloudify': {'cloudify_agent': config[AGENT]}},
+        'provider_context': _get_provider_context(),
         'authorization_file_path': join(HOME_DIR, 'authorization.conf'),
         'db_migrate_dir': join(
             constants.MANAGER_RESOURCES_HOME,
