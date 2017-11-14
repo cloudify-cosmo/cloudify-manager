@@ -5,7 +5,6 @@ from subprocess import check_output
 
 import logging
 
-from .config import config
 from .constants import BASE_LOG_DIR
 
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(30, 38)

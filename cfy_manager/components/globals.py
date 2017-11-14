@@ -7,7 +7,8 @@ from .service_names import RABBITMQ, MANAGER
 from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, SOURCES, AGENT, CONSTANTS
 
 BROKER_IP = 'broker_ip'
-
+BROKER_USERNAME = 'broker_user'
+BROKER_PASSWORD = 'broker_pass'
 logger = get_logger('Globals')
 
 
@@ -47,6 +48,11 @@ def _set_ip_config():
         networks['default'] = private_ip
 
 
+def _set_agent_broker_credentials():
+    config[AGENT][BROKER_USERNAME] = config[RABBITMQ]['username']
+    config[AGENT][BROKER_PASSWORD] = config[RABBITMQ]['password']
+
+
 def _set_constant_config():
     const_conf = config.setdefault(CONSTANTS, {})
 
@@ -69,6 +75,7 @@ def _set_community_edition():
 
 def set_globals():
     _set_ip_config()
+    _set_agent_broker_credentials()
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
