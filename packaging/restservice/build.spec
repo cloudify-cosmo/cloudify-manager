@@ -33,9 +33,6 @@ virtualenv /opt/manager/env
 export REST_SERVICE_BUILD=True
 /opt/manager/env/bin/pip install --upgrade pip setuptools
 /opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@4.2#egg=cloudify-dsl-parser==4.2
-
-# ldappy is being install without a specific version, until it'll be stable..
-/opt/manager/env/bin/pip install https://github.com/dusking/ldappy/archive/master.tar.gz
 /opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/rest-service"
 
 
@@ -66,7 +63,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 export REST_SERVICE_BUILD=True
 
 if [ ! -d "/opt/manager/env" ]; then virtualenv --no-download /opt/manager/env; fi && \
-/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} ldappy --pre && \
 if [ "%{REPO}" != "cloudify-versions" ]; then
     /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-premium --pre
 fi
