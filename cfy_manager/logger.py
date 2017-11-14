@@ -71,13 +71,12 @@ def _setup_logger():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    _setup_console_logger(logger)
     _setup_file_logger(logger)
 
 
-def _setup_console_logger(logger):
-    # The console log level is determined by the user in the config
-    log_level = config['log_level'].upper()
+def setup_console_logger(verbose=False):
+    logger = logging.getLogger()
+    log_level = logging.DEBUG if verbose else logging.INFO
     sh = logging.StreamHandler(sys.stdout)
     sh.setLevel(log_level)
     sh.setFormatter(ColoredFormatter(FORMAT_MESSAGE))

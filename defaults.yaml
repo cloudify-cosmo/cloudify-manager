@@ -55,9 +55,6 @@ amqpinflux:
   sources:
     amqpinflux_source_url: cloudify-amqp-influx-*.x86_64.rpm
 
-# The log level of `cfy_manager` logs
-log_level: info
-
 influxdb:
   # An IP Endpoint of your InfluxDB Cluster.
   endpoint_ip: ''
