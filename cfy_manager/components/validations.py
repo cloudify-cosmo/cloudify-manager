@@ -121,8 +121,7 @@ def _validate_openssl_version():
     try:
         output = run(['openssl', 'version']).aggr_stdout
     except OSError as e:
-        # TODO: This should be an error, after the image is fixed
-        logger.warning(
+        _errors.append(
             'Cloudify Manager requires OpenSSL {0}, Error: {1}'.format(
                 required_version, e
             )
@@ -132,9 +131,10 @@ def _validate_openssl_version():
     # The output should look like: "LibreSSL 2.2.7"
     version = output.split()[1]
     if LooseVersion(version) < LooseVersion(required_version):
-        _errors.append(
-            "Cloudify Manager requires OpenSSL {0}, current version: {1}"
-            "".format(required_version, version)
+        # TODO: This should be an error, after the image is fixed
+        logger.warning(
+            'Cloudify Manager requires OpenSSL {0}, current version: {1}'
+            ''.format(required_version, version)
         )
 
 

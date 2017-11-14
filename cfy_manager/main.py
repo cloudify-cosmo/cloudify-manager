@@ -58,11 +58,6 @@ COMPONENTS = [
 
 START_TIME = time()
 
-command = argh.EntryPoint(
-    'cfy_manager',
-    dict(description='Cloudify Manager operations')
-)
-
 
 def _print_time():
     running_time = time() - START_TIME
