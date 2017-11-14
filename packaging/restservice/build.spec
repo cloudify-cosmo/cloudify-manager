@@ -33,6 +33,9 @@ virtualenv /opt/manager/env
 export REST_SERVICE_BUILD=True
 /opt/manager/env/bin/pip install --upgrade pip setuptools
 /opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@4.2#egg=cloudify-dsl-parser==4.2
+
+# ldappy is being install without a specific version, until it'll be stable..
+/opt/manager/env/bin/pip install https://github.com/dusking/ldappy/archive/master.tar.gz
 /opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/rest-service"
 
 
@@ -45,16 +48,11 @@ export REST_SERVICE_BUILD=True
 default_version=%{CORE_BRANCH}
 
 mkdir -p %{buildroot}/opt/manager/resources/
-sudo cp -R "/tmp/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
+cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
 
-# ldappy is being install without a specific version, until it'll be stable..
-
-sudo /tmp/env/bin/pip wheel virtualenv --wheel-dir %{buildroot}/var/wheels/%{name} && \
-sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/dusking/ldappy/archive/master.tar.gz && \
 if [ "%{REPO}" != "cloudify-versions" ]; then
-    sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://%{GITHUB_USERNAME}:%{GITHUB_PASSWORD}@github.com/cloudify-cosmo/cloudify-premium/archive/%{CORE_BRANCH}.tar.gz
+    /opt/manager/env/bin/pip https://%{GITHUB_USERNAME}:%{GITHUB_PASSWORD}@github.com/cloudify-cosmo/cloudify-premium/archive/%{CORE_BRANCH}.tar.gz
 fi
-sudo -E /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} /tmp/rest-service
 
 
 %pre
