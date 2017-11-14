@@ -2,8 +2,8 @@
 
 
 Name:           cloudify-rest-service
-Version:        %{VERSION}
-Release:        %{PRERELEASE}
+Version:        4.2
+Release:        1%{?dist}
 Summary:        Cloudify's REST Service
 Group:          Applications/Multimedia
 License:        Apache 2.0
