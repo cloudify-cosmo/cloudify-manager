@@ -12,7 +12,8 @@ Vendor:         Gigaspaces Inc.
 Prefix:         %{_prefix}
 Packager:       Gigaspaces Inc.
 
-Requires:       postgresql-libs, nginx >= 1.12
+BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, postgresql-devel, git
+Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12
 Requires(pre):  shadow-utils
 
 
@@ -24,20 +25,21 @@ Cloudify's REST Service.
 
 %prep
 
-set +e
-pip=$(which pip)
-set -e
-
-[ ! -z $pip ] || curl --show-error --silent --retry 5 https://bootstrap.pypa.io/get-pip.py | python
-pip install virtualenv
-
 
 %build
 
 virtualenv /opt/manager/env
 
+export REST_SERVICE_BUILD=True
+/opt/manager/env/bin/pip install --upgrade pip setuptools
+/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@4.2#egg=cloudify-dsl-parser==4.2
+/opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/rest-service"
+
 
 %install
+
+mkdir -p %{buildroot}/opt/manager
+mv /opt/manager/env %{buildroot}/opt/manager
 
 export REST_SERVICE_BUILD=True
 default_version=%{CORE_BRANCH}
