@@ -30,10 +30,16 @@ Cloudify's REST Service.
 
 virtualenv /opt/manager/env
 
+default_version=%{CORE_BRANCH}
 export REST_SERVICE_BUILD=True
+
 /opt/manager/env/bin/pip install --upgrade pip setuptools
 /opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@4.2#egg=cloudify-dsl-parser==4.2
 /opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/rest-service"
+
+if [ "%{REPO}" != "cloudify-versions" ]; then
+    /opt/manager/env/bin/pip https://%{GITHUB_USERNAME}:%{GITHUB_PASSWORD}@github.com/cloudify-cosmo/cloudify-premium/archive/%{CORE_BRANCH}.tar.gz
+fi
 
 
 %install
@@ -41,15 +47,8 @@ export REST_SERVICE_BUILD=True
 mkdir -p %{buildroot}/opt/manager
 mv /opt/manager/env %{buildroot}/opt/manager
 
-export REST_SERVICE_BUILD=True
-default_version=%{CORE_BRANCH}
-
 mkdir -p %{buildroot}/opt/manager/resources/
 cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
-
-if [ "%{REPO}" != "cloudify-versions" ]; then
-    /opt/manager/env/bin/pip https://%{GITHUB_USERNAME}:%{GITHUB_PASSWORD}@github.com/cloudify-cosmo/cloudify-premium/archive/%{CORE_BRANCH}.tar.gz
-fi
 
 
 %pre
