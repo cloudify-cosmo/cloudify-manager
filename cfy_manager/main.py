@@ -27,6 +27,9 @@ from .components import manager_ip_setter
 from .components.globals import set_globals
 from .components.validations import validate
 
+from .components.service_names import MANAGER
+from .components import SECURITY, PRIVATE_IP, PUBLIC_IP, ADMIN_PASSWORD
+
 from .config import config
 from .logger import get_logger, setup_console_logger
 
@@ -82,16 +85,28 @@ def _exception_handler(type_, value, traceback):
 sys.excepthook = _exception_handler
 
 
-def _load_config_and_logger(verbose, inputs=None):
+def _load_config_and_logger(verbose=False,
+                            private_ip=None,
+                            public_ip=None,
+                            admin_password=None):
     setup_console_logger(verbose)
-    config.load_config(inputs)
+    config.load_config()
+    manager_config = config[MANAGER]
+    if private_ip:
+        manager_config[PRIVATE_IP] = private_ip
+    if public_ip:
+        manager_config[PUBLIC_IP] = public_ip
+    if admin_password:
+        manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
 
 
-@argh.arg('-i', '--inputs', action='append')
-def install(inputs=None, verbose=False):
+def install(verbose=False,
+            private_ip=None,
+            public_ip=None,
+            admin_password=None):
     """ Install Cloudify Manager """
 
-    _load_config_and_logger(verbose, inputs)
+    _load_config_and_logger(verbose, private_ip, public_ip, admin_password)
 
     logger.notice('Installing Cloudify Manager...')
     validate()
@@ -105,11 +120,13 @@ def install(inputs=None, verbose=False):
     _print_time()
 
 
-@argh.arg('-i', '--inputs', action='append')
-def configure(inputs=None, verbose=False):
+def configure(verbose=False,
+              private_ip=None,
+              public_ip=None,
+              admin_password=None):
     """ Configure Cloudify Manager """
 
-    _load_config_and_logger(verbose, inputs)
+    _load_config_and_logger(verbose, private_ip, public_ip, admin_password)
 
     logger.notice('Configuring Cloudify Manager...')
     validate(skip_validations=True)

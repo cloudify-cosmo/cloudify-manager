@@ -51,17 +51,13 @@ class Config(dict):
                     'YAML file:\n{1}'.format(path_to_yaml, e)
                 )
 
-    def load_config(self, inputs=None):
+    def load_config(self):
         self._load_defaults_config()
         self._load_user_config()
-        self._load_inputs(inputs)
 
     def add_temp_path_to_clean(self, new_path_to_remove):
         paths_to_remove = self.setdefault('temp_paths_to_remove', [])
         paths_to_remove.append(new_path_to_remove)
-
-    def _load_inputs(self, inputs):
-        pass
 
 
 config = Config()
