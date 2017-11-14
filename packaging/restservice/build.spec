@@ -12,7 +12,7 @@ Vendor:         Gigaspaces Inc.
 Prefix:         %{_prefix}
 Packager:       Gigaspaces Inc.
 
-BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, postgresql-devel, git
+BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, postgresql-devel, openldap-devel, git
 Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12
 Requires(pre):  shadow-utils
 
