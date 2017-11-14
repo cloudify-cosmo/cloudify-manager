@@ -27,7 +27,8 @@ from .components import manager_ip_setter
 from .components.globals import set_globals
 from .components.validations import validate
 
-from .logger import get_logger
+from .config import config
+from .logger import get_logger, setup_console_logger
 
 from .utils.files import remove_temp_files
 from .utils.certificates import create_internal_certs
@@ -81,8 +82,16 @@ def _exception_handler(type_, value, traceback):
 sys.excepthook = _exception_handler
 
 
-def install():
+def _load_config_and_logger(verbose, inputs=None):
+    setup_console_logger(verbose)
+    config.load_config(inputs)
+
+
+@argh.arg('-i', '--inputs', action='append')
+def install(inputs=None, verbose=False):
     """ Install Cloudify Manager """
+
+    _load_config_and_logger(verbose, inputs)
 
     logger.notice('Installing Cloudify Manager...')
     validate()
@@ -96,8 +105,11 @@ def install():
     _print_time()
 
 
-def configure():
+@argh.arg('-i', '--inputs', action='append')
+def configure(inputs=None, verbose=False):
     """ Configure Cloudify Manager """
+
+    _load_config_and_logger(verbose, inputs)
 
     logger.notice('Configuring Cloudify Manager...')
     validate(skip_validations=True)
@@ -111,8 +123,10 @@ def configure():
     _print_time()
 
 
-def remove():
+def remove(verbose=False):
     """ Uninstall Cloudify Manager """
+
+    _load_config_and_logger(verbose)
 
     logger.notice('Removing Cloudify Manager...')
 
