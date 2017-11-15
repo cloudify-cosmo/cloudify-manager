@@ -8,6 +8,6 @@
         notifempty
         sharedscripts
         postrotate
-                [ -f /var/run/gunicorn.pid ] && kill -USR1 $(cat /var/run/gunicorn.pid)
+                [ -f /run/cloudify-restservice/pid ] && kill -USR1 $(cat /run/cloudify-restservice/pid)
         endscript
 }
