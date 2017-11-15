@@ -223,7 +223,7 @@ def generate_ca_cert():
           help='File containing the cert metadata. It should be a '
           'JSON file containing an object with the '
           '"internal_rest_host" and "networks" fields.')
-@argh.arg('--manager_ip', help='The IP of this machine on the default network')
+@argh.arg('--manager-ip', help='The IP of this machine on the default network')
 def create_internal_certs(manager_ip=None,
                           metadata=const.CERT_METADATA_FILE_PATH):
     """
