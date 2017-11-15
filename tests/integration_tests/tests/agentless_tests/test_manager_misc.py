@@ -19,13 +19,12 @@ import tarfile
 import tempfile
 from contextlib import closing
 
-from integration_tests import ManagerTestCase
+from integration_tests import AgentlessTestCase
 
 
-class MiscManagerTest(ManagerTestCase):
+class MiscManagerTest(AgentlessTestCase):
 
     def test_cfy_logs(self):
-        self.run_manager()
         self.logger.info('Testing `cfy logs download`')
         with tempfile.NamedTemporaryFile() as tempf:
             self.cfy.logs.download(output_path=tempf.name)
@@ -46,7 +45,6 @@ class MiscManagerTest(ManagerTestCase):
             'test ! -s /var/log/cloudify/nginx/cloudify.access.log')
 
     def test_tmux_session(self):
-        self.run_manager()
         self.logger.info('Test list without tmux installed...')
         try:
             self.cfy.ssh(list_sessions=True)
@@ -73,10 +71,8 @@ class MiscManagerTest(ManagerTestCase):
         and performs logrotation based on the manager blueprint's provided
         logrotate configuration. It then validates that logrotation occurs.
         """
-        self.run_manager()
         logs_dir = '/var/log/cloudify'
         test_log_files = [
-            'elasticsearch/elasticsearch.log',
             'influxdb/log.txt',
             'mgmtworker/logs/test.log',
             'rabbitmq/rabbit@cloudifyman.log',
@@ -84,7 +80,8 @@ class MiscManagerTest(ManagerTestCase):
             'logstash/logstash.log',
             'nginx/cloudify.access.log',
             'riemann/riemann.log',
-            'webui/backend.log'
+            'stage/app.log',
+            'composer/app.log'
         ]
         # the mgmtworker doesn't create a log file upon loading so we're
         # generating one for him.
