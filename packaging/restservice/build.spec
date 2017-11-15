@@ -9,7 +9,6 @@ Group:          Applications/Multimedia
 License:        Apache 2.0
 URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Gigaspaces Inc.
-Prefix:         %{_prefix}
 Packager:       Gigaspaces Inc.
 
 BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, postgresql-devel, openldap-devel, git
