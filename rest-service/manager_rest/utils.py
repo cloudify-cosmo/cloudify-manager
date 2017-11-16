@@ -193,6 +193,15 @@ def is_administrator(tenant):
     )
 
 
+def is_system_administrator(tenant):
+    system_administrators_roles = \
+        config.instance.authorization_permissions['system_administrators']
+    return (
+        current_user.id == constants.BOOTSTRAP_ADMIN_ID or
+        current_user.has_role_in(tenant, system_administrators_roles)
+    )
+
+
 @LocalProxy
 def current_tenant():
     tenant = getattr(g, 'current_tenant', None)

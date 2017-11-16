@@ -28,6 +28,7 @@ from flask_security import current_user
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
+from manager_rest.utils import is_system_administrator
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest.storage import get_storage_manager, models, get_node
@@ -1260,26 +1261,48 @@ class ResourceManager(object):
         return AvailabilityState.PRIVATE if private_resource \
             else AvailabilityState.TENANT
 
-    def set_global_availability(self, model_class, element_id):
-        resource = None
+    def set_availability(self, model_class, resource_id, availability):
+        resource = self.sm.get(model_class, resource_id)
+        self._validate_availability_value(model_class,
+                                          resource,
+                                          availability)
+        # Set the resource_availability
+        resource.resource_availability = availability
+        resource.updated_at = utils.get_formatted_timestamp()
+        return self.sm.update(resource)
+
+    def _validate_availability_value(self,
+                                     model_class,
+                                     resource,
+                                     new_availability):
+        current_availability = resource.resource_availability
+        if new_availability == AvailabilityState.GLOBAL:
+            self._validate_global_permitted(model_class, resource)
+        elif new_availability == AvailabilityState.TENANT and \
+                current_availability == AvailabilityState.GLOBAL:
+            raise manager_exceptions.IllegalActionError(
+                "Can't set the availability of `{0}` to tenant because it is "
+                "already global".format(resource.id)
+            )
+
+    def _validate_global_permitted(self, model_class, resource):
+        # Only admin is allowed to set a resource to global
+        if not is_system_administrator(self.sm.current_tenant):
+            raise manager_exceptions.ForbiddenError(
+                'User `{0}` is not permitted to set a resource to global'.
+                format(current_user.username))
+
         if model_class == models.Plugin:
-            resource = self.sm.get(model_class, element_id)
             unique_filter = {model_class.package_name: resource.package_name,
                              model_class.archive_name: resource.archive_name}
         else:
-            unique_filter = {model_class.id: element_id}
+            unique_filter = {model_class.id: resource.id}
 
         # Check if the resource is unique
         if self.sm.count(model_class, unique_filter) > 1:
             raise manager_exceptions.IllegalActionError(
                 "Can't set the availability of `{0}` to global because it "
-                "also exists in other tenants".format(element_id))
-
-        # Set the resource_availability to global
-        resource = resource or self.sm.get(model_class, element_id)
-        resource.resource_availability = AvailabilityState.GLOBAL
-        resource.updated_at = utils.get_formatted_timestamp()
-        return self.sm.update(resource)
+                "also exists in other tenants".format(resource.id))
 
     def validate_modification_permitted(self, resource):
         # A global resource can't be modify from outside its tenant

@@ -29,6 +29,8 @@ def setup_resources(api):
         'BlueprintsId': 'blueprints/<string:blueprint_id>',
         'BlueprintsIdArchive': 'blueprints/<string:blueprint_id>/archive',
         'BlueprintsSetGlobal': 'blueprints/<string:blueprint_id>/set-global',
+        'BlueprintsSetAvailability': 'blueprints/<string:blueprint_id>/'
+                                     'set-availability',
         'Snapshots': 'snapshots',
         'SnapshotsId': 'snapshots/<string:snapshot_id>',
         'SnapshotsIdArchive': 'snapshots/<string:snapshot_id>/archive',
@@ -38,6 +40,8 @@ def setup_resources(api):
         'Deployments': 'deployments',
         'DeploymentsId': 'deployments/<string:deployment_id>',
         'DeploymentsIdOutputs': 'deployments/<string:deployment_id>/outputs',
+        'DeploymentsSetAvailability': 'deployments/<string:deployment_id>/'
+                                      'set-availability',
         'DeploymentModifications': 'deployment-modifications',
         'DeploymentModificationsId': 'deployment-modifications/'
                                      '<string:modification_id>',
@@ -60,6 +64,8 @@ def setup_resources(api):
         'PluginsId': 'plugins/<string:plugin_id>',
         'PluginsArchive': 'plugins/<string:plugin_id>/archive',
         'PluginsSetGlobal': 'plugins/<string:plugin_id>/set-global',
+        'PluginsSetAvailability': 'plugins/<string:plugin_id>/'
+                                  'set-availability',
         'MaintenanceMode': 'maintenance',
         'MaintenanceModeAction': 'maintenance/<string:maintenance_action>',
 
@@ -87,6 +93,7 @@ def setup_resources(api):
         'Secrets': 'secrets',
         'SecretsKey': 'secrets/<string:key>',
         'SecretsSetGlobal': 'secrets/<string:key>/set-global',
+        'SecretsSetAvailability': 'secrets/<string:key>/set-availability',
         'ManagerConfig': 'config',
     }
 

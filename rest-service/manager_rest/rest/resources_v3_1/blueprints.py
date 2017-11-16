@@ -16,8 +16,10 @@
 from manager_rest.storage import models
 from manager_rest.rest import rest_decorators
 from manager_rest.security import SecuredResource
+from manager_rest.constants import AVAILABILITY_VALUES
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage.models_states import AvailabilityState
 
 
 class BlueprintsSetGlobal(SecuredResource):
@@ -29,7 +31,23 @@ class BlueprintsSetGlobal(SecuredResource):
         """
         Set the blueprint's availability to global
         """
-        return get_resource_manager().set_global_availability(
+        return get_resource_manager().set_availability(
             models.Blueprint,
-            blueprint_id
+            blueprint_id,
+            AvailabilityState.GLOBAL
         )
+
+
+class BlueprintsSetAvailability(SecuredResource):
+
+    @rest_decorators.exceptions_handled
+    @authorize('resource_set_availability')
+    @rest_decorators.verify_params(AVAILABILITY_VALUES)
+    @rest_decorators.marshal_with(models.Blueprint)
+    def patch(self, blueprint_id, availability):
+        """
+        Set the blueprint's availability
+        """
+        return get_resource_manager().set_availability(models.Blueprint,
+                                                       blueprint_id,
+                                                       availability)
