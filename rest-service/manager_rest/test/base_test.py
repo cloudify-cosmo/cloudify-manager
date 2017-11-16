@@ -239,7 +239,7 @@ class BaseServerTestCase(unittest.TestCase):
         finally:
             os.remove(temp_auth_file)
 
-        server.app.config[constants.CURRENT_TENANT_CONFIG] = default_tenant
+        utils.set_current_tenant(default_tenant)
 
     @staticmethod
     def _get_app(flask_app):

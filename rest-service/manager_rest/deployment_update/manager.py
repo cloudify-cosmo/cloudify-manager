@@ -23,7 +23,6 @@ from dsl_parser import exceptions as parser_exceptions
 
 from manager_rest import config
 from manager_rest.dsl_functions import get_secret_method
-from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest import app_context, manager_exceptions
 from manager_rest.storage import get_storage_manager, models
 from manager_rest.storage.models_states import ExecutionState
@@ -101,7 +100,7 @@ class DeploymentUpdateManager(object):
         blueprint_resource_dir = os.path.join(
             file_server_root,
             'blueprints',
-            current_app.config[CURRENT_TENANT_CONFIG].name,
+            utils.current_tenant.name,
             blueprint_id)
         # The dsl parser expects a URL
         blueprint_resource_dir_url = 'file:{0}'.format(blueprint_resource_dir)

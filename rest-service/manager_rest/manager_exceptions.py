@@ -471,3 +471,8 @@ class DeploymentPluginNotFound(ManagerException):
             *args,
             **kwargs
         )
+
+
+class TenantNotProvided(ForbiddenError):
+    def __init__(self, *args, **kwargs):
+        super(TenantNotProvided, self).__init__(*args, **kwargs)
