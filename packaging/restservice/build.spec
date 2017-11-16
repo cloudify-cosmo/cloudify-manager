@@ -27,7 +27,7 @@ Cloudify's REST Service.
 
 virtualenv /opt/manager/env
 
-export REST_SERVICE_BUILD=True
+export REST_SERVICE_BUILD=True  # TODO: remove this hack from setup.py
 
 /opt/manager/env/bin/pip install --upgrade pip setuptools
 /opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@4.2#egg=cloudify-dsl-parser==4.2
