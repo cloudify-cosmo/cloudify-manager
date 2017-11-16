@@ -27,7 +27,6 @@ Cloudify's REST Service.
 
 virtualenv /opt/manager/env
 
-default_version=%{CORE_BRANCH}
 export REST_SERVICE_BUILD=True
 
 /opt/manager/env/bin/pip install --upgrade pip setuptools
