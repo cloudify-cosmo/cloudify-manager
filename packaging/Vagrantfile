@@ -23,6 +23,7 @@ PACKAGER_BRANCH = ENV['PACKAGER_BRANCH']
 REPO = ENV['REPO']
 GITHUB_USERNAME = ENV['GITHUB_USERNAME']
 GITHUB_PASSWORD = ENV['GITHUB_PASSWORD']
+WORKSPACE = ENV['WORKSPACE']
 
 CENTOS7_OFFICIAL_BOX_URL = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7.box'
 
@@ -44,7 +45,7 @@ Vagrant.configure('2') do |config|
       aws.tags = { "Name" => "vagrant rest 7.0 build" }
       aws.security_groups = "vagrant_linux_build"
     end
-    rest.vm.provision "file", source: "..", destination: "repo"
+    rest.vm.provision "file", source: "#{WORKSPACE}/cloudify-manager", destination: "repo"
     rest.vm.provision "shell" do |s|
       s.inline = "repo/restservice/provision.sh"
       s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
