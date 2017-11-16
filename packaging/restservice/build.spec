@@ -34,10 +34,6 @@ export REST_SERVICE_BUILD=True
 /opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-dsl-parser@4.2#egg=cloudify-dsl-parser==4.2
 /opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/rest-service"
 
-if [ "%{REPO}" != "cloudify-versions" ]; then
-    /opt/manager/env/bin/pip install https://%{GITHUB_USERNAME}:%{GITHUB_PASSWORD}@github.com/cloudify-cosmo/cloudify-premium/archive/%{CORE_BRANCH}.tar.gz
-fi
-
 
 %install
 
