@@ -13,14 +13,26 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .deployments import DeploymentsId       # NOQA
+from .manager import SSLConfig                   # NOQA
 
-from .manager import SSLConfig               # NOQA
+from .manager_config import ManagerConfig        # NOQA
 
-from .manager_config import ManagerConfig    # NOQA
+from .secrets import (                           # NOQA
+    SecretsSetGlobal,
+    SecretsSetAvailability
+)
 
-from .blueprints import BlueprintsSetGlobal  # NOQA
+from .plugins import (                           # NOQA
+    PluginsSetGlobal,
+    PluginsSetAvailability
+)
 
-from .secrets import SecretsSetGlobal        # NOQA
+from .deployments import (                       # NOQA
+    DeploymentsId,
+    DeploymentsSetAvailability
+)
 
-from .plugins import PluginsSetGlobal        # NOQA
+from .blueprints import (                        # NOQA
+    BlueprintsSetGlobal,
+    BlueprintsSetAvailability
+)

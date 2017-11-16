@@ -493,3 +493,36 @@ def no_external_authenticator(action):
     return no_external_authenticator_dec
 
 # endregion
+
+
+# region V3.1 decorators
+
+def verify_params(params):
+    """
+    Decorator for verifying the request params.
+    :param params: A dict representing the possible valid values for each
+                   parameter.
+    :return: A decorator for validating and injecting the accepted params.
+    """
+    def verify_params_decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if request.content_type != 'application/json':
+                raise manager_exceptions.UnsupportedContentTypeError(
+                    'Content type must be application/json')
+
+            request_dict = request.json
+            for param, values in params.iteritems():
+                if request_dict[param] and request_dict[param] in values:
+                    kwargs[param] = request_dict[param]
+                else:
+                    raise manager_exceptions.BadParametersError(
+                        "Invalid {0}: `{1}`. Valid {0}'s values are: {2}".
+                        format(param, request_dict[param], values)
+                    )
+
+            return func(*args, **kwargs)
+        return wrapper
+    return verify_params_decorator
+
+# endregion

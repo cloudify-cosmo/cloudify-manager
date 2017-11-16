@@ -47,3 +47,5 @@ FILE_SERVER_SNAPSHOTS_FOLDER = 'snapshots'
 FILE_SERVER_PLUGINS_FOLDER = 'plugins'
 
 BROKER_SSL_PORT = 5671
+
+AVAILABILITY_VALUES = {'availability': ['tenant', 'global']}
