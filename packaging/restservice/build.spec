@@ -68,9 +68,6 @@ fi
 %preun
 %postun
 
-rm -rf /opt/manager/resources
-rm -rf /var/wheels/${name}
-
 
 %files
 
