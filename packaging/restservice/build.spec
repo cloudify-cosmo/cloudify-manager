@@ -1,5 +1,3 @@
-%define _rpmdir /tmp
-
 
 Name:           cloudify-rest-service
 Version:        4.2
