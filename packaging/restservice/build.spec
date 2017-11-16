@@ -49,6 +49,9 @@ mv /opt/manager/env %{buildroot}/opt/manager
 mkdir -p %{buildroot}/opt/manager/resources/
 cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/manager/resources/"
 
+# Create the log dir
+mkdir -p %{buildroot}/var/log/cloudify/rest
+
 
 %pre
 
@@ -76,4 +79,4 @@ fi
 %defattr(-,root,root)
 /opt/manager
 
-%dir %attr(-,cfyuser,adm,750) /var/log/cloudify/rest
+%attr(750,cfyuser,adm) /var/log/cloudify/rest
