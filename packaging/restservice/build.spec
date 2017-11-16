@@ -61,13 +61,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 %post
 
-export REST_SERVICE_BUILD=True
-
-if [ ! -d "/opt/manager/env" ]; then virtualenv --no-download /opt/manager/env; fi && \
-if [ "%{REPO}" != "cloudify-versions" ]; then
-    /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-premium --pre
-fi
-# sudo cp -R "/tmp/resources/rest-service/cloudify/" "/opt/manager/resources/"
 
 
 %preun
