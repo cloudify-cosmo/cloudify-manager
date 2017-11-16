@@ -20,9 +20,8 @@ import psutil
 from flask_security import current_user
 from manager_rest.storage.models_base import db
 from flask import current_app, has_request_context
-from manager_rest import manager_exceptions, config
+from manager_rest import manager_exceptions, config, utils
 from manager_rest.utils import all_tenants_authorization, is_administrator
-from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.storage.models_states import AvailabilityState
 from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
@@ -418,8 +417,10 @@ class SQLStorageManager(object):
     def current_tenant(self):
         """Return the tenant with which the user accessed the app
         """
-        if CURRENT_TENANT_CONFIG in current_app.config:
-            return current_app.config[CURRENT_TENANT_CONFIG]
+        try:
+            return utils.current_tenant._get_current_object()
+        except manager_exceptions.TenantNotProvided:
+            return None
 
     def get(self,
             model_class,

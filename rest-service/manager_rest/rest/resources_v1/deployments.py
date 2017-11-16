@@ -17,14 +17,12 @@
 import os
 import shutil
 
-from flask import current_app
 from flask_restful import types
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
 
-from manager_rest import config
-from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest import config, utils
 from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
 from manager_rest.maintenance import is_bypass_maintenance_mode
 from manager_rest.dsl_functions import evaluate_deployment_outputs
@@ -125,7 +123,7 @@ class DeploymentsId(SecuredResource):
             private_resource=args.private_resource,
             skip_plugins_validation=self.get_skip_plugin_validation_flag(
                 request_dict)
-            )
+        )
         return deployment, 201
 
     def create_request_schema(self):
@@ -172,7 +170,7 @@ class DeploymentsId(SecuredResource):
         deployment_folder = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_DEPLOYMENTS_FOLDER,
-            current_app.config[CURRENT_TENANT_CONFIG].name,
+            utils.current_tenant.name,
             deployment.id)
         if os.path.exists(deployment_folder):
             shutil.rmtree(deployment_folder)

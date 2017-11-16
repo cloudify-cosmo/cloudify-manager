@@ -148,7 +148,7 @@ def setup_flask_app(tenant_name):
     app = flask_utils.setup_flask_app()
     flask_utils.set_admin_current_user(app)
     tenant = flask_utils.get_tenant_by_name(tenant_name)
-    flask_utils.set_tenant_in_app(app, tenant)
+    flask_utils.set_tenant_in_app(tenant)
 
 
 if __name__ == '__main__':

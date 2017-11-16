@@ -15,7 +15,7 @@
 
 from flask import current_app, request
 
-from manager_rest import config
+from manager_rest import config, utils
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -26,8 +26,7 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              NotFoundError)
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER,
-                                    CURRENT_TENANT_CONFIG)
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
 
 from .. import rest_decorators, rest_utils
 from ...security.authentication import authenticator
@@ -65,7 +64,7 @@ class FileServerAuth(SecuredResource):
                     uri_tenant,
                     filters={'name': uri_tenant}
                 )
-                current_app.config[CURRENT_TENANT_CONFIG] = tenant
+                utils.set_current_tenant(tenant)
                 if FileServerAuth._is_global_blueprint(uri):
                     return
 

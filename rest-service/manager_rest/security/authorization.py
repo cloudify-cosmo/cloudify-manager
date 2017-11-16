@@ -1,16 +1,15 @@
 
 from functools import wraps
 
-from flask import request, current_app
+from flask import request
 from flask_security import current_user
 
-from manager_rest import config
+from manager_rest import config, utils
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 from manager_rest.manager_exceptions import NotFoundError, ForbiddenError
-from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
-                                    CURRENT_TENANT_CONFIG)
+from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
 
 def authorize(action, tenant_for_auth=None, get_tenant_from='header'):
@@ -38,7 +37,7 @@ def authorize(action, tenant_for_auth=None, get_tenant_from='header'):
                         tenant_name,
                         filters={'name': tenant_name}
                     )
-                    current_app.config[CURRENT_TENANT_CONFIG] = tenant
+                    utils.set_current_tenant(tenant)
                 except NotFoundError:
                     raise ForbiddenError(
                         'Authorization failed: Tried to authenticate with '

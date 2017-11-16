@@ -17,13 +17,11 @@
 import os
 import shutil
 
-from flask import current_app
 from flask_restful_swagger import swagger
 
-from manager_rest import config
+from manager_rest import config, utils
 from manager_rest.constants import (
     SUPPORTED_ARCHIVE_TYPES,
-    CURRENT_TENANT_CONFIG,
     FILE_SERVER_RESOURCES_FOLDER,
     FILE_SERVER_BLUEPRINTS_FOLDER,
     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
@@ -193,13 +191,13 @@ class BlueprintsId(SecuredResource):
         blueprint_folder = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_BLUEPRINTS_FOLDER,
-            current_app.config[CURRENT_TENANT_CONFIG].name,
+            utils.current_tenant.name,
             blueprint.id)
         shutil.rmtree(blueprint_folder)
         uploaded_blueprint_folder = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            current_app.config[CURRENT_TENANT_CONFIG].name,
+            utils.current_tenant.name,
             blueprint.id)
         shutil.rmtree(uploaded_blueprint_folder)
 
