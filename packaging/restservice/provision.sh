@@ -2,6 +2,7 @@
 
 function build_rpm() {
     echo "Building RPM..."
+    sudo yum -y update
     sudo yum install -y epel-release
     sudo yum install -y mock
     sudo usermod -a -G mock $USER
