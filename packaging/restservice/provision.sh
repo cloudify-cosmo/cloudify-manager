@@ -10,13 +10,12 @@ function build_rpm() {
     echo -e "\nconfig_opts['rpmbuild_networking'] = True\n" | sudo tee -a /etc/mock/site-defaults.cfg
 
     # Build the source RPM
-    mock --buildsrpm --spec cloudify-manager/packaging/restservice/build.spec --sources cloudify-manager/
-    cat /var/lib/mock/epel-7-x86_64/result/*.log
+    mock --verbose --buildsrpm --spec cloudify-manager/packaging/restservice/build.spec --sources cloudify-manager/
     cp /var/lib/mock/epel-7-x86_64/result/*.src.rpm .
     # mock strongly assumes that root is not required for building RPMs.
     # Here we work around that assumption by changing the onwership of /opt
     # inside the CHROOT to the mockbuild user
-    mock --chroot -- chown -R mockbuild /opt
+    mock --verbose --chroot -- chown -R mockbuild /opt
     # Build the RPM
     mock *.src.rpm --no-clean
 }
