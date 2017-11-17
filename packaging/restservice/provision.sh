@@ -11,6 +11,7 @@ function build_rpm() {
 
     # Build the source RPM
     mock --buildsrpm --spec cloudify-manager/packaging/restservice/build.spec --sources cloudify-manager/
+    cat /var/lib/mock/epel-7-x86_64/result/*.log
     cp /var/lib/mock/epel-7-x86_64/result/*.src.rpm .
     # mock strongly assumes that root is not required for building RPMs.
     # Here we work around that assumption by changing the onwership of /opt
