@@ -29,6 +29,15 @@ CENTOS7_OFFICIAL_BOX_URL = 'http://cloud.centos.org/centos/7/vagrant/x86_64/imag
 CENTOS7_AMI = "ami-8df8c1eb"
 CENTOS7_USER = "centos"
 
+AWS_USER_DATA = <<-EOF
+#cloud-config
+write_files:
+-   path: /etc/sudoers.d/999-vagrant-cloud-init-requiretty
+    permissions: 440
+    content: |
+        Defaults:centos !requiretty
+EOF
+
 Vagrant.configure('2') do |config|
   config.vm.define "restservice" do |rest|
     #dummy box, will be overriden
@@ -46,6 +55,7 @@ Vagrant.configure('2') do |config|
       override.nfs.functional = false
       aws.tags = { "Name" => "vagrant rest 7.0 build" }
       aws.security_groups = "vagrant_linux_build"
+      aws.user_data = AWS_USER_DATA
     end
     rest.vm.provision "file", source: "#{WORKSPACE}/cloudify-manager", destination: "cloudify-manager"
     rest.vm.provision "shell" do |s|
