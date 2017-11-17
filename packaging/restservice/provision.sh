@@ -30,9 +30,13 @@ export REPO=$3
 export GITHUB_USERNAME=$4
 export GITHUB_PASSWORD=$5
 
-curl -u $GITHUB_USERNAME:$GITHUB_PASSWORD https://raw.githubusercontent.com/cloudify-cosmo/${REPO}/${CORE_BRANCH}/packages-urls/common_build_env.sh -o ./common_build_env.sh &&
+echo Repo: $REPO
+
+URL=https://raw.githubusercontent.com/cloudify-cosmo/${REPO}/${CORE_BRANCH}/packages-urls/common_build_env.sh
+echo $URL
+curl -Of -u $GITHUB_USERNAME:$GITHUB_PASSWORD $URL
 source common_build_env.sh &&
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${CORE_BRANCH}/common/provision.sh -o ./common-provision.sh &&
+curl -Of https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${CORE_BRANCH}/common/provision.sh
 source common-provision.sh
 
 
