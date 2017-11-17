@@ -36,7 +36,7 @@ URL=https://raw.githubusercontent.com/cloudify-cosmo/${REPO}/${CORE_BRANCH}/pack
 echo $URL
 curl -Of -u $GITHUB_USERNAME:$GITHUB_PASSWORD $URL
 source common_build_env.sh &&
-curl -Of https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${CORE_BRANCH}/common/provision.sh
+curl -f https://raw.githubusercontent.com/cloudify-cosmo/cloudify-packager/${CORE_BRANCH}/common/provision.sh -o common-provision.sh
 source common-provision.sh
 
 
