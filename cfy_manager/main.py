@@ -100,6 +100,15 @@ def _load_config_and_logger(verbose=False,
         manager_config[SECURITY][ADMIN_PASSWORD] = admin_password
 
 
+def _print_finish_message():
+    manager_config = config[MANAGER]
+    logger.notice('Manager is up at {0}'.format(manager_config[PUBLIC_IP]))
+    logger.notice('#' * 50)
+    logger.notice('Manager password is {0}'.format(
+        manager_config[SECURITY][ADMIN_PASSWORD]))
+    logger.notice('#' * 50)
+
+
 def install(verbose=False,
             private_ip=None,
             public_ip=None,
@@ -117,6 +126,7 @@ def install(verbose=False,
 
     remove_temp_files()
     logger.notice('Cloudify Manager successfully installed!')
+    _print_finish_message()
     _print_time()
 
 
@@ -137,6 +147,7 @@ def configure(verbose=False,
 
     remove_temp_files()
     logger.notice('Cloudify Manager successfully configured!')
+    _print_finish_message()
     _print_time()
 
 

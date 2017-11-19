@@ -1,10 +1,14 @@
+import string
+import random
+
 from .. import constants
 from ..config import config
 from ..logger import get_logger
 
-from .service_names import RABBITMQ, MANAGER
+from .service_names import RABBITMQ, MANAGER, INFLUXB
 
-from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, SOURCES, AGENT, CONSTANTS
+from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, SOURCES, AGENT, CONSTANTS,\
+    ADMIN_PASSWORD
 
 BROKER_IP = 'broker_ip'
 BROKER_USERNAME = 'broker_user'
@@ -73,6 +77,31 @@ def _set_community_edition():
         logger.info('Working with `Premium` edition')
 
 
+def _set_admin_password():
+    if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
+        config[MANAGER][SECURITY][ADMIN_PASSWORD] = _generate_password()
+
+
+def _generate_password(length=12):
+    chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    password = ''.join(random.choice(chars) for _ in range(length))
+    logger.info('Generated password: {0}'.format(password))
+    return password
+
+
+def _set_influx_db_endpoint():
+    influxdb_endpoint_ip = config[INFLUXB][ENDPOINT_IP]
+
+    if influxdb_endpoint_ip:
+        config[INFLUXB]['is_internal'] = False
+        logger.info('External InfluxDB Endpoint IP provided: {0}'.format(
+            influxdb_endpoint_ip))
+    else:
+        config[INFLUXB]['is_internal'] = True
+        influxdb_endpoint_ip = config[MANAGER][PRIVATE_IP]
+        config[INFLUXB][ENDPOINT_IP] = influxdb_endpoint_ip
+
+
 def set_globals():
     _set_ip_config()
     _set_agent_broker_credentials()
@@ -80,3 +109,5 @@ def set_globals():
     _set_external_port_and_protocol()
     _set_constant_config()
     _set_community_edition()
+    _set_admin_password()
+    _set_influx_db_endpoint()

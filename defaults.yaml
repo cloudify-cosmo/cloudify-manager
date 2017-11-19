@@ -16,7 +16,7 @@ manager:
 
     # Username and password of the Cloudify Manager administrator.
     admin_username: admin
-    admin_password: admin
+    admin_password: ''
 
   sources:
     manager_resources_package: /opt/cloudify-manager-install/cloudify-manager-resources_*.tar.gz
