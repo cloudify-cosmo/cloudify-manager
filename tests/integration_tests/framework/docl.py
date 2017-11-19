@@ -19,13 +19,11 @@ import os
 import sh
 import sys
 import yaml
-import copy
 import time
 import socket
 import tempfile
 
 from functools import partial
-from contextlib import contextmanager
 
 import proxy_tools
 import requests.exceptions
@@ -92,14 +90,6 @@ def docker_host():
     return _get_docl_config_property('docker_host')
 
 
-def ssh_key_path():
-    return _get_docl_config_property('ssh_key_path')
-
-
-def simple_manager_blueprint_path():
-    return _get_docl_config_property('simple_manager_blueprint_path')
-
-
 def init(expose=None, resources=None):
     """
     For each test suite, we augment the existing docl configuration
@@ -128,65 +118,6 @@ def init(expose=None, resources=None):
     _save_docl_config(conf)
 
 
-@contextmanager
-def update_config(additional_expose=None,
-                  additional_resources=None,
-                  manager_blueprint_path=None):
-    conf = _load_docl_config()
-    previous_conf = copy.deepcopy(conf)
-    conf['expose'] += list(additional_expose or [])
-    conf['resources'] += list(additional_resources or [])
-    if manager_blueprint_path:
-        conf['simple_manager_blueprint_path'] = manager_blueprint_path
-    try:
-        _save_docl_config(conf)
-        yield
-    finally:
-        _save_docl_config(previous_conf)
-
-
-def prepare_bootstrappable_container(label=None, tag=None):
-    args = []
-    label = label or []
-    if tag:
-        args += ['--tag', tag]
-    for l in label:
-        args += ['--label', l]
-    with tempfile.NamedTemporaryFile() as f:
-        with tempfile.NamedTemporaryFile() as f2:
-            args += ['--details-path', f.name,
-                     '--inputs-output', f2.name]
-            _docl.prepare(*args)
-            with open(f.name) as f3:
-                container_details = yaml.safe_load(f3)
-            with open(f2.name) as f4:
-                inputs = yaml.safe_load(f4)
-    _set_container_id_and_ip(container_details)
-    return inputs
-
-
-def bootstrap_prepared_container(container_id=None,
-                                 inputs=None,
-                                 serve_resources_tar=True):
-    container_id = container_id or default_container_id
-    start = time.time()
-    inputs = inputs or {}
-    args = ['--container-id', container_id,
-            '--cfy-args', "--skip-sanity "
-                          "--task-retries 0"]
-
-    if serve_resources_tar:
-        args += ['--serve-resources-tar',
-                 '--serve-resources-tar-no-progress']
-    with tempfile.NamedTemporaryFile() as inputs_file:
-        yaml.safe_dump(inputs, inputs_file)
-        inputs_file.flush()
-        args += ['--inputs', inputs_file.name]
-        _docl.bootstrap(*args)
-    logger.info(
-        'Container bootstrap took {0} seconds'.format(time.time() - start))
-
-
 def run_manager(label=None, tag=None):
     start = time.time()
     label = label or []
@@ -208,27 +139,12 @@ def run_manager(label=None, tag=None):
     return container_details
 
 
-def save_image(tag, container_id=None):
-    container_id = container_id or default_container_id
-    _docl('save-image', container_id=container_id, tag=tag)
-
-
-def remove_image(tag):
-    _docl('remove-image', tag=tag)
-
-
 def clean(label=None):
     label = label or []
     args = []
     for l in label:
         args += ['--label', l]
     _docl.clean(*args)
-
-
-def restart_manager(container_id=None):
-    container_id = container_id or default_container_id
-    _quiet_docl('restart-container', container_id=container_id)
-    _wait_for_services()
 
 
 def read_file(file_path, no_strip=False, container_id=None):
