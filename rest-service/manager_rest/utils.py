@@ -179,8 +179,8 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
 def all_tenants_authorization():
     return (
         current_user.id == constants.BOOTSTRAP_ADMIN_ID or
-        current_user.role
-        in config.instance.authorization_permissions['all_tenants']
+        any(r in current_user.system_roles
+            for r in config.instance.authorization_permissions['all_tenants'])
     )
 
 
