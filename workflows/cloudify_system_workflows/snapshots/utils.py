@@ -125,7 +125,7 @@ def copy_stage_files(archive_root):
             os.path.join(archive_root, 'stage', folder))
 
 
-def restore_stage_files(archive_root):
+def restore_stage_files(archive_root, override=False):
     """Copy Cloudify Stage files from the snapshot archive to stage folder.
 
     Note that only the stage user can write into the stage directory,
@@ -151,7 +151,11 @@ def restore_stage_files(archive_root):
             ],
             user=snapshot_constants.STAGE_USER,
         )
-        sudo([snapshot_constants.STAGE_RESTORE_SCRIPT, stage_tempdir],
+        restore_command = [snapshot_constants.STAGE_RESTORE_SCRIPT,
+                           stage_tempdir]
+        if override:
+            restore_command.append('--override-existing')
+        sudo(restore_command,
              user=snapshot_constants.STAGE_USER)
     finally:
         shutil.rmtree(stage_tempdir)
