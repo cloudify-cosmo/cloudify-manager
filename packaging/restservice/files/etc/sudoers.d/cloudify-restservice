@@ -1,0 +1,8 @@
+
+# Copied from existing permission. WE SHOULD REALLY NOT DO THIS.
+cfyuser ALL=(root) NOPASSWD:/usr/bin/systemctl
+
+# Needed so that we can reboot after restoring a snapshot
+cfyuser ALL=(root) NOPASSWD:/usr/sbin/shutdown
+
+cfyuser ALL=(root) NOPASSWD:/opt/restservice/set-manager-ssl.py

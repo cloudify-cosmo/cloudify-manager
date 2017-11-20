@@ -51,6 +51,16 @@ cp -R "${RPM_SOURCE_DIR}/resources/rest-service/cloudify/" "%{buildroot}/opt/man
 # Create the log dir
 mkdir -p %{buildroot}/var/log/cloudify/rest
 
+# Copy static files into place
+pushd ${RPM_SOURCE_DIR}/packaging/restservice/files/
+    for f in find .
+    do
+        install -d $f %{buildroot}
+    done
+popd
+
+visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
+
 
 %pre
 
@@ -70,5 +80,8 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 %defattr(-,root,root)
 /opt/manager
+
+/etc/sudoers.d/cloudify-restservice
+/opt/restservice/set-manager-ssl.py
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
