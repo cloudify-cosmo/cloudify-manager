@@ -89,6 +89,7 @@ class SnapshotRestore(object):
         self._tempdir = None
         self._snapshot_version = None
         self._client = get_rest_client()
+        self._manager_version = utils.get_manager_version(self._client)
 
     def restore(self):
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
@@ -304,7 +305,13 @@ class SnapshotRestore(object):
                 ctx.tenant_name if self._snapshot_version < V_4_0_0 else None
             ),
         )
-        utils.restore_stage_files(self._tempdir)
+        # Only restore stage files to their correct location
+        # if this snapshot version is the same as the manager version
+        if self._snapshot_version == self._manager_version:
+            stage_restore_override = True
+        else:
+            stage_restore_override = False
+        utils.restore_stage_files(self._tempdir, stage_restore_override)
         utils.restore_composer_files(self._tempdir)
         ctx.logger.info('Successfully restored archive files')
 
