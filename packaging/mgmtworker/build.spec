@@ -13,69 +13,53 @@ Prefix:         %{_prefix}
 Packager:       Gigaspaces Inc.
 BuildRoot:      %{_tmppath}/%{name}-root
 
+BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, postgresql-devel, git
+Requires:       python >= 2.7, postgresql-libs
+Requires(pre):  shadow-utils
+
+
 
 
 %description
-Cloudify's REST Service.
+Cloudify's Management worker
 
 
 
 %prep
-
-set +e
-pip=$(which pip)
-set -e
-
-[ ! -z $pip ] || sudo curl --show-error --silent --retry 5 https://bootstrap.pypa.io/get-pip.py | sudo python
-sudo yum install -y git python-devel postgresql-devel gcc gcc-c++
-sudo pip install virtualenv
-sudo virtualenv /tmp/env
-sudo /tmp/env/bin/pip install setuptools==18.1 && \
-sudo /tmp/env/bin/pip install wheel==0.24.0 && \
-
 %build
+
+virtualenv /opt/mgmtworker/env
+
+/opt/mgmtworker/env/bin/pip install --upgrade pip setuptools
+/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-rest-client@4.2#egg=cloudify-rest-client==4.2
+/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-plugins-common@4.2#egg=cloudify-plugins-common==4.2
+/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-script-plugin
+/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-agent@4.2#egg=cloudify-agent==4.2
+/opt/manager/env/bin/pip install psycopg2
+/opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
+/opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
+
 %install
 
-destination="/tmp/${RANDOM}.file"
-curl --retry 10 --fail --silent --show-error --location https://github.com/cloudify-cosmo/cloudify-manager/archive/%{CORE_BRANCH}.tar.gz --create-dirs --output $destination && \
-tar -xzf $destination --strip-components=1 -C "/tmp" && \
+mkdir -p %{buildroot}/opt/mgmtworker
+mv /opt/mgmtworker/env %{buildroot}/opt/manager
 
-sudo /tmp/env/bin/pip wheel virtualenv --wheel-dir %{buildroot}/var/wheels/%{name} && \
-sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-rest-client/archive/%{CORE_BRANCH}.tar.gz && \
-sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/%{CORE_BRANCH}.tar.gz && \
-sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.5.1.tar.gz && \
-sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/cloudify-cosmo/cloudify-agent/archive/%{CORE_BRANCH}.tar.gz && \
-sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} https://github.com/psycopg/psycopg2/archive/2_6_2.tar.gz && \
-sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} /tmp/plugins/riemann-controller
-sudo /tmp/env/bin/pip wheel --wheel-dir=%{buildroot}/var/wheels/%{name} --find-links=%{buildroot}/var/wheels/%{name} /tmp/workflows
-
-
+# Create the log dir
+mkdir -p %{buildroot}/var/log/cloudify/mgmtworker
 
 
 %pre
+groupadd -fr cfyuser
+getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
+
 %post
-
-pip install --use-wheel --no-index --find-links=/var/wheels/%{name} virtualenv && \
-if [ ! -d "/opt/mgmtworker/env" ]; then virtualenv --no-download /opt/mgmtworker/env; fi && \
-/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-client --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-plugins-common --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-script-plugin --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-agent --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} psycopg2 --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-riemann-controller-plugin --pre && \
-/opt/mgmtworker/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-workflows --pre
-
-
-
-
 
 %preun
 %postun
 
-rm -rf /var/wheels/${name}
-
-
 %files
 
 %defattr(-,root,root)
-/var/wheels/%{name}/*.whl
+/opt/mgmtworker
+
+%attr(750,cfyuser,adm) /var/log/cloudify/mgmtworker

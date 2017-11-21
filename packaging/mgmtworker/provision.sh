@@ -1,28 +1,23 @@
 #/bin/bash -e
 
-function install_deps() {
-		sudo yum -y update &&
-		sudo yum install libffi-devel openssl-devel -y
-}
-
 function build_rpm() {
     echo "Building RPM..."
-    sudo yum install -y rpm-build redhat-rpm-config
-    sudo yum install -y python-devel gcc
-    sudo mkdir -p /root/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-    sudo cp /vagrant/mgmtworker/build.spec /root/rpmbuild/SPECS
-    sudo rpmbuild -ba /root/rpmbuild/SPECS/build.spec \
-        --define "VERSION $VERSION" \
-        --define "PRERELEASE $PRERELEASE" \
-        --define "BUILD $BUILD" \
-        --define "CORE_TAG_NAME $CORE_TAG_NAME" \
-        --define "CORE_BRANCH $CORE_BRANCH" \
-        --define "PLUGINS_TAG_NAME $PLUGINS_TAG_NAME"
-    # This is the UGLIEST HACK EVER!
-    # Since rpmbuild spec files cannot receive a '-' in their version,
-    # we do this... thing and replace an underscore with a dash.
-    # cd /tmp/x86_64 &&
-    # sudo mv *.rpm $(ls *.rpm | sed 's|_|-|g')
+    sudo yum install -y epel-release
+    sudo yum install -y mock
+    sudo usermod -a -G mock $USER
+    newgrp mock
+    # allow network access during the build (we have to download packages from pypi)
+    echo -e "\nconfig_opts['rpmbuild_networking'] = True\n" | sudo tee -a /etc/mock/site-defaults.cfg
+
+    # Build the source RPM
+    mock --verbose --buildsrpm --spec cloudify-manager/packaging/mgmtworker/build.spec --sources cloudify-manager/
+    cp /var/lib/mock/epel-7-x86_64/result/*.src.rpm .
+    # mock strongly assumes that root is not required for building RPMs.
+    # Here we work around that assumption by changing the onwership of /opt
+    # inside the CHROOT to the mockbuild user
+    mock --verbose --chroot -- chown -R mockbuild /opt
+    # Build the RPM
+    mock *.src.rpm --no-clean
 }
 
 
@@ -44,7 +39,6 @@ source common-provision.sh
 
 
 install_common_prereqs &&
-install_deps &&
 build_rpm &&
 cd /tmp/x86_64 && create_md5 "rpm" &&
 [ -z ${AWS_ACCESS_KEY} ] || upload_to_s3 "rpm" && upload_to_s3 "md5"
