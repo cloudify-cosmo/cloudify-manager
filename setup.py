@@ -54,8 +54,8 @@ setup(
     zip_safe=False,
     package_data={'': extra_files},
     install_requires=[
-        'PyYAML==3.12',
-        'Jinja2==2.9.6',
+        'PyYAML==3.10',
+        'Jinja2==2.7.2',
         'argh==0.26.2'
     ]
 )
