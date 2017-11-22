@@ -20,6 +20,9 @@ import sys
 from subprocess import check_call, check_output
 
 
+SSH_CONFIG_FILE = 'ssh_config.tmp'
+
+
 logger = logging.getLogger(os.path.basename(__file__))
 
 
@@ -47,8 +50,9 @@ def main(args):
 
     args = parser.parse_args(args)
 
-    packaging_dir = os.path.dirname(args.spec_file.name) or '.'
-    ssh_conf_file = os.path.join(packaging_dir, 'ssh_config.tmp')
+    packaging_dir, spec_file = os.path.split(args.spec_file.name)
+    if not packaging_dir:
+        packaging_dir = '.'
 
     os.chdir(packaging_dir)
     check_call(['vagrant', 'up', 'builder'])
@@ -69,7 +73,7 @@ def main(args):
     run('mock --verbose --buildsrpm --spec '
         '/source/packaging/{spec_file} '
         '--sources /source/'.format(
-            spec_file=args.spec_file.name))
+            spec_file=spec_file))
     # Extract the .src.rpm file name.
     src_rpm = run(
             'find /var/lib/mock/epel-7-x86_64/result -name *.src.rpm',
@@ -86,12 +90,12 @@ def main(args):
 
     ssh_config = check_output(
             ['vagrant', 'ssh-config', 'builder'])
-    with open(ssh_conf_file, 'w') as f:
+    with open(SSH_CONFIG_FILE, 'w') as f:
         f.write(ssh_config)
 
     # Download the finished RPM from the Vagrant box to localhost
     check_call(
-            ['scp', '-F', ssh_conf_file,
+            ['scp', '-F', SSH_CONFIG_FILE,
              'builder:{rpm}'.format(
                  rpm=src_rpm.replace('.src.rpm', '.x86_64.rpm')),
              '.'])
