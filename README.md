@@ -18,7 +18,7 @@ steps 1-6).
 #### Creating the RPM
 
 1. SSH into a clean VM (or a bare metal server, of course).
-2. Download the [`create_rpm.sh`](create_rpm.sh) script to the machine
+2. Download the [`create_rpm.sh`](packaging/create_rpm.sh) script to the machine
 with:
 
 `curl -L https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/packaging/create_rpm.sh -o /tmp/create_rpm.sh `
