@@ -28,7 +28,7 @@ from os import path
 from setuptools import archive_util
 from urllib2 import urlopen, URLError
 
-from flask import request, current_app
+from flask import request
 from flask_restful import types
 from flask_restful.reqparse import RequestParser
 
@@ -44,11 +44,10 @@ from manager_rest.archiving import get_archive_type
 from manager_rest.storage.models import Plugin
 from manager_rest.storage.models_states import SnapshotState
 from manager_rest import config, chunked, manager_exceptions
-from manager_rest.utils import mkdirs, get_formatted_timestamp
+from manager_rest.utils import mkdirs, get_formatted_timestamp, current_tenant
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
-                                    SUPPORTED_ARCHIVE_TYPES,
-                                    CURRENT_TENANT_CONFIG)
+                                    SUPPORTED_ARCHIVE_TYPES)
 
 
 class UploadedDataManager(object):
@@ -315,7 +314,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
 
     def _get_target_dir_path(self):
         return os.path.join(FILE_SERVER_DEPLOYMENTS_FOLDER,
-                            current_app.config[CURRENT_TENANT_CONFIG].name)
+                            current_tenant.name)
 
     def _get_archive_type(self, archive_path):
         return get_archive_type(archive_path)
@@ -365,7 +364,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
             file_server_deployment_root = \
                 os.path.join(file_server_root,
                              FILE_SERVER_DEPLOYMENTS_FOLDER,
-                             current_app.config[CURRENT_TENANT_CONFIG].name,
+                             current_tenant.name,
                              deployment_id)
 
             app_root_dir = os.path.join(file_server_root, app_dir)
@@ -462,8 +461,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
 
     def _get_target_dir_path(self):
         return os.path.join(
-            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            current_app.config[CURRENT_TENANT_CONFIG].name)
+            FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER, current_tenant.name)
 
     def _get_archive_type(self, archive_path):
         return get_archive_type(archive_path)
@@ -486,7 +484,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
         plugins_directory = path.join(
             file_server_root,
             FILE_SERVER_BLUEPRINTS_FOLDER,
-            current_app.config[CURRENT_TENANT_CONFIG].name,
+            current_tenant.name,
             blueprint_id,
             "plugins")
         if not path.isdir(plugins_directory):
@@ -546,7 +544,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
             tenant_dir = os.path.join(
                 file_server_root,
                 FILE_SERVER_BLUEPRINTS_FOLDER,
-                current_app.config[CURRENT_TENANT_CONFIG].name)
+                current_tenant.name)
             mkdirs(tenant_dir)
             shutil.move(os.path.join(file_server_root, app_dir),
                         os.path.join(tenant_dir, blueprint.id))

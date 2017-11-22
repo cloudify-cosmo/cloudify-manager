@@ -27,10 +27,12 @@ from datetime import datetime
 from os import path, makedirs
 
 import wagon
+from flask import g
 from flask_restful import abort
 from flask_security import current_user
+from werkzeug.local import LocalProxy
 
-from manager_rest import constants, config
+from manager_rest import constants, config, manager_exceptions
 
 
 CLOUDIFY_AUTH_HEADER = 'Authorization'
@@ -189,3 +191,16 @@ def is_administrator(tenant):
         current_user.id == constants.BOOTSTRAP_ADMIN_ID or
         current_user.has_role_in(tenant, administrators_roles)
     )
+
+
+@LocalProxy
+def current_tenant():
+    tenant = getattr(g, 'current_tenant', None)
+    if not tenant:
+        raise manager_exceptions.TenantNotProvided(
+            'Authorization failed: tenant not provided')
+    return tenant
+
+
+def set_current_tenant(tenant):
+    g.current_tenant = tenant

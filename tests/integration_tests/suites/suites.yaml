@@ -1,11 +1,3 @@
-security:
-  - manager_tests/test_secured_broker.py
-  - manager_tests/security/test_authentication.py
-  - manager_tests/security/test_cert_location.py
-  - manager_tests/security/test_ldap_authentication.py
-  - manager_tests/security/test_misc.py
-  - manager_tests/security/test_user_certificate.py
-
 load:
   - agentless_tests/test_n_instances.py
 
@@ -51,14 +43,6 @@ manager:
   - agentless_tests/test_resources_available.py
   - agentless_tests/test_retrieve_resource_rendering.py
   - agentless_tests/test_storage.py
-
-manager_with_bootstrap:
-  - manager_tests/test_celery_restart.py
-  - manager_tests/test_managed_plugins.py
-  - manager_tests/test_manager_after_reboot.py
-  - manager_tests/test_manager_misc.py
-  - manager_tests/test_manager_status.py
-  - manager_tests/test_rest_plugins.py
 
 plugins_infrastructure:
   - agentless_tests/test_plugins.py

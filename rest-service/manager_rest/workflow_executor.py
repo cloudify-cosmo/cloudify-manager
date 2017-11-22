@@ -14,11 +14,10 @@
 #  * limitations under the License.
 
 
-from flask import current_app
 from flask_security import current_user
 
-from manager_rest import celery_client
-from manager_rest.constants import CURRENT_TENANT_CONFIG, MGMTWORKER_QUEUE
+from manager_rest import celery_client, utils
+from manager_rest.constants import MGMTWORKER_QUEUE
 
 
 def execute_workflow(name,
@@ -83,8 +82,7 @@ def execute_system_workflow(wf_id,
 
 
 def _get_tenant_dict():
-    current_tenant = current_app.config[CURRENT_TENANT_CONFIG]
-    tenant_dict = current_tenant.to_dict()
+    tenant_dict = utils.current_tenant.to_dict()
     for to_remove in ['id', 'users', 'groups']:
         tenant_dict.pop(to_remove)
     return tenant_dict

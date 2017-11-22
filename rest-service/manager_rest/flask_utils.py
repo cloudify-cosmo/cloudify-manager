@@ -19,10 +19,9 @@ from flask import Flask
 from flask_migrate import Migrate
 from flask_security import Security
 
-from manager_rest import config
+from manager_rest import config, utils
 from manager_rest.storage import user_datastore, db
 from manager_rest.storage.models import User, Tenant
-from manager_rest.constants import CURRENT_TENANT_CONFIG
 from manager_rest.config import instance as manager_config
 
 
@@ -98,10 +97,12 @@ def set_flask_security_config(app, hash_salt=None, secret_key=None):
     app.config['SECRET_KEY'] = secret_key
 
 
-def set_tenant_in_app(app, tenant):
-    """Set the tenant as the current tenant in the flask app"""
+def set_tenant_in_app(tenant):
+    """Set the tenant as the current tenant in the flask app.
 
-    app.config[CURRENT_TENANT_CONFIG] = tenant
+    Requires app context (using `with app.app_context()` or push as returned
+    by setup_flask_app"""
+    utils.set_current_tenant(tenant)
 
 
 def get_tenant_by_name(tenant_name):

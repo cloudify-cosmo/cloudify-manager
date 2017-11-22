@@ -21,7 +21,7 @@ import argparse
 
 from manager_rest import manager_exceptions
 from manager_rest import flask_utils
-from manager_rest.constants import CURRENT_TENANT_CONFIG
+from manager_rest import utils
 from manager_rest.storage import models, get_storage_manager
 
 format_str = '%(asctime)s [%(name)s] %(levelname)s: %(message)s'
@@ -71,7 +71,7 @@ class EsToPg(object):
         tenant in the flask app
         """
         storage_manager.put(tenant)
-        app.config[CURRENT_TENANT_CONFIG] = tenant
+        utils.set_current_tenant(tenant)
 
     def restore_es(self):
         logger.debug('Restoring elastic search..')

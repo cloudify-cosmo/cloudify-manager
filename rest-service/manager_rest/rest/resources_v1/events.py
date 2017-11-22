@@ -14,7 +14,6 @@
 #  * limitations under the License.
 #
 
-from flask import current_app
 from flask_restful_swagger import swagger
 from sqlalchemy import (
     asc,
@@ -25,7 +24,7 @@ from sqlalchemy import (
 )
 from toolz import dicttoolz
 
-from manager_rest import constants, manager_exceptions
+from manager_rest import manager_exceptions, utils
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     insecure_rest_method,
@@ -613,4 +612,4 @@ class Events(SecuredResource):
     def current_tenant(self):
         """Return the tenant with which the user accessed the app
         """
-        return current_app.config[constants.CURRENT_TENANT_CONFIG]
+        return utils.current_tenant
