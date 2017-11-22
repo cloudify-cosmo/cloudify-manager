@@ -52,6 +52,7 @@ def main(args):
 
     os.chdir(packaging_dir)
     check_call(['vagrant', 'up', 'builder'])
+    check_call(['vagrant', 'rsync', 'builder'])
     # EPEL is enabled only for the build system.
     # It is not required on production systems.
     run('sudo yum -y install epel-release')
