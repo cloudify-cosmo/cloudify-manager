@@ -20,8 +20,32 @@ function print_line() {
   echo -e "$COL_YELLOW $LINE $COL_RESET"
 }
 
+if [ $# -eq 0 ]; then
+    echo "You need to provide a resource URL for the script to work"
+    exit 1
+fi
+
+print_line "Validating user has sudo permissions..."
+sudo -n true
+
 MANAGER_RESOURCES_URL=$1
-BRANCH=${2:-master}
+INSTALL_PIP=${2:-true}
+BRANCH=${3:-master}
+
+if [ ${INSTALL_PIP} = "true" ]; then
+    print_line "Installing pip..."
+    curl -O https://bootstrap.pypa.io/get-pip.py
+    sudo python get-pip.py
+else
+    print_line "Validating pip is installed..."
+    set +e
+    pip
+    if [ $? -ne "0" ]; then
+       echo "pip is not installed but is required"
+       exit 1
+    fi
+    set -e
+fi
 
 print_line "Installing fpm dependencies..."
 sudo yum install -y -q ruby-devel gcc make rpm-build rubygems

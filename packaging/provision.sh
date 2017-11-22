@@ -6,7 +6,7 @@ function create_install_rpm() {
 
     curl -L https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${CORE_BRANCH}/packaging/create_rpm.sh -o /tmp/create_rpm.sh
     chmod +x /tmp/create_rpm.sh
-    /tmp/create_rpm.sh ${MANAGER_RESOURCES_URL}
+    /tmp/create_rpm.sh ${MANAGER_RESOURCES_URL} false
 }
 
 export CORE_TAG_NAME="4.2"
