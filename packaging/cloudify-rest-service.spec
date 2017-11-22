@@ -53,7 +53,7 @@ mkdir -p %{buildroot}/var/log/cloudify/rest
 # Copy static files into place. In order to have files in /packaging/files
 # actually included in the RPM, they must have an entry in the %files
 # section of this spec file.
-cp -R ${RPM_SOURCE_DIR}/packaging/files/* %{buildroot}
+cp -R ${RPM_SOURCE_DIR}/packaging/rest-service/files/* %{buildroot}
 
 visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 

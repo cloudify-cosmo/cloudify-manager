@@ -51,3 +51,7 @@ riemann.log
 
 # vim
 *.swp
+
+# vagrant status
+.vagrant
+packaging/ssh_config.tmp
