@@ -136,7 +136,8 @@ def main(args):
             ).strip()
     # Download the finished RPM from the Vagrant box to localhost
     if args.local:
-        shutil.move(final_rpm, os.getcwd())
+        filename = os.path.basename(final_rpm)
+        shutil.move(final_rpm, os.path.join(os.getcwd(), filename))
     else:
         ssh_config = check_output(
                 ['vagrant', 'ssh-config', 'builder'])
