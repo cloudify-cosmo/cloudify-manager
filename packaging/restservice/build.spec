@@ -67,6 +67,7 @@ pip install --use-wheel --no-index --find-links=/var/wheels/%{name} --upgrade vi
 if [ ! -d "/opt/manager/env" ]; then virtualenv --no-download /opt/manager/env; fi && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-dsl-parser --pre && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} ldappy --pre && \
+/opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} apache_ariatosca --pre && \
 /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-rest-service --pre
 if [ "%{REPO}" != "cloudify-versions" ]; then
     /opt/manager/env/bin/pip install --upgrade --force-reinstall --use-wheel --no-index --find-links=/var/wheels/%{name} cloudify-premium --pre
