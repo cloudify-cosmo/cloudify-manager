@@ -58,12 +58,13 @@ class SecretsKey(SecuredResource):
         rest_utils.validate_inputs({'key': key})
 
         sm = get_storage_manager()
+        timestamp = utils.get_formatted_timestamp()
         try:
             new_secret = models.Secret(
                 id=key,
                 value=value,
-                created_at=utils.get_formatted_timestamp(),
-                updated_at=utils.get_formatted_timestamp(),
+                created_at=timestamp,
+                updated_at=timestamp,
             )
             return sm.put(new_secret)
         except ConflictError:
@@ -71,7 +72,7 @@ class SecretsKey(SecuredResource):
             if secret and upsert:
                 get_resource_manager().validate_modification_permitted(secret)
                 secret.value = value
-                secret.updated_at = utils.get_formatted_timestamp()
+                secret.updated_at = timestamp
                 return sm.update(secret)
             raise
 
