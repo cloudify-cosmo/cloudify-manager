@@ -128,9 +128,9 @@ def _generate_ssl_certificate(ips,
     :type cert_path: str
     :param key_path: path to save the key for the new certificate to
     :type key_path: str
-    :param sign_cert: path to the signing cert (internal CA by default)
+    :param sign_cert: path to the signing cert (self-signed by default)
     :type sign_cert: str
-    :param sign_key: path to the signing cert's key (internal CA by default)
+    :param sign_key: path to the signing cert's key (self-signed by default)
     :type sign_key: str
     :return: The path to the cert and key files on the manager
     """
@@ -259,4 +259,31 @@ def create_internal_certs(manager_ip=None,
         internal_rest_host,
         networks,
         filename=metadata
+    )
+
+
+@argh.arg('--private-ip', help="The manager's private IP", required=True)
+@argh.arg('--public-ip', help="The manager's public IP", required=True)
+@argh.arg('--sign-cert', help="Path to the signing cert "
+                              "(self-signed by default)")
+@argh.arg('--sign-key', help="Path to the signing cert's key "
+                             "(self-signed by default)")
+def create_external_certs(private_ip=None,
+                          public_ip=None,
+                          sign_cert=None,
+                          sign_key=None):
+    """
+    Recreate Cloudify Manager's external certificates, based on the public
+    and private IPs
+    """
+    # Note: the function has default values for the IP arguments, but they
+    # are actually required by argh, so it won't be possible to call this
+    # function without them from the CLI
+    _generate_ssl_certificate(
+        ips=[public_ip, private_ip],
+        cn=public_ip,
+        cert_path=const.EXTERNAL_CERT_PATH,
+        key_path=const.EXTERNAL_KEY_PATH,
+        sign_cert=sign_cert,
+        sign_key=sign_key
     )

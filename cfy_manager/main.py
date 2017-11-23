@@ -49,7 +49,10 @@ from .config import config
 from .logger import get_logger, setup_console_logger
 
 from .utils.files import remove_temp_files
-from .utils.certificates import create_internal_certs
+from .utils.certificates import (
+    create_internal_certs,
+    create_external_certs
+)
 
 logger = get_logger('Main')
 
@@ -181,4 +184,10 @@ def remove(verbose=False):
 
 
 if __name__ == '__main__':
-    argh.dispatch_commands([install, configure, remove, create_internal_certs])
+    argh.dispatch_commands([
+        install,
+        configure,
+        remove,
+        create_internal_certs,
+        create_external_certs
+    ])
