@@ -51,17 +51,21 @@ def _configure():
     username = config[MANAGER][SECURITY]['admin_username']
     password = config[MANAGER][SECURITY]['admin_password']
 
-    cmd = [
-        'cfy', 'profiles', 'use', 'localhost', '-u', username,
+    use_cmd = ['cfy', 'profiles', 'use', 'localhost',
+               '--skip-credentials-validation']
+    set_cmd = [
+        'cfy', 'profiles', 'set', '-u', username,
         '-p', password, '-t', 'default_tenant'
     ]
     logger.info('Setting CLI for default user...')
-    common.run(cmd)
+    common.run(use_cmd)
+    common.run(set_cmd)
     _set_colors(is_root=False)
 
     logger.info('Setting CLI for root user...')
-    root_cmd = ['sudo', '-u', 'root'] + cmd
-    common.run(root_cmd)
+    for cmd in (use_cmd, set_cmd):
+        root_cmd = ['sudo', '-u', 'root'] + cmd
+        common.run(root_cmd)
     _set_colors(is_root=True)
 
 
