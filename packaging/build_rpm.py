@@ -32,7 +32,7 @@ def get_rpmbuild_opts():
     # ad-hoc config format. Consider replacing with something more standardised
     # before adding any more features here.
     defines = []
-    with open('version.ini') as f:
+    with open('version_info') as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#'):
