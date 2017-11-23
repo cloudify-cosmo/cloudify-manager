@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -41,16 +42,39 @@ class SecretsKey(SecuredResource):
         """
         Create a new secret
         """
-        request_dict = rest_utils.get_json_and_verify_params({'value'})
+        request_dict = rest_utils.get_json_and_verify_params({
+            'value': {
+                'type': unicode,
+            },
+            'upsert': {
+                'type': unicode,
+                'optional': True,
+            }
+        })
         value = request_dict['value']
+        upsert = rest_utils.verify_and_convert_bool(
+            'upsert',
+            request_dict.get('upsert', False),
+        )
         rest_utils.validate_inputs({'key': key})
 
-        return get_storage_manager().put(models.Secret(
-            id=key,
-            value=value,
-            created_at=utils.get_formatted_timestamp(),
-            updated_at=utils.get_formatted_timestamp()
-        ))
+        sm = get_storage_manager()
+        try:
+            new_secret = models.Secret(
+                id=key,
+                value=value,
+                created_at=utils.get_formatted_timestamp(),
+                updated_at=utils.get_formatted_timestamp(),
+            )
+            return sm.put(new_secret)
+        except ConflictError:
+            secret = sm.get(models.Secret, key)
+            if secret and upsert:
+                get_resource_manager().validate_modification_permitted(secret)
+                secret.value = value
+                secret.updated_at = utils.get_formatted_timestamp()
+                return sm.update(secret)
+            raise
 
     @rest_decorators.exceptions_handled
     @authorize('secret_update')
