@@ -21,9 +21,25 @@ from subprocess import check_call, check_output
 
 
 SSH_CONFIG_FILE = 'ssh_config.tmp'
-
-
 logger = logging.getLogger(os.path.basename(__file__))
+
+
+def get_rpmbuild_opts():
+    """
+    Return a string to be passed to `mock` as the value of --rpmbuild-opts
+    """
+    # Beware that `version.ini` is already looking a bit too much like an
+    # ad-hoc config format. Consider replacing with something more standardised
+    # before adding any more features here.
+    defines = []
+    with open('version.ini') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                defines.append(
+                        '--define "{}"'.format(line))
+
+    return ' '.join(defines)
 
 
 def run(cmd, *args, **kwargs):
@@ -69,11 +85,18 @@ def main(args):
         r'''"\nconfig_opts['rpmbuild_networking'] = True\n" '''
         '| sudo tee -a /etc/mock/site-defaults.cfg')
 
+    # Get build options
+    rpmbuild_opts = get_rpmbuild_opts()
+    logger.info('rpmbuild_opts: ' + rpmbuild_opts)
+
     # Build .src.rpm
     run('mock --verbose --buildsrpm --spec '
         '/source/packaging/{spec_file} '
-        '--sources /source/'.format(
-            spec_file=spec_file))
+        '--sources /source/ '
+        "--rpmbuild-opts '{rpmbuild_opts}'".format(
+            spec_file=spec_file,
+            rpmbuild_opts=rpmbuild_opts,
+            ))
     # Extract the .src.rpm file name.
     src_rpm = run(
             'find /var/lib/mock/epel-7-x86_64/result -name *.src.rpm',
@@ -85,19 +108,27 @@ def main(args):
     # inside the CHROOT to the mockbuild user
     run('mock --verbose --chroot -- chown -R mockbuild /opt')
     # Build the RPM
-    run('mock "{src_rpm}" --no-clean'.format(
-                src_rpm=src_rpm))
+    run('mock "{src_rpm}" '
+        '--no-clean '
+        "--rpmbuild-opts '{rpmbuild_opts}'".format(
+            src_rpm=src_rpm,
+            rpmbuild_opts=rpmbuild_opts,
+            ))
 
     ssh_config = check_output(
             ['vagrant', 'ssh-config', 'builder'])
     with open(SSH_CONFIG_FILE, 'w') as f:
         f.write(ssh_config)
 
+    # Extract the final .rpm file name.
+    final_rpm = run(
+            'find /var/lib/mock/epel-7-x86_64/result -name *.x86_64.rpm',
+            _func=check_output,
+            ).strip()
     # Download the finished RPM from the Vagrant box to localhost
     check_call(
             ['scp', '-F', SSH_CONFIG_FILE,
-             'builder:{rpm}'.format(
-                 rpm=src_rpm.replace('.src.rpm', '.x86_64.rpm')),
+             'builder:{rpm}'.format(rpm=final_rpm),
              '.'])
 
 
