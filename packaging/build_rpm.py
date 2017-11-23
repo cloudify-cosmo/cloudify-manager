@@ -17,6 +17,7 @@ import argparse
 import logging
 import os
 import sys
+import shutil
 from subprocess import check_call, check_output
 
 
@@ -42,17 +43,20 @@ def get_rpmbuild_opts():
     return ' '.join(defines)
 
 
-def run(cmd, *args, **kwargs):
+def run_vagrant(cmd, *args, **kwargs):
     """Run command on Vagrant box"""
-    if '_func' in kwargs:
-        func = kwargs.pop('_func')
-    else:
-        func = check_call
+    func = kwargs.pop('_func', check_call)
 
     logger.info('running <{cmd}> on vagrant builder'.format(cmd=cmd))
     return func(
             ['vagrant', 'ssh', 'builder', '-c', cmd],
             *args, **kwargs)
+
+
+def run_local(cmd, *args, **kwargs):
+    func = kwargs.pop('_func', check_call)
+    kwargs.setdefault('shell', True)
+    return func(cmd, *args, **kwargs)
 
 
 def main(args):
@@ -63,16 +67,20 @@ def main(args):
             'spec_file', type=argparse.FileType('r'),
             help="which RPM to build",
             )
+    parser.add_argument('--local', action='store_true',
+                        help='Run locally instead of using vagrant')
 
     args = parser.parse_args(args)
+    run = run_local if args.local else run_vagrant
 
     packaging_dir, spec_file = os.path.split(args.spec_file.name)
     if not packaging_dir:
         packaging_dir = '.'
 
     os.chdir(packaging_dir)
-    check_call(['vagrant', 'up', 'builder'])
-    check_call(['vagrant', 'rsync', 'builder'])
+    if not args.local:
+        check_call(['vagrant', 'up', 'builder'])
+        check_call(['vagrant', 'rsync', 'builder'])
     # EPEL is enabled only for the build system.
     # It is not required on production systems.
     run('sudo yum -y install epel-release')
@@ -89,14 +97,20 @@ def main(args):
     rpmbuild_opts = get_rpmbuild_opts()
     logger.info('rpmbuild_opts: ' + rpmbuild_opts)
 
+    if args.local:
+        source = '..'
+    else:
+        source = '/source'
     # Build .src.rpm
+
     run('mock --verbose --buildsrpm --spec '
-        '/source/packaging/{spec_file} '
-        '--sources /source/ '
+        '{source}/packaging/{spec_file} '
+        '--sources {source}/ '
         "--rpmbuild-opts '{rpmbuild_opts}'".format(
             spec_file=spec_file,
             rpmbuild_opts=rpmbuild_opts,
-            ))
+            source=source
+    ))
     # Extract the .src.rpm file name.
     src_rpm = run(
             'find /var/lib/mock/epel-7-x86_64/result -name *.src.rpm',
@@ -115,21 +129,23 @@ def main(args):
             rpmbuild_opts=rpmbuild_opts,
             ))
 
-    ssh_config = check_output(
-            ['vagrant', 'ssh-config', 'builder'])
-    with open(SSH_CONFIG_FILE, 'w') as f:
-        f.write(ssh_config)
-
     # Extract the final .rpm file name.
     final_rpm = run(
             'find /var/lib/mock/epel-7-x86_64/result -name *.x86_64.rpm',
             _func=check_output,
             ).strip()
     # Download the finished RPM from the Vagrant box to localhost
-    check_call(
-            ['scp', '-F', SSH_CONFIG_FILE,
-             'builder:{rpm}'.format(rpm=final_rpm),
-             '.'])
+    if args.local:
+        shutil.move(final_rpm, os.getcwd())
+    else:
+        ssh_config = check_output(
+                ['vagrant', 'ssh-config', 'builder'])
+        with open(SSH_CONFIG_FILE, 'w') as f:
+            f.write(ssh_config)
+        check_call(
+                ['scp', '-F', SSH_CONFIG_FILE,
+                 'builder:{rpm}'.format(rpm=final_rpm),
+                 '.'])
 
 
 if __name__ == "__main__":
