@@ -41,7 +41,9 @@ class SecretsKey(SecuredResource):
         """
         Create a new secret
         """
-        key, value = self._validate_secret_inputs(key)
+        request_dict = rest_utils.get_json_and_verify_params({'value'})
+        value = request_dict['value']
+        rest_utils.validate_inputs({'key': key})
 
         return get_storage_manager().put(models.Secret(
             id=key,
@@ -57,7 +59,10 @@ class SecretsKey(SecuredResource):
         """
         Update an existing secret
         """
-        key, value = self._validate_secret_inputs(key)
+        request_dict = rest_utils.get_json_and_verify_params({'value'})
+        value = request_dict['value']
+        rest_utils.validate_inputs({'key': key})
+
         secret = get_storage_manager().get(models.Secret, key)
         get_resource_manager().validate_modification_permitted(secret)
         secret.value = value
@@ -76,12 +81,6 @@ class SecretsKey(SecuredResource):
         secret = storage_manager.get(models.Secret, key)
         get_resource_manager().validate_modification_permitted(secret)
         return storage_manager.delete(secret)
-
-    def _validate_secret_inputs(self, key):
-        request_dict = rest_utils.get_json_and_verify_params({'value'})
-        value = request_dict['value']
-        rest_utils.validate_inputs({'key': key})
-        return key, value
 
 
 class Secrets(SecuredResource):
