@@ -47,7 +47,6 @@ class SecretsKey(SecuredResource):
                 'type': unicode,
             },
             'upsert': {
-                'type': unicode,
                 'optional': True,
             }
         })
