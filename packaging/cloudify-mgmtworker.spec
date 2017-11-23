@@ -31,18 +31,18 @@ Cloudify's Management worker
 virtualenv /opt/mgmtworker/env
 
 /opt/mgmtworker/env/bin/pip install --upgrade pip setuptools
-/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-rest-client@4.2#egg=cloudify-rest-client==4.2
-/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-plugins-common@4.2#egg=cloudify-plugins-common==4.2
-/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-script-plugin
-/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-agent@4.2#egg=cloudify-agent==4.2
-/opt/manager/env/bin/pip install psycopg2
-/opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
-/opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
+/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-rest-client@4.2#egg=cloudify-rest-client==4.2
+/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-plugins-common@4.2#egg=cloudify-plugins-common==4.2
+/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-script-plugin
+/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-agent@4.2#egg=cloudify-agent==4.2
+/opt/mgmtworker/env/bin/pip install psycopg2
+/opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
+/opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
 
 %install
 
 mkdir -p %{buildroot}/opt/mgmtworker
-mv /opt/mgmtworker/env %{buildroot}/opt/manager
+mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker
 
 # Create the log dir
 mkdir -p %{buildroot}/var/log/cloudify/mgmtworker
