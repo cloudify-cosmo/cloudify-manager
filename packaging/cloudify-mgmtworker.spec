@@ -39,6 +39,8 @@ virtualenv /opt/mgmtworker/env
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
 
+rm /opt/mgmtworker/env/lib/python2.7/site-packages/zmq/tests/_test_asyncio.py
+
 %install
 
 mkdir -p %{buildroot}/opt/mgmtworker
