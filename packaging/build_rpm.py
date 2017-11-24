@@ -15,14 +15,22 @@
 
 import argparse
 import logging
-import os
 import sys
 import shutil
+from os import chdir, getcwd
+from os.path import (
+        abspath,
+        basename,
+        dirname,
+        join as path_join,
+        split as path_split,
+        )
 from subprocess import check_call, check_output
 
 
-SSH_CONFIG_FILE = 'ssh_config.tmp'
-logger = logging.getLogger(os.path.basename(__file__))
+VAGRANT_DIR = abspath(dirname(__file__))
+SSH_CONFIG_FILE = path_join(VAGRANT_DIR, 'ssh_config.tmp')
+logger = logging.getLogger(basename(__file__))
 
 
 def get_rpmbuild_opts():
@@ -56,6 +64,8 @@ def run_vagrant(cmd, *args, **kwargs):
 def run_local(cmd, *args, **kwargs):
     func = kwargs.pop('_func', check_call)
     kwargs.setdefault('shell', True)
+
+    logger.info('running <{cmd}> locally'.format(cmd=cmd))
     return func(cmd, *args, **kwargs)
 
 
@@ -73,14 +83,33 @@ def main(args):
     args = parser.parse_args(args)
     run = run_local if args.local else run_vagrant
 
-    packaging_dir, spec_file = os.path.split(args.spec_file.name)
-    if not packaging_dir:
-        packaging_dir = '.'
+    spec_file = abspath(args.spec_file.name)
+    packaging_dir, spec_file_name = path_split(spec_file)
+    # We assume that the spec always lives one dir level below the source
+    source = dirname(packaging_dir)
 
-    os.chdir(packaging_dir)
+    chdir(VAGRANT_DIR)
     if not args.local:
         check_call(['vagrant', 'up', 'builder'])
-        check_call(['vagrant', 'rsync', 'builder'])
+
+        ssh_config = check_output(
+                ['vagrant', 'ssh-config', 'builder'])
+        with open(SSH_CONFIG_FILE, 'w') as f:
+            f.write(ssh_config)
+
+        # sync the code
+        check_call(
+                ['rsync', '-avz',
+                 '-e', 'ssh -F {}'.format(SSH_CONFIG_FILE),
+                 '--exclude', '.git',
+                 '--exclude', '*.sw[op]',  # vim swap files
+                 '--delete', '--delete-excluded',
+                 source,
+                 'builder:source',
+                 ])
+
+        source = path_join('~/source', basename(source))
+
     # EPEL is enabled only for the build system.
     # It is not required on production systems.
     run('sudo yum -y install epel-release')
@@ -97,20 +126,16 @@ def main(args):
     rpmbuild_opts = get_rpmbuild_opts()
     logger.info('rpmbuild_opts: ' + rpmbuild_opts)
 
-    if args.local:
-        source = '..'
-    else:
-        source = '/source'
     # Build .src.rpm
-
     run('mock --verbose --buildsrpm --spec '
         '{source}/packaging/{spec_file} '
         '--sources {source}/ '
         "--rpmbuild-opts '{rpmbuild_opts}'".format(
-            spec_file=spec_file,
+            spec_file=spec_file_name,
             rpmbuild_opts=rpmbuild_opts,
             source=source
-    ))
+            )
+        )
     # Extract the .src.rpm file name.
     src_rpm = run(
             'find /var/lib/mock/epel-7-x86_64/result -name *.src.rpm',
@@ -136,13 +161,9 @@ def main(args):
             ).strip()
     # Download the finished RPM from the Vagrant box to localhost
     if args.local:
-        filename = os.path.basename(final_rpm)
-        shutil.move(final_rpm, os.path.join(os.getcwd(), filename))
+        filename = basename(final_rpm)
+        shutil.move(final_rpm, path_join(getcwd(), filename))
     else:
-        ssh_config = check_output(
-                ['vagrant', 'ssh-config', 'builder'])
-        with open(SSH_CONFIG_FILE, 'w') as f:
-            f.write(ssh_config)
         check_call(
                 ['scp', '-F', SSH_CONFIG_FILE,
                  'builder:{rpm}'.format(rpm=final_rpm),

@@ -58,8 +58,6 @@ Vagrant.configure('2') do |config|
       aws.security_groups = "vagrant_linux_build"
       aws.user_data = AWS_USER_DATA
     end
-    builder.vm.synced_folder "..", "/source", type: "rsync",
-      rsync__exclude: [".git/", "*.sw?"]
   end
 
   config.vm.define "mgmtworker" do |mgmtworker|
