@@ -61,7 +61,7 @@ auth_dict = {
     'permissions': {
         'all_tenants': ['sys_admin', 'manager'],
         'administrators': ['sys_admin', 'manager'],
-        'system_administrators': ['sys_admin']
+        'create_global_resource': ['sys_admin']
     }
 }
 

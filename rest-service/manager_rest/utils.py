@@ -193,12 +193,12 @@ def is_administrator(tenant):
     )
 
 
-def is_system_administrator(tenant):
-    system_administrators_roles = \
-        config.instance.authorization_permissions['system_administrators']
+def is_create_global_permitted(tenant):
+    create_global_roles = \
+        config.instance.authorization_permissions['create_global_resource']
     return (
         current_user.id == constants.BOOTSTRAP_ADMIN_ID or
-        current_user.has_role_in(tenant, system_administrators_roles)
+        current_user.has_role_in(tenant, create_global_roles)
     )
 
 
