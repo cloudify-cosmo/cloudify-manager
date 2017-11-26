@@ -28,9 +28,9 @@ from flask_security import current_user
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
 
-from manager_rest.utils import is_system_administrator
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.dsl_functions import get_secret_method
+from manager_rest.utils import is_create_global_permitted
 from manager_rest.storage import get_storage_manager, models, get_node
 from manager_rest.storage.models_states import (SnapshotState,
                                                 ExecutionState,
@@ -1276,18 +1276,20 @@ class ResourceManager(object):
                                      resource,
                                      new_availability):
         current_availability = resource.resource_availability
+        states = AvailabilityState.STATES
+        if states.index(new_availability) < states.index(current_availability):
+            raise manager_exceptions.IllegalActionError(
+                "Can't set the availability of `{0}` to {1} because it "
+                "already has wider availability".format(resource.id,
+                                                        new_availability)
+            )
+
         if new_availability == AvailabilityState.GLOBAL:
             self._validate_global_permitted(model_class, resource)
-        elif new_availability == AvailabilityState.TENANT and \
-                current_availability == AvailabilityState.GLOBAL:
-            raise manager_exceptions.IllegalActionError(
-                "Can't set the availability of `{0}` to tenant because it is "
-                "already global".format(resource.id)
-            )
 
     def _validate_global_permitted(self, model_class, resource):
         # Only admin is allowed to set a resource to global
-        if not is_system_administrator(self.sm.current_tenant):
+        if not is_create_global_permitted(self.sm.current_tenant):
             raise manager_exceptions.ForbiddenError(
                 'User `{0}` is not permitted to set a resource to global'.
                 format(current_user.username))
