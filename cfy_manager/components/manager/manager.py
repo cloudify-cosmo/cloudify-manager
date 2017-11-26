@@ -121,11 +121,19 @@ def _normalize_agent_names():
         )
 
 
+def _get_selinux_state():
+    try:
+        return subprocess.check_output('getenforce').rstrip('\n\r')
+    except OSError:
+        logger.warning('SELinux is not installed')
+        return None
+
+
 def _set_selinux_permissive():
     """This sets SELinux to permissive mode both for the current session
     and systemwide.
     """
-    selinux_state = subprocess.check_output('getenforce').rstrip('\n\r')
+    selinux_state = _get_selinux_state()
     logger.debug('Checking whether SELinux in enforced...')
     if selinux_state == 'Enforcing':
         logger.info('SELinux is enforcing, setting permissive state...')
