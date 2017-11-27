@@ -46,14 +46,14 @@ class SecretsKey(SecuredResource):
             'value': {
                 'type': unicode,
             },
-            'upsert': {
+            'update_if_exists': {
                 'optional': True,
             }
         })
         value = request_dict['value']
-        upsert = rest_utils.verify_and_convert_bool(
-            'upsert',
-            request_dict.get('upsert', False),
+        update_if_exists = rest_utils.verify_and_convert_bool(
+            'update_if_exists',
+            request_dict.get('update_if_exists', False),
         )
         rest_utils.validate_inputs({'key': key})
 
@@ -69,7 +69,7 @@ class SecretsKey(SecuredResource):
             return sm.put(new_secret)
         except ConflictError:
             secret = sm.get(models.Secret, key)
-            if secret and upsert:
+            if secret and update_if_exists:
                 get_resource_manager().validate_modification_permitted(secret)
                 secret.value = value
                 secret.updated_at = timestamp
