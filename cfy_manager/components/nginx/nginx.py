@@ -29,6 +29,7 @@ from ...utils import common
 from ...utils import certificates
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
+from ...utils.users import delete_service_user, delete_group
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
@@ -319,4 +320,6 @@ def remove():
         UNIT_OVERRIDE_PATH
     ])
     yum_remove(NGINX)
+    delete_service_user(NGINX)
+    delete_group(NGINX)
     logger.notice('NGINX successfully removed')

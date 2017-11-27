@@ -34,6 +34,7 @@ from ...exceptions import ValidationError, BootstrapError
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
+from ...utils.users import delete_service_user, delete_group
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.network import wait_for_port, check_http_response
 from ...utils.files import copy_notice, remove_notice, remove_files, temp_copy
@@ -208,4 +209,6 @@ def remove():
     systemd.remove(INFLUXB)
     remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
     yum_remove(INFLUXB)
+    delete_service_user(INFLUXB)
+    delete_group(INFLUXB)
     logger.notice('InfluxDB successfully removed')

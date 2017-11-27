@@ -46,6 +46,7 @@ from .components.service_names import MANAGER
 from .components import SECURITY, PRIVATE_IP, PUBLIC_IP, ADMIN_PASSWORD
 
 from .config import config
+from .exceptions import BootstrapError
 from .logger import get_logger, setup_console_logger
 
 from .utils.files import remove_temp_files
@@ -169,10 +170,14 @@ def configure(verbose=False,
     _print_time()
 
 
-def remove(verbose=False):
+def remove(verbose=False, force=False):
     """ Uninstall Cloudify Manager """
 
     _load_config_and_logger(verbose)
+    if not force:
+        raise BootstrapError(
+            'The --force flag must be passed to `cfy_manager remove`'
+        )
 
     logger.notice('Removing Cloudify Manager...')
 

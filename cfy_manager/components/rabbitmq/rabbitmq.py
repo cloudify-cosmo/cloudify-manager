@@ -28,6 +28,7 @@ from ...exceptions import ValidationError, NetworkError
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
+from ...utils.users import delete_service_user, delete_group
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.common import sudo, mkdir, chown, remove as remove_file
 from ...utils.files import copy_notice, remove_notice, remove_files, deploy
@@ -247,4 +248,6 @@ def remove():
         join('/var/log', RABBITMQ)
     ])
     yum_remove('erlang')
+    delete_service_user(RABBITMQ)
+    delete_group(RABBITMQ)
     logger.notice('RabbitMQ successfully removed')

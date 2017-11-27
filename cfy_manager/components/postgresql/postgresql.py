@@ -28,6 +28,7 @@ from ...logger import get_logger
 from ...utils import common, files
 from ...utils.systemd import systemd
 from ...utils.install import yum_install, yum_remove
+from ...utils.users import delete_service_user, delete_group
 
 
 SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
@@ -191,4 +192,6 @@ def remove():
     files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
     yum_remove('postgresql95')
     yum_remove('postgresql95-libs')
+    delete_service_user(POSTGRES_USER)
+    delete_group(POSTGRES_USER)
     logger.notice('PostgreSQL successfully removed')

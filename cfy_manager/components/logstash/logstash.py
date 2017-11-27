@@ -31,8 +31,9 @@ from ...utils.files import replace_in_file, get_local_source_path
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
 HOME_DIR = join('/opt', LOGSTASH)
+LOGSTASH_CONF_DIR = join('/etc', LOGSTASH)
 LOG_DIR = join(constants.BASE_LOG_DIR, LOGSTASH)
-REMOTE_CONFIG_PATH = '/etc/logstash/conf.d'
+REMOTE_CONFIG_PATH = join(LOGSTASH_CONF_DIR, 'conf.d')
 UNIT_OVERRIDE_PATH = '/etc/systemd/system/logstash.service.d'
 INIT_D_FILE = '/etc/init.d/logstash'
 
@@ -185,6 +186,6 @@ def remove():
     logger.notice('Removing Logstash...')
     remove_notice(LOGSTASH)
     systemd.remove(LOGSTASH)
-    remove_files([HOME_DIR, LOG_DIR, UNIT_OVERRIDE_PATH])
+    remove_files([HOME_DIR, LOG_DIR, UNIT_OVERRIDE_PATH, LOGSTASH_CONF_DIR])
     yum_remove(LOGSTASH)
     logger.notice('Logstash successfully removed')
