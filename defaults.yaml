@@ -237,7 +237,7 @@ restservice:
 
 nginx:
   sources:
-    nginx_source_url: nginx-1.12.0-1.el7.ngx.x86_64.rpm
+    nginx_source_url: nginx-1.13.7-1.el7_4.ngx.x86_64.rpm
 
 mgmtworker:
   sources:
