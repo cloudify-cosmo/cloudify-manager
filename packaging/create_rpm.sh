@@ -93,7 +93,11 @@ print_line "Creating rpm..."
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-manager-install: The directory from which the rpm will be created
-fpm -s dir -t rpm -n cloudify-manager-install --force ${VERSION:+ -v "${VERSION}"} ${PRERELEASE:+ --iteration "${PRERELEASE}"} --after-install ./tmp-install-rpm/install.sh --config-files /opt/cloudify-manager-install/config.yaml ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager ./tmp-install-rpm/cloudify-manager-install=/opt
+RPMLOC=$(fpm -s dir -t rpm -n cloudify-manager-install --force ${VERSION:+ -v "${VERSION}"} ${PRERELEASE:+ --iteration "${PRERELEASE}"} --after-install ./tmp-install-rpm/install.sh --config-files /opt/cloudify-manager-install/config.yaml ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager ./tmp-install-rpm/cloudify-manager-install=/opt)
+# Maintain something close to standard output but allow printing the actual location
+echo ${RPMLOC}
 
 print_line "Cleaning up..."
 rm -rf tmp-install-rpm
+
+print_line "RPM created: $(pwd)/$(echo ${RPMLOC} | grep -oE 'path[^ ]+' | cut -d '"' -f2)"
