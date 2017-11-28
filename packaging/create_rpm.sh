@@ -62,17 +62,23 @@ mkdir -p tmp-install-rpm
 
 pushd tmp-install-rpm
 
-    # Anything inside this inner directory will be mapped on the manager to
-    # /opt/cloudify-manager-install. Anything *outside* it needs to be
-    # mapped manually when running fpm
-    mkdir -p cloudify-manager-install
+    # Anything inside these inner directory will be mapped on the manager to
+    # /opt/cloudify-manager-install and /opt/cloudify, respectively.
+    # Anything *outside* of these must be mapped manually when running fpm
+    # (e.g. see cfy_manager mapping)
+    mkdir -p cloudify-manager-install cloudify
 
     pushd cloudify-manager-install
-        print_line "Downloading cloudify manager resources tar..."
-        curl -O ${MANAGER_RESOURCES_URL}
-
         print_line "Getting config.yaml from the repo..."
         curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/config.yaml
+    popd
+
+    pushd cloudify
+        print_line "Downloading and extracting cloudify manager resources tar..."
+        curl -o manager-resources.tar.gz ${MANAGER_RESOURCES_URL}
+        mkdir sources
+        tar -xzf manager-resources.tar.gz -C sources --strip=1
+        rm manager-resources.tar.gz
     popd
 
     print_line "Creating cfy_manager executable..."
@@ -93,7 +99,17 @@ print_line "Creating rpm..."
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
 # cloudify-manager-install: The directory from which the rpm will be created
-RPMLOC=$(fpm -s dir -t rpm -n cloudify-manager-install --force ${VERSION:+ -v "${VERSION}"} ${PRERELEASE:+ --iteration "${PRERELEASE}"} --after-install ./tmp-install-rpm/install.sh --config-files /opt/cloudify-manager-install/config.yaml ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager ./tmp-install-rpm/cloudify-manager-install=/opt)
+RPMLOC=$(fpm \
+  -s dir \
+  -t rpm \
+  -n cloudify-manager-install \
+  --force ${VERSION:+ -v "${VERSION}"} ${PRERELEASE:+ --iteration "${PRERELEASE}"} \
+  --after-install ./tmp-install-rpm/install.sh \
+  --config-files /opt/cloudify-manager-install/config.yaml \
+  ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager \
+  ./tmp-install-rpm/cloudify-manager-install=/opt \
+  ./tmp-install-rpm/cloudify=/opt \
+)
 # Maintain something close to standard output but allow printing the actual location
 echo ${RPMLOC}
 

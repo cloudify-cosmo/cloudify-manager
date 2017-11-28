@@ -18,12 +18,9 @@ import subprocess
 from os.path import join
 from tempfile import gettempdir
 
-from .. import SOURCES
-
 from ..service_names import MANAGER
 
 from ... import constants
-from ...config import config
 from ...logger import get_logger
 from ...exceptions import FileError
 
@@ -34,9 +31,7 @@ from ...utils.users import (create_service_user,
 from ...utils.logrotate import setup_logrotate
 from ...utils.sudoers import add_entry_to_sudoers
 from ...utils.files import (replace_in_file,
-                            get_local_source_path,
-                            remove_files,
-                            get_glob_path)
+                            remove_files)
 
 logger = get_logger(MANAGER)
 
@@ -63,26 +58,6 @@ def _create_sudoers_file_and_disable_sudo_requiretty():
         constants.CLOUDIFY_USER
     )
     add_entry_to_sudoers(entry, description)
-
-
-def _get_single_tar_path():
-    single_tar_url = config[MANAGER][SOURCES]['manager_resources_package']
-    if '*' in single_tar_url:
-        local_single_tar_path = get_glob_path(single_tar_url)
-    else:
-        local_single_tar_path = get_local_source_path(single_tar_url)
-    return local_single_tar_path
-
-
-def _extract_single_tar():
-    logger.info('Extracting Cloudify manager resources archive...')
-    local_single_tar_path = _get_single_tar_path()
-    common.mkdir(constants.CLOUDIFY_SOURCES_PATH)
-    common.untar(
-        local_single_tar_path,
-        constants.CLOUDIFY_SOURCES_PATH,
-        skip_old_files=True
-    )
 
 
 def _normalize_agent_names():
@@ -155,7 +130,6 @@ def _create_manager_resources_dirs():
 
 
 def _install():
-    _extract_single_tar()
     _normalize_agent_names()
 
 
