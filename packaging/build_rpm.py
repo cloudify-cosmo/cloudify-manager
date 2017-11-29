@@ -28,6 +28,7 @@ from os.path import (
 from subprocess import check_call, check_output, CalledProcessError
 
 
+MOCK = '/usr/bin/mock'
 LOCAL_REPO_PATH = '~/mock_repo'
 DEPENDENCIES_FILE = '{spec_file}.dependencies'
 RESULT_DIR = '/var/lib/mock/epel-7-x86_64/result'
@@ -106,7 +107,7 @@ def build(source, spec_file_name):
 
     # Build .src.rpm
     check_call(
-            ['mock', '--verbose', '--buildsrpm',
+            [MOCK, '--verbose', '--buildsrpm',
              '--spec', rendered_spec_file,
              '--sources', source,
              ]
@@ -123,12 +124,12 @@ def build(source, spec_file_name):
     # Here we work around that assumption by changing the onwership of /opt
     # inside the CHROOT to the mockbuild user
     check_call([
-            'mock', '--verbose', '--chroot', '--',
+            MOCK, '--verbose', '--chroot', '--',
             'chown', '-R', 'mockbuild', '/opt'
             ])
     # Build the RPM
     check_call([
-            'mock', src_rpm,
+            MOCK, src_rpm,
             '--no-clean',
             ])
 
