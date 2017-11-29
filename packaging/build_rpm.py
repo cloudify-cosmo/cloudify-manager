@@ -67,7 +67,7 @@ def render_spec_file(spec_file, defines):
     for k, v in defines.items():
         spec_content = spec_content.replace('%{' + k + '}', v)
 
-    spec_file_out = spec_file.replace('.src.rpm', '.rendered.src.rpm')
+    spec_file_out = spec_file.replace('.spec', '.rendered.spec')
     with open(spec_file_out, 'w') as f:
         f.write(spec_content)
 
