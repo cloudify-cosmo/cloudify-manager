@@ -17,12 +17,11 @@ import argparse
 import logging
 import sys
 import shutil
-from os import chdir, getcwd, listdir
+from os import chdir, listdir
 from os.path import (
         abspath,
         basename,
         dirname,
-        expanduser,
         join as path_join,
         split as path_split,
         )
