@@ -232,6 +232,9 @@ def main(args):
                  'builder:{rpm}'.format(rpm=final_rpm),
                  '.'])
 
+        # Power down the vagrant box
+        check_call(['vagrant', 'halt', 'builder'])
+
     else:
         raise RuntimeError('need either mock or vagrant to build')
 
