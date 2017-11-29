@@ -179,8 +179,8 @@ def create_auth_header(username=None, password=None, token=None, tenant=None):
 def all_tenants_authorization():
     return (
         current_user.id == constants.BOOTSTRAP_ADMIN_ID or
-        current_user.role
-        in config.instance.authorization_permissions['all_tenants']
+        any(r in current_user.system_roles
+            for r in config.instance.authorization_permissions['all_tenants'])
     )
 
 
@@ -190,6 +190,15 @@ def is_administrator(tenant):
     return (
         current_user.id == constants.BOOTSTRAP_ADMIN_ID or
         current_user.has_role_in(tenant, administrators_roles)
+    )
+
+
+def is_create_global_permitted(tenant):
+    create_global_roles = \
+        config.instance.authorization_permissions['create_global_resource']
+    return (
+        current_user.id == constants.BOOTSTRAP_ADMIN_ID or
+        current_user.has_role_in(tenant, create_global_roles)
     )
 
 

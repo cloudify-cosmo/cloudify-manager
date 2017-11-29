@@ -15,6 +15,7 @@
 
 from flask import current_app
 
+from manager_rest import constants
 from manager_rest.storage import models
 from manager_rest.security.authorization import authorize
 from manager_rest.security import MissingPremiumFeatureResource
@@ -62,6 +63,8 @@ class UserGroups(SecuredMultiTenancyResource):
         request_dict = rest_utils.get_json_and_verify_params()
         group_name = request_dict['group_name']
         ldap_group_dn = request_dict.get('ldap_group_dn')
+        role = request_dict.get('role', constants.DEFAULT_SYSTEM_ROLE)
+        rest_utils.verify_role(role, is_system_role=True)
         rest_utils.validate_inputs({'group_name': group_name})
         if group_name == 'users':
             raise BadParametersError(
@@ -70,10 +73,24 @@ class UserGroups(SecuredMultiTenancyResource):
                 'a conflict with the remove {0} from user group endpoint'
                 .format(str(group_name))
             )
-        return multi_tenancy.create_group(group_name, ldap_group_dn)
+        return multi_tenancy.create_group(group_name, ldap_group_dn, role)
 
 
 class UserGroupsId(SecuredMultiTenancyResource):
+
+    @rest_decorators.exceptions_handled
+    @authorize('user_group_update')
+    @rest_decorators.marshal_with(GroupResponse)
+    def post(self, group_name, multi_tenancy):
+        """
+        Set role for a certain group
+        """
+        request_dict = rest_utils.get_json_and_verify_params()
+        role_name = request_dict.get('role')
+        if not role_name:
+            raise BadParametersError('`role` not provided')
+        rest_utils.verify_role(role_name, is_system_role=True)
+        return multi_tenancy.set_group_role(group_name, role_name)
 
     @rest_decorators.exceptions_handled
     @authorize('user_group_get')

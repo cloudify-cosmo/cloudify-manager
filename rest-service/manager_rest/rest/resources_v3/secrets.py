@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -41,14 +42,39 @@ class SecretsKey(SecuredResource):
         """
         Create a new secret
         """
-        key, value = self._validate_secret_inputs(key)
+        request_dict = rest_utils.get_json_and_verify_params({
+            'value': {
+                'type': unicode,
+            },
+            'update_if_exists': {
+                'optional': True,
+            }
+        })
+        value = request_dict['value']
+        update_if_exists = rest_utils.verify_and_convert_bool(
+            'update_if_exists',
+            request_dict.get('update_if_exists', False),
+        )
+        rest_utils.validate_inputs({'key': key})
 
-        return get_storage_manager().put(models.Secret(
-            id=key,
-            value=value,
-            created_at=utils.get_formatted_timestamp(),
-            updated_at=utils.get_formatted_timestamp()
-        ))
+        sm = get_storage_manager()
+        timestamp = utils.get_formatted_timestamp()
+        try:
+            new_secret = models.Secret(
+                id=key,
+                value=value,
+                created_at=timestamp,
+                updated_at=timestamp,
+            )
+            return sm.put(new_secret)
+        except ConflictError:
+            secret = sm.get(models.Secret, key)
+            if secret and update_if_exists:
+                get_resource_manager().validate_modification_permitted(secret)
+                secret.value = value
+                secret.updated_at = timestamp
+                return sm.update(secret)
+            raise
 
     @rest_decorators.exceptions_handled
     @authorize('secret_update')
@@ -57,7 +83,10 @@ class SecretsKey(SecuredResource):
         """
         Update an existing secret
         """
-        key, value = self._validate_secret_inputs(key)
+        request_dict = rest_utils.get_json_and_verify_params({'value'})
+        value = request_dict['value']
+        rest_utils.validate_inputs({'key': key})
+
         secret = get_storage_manager().get(models.Secret, key)
         get_resource_manager().validate_modification_permitted(secret)
         secret.value = value
@@ -76,12 +105,6 @@ class SecretsKey(SecuredResource):
         secret = storage_manager.get(models.Secret, key)
         get_resource_manager().validate_modification_permitted(secret)
         return storage_manager.delete(secret)
-
-    def _validate_secret_inputs(self, key):
-        request_dict = rest_utils.get_json_and_verify_params({'value'})
-        value = request_dict['value']
-        rest_utils.validate_inputs({'key': key})
-        return key, value
 
 
 class Secrets(SecuredResource):

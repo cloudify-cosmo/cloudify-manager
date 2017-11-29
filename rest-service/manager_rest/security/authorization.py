@@ -57,7 +57,7 @@ def authorize(action, tenant_for_auth=None, get_tenant_from='header'):
 
             # joining user's system role with his tenant roles
             user_roles = [role.name for role in tenant_roles] \
-                + [current_user.role]
+                + current_user.system_roles
 
             # getting the roles allowed to perform requested action
             action_roles = config.instance.authorization_permissions[action]

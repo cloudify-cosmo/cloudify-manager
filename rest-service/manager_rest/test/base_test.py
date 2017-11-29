@@ -60,7 +60,8 @@ auth_dict = {
     ],
     'permissions': {
         'all_tenants': ['sys_admin', 'manager'],
-        'administrators': ['sys_admin', 'manager']
+        'administrators': ['sys_admin', 'manager'],
+        'create_global_resource': ['sys_admin']
     }
 }
 
@@ -397,6 +398,13 @@ class BaseServerTestCase(unittest.TestCase):
     def get_blueprint_path(self, blueprint_dir_name):
         return os.path.join(os.path.dirname(
             os.path.abspath(__file__)), blueprint_dir_name)
+
+    def upload_blueprint(self, client, private=False, blueprint_id='bp_1'):
+        bp_path = self.get_blueprint_path('mock_blueprint/blueprint.yaml')
+        client.blueprints.upload(blueprint_path=bp_path,
+                                 blueprint_id=blueprint_id,
+                                 private_resource=private)
+        return blueprint_id
 
     def archive_mock_blueprint(self, archive_func=archiving.make_targzfile,
                                blueprint_dir='mock_blueprint'):

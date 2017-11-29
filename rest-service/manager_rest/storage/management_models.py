@@ -41,6 +41,18 @@ class ProviderContext(SQLModelBase):
     context = db.Column(db.PickleType, nullable=False)
 
 
+class Role(SQLModelBase, RoleMixin):
+    __tablename__ = 'roles'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.Text, unique=True, nullable=False, index=True)
+
+    description = db.Column(db.Text)
+
+    def _get_identifier_dict(self):
+        return OrderedDict({'name': self.name})
+
+
 class Tenant(SQLModelBase):
     __tablename__ = 'tenants'
 
@@ -143,6 +155,14 @@ class Group(SQLModelBase):
     )
     tenants = association_proxy('tenant_associations', 'tenant')
 
+    @declared_attr
+    def roles(cls):
+        return many_to_many_relationship(cls, Role)
+
+    @property
+    def role(self):
+        return self.roles[0].name
+
     def _get_identifier_dict(self):
         id_dict = OrderedDict({'name': self.name})
         if self.ldap_dn:
@@ -164,6 +184,7 @@ class Group(SQLModelBase):
         group_dict = super(Group, self).to_response()
         group_dict['tenants'] = self._get_tenants_response()
         group_dict['users'] = self._get_users_response()
+        group_dict['role'] = self.role
 
         if not get_data:
             for attr in ('tenants', 'users'):
@@ -197,18 +218,6 @@ class GroupTenantAssoc(SQLModelBase):
             ('tenant', self.tenant.name),
             ('role', self.role.name),
         ])
-
-
-class Role(SQLModelBase, RoleMixin):
-    __tablename__ = 'roles'
-
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    name = db.Column(db.Text, unique=True, nullable=False, index=True)
-
-    description = db.Column(db.Text)
-
-    def _get_identifier_dict(self):
-        return OrderedDict({'name': self.name})
 
 
 class User(SQLModelBase, UserMixin):
@@ -254,7 +263,7 @@ class User(SQLModelBase, UserMixin):
         return any(r in user_roles for r in list_of_roles)
 
     def roles_in_tenant(self, tenant):
-        tenant_roles = {self.role}
+        tenant_roles = set(self.system_roles)
         if not tenant:
             return tenant_roles
         for tenant_association in self.tenant_associations:
@@ -316,6 +325,7 @@ class User(SQLModelBase, UserMixin):
         user_dict['tenants'] = self._get_tenants_response()
         user_dict['groups'] = self._get_groups_response()
         user_dict['role'] = self.role
+        user_dict['system_roles'] = self.system_roles
 
         if not get_data:
             for attr in ('tenants', 'groups'):
@@ -326,6 +336,10 @@ class User(SQLModelBase, UserMixin):
     @property
     def role(self):
         return self.roles[0].name
+
+    @property
+    def system_roles(self):
+        return [self.role] + [group.role for group in self.groups]
 
     @property
     def is_bootstrap_admin(self):
