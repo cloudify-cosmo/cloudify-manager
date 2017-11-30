@@ -9,7 +9,9 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Gigaspaces Inc.
 Packager:       Gigaspaces Inc.
 
-BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, postgresql-devel, openldap-devel, git, sudo
+BuildRequires:  python >= 2.7, python-virtualenv
+BuildRequires:  openssl-devel, postgresql-devel, openldap-devel, libffi-devel
+BuildRequires:  git, sudo
 Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo
 Requires(pre):  shadow-utils
 
