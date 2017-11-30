@@ -17,11 +17,14 @@ import argparse
 import logging
 import sys
 import shutil
+import urllib2
+from datetime import datetime
 from os import chdir, listdir
 from os.path import (
         abspath,
         basename,
         dirname,
+        getmtime,
         join as path_join,
         split as path_split,
         )
@@ -35,6 +38,8 @@ RESULT_DIR = '/var/lib/mock/epel-7-x86_64/result'
 
 SCRIPT_DIR, SCRIPT_NAME = path_split(abspath(__file__))
 SSH_CONFIG_FILE = path_join(SCRIPT_DIR, 'ssh_config.tmp')
+
+RPMS_DIR = SCRIPT_DIR
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(SCRIPT_NAME)
@@ -85,16 +90,49 @@ def run_vagrant(cmd, *args, **kwargs):
             *args, **kwargs)
 
 
+def install_dependencies(spec_file):
+    dependencies_file = DEPENDENCIES_FILE.format(spec_file=spec_file)
+
+    try:
+        with open(dependencies_file) as f:
+            dependencies = f.readlines()
+    except IOError:
+        return
+
+    logger.info(
+            'installing dependencies from <{file}>. RPMs dir: {dir}'.format(
+                file=dependencies_file,
+                dir=RPMS_DIR,
+                ))
+
+    rpms = {}
+    for f in listdir(RPMS_DIR):
+        f = f.strip()
+        if f.endswith('.x86_64.rpm'):
+            name = check_output([
+                'rpm', '-qp', '--queryformat', '%{NAME}', f,
+                ])
+            rpms[name] = f
+
+    logger.info(('found RPMs:', rpms))
+
+    for dep in dependencies:
+        dep = dep.strip()
+        install_package = rpms[dep]
+        check_call([MOCK, '--yum-cmd', 'remove', dep])
+        check_call([
+            MOCK, '--yum-cmd', 'install', install_package,
+            ])
+
+
 def build(source, spec_file_name):
     """Builds the RPM"""
+    spec_file = path_join(source, 'packaging', spec_file_name)
     check_mock_config()
     # Get build options
     rpmbuild_defines = get_rpmbuild_defines()
     logger.info('defines', rpmbuild_defines)
-    rendered_spec_file = render_spec_file(
-            path_join(source, 'packaging', spec_file_name),
-            rpmbuild_defines,
-            )
+    rendered_spec_file = render_spec_file(spec_file, rpmbuild_defines)
 
     # Build .src.rpm
     check_call(
@@ -110,6 +148,9 @@ def build(source, spec_file_name):
             break
     else:
         raise RuntimeError('src rpm not found')
+
+    # Install our internal dependencies
+    install_dependencies(spec_file)
 
     # mock strongly assumes that root is not required for building RPMs.
     # Here we work around that assumption by changing the onwership of /opt
@@ -172,6 +213,46 @@ def check_mock_config():
                 )
 
 
+def download_if_newer(url, outfile=None):
+    """Check the modified time and ask the server if the file has changed"""
+    if not outfile:
+        outfile = basename(url)
+    headers = {}
+    try:
+        mod_time = getmtime(outfile)
+    except OSError:
+        pass
+    else:
+        headers['If-Modified-Since'] = datetime.utcfromtimestamp(
+                mod_time).strftime('%a, %d %b %Y %H:%M:%S GMT')
+
+    req = urllib2.Request(url, headers=headers)
+    try:
+        try:
+            f = urllib2.urlopen(req)
+        except urllib2.HTTPError as f:
+            if f.getcode() == 304:
+                return
+            else:
+                raise
+        with open(outfile, 'wb') as out:
+            print('writing', outfile)
+            out.write(f.read())
+    finally:
+        f.close()
+
+
+def get_sources(spec_file):
+    sources = []
+    with open(spec_file) as f:
+        for line in f:
+            key, sep, value = line.strip().partition(':')
+            if sep and key.strip().lower().startswith('source'):
+                sources.append(value.strip())
+
+    return sources
+
+
 def main(args):
     parser = argparse.ArgumentParser(
             description="Build RPM using mock",
@@ -190,10 +271,15 @@ def main(args):
 
     chdir(SCRIPT_DIR)
 
+    # Fetch any defined Sources (this does not include the repo containing the
+    # spec file itself, the local copy is to be used.
+    for url in get_sources(spec_file):
+        download_if_newer(url)
+
     if has_cmd('mock'):
         # run locally
         rpm = build(source, spec_file_name)
-        shutil.copy(rpm, packaging_dir)
+        shutil.copy(rpm, SCRIPT_DIR)
     elif has_cmd('vagrant'):
         # install and run mock in a vagrant CentOS 7 box
         check_call(['vagrant', 'up', 'builder'])
