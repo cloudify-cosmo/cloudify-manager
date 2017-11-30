@@ -85,16 +85,6 @@ def run_vagrant(cmd, *args, **kwargs):
             *args, **kwargs)
 
 
-def build_local_yum_repo(run, packaging_dir, spec_file):
-    """
-    Collect the dependent packages and build a local yum repo for `mock` to use
-    """
-    run('mkdir ' + LOCAL_REPO_PATH)
-    with open('{spec_file}.dependencies'.format(spec_file)) as f:
-        for url in f:
-            run('cd {local_repo_path} && wget -m {url}')
-
-
 def build(source, spec_file_name):
     """Builds the RPM"""
     check_mock_config()
