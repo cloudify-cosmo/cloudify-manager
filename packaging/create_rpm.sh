@@ -20,17 +20,73 @@ function print_line() {
   echo -e "$COL_YELLOW $LINE $COL_RESET"
 }
 
-if [ $# -eq 0 ]; then
-    echo "You need to provide a resource URL for the script to work"
-    exit 1
-fi
+function exit_with_sadness() {
+  echo ${1} >&2
+  exit 1
+}
+
+function validate_args() {
+  # We're using this ugly construct twice now. If we need it once more we should probably make it a function
+  if [[ "${INSTALL_PIP}" != true ]] && [[ "${INSTALL_PIP}" != false ]]; then
+    exit_with_sadness "Install pip argument must be either 'true' or 'false', but was: ${INSTALL_PIP}"
+  fi
+
+  # About the only definitely 'bad' branch is if someone deliberately feeds an empty string
+  # It shouldn't be possible to reach this while we're defaulting but it's worth guarding against in case of later modifications.
+  if [[ -z "${BRANCH}" ]]; then
+    exit_with_sadness "Specifying an empty string as the branch will cause problems."
+  fi
+
+  if [[ "${COMMUNITY_OR_PREMIUM}" != community ]] && [[ "${COMMUNITY_OR_PREMIUM}" != premium ]]; then
+    exit_with_sadness "Community/premium argument must be either 'community' or 'premium' but was: ${COMMUNITY_OR_PREMIUM}"
+  fi
+}
+
+function get_repo() {
+  case ${COMMUNITY_OR_PREMIUM} in
+    community)
+      repo=cloudify-versions
+      ;;
+    premium)
+      repo=cloudify-premium
+      ;;
+    *)
+      exit_with_sadness "Could not determine which repository to retrieve."
+  esac
+
+  full_repo_path="cloudify-cosmo/${repo}.git"
+
+  # vars supported for compatibility with current jenkins build approach
+  GITHUB_USERNAME=${GITHUB_USERNAME:-""}
+  GITHUB_PASSWORD=${GITHUB_PASSWORD:-""}
+  if [[ -n "${GITHUB_USERNAME}" ]]; then
+    # If we have github credentials in the environment we will use them to fetch the repo
+    git_repo="https://${GITHUB_USERNAME}:${GITHUB_PASSWORD}@github.com/${full_repo_path}"
+  else
+    # If not, we will assume SSH keys will work
+    git_repo="git@github.com:${full_repo_path}"
+  fi
+
+  git clone ${git_repo} . --branch=${BRANCH} --single-branch
+}
+
+function download_resources() {
+    local resources_file=$1
+
+    while read file; do
+      echo "Downloading ${file}..."
+      curl --retry 10 --fail --silent --show-error --location -O $file
+    done < $resources_file
+}
+
+INSTALL_PIP=${1:-true}
+BRANCH=${2:-master}
+COMMUNITY_OR_PREMIUM=${3:-premium}
+
+validate_args
 
 print_line "Validating user has sudo permissions..."
 sudo -n true
-
-MANAGER_RESOURCES_URL=$1
-INSTALL_PIP=${2:-true}
-BRANCH=${3:-master}
 
 if [ ${INSTALL_PIP} = "true" ]; then
     print_line "Installing pip..."
@@ -61,31 +117,38 @@ cd /tmp
 mkdir -p tmp-install-rpm
 
 pushd tmp-install-rpm
+  # Anything inside these inner directory will be mapped on the manager to
+  # /opt/cloudify-manager-install and /opt/cloudify, respectively.
+  # Anything *outside* of these must be mapped manually when running fpm
+  # (e.g. see cfy_manager mapping)
+  mkdir -p cloudify-manager-install cloudify/sources
 
-    # Anything inside these inner directory will be mapped on the manager to
-    # /opt/cloudify-manager-install and /opt/cloudify, respectively.
-    # Anything *outside* of these must be mapped manually when running fpm
-    # (e.g. see cfy_manager mapping)
-    mkdir -p cloudify-manager-install cloudify
+  pushd cloudify-manager-install
+    print_line "Getting config.yaml from the repo..."
+    curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/config.yaml
+  popd
 
-    pushd cloudify-manager-install
-        print_line "Getting config.yaml from the repo..."
-        curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/config.yaml
+  pushd cloudify/sources
+    mkdir versions -p
+    pushd versions
+      get_repo
     popd
+    print_line "Downloading cloudify manager resources..."
+    download_resources "versions/packages-urls/manager-packages.yaml"
 
-    pushd cloudify
-        print_line "Downloading and extracting cloudify manager resources tar..."
-        curl -o manager-resources.tar.gz ${MANAGER_RESOURCES_URL}
-        mkdir sources
-        tar -xzf manager-resources.tar.gz -C sources --strip=1
-        rm manager-resources.tar.gz
+    mkdir agents -p
+    pushd agents
+      print_line "Downloading cloudify agent resources..."
+      download_resources "../versions/packages-urls/agent-packages.yaml"
     popd
+    rm -rf versions
+  popd
 
-    print_line "Creating cfy_manager executable..."
-    pex https://github.com/cloudify-cosmo/cloudify-manager-install/archive/${BRANCH}.tar.gz -o cfy_manager -m cfy_manager.main --disable-cache
+  print_line "Creating cfy_manager executable..."
+  pex https://github.com/cloudify-cosmo/cloudify-manager-install/archive/${BRANCH}.tar.gz -o cfy_manager -m cfy_manager.main --disable-cache
 
-    print_line "Getting install.sh from the repo..."
-    curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/packaging/install.sh
+  print_line "Getting install.sh from the repo..."
+  curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/packaging/install.sh
 popd
 
 print_line "Creating rpm..."
