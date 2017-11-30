@@ -80,5 +80,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice/set-manager-ssl.py*
+/etc/cloudify/delete_logs_and_events_from_db.py*
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
