@@ -97,6 +97,7 @@ def build_local_yum_repo(run, packaging_dir, spec_file):
 
 def build(source, spec_file_name):
     """Builds the RPM"""
+    check_mock_config()
     # Get build options
     rpmbuild_defines = get_rpmbuild_defines()
     logger.info('defines', rpmbuild_defines)
@@ -161,12 +162,24 @@ def install_mock():
     # mock requires the user to be in the `mock` group
     run_vagrant('sudo usermod -a -G mock $USER')
 
+
+def check_mock_config():
     # allow network access during the build
     # (we have to download packages from pypi)
-    run_vagrant(
-            'echo -e '
-            r'''"\nconfig_opts['rpmbuild_networking'] = True\n" '''
-            '| sudo tee -a /etc/mock/site-defaults.cfg')
+    mock_config = check_output([
+        MOCK, '--debug-config',
+        ]).splitlines()
+
+    for line in mock_config:
+        if all(s in line for s in ('rpmbuild_networking', 'True')):
+            break
+    else:
+        logger.info('configuring rpmbuild_networking')
+        check_call(
+                '''echo "config_opts['rpmbuild_networking'] = True" '''
+                '| sudo -n tee -a /etc/mock/site-defaults.cfg',
+                shell=True,
+                )
 
 
 def main(args):
