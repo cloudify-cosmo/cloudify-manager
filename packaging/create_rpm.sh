@@ -127,18 +127,23 @@ cd /tmp
 mkdir -p tmp-install-rpm
 
 pushd tmp-install-rpm
-  # Anything inside these inner directory will be mapped on the manager to
-  # /opt/cloudify-manager-install and /opt/cloudify, respectively.
+  # Anything inside this inner directory will be mapped on the manager to
+  # /opt/cloudify
   # Anything *outside* of these must be mapped manually when running fpm
   # (e.g. see cfy_manager mapping)
-  mkdir -p cloudify-manager-install cloudify/sources
+  mkdir -p cloudify/sources
 
-  pushd cloudify-manager-install
+  pushd cloudify
     print_line "Getting config.yaml from the repo..."
     if [[ -n "${LOCAL_PATH}" ]]; then
         cp ${LOCAL_PATH}/config.yaml .
     else
         curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/config.yaml
+    fi
+    if [[ "${COMMUNITY_OR_PREMIUM}" == premium ]]; then
+      sed -i 's/premium_edition: set_by_installer_builder/premium_edition: true/' config.yaml
+    else
+      sed -i 's/premium_edition: set_by_installer_builder/premium_edition: false/' config.yaml
     fi
   popd
 
@@ -178,16 +183,14 @@ print_line "Creating rpm..."
 # --prefix /opt: The rpm will be extracted to /opt
 # --after-install: A script to run after yum install
 # PATH_1=PATH_2: After yum install, move the file in PATH_1 to PATH_2
-# cloudify-manager-install: The directory from which the rpm will be created
 RPMLOC=$(fpm \
   -s dir \
   -t rpm \
   -n cloudify-manager-install \
   --force ${VERSION:+ -v "${VERSION}"} ${PRERELEASE:+ --iteration "${PRERELEASE}"} \
   --after-install ./tmp-install-rpm/install.sh \
-  --config-files /opt/cloudify-manager-install/config.yaml \
+  --config-files /opt/cloudify/config.yaml \
   ./tmp-install-rpm/cfy_manager=/usr/bin/cfy_manager \
-  ./tmp-install-rpm/cloudify-manager-install=/opt \
   ./tmp-install-rpm/cloudify=/opt \
 )
 # Maintain something close to standard output but allow printing the actual location

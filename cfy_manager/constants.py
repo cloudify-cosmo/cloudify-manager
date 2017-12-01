@@ -18,9 +18,10 @@ from os.path import join, dirname
 BASE_DIR = dirname(__file__)
 COMPONENTS_DIR = join(BASE_DIR, 'components')
 
-CLOUDIFY_INSTALL_DIR = '/opt/cloudify-manager-install'
+CLOUDIFY_INSTALL_DIR = '/opt/cloudify'
 USER_CONFIG_PATH = join(CLOUDIFY_INSTALL_DIR, 'config.yaml')
-DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'defaults.yaml')
+# For defaults, use the version supplied in the package
+DEFAULT_CONFIG_PATH = join(dirname(BASE_DIR), 'config.yaml')
 
 CLOUDIFY_USER = 'cfyuser'
 CLOUDIFY_GROUP = 'cfyuser'
