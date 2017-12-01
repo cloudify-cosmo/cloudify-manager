@@ -30,16 +30,17 @@ with:
 
 `chmod +x create_rpm.sh`
 
-4. The script requires a URL for the manager's resources archive
-([community version](https://github.com/cloudify-cosmo/cloudify-versions/blob/master/packages-urls/manager-single-tar.yaml),
-[premium version](https://github.com/cloudify-cosmo/cloudify-premium/blob/master/packages-urls/manager-single-tar.yaml)).
-Pick the relevant link, and copy it.
+4. Execute the script:
 
-5. Execute the script:
+Note: For this to work you will either need an ssh key that can access cloudify-premium (premium) or cloudify-versions (community),
+or you will need to export GITHUB_USERNAME and GITHUB_PASSWORD env vars.
 
-`./create_rpm.sh <RESOURCE_ARCHIVE_URL>`
+`./create_rpm.sh`
 
-6. This will result in an rpm created in `/tmp/cloudify-manager-install-1.0-1.x86_64.rpm`.
+To build community, execute with:
+`./create_rpm.sh community`
+
+5. This will result in an rpm created in `/tmp/cloudify-manager-install-premium-1.0-1.x86_64.rpm` or `/tmp/cloudify-manager-install-community-1.0.1.x86_64.rpm`.
 
 > Note that steps 1-6 may be performed on a machine other than the one
 intended to serve as a Cloudify manager. It will be then up to the user
@@ -47,14 +48,16 @@ to ensure the `rpm` is then copied to the other machine.
 
 #### Installing Cloudify Manager
 
-7. `yum` install the rpm:
+6. `yum` install the rpm:
 
-`sudo yum install -y /tmp/cloudify-manager-install-1.0-1.x86_64.rpm`
+`sudo yum install -y /tmp/cloudify-manager-install-premium-1.0-1.x86_64.rpm`
+or
+`sudo yum install -y /tmp/cloudify-manager-install-community-1.0-1.x86_64.rpm`
 
-8. This step extracts necessary files on the system and gives permissions to the
+7. This step extracts necessary files on the system and gives permissions to the
 `/opt/cloudify-manager-install` folder. One of the files extracted is the
 `cfy_manager` executable which will be used to actually install the manager.
-9. Only the private and public IPs are necessary to install the manager,
+8. Only the private and public IPs are necessary to install the manager,
 and those can be provided directly to the executable like this:
 
 `cfy_manager install --private-ip <PRIVATE-IP> --public-ip <PUBLIC-IP>`
@@ -64,7 +67,7 @@ If more configurations are necessary, you may edit the config file in:
 wish to edit (beside the IPs) are set in [defaults.yaml](defaults.yaml).
 The format of the file is basic YAML format.
 
-10. After the command has finished, you should have a working manager,
+9. After the command has finished, you should have a working manager,
 with `cfy` installed for both the current user and `root`.
 
 ### Configuration

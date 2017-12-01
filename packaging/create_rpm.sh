@@ -79,11 +79,13 @@ function download_resources() {
     done < $resources_file
 }
 
-INSTALL_PIP=${1:-true}
-BRANCH=${2:-master}
-COMMUNITY_OR_PREMIUM=${3:-premium}
+COMMUNITY_OR_PREMIUM=${1:-premium}
+INSTALL_PIP=${2:-true}
+BRANCH=${3:-master}
 
 validate_args
+
+PRERELEASE=${PRERELEASE:-${COMMUNITY_OR_PREMIUM}}
 
 print_line "Validating user has sudo permissions..."
 sudo -n true
@@ -103,8 +105,10 @@ else
     set -e
 fi
 
-print_line "Installing fpm dependencies..."
-sudo yum install -y -q ruby-devel gcc make rpm-build rubygems
+print_line "Installing dependencies..."
+# fpm requires ruby-devel, gcc, make, rpm-build, rubygems
+# This script requires git
+sudo yum install -y -q ruby-devel gcc make rpm-build rubygems git
 
 print_line "Installing fpm..."
 gem install --no-ri --no-rdoc fpm
