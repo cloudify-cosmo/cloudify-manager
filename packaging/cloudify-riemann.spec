@@ -57,6 +57,7 @@ getent passwd %user >/dev/null || useradd -r -g %user -d /etc/cloudify -s /sbin/
 /etc/riemann/main.clj
 /etc/riemann/conf.d/manager.config
 /opt/lib/langohr.jar
+/usr/lib/systemd/system/cloudify-riemann.service
 
 %dir %attr(770,%user,cfyuser) /opt/riemann
 
