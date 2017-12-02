@@ -91,12 +91,25 @@ def run_vagrant(cmd, *args, **kwargs):
 
 
 def install_dependencies(spec_file):
+    """
+    Check for and install any internal dependencies.
+
+    Place dependencies, one package name per line, in a file called
+    '<spec_file_name>.dependencies'
+
+    e.g.:
+        $ cat cloudify-premium/packages/cloudify-premium.spec.dependencies
+        cloudify-rest-service
+    """
     dependencies_file = DEPENDENCIES_FILE.format(spec_file=spec_file)
 
     try:
         with open(dependencies_file) as f:
             dependencies = f.readlines()
     except IOError:
+        logger.info(
+                'no dependencies file found. skipping dependencies install '
+                '(this is only required for internal cloudify dependencies)')
         return
 
     logger.info(
