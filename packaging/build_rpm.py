@@ -282,12 +282,14 @@ def main(args):
     # We assume that the spec always lives one dir level below the source
     source = dirname(packaging_dir)
 
-    chdir(SCRIPT_DIR)
-
     # Fetch any defined Sources (this does not include the repo containing the
     # spec file itself, the local copy is to be used.
-    for url in get_sources(spec_file):
+    chdir(source)
+    sources = get_sources(spec_file)
+    for url in sources:
         download_if_newer(url)
+
+    chdir(SCRIPT_DIR)
 
     if has_cmd('mock'):
         # run locally
