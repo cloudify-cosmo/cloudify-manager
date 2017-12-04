@@ -18,6 +18,7 @@ from .manager import SSLConfig                   # NOQA
 from .manager_config import ManagerConfig        # NOQA
 
 from .secrets import (                           # NOQA
+    SecretsKey,
     SecretsSetGlobal,
     SecretsSetAvailability
 )
@@ -33,6 +34,7 @@ from .deployments import (                       # NOQA
 )
 
 from .blueprints import (                        # NOQA
+    BlueprintsId,
     BlueprintsSetGlobal,
     BlueprintsSetAvailability
 )

@@ -33,10 +33,11 @@ from mock import MagicMock, patch
 from manager_rest.rest import rest_utils
 from manager_rest import utils, config, constants, archiving
 from manager_rest.test.security_utils import get_admin_user
-from manager_rest.storage.models_states import ExecutionState
 from manager_rest.storage import FileServer, get_storage_manager, models
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
+from manager_rest.storage.models_states import (ExecutionState,
+                                                AvailabilityState)
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER)
@@ -399,11 +400,14 @@ class BaseServerTestCase(unittest.TestCase):
         return os.path.join(os.path.dirname(
             os.path.abspath(__file__)), blueprint_dir_name)
 
-    def upload_blueprint(self, client, private=False, blueprint_id='bp_1'):
+    def upload_blueprint(self,
+                         client,
+                         availability=AvailabilityState.TENANT,
+                         blueprint_id='bp_1'):
         bp_path = self.get_blueprint_path('mock_blueprint/blueprint.yaml')
         client.blueprints.upload(blueprint_path=bp_path,
                                  blueprint_id=blueprint_id,
-                                 private_resource=private)
+                                 availability=availability)
         return blueprint_id
 
     def archive_mock_blueprint(self, archive_func=archiving.make_targzfile,

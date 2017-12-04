@@ -489,17 +489,11 @@ class SnapshotRestore(object):
                             tenant=tenant,
                         )
                     )
-                    private_plugin = plugin['availability'] == \
-                        AvailabilityState.PRIVATE
                     temp_plugin = os.path.join(plugins_tmp, wagon_name)
                     shutil.copyfile(plugin['path'], temp_plugin)
                     client.plugins.delete(plugin['id'], force=True)
-                    new_plugin = client.plugins.upload(
-                        temp_plugin,
-                        private_resource=private_plugin
-                    )
-                    if plugin['availability'] == AvailabilityState.GLOBAL:
-                        client.plugins.set_global(new_plugin.id)
+                    client.plugins.upload(temp_plugin,
+                                          availability=plugin['availability'])
                     os.remove(temp_plugin)
             finally:
                 os.rmdir(plugins_tmp)

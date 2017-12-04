@@ -118,9 +118,10 @@ class DeploymentsId(SecuredResource):
         deployment = get_resource_manager().create_deployment(
             blueprint_id,
             deployment_id,
+            private_resource=args.private_resource,
+            availability=None,
             inputs=request_dict.get('inputs', {}),
             bypass_maintenance=bypass_maintenance,
-            private_resource=args.private_resource,
             skip_plugins_validation=self.get_skip_plugin_validation_flag(
                 request_dict)
         )

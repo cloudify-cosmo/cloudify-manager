@@ -133,19 +133,14 @@ class SnapshotsId(SecuredResource):
             'include_credentials',
             request_dict.get('include_credentials', 'true')
         )
-        private_resource = rest_utils.verify_and_convert_bool(
-            'private_resource',
-            request_dict.get('private_resource', 'false')
-        )
         bypass_maintenance = is_bypass_maintenance_mode()
-
         execution = get_resource_manager().create_snapshot(
             snapshot_id,
             include_metrics,
             include_credentials,
-            bypass_maintenance,
-            private_resource=private_resource
+            bypass_maintenance
         )
+
         return execution, 201
 
     @swagger.operation(
