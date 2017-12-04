@@ -105,7 +105,7 @@ def untar(source,
         config.add_temp_path_to_clean(destination)
     logger.debug('Extracting {0} to {1}...'.format(
         source, destination))
-    tar_command = ['tar', '-xzvf', source, '-C', destination, '--strip=1']
+    tar_command = ['tar', '-xvf', source, '-C', destination, '--strip=1']
     if skip_old_files:
         tar_command.append('--skip-old-files')
     sudo(tar_command)
