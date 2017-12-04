@@ -6,7 +6,7 @@ function create_install_rpm() {
     /tmp/create_rpm.sh ${EDITION} false ${CORE_BRANCH}
 }
 
-export CORE_TAG_NAME="4.2"
+export CORE_TAG_NAME="4.3.dev1"
 export CORE_BRANCH="master"
 AWS_ACCESS_KEY_ID=$1
 AWS_ACCESS_KEY=$2
