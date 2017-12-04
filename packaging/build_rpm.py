@@ -329,7 +329,7 @@ def main(args):
 
         # Copy files back
         final_rpm = run_vagrant(
-            'find /var/lib/mock/epel-7-x86_64/result -name *.x86_64.rpm',
+            "find /var/lib/mock/epel-7-x86_64/result -name '*.x86_64.rpm'",
             _func=check_output,
             ).strip()
         check_call(
