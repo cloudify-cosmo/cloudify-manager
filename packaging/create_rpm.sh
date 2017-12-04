@@ -56,15 +56,20 @@ function get_repo() {
 
   full_repo_path="cloudify-cosmo/${repo}.git"
 
-  # vars supported for compatibility with current jenkins build approach
-  GITHUB_USERNAME=${GITHUB_USERNAME:-""}
-  GITHUB_PASSWORD=${GITHUB_PASSWORD:-""}
-  if [[ -n "${GITHUB_USERNAME}" ]]; then
-    # If we have github credentials in the environment we will use them to fetch the repo
-    git_repo="https://${GITHUB_USERNAME}:${GITHUB_PASSWORD}@github.com/${full_repo_path}"
+  if [[ "${COMMUNITY_OR_PREMIUM}" == community ]]; then
+    # We don't need GitHub credentials for the cloudify-versions repo
+    git_repo="https://github.com/${full_repo_path}"
   else
-    # If not, we will assume SSH keys will work
-    git_repo="git@github.com:${full_repo_path}"
+      # vars supported for compatibility with current jenkins build approach
+      GITHUB_USERNAME=${GITHUB_USERNAME:-""}
+      GITHUB_PASSWORD=${GITHUB_PASSWORD:-""}
+      if [[ -n "${GITHUB_USERNAME}" ]]; then
+        # If we have github credentials in the environment we will use them to fetch the repo
+        git_repo="https://${GITHUB_USERNAME}:${GITHUB_PASSWORD}@github.com/${full_repo_path}"
+      else
+        # If not, we will assume SSH keys will work
+        git_repo="git@github.com:${full_repo_path}"
+      fi
   fi
 
   git clone ${git_repo} . --branch=${BRANCH} --single-branch
@@ -82,6 +87,7 @@ function download_resources() {
 COMMUNITY_OR_PREMIUM=${1:-premium}
 INSTALL_PIP=${2:-true}
 BRANCH=${3:-master}
+LOCAL_PATH=${4:-""}
 
 validate_args
 
@@ -129,7 +135,11 @@ pushd tmp-install-rpm
 
   pushd cloudify-manager-install
     print_line "Getting config.yaml from the repo..."
-    curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/config.yaml
+    if [[ -n "${LOCAL_PATH}" ]]; then
+        cp ${LOCAL_PATH}/config.yaml .
+    else
+        curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/config.yaml
+    fi
   popd
 
   pushd cloudify/sources
@@ -148,11 +158,14 @@ pushd tmp-install-rpm
     rm -rf versions
   popd
 
-  print_line "Creating cfy_manager executable..."
-  pex https://github.com/cloudify-cosmo/cloudify-manager-install/archive/${BRANCH}.tar.gz -o cfy_manager -m cfy_manager.main --disable-cache
-
-  print_line "Getting install.sh from the repo..."
-  curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/packaging/install.sh
+  print_line "Creating cfy_manager executable and getting the install.sh script..."
+  if [[ -n "${LOCAL_PATH}" ]]; then
+    pex ${LOCAL_PATH} -o cfy_manager -m cfy_manager.main --disable-cache
+    cp ${LOCAL_PATH}/packaging/install.sh .
+  else
+    pex https://github.com/cloudify-cosmo/cloudify-manager-install/archive/${BRANCH}.tar.gz -o cfy_manager -m cfy_manager.main --disable-cache
+    curl -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${BRANCH}/packaging/install.sh
+  fi
 popd
 
 print_line "Creating rpm..."

@@ -1,19 +1,47 @@
 version: 2
 jobs:
   build:
-    docker:
-      - image: python:2.7.13
+    machine: true
 
     working_directory: ~/cloudify-manager-install
 
+    environment:
+      - CONTAINER_NAME: cfy_manager
+      - IMAGE_NAME: cfy_manager_image
+      - REMOTE_PATH: /root/cloudify-manager-install
+
     steps:
       - checkout
+      # Running this step in the background allows us to run it in parallel
       - run:
-          name: Install tox
-          command: pip install tox
+          name: Python tests
+          background: true
+          command: |
+            pip install tox
+            tox -e flake8
+            tox -e py27
       - run:
-          name: Run static analysis
-          command: tox -e flake8
+          name: Build base container
+          command: |
+            docker build --tag ${IMAGE_NAME} packaging/docker
       - run:
-          name: Run test cases
-          command: tox -e py27
+          name: Run base container
+          command: |
+            docker run --name ${CONTAINER_NAME} -d -v /sys/fs/cgroup:/sys/fs/cgroup:ro --tmpfs /run --tmpfs /run/lock --security-opt seccomp:unconfined --cap-add SYS_ADMIN ${IMAGE_NAME}
+      - run:
+          name: Prepare base container
+          command: |
+            docker cp ~/cloudify-manager-install ${CONTAINER_NAME}:${REMOTE_PATH}
+            docker exec -d ${CONTAINER_NAME} sh -c "systemctl start sshd"
+      - run:
+          name: Create RPM
+          command: |
+            BUILD_SCRIPT_PATH=${REMOTE_PATH}/packaging/docker/build_rpm.sh
+            docker exec -t ${CONTAINER_NAME} sh -c "chmod +x ${BUILD_SCRIPT_PATH} && ${BUILD_SCRIPT_PATH}"
+      - run:
+          name: Install Cloudify Manager
+          command: |
+            cd packaging/docker
+
+            chmod +x install_manager.sh
+            ./install_manager.sh
