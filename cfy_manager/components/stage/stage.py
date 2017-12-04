@@ -81,6 +81,13 @@ def _install():
     logger.info('Extracting Stage package...')
     common.untar(stage_tar, HOME_DIR)
 
+    logger.info('Creating symlink to /usr/bin/node')
+    files.ln(
+        source=join(NODEJS_DIR, 'bin', 'node'),
+        target='/usr/bin/node',
+        params='-s'
+    )
+
 
 def _create_user_and_set_permissions():
     create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
