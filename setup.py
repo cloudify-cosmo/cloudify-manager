@@ -33,7 +33,6 @@ def package_files(directory):
 
 extra_files = package_files('cfy_manager')
 extra_files.append(join('..', 'config.yaml'))
-extra_files.append(join('..', 'defaults.yaml'))
 
 
 setup(

@@ -55,7 +55,7 @@ or
 `sudo yum install -y /tmp/cloudify-manager-install-community-1.0-1.x86_64.rpm`
 
 7. This step extracts necessary files on the system and gives permissions to the
-`/opt/cloudify-manager-install` folder. One of the files extracted is the
+`/opt/cloudify/config.yaml` file. One of the files extracted is the
 `cfy_manager` executable which will be used to actually install the manager.
 8. Only the private and public IPs are necessary to install the manager,
 and those can be provided directly to the executable like this:
@@ -63,9 +63,7 @@ and those can be provided directly to the executable like this:
 `cfy_manager install --private-ip <PRIVATE-IP> --public-ip <PUBLIC-IP>`
 
 If more configurations are necessary, you may edit the config file in:
-`/opt/cloudify-manager-install/config.yaml`. Any other values you might
-wish to edit (beside the IPs) are set in [defaults.yaml](defaults.yaml).
-The format of the file is basic YAML format.
+`/opt/cloudify/config.yaml`.
 
 9. After the command has finished, you should have a working manager,
 with `cfy` installed for both the current user and `root`.
@@ -73,14 +71,11 @@ with `cfy` installed for both the current user and `root`.
 ### Configuration
 If you wish to change some configuration after install, just edit
 `config.yaml` again and run `cfy_manager configure`. It takes about a minute.
-As stated above, all the available configurations can be found in
-[defaults.yaml](defaults.yaml).
-
 
 ### Teardown
 At any point, you can run `cfy_manager remove`, which will remove everything
 Cloudify related from the machine, except the installation code, that
-will remain in `/opt/cloudify-manager-install/config.yaml`, so that you will
+will remain in `/opt/cloudify/config.yaml`, so that you will
 have the ability to run `cfy_manager install` again.
 
 

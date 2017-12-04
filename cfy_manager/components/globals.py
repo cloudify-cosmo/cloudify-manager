@@ -22,7 +22,7 @@ from ..logger import get_logger
 
 from .service_names import RABBITMQ, MANAGER, INFLUXB
 
-from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, SOURCES, AGENT, CONSTANTS,\
+from . import PRIVATE_IP, ENDPOINT_IP, SECURITY, AGENT, CONSTANTS,\
     ADMIN_PASSWORD
 
 BROKER_IP = 'broker_ip'
@@ -84,14 +84,6 @@ def _set_constant_config():
     const_conf['internal_rest_port'] = constants.INTERNAL_REST_PORT
 
 
-def _set_community_edition():
-    if 'community' in config[MANAGER][SOURCES]['manager_resources_package']:
-        logger.info('Working with `Community` edition')
-        config[MANAGER]['premium_edition'] = False
-    else:
-        logger.info('Working with `Premium` edition')
-
-
 def _set_admin_password():
     if not config[MANAGER][SECURITY][ADMIN_PASSWORD]:
         config[MANAGER][SECURITY][ADMIN_PASSWORD] = _generate_password()
@@ -123,6 +115,5 @@ def set_globals():
     _set_rabbitmq_config()
     _set_external_port_and_protocol()
     _set_constant_config()
-    _set_community_edition()
     _set_admin_password()
     _set_influx_db_endpoint()

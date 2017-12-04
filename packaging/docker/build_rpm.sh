@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-set -eu
+set -eux
 
-REMOTE_LOCATION='/root/cloudify-manager-install'
+# Pick up path from circle, or use a default
+REMOTE_LOCATION=${REMOTE_PATH:-/root/cloudify-manager-install}
 
 echo "Creating install RPM..."
 chmod +x ${REMOTE_LOCATION}/packaging/create_rpm.sh

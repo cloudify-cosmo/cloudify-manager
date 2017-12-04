@@ -14,13 +14,12 @@
 #  * limitations under the License.
 
 import sys
-import urllib2
 import platform
 import subprocess
 from getpass import getuser
 from distutils.version import LooseVersion
 
-from . import SOURCES, PRIVATE_IP, PUBLIC_IP, VALIDATIONS
+from . import PRIVATE_IP, PUBLIC_IP, VALIDATIONS
 
 from .service_names import MANAGER, PYTHON
 
@@ -30,7 +29,6 @@ from ..constants import USER_CONFIG_PATH
 from ..exceptions import ValidationError
 
 from ..utils.common import run
-from ..utils.network import is_url
 from ..utils.install import RpmPackageHandler
 
 logger = get_logger(VALIDATIONS)
@@ -153,24 +151,6 @@ def _validate_openssl_version():
         )
 
 
-def _validate_resources_package_url():
-    single_tar_url = config[MANAGER][SOURCES]['manager_resources_package']
-    if not single_tar_url or not is_url(single_tar_url):
-        return
-    try:
-        urllib2.urlopen(single_tar_url)
-    except urllib2.HTTPError as ex:
-        _errors.append(
-            "The Manager's Resources Package {0} is "
-            "not accessible (HTTP Error: {1})".format(
-                single_tar_url, ex.code))
-    except urllib2.URLError as ex:
-        _errors.append(
-            "The Manager's Resources Package {0} is "
-            "invalid (URL Error: {1})".format(
-                single_tar_url, ex.args))
-
-
 def _validate_inputs():
     for key in (PRIVATE_IP, PUBLIC_IP):
         ip = config[MANAGER].get(key)
@@ -228,7 +208,6 @@ def validate(skip_validations=False):
     _validate_supported_distros()
     _validate_sufficient_memory()
     _validate_sufficient_disk_space()
-    _validate_resources_package_url()
     _validate_openssl_version()
     _validate_python_packages()
     _validate_user_has_sudo_permissions()
