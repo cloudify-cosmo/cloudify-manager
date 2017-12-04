@@ -118,14 +118,49 @@ class Tenant(SQLModelBase):
         tenant_dict['groups'] = self._get_groups_response()
         tenant_dict['users'] = self._get_users_response()
 
-        if not get_data:
+        if get_data:
+            tenant_dict['user_roles'] = {
+                'direct': self.direct_users,
+                'groups': self.group_users
+            }
+        else:
             for attr in ('groups', 'users'):
                 tenant_dict[attr] = len(tenant_dict[attr])
 
         return tenant_dict
 
     @property
+    def direct_users(self):
+        """
+        Return dict of all users directly associated with the tenant (not via
+        groups) and their roles in the tenant
+        """
+        return {
+            user_association.user.username: user_association.role.name
+            for user_association in self.user_associations
+        }
+
+    @property
+    def group_users(self):
+        """
+        Return a dict of all the groups associated with the tenant, their
+        roles and users
+        """
+        return {
+            group_association.group.name: {
+                'role': group_association.role.name,
+                'users': [user.username
+                          for user in group_association.group.users]
+            }
+            for group_association in self.group_associations
+        }
+
+    @property
     def all_users(self):
+        """
+        Return all the users associated with the tenants - either directly,
+        or via group - and their roles in the tenant
+        """
         all_users = defaultdict(set)
         for user_association in self.user_associations:
             all_users[user_association.user].add(user_association.role)
@@ -280,9 +315,38 @@ class User(SQLModelBase, UserMixin):
         return many_to_many_relationship(cls, Group)
 
     @property
+    def user_tenants(self):
+        """
+        Return all tenants the user is associated to directly (not via groups),
+        including the user's role in each tenant
+
+        Note: both tenants and roles are returned by their names, not objects
+        """
+        return {
+            tenant_association.tenant.name: tenant_association.role.name
+            for tenant_association in self.tenant_associations
+        }
+
+    @property
+    def group_tenants(self):
+        """
+        Return all tenants the user is associated to via groups,
+        including the user's role in each tenant
+
+        Note: both tenants and roles are returned by their names, not objects
+        """
+        group_tenants = defaultdict(dict)
+        for group in self.groups:
+            for tenant_association in group.tenant_associations:
+                # tenant maps to a dict, within it role maps to groups
+                group_tenants[tenant_association.tenant.name].setdefault(
+                    tenant_association.role.name, set()).add(group.name)
+        return group_tenants
+
+    @property
     def all_tenants(self):
-        """Return all tenants associated with a user - either directly, or
-        via a group the user is in
+        """Return all tenants the user is associated to - either directly, or
+        via a group the user is in - including tenant roles
 
         Note: recursive membership in groups is currently not supported
         """
@@ -320,14 +384,28 @@ class User(SQLModelBase, UserMixin):
         """Get the groups to which this user has been added."""
         return sorted(group.name for group in self.groups)
 
+    def _get_group_tenants_response(self):
+        return {
+            tenant: {
+                role: sorted(list(self.group_tenants[tenant][role]))
+                for role in self.group_tenants[tenant]
+                }
+            for tenant in self.group_tenants
+        }
+
     def to_response(self, get_data=False):
         user_dict = super(User, self).to_response()
         user_dict['tenants'] = self._get_tenants_response()
         user_dict['groups'] = self._get_groups_response()
         user_dict['role'] = self.role
-        user_dict['system_roles'] = self.system_roles
+        user_dict['group_system_roles'] = self.group_system_roles
 
-        if not get_data:
+        if get_data:
+            user_dict['tenant_roles'] = {
+                'direct': self.user_tenants,
+                'groups': self._get_group_tenants_response()
+            }
+        else:
             for attr in ('tenants', 'groups'):
                 user_dict[attr] = len(user_dict[attr])
 
@@ -338,8 +416,15 @@ class User(SQLModelBase, UserMixin):
         return self.roles[0].name
 
     @property
+    def group_system_roles(self):
+        group_system_roles = {}
+        for group in self.groups:
+            group_system_roles.setdefault(group.role, []).append(group.name)
+        return group_system_roles
+
+    @property
     def system_roles(self):
-        return [self.role] + [group.role for group in self.groups]
+        return [self.role] + [role for role in self.group_system_roles]
 
     @property
     def is_bootstrap_admin(self):
