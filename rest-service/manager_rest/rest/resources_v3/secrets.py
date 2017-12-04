@@ -38,7 +38,7 @@ class SecretsKey(SecuredResource):
     @rest_decorators.exceptions_handled
     @authorize('secret_create')
     @rest_decorators.marshal_with(models.Secret)
-    def put(self, key):
+    def put(self, key, **kwargs):
         """
         Create a new secret
         """

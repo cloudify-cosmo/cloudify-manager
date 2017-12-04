@@ -19,15 +19,16 @@ from nose.plugins.attrib import attr
 
 from manager_rest.test.base_test import LATEST_API_VERSION
 from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest.storage.models_states import AvailabilityState
 
 from .test_base import SecurityTestBase
 
 
-@attr(client_min_version=3, client_max_version=LATEST_API_VERSION)
+@attr(client_min_version=3.1, client_max_version=LATEST_API_VERSION)
 class ResourcePermissionTests(SecurityTestBase):
     NOT_FOUND_MSG = '404: Requested `{0}` with ID `{1}` was not found'
 
-    def _upload_blueprint(self, private=False):
+    def _upload_blueprint(self, availability=AvailabilityState.TENANT):
         blueprint_id = 'blueprint_id'
         blueprint_path = os.path.join(
             self.get_blueprint_path('mock_blueprint'),
@@ -38,32 +39,32 @@ class ResourcePermissionTests(SecurityTestBase):
             self.client.blueprints.upload(
                 blueprint_path,
                 blueprint_id,
-                private_resource=private
+                availability=availability
             )
+
         return blueprint_id
 
-    def _create_deployment(self, private=False):
+    def _create_deployment(self, availability=AvailabilityState.TENANT):
         deployment_id = 'deployment_id'
         blueprint_id = self._upload_blueprint()
         with self.use_secured_client(username='bob',
                                      password='bob_password'):
             self.client.deployments.create(blueprint_id,
                                            deployment_id,
-                                           private_resource=private)
+                                           availability=availability)
         return deployment_id
 
-    def _upload_plugin(self, private=False):
+    def _upload_plugin(self, availability=AvailabilityState.TENANT):
         plugin_path = self.create_wheel('psutil', '3.3.0')
 
         with self.use_secured_client(username='bob',
                                      password='bob_password'):
             plugin = self.client.plugins.upload(plugin_path,
-                                                private_resource=private)
+                                                availability=availability)
         return plugin.id
 
     def test_private_blueprint(self):
-        blueprint_id = self._upload_blueprint(private=True)
-
+        blueprint_id = self._upload_blueprint(AvailabilityState.PRIVATE)
         self._test_resource_get_and_list(
             resource_name='Blueprint',
             get_func_getter=lambda client: client.blueprints.get,
@@ -72,22 +73,7 @@ class ResourcePermissionTests(SecurityTestBase):
         )
 
     def test_private_deployment(self):
-        deployment_id = self._create_deployment(private=True)
-
-        self._test_resource_get_and_list(
-            resource_name='Deployment',
-            get_func_getter=lambda client: client.deployments.get,
-            resource_id=deployment_id,
-            list_func_getter=lambda client: client.deployments.list
-        )
-
-    def test_deployment_in_private_blueprint(self):
-        deployment_id = 'deployment_id'
-        blueprint_id = self._upload_blueprint(private=True)
-        with self.use_secured_client(username='bob',
-                                     password='bob_password'):
-            self.client.deployments.create(blueprint_id,
-                                           deployment_id)
+        deployment_id = self._create_deployment(AvailabilityState.PRIVATE)
         self._test_resource_get_and_list(
             resource_name='Deployment',
             get_func_getter=lambda client: client.deployments.get,
@@ -96,7 +82,7 @@ class ResourcePermissionTests(SecurityTestBase):
         )
 
     def test_private_plugin(self):
-        plugin_id = self._upload_plugin(private=True)
+        plugin_id = self._upload_plugin(AvailabilityState.PRIVATE)
         self._test_resource_get_and_list(
             resource_name='Plugin',
             get_func_getter=lambda client: client.plugins.get,
@@ -105,7 +91,7 @@ class ResourcePermissionTests(SecurityTestBase):
         )
 
     def test_cant_view_private_blueprint(self):
-        blueprint_id = self._upload_blueprint(private=True)
+        blueprint_id = self._upload_blueprint(AvailabilityState.PRIVATE)
         self._test_cant_view_private_resource(
             resource_id=blueprint_id,
             resource_name='Blueprint',
@@ -113,7 +99,7 @@ class ResourcePermissionTests(SecurityTestBase):
         )
 
     def test_cant_view_private_plugin(self):
-        plugin_id = self._upload_plugin(private=True)
+        plugin_id = self._upload_plugin(AvailabilityState.PRIVATE)
         self._test_cant_view_private_resource(
             resource_id=plugin_id,
             resource_name='Plugin',
@@ -121,7 +107,7 @@ class ResourcePermissionTests(SecurityTestBase):
         )
 
     def test_cant_view_private_deployment(self):
-        deployment_id = self._create_deployment(private=True)
+        deployment_id = self._create_deployment(AvailabilityState.PRIVATE)
         self._test_cant_view_private_resource(
             resource_id=deployment_id,
             resource_name='Deployment',

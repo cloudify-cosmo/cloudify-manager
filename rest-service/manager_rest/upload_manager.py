@@ -283,24 +283,14 @@ class UploadedSnapshotsManager(UploadedDataManager):
     def _get_archive_type(self, archive_path):
         return 'zip'
 
-    @staticmethod
-    def _get_args():
-        args_parser = RequestParser()
-        args_parser.add_argument('private_resource',
-                                 type=types.boolean,
-                                 default=False)
-        return args_parser.parse_args()
-
     def _prepare_and_process_doc(self,
                                  data_id,
                                  file_server_root,
                                  archive_target_path,
                                  **kwargs):
-        args = self._get_args()
         return get_resource_manager().create_snapshot_model(
             data_id,
-            status=SnapshotState.UPLOADED,
-            private_resource=args.private_resource
+            status=SnapshotState.UPLOADED
         ), None
 
 
@@ -514,9 +504,8 @@ class UploadedBlueprintsManager(UploadedDataManager):
     @classmethod
     def _get_args(cls):
         args_parser = RequestParser()
-        args_parser.add_argument('private_resource',
-                                 type=types.boolean,
-                                 default=False)
+        args_parser.add_argument('private_resource', type=types.boolean)
+        args_parser.add_argument('availability', type=str)
         args_parser.add_argument('application_file_name', type=str, default='')
         return args_parser.parse_args()
 
@@ -536,7 +525,8 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 app_file_name,
                 file_server_root,
                 blueprint_id,
-                private_resource=args.private_resource
+                args.private_resource,
+                args.availability
             )
 
             # moving the app directory in the file server to be under a
@@ -604,9 +594,8 @@ class UploadedPluginsManager(UploadedDataManager):
     @staticmethod
     def _get_args():
         args_parser = RequestParser()
-        args_parser.add_argument('private_resource',
-                                 type=types.boolean,
-                                 default=False)
+        args_parser.add_argument('private_resource', type=types.boolean)
+        args_parser.add_argument('availability', type=str)
         return args_parser.parse_args()
 
     def _prepare_and_process_doc(self,
@@ -617,7 +606,8 @@ class UploadedPluginsManager(UploadedDataManager):
         args = self._get_args()
         new_plugin = self._create_plugin_from_archive(data_id,
                                                       archive_target_path,
-                                                      args.private_resource)
+                                                      args.private_resource,
+                                                      args.availability)
         filter_by_name = {'package_name': new_plugin.package_name}
         sm = get_resource_manager().sm
         plugins = sm.list(Plugin, filters=filter_by_name)
@@ -638,11 +628,21 @@ class UploadedPluginsManager(UploadedDataManager):
     def _create_plugin_from_archive(self,
                                     plugin_id,
                                     archive_path,
-                                    private_resource):
+                                    private_resource,
+                                    availability):
         plugin = self._load_plugin_package_json(archive_path)
         build_props = plugin.get('build_server_os_properties')
-        availability = get_resource_manager().\
-            get_resource_availability(private_resource)
+        plugin_info = {'package_name': plugin.get('package_name'),
+                       'archive_name': plugin.get('archive_name')}
+        resource_manager = get_resource_manager()
+        availability = resource_manager.get_resource_availability(
+            Plugin,
+            plugin_id,
+            availability,
+            private_resource,
+            plugin_info
+        )
+
         return Plugin(
             id=plugin_id,
             package_name=plugin.get('package_name'),

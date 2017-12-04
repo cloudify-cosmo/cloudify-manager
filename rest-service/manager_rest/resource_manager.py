@@ -117,10 +117,9 @@ class ResourceManager(object):
 
     def create_snapshot_model(self,
                               snapshot_id,
-                              status=SnapshotState.CREATING,
-                              private_resource=False):
+                              status=SnapshotState.CREATING):
         now = utils.get_formatted_timestamp()
-        availability = self.get_resource_availability(private_resource)
+        availability = AvailabilityState.PRIVATE
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
                                        status=status,
@@ -132,10 +131,8 @@ class ResourceManager(object):
                         snapshot_id,
                         include_metrics,
                         include_credentials,
-                        bypass_maintenance,
-                        private_resource=False):
-        self.create_snapshot_model(snapshot_id,
-                                   private_resource=private_resource)
+                        bypass_maintenance):
+        self.create_snapshot_model(snapshot_id)
         try:
             _, execution = self._execute_system_workflow(
                 wf_id='create_snapshot',
@@ -255,7 +252,8 @@ class ResourceManager(object):
                           application_file_name,
                           resources_base,
                           blueprint_id,
-                          private_resource=False):
+                          private_resource,
+                          availability):
         dsl_location = os.path.join(
             resources_base,
             application_dir,
@@ -269,8 +267,10 @@ class ResourceManager(object):
             raise manager_exceptions.DslParseException(str(ex))
 
         now = utils.get_formatted_timestamp()
-
-        availability = self.get_resource_availability(private_resource)
+        availability = self.get_resource_availability(models.Blueprint,
+                                                      blueprint_id,
+                                                      availability,
+                                                      private_resource)
         new_blueprint = models.Blueprint(
             plan=plan,
             id=blueprint_id,
@@ -658,9 +658,10 @@ class ResourceManager(object):
     def create_deployment(self,
                           blueprint_id,
                           deployment_id,
+                          private_resource,
+                          availability,
                           inputs=None,
                           bypass_maintenance=None,
-                          private_resource=False,
                           skip_plugins_validation=False):
 
         blueprint = self.sm.get(models.Blueprint, blueprint_id)
@@ -696,14 +697,11 @@ class ResourceManager(object):
             deployment_plan
         )
         new_deployment.blueprint = blueprint
-        # The deployment is private if either the blueprint was
-        # private, or the user passed the `private_resource` flag
-        private_blueprint = blueprint.resource_availability == \
-            AvailabilityState.PRIVATE
-        private_resource = private_resource or private_blueprint
-        availability = self.get_resource_availability(private_resource)
+        availability = self.get_resource_availability(models.Deployment,
+                                                      deployment_id,
+                                                      availability,
+                                                      private_resource)
         new_deployment.resource_availability = availability
-
         self.sm.put(new_deployment)
 
         self._create_deployment_nodes(deployment_id, deployment_plan)
@@ -1257,9 +1255,46 @@ class ResourceManager(object):
 
         app_context.update_parser_context(context_dict['context'])
 
-    def get_resource_availability(self, private_resource):
-        return AvailabilityState.PRIVATE if private_resource \
-            else AvailabilityState.TENANT
+    def get_resource_availability(self,
+                                  model_class,
+                                  resource_id,
+                                  availability,
+                                  private_resource=None,
+                                  plugin_info=None):
+        """
+        Determine the availability of the resource.
+        :param model_class: SQL DB table class
+        :param resource_id: The id of the resource
+        :param availability: The new parameter for the user to set the
+                             availability of the resource.
+        :param private_resource: The old parameter the user used to set
+                                 the availability, kept for backwards
+                                 compatibility and it will be deprecated soon
+        :param plugin_info: In case the resource is a plugin,
+                            it's package_name and archive_name
+        :return: The availability to set
+        """
+
+        # Validate we're not using the old parameter with new parameter
+        if private_resource is not None and availability:
+            raise manager_exceptions.BadParametersError(
+                "The `private_resource` and `availability` "
+                "parameters cannot be used together"
+            )
+
+        # Handle the old parameter
+        if private_resource:
+            return AvailabilityState.PRIVATE if private_resource else \
+                AvailabilityState.TENANT
+
+        # Validate that global availability is permitted
+        if availability == AvailabilityState.GLOBAL:
+            self._validate_global_permitted(model_class,
+                                            resource_id,
+                                            create_resource=True,
+                                            plugin_info=plugin_info)
+
+        return availability or AvailabilityState.TENANT
 
     def set_availability(self, model_class, resource_id, availability):
         resource = self.sm.get(model_class, resource_id)
@@ -1285,26 +1320,41 @@ class ResourceManager(object):
             )
 
         if new_availability == AvailabilityState.GLOBAL:
-            self._validate_global_permitted(model_class, resource)
+            plugin_info = None
+            if model_class == models.Plugin:
+                plugin_info = {'package_name': resource.package_name,
+                               'archive_name': resource.archive_name}
+            self._validate_global_permitted(model_class,
+                                            resource.id,
+                                            plugin_info=plugin_info)
 
-    def _validate_global_permitted(self, model_class, resource):
+    def _validate_global_permitted(self,
+                                   model_class,
+                                   resource_id,
+                                   create_resource=False,
+                                   plugin_info=None):
         # Only admin is allowed to set a resource to global
         if not is_create_global_permitted(self.sm.current_tenant):
             raise manager_exceptions.ForbiddenError(
-                'User `{0}` is not permitted to set a resource to global'.
-                format(current_user.username))
+                'User `{0}` is not permitted to set or create a global '
+                'resource'.format(current_user.username))
 
         if model_class == models.Plugin:
-            unique_filter = {model_class.package_name: resource.package_name,
-                             model_class.archive_name: resource.archive_name}
+            unique_filter = {
+                model_class.package_name: plugin_info['package_name'],
+                model_class.archive_name: plugin_info['archive_name']
+            }
         else:
-            unique_filter = {model_class.id: resource.id}
+            unique_filter = {model_class.id: resource_id}
 
         # Check if the resource is unique
-        if self.sm.count(model_class, unique_filter) > 1:
+        max_resource_number = 0 if create_resource else 1
+        if self.sm.count(model_class, unique_filter) > max_resource_number:
             raise manager_exceptions.IllegalActionError(
-                "Can't set the availability of `{0}` to global because it "
-                "also exists in other tenants".format(resource.id))
+                "Can't set or create the resource `{0}`, it's availability "
+                "can't be global because it also exists in other tenants"
+                .format(resource_id)
+            )
 
     def validate_modification_permitted(self, resource):
         # A global resource can't be modify from outside its tenant
