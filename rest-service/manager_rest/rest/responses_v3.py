@@ -57,8 +57,10 @@ class UserResponse(object):
     resource_fields = {
         'username': fields.String,
         'tenants': fields.Raw,
+        'tenant_roles': fields.Raw,
         'groups': fields.Raw,
         'role': fields.String,
+        'group_system_roles': fields.Raw,
         'active': fields.Boolean,
         'last_login_at': fields.String
     }
@@ -66,8 +68,10 @@ class UserResponse(object):
     def __init__(self, **kwargs):
         self.username = kwargs.get('username')
         self.tenants = kwargs.get('tenants')
+        self.tenant_roles = kwargs.get('tenant_roles')
         self.groups = kwargs.get('groups')
         self.role = kwargs.get('role')
+        self.group_system_roles = kwargs.get('group_system_roles')
         self.active = kwargs.get('active')
         self.last_login_at = kwargs.get('last_login_at')
 
@@ -79,9 +83,11 @@ class TenantResponse(object):
         'name': fields.String,
         'groups': fields.Raw,
         'users': fields.Raw,
+        'user_roles': fields.Raw,
     }
 
     def __init__(self, **kwargs):
         self.name = kwargs.get('name')
         self.groups = kwargs.get('groups')
         self.users = kwargs.get('users')
+        self.user_roles = kwargs.get('user_roles')
