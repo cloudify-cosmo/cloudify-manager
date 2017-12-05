@@ -1,0 +1,46 @@
+# REST and UI external server
+server {
+  # server listening for external requests
+  listen              443 ssl;
+  server_name         {{ manager.public_ip }};
+
+  ssl_certificate     {{ constants.external_cert_path }};
+  ssl_certificate_key {{ constants.external_key_path }};
+
+  include "/etc/nginx/conf.d/logs-conf.cloudify";
+
+  # serve the UI
+  include "/etc/nginx/conf.d/ui-locations.cloudify";
+
+  # serve the Composer
+  include "/etc/nginx/conf.d/composer-location.cloudify";
+
+  # Serves the Rest Service (backed by the cloudify-rest upstream).
+  include "/etc/nginx/conf.d/rest-location.cloudify";
+
+  # Serves the File Server (backed by the cloudify-resources upstream).
+  include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
+}
+
+server {
+  listen 80;
+  server_name _;
+
+  # For REST API requests, return HTTP 400.
+  # We don't want to automatically redirect API requests which
+  # may contain sensitive info.
+  location ~ ^/api/ {
+    return 400;
+  }
+
+  # Other than API requests, and unless otherwise noted: redirect
+  # to HTTPS using HTTP code 308 to preserve the request's body.
+  location / {
+    add_header Location https://$host$request_uri always;
+    return 308;
+  }
+
+  location /resources/cloudify_agent {
+    include "/etc/nginx/conf.d/redirect-to-fileserver.cloudify";
+  }
+}

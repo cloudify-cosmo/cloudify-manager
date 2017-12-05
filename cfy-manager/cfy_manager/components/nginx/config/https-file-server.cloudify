@@ -1,0 +1,17 @@
+# internal file server
+server {
+    # server listening for internal requests
+    listen              53229 ssl;
+    server_name         127.0.0.1;
+
+    # force http redirect to https
+    if ($scheme = http) {
+        return 301 https://$server_name$request_uri;
+    }
+
+    ssl_certificate     {{ constants.internal_cert_path }};
+    ssl_certificate_key {{ constants.internal_key_path }};
+
+    access_log    /var/log/cloudify/nginx/cloudify-files.log;
+    include "/etc/nginx/conf.d/fileserver-location.cloudify";
+}

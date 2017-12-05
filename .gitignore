@@ -55,3 +55,6 @@ riemann.log
 .vagrant
 packaging/ssh_config.tmp
 *.rpm
+
+*.jar
+*.gem

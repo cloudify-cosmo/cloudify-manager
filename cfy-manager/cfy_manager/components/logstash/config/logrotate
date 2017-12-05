@@ -1,0 +1,10 @@
+{{ logstash.log_dir }}/*.log {{ logstash.log_dir }}/*.err {{ logstash.log_dir }}/*.stdout {
+        hourly
+        rotate 7
+        size 100M
+        copytruncate
+        compress
+        delaycompress
+        missingok
+        notifempty
+}
