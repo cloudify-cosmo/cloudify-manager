@@ -90,7 +90,23 @@ def run_vagrant(cmd, *args, **kwargs):
             *args, **kwargs)
 
 
-def install_dependencies(spec_file):
+def get_dependencies(spec_file):
+    """get the list of dependencies"""
+    dependencies_file = DEPENDENCIES_FILE.format(spec_file=spec_file)
+
+    try:
+        with open(dependencies_file) as f:
+            dependencies = f.readlines()
+    except IOError:
+        logger.info(
+                'no dependencies file found. skipping dependencies install '
+                '(this is only required for internal cloudify dependencies)')
+        dependencies = []
+
+    return dependencies
+
+
+def install_dependencies(spec_file, source):
     """
     Check for and install any internal dependencies.
 
@@ -101,20 +117,14 @@ def install_dependencies(spec_file):
         $ cat cloudify-premium/packages/cloudify-premium.spec.dependencies
         cloudify-rest-service
     """
-    dependencies_file = DEPENDENCIES_FILE.format(spec_file=spec_file)
+    dependencies = get_dependencies(spec_file)
 
-    try:
-        with open(dependencies_file) as f:
-            dependencies = f.readlines()
-    except IOError:
-        logger.info(
-                'no dependencies file found. skipping dependencies install '
-                '(this is only required for internal cloudify dependencies)')
+    if not dependencies:
         return
 
     logger.info(
             'installing dependencies from <{file}>. RPMs dir: {dir}'.format(
-                file=dependencies_file,
+                file=DEPENDENCIES_FILE.format(spec_file=spec_file),
                 dir=RPMS_DIR,
                 ))
 
@@ -131,11 +141,25 @@ def install_dependencies(spec_file):
 
     for dep in dependencies:
         dep = dep.strip()
-        install_package = rpms[dep]
-        check_call([MOCK, '--yum-cmd', 'remove', dep])
+        if '://' in dep:
+            package_name = check_output([
+                    'rpm', '-qp', '--queryformat', '%{NAME}', dep,
+                    ])
+            install_package = path_join(source, basename(dep))
+        else:
+            package_name = dep
+            install_package = rpms[dep]
+
+        check_call([MOCK, '--yum-cmd', 'remove', package_name])
         check_call([
             MOCK, '--yum-cmd', 'install', install_package,
             ])
+
+
+def get_dependency_urls(spec_file):
+    dependencies = get_dependencies(spec_file)
+
+    return [dep.strip() for dep in dependencies if '://' in dep]
 
 
 def build(source, spec_file_name):
@@ -163,7 +187,7 @@ def build(source, spec_file_name):
         raise RuntimeError('src rpm not found')
 
     # Install our internal dependencies
-    install_dependencies(spec_file)
+    install_dependencies(spec_file, source)
 
     # mock strongly assumes that root is not required for building RPMs.
     # Here we work around that assumption by changing the onwership of /opt
@@ -286,6 +310,8 @@ def main(args):
     # spec file itself, the local copy is to be used.
     chdir(source)
     sources = get_sources(spec_file)
+    sources += get_dependency_urls(spec_file)
+    logger.info(sources)
     for url in sources:
         download_if_newer(url)
 
