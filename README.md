@@ -21,24 +21,24 @@ see below steps 1-6.
 #### Creating the RPM
 
 1. SSH into a clean VM (or a bare metal server, of course).
-2. Download the [`create_rpm.sh`](packaging/create_rpm.sh) script to the machine
+2. Download the [`create_rpm`](packaging/create_rpm) script to the machine
 with:
 
-`curl -L -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/packaging/create_rpm.sh`
+`curl -L -O https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/master/packaging/create_rpm`
 
 3. Give it executable permissions:
 
-`chmod +x create_rpm.sh`
+`chmod +x create_rpm`
 
 4. Execute the script:
 
 Note: For this to work you will either need an ssh key that can access cloudify-premium (premium) or cloudify-versions (community),
 or you will need to export GITHUB_USERNAME and GITHUB_PASSWORD env vars.
 
-`./create_rpm.sh`
+`./create_rpm`
 
 To build community, execute with:
-`./create_rpm.sh community`
+`./create_rpm --edition community`
 
 5. This will result in an rpm created in `/tmp/cloudify-manager-install-premium-1.0-1.x86_64.rpm` or `/tmp/cloudify-manager-install-community-1.0.1.x86_64.rpm`.
 

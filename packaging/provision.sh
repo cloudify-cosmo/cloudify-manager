@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 function create_install_rpm() {
-    curl -L https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${CORE_BRANCH}/packaging/create_rpm.sh -o /tmp/create_rpm.sh
-    chmod +x /tmp/create_rpm.sh
-    /tmp/create_rpm.sh ${EDITION} false ${CORE_BRANCH}
+    curl -L https://raw.githubusercontent.com/cloudify-cosmo/cloudify-manager-install/${CORE_BRANCH}/packaging/create_rpm -o /tmp/create_rpm
+    chmod +x /tmp/create_rpm
+    /tmp/create_rpm --edition ${EDITION} --skip-pip-install --branch ${CORE_BRANCH}
 }
 
 export CORE_TAG_NAME="4.3.dev1"
