@@ -121,7 +121,7 @@ def install_dependencies(spec_file):
     rpms = {}
     for f in listdir(RPMS_DIR):
         f = f.strip()
-        if f.endswith('.x86_64.rpm'):
+        if any(f.endswith(y) for y in ('.x86_64.rpm', '.noarch.rpm')):
             name = check_output([
                 'rpm', '-qp', '--queryformat', '%{NAME}', f,
                 ])
