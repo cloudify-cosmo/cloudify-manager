@@ -10,7 +10,7 @@ Vendor:         Gigaspaces Inc.
 Packager:       Gigaspaces Inc.
 
 BuildRequires:  python, python-setuptools
-Requires:       PyYAML, python-jinja2, python2-argh
+Requires:       python, python-setuptools, PyYAML, python-jinja2, python2-argh = 0.26.1
 
 
 %define _name cfy-manager
