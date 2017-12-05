@@ -50,6 +50,8 @@ LOG_DIR = join(BASE_LOG_DIR, STAGE)
 RESOURCES_DIR = join(HOME_DIR, 'resources')
 STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
 
+NODE_EXECUTABLE_PATH = '/usr/bin/node'
+
 
 def _create_paths():
     common.mkdir(NODEJS_DIR)
@@ -81,11 +83,11 @@ def _install():
     logger.info('Extracting Stage package...')
     common.untar(stage_tar, HOME_DIR)
 
-    logger.info('Creating symlink to /usr/bin/node')
+    logger.info('Creating symlink to {0}...'.format(NODE_EXECUTABLE_PATH))
     files.ln(
         source=join(NODEJS_DIR, 'bin', 'node'),
-        target='/usr/bin/node',
-        params='-s'
+        target=NODE_EXECUTABLE_PATH,
+        params='-sf'
     )
 
 
@@ -199,5 +201,5 @@ def remove():
     systemd.remove(STAGE)
     delete_service_user(STAGE_USER)
     delete_group(STAGE_GROUP)
-    files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR])
+    files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR, NODE_EXECUTABLE_PATH])
     logger.notice('Stage successfully removed')
