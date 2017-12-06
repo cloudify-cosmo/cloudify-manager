@@ -1,0 +1,32 @@
+{
+  "spaces": [
+    {
+      "name": "everything_30d",
+      "retentionPolicy": "30d",
+      "shardDuration": "7d",
+      "regex": "/.*/",
+      "replicationFactor": 1,
+      "split": 1
+    },
+    {
+      "name": "forever",
+      "retentionPolicy": "inf",
+      "shardDuration": "7d",
+      "regex": "/^_.*/",
+      "replicationFactor": 1,
+      "split": 1
+    },
+    {
+      "name": "rollups",
+      "retentionPolicy": "365d",
+      "shardDuration": "30d",
+      "regex": "/^\\d+.*/",
+      "replicationFactor": 1,
+      "split": 1
+    }
+  ],
+  "continuousQueries": [
+    "select * from events into events.[id]",
+    "select count(value) from events group by time(5m) into 5m.count.events"
+  ]
+}

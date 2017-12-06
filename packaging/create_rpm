@@ -1,0 +1,670 @@
+#!/usr/bin/env python
+from __future__ import print_function
+import argparse
+import json
+import multiprocessing
+import os
+import subprocess
+import sys
+import urlparse
+
+# Not using click or the cfy_manager/logging.py so that this remains a single
+# file download that is immediately usable without installing anything outside
+# of python stdlib
+
+EDITIONS = {
+    'community': {
+        'repo': 'cloudify-cosmo/cloudify-versions.git',
+        'requires_auth': False,
+    },
+    'premium': {
+        'repo': 'cloudify-cosmo/cloudify-premium.git',
+        'requires_auth': True,
+    },
+}
+
+RPM_BUILDER_BASE = '/tmp/tmp-install-rpm'
+MANAGER_RESOURCES_BASE = os.path.join(
+    RPM_BUILDER_BASE,
+    'cloudify/sources',
+)
+AGENT_RESOURCES_BASE = os.path.join(
+    RPM_BUILDER_BASE,
+    'cloudify/sources/agents',
+)
+CONFIG_DIR = os.path.join(
+    RPM_BUILDER_BASE,
+    'cloudify',
+)
+
+CONFIG_FILE_DESTINATION = os.path.join(CONFIG_DIR, 'config.yaml')
+INSTALL_SCRIPT_DESTINATION = os.path.join(RPM_BUILDER_BASE, 'install.sh')
+
+INSTALLER_REPO_RAW_BASE = (
+    'https://raw.githubusercontent.com/cloudify-cosmo/'
+    'cloudify-manager-install/{branch}/'  # Trailing slash needed for urljoin
+)
+INSTALLER_REPO_ARCHIVE = (
+    'https://github.com/cloudify-cosmo/cloudify-manager-install/'
+    'archive/{branch}.tar.gz'
+)
+
+
+def print_in_color(message, color, stream=None):
+    """
+        Print a line in color.
+    """
+    if stream:
+        func = stream.write
+    else:
+        func = sys.stdout.write
+
+    esc_seq = '\x1b['
+    reset = esc_seq + '39;49;00m'
+    colors = {
+        'red': esc_seq + '31;01m',
+        'green': esc_seq + '32;01m',
+        'yellow': esc_seq + '33;01m',
+        'blue': esc_seq + '34;01m',
+        'magenta': esc_seq + '35;01m',
+        'cyan': esc_seq + '36;01m',
+    }
+
+    func(colors[color] + message + reset + '\n')
+
+
+def print_status_update(message):
+    """
+        Print clear status update, differentiated from general command output.
+    """
+    line = "-------------------------------------------------------------"
+
+    print_in_color(line, 'yellow')
+    print_in_color(message, 'blue')
+    print_in_color(line, 'yellow')
+
+
+def determine_rpm_location(rpmbuild_output):
+    """
+        Determine the full path of the RPM file produced by fpm.
+    """
+    # Expecting ruby-style output:
+    # {:timestamp=>"2017-12-04T18:31:03.884873+0000", :message=>"Created package", :path=>"cloudify-manager-install-1.0-premium.x86_64.rpm"}  # noqa
+    # Or, when overwriting:
+    # {:timestamp=>"2017-12-04T19:12:30.367577+0000", :message=>"Force flag given. Overwriting package at cloudify-manager-install-1.0-premium.x86_64.rpm", :level=>:warn}  # noqa
+    # {:timestamp=>"2017-12-04T19:12:54.776960+0000", :message=>"Created package", :path=>"cloudify-manager-install-1.0-premium.x86_64.rpm"}  # noqa
+    # We want the path to the produced RPM:
+    # We only need the last line
+    rpmbuild_output = rpmbuild_output.splitlines()[-1]
+    # First, get just the list of items without surrounding whitespace and
+    # without the leading and trailing braces
+    rpmbuild_output = rpmbuild_output.strip().strip('{}').split(',')
+    rpmbuild_output = [element.strip()
+                       for element in rpmbuild_output]
+    # Now split each element on the rocket ruby uses to key hashes
+    rpmbuild_output = [element.split('=>')
+                       for element in rpmbuild_output]
+    # And now it's as close to being a dict as we could hope for!
+    rpmbuild_output = dict(rpmbuild_output)
+    return rpmbuild_output[':path'].strip('"')
+
+
+def exit_with_sadness(message):
+    """
+        Display an error then exit with an error status.
+    """
+    print_in_color(message, 'red', stream=sys.stderr)
+
+
+def exit_helpfully_on_failure(command, error, return_output=False):
+    """
+        Try to run a command, but exit with a useful error message on failure.
+        If return_output is set to True then the stderr and stdout will be out
+        of order but the stdout will be returned.
+    """
+    if return_output:
+        func = subprocess.check_output
+    else:
+        func = subprocess.check_call
+    try:
+        result = func(command)
+        if return_output:
+            # This will put stdout out of order with stderr, but allows us to
+            # parse the resulting output if we need to
+            print(result)
+            return result
+    except subprocess.CalledProcessError:
+        message = 'Tried to execute: {command}'.format(
+            # This is not necessarily exactly what we tried to execute, but is
+            # often good enough to provide pointers for troubleshooting.
+            command=' '.join(command),
+        )
+        print_in_color(message, 'red', stream=sys.stderr)
+        exit_with_sadness(error)
+
+
+def get_package_urls_file(edition, branch, repo_destination_path):
+    """
+        Get the package urls list, returning the paths to the file (in a dict)
+        for 'agent' and 'manager' package urls.
+    """
+    edition_details = EDITIONS[edition]
+    repo_path = edition_details['repo']
+    auth_required = edition_details['requires_auth']
+
+    using_credentials = False
+    print_status_update('Getting package urls.')
+    if auth_required:
+        print('Authentication is required...')
+        if (
+            'GITHUB_USERNAME' in os.environ
+            and 'GITHUB_PASSWORD' in os.environ
+        ):
+            print('Username and password have been supplied.')
+            repo = 'https://{username}:{password}@github.com/'.format(
+                username=os.environ['GITHUB_USERNAME'],
+                password=os.environ['GITHUB_PASSWORD'],
+            )
+            repo += '{repo_path}'
+            using_credentials = True
+        else:
+            print('Username and password not supplied, SSH key will be used.')
+            repo = 'git@github.com:{repo_path}'
+    else:
+        print('Authentication not required.')
+        repo = 'https://github.com/{repo_path}'
+
+    repo = repo.format(repo_path=repo_path)
+
+    if using_credentials:
+        # If credentials are used, don't spit them onto the screen.
+        # Note that if there's an error they will be dumped to the screen.
+        output_repo = repo.split('@')[-1]
+        output_repo = 'http://****:****@' + output_repo
+    else:
+        output_repo = repo
+    print('Cloning {branch} from: {repo}'.format(
+        repo=output_repo,
+        branch=branch,
+    ))
+
+    # We can't use the normal utility function for this or we will spit
+    # passwords onto the screen.
+    try:
+        subprocess.check_call([
+            'git', 'clone',
+            '--branch=' + branch,
+            '--depth=1',
+            repo,
+            repo_destination_path,
+        ])
+    except subprocess.CalledProcessError:
+        # Don't spit out the password, please.
+        exit_with_sadness(
+            'Could not git clone: {repo}'.format(repo=output_repo),
+        )
+    return {
+        'manager': os.path.join(repo_destination_path,
+                                'packages-urls/manager-packages.yaml'),
+        'agent': os.path.join(repo_destination_path,
+                              'packages-urls/agent-packages.yaml'),
+    }
+
+
+def download_file(source, destination):
+    """
+        Download a specific file.
+    """
+    # Please note that this function is used under multiprocessing.
+    # Therefore, if you change from print to e.g. a logger, or even if you
+    # change any prints to be multi-line, you will probably find that the
+    # output will become very... artistic.
+    print('Downloading {url}...'.format(url=source))
+    result = subprocess.check_output(
+        [
+            'curl', '--retry', '10', '--fail', '--silent',
+            '--show-error', '--location',
+            '-o', destination,
+            source,
+        ],
+        stderr=subprocess.STDOUT,
+    )
+    print('...finished downloading {url}'.format(url=source))
+    return result
+
+
+def download_listed_resources(resource_file, destination_path):
+    """
+        Download resources listed in a file.
+    """
+    with open(resource_file) as resource_list_handle:
+        resources = resource_list_handle.readlines()
+
+    downloader_pool = multiprocessing.Pool(processes=5)
+    results = []
+
+    for resource in resources:
+        resource = resource.strip()
+        if (not resource) or resource.startswith('#'):
+            # Cope with blank lines and comments
+            continue
+        resource_file_name = os.path.split(resource)[-1]
+        results.append(
+            downloader_pool.apply_async(
+                download_file,
+                (
+                    resource,
+                    os.path.join(destination_path,
+                                 resource_file_name),
+                ),
+            )
+        )
+
+    for result in results:
+        # Complete each process.
+        result.get()
+
+
+def retrieve_resources(edition, branch):
+    """
+        Retrieve all of the required resources for the installer.
+    """
+    package_urls_destination = os.path.join(RPM_BUILDER_BASE, 'tmp-urls')
+    package_url_files = get_package_urls_file(
+        edition,
+        branch,
+        package_urls_destination,
+    )
+
+    print_status_update('Downloading resources...')
+    download_listed_resources(
+        package_url_files['manager'],
+        MANAGER_RESOURCES_BASE,
+    )
+    download_listed_resources(
+        package_url_files['agent'],
+        AGENT_RESOURCES_BASE,
+    )
+
+    exit_helpfully_on_failure(
+        command=[
+            'rm', '-rf', package_urls_destination,
+        ],
+        error='Could not clean up package urls dir.',
+    )
+
+
+def retrieve_required_files(edition, types_yaml_url,
+                            installer_path, installer_branch):
+    """
+        Retrieve all files required for the installer build, either locally or
+        from repositories.
+    """
+    installer_repo_base = INSTALLER_REPO_RAW_BASE.format(
+        branch=installer_branch,
+    )
+
+    print_status_update('Retrieving required files...')
+    for required_file, destination in (
+        ('config.yaml', CONFIG_FILE_DESTINATION),
+        ('packaging/install.sh', INSTALL_SCRIPT_DESTINATION),
+    ):
+        if installer_path:
+            source = os.path.join(installer_path, required_file)
+            exit_helpfully_on_failure(
+                command=[
+                    'cp',
+                    source,
+                    destination,
+                ],
+                error=(
+                    'Could not copy {req} from local installer repo.'.format(
+                        req=required_file,
+                    )
+                ),
+            )
+        else:
+            source = urlparse.urljoin(installer_repo_base, required_file)
+            exit_helpfully_on_failure(
+                command=[
+                    'curl',
+                    '-o', destination,
+                    source,
+                ],
+                error=(
+                    'Could not download {req} from installer '
+                    'repository.'.format(
+                        req=required_file,
+                    )
+                ),
+            )
+
+    # Grab types.yaml to make sanity work offline
+    types_destination = os.path.join(RPM_BUILDER_BASE, 'types.yaml')
+    exit_helpfully_on_failure(
+        command=[
+            'curl',
+            '--location',  # Follow redirects for moved content
+            '-o', types_destination,
+            types_yaml_url,
+        ],
+        error='Could not retrieve types.yaml!',
+    )
+
+    print('Setting premium edition flag in config...')
+    premium = json.dumps(edition == 'premium')
+    with open(CONFIG_FILE_DESTINATION) as config_handle:
+        config = config_handle.read()
+    config = config.replace(
+        'premium_edition: set_by_installer_builder',
+        'premium_edition: {premium}'.format(premium=premium),
+    )
+    with open(CONFIG_FILE_DESTINATION, 'w') as config_handle:
+        config_handle.write(config)
+
+
+def install_dependencies():
+    """
+        Install the dependencies for the package builder.
+    """
+    print_status_update('Installing dependencies.')
+
+    print('Installing required rpms...')
+    install_rpms = [
+        'sudo', 'yum', 'install', '-y', '-q',
+        # fpm requirements
+        'ruby-devel',
+        'gcc',
+        'make',
+        'rpm-build',
+        'rubygems',
+        # Requirements for this script
+        'git',
+    ]
+    exit_helpfully_on_failure(
+        command=install_rpms,
+        error='Could not yum install dependencies!',
+    )
+
+    print('Installing fpm...')
+    exit_helpfully_on_failure(
+        command=['gem', 'install', '--no-ri', '--no-rdoc', 'fpm'],
+        error='Failed to gem install fpm.',
+    )
+
+    print('Installing pex...')
+    exit_helpfully_on_failure(
+        command=['sudo', 'pip', 'install', 'pex'],
+        error='Failed to pip install pex.',
+    )
+
+
+def install_pip():
+    print_status_update('Installing pip.')
+    print('Downloading pip installer...')
+    subprocess.check_call([
+        'curl', '-O', 'https://bootstrap.pypa.io/get-pip.py',
+    ])
+    print('Installing pip...')
+    subprocess.check_call([
+        'sudo', 'python', 'get-pip.py',
+    ])
+
+
+def validate_sudo():
+    """
+        Confirm the current user can sudo.
+    """
+    print_status_update('Validating user sudo ability.')
+    exit_helpfully_on_failure(
+        command=['sudo', '-n', 'true'],
+        error='Could not sudo as this user!',
+    )
+
+
+def validate_pip():
+    """
+        Confirm that pip is available for the current user.')
+    """
+    print_status_update('Validating user pip ability.')
+    exit_helpfully_on_failure(
+        command=['pip', '--version'],
+        error='pip is not installed but is required!',
+    )
+
+
+def prepare_directory_structure():
+    """
+        Prepare the directory structure needed for building the installer.
+    """
+    print_status_update('Preparing directory structure to build package.')
+    print('Making required directories...')
+    exit_helpfully_on_failure(
+        command=[
+            'mkdir', '-p',
+            RPM_BUILDER_BASE,
+            MANAGER_RESOURCES_BASE,
+            AGENT_RESOURCES_BASE,
+            CONFIG_DIR,
+        ],
+        error='Could not create directory tree in /tmp/tmp-install-rpm',
+    )
+
+
+def create_cfy_manager_command(installer_path, installer_branch):
+    """
+        Ensure that the cfy_manager command can be executed after the
+        installer is on the user's system.
+    """
+    print_status_update('Creating cfy_manager executable.')
+    if installer_path:
+        source = installer_path
+    else:
+        source = INSTALLER_REPO_ARCHIVE.format(
+            branch=installer_branch,
+        )
+    exit_helpfully_on_failure(
+        command=[
+            'pex', source,
+            '-o', os.path.join(RPM_BUILDER_BASE, 'cfy_manager'),
+            '-m', 'cfy_manager.main',
+            '--disable-cache',
+        ],
+        error='Failed to build cfy_manager executable!',
+    )
+
+
+def run_build_command(edition):
+    """
+        Run the command to build the installer package and return the path to
+        the created package.
+    """
+    print_status_update('Creating RPM.')
+    rpm_builder_command = [
+        'fpm',
+        '-s', 'dir',  # Source is a directory
+        '-t', 'rpm',  # Build an RPM
+        '-n', 'cloudify-manager-install',  # The name of the package
+        '--package', '/tmp',  # Put the package in /tmp when it is built
+        '--force',  # Force run even if this will overwrite an existing RPM
+        # Command to run after rpm is installed
+        '--after-install', INSTALL_SCRIPT_DESTINATION,
+        # Which files are considered config files (path as it will be when the
+        # RPM has been installed)
+        '--config-files', '/opt/cloudify/config.yaml',
+    ]
+    if 'VERSION' in os.environ:
+        version = os.environ['VERSION']
+        print('Using version {version} setting from env var.'.format(
+            version=version,
+        ))
+        rpm_builder_command.extend([
+            '-v', version,
+        ])
+    if 'PRERELEASE' in os.environ:
+        print('Using iteration set by PRERELEASE env var.')
+        iteration = os.environ['PRERELEASE']
+    else:
+        iteration = edition
+    print('Using iteration {iteration}.'.format(
+        iteration=iteration,
+    ))
+    rpm_builder_command.extend([
+        '--iteration', iteration,
+    ])
+
+    mapping = '{source}={destination}'
+    rpm_builder_command.extend([
+        # What files to include in the package:
+        # <package_path>=<path after RPM is installed>
+        mapping.format(
+            source=os.path.join(RPM_BUILDER_BASE, 'cfy_manager'),
+            destination='/usr/bin/cfy_manager',
+        ),
+        mapping.format(
+            # This will put all of the cloudify directory in /opt/cloudify
+            source=os.path.join(RPM_BUILDER_BASE, 'cloudify'),
+            destination='/opt',
+        ),
+        mapping.format(
+            source=os.path.join(RPM_BUILDER_BASE, 'types.yaml'),
+            destination='/opt/manager/resources/spec/types.yaml',
+        ),
+    ])
+
+    rpmbuild_output = exit_helpfully_on_failure(
+        command=rpm_builder_command,
+        error='Could not build RPM!',
+        return_output=True,
+    )
+
+    print('Cleaning up build directory.')
+    exit_helpfully_on_failure(
+        command=['rm', '-rf', RPM_BUILDER_BASE],
+        error='Could not delete build directory.',
+    )
+
+    return determine_rpm_location(rpmbuild_output)
+
+
+def build_package(edition, branch, installer_branch, installer_path,
+                  should_install_pip, types_yaml_url):
+    """
+        Build the package.
+    """
+    validate_sudo()
+
+    if should_install_pip:
+        install_pip()
+
+    validate_pip()
+
+    install_dependencies()
+
+    prepare_directory_structure()
+
+    retrieve_required_files(
+        edition=edition,
+        types_yaml_url=types_yaml_url,
+        installer_path=installer_path,
+        installer_branch=installer_branch,
+    )
+
+    create_cfy_manager_command(
+        installer_path=installer_path,
+        installer_branch=installer_branch,
+    )
+
+    retrieve_resources(
+        edition=edition,
+        branch=branch,
+    )
+
+    rpm_location = run_build_command(
+        edition=edition,
+    )
+
+    print_status_update('RPM created: {location}'.format(
+        location=rpm_location,
+    ))
+
+
+if __name__ == '__main__':
+    # Env vars are still supported for compatibility with the current build
+    # approach.
+    # Yes, documenting the env vars like this is a bit ugly. It would be nicer
+    # if we made them arguments instead!
+    parser = argparse.ArgumentParser(
+        description=(
+            'Create a cloudify installer package. '
+            'The package itself will support offline install. '
+            'The package builder, however, will need internet access.\n'
+            '\n'
+            'Supported env vars:\n'
+            'GITHUB_USERNAME, GITHUB_PASSWORD: These will be used if '
+            'authentication is required for the package urls of the edition '
+            'you are building an installer for. If these are not specified, '
+            'it will be assumed that your SSH key is able to access the git '
+            'repository. Note that many special characters are expected to '
+            'break these variables.\n'
+            'VERSION: If this is set it will be used as the RPM version.\n'
+            'PRERELEASE: If this is set then it will be used as the RPM '
+            '"iteration" value. If this is not set then it will use the name '
+            'of the edition you are building an installer for.'
+        ),
+    )
+
+    parser.add_argument(
+        '--skip-pip-install',
+        dest='install_pip',
+        help='If this is set, pip will not be installed.',
+        action='store_false',
+        default=True,
+    )
+
+    parser.add_argument(
+        '-e', '--edition',
+        help='Specify which edition of cloudify to build',
+        choices=EDITIONS.keys(),
+        default='premium',
+    )
+
+    parser.add_argument(
+        '-b', '--branch',
+        help=(
+            'Which branch of cloudify versions/premium repo to get package '
+            'list from.'
+        ),
+        default='master',
+    )
+
+    parser.add_argument(
+        '-t', '--types-yaml-url',
+        help='Which types.yaml to bake into the manager.',
+        default=(
+            'http://www.getcloudify.org/spec/cloudify/4.3.dev1/types.yaml'
+        ),
+    )
+
+    installer_source_group = parser.add_mutually_exclusive_group()
+    installer_source_group.add_argument(
+        '-B', '--installer-branch',
+        help='Which branch of the installer builder to use.',
+        default='master',
+    )
+    installer_source_group.add_argument(
+        '-L', '--local-installer-path',
+        help='Path to local clone of installer builder to use.',
+        default='',
+    )
+
+    args = parser.parse_args()
+
+    build_package(
+        edition=args.edition,
+        branch=args.branch,
+        installer_branch=args.installer_branch,
+        installer_path=args.local_installer_path,
+        should_install_pip=args.install_pip,
+        types_yaml_url=args.types_yaml_url,
+    )
