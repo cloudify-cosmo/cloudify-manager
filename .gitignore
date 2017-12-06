@@ -23,7 +23,6 @@ var
 sdist
 develop-eggs
 .installed.cfg
-lib
 lib64
 
 # Installer logs
@@ -51,3 +50,11 @@ riemann.log
 
 # vim
 *.swp
+
+# rpm packaging
+.vagrant
+packaging/ssh_config.tmp
+*.rpm
+
+*.jar
+*.gem

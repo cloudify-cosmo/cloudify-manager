@@ -1,0 +1,15 @@
+[Unit]
+Description=Riemann Service
+Wants=cloudify-rabbitmq.service
+After=cloudify-rabbitmq.service
+
+[Service]
+TimeoutStartSec=0
+Restart=always
+User=riemann
+Group=riemann
+EnvironmentFile=-/etc/sysconfig/cloudify-riemann
+ExecStart=/usr/bin/riemann -a ${RIEMANN_CONFIG_PATH}/main.clj
+
+[Install]
+WantedBy=multi-user.target

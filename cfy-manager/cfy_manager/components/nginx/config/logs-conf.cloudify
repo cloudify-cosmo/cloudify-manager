@@ -1,0 +1,3 @@
+  # log files
+  access_log          /var/log/cloudify/nginx/cloudify.access.log;
+  error_log           /var/log/cloudify/nginx/cloudify.error.log;

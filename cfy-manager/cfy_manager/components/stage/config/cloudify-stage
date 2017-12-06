@@ -1,0 +1,2 @@
+NODEJS_HOME=/opt/nodejs
+STAGE_HOME=/opt/cloudify-stage

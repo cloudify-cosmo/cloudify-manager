@@ -1,0 +1,8 @@
+/var/log/cloudify/riemann/*.txt {
+        hourly
+        rotate 7
+        size 100M
+        compress
+        delaycompress
+        missingok
+        notifempty
