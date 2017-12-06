@@ -17,7 +17,7 @@ import os
 from tempfile import mkstemp
 from os.path import join, isdir, islink
 
-from .. import SOURCES, SCRIPTS
+from .. import SCRIPTS
 
 from ..service_names import POSTGRESQL
 
@@ -27,7 +27,6 @@ from ...logger import get_logger
 
 from ...utils import common, files
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils.users import delete_service_user, delete_group
 
 
@@ -43,23 +42,6 @@ PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 PG_PORT = 5432
 
 logger = get_logger(POSTGRESQL)
-
-
-def _install():
-    sources = config[POSTGRESQL][SOURCES]
-
-    logger.debug('Installing PostgreSQL dependencies...')
-    yum_install(sources['libxslt_rpm_url'])
-
-    logger.debug('Installing PostgreSQL...')
-    yum_install(sources['ps_libs_rpm_url'])
-    yum_install(sources['ps_rpm_url'])
-    yum_install(sources['ps_contrib_rpm_url'])
-    yum_install(sources['ps_server_rpm_url'])
-    yum_install(sources['ps_devel_rpm_url'])
-
-    logger.debug('Installing python libs for PostgreSQL...')
-    yum_install(sources['psycopg2_rpm_url'])
 
 
 def _init_postgresql():
@@ -174,7 +156,6 @@ def _configure():
 
 def install():
     logger.notice('Installing PostgreSQL...')
-    _install()
     _configure()
     logger.notice('PostgreSQL successfully installed')
 
@@ -190,8 +171,6 @@ def remove():
     files.remove_notice(POSTGRESQL)
     systemd.remove(SYSTEMD_SERVICE_NAME)
     files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
-    yum_remove('postgresql95')
-    yum_remove('postgresql95-libs')
     delete_service_user(POSTGRES_USER)
     delete_group(POSTGRES_USER)
     logger.notice('PostgreSQL successfully removed')
