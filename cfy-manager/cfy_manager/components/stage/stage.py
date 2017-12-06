@@ -43,7 +43,6 @@ STAGE_USER = '{0}_user'.format(STAGE)
 STAGE_GROUP = '{0}_group'.format(STAGE)
 
 HOME_DIR = join('/opt', 'cloudify-{0}'.format(STAGE))
-NODEJS_DIR = join('/opt', 'nodejs')
 LOG_DIR = join(BASE_LOG_DIR, STAGE)
 RESOURCES_DIR = join(HOME_DIR, 'resources')
 STAGE_RESOURCES = join(BASE_RESOURCES_PATH, STAGE)
@@ -52,7 +51,6 @@ NODE_EXECUTABLE_PATH = '/usr/bin/node'
 
 
 def _create_paths():
-    common.mkdir(NODEJS_DIR)
     common.mkdir(HOME_DIR)
     common.mkdir(LOG_DIR)
     common.mkdir(RESOURCES_DIR)
@@ -69,20 +67,12 @@ def _set_community_mode():
 def _install():
     _create_paths()
 
-    logger.info('Creating symlink to {0}...'.format(NODE_EXECUTABLE_PATH))
-    files.ln(
-        source=join(NODEJS_DIR, 'bin', 'node'),
-        target=NODE_EXECUTABLE_PATH,
-        params='-sf'
-    )
-
 
 def _create_user_and_set_permissions():
     create_service_user(STAGE_USER, STAGE_GROUP, HOME_DIR)
 
     logger.debug('Fixing permissions...')
     common.chown(STAGE_USER, STAGE_GROUP, HOME_DIR)
-    common.chown(STAGE_USER, STAGE_GROUP, NODEJS_DIR)
     common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
 
 
@@ -126,9 +116,8 @@ def _create_auth_token(rest_service_python):
 
 def _run_db_migrate():
     backend_dir = join(HOME_DIR, 'backend')
-    npm_path = join(NODEJS_DIR, 'bin', 'npm')
     common.run(
-        'cd {0}; {1} run db-migrate'.format(backend_dir, npm_path),
+        'cd {0}; /usr/bin/npm run db-migrate'.format(backend_dir),
         shell=True
     )
 
@@ -177,5 +166,5 @@ def remove():
     systemd.remove(STAGE)
     delete_service_user(STAGE_USER)
     delete_group(STAGE_GROUP)
-    files.remove_files([HOME_DIR, NODEJS_DIR, LOG_DIR, NODE_EXECUTABLE_PATH])
+    files.remove_files([HOME_DIR, LOG_DIR, NODE_EXECUTABLE_PATH])
     logger.notice('Stage successfully removed')
