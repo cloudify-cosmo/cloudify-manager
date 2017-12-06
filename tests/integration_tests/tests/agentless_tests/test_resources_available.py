@@ -33,7 +33,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
         blueprint_name = 'empty_blueprint.yaml'
         blueprint_path = resource('dsl/{0}'.format(blueprint_name))
         self.client.blueprints.upload(blueprint_path,
-                                      blueprint_id=blueprint_id)
+                                      entity_id=blueprint_id)
         invalid_resource_url = 'https://{0}:{1}/resources/blueprints/{1}/{2}' \
             .format(container_ip, 53229, blueprint_id, blueprint_name)
         try:
@@ -46,7 +46,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
 
     def test_resources_access(self):
         self.client.blueprints.upload(resource('dsl/empty_blueprint.yaml'),
-                                      blueprint_id='blu')
+                                      entity_id='blu')
 
         # admin can the blueprint
         admin_headers = self.client._client.headers

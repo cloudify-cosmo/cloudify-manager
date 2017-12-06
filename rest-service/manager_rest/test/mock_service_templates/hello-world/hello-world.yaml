@@ -1,0 +1,32 @@
+tosca_definitions_version: tosca_simple_yaml_1_0
+
+node_types:
+
+  HelloWorld:
+    derived_from: tosca:WebApplication
+    requirements:
+      - host:
+          # Override to allow for 0 occurrences
+          capability: tosca:Container
+          occurrences: [ 0, UNBOUNDED ]
+
+topology_template:
+
+  node_templates:
+    hello_world:
+      type: HelloWorld
+      capabilities:
+        app_endpoint:
+          properties:
+            protocol: http
+            port: 9090
+      interfaces:
+        Standard:
+          configure: scripts/configure.sh
+          start: scripts/start.sh
+          stop: scripts/stop.sh
+
+  outputs:
+    port:
+      type: integer
+      value: { get_property: [ hello_world, app_endpoint, port ] }
