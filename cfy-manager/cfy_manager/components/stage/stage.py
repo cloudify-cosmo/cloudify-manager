@@ -27,7 +27,6 @@ from ..service_names import STAGE, MANAGER, RESTSERVICE
 
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import FileError
 from ...constants import BASE_LOG_DIR, BASE_RESOURCES_PATH, CLOUDIFY_GROUP
 
 from ...utils import sudoers
@@ -69,19 +68,7 @@ def _set_community_mode():
 
 
 def _install():
-    stage_source_url = config[STAGE][SOURCES]['stage_source_url']
-    try:
-        stage_tar = files.get_local_source_path(stage_source_url)
-    except FileError:
-        logger.info('Stage package not found in manager resources package')
-        logger.notice('Stage will not be installed.')
-        config[STAGE]['skip_installation'] = True
-        return
-
     _create_paths()
-
-    logger.info('Extracting Stage package...')
-    common.untar(stage_tar, HOME_DIR)
 
     logger.info('Creating symlink to {0}...'.format(NODE_EXECUTABLE_PATH))
     files.ln(
@@ -182,8 +169,6 @@ def _configure():
 def install():
     logger.notice('Installing Stage...')
     _install()
-    if config[STAGE]['skip_installation']:
-        return
     _configure()
     logger.notice('Stage successfully installed')
 

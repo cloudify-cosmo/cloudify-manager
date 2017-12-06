@@ -124,12 +124,7 @@ java:
 
 logstash: {}
 
-stage:
-  # If set to true, Cloudify UI will not be installed
-  skip_installation: false
-  sources:
-    nodejs_source_url: node-v8.9.1-linux-x64.tar.xz
-    stage_source_url: cloudify-stage-*.tgz
+stage: {}
 
 composer:
   # If set to true, Cloudify Composer will not be installed
