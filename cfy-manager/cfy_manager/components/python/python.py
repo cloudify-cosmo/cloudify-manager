@@ -13,8 +13,6 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from .. import SOURCES
-
 from ..service_names import PYTHON
 
 from ...config import config
@@ -22,20 +20,9 @@ from ...logger import get_logger
 from ...exceptions import ValidationError
 
 from ...utils.common import sudo
-from ...utils.install import yum_install, yum_remove
 from ...utils.files import copy_notice, remove_notice
 
 logger = get_logger(PYTHON)
-
-
-def _install():
-    yum_install(config[PYTHON][SOURCES]['pip_source_url'])
-
-    if config[PYTHON]['install_python_compilers']:
-        logger.info('Installing Compilers...')
-        yum_install('python-devel')
-        yum_install('gcc')
-        yum_install('gcc-c++')
 
 
 def _validate_pip_installed():
@@ -54,7 +41,6 @@ def _configure():
 
 def install():
     logger.notice('Installing Python dependencies...')
-    _install()
     _configure()
     logger.notice('Python dependencies successfully installed')
 
@@ -69,9 +55,4 @@ def remove():
     remove_notice(PYTHON)
     if config[PYTHON]['remove_on_teardown']:
         logger.notice('Removing Python dependencies...')
-        yum_remove('python-pip')
-        if config[PYTHON]['install_python_compilers']:
-            yum_remove('python-devel')
-            yum_remove('gcc')
-            yum_remove('gcc-c++')
         logger.notice('Python dependencies successfully removed')

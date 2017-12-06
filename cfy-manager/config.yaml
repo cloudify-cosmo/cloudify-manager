@@ -176,8 +176,6 @@ python:
   # uninstalling the Cloudify Manager. NOTE: only set to true if those
   # dependencies weren't available before Cloudify Manager installation
   remove_on_teardown: false
-  sources:
-    pip_source_url: python-pip-7.1.0-1.el7.noarch.rpm
 
   # Dependencies of the python package. These are NOT currently being
   # installed, but are validated to exist on the machine prior to Cloudify
