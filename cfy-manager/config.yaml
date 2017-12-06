@@ -61,10 +61,6 @@ agent:
   min_workers: 2
   max_workers: 5
 
-amqpinflux:
-  sources:
-    amqpinflux_source_url: cloudify-amqp-influx-*.x86_64.rpm
-
 influxdb:
   # An IP Endpoint of your InfluxDB Cluster.
   endpoint_ip: ''
