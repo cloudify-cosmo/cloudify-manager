@@ -16,7 +16,7 @@
 import json
 from os.path import join
 
-from .. import SOURCES, CONFIG
+from .. import CONFIG
 
 from ..service_names import RABBITMQ
 
@@ -26,7 +26,6 @@ from ...logger import get_logger
 from ...exceptions import ValidationError, NetworkError
 
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils.network import wait_for_port, is_port_open
 from ...utils.users import delete_service_user, delete_group
 from ...utils.logrotate import set_logrotate, remove_logrotate
@@ -45,12 +44,6 @@ INSECURE_PORT = 5672
 RABBITMQ_CTL = 'rabbitmqctl'
 
 logger = get_logger(RABBITMQ)
-
-
-def _install():
-    sources = config[RABBITMQ][SOURCES]
-    for source in sources.values():
-        yum_install(source)
 
 
 def _deploy_resources():
@@ -223,7 +216,6 @@ def _configure():
 
 def install():
     logger.notice('Installing RabbitMQ...')
-    _install()
     _configure()
     logger.notice('RabbitMQ successfully installed')
 
@@ -247,7 +239,6 @@ def remove():
         join('/usr/lib', RABBITMQ),
         join('/var/log', RABBITMQ)
     ])
-    yum_remove('erlang')
     delete_service_user(RABBITMQ)
     delete_group(RABBITMQ)
     logger.notice('RabbitMQ successfully removed')

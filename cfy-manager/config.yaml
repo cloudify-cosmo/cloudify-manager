@@ -81,9 +81,6 @@ rabbitmq:
   # Sets the File Descriptor limit for the rabbitmq user.
   # Not used if an external endpoint is used.
   fd_limit: 102400
-  sources:
-    erlang_rpm_source_url: erlang-17.4-1.el6.x86_64.rpm
-    rabbitmq_rpm_source_url: rabbitmq-server-3.5.3-1.noarch.rpm
 
   policy_metrics:
     # Sets the number of milliseconds to wait before a message expires
