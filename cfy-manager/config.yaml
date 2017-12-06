@@ -130,11 +130,6 @@ logstash:
     postgresql_jdbc_driver_url: postgresql-9.4.1212.jar
 
 
-consul:
-  sources:
-    consul_source_url: consul_0.7.2_linux_amd64.zip
-
-
 syncthing:
   sources:
     syncthing_source_url: syncthing-linux-amd64-v0.14.5.tar.gz

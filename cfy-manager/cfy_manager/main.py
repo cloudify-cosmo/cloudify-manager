@@ -24,7 +24,6 @@ from .components import java
 from .components import nginx
 from .components import stage
 from .components import sanity
-from .components import consul
 from .components import python
 from .components import manager
 from .components import riemann
@@ -69,7 +68,6 @@ COMPONENTS = [
     amqpinflux,
     java,
     riemann,
-    consul,
     syncthing,
     stage,
     composer,
