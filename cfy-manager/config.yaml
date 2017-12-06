@@ -61,6 +61,8 @@ agent:
   min_workers: 2
   max_workers: 5
 
+amqpinflux: {}
+
 influxdb:
   # An IP Endpoint of your InfluxDB Cluster.
   endpoint_ip: ''
