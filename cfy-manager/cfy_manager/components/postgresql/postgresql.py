@@ -30,12 +30,10 @@ from ...utils.systemd import systemd
 from ...utils.users import delete_service_user, delete_group
 
 
-SYSTEMD_SERVICE_NAME = 'postgresql-9.5'
+SYSTEMD_SERVICE_NAME = 'postgresql'
 POSTGRES_USER = 'postgres'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL)
-
 PGSQL_LIB_DIR = '/var/lib/pgsql'
-PGSQL_USR_DIR = '/usr/pgsql-9.5'
 PS_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
@@ -46,9 +44,8 @@ logger = get_logger(POSTGRESQL)
 
 def _init_postgresql():
     logger.debug('Initializing PostreSQL DATA folder...')
-    postgresql95_setup = join(PGSQL_USR_DIR, 'bin', 'postgresql95-setup')
     try:
-        common.sudo(command=[postgresql95_setup, 'initdb'])
+        common.sudo(command=['/bin/postgresql-setup', 'initdb'])
     except Exception:
         logger.debug('PostreSQL DATA folder already initialized...')
         pass
@@ -58,10 +55,10 @@ def _init_postgresql():
     systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
 
     logger.debug('Setting PostgreSQL logs path...')
-    ps_95_logs_path = join(PGSQL_LIB_DIR, '9.5', 'data', 'pg_log')
+    pg_logs_path = join(PGSQL_LIB_DIR, 'data', 'pg_log')
     common.mkdir(LOG_DIR)
-    if not isdir(ps_95_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
-        files.ln(source=ps_95_logs_path, target=LOG_DIR, params='-s')
+    if not isdir(pg_logs_path) and not islink(join(LOG_DIR, 'pg_log')):
+        files.ln(source=pg_logs_path, target=LOG_DIR, params='-s')
 
     logger.info('Starting PostgreSQL service...')
     systemd.restart(SYSTEMD_SERVICE_NAME, append_prefix=False)
@@ -170,7 +167,7 @@ def remove():
     logger.notice('Removing PostgreSQL...')
     files.remove_notice(POSTGRESQL)
     systemd.remove(SYSTEMD_SERVICE_NAME)
-    files.remove_files([PGSQL_LIB_DIR, PGSQL_USR_DIR, LOG_DIR])
+    files.remove_files([PGSQL_LIB_DIR, LOG_DIR])
     delete_service_user(POSTGRES_USER)
     delete_group(POSTGRES_USER)
     logger.notice('PostgreSQL successfully removed')
