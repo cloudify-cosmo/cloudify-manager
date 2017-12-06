@@ -16,7 +16,6 @@
 from os.path import join
 
 from .. import (
-    SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
     HOME_DIR_KEY,
@@ -87,13 +86,6 @@ def _create_user_and_set_permissions():
     common.chown(STAGE_USER, STAGE_GROUP, LOG_DIR)
 
 
-def _install_nodejs():
-    logger.info('Installing NodeJS...')
-    nodejs_source_url = config[STAGE][SOURCES]['nodejs_source_url']
-    nodejs = files.get_local_source_path(nodejs_source_url)
-    common.untar(nodejs, NODEJS_DIR)
-
-
 def _deploy_script(script_name, description):
     sudoers.deploy_sudo_command_script(
         script_name,
@@ -157,7 +149,6 @@ def _configure():
     files.copy_notice(STAGE)
     set_logrotate(STAGE)
     _create_user_and_set_permissions()
-    _install_nodejs()
     _deploy_scripts()
     rest_service_python = join(config[RESTSERVICE][VENV], 'bin', 'python')
     _allow_snapshot_restore_to_restore_token(rest_service_python)
