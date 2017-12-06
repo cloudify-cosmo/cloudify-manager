@@ -170,12 +170,7 @@ python:
     - python-backports
     - python-backports-ssl_match_hostname
 
-riemann:
-  sources:
-    langohr_source_url: langohr.jar
-    daemonize_source_url: daemonize-1.7.3-7.el7.x86_64.rpm
-    riemann_source_url: riemann-0.2.6-1.noarch.rpm
-    cloudify_resources_url: cloudify-manager-*.tar.gz
+riemann: {}
 
 restservice:
   log:

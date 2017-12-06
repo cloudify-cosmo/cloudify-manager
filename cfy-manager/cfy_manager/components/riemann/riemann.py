@@ -25,7 +25,6 @@ from ...logger import get_logger
 
 from ...utils import common, files
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.users import (create_service_user,
                             delete_service_user,
@@ -37,7 +36,6 @@ HOME_DIR = join('/opt', RIEMANN)
 CONFIG_PATH = join('/etc', RIEMANN)
 LOG_DIR = join(constants.BASE_LOG_DIR, RIEMANN)
 LANGOHR_HOME = '/opt/lib'
-LANGOHR_JAR_PATH = join(LANGOHR_HOME, 'langohr.jar')
 
 
 def _create_paths():
@@ -51,18 +49,6 @@ def _create_paths():
     common.chown(RIEMANN, constants.CLOUDIFY_GROUP, HOME_DIR)
     common.chmod('770', HOME_DIR)
     common.chown(RIEMANN, RIEMANN, LOG_DIR)
-
-
-def _install():
-    sources = config[RIEMANN][SOURCES]
-
-    langohr_resource_path = \
-        files.get_local_source_path(sources['langohr_source_url'])
-    common.copy(langohr_resource_path, LANGOHR_JAR_PATH)
-    common.chmod('644', LANGOHR_JAR_PATH)
-
-    yum_install(sources['daemonize_source_url'])
-    yum_install(sources['riemann_source_url'])
 
 
 def _configure_riemann():
@@ -115,7 +101,6 @@ def _configure():
 
 def install():
     logger.notice('Installing Riemann...')
-    _install()
     _configure()
     logger.notice('Riemann successfully installed')
 
@@ -137,7 +122,5 @@ def remove():
         HOME_DIR,
         CONFIG_PATH,
         LOG_DIR,
-        LANGOHR_JAR_PATH,
     ])
-    yum_remove(RIEMANN)
     logger.notice('Riemann successfully removed')
