@@ -1,0 +1,13 @@
+/var/log/cloudify/rabbitmq/*.log {
+        hourly
+        missingok
+        rotate 7
+        size 100M
+        compress
+        delaycompress
+        notifempty
+        sharedscripts
+        postrotate
+            /sbin/service rabbitmq-server rotate-logs > /dev/null
+        endscript
+}

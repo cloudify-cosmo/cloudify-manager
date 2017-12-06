@@ -27,6 +27,30 @@ GITHUB_PASSWORD = ENV['GITHUB_PASSWORD']
 CENTOS7_OFFICIAL_BOX_URL = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7.box'
 
 Vagrant.configure('2') do |config|
+
+  config.vm.define "install_rpm" do |rpm|
+    rpm.vm.box = "dummy"
+    rpm.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
+    rpm.vm.provider :aws do |aws, override|
+      aws.access_key_id = AWS_ACCESS_KEY_ID
+      aws.secret_access_key = AWS_ACCESS_KEY
+      aws.ami = "ami-0726a974"
+      aws.region = "eu-west-1"
+      aws.instance_type = "m3.medium"
+      aws.keypair_name = "vagrant_build"
+      override.ssh.username = "ec2-user"
+      override.ssh.private_key_path = "~/.ssh/aws/vagrant_build.pem"
+      override.nfs.functional = false
+      aws.tags = { "Name" => "vagrant install RPM build" }
+      aws.security_groups = "vagrant_linux_build"
+    end
+    rpm.vm.provision "shell" do |s|
+      s.path = "provision.sh"
+      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
+      s.privileged = false
+    end
+  end
+
   config.vm.define "restservice" do |rest|
     #dummy box, will be overriden
     rest.vm.box = "dummy"
