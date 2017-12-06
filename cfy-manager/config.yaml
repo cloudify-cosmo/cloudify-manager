@@ -220,9 +220,6 @@ restservice:
     # Any extra LDAP information (separated by the `;` sign. e.g. a=1;b=2)
     dn_extra: ''
 
-  sources:
-    restservice_source_url: cloudify-rest-service-*.x86_64.rpm
-
   # Minimum available memory for running list query on Manager host in MB.
   min_available_memory_mb: 100
 

@@ -24,7 +24,6 @@ from os.path import join, islink, isdir
 
 from .. import (
     AGENT,
-    SOURCES,
     CONFIG,
     SCRIPTS,
     HOME_DIR_KEY,
@@ -46,7 +45,6 @@ from ...exceptions import BootstrapError, NetworkError
 
 from ...utils import common, sudoers
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils.network import get_auth_headers, wait_for_port
 from ...utils.files import deploy, remove_notice, copy_notice
 from ...utils.logrotate import set_logrotate, remove_logrotate
@@ -113,15 +111,12 @@ def _configure_dbus():
             ln(source=dbus_bindings, target=dbus_venv_path, params='-sf')
         if not islink(join(REST_VENV, site_packages)):
             ln(source=dbus_glib_bindings, target=join(
-                    REST_VENV, site_packages), params='-sf')
+               REST_VENV, site_packages), params='-sf')
     else:
         logger.warn('Could not find dbus install, cfy status will not work')
 
 
 def _install():
-    source_url = config[RESTSERVICE][SOURCES]['restservice_source_url']
-    yum_install(source_url)
-
     _configure_dbus()
 
 
@@ -373,5 +368,4 @@ def remove():
     remove_logrotate(RESTSERVICE)
     systemd.remove(RESTSERVICE)
     remove_files([HOME_DIR, LOG_DIR])
-    yum_remove('cloudify-rest-service')
     logger.notice('Rest Service successfully installed')
