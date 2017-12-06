@@ -34,7 +34,7 @@ SYSTEMD_SERVICE_NAME = 'postgresql'
 POSTGRES_USER = 'postgres'
 LOG_DIR = join(constants.BASE_LOG_DIR, POSTGRESQL)
 PGSQL_LIB_DIR = '/var/lib/pgsql'
-PS_HBA_CONF = '/var/lib/pgsql/9.5/data/pg_hba.conf'
+PG_HBA_CONF = '/var/lib/pgsql/data/pg_hba.conf'
 PGPASS_PATH = join(constants.CLOUDIFY_HOME_DIR, '.pgpass')
 
 PG_PORT = 5432
@@ -66,7 +66,7 @@ def _init_postgresql():
 
 def _read_hba_lines():
     temp_hba_path = files.write_to_tempfile('')
-    common.copy(PS_HBA_CONF, temp_hba_path)
+    common.copy(PG_HBA_CONF, temp_hba_path)
     common.chmod('777', temp_hba_path)
     with open(temp_hba_path, 'r') as f:
         lines = f.readlines()
@@ -86,12 +86,12 @@ def _write_new_hba_file(lines):
 
 def _update_configuration():
     logger.info('Updating PostgreSQL configuration...')
-    logger.debug('Modifying {0}'.format(PS_HBA_CONF))
-    common.copy(PS_HBA_CONF, '{0}.backup'.format(PS_HBA_CONF))
+    logger.debug('Modifying {0}'.format(PG_HBA_CONF))
+    common.copy(PG_HBA_CONF, '{0}.backup'.format(PG_HBA_CONF))
     lines = _read_hba_lines()
     temp_hba_path = _write_new_hba_file(lines)
-    common.move(temp_hba_path, PS_HBA_CONF)
-    common.chown(POSTGRES_USER, POSTGRES_USER, PS_HBA_CONF)
+    common.move(temp_hba_path, PG_HBA_CONF)
+    common.chown(POSTGRES_USER, POSTGRES_USER, PG_HBA_CONF)
 
 
 def _create_postgres_pass_file():
