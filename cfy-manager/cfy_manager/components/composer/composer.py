@@ -13,15 +13,14 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from os.path import join, dirname
+from os.path import join, dirname, exists
 
-from .. import SOURCES, SERVICE_USER, SERVICE_GROUP
+from .. import SERVICE_USER, SERVICE_GROUP
 
 from ..service_names import COMPOSER
 
 from ...config import config
 from ...logger import get_logger
-from ...exceptions import FileError
 from ...constants import BASE_LOG_DIR, CLOUDIFY_USER
 
 from ...utils import common, files
@@ -50,19 +49,13 @@ def _create_paths():
 
 
 def _install():
-    composer_source_url = config[COMPOSER][SOURCES]['composer_source_url']
-    try:
-        composer_tar = files.get_local_source_path(composer_source_url)
-    except FileError:
-        logger.info('Composer package not found in manager resources package')
-        logger.notice('Composer will not be installed.')
+    if not exists(HOME_DIR):
+        logger.info('Composer package not found')
+        logger.notice('Composer will not be configured.')
         config[COMPOSER]['skip_installation'] = True
         return
 
     _create_paths()
-
-    logger.info('Installing Cloudify Composer...')
-    common.untar(composer_tar, HOME_DIR)
 
 
 def _start_and_validate_composer():
