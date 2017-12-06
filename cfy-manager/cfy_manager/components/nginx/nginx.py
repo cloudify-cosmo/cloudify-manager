@@ -16,7 +16,7 @@
 from os.path import join, isfile
 from collections import namedtuple
 
-from .. import SOURCES, CONFIG, PRIVATE_IP, PUBLIC_IP, AGENT, SSL_INPUTS
+from .. import CONFIG, PRIVATE_IP, PUBLIC_IP, AGENT, SSL_INPUTS
 
 from ..service_names import NGINX, MANAGER
 
@@ -28,7 +28,6 @@ from ...exceptions import ValidationError, InputError
 from ...utils import common
 from ...utils import certificates
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils.users import delete_service_user, delete_group
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
@@ -55,11 +54,6 @@ def _deploy_cert_and_key(cert, key, cert_dst_path, key_dst_path):
         key_deployed = True
 
     return cert_deployed, key_deployed
-
-
-def _install():
-    nginx_source_url = config[NGINX][SOURCES]['nginx_source_url']
-    yum_install(nginx_source_url)
 
 
 def _deploy_unit_override():
@@ -297,7 +291,6 @@ def _configure():
 
 def install():
     logger.notice('Installing NGINX...')
-    _install()
     _configure()
     logger.notice('NGINX successfully installed')
 
@@ -319,7 +312,6 @@ def remove():
         LOG_DIR,
         UNIT_OVERRIDE_PATH
     ])
-    yum_remove(NGINX)
     delete_service_user(NGINX)
     delete_group(NGINX)
     logger.notice('NGINX successfully removed')

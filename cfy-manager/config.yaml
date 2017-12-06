@@ -245,9 +245,6 @@ restservice:
   # Port to be used by the REST service
   port: 8100
 
-nginx:
-  sources:
-    nginx_source_url: nginx-1.13.7-1.el7_4.ngx.x86_64.rpm
 
 mgmtworker:
   sources:
