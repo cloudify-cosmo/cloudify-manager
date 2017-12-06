@@ -17,7 +17,6 @@ import json
 from os.path import join
 
 from .. import (
-    SOURCES,
     SERVICE_USER,
     SERVICE_GROUP,
     CONFIG,
@@ -33,7 +32,6 @@ from ...exceptions import ValidationError, BootstrapError
 
 from ...utils import common
 from ...utils.systemd import systemd
-from ...utils.install import yum_install, yum_remove
 from ...utils.users import delete_service_user, delete_group
 from ...utils.logrotate import set_logrotate, remove_logrotate
 from ...utils.network import wait_for_port, check_http_response
@@ -112,16 +110,6 @@ def _configure_database(host, port):
     logger.info('Databased {0} successfully created'.format(db_name))
 
 
-def _install_influxdb():
-    source_url = config[INFLUXB][SOURCES]['influxdb_source_url']
-    yum_install(source_url)
-
-
-def _install():
-    if config[INFLUXB]['is_internal']:
-        _install_influxdb()
-
-
 def _create_paths():
     common.mkdir(HOME_DIR)
     common.mkdir(LOG_DIR)
@@ -191,7 +179,6 @@ def _configure():
 
 def install():
     logger.notice('Installing InfluxDB...')
-    _install()
     _configure()
     logger.notice('InfluxDB successfully installed')
 
@@ -208,7 +195,6 @@ def remove():
     remove_logrotate(INFLUXB)
     systemd.remove(INFLUXB)
     remove_files([HOME_DIR, LOG_DIR, INIT_D_PATH])
-    yum_remove(INFLUXB)
     delete_service_user(INFLUXB)
     delete_group(INFLUXB)
     logger.notice('InfluxDB successfully removed')

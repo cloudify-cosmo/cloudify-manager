@@ -68,8 +68,6 @@ amqpinflux:
 influxdb:
   # An IP Endpoint of your InfluxDB Cluster.
   endpoint_ip: ''
-  sources:
-    influxdb_source_url: influxdb-0.8.8-1.x86_64.rpm
 
 rabbitmq:
   # Sets the username/password to use for clients such as celery to connect to
