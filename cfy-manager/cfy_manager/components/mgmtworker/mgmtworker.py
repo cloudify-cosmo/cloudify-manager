@@ -17,7 +17,6 @@ from time import sleep
 from os.path import join, dirname
 
 from .. import (
-    SOURCES,
     CONFIG,
     HOME_DIR_KEY,
     LOG_DIR_KEY,
@@ -35,7 +34,6 @@ from ...exceptions import ValidationError
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.logrotate import set_logrotate
-from ...utils.install import yum_install, yum_remove
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
 HOME_DIR = '/opt/mgmtworker'
@@ -47,15 +45,13 @@ logger = get_logger(MGMTWORKER)
 
 
 def _install():
-    source_url = config[MGMTWORKER][SOURCES]['mgmtworker_source_url']
-    yum_install(source_url)
-
     # TODO: Take care of this
     # Prepare riemann dir. We will change the owner to riemann later, but the
     # management worker will still need access to it
     # common.mkdir('/opt/riemann')
     # utils.chown(CLOUDIFY_USER, CLOUDIFY_GROUP, riemann_dir)
     # utils.chmod('770', riemann_dir)
+    pass
 
 
 def _create_paths():
@@ -167,5 +163,4 @@ def remove():
     remove_notice(MGMTWORKER)
     systemd.remove(MGMTWORKER)
     remove_files([HOME_DIR, LOG_DIR])
-    yum_remove('cloudify-management-worker')
     logger.notice('Management Worker successfully removed')

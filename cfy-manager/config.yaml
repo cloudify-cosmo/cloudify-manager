@@ -207,9 +207,6 @@ restservice:
 
 
 mgmtworker:
-  sources:
-    mgmtworker_source_url: cloudify-management-worker-*.x86_64.rpm
-
   # Sets the logging level to use for the management workers. This affects the
   # logging performed by the manager during the execution of management tasks,
   # such as deployment creation and deployment deletion. NOTE: specifying
