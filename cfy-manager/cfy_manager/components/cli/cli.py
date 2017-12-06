@@ -15,7 +15,7 @@
 
 from os.path import join, expanduser
 
-from .. import SOURCES, SECURITY
+from .. import SECURITY
 
 from ..service_names import CLI, MANAGER
 
@@ -23,15 +23,9 @@ from ...config import config
 from ...logger import get_logger
 
 from ...utils import common
-from ...utils.install import yum_install, yum_remove
 
 
 logger = get_logger(CLI)
-
-
-def _install():
-    source_url = config[CLI][SOURCES]['cli_source_url']
-    yum_install(source_url)
 
 
 def _set_colors(is_root):
@@ -70,10 +64,9 @@ def _configure():
 
 
 def install():
-    logger.notice('Installing Cloudify CLI...')
-    _install()
+    logger.notice('Configuring Cloudify CLI...')
     _configure()
-    logger.notice('Cloudify CLI successfully installed')
+    logger.notice('Cloudify CLI successfully configured')
 
 
 def configure():
@@ -83,6 +76,4 @@ def configure():
 
 
 def remove():
-    logger.notice('Removing Cloudify CLI...')
-    yum_remove('cloudify')
-    logger.notice('Cloudify CLI successfully removed')
+    pass

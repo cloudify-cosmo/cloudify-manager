@@ -224,9 +224,7 @@ mgmtworker:
   # file.
   extra_env: {}
 
-cli:
-  sources:
-    cli_source_url: cloudify-cli-*.x86_64.rpm
+cli: {}
 
 sanity:
   # If set to true, the sanity blueprint install/uninstall will not be
