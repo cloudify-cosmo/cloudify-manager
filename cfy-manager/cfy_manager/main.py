@@ -31,7 +31,6 @@ from .components import composer
 from .components import logstash
 from .components import rabbitmq
 from .components import influxdb
-from .components import syncthing
 from .components import amqpinflux
 from .components import mgmtworker
 from .components import postgresql
@@ -68,7 +67,6 @@ COMPONENTS = [
     amqpinflux,
     java,
     riemann,
-    syncthing,
     stage,
     composer,
     logstash,

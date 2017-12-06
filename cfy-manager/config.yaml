@@ -130,10 +130,6 @@ logstash:
     postgresql_jdbc_driver_url: postgresql-9.4.1212.jar
 
 
-syncthing:
-  sources:
-    syncthing_source_url: syncthing-linux-amd64-v0.14.5.tar.gz
-
 stage:
   # If set to true, Cloudify UI will not be installed
   skip_installation: false
