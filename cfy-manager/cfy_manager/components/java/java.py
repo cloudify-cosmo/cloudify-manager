@@ -15,27 +15,18 @@
 
 from os.path import join, isfile
 
-from .. import SOURCES
-
 from ..service_names import JAVA
 
 from ... import constants
-from ...config import config
 from ...logger import get_logger
 from ...exceptions import ValidationError
 
 from ...utils.common import move, mkdir, sudo
-from ...utils.install import yum_install, yum_remove
 from ...utils.files import remove_files, copy_notice, remove_notice
 
 logger = get_logger(JAVA)
 HOME_DIR = join('/opt', JAVA)
 LOG_DIR = join(constants.BASE_LOG_DIR, JAVA)
-
-
-def _install():
-    java_source_url = config[JAVA][SOURCES]['java_source_url']
-    yum_install(java_source_url)
 
 
 def _move_java_log():
@@ -62,7 +53,6 @@ def _configure():
 
 def install():
     logger.notice('Installing Java...')
-    _install()
     _configure()
     logger.notice('Java successfully installed')
 
@@ -77,5 +67,4 @@ def remove():
     logger.notice('Removing Java...')
     remove_notice(JAVA)
     remove_files([LOG_DIR])
-    yum_remove(JAVA)
     logger.notice('Java successfully removed')
