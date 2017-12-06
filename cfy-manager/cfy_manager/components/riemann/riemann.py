@@ -15,7 +15,7 @@
 
 from os.path import join
 
-from .. import SOURCES, CONFIG, SERVICE_USER, SERVICE_GROUP
+from .. import CONFIG, SERVICE_USER, SERVICE_GROUP
 
 from ..service_names import RIEMANN
 
@@ -51,20 +51,6 @@ def _create_paths():
     common.chown(RIEMANN, RIEMANN, LOG_DIR)
 
 
-def _configure_riemann():
-    logger.debug('Getting manager repo archive...')
-    cloudify_resources_url = config[RIEMANN][SOURCES]['cloudify_resources_url']
-    local_tar_path = files.get_local_source_path(cloudify_resources_url)
-    manager_dir = common.untar(local_tar_path, unique_tmp_dir=True)
-
-    logger.debug('Deploying Riemann manager.config...')
-    config_src_path = join(
-        manager_dir, 'plugins', 'riemann-controller',
-        'riemann_controller', 'resources', 'manager.config'
-    )
-    common.move(config_src_path, join(CONFIG_PATH, 'conf.d', 'manager.config'))
-
-
 def _deploy_riemann_config():
     logger.info('Deploying Riemann config...')
     files.deploy(
@@ -94,7 +80,6 @@ def _configure():
     _create_user()
     _create_paths()
     set_logrotate(RIEMANN)
-    _configure_riemann()
     _deploy_riemann_config()
     _start_and_verify_service()
 
