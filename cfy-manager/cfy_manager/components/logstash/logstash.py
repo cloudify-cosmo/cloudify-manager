@@ -15,7 +15,7 @@
 
 from os.path import join, basename
 
-from .. import SOURCES, CONFIG, LOG_DIR_KEY
+from .. import CONFIG, LOG_DIR_KEY
 
 from ..service_names import LOGSTASH
 
@@ -26,7 +26,6 @@ from ...logger import get_logger
 from ...utils import common
 from ...utils.systemd import systemd
 from ...utils.logrotate import set_logrotate
-from ...utils.install import yum_install, yum_remove
 from ...utils.files import replace_in_file, get_local_source_path
 from ...utils.files import remove_files, deploy, copy_notice, remove_notice
 
@@ -81,26 +80,6 @@ def _install_postgresql_jdbc_driver(sources):
         driver_path,
         join(jdbc_path, basename(jdbc_driver_url)),
     ])
-
-
-def _install_plugins(sources):
-    _install_plugin(
-        name='logstash-filter-json_encode',
-        plugin_url=sources['logstash_filter_json_encode_plugin_url']
-    )
-    _install_plugin(
-        name='logstash-output-jdbc',
-        plugin_url=sources['logstash_output_jdbc_plugin_url']
-    )
-    _install_postgresql_jdbc_driver(sources)
-
-
-def _install():
-    """Install logstash as a systemd service."""
-    sources = config[LOGSTASH][SOURCES]
-
-    yum_install(sources['logstash_source_url'])
-    _install_plugins(sources)
 
 
 def _deploy_logstash_config():
@@ -171,7 +150,6 @@ def _configure():
 
 def install():
     logger.notice('Installing Logstash...')
-    _install()
     _configure()
     logger.notice('Logstash successfully installed')
 
@@ -187,5 +165,4 @@ def remove():
     remove_notice(LOGSTASH)
     systemd.remove(LOGSTASH)
     remove_files([HOME_DIR, LOG_DIR, UNIT_OVERRIDE_PATH, LOGSTASH_CONF_DIR])
-    yum_remove(LOGSTASH)
     logger.notice('Logstash successfully removed')

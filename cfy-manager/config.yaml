@@ -122,13 +122,7 @@ java:
   sources:
     java_source_url: jre1.8.0_45-1.8.0_45-fcs.x86_64.rpm
 
-logstash:
-  sources:
-    logstash_source_url: logstash-1.5.0-1.noarch.rpm
-    logstash_filter_json_encode_plugin_url: logstash-filter-json_encode-0.1.5.gem
-    logstash_output_jdbc_plugin_url: logstash-output-jdbc-0.2.10.gem
-    postgresql_jdbc_driver_url: postgresql-9.4.1212.jar
-
+logstash: {}
 
 stage:
   # If set to true, Cloudify UI will not be installed
