@@ -29,6 +29,7 @@ from os.path import (
         split as path_split,
         )
 from subprocess import check_call, check_output, CalledProcessError
+from textwrap import dedent
 
 
 MOCK = '/usr/bin/mock'
@@ -47,8 +48,19 @@ logger = logging.getLogger(SCRIPT_NAME)
 
 def main(args):
     parser = argparse.ArgumentParser(
-            description="Build RPM using mock "
-            "(in a Vagrant box if you don't have mock installed locally)",
+            description=dedent("""\
+                Build RPM using mock
+
+                If mock is not installed locally,
+                Vagrant will be used to build and
+                configure a mock build VM
+
+                Requirements:
+                  mock (on an EL7 host, from epel-release)
+                or
+                  vagrant, rsync
+            """),
+            formatter_class=argparse.RawDescriptionHelpFormatter,
             )
     parser.add_argument(
             'spec_file', type=argparse.FileType('r'),
