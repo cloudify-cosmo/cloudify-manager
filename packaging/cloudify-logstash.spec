@@ -45,7 +45,7 @@ cp -r /opt/logstash /tmp/existing_env
 mkdir -p %{buildroot}/opt/logstash
 # Now we copy the files into the buildroot, checking against existing_env
 # so that only new files will be included in the RPM.
-rsync -rlc --compare-dest /tmp/existing_env /opt/logstash/ %{buildroot}/opt/logstash
+rsync -rlc --compare-dest /tmp/existing_env /opt/logstash/vendor %{buildroot}/opt/logstash
 
 # Clear out empty dirs from the result
 find %{buildroot} -depth -type d -empty -delete
@@ -70,4 +70,4 @@ cp -R ${RPM_SOURCE_DIR}/packaging/logstash/files/* %{buildroot}
 
 /etc/logrotate.d/cloudify-logstash
 %attr(750,%_user,adm) /var/log/cloudify/%_user
-%attr(-,%_user,%_user) /opt/logstash
+%attr(-,%_user,%_user) /opt/logstash/vendor/local_gems
