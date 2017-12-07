@@ -141,49 +141,51 @@ def build_in_vagrant(source, spec_file_name):
     run this script inside a Vagrant box
     where `mock` is installed and configured
     """
-    check_call(['vagrant', 'up', 'builder'])
+    try:
+        check_call(['vagrant', 'up', 'builder'])
 
-    ssh_config = check_output(
-            ['vagrant', 'ssh-config', 'builder'])
-    with open(SSH_CONFIG_FILE, 'w') as f:
-        f.write(ssh_config)
+        ssh_config = check_output(
+                ['vagrant', 'ssh-config', 'builder'])
+        with open(SSH_CONFIG_FILE, 'w') as f:
+            f.write(ssh_config)
 
-    install_mock()
-    # sync the code
-    for local, remote in (
-            (source, 'source'),
-            (SCRIPT_DIR + '/', 'build_script')):
+        install_mock()
+        # sync the code
+        for local, remote in (
+                (source, 'source'),
+                (SCRIPT_DIR + '/', 'build_script')):
+            check_call(
+                    ['rsync', '-avz',
+                     '-e', 'ssh -F {}'.format(SSH_CONFIG_FILE),
+                     '--exclude', '.git',
+                     '--exclude', '*.sw[op]',  # vim swap files
+                     '--delete', '--delete-excluded',
+                     local,
+                     'builder:' + remote,
+                     ])
+
+        source = path_join('source', basename(source))
+
+        run_vagrant(
+                'python "{this_script}" "{spec_file}"'.format(
+                    this_script=path_join('build_script', SCRIPT_NAME),
+                    spec_file=path_join(source, 'packaging', spec_file_name),
+                ))
+
+        # Copy files back
+        final_rpm = run_vagrant(
+            "find /var/lib/mock/epel-7-x86_64/result "
+            "-name '*.noarch.rpm' -o -name '*.x86_64.rpm'",
+            _func=check_output,
+            ).strip()
         check_call(
-                ['rsync', '-avz',
-                 '-e', 'ssh -F {}'.format(SSH_CONFIG_FILE),
-                 '--exclude', '.git',
-                 '--exclude', '*.sw[op]',  # vim swap files
-                 '--delete', '--delete-excluded',
-                 local,
-                 'builder:' + remote,
-                 ])
+                ['scp', '-F', SSH_CONFIG_FILE,
+                 'builder:{rpm}'.format(rpm=final_rpm),
+                 '.'])
 
-    source = path_join('source', basename(source))
-
-    run_vagrant(
-            'python "{this_script}" "{spec_file}"'.format(
-                this_script=path_join('build_script', SCRIPT_NAME),
-                spec_file=path_join(source, 'packaging', spec_file_name),
-            ))
-
-    # Copy files back
-    final_rpm = run_vagrant(
-        "find /var/lib/mock/epel-7-x86_64/result "
-        "-name '*.noarch.rpm' -o -name '*.x86_64.rpm'",
-        _func=check_output,
-        ).strip()
-    check_call(
-            ['scp', '-F', SSH_CONFIG_FILE,
-             'builder:{rpm}'.format(rpm=final_rpm),
-             '.'])
-
-    # Power down the vagrant box
-    check_call(['vagrant', 'halt', 'builder'])
+    finally:
+        # Power down the vagrant box
+        check_call(['vagrant', 'halt', 'builder'])
 
 
 def get_rpmbuild_defines():
