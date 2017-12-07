@@ -47,11 +47,12 @@ logger = logging.getLogger(SCRIPT_NAME)
 
 def main(args):
     parser = argparse.ArgumentParser(
-            description="Build RPM using mock",
+            description="Build RPM using mock "
+            "(in a Vagrant box if you don't have mock installed locally)",
             )
     parser.add_argument(
             'spec_file', type=argparse.FileType('r'),
-            help="which RPM to build",
+            help="which RPM spec file to build",
             )
 
     args = parser.parse_args(args)
@@ -78,49 +79,7 @@ def main(args):
         shutil.copy(rpm, SCRIPT_DIR)
     elif has_cmd('vagrant'):
         # install and run mock in a vagrant CentOS 7 box
-        check_call(['vagrant', 'up', 'builder'])
-
-        ssh_config = check_output(
-                ['vagrant', 'ssh-config', 'builder'])
-        with open(SSH_CONFIG_FILE, 'w') as f:
-            f.write(ssh_config)
-
-        install_mock()
-        # sync the code
-        for local, remote in (
-                (source, 'source'),
-                (SCRIPT_DIR + '/', 'build_script')):
-            check_call(
-                    ['rsync', '-avz',
-                     '-e', 'ssh -F {}'.format(SSH_CONFIG_FILE),
-                     '--exclude', '.git',
-                     '--exclude', '*.sw[op]',  # vim swap files
-                     '--delete', '--delete-excluded',
-                     local,
-                     'builder:' + remote,
-                     ])
-
-        source = path_join('source', basename(source))
-
-        run_vagrant(
-                'python "{this_script}" "{spec_file}"'.format(
-                    this_script=path_join('build_script', SCRIPT_NAME),
-                    spec_file=path_join(source, 'packaging', spec_file_name),
-                ))
-
-        # Copy files back
-        final_rpm = run_vagrant(
-            "find /var/lib/mock/epel-7-x86_64/result "
-            "-name '*.noarch.rpm' -o -name '*.x86_64.rpm'",
-            _func=check_output,
-            ).strip()
-        check_call(
-                ['scp', '-F', SSH_CONFIG_FILE,
-                 'builder:{rpm}'.format(rpm=final_rpm),
-                 '.'])
-
-        # Power down the vagrant box
-        check_call(['vagrant', 'halt', 'builder'])
+        build_in_vagrant(source, spec_file_name)
 
     else:
         raise RuntimeError('need either mock or vagrant to build')
@@ -175,6 +134,56 @@ def build(source, spec_file_name):
         raise RuntimeError('final rpm not found')
 
     return final_rpm
+
+
+def build_in_vagrant(source, spec_file_name):
+    """
+    run this script inside a Vagrant box
+    where `mock` is installed and configured
+    """
+    check_call(['vagrant', 'up', 'builder'])
+
+    ssh_config = check_output(
+            ['vagrant', 'ssh-config', 'builder'])
+    with open(SSH_CONFIG_FILE, 'w') as f:
+        f.write(ssh_config)
+
+    install_mock()
+    # sync the code
+    for local, remote in (
+            (source, 'source'),
+            (SCRIPT_DIR + '/', 'build_script')):
+        check_call(
+                ['rsync', '-avz',
+                 '-e', 'ssh -F {}'.format(SSH_CONFIG_FILE),
+                 '--exclude', '.git',
+                 '--exclude', '*.sw[op]',  # vim swap files
+                 '--delete', '--delete-excluded',
+                 local,
+                 'builder:' + remote,
+                 ])
+
+    source = path_join('source', basename(source))
+
+    run_vagrant(
+            'python "{this_script}" "{spec_file}"'.format(
+                this_script=path_join('build_script', SCRIPT_NAME),
+                spec_file=path_join(source, 'packaging', spec_file_name),
+            ))
+
+    # Copy files back
+    final_rpm = run_vagrant(
+        "find /var/lib/mock/epel-7-x86_64/result "
+        "-name '*.noarch.rpm' -o -name '*.x86_64.rpm'",
+        _func=check_output,
+        ).strip()
+    check_call(
+            ['scp', '-F', SSH_CONFIG_FILE,
+             'builder:{rpm}'.format(rpm=final_rpm),
+             '.'])
+
+    # Power down the vagrant box
+    check_call(['vagrant', 'halt', 'builder'])
 
 
 def get_rpmbuild_defines():
@@ -260,6 +269,7 @@ def install_dependencies(spec_file, source):
                 dir=RPMS_DIR,
                 ))
 
+    # Collect details about the local RPMs in RPMS_DIR
     rpms = {}
     for f in listdir(RPMS_DIR):
         f = f.strip()
@@ -268,18 +278,21 @@ def install_dependencies(spec_file, source):
                 'rpm', '-qp', '--queryformat', '%{NAME}', f,
                 ])
             rpms[name] = f
+            logger.info('found RPM: {name}: {filename}'.format(
+                name=name, filename=f))
 
-    logger.info(('found RPMs:', rpms))
-
+    # Install the dependencies from the dependencies file
     for dep in dependencies:
         dep = dep.strip()
         if '://' in dep:
             package_name = check_output([
                     'rpm', '-qp', '--queryformat', '%{NAME}', dep,
                     ])
+            # found a URL, install by basename
             install_package = path_join(source, basename(dep))
         else:
             package_name = dep
+            # found a package name, lookup in rpms dict
             install_package = rpms[dep]
 
         check_call([MOCK, '--yum-cmd', 'remove', package_name])
@@ -289,6 +302,7 @@ def install_dependencies(spec_file, source):
 
 
 def get_dependency_urls(spec_file):
+    """extract lines which contain URLs from the spec.dependencies file"""
     dependencies = get_dependencies(spec_file)
 
     return [dep.strip() for dep in dependencies if '://' in dep]
@@ -361,6 +375,10 @@ def download_if_newer(url, outfile=None):
 
 
 def get_sources(spec_file):
+    """
+    Extract RPM `Source*: ` definitions from the spec file
+    so we can download them
+    """
     sources = []
     with open(spec_file) as f:
         for line in f:
