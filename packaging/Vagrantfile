@@ -27,6 +27,13 @@ GITHUB_PASSWORD = ENV['GITHUB_PASSWORD']
 CENTOS7_OFFICIAL_BOX_URL = 'http://cloud.centos.org/centos/7/vagrant/x86_64/images/CentOS-7.box'
 
 Vagrant.configure('2') do |config|
+  config.vm.define "builder" do |builder|
+    #dummy box, will be overriden
+    builder.vm.box = "centos/7"
+    builder.vm.provider :libvirt
+    builder.vm.provider :virtualbox
+  end
+
   config.vm.define "restservice" do |rest|
     #dummy box, will be overriden
     rest.vm.box = "dummy"
