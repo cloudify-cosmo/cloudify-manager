@@ -42,7 +42,7 @@ class Blueprints(resources_v1.Blueprints):
         )
     )
     @rest_decorators.exceptions_handled
-    @authorize('blueprint_list')
+    @authorize('blueprint_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Blueprint)
     @rest_decorators.create_filters(models.Blueprint)
     @rest_decorators.paginate

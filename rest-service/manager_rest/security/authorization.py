@@ -7,12 +7,16 @@ from flask_security import current_user
 from manager_rest import config, utils
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
-from manager_rest.rest.rest_utils import get_json_and_verify_params
-from manager_rest.manager_exceptions import NotFoundError, ForbiddenError
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
+from manager_rest.manager_exceptions import NotFoundError, ForbiddenError
+from manager_rest.rest.rest_utils import (get_json_and_verify_params,
+                                          request_use_all_tenants)
 
 
-def authorize(action, tenant_for_auth=None, get_tenant_from='header'):
+def authorize(action,
+              tenant_for_auth=None,
+              get_tenant_from='header',
+              allow_all_tenants=False):
     def authorize_dec(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -51,9 +55,9 @@ def authorize(action, tenant_for_auth=None, get_tenant_from='header'):
             # extracting tenant roles for user in the tenant
             tenant_roles = []
             for t in current_user.all_tenants:
-                if t.name == tenant_name:
+                if (allow_all_tenants and request_use_all_tenants()) \
+                        or t.name == tenant_name:
                     tenant_roles = current_user.all_tenants[t]
-                    break
 
             # joining user's system role with his tenant roles
             user_roles = [role.name for role in tenant_roles] \

@@ -210,3 +210,8 @@ def verify_role(role_name, is_system_role=False):
             'Role `{0}` is a {1} and cannot be assigned as a {2}'
             .format(role_name, role['type'], expected_role_type)
         )
+
+
+def request_use_all_tenants():
+    return verify_and_convert_bool('all_tenants',
+                                   request.args.get('_all_tenants', False))

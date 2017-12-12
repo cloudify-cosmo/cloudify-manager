@@ -40,7 +40,7 @@ class Nodes(resources_v1.Nodes):
         )
     )
     @rest_decorators.exceptions_handled
-    @authorize('node_list')
+    @authorize('node_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Node)
     @rest_decorators.create_filters(models.Node)
     @rest_decorators.paginate
@@ -74,7 +74,7 @@ class NodeInstances(resources_v1.NodeInstances):
         )
     )
     @rest_decorators.exceptions_handled
-    @authorize('node_instance_list')
+    @authorize('node_instance_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.NodeInstance)
     @rest_decorators.create_filters(models.NodeInstance)
     @rest_decorators.paginate
