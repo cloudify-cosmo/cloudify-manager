@@ -386,7 +386,8 @@ class SQLStorageManager(object):
         Query for all the resources with the same id of the given instance,
         if it's in the current tenant, or if it's a global resource
         """
-        query = self._get_query(model_class, filters={'id': resource_id})
+        query = model_class.query
+        query = query.filter(model_class.id == resource_id)
         tenant_id = self.current_tenant.id if self.current_tenant else ''
         unique_resource_filter = sql_or(
             model_class._tenant_id == tenant_id,
