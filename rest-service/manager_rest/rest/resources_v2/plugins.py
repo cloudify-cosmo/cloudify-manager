@@ -54,7 +54,7 @@ class Plugins(SecuredResource):
         )
     )
     @rest_decorators.exceptions_handled
-    @authorize('plugin_list')
+    @authorize('plugin_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Plugin)
     @rest_decorators.create_filters(models.Plugin)
     @rest_decorators.paginate

@@ -41,7 +41,7 @@ class Deployments(resources_v1.Deployments):
         )
     )
     @rest_decorators.exceptions_handled
-    @authorize('deployment_list')
+    @authorize('deployment_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Deployment)
     @rest_decorators.create_filters(models.Deployment)
     @rest_decorators.paginate

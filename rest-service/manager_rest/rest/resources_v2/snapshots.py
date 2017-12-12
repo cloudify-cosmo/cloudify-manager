@@ -77,7 +77,7 @@ class Snapshots(SecuredResource):
         notes='Returns a list of existing snapshots.'
     )
     @rest_decorators.exceptions_handled
-    @authorize('snapshot_list')
+    @authorize('snapshot_list', allow_all_tenants=True)
     @rest_decorators.marshal_with(models.Snapshot)
     @rest_decorators.create_filters(models.Snapshot)
     @rest_decorators.paginate
