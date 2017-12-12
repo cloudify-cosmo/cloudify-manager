@@ -1263,6 +1263,7 @@ class ResourceManager(object):
                                   plugin_info=None):
         """
         Determine the availability of the resource.
+
         :param model_class: SQL DB table class
         :param resource_id: The id of the resource
         :param availability: The new parameter for the user to set the
