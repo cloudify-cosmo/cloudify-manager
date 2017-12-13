@@ -17,6 +17,8 @@ install_dependencies() {
             tox -c $REST_CONFIG -e clientV2_1-infrastructure --notest
             tox -c $REST_CONFIG -e clientV3-endpoints --notest
             tox -c $REST_CONFIG -e clientV3-infrastructure --notest
+            tox -c $REST_CONFIG -e clientV3_1-endpoints --notest
+            tox -c $REST_CONFIG -e clientV3_1-infrastructure --notest
             ;;
         *)
             echo "Not running in fist node. Skipping..."
@@ -36,19 +38,21 @@ run() {
             ;;
         2)
             tox -c $REST_CONFIG -e clientV2-infrastructure
+            tox -c $REST_CONFIG -e clientV2_1-infrastructure
             tox -c $WORKFLOWS_CONFIG
             ;;
         3)
             tox -c $REST_CONFIG -e clientV2_1-endpoints
             ;;
         4)
-            tox -c $REST_CONFIG -e clientV2_1-infrastructure
+            tox -c $REST_CONFIG -e clientV3-infrastructure
+            tox -c $REST_CONFIG -e clientV3_1-infrastructure
             ;;
         5)
             tox -c $REST_CONFIG -e clientV3-endpoints
             ;;
         6)
-            tox -c $REST_CONFIG -e clientV3-infrastructure
+            tox -c $REST_CONFIG -e clientV3_1-endpoints
             ;;
     esac
 }

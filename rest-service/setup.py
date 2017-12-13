@@ -64,6 +64,7 @@ setup(
         'manager_rest.rest.resources_v2_1',
         'manager_rest.rest.resources_v3',
         'manager_rest.rest.resources_v3_1',
+        'manager_rest.rest.resources_v3_2',
         'manager_rest.deployment_update',
         'manager_rest.storage',
         'manager_rest.security',

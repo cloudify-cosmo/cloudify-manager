@@ -49,7 +49,7 @@ from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
 
 FILE_SERVER_PORT = 53229
-LATEST_API_VERSION = 3.1  # to be used by max_client_version test attribute
+LATEST_API_VERSION = 3.2  # to be used by max_client_version test attribute
 
 auth_dict = {
     'roles': [

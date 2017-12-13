@@ -14,13 +14,14 @@
 #  * limitations under the License.
 
 from . import (swagger, resources_v1, resources_v2,
-               resources_v2_1, resources_v3, resources_v3_1)
+               resources_v2_1, resources_v3, resources_v3_1, resources_v3_2)
 
 SUPPORTED_API_VERSIONS = [('v1', resources_v1),
                           ('v2', resources_v2),
                           ('v2.1', resources_v2_1),
                           ('v3', resources_v3),
-                          ('v3.1', resources_v3_1)]
+                          ('v3.1', resources_v3_1),
+                          ('v3.2', resources_v3_2)]
 
 
 def setup_resources(api):
@@ -95,6 +96,7 @@ def setup_resources(api):
         'SecretsSetGlobal': 'secrets/<string:key>/set-global',
         'SecretsSetAvailability': 'secrets/<string:key>/set-availability',
         'ManagerConfig': 'config',
+        'AgentsUpgrade': 'agents/upgrade',
     }
 
     # Set version endpoint as a non versioned endpoint
