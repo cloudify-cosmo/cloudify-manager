@@ -13,18 +13,18 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
-from manager_rest.security import SecuredResource
-
 from manager_rest.rest import rest_decorators
+from manager_rest.storage.models import Execution
+from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 
 
 class AgentsUpgrade(SecuredResource):
     @rest_decorators.exceptions_handled
-    @authorize('agents_upgrade')
-    @rest_decorators.marshal_with(None)
-    def get(self, *args, **kwargs):
+    @authorize('agents_upgrade', allow_all_tenants=True)
+    @rest_decorators.marshal_with(Execution)
+    @rest_decorators.all_tenants
+    def get(self, all_tenants=None, **kwargs):
         """
         Upgrade agents
         """
