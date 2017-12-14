@@ -41,6 +41,9 @@ CLOUDIFY_API_AUTH_TOKEN_HEADER = 'API-Authentication-Token'
 BASIC_AUTH_PREFIX = 'Basic '
 
 
+MODELS_TO_PERMISSIONS = {'NodeInstance': 'node_instance'}
+
+
 def copy_resources(file_server_root, resources_path=None):
     if resources_path is None:
         resources_path = path.abspath(__file__)
@@ -182,6 +185,18 @@ def all_tenants_authorization():
         any(r in current_user.system_roles
             for r in config.instance.authorization_permissions['all_tenants'])
     )
+
+
+def tenant_specific_authorization(tenant, resource_name, action='list'):
+    """
+    Return true if the user is permitted to perform a certain action in a
+    in a given tenant on a given resource (for filtering purpose).
+    """
+    resource_name = MODELS_TO_PERMISSIONS.get(resource_name,
+                                              resource_name.lower())
+    permission_name = '{0}_{1}'.format(resource_name, action)
+    return current_user.has_role_in(
+        tenant, config.instance.authorization_permissions[permission_name])
 
 
 def is_administrator(tenant):

@@ -57,7 +57,7 @@ def authorize(action,
             for t in current_user.all_tenants:
                 if (allow_all_tenants and request_use_all_tenants()) \
                         or t.name == tenant_name:
-                    tenant_roles = current_user.all_tenants[t]
+                    tenant_roles += current_user.all_tenants[t]
 
             # joining user's system role with his tenant roles
             user_roles = [role.name for role in tenant_roles] \
