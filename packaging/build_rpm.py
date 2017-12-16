@@ -81,7 +81,8 @@ def main(args):
     sources += get_dependency_urls(spec_file)
     logger.info(sources)
     for url in sources:
-        download_if_newer(url)
+        if url.startswith('http')
+            download_if_newer(url)
 
     chdir(SCRIPT_DIR)
 
