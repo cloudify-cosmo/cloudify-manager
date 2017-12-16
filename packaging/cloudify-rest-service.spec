@@ -1,3 +1,5 @@
+%define dbus_glib_version 0.70
+%define dbus_version 0.90
 
 Name:           cloudify-rest-service
 Version:        %{CLOUDIFY_VERSION}
@@ -12,6 +14,10 @@ Packager:       Gigaspaces Inc.
 BuildRequires:  python >= 2.7, python-virtualenv
 BuildRequires:  openssl-devel, postgresql-devel, openldap-devel, libffi-devel
 BuildRequires:  git, sudo
+BuildRequires: dbus-devel >= %{dbus_version}
+BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
+BuildRequires: python-devel
+
 Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo
 Requires(pre):  shadow-utils
 
@@ -31,10 +37,10 @@ virtualenv /opt/manager/env
 export REST_SERVICE_BUILD=True  # TODO: remove this hack from setup.py
 
 /opt/manager/env/bin/pip install --upgrade pip setuptools
-/opt/manager/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-dsl-parser#egg=cloudify-dsl-parser==4.3.dev1
-/opt/manager/env/bin/pip install https://github.com/cloudify-cosmo/incubator-ariatosca/archive/master.tar.gz
-/opt/manager/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/rest-service"
-
+/opt/manager/env/bin/pip install \
+    'git+https://github.com/cloudify-cosmo/cloudify-dsl-parser#egg=cloudify-dsl-parser==4.3.dev1' \
+    https://github.com/cloudify-cosmo/incubator-ariatosca/archive/master.tar.gz \
+    "${RPM_SOURCE_DIR}/rest-service"[dbus]
 
 # Jinja2 includes 2 files which will only be imported if async is available,
 # but rpmbuild's brp-python-bytecompile falls over when it finds them. Here
