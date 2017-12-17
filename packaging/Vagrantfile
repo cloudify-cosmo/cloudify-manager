@@ -41,7 +41,7 @@ Vagrant.configure('2') do |config|
     rest.vm.provider :aws do |aws, override|
       aws.access_key_id = AWS_ACCESS_KEY_ID
       aws.secret_access_key = AWS_ACCESS_KEY
-      aws.ami = "ami-0726a974"
+      aws.ami = "ami-f4a8298d"
       aws.region = "eu-west-1"
       aws.instance_type = "m3.medium"
       aws.keypair_name = "vagrant_build"
@@ -65,7 +65,7 @@ Vagrant.configure('2') do |config|
     mgmtworker.vm.provider :aws do |aws, override|
       aws.access_key_id = AWS_ACCESS_KEY_ID
       aws.secret_access_key = AWS_ACCESS_KEY
-      aws.ami = "ami-0726a974"
+      aws.ami = "ami-f4a8298d"
       aws.region = "eu-west-1"
       aws.instance_type = "m3.medium"
       aws.keypair_name = "vagrant_build"
@@ -89,7 +89,7 @@ Vagrant.configure('2') do |config|
     mgr.vm.provider :aws do |aws, override|
       aws.access_key_id = AWS_ACCESS_KEY_ID
       aws.secret_access_key = AWS_ACCESS_KEY
-      aws.ami = "ami-0726a974"
+      aws.ami = "ami-f4a8298d"
       aws.region = "eu-west-1"
       aws.instance_type = "m3.medium"
       aws.keypair_name = "vagrant_build"
@@ -113,7 +113,7 @@ Vagrant.configure('2') do |config|
     restservice_embedded_python.vm.provider :aws do |aws, override|
       aws.access_key_id = AWS_ACCESS_KEY_ID
       aws.secret_access_key = AWS_ACCESS_KEY
-      aws.ami = "ami-0726a974"
+      aws.ami = "ami-f4a8298d"
       aws.region = "eu-west-1"
       aws.instance_type = "m3.large"
       aws.keypair_name = "vagrant_build"
