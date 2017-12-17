@@ -72,7 +72,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 %files
 
-%defattr(-,root,root)
 /opt/manager
 
 /etc/sudoers.d/cloudify-restservice
