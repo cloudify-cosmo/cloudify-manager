@@ -70,6 +70,11 @@ groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
 
 
+%post
+
+systemd-tmpfiles --create
+
+
 %files
 
 /opt/manager
@@ -80,5 +85,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 /opt/restservice/NOTICE.txt
 /opt/restservice/set-manager-ssl.py*
 /usr/lib/systemd/system/cloudify-rest-service.service
+/usr/lib/tmpfiles.d/cloudify-restservice.conf
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
