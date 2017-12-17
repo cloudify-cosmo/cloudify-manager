@@ -27,9 +27,6 @@ Requires(pre):  shadow-utils
 Cloudify's REST Service.
 
 
-%prep
-
-
 %build
 
 virtualenv /opt/manager/env
@@ -71,14 +68,6 @@ visudo -cf %{buildroot}/etc/sudoers.d/cloudify-restservice
 
 groupadd -fr cfyuser
 getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /sbin/nologin cfyuser
-
-
-%post
-
-
-
-%preun
-%postun
 
 
 %files
