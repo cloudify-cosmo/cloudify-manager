@@ -4,7 +4,7 @@ function build_rpm() {
     echo "Building RPM..."
     sudo yum -y update &&
     sudo yum install -y rpm-build redhat-rpm-config &&
-    sudo yum install -y python-devel gcc libffi-devel &&
+    sudo yum install -y python-devel gcc libffi-devel openssl-devel &&
     sudo mkdir -p /root/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
     sudo cp /vagrant/restservice/build.spec /root/rpmbuild/SPECS
     sudo rpmbuild -ba /root/rpmbuild/SPECS/build.spec \
