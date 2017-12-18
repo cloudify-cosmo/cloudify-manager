@@ -84,7 +84,7 @@ systemd-tmpfiles --create
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice/NOTICE.txt
 /opt/restservice/set-manager-ssl.py*
-/usr/lib/systemd/system/cloudify-rest-service.service
+/usr/lib/systemd/system/cloudify-restservice.service
 /usr/lib/tmpfiles.d/cloudify-restservice.conf
 
 %attr(750,cfyuser,adm) /var/log/cloudify/rest
