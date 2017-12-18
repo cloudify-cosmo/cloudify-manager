@@ -18,8 +18,6 @@ from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.models_states import AvailabilityState
-from manager_rest.rest.constants import (AVAILABILITY_VALUES,
-                                         SET_AVAILABILITY_VALUES)
 from manager_rest.rest import (resources_v2,
                                rest_decorators,
                                rest_utils)
@@ -45,12 +43,12 @@ class PluginsSetAvailability(SecuredResource):
 
     @rest_decorators.exceptions_handled
     @authorize('resource_set_availability')
-    @rest_decorators.verify_params(SET_AVAILABILITY_VALUES)
     @rest_decorators.marshal_with(models.Plugin)
-    def patch(self, plugin_id, availability):
+    def patch(self, plugin_id):
         """
         Set the plugin's availability
         """
+        availability = rest_utils.get_availability_parameter()
         return get_resource_manager().set_availability(models.Plugin,
                                                        plugin_id,
                                                        availability)
@@ -59,11 +57,15 @@ class PluginsSetAvailability(SecuredResource):
 class Plugins(resources_v2.Plugins):
     @rest_decorators.exceptions_handled
     @authorize('plugin_upload')
-    @rest_decorators.verify_params(AVAILABILITY_VALUES)
     @rest_decorators.marshal_with(models.Plugin)
     def post(self, **kwargs):
         """
         Upload a plugin
         """
+        availability = rest_utils.get_availability_parameter(
+            optional=True,
+            is_argument=True,
+            valid_values=AvailabilityState.STATES
+        )
         with rest_utils.skip_nested_marshalling():
-            return super(Plugins, self).post(**kwargs)
+            return super(Plugins, self).post(availability=availability)

@@ -20,8 +20,6 @@ from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.models_states import AvailabilityState
 from manager_rest.manager_exceptions import ConflictError
-from manager_rest.rest.constants import (AVAILABILITY_VALUES,
-                                         SET_AVAILABILITY_VALUES)
 from manager_rest.rest import (rest_decorators,
                                resources_v3,
                                rest_utils)
@@ -47,12 +45,12 @@ class SecretsSetAvailability(SecuredResource):
 
     @rest_decorators.exceptions_handled
     @authorize('resource_set_availability')
-    @rest_decorators.verify_params(SET_AVAILABILITY_VALUES)
     @rest_decorators.marshal_with(models.Secret)
-    def patch(self, key, availability):
+    def patch(self, key):
         """
         Set the secret's availability
         """
+        availability = rest_utils.get_availability_parameter()
         return get_resource_manager().set_availability(models.Secret,
                                                        key,
                                                        availability)
@@ -61,7 +59,6 @@ class SecretsSetAvailability(SecuredResource):
 class SecretsKey(resources_v3.SecretsKey):
     @rest_decorators.exceptions_handled
     @authorize('secret_create')
-    @rest_decorators.verify_params(AVAILABILITY_VALUES)
     @rest_decorators.marshal_with(models.Secret)
     def put(self, key, **kwargs):
         """
@@ -101,7 +98,10 @@ class SecretsKey(resources_v3.SecretsKey):
             request_dict.get('update_if_exists', False),
         )
         rest_utils.validate_inputs({'key': key})
-        availability_param = request_dict.get('availability', None)
+        availability_param = rest_utils.get_availability_parameter(
+            optional=True,
+            valid_values=AvailabilityState.STATES,
+        )
         availability = get_resource_manager().get_resource_availability(
             models.Secret,
             key,

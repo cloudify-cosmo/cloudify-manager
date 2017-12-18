@@ -24,6 +24,7 @@ from .secrets import (                           # NOQA
 )
 
 from .plugins import (                           # NOQA
+    Plugins,
     PluginsSetGlobal,
     PluginsSetAvailability
 )

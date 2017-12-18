@@ -107,7 +107,9 @@ class Plugins(SecuredResource):
         Upload a plugin
         """
         plugin, code = UploadedPluginsManager().receive_uploaded_data(
-            str(uuid4()))
+            str(uuid4()),
+            **kwargs
+        )
         try:
             get_resource_manager().install_plugin(plugin)
         except manager_exceptions.ExecutionTimeout:

@@ -52,7 +52,7 @@ from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
 
 class UploadedDataManager(object):
 
-    def receive_uploaded_data(self, data_id):
+    def receive_uploaded_data(self, data_id, **kwargs):
         file_server_root = config.instance.file_server_root
         resource_target_path = tempfile.mktemp(dir=file_server_root)
         try:
@@ -64,7 +64,9 @@ class UploadedDataManager(object):
                 data_id,
                 file_server_root,
                 resource_target_path,
-                additional_inputs=additional_inputs)
+                additional_inputs=additional_inputs,
+                **kwargs
+            )
             self._move_archive_to_uploaded_dir(doc.id,
                                                file_server_root,
                                                resource_target_path,
@@ -264,8 +266,12 @@ class UploadedDataManager(object):
     def _get_archive_type(self, archive_path):
         raise NotImplementedError('Subclass responsibility')
 
-    def _prepare_and_process_doc(self, data_id, file_server_root,
-                                 archive_target_path, additional_inputs):
+    def _prepare_and_process_doc(self,
+                                 data_id,
+                                 file_server_root,
+                                 archive_target_path,
+                                 additional_inputs,
+                                 **kwargs):
         raise NotImplementedError('Subclass responsibility')
 
 
@@ -313,7 +319,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                                  data_id,
                                  file_server_root,
                                  archive_target_path,
-                                 additional_inputs=None):
+                                 additional_inputs=None,
+                                 **kwargs):
         application_dir = self._extract_file_to_file_server(
             archive_target_path,
             file_server_root
@@ -465,9 +472,11 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 archive_target_path,
                 file_server_root
             )
+        availability = kwargs.get('availability', None)
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
-                                                  data_id), None
+                                                  data_id,
+                                                  availability), None
 
     @classmethod
     def _process_plugins(cls, file_server_root, blueprint_id):
@@ -510,9 +519,11 @@ class UploadedBlueprintsManager(UploadedDataManager):
         return args_parser.parse_args()
 
     @classmethod
-    def _prepare_and_submit_blueprint(cls, file_server_root,
+    def _prepare_and_submit_blueprint(cls,
+                                      file_server_root,
                                       app_dir,
-                                      blueprint_id):
+                                      blueprint_id,
+                                      availability):
 
         args = cls._get_args()
         app_dir, app_file_name = cls._extract_application_file(
@@ -526,7 +537,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 file_server_root,
                 blueprint_id,
                 args.private_resource,
-                args.availability
+                availability
             )
 
             # moving the app directory in the file server to be under a
@@ -604,10 +615,11 @@ class UploadedPluginsManager(UploadedDataManager):
                                  archive_target_path,
                                  **kwargs):
         args = self._get_args()
+        availability = kwargs.get('availability', None)
         new_plugin = self._create_plugin_from_archive(data_id,
                                                       archive_target_path,
                                                       args.private_resource,
-                                                      args.availability)
+                                                      availability)
         filter_by_name = {'package_name': new_plugin.package_name}
         sm = get_resource_manager().sm
         plugins = sm.list(Plugin, filters=filter_by_name)
