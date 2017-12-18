@@ -32,7 +32,7 @@ from subprocess import check_call, check_output, CalledProcessError
 from textwrap import dedent
 
 
-MOCK = '/usr/bin/mock'
+MOCK = ['/usr/bin/mock', '--verbose']
 LOCAL_REPO_PATH = '~/mock_repo'
 DEPENDENCIES_FILE = '{spec_file}.dependencies'
 RESULT_DIR = '/var/lib/mock/epel-7-x86_64/result'
@@ -108,7 +108,7 @@ def build(source, spec_file_name):
 
     # Build .src.rpm
     check_call(
-            [MOCK, '--verbose', '--buildsrpm',
+            MOCK + ['--buildsrpm',
              '--spec', rendered_spec_file,
              '--sources', source,
              ]
@@ -127,15 +127,12 @@ def build(source, spec_file_name):
     # mock strongly assumes that root is not required for building RPMs.
     # Here we work around that assumption by changing the onwership of /opt
     # inside the CHROOT to the mockbuild user
-    check_call([
-            MOCK, '--verbose', '--chroot', '--',
+    check_call(
+            MOCK + ['--verbose', '--chroot', '--',
             'chown', '-R', 'mockbuild', '/opt'
             ])
     # Build the RPM
-    check_call([
-            MOCK, src_rpm,
-            '--no-clean',
-            ])
+    check_call(MOCK + ['--verbose', '--no-clean', src_rpm])
 
     # Extract the final .rpm file name.
     for f in listdir(RESULT_DIR):
@@ -309,10 +306,8 @@ def install_dependencies(spec_file, source):
             # found a package name, lookup in rpms dict
             install_package = rpms[dep]
 
-        check_call([MOCK, '--yum-cmd', 'remove', package_name])
-        check_call([
-            MOCK, '--yum-cmd', 'install', install_package,
-            ])
+        check_call(MOCK + ['--yum-cmd', 'remove', package_name])
+        check_call(MOCK + ['--yum-cmd', 'install', install_package])
 
 
 def get_dependency_urls(spec_file):
@@ -343,8 +338,8 @@ def install_mock():
 def check_mock_config():
     # allow network access during the build
     # (we have to download packages from pypi)
-    mock_config = check_output([
-        MOCK, '--debug-config',
+    mock_config = check_output(
+        MOCK + ['--debug-config',
         ]).splitlines()
 
     for line in mock_config:
