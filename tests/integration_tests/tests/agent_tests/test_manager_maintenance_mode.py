@@ -37,7 +37,7 @@ class ManagerMaintenanceModeTest(AgentTestCase):
         deployment_id = blueprint_id
         blueprint_path = resource('dsl/maintenance_mode.yaml')
         self.client.blueprints.upload(blueprint_path,
-                                      blueprint_id=blueprint_id)
+                                      entity_id=blueprint_id)
         self.client.deployments.create(blueprint_id=blueprint_id,
                                        deployment_id=deployment_id)
         wait_for_deployment_creation_to_complete(deployment_id=deployment_id)

@@ -49,7 +49,7 @@ class DownloadBlueprintTest(AgentlessTestCase):
 
     def download_blueprint_test(self):
         self.cfy.blueprints.upload(self.original_blueprint_file,
-                                   blueprint_id=self.blueprint_id)
+                                   entity_id=self.blueprint_id)
         self.cfy.blueprints.download(self.blueprint_id,
                                      output_path=self.downloaded_archive_path)
         self.assertTrue(os.path.exists(self.downloaded_archive_path))
