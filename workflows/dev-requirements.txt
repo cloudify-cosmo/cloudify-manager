@@ -1,2 +1,2 @@
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/CFY-7690-Cloudify-REST-client-is-missing-aria-client-packages.zip
 https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
