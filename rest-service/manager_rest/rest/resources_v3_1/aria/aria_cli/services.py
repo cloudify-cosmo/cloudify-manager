@@ -14,7 +14,7 @@
 #  * limitations under the License.
 
 from .... import rest_utils, rest_decorators
-from . import base
+from .. import base
 
 
 class ARIAService(base.BaseARIAEndpoints):

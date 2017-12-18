@@ -16,7 +16,7 @@ import json
 
 from ..... import upload_manager
 from .... import rest_decorators
-from . import base
+from .. import base
 
 
 class ARIAServiceTemplate(base.BaseARIAEndpoints):

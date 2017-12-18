@@ -22,6 +22,7 @@ from aria import storage
 from aria.orchestrator import plugin
 
 from manager_rest.storage import aria_model
+
 install_aria_extensions()
 
 
