@@ -9,7 +9,7 @@ Group=cfyuser
 TimeoutStartSec=0
 Restart=on-failure
 EnvironmentFile=-/etc/sysconfig/cloudify-restservice
-ExecStart=/bin/sh -c '/opt/cloudify/env/bin/gunicorn \
+ExecStart=/bin/sh -c '/opt/manager/env/bin/gunicorn \
     --pid /run/cloudify-restservice/pid \
     -w ${GUNICORN_WORKER_COUNT} \
     --max-requests ${GUNICORN_MAX_REQUESTS} \
