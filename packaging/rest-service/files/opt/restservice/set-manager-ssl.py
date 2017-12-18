@@ -18,7 +18,7 @@ import argparse
 import subprocess
 
 
-DEFAULT_CONF_PATH = '/etc/nginx/conf.d/default.conf'
+DEFAULT_CONF_PATH = '/etc/nginx/conf.d/cloudify.conf'
 HTTP_PATH = '/etc/nginx/conf.d/http-external-rest-server.cloudify'
 HTTPS_PATH = '/etc/nginx/conf.d/https-external-rest-server.cloudify'
 
