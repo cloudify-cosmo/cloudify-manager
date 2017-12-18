@@ -1,0 +1,22 @@
+[Unit]
+Description=Cloudify REST Service
+Wants=network-online.target dbus.service
+After=network-online.target
+
+[Service]
+User=cfyuser
+Group=cfyuser
+TimeoutStartSec=0
+Restart=on-failure
+EnvironmentFile=-/etc/sysconfig/cloudify-restservice
+ExecStart=/bin/sh -c '/opt/cloudify/env/bin/gunicorn \
+    --pid /run/cloudify-restservice/pid \
+    -w ${GUNICORN_WORKER_COUNT} \
+    --max-requests ${GUNICORN_MAX_REQUESTS} \
+    -b 0.0.0.0:${REST_PORT} \
+    --timeout 300 manager_rest.wsgi:app \
+    --log-file /var/log/cloudify/rest/gunicorn.log \
+    --access-logfile /var/log/cloudify/rest/gunicorn-access.log'
+
+[Install]
+WantedBy=multi-user.target
