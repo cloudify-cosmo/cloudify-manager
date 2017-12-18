@@ -13,23 +13,30 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import copy
 import urllib
 import subprocess
 from flask import current_app
 from string import ascii_letters
 
 from flask import request, make_response
+from flask_restful.reqparse import Argument
 from flask_restful.reqparse import RequestParser
 
 from contextlib import contextmanager
 
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
+from manager_rest.storage.models_states import AvailabilityState
 
 try:
     from cloudify_premium.ha import node_status
 except ImportError:
     node_status = {'initialized': False}
+
+states_except_private = copy.deepcopy(AvailabilityState.STATES)
+states_except_private.remove('private')
+AVAILABILITY_EXCEPT_PRIVATE = states_except_private
 
 
 @contextmanager
@@ -215,3 +222,25 @@ def verify_role(role_name, is_system_role=False):
 def request_use_all_tenants():
     return verify_and_convert_bool('all_tenants',
                                    request.args.get('_all_tenants', False))
+
+
+def get_availability_parameter(optional=False,
+                               is_argument=False,
+                               valid_values=AVAILABILITY_EXCEPT_PRIVATE):
+    if is_argument:
+        args = get_args_and_verify_arguments(
+            [Argument('availability', type=unicode, default=None)]
+        )
+        availability = args.availability
+    else:
+        request_dict = get_json_and_verify_params({
+            'availability': {'optional': optional, 'type': unicode}
+        })
+        availability = request_dict.get('availability', None)
+
+    if availability is not None and availability not in valid_values:
+        raise manager_exceptions.BadParametersError(
+            "Invalid availability: `{0}`. Valid availability's values are: {1}"
+            .format(availability, valid_values)
+        )
+    return availability

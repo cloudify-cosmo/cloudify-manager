@@ -19,9 +19,12 @@ from flask_restful.reqparse import Argument
 from manager_rest.storage import models
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.rest import rest_decorators, resources_v1
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.maintenance import is_bypass_maintenance_mode
+from manager_rest.storage.models_states import AvailabilityState
+from manager_rest.rest import (rest_utils,
+                               resources_v1,
+                               rest_decorators)
 from manager_rest.rest.rest_utils import (get_args_and_verify_arguments,
                                           get_json_and_verify_params)
 
@@ -39,7 +42,6 @@ class DeploymentsId(resources_v1.DeploymentsId):
 
     @rest_decorators.exceptions_handled
     @authorize('deployment_create')
-    @rest_decorators.verify_params({'availability': ['private', 'tenant']})
     @rest_decorators.marshal_with(models.Deployment)
     def put(self, deployment_id, **kwargs):
         """
@@ -52,13 +54,17 @@ class DeploymentsId(resources_v1.DeploymentsId):
         args = get_args_and_verify_arguments(
             [Argument('private_resource', type=types.boolean)]
         )
+        availability = rest_utils.get_availability_parameter(
+            optional=True,
+            valid_values=[AvailabilityState.PRIVATE, AvailabilityState.TENANT]
+        )
         deployment = get_resource_manager().create_deployment(
             blueprint_id,
             deployment_id,
             inputs=request_dict.get('inputs', {}),
             bypass_maintenance=bypass_maintenance,
             private_resource=args.private_resource,
-            availability=request_dict.get('availability', None),
+            availability=availability,
             skip_plugins_validation=self.get_skip_plugin_validation_flag(
                 request_dict)
         )
@@ -69,12 +75,14 @@ class DeploymentsSetAvailability(SecuredResource):
 
     @rest_decorators.exceptions_handled
     @authorize('deployment_set_availability')
-    @rest_decorators.verify_params({'availability': ['tenant']})
     @rest_decorators.marshal_with(models.Deployment)
-    def patch(self, deployment_id, availability):
+    def patch(self, deployment_id):
         """
         Set the deployment's availability
         """
+        availability = rest_utils.get_availability_parameter(
+            valid_values=AvailabilityState.TENANT
+        )
         return get_resource_manager().set_availability(models.Deployment,
                                                        deployment_id,
                                                        availability)
