@@ -24,7 +24,7 @@ for file in os.listdir(THIS_DIR):
 
         for name in (file_path, md5sum_file):
             s3.meta.client.upload_file(
-                name, os.getenv('cloudify-release-eu'),
+                name, 'cloudify-release-eu',
                 'cloudify/{version}/build/{name}'.format(
                     version=version, name=name),
                 )
