@@ -23,7 +23,7 @@ from aria.orchestrator import plugin
 
 from manager_rest.storage import aria_model
 
-install_aria_extensions()
+install_aria_extensions(strict=False)
 
 
 class BaseARIAEndpoints(Resource):
