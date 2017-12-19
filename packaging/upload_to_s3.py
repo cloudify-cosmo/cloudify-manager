@@ -19,8 +19,12 @@ for file in os.listdir(THIS_DIR):
         with open(md5sum_file, 'w') as f:
             f.write(md5sum)
 
+        version = subprocess.check_output([
+            'rpm', '-qp', '--queryformat', '%{VERSION}', file_path])
+
         for name in (file_path, md5sum_file):
             s3.meta.client.upload_file(
-                name,
-                os.getenv('AWS_S3_BUCKET'),
+                name, os.getenv('AWS_S3_BUCKET'),
+                'cloudify/{version}/build/{name}'.format(
+                    version=version, name=name),
                 )
