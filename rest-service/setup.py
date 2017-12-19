@@ -15,8 +15,7 @@
 
 import os
 
-from setuptools import setup
-
+from setuptools import setup, find_packages
 
 install_requires = [
     'Flask==0.10.1',
@@ -56,18 +55,9 @@ setup(
     version='4.3.dev1',
     author='Gigaspaces',
     author_email='cosmo-admin@gigaspaces.com',
-    packages=[
-        'manager_rest',
-        'manager_rest.rest',
-        'manager_rest.rest.resources_v1',
-        'manager_rest.rest.resources_v2',
-        'manager_rest.rest.resources_v2_1',
-        'manager_rest.rest.resources_v3',
-        'manager_rest.rest.resources_v3_1',
-        'manager_rest.deployment_update',
-        'manager_rest.storage',
-        'manager_rest.security',
-    ],
+    packages=find_packages(
+        include='manager_rest*', exclude=('manager_rest.test*',)
+    ),
     package_data={'manager_rest': ['VERSION']},
     license='LICENSE',
     description='Cloudify manager rest service',
