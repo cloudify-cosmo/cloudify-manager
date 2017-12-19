@@ -21,7 +21,7 @@ from aria.orchestrator.workflows.executor import process
 
 from ..... import manager_exceptions
 from .... import rest_decorators
-from . import base
+from .. import base
 
 
 class ARIAExecution(base.BaseARIAEndpoints):
