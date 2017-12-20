@@ -28,6 +28,6 @@ for file in os.listdir(THIS_DIR):
             name = os.path.basename(path)
             key = 'cloudify/{version}/build/{name}'.format(
                 version=version, name=name)
-            s3.meta.client.upload_file(name, BUCKET, key)
+            s3.meta.client.upload_file(path, BUCKET, key)
             target_url = 'https://{0}.s3.amazonaws.com/{1}'.format(BUCKET, key)
             print('uploaded', target_url)
