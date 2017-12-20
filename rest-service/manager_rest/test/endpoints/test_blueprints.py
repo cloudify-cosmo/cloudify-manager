@@ -278,8 +278,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             assert_almost_equal=self.assertAlmostEqual)
 
         try:
-            self.client.blueprints.upload(blueprint_path,
-                                          blueprint_id='0',
+            self.client.blueprints.upload(blueprint_path, '0',
                                           progress_callback=progress_func)
         finally:
             self.quiet_delete_directory(tmp_dir)

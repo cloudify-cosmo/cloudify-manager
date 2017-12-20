@@ -153,15 +153,20 @@ class SQLStorageManager(object):
 
         current_tenant = self.current_tenant
 
-        # If a user that is allowed to get all the tenants in the system
-        # passed the `all_tenants` flag, no need to filter
-        is_admin = is_administrator(current_tenant)
-        if is_admin and all_tenants_authorization() and all_tenants:
-            return query
-
+        # If a user passed the `all_tenants` flag
         if all_tenants:
-            tenant_ids = [tenant.id for tenant in current_user.all_tenants]
+            # If a user that is allowed to get all the tenants in the system
+            # no need to filter
+            if all_tenants_authorization():
+                return query
+            # Filter by all the tenants the user is allowed to list in
+            tenant_ids = [
+                tenant.id for tenant in current_user.all_tenants
+                if utils.tenant_specific_authorization(tenant,
+                                                       model_class.__name__)
+                ]
         else:
+            # Specific tenant only
             tenant_ids = [current_tenant.id] if current_tenant else []
 
         # Match any of the applicable tenant ids or if it's a global resource
