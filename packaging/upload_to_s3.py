@@ -28,4 +28,5 @@ for file in os.listdir(THIS_DIR):
     s3.upload_fileobj(StringIO(md5sum), BUCKET, key + '.md5',
                       ExtraArgs={'ACL': 'public-read'})
     target_url = 'https://{0}.s3.amazonaws.com/{1}'.format(BUCKET, key)
-    print('uploaded {0} ({1}): {2}'.format(file, md5sum, target_url))
+    print('uploaded {0} ({1}): {2}'
+          .format(file, md5sum.split()[0], target_url))
