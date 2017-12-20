@@ -202,7 +202,8 @@ class ExecutionsTest(AgentlessTestCase):
         execution = self.client.executions.start(
             deployment_id, workflow_id, parameters=workflow_params)
 
-        node_inst_id = self.client.node_instances.list(deployment_id)[0].id
+        node_inst_id = self.client.node_instances.list(
+            deployment_id=deployment_id)[0].id
 
         if is_wait_for_asleep_node:
             for retry in range(30):

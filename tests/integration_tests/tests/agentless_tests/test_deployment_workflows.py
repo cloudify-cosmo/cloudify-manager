@@ -108,7 +108,7 @@ class TestDeploymentWorkflows(AgentlessTestCase):
         self.client.blueprints.upload(dsl_path, blueprint_id)
         self.client.deployments.create(blueprint_id, deployment_id,
                                        skip_plugins_validation=True)
-        execution = self.client.executions.list(deployment_id)[0]
+        execution = self.client.executions.list(deployment_id=deployment_id)[0]
         self.wait_for_execution_to_end(execution)
 
         self.client.deployments.delete(deployment_id)

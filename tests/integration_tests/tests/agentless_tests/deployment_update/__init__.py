@@ -138,10 +138,15 @@ class DeploymentUpdateBase(AgentlessTestCase):
         node_instances_dct = {k: [] for k, _ in dct.iteritems()}
 
         for k, v in dct.iteritems():
-            nodes = list(self.client.nodes.list(deployment_id, node_id=dct[k]))
+            nodes = list(self.client.nodes.list(
+                deployment_id=deployment_id,
+                node_id=dct[k]
+            ))
             node_instances = \
-                list(self.client.node_instances.list(deployment_id,
-                                                     node_id=dct[k]))
+                list(self.client.node_instances.list(
+                    deployment_id=deployment_id,
+                    node_id=dct[k]
+                ))
             nodes_dct[k].extend(nodes)
             node_instances_dct[k].extend(node_instances)
 

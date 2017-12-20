@@ -293,7 +293,10 @@ class NodesTest(base_test.BaseServerTestCase):
 
         all_instances = self.client.node_instances.list()
         dep1_node_instances = \
-            self.client.node_instances.list('111', ['1', '2', '3', '4'])
+            self.client.node_instances.list(
+                deployment_id='111',
+                node_id=['1', '2', '3', '4']
+            )
 
         self.assertEqual(8, len(all_instances))
         self.assertEquals(4, len(dep1_node_instances))
@@ -317,12 +320,26 @@ class NodesTest(base_test.BaseServerTestCase):
                                deployment_id='222')
 
         all_instances = self.client.node_instances.list()
-        dep1_instances = self.client.node_instances.list('111')
-        dep2_instances = self.client.node_instances.list('222')
-        dep1_n1_instances = self.client.node_instances.list('111', '1')
-        dep1_n2_instances = self.client.node_instances.list('111', '2')
-        dep2_n3_instances = self.client.node_instances.list('222', '3')
-        dep2_n4_instances = self.client.node_instances.list('222', '4')
+        dep1_instances = self.client.node_instances.list(
+            deployment_id='111')
+        dep2_instances = self.client.node_instances.list(
+            deployment_id='222')
+        dep1_n1_instances = self.client.node_instances.list(
+            deployment_id='111',
+            node_name='1'
+        )
+        dep1_n2_instances = self.client.node_instances.list(
+            deployment_id='111',
+            node_name='2'
+        )
+        dep2_n3_instances = self.client.node_instances.list(
+            deployment_id='222',
+            node_name='3'
+        )
+        dep2_n4_instances = self.client.node_instances.list(
+            deployment_id='222',
+            node_name='4'
+        )
 
         self.assertEqual(8, len(all_instances))
 
@@ -450,7 +467,9 @@ class NodesTest(base_test.BaseServerTestCase):
             'planned_number_of_instances': 2,
             'deploy_number_of_instances': 2,
         }, node)
-        instances = self.client.node_instances.list(deployment.id).items
+        instances = self.client.node_instances.list(
+            deployment_id=deployment.id
+        ).items
         for instance in instances:
             # test list/get/patch endpoints
             tested_instances = [

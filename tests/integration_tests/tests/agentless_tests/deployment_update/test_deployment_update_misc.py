@@ -296,7 +296,7 @@ class TestDeploymentUpdateMisc(DeploymentUpdateBase):
         )
 
         workflows = [e['workflow_id'] for e in
-                     self.client.executions.list(deployment.id,
+                     self.client.executions.list(deployment_id=deployment.id,
                                                  _include=['workflow_id'])]
 
         self.assertNotIn('update', workflows)

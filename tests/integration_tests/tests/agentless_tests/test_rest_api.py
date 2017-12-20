@@ -102,16 +102,24 @@ class RestAPITest(AgentlessTestCase):
         self._create_basic_deployment(dsl_path, blueprint_id2, deployment_id2)
 
         all_instances = self.client.node_instances.list()
-        dep1_instances = self.client.node_instances.list(deployment_id1)
-        dep2_instances = self.client.node_instances.list(deployment_id2)
+        dep1_instances = self.client.node_instances.list(
+            deployment_id=deployment_id1
+        )
+        dep2_instances = self.client.node_instances.list(
+            deployment_id=deployment_id2
+        )
         dep1_n1_instances = self.client.node_instances.list(
-            deployment_id1, 'node1')
+            deployment_id=deployment_id1, node_id='node1'
+        )
         dep1_n2_instances = self.client.node_instances.list(
-            deployment_id1, 'node2')
+            deployment_id=deployment_id1, node_id='node2'
+        )
         dep2_n1_instances = self.client.node_instances.list(
-            deployment_id2, 'node1')
+            deployment_id=deployment_id2, node_id='node1'
+        )
         dep2_n2_instances = self.client.node_instances.list(
-            deployment_id2, 'node2')
+            deployment_id=deployment_id2, node_id='node2'
+        )
 
         self.assertEqual(8, len(all_instances))
 
@@ -159,7 +167,7 @@ class RestAPITest(AgentlessTestCase):
         deployment_id = deployments[0].id
         deployment_by_id = self.client.deployments.get(deployment_id)
         executions = self.client.executions.list(
-            deployment_by_id.id)
+            deployment_id=deployment_by_id.id)
 
         self.assertEqual(len(executions),
                          2,

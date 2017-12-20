@@ -29,7 +29,9 @@ class PoliciesTestsBase(BaseTestCase):
     def launch_deployment(self, yaml_file, expected_num_of_node_instances=1):
         deployment, _ = self.deploy_application(resource(yaml_file))
         self.deployment = deployment
-        self.node_instances = self.client.node_instances.list(deployment.id)
+        self.node_instances = self.client.node_instances.list(
+            deployment_id=deployment.id
+        )
         self.assertEqual(
                 expected_num_of_node_instances,
                 len(self.node_instances)

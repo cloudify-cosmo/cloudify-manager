@@ -85,7 +85,7 @@ def verify_deployment_environment_creation_complete(deployment_id):
     # a workaround for waiting for the deployment environment creation to
     # complete
     client = create_rest_client()
-    execs = client.executions.list(deployment_id)
+    execs = client.executions.list(deployment_id=deployment_id)
     if not execs \
             or execs[0].status != Execution.TERMINATED \
             or execs[0].workflow_id != 'create_deployment_environment':

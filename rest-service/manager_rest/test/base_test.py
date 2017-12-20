@@ -525,7 +525,9 @@ class BaseServerTestCase(unittest.TestCase):
 
     def wait_for_deployment_creation(self, client, deployment_id):
         env_creation_execution = None
-        deployment_executions = client.executions.list(deployment_id)
+        deployment_executions = client.executions.list(
+            deployment_id=deployment_id
+        )
         for execution in deployment_executions:
             if execution.workflow_id == 'create_deployment_environment':
                 env_creation_execution = execution

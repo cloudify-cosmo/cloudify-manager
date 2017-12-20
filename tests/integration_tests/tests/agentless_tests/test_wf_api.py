@@ -159,7 +159,9 @@ class WorkflowsAPITest(AgentlessTestCase):
         deployment, _ = self.deploy_and_execute_workflow(
             resource('dsl/store-scaling-groups.yaml'),
             workflow_name='workflow')
-        instance = self.client.node_instances.list(deployment.id)[0]
+        instance = self.client.node_instances.list(
+            deployment_id=deployment.id
+        )[0]
         self.assertEqual(
             ['node'],
             instance.runtime_properties['scaling_groups']['group1']['members'])

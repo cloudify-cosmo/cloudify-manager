@@ -427,7 +427,9 @@ class ModifyTests(base_test.BaseServerTestCase):
 
         # verify node instances scaling groups are also updated for newly
         # added nodes
-        node_instances = self.client.node_instances.list(deployment.id).items
+        node_instances = self.client.node_instances.list(
+            deployment_id=deployment.id
+        ).items
         self.assertEqual(2, len(node_instances))
         for instance in node_instances:
             node_instance_scaling_groups = instance['scaling_groups']

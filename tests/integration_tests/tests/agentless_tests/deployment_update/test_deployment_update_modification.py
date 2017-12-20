@@ -324,9 +324,10 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id,
                                               'my_custom_workflow')
-        affected_node = \
-            self.client.node_instances.list(dep_update.deployment_id,
-                                            'site1')
+        affected_node = self.client.node_instances.list(
+            deployment_id=dep_update.deployment_id,
+            node_id='site1'
+        )
         self.assertEqual(len(affected_node), 6)
         deployment = self.client.deployments.get(dep_update.deployment_id)
         self.assertIn('my_custom_workflow',
