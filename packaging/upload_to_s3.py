@@ -24,7 +24,8 @@ for file in os.listdir(THIS_DIR):
         version = subprocess.check_output([
             'rpm', '-qp', '--queryformat', '%{VERSION}', file_path])
 
-        for name in (file_path, md5sum_file):
+        for path in (file_path, md5sum_file):
+            name = os.path.basename(path)
             key = 'cloudify/{version}/build/{name}'.format(
                 version=version, name=name)
             s3.meta.client.upload_file(name, BUCKET, key)
