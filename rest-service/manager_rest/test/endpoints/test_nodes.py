@@ -293,7 +293,10 @@ class NodesTest(base_test.BaseServerTestCase):
 
         all_instances = self.client.node_instances.list()
         dep1_node_instances = \
-            self.client.node_instances.list('111', ['1', '2', '3', '4'])
+            self.client.node_instances.list(
+                deployment_id='111',
+                node_id=['1', '2', '3', '4']
+            )
 
         self.assertEqual(8, len(all_instances))
         self.assertEquals(4, len(dep1_node_instances))

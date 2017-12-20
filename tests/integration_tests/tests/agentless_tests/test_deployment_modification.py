@@ -167,7 +167,7 @@ class TestDeploymentModification(AgentlessTestCase):
 
         nodes_before_modification = {
             node.id: node for node in
-            self.client.nodes.list(deployment_id)
+            self.client.nodes.list(deployment_id=deployment_id)
         }
 
         before_modifications = self.client.deployment_modifications.list(
@@ -257,7 +257,9 @@ class TestDeploymentModification(AgentlessTestCase):
             self.assertEqual(expected_webserver['relationships'],
                              len(webserver_instances[0]['relationships']))
 
-        node_instances = self.client.node_instances.list(deployment_id)
+        node_instances = self.client.node_instances.list(
+            deployment_id=deployment_id
+        )
         self.assertEqual(expected_total, len(node_instances))
         for node_id, modification in modified_nodes.items():
             if rollback:

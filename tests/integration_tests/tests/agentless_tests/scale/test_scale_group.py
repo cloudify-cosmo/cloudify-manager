@@ -34,7 +34,7 @@ class TestScaleGroup(TestScaleBase):
             self.assertEqual(
                     expected_node_count,
                     len(self.client.node_instances.list(
-                            self.deployment_id,
+                            deployment_id=self.deployment_id,
                             node_id=node_id).items)
             )
         plugin_name = 'testmockoperations'
