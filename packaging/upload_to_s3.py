@@ -20,7 +20,7 @@ for file in os.listdir(THIS_DIR):
         md5sum_file = file_path + '.md5'
         with open(md5sum_file, 'w') as f:
             f.write(md5sum)
-
+        print('{0}: {1}'.format(file, md5sum))
         version = subprocess.check_output([
             'rpm', '-qp', '--queryformat', '%{VERSION}', file_path])
 
@@ -28,4 +28,5 @@ for file in os.listdir(THIS_DIR):
             key = 'cloudify/{version}/build/{name}'.format(
                 version=version, name=name)
             s3.meta.client.upload_file(name, BUCKET, key)
-            print('uploaded', '/'.join((s3.meta.endpoint_url, BUCKET, key)))
+            target_url = 'https://{0}.s3.amazonaws.com/{1}'.format(BUCKET, key)
+            print('uploaded', target_url)
