@@ -326,19 +326,19 @@ class NodesTest(base_test.BaseServerTestCase):
             deployment_id='222')
         dep1_n1_instances = self.client.node_instances.list(
             deployment_id='111',
-            node_id='1'
+            node_name='1'
         )
         dep1_n2_instances = self.client.node_instances.list(
             deployment_id='111',
-            node_id='2'
+            node_name='2'
         )
         dep2_n3_instances = self.client.node_instances.list(
             deployment_id='222',
-            node_id='3'
+            node_name='3'
         )
         dep2_n4_instances = self.client.node_instances.list(
             deployment_id='222',
-            node_id='4'
+            node_name='4'
         )
 
         self.assertEqual(8, len(all_instances))
