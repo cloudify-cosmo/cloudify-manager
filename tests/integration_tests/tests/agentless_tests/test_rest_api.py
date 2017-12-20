@@ -167,7 +167,7 @@ class RestAPITest(AgentlessTestCase):
         deployment_id = deployments[0].id
         deployment_by_id = self.client.deployments.get(deployment_id)
         executions = self.client.executions.list(
-            deployment_by_id.id)
+            deployment_id=deployment_by_id.id)
 
         self.assertEqual(len(executions),
                          2,
