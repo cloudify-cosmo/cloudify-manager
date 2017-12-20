@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import os
 import subprocess
@@ -6,6 +7,7 @@ import subprocess
 import boto3
 
 
+BUCKET = 'cloudify-release-eu'
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -23,8 +25,7 @@ for file in os.listdir(THIS_DIR):
             'rpm', '-qp', '--queryformat', '%{VERSION}', file_path])
 
         for name in (file_path, md5sum_file):
-            s3.meta.client.upload_file(
-                name, 'cloudify-release-eu',
-                'cloudify/{version}/build/{name}'.format(
-                    version=version, name=name),
-                )
+            key = 'cloudify/{version}/build/{name}'.format(
+                version=version, name=name)
+            s3.meta.client.upload_file(name, BUCKET, key)
+            print('uploaded', '/'.join((s3.meta.endpoint_url, BUCKET, key)))
