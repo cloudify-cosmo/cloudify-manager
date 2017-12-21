@@ -21,7 +21,7 @@ for file in os.listdir(THIS_DIR):
     version = subprocess.check_output([
         'rpm', '-qp', '--queryformat', '%{VERSION}', file_path])
     key = 'cloudify/{version}/build/{name}'.format(version=version, name=file)
-    md5sum = subprocess.check_output(['md5sum', file_path])
+    md5sum = subprocess.check_output(['md5sum', file])
 
     s3.upload_file(file_path, BUCKET, key,
                    ExtraArgs={'ACL': 'public-read'})
