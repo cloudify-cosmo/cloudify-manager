@@ -24,6 +24,7 @@ install_requires = [
     'flask-sqlalchemy==2.1',
     'flask-security==1.7.5',
     'flask-migrate==2.0.3',
+    'ldappy',
     'supervise==1.1.1',
     'cloudify-dsl-parser==4.3.dev1',
     'requests>=2.7.0,<3.0.0',
@@ -62,4 +63,8 @@ setup(
     license='LICENSE',
     description='Cloudify manager rest service',
     zip_safe=False,
-    install_requires=install_requires)
+    install_requires=install_requires,
+    extras_require={
+        'dbus': ['dbus-python==1.2.4'],
+        },
+    )
