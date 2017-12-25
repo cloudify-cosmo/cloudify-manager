@@ -20,7 +20,7 @@ for file in os.listdir(THIS_DIR):
     file_path = os.path.join(THIS_DIR, file)
     version = subprocess.check_output([
         'rpm', '-qp', '--queryformat', '%{VERSION}', file_path])
-    key = KEY_TEMPLATE.format(version=version, name=file)
+    key = KEY_TEMPLATE.format(version=version, build_type=build_type, name=file)
     md5sum = subprocess.check_output(['md5sum', file], cwd=THIS_DIR)
 
     s3.upload_file(file_path, BUCKET, key,
