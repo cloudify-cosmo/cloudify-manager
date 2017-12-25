@@ -104,7 +104,9 @@ class SnapshotCreate(object):
     def _dump_postgres(self):
         ctx.logger.info('Dumping Postgres data')
         with Postgres(self._config) as postgres:
-            postgres.dump(self._tempdir, self._include_logs, self._include_events)
+            postgres.dump(self._tempdir,
+                          self._include_logs,
+                          self._include_events)
             postgres.dump_stage(self._tempdir)
             postgres.dump_composer(self._tempdir)
 
