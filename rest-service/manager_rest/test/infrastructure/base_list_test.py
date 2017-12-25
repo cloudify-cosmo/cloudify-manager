@@ -79,6 +79,4 @@ class BaseListTest(BaseServerTestCase):
         for i in range(number_of_snapshots):
             self.client.snapshots.create(snapshot_id='oh-snap{0}'.format(i),
                                          include_metrics=False,
-                                         include_credentials=False,
-                                         include_logs=True,
-                                         include_events=True)
+                                         include_credentials=False)
