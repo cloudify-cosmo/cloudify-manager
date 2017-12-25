@@ -37,7 +37,7 @@ from manager_rest.storage import FileServer, get_storage_manager, models
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
 from manager_rest.storage.models_states import (ExecutionState,
-                                                AvailabilityState)
+                                                VisibilityState)
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER)
@@ -416,12 +416,12 @@ class BaseServerTestCase(unittest.TestCase):
 
     def upload_blueprint(self,
                          client,
-                         availability=AvailabilityState.TENANT,
+                         visibility=VisibilityState.TENANT,
                          blueprint_id='bp_1'):
         bp_path = self.get_blueprint_path('mock_blueprint/blueprint.yaml')
         client.blueprints.upload(path=bp_path,
                                  entity_id=blueprint_id,
-                                 availability=availability)
+                                 visibility=visibility)
         return blueprint_id
 
     def archive_mock_blueprint(self, archive_func=archiving.make_targzfile,

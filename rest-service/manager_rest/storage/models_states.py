@@ -48,7 +48,7 @@ class ExecutionState(object):
     ACTIVE_STATES = [state for state in STATES if state not in END_STATES]
 
 
-class AvailabilityState(object):
+class VisibilityState(object):
     PRIVATE = 'private'
     TENANT = 'tenant'
     GLOBAL = 'global'

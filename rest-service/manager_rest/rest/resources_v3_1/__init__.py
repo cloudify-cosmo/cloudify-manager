@@ -20,24 +20,24 @@ from .manager_config import ManagerConfig        # NOQA
 from .secrets import (                           # NOQA
     SecretsKey,
     SecretsSetGlobal,
-    SecretsSetAvailability
+    SecretsSetVisibility
 )
 
 from .plugins import (                           # NOQA
     Plugins,
     PluginsSetGlobal,
-    PluginsSetAvailability
+    PluginsSetVisibility
 )
 
 from .deployments import (                       # NOQA
     DeploymentsId,
-    DeploymentsSetAvailability
+    DeploymentsSetVisibility
 )
 
 from .blueprints import (                        # NOQA
     BlueprintsId,
     BlueprintsSetGlobal,
-    BlueprintsSetAvailability
+    BlueprintsSetVisibility
 )
 
 from .aria import (                              # NOQA

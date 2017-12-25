@@ -119,7 +119,7 @@ class DeploymentsId(SecuredResource):
             blueprint_id,
             deployment_id,
             private_resource=args.private_resource,
-            availability=None,
+            visibility=None,
             inputs=request_dict.get('inputs', {}),
             bypass_maintenance=bypass_maintenance,
             skip_plugins_validation=self.get_skip_plugin_validation_flag(

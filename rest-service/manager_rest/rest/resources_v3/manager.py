@@ -19,7 +19,7 @@ from manager_rest import config, utils
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.storage.models_states import AvailabilityState
+from manager_rest.storage.models_states import VisibilityState
 from manager_rest.manager_exceptions import (BadParametersError,
                                              MethodNotAllowedError,
                                              UnauthorizedError,
@@ -90,7 +90,7 @@ class FileServerAuth(SecuredResource):
                                                   resource_id)
         except NotFoundError:
             return False
-        return blueprint.resource_availability == AvailabilityState.GLOBAL
+        return blueprint.resource_availability == VisibilityState.GLOBAL
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ResourceID)

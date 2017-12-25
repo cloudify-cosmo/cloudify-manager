@@ -19,8 +19,8 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from manager_rest.utils import classproperty
 
 from .models_base import db, SQLModelBase
+from .models_states import VisibilityState
 from .management_models import Tenant, User
-from .models_states import AvailabilityState
 from .relationships import one_to_many_relationship, foreign_key
 
 
@@ -58,8 +58,8 @@ class SQLResourceBase(SQLModelBase):
     id = db.Column(db.Text, index=True)
     private_resource = db.Column(db.Boolean, default=False)  # Deprecated
     resource_availability = db.Column(
-        db.Enum(*AvailabilityState.STATES, name='resource_availability'),
-        default=AvailabilityState.TENANT)
+        db.Enum(*VisibilityState.STATES, name='resource_availability'),
+        default=VisibilityState.TENANT)
 
     @declared_attr
     def _tenant_id(cls):
@@ -90,7 +90,7 @@ class SQLResourceBase(SQLModelBase):
 
         # Fix the value of the deprecated property private_resource
         # for backwards compatibility
-        private = fields['resource_availability'] == AvailabilityState.PRIVATE
+        private = fields['resource_availability'] == VisibilityState.PRIVATE
         fields['private_resource'] = private
         return fields
 
