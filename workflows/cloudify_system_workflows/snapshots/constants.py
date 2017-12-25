@@ -51,7 +51,7 @@ V_4_1_0 = ManagerVersion('4.1.0')
 V_4_2_0 = ManagerVersion('4.2.0')
 
 
-class AvailabilityState(object):
+class VisibilityState(object):
     PRIVATE = 'private'
     TENANT = 'tenant'
     GLOBAL = 'global'

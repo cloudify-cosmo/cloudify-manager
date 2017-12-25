@@ -35,7 +35,7 @@ from manager_rest.storage import get_storage_manager, models, get_node
 from manager_rest.storage.models_states import (SnapshotState,
                                                 ExecutionState,
                                                 DeploymentModificationState,
-                                                AvailabilityState)
+                                                VisibilityState)
 
 from . import utils
 from . import config
@@ -119,11 +119,11 @@ class ResourceManager(object):
                               snapshot_id,
                               status=SnapshotState.CREATING):
         now = utils.get_formatted_timestamp()
-        availability = AvailabilityState.PRIVATE
+        visibility = VisibilityState.PRIVATE
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
                                        status=status,
-                                       resource_availability=availability,
+                                       resource_availability=visibility,
                                        error='')
         return self.sm.put(new_snapshot)
 
@@ -257,7 +257,7 @@ class ResourceManager(object):
                           resources_base,
                           blueprint_id,
                           private_resource,
-                          availability):
+                          visibility):
         dsl_location = os.path.join(
             resources_base,
             application_dir,
@@ -271,10 +271,10 @@ class ResourceManager(object):
             raise manager_exceptions.DslParseException(str(ex))
 
         now = utils.get_formatted_timestamp()
-        availability = self.get_resource_availability(models.Blueprint,
-                                                      blueprint_id,
-                                                      availability,
-                                                      private_resource)
+        visibility = self.get_resource_visibility(models.Blueprint,
+                                                  blueprint_id,
+                                                  visibility,
+                                                  private_resource)
         new_blueprint = models.Blueprint(
             plan=plan,
             id=blueprint_id,
@@ -282,7 +282,7 @@ class ResourceManager(object):
             created_at=now,
             updated_at=now,
             main_file_name=application_file_name,
-            resource_availability=availability
+            resource_availability=visibility
         )
         return self.sm.put(new_blueprint)
 
@@ -663,7 +663,7 @@ class ResourceManager(object):
                           blueprint_id,
                           deployment_id,
                           private_resource,
-                          availability,
+                          visibility,
                           inputs=None,
                           bypass_maintenance=None,
                           skip_plugins_validation=False):
@@ -701,11 +701,11 @@ class ResourceManager(object):
             deployment_plan
         )
         new_deployment.blueprint = blueprint
-        availability = self.get_resource_availability(models.Deployment,
-                                                      deployment_id,
-                                                      availability,
-                                                      private_resource)
-        new_deployment.resource_availability = availability
+        visibility = self.get_resource_visibility(models.Deployment,
+                                                  deployment_id,
+                                                  visibility,
+                                                  private_resource)
+        new_deployment.resource_availability = visibility
         self.sm.put(new_deployment)
 
         self._create_deployment_nodes(deployment_id, deployment_plan)
@@ -1259,72 +1259,70 @@ class ResourceManager(object):
 
         app_context.update_parser_context(context_dict['context'])
 
-    def get_resource_availability(self,
-                                  model_class,
-                                  resource_id,
-                                  availability,
-                                  private_resource=None,
-                                  plugin_info=None):
+    def get_resource_visibility(self,
+                                model_class,
+                                resource_id,
+                                visibility,
+                                private_resource=None,
+                                plugin_info=None):
         """
-        Determine the availability of the resource.
+        Determine the visibility of the resource.
 
         :param model_class: SQL DB table class
         :param resource_id: The id of the resource
-        :param availability: The new parameter for the user to set the
-                             availability of the resource.
+        :param visibility: The new parameter for the user to set the
+                           visibility of the resource.
         :param private_resource: The old parameter the user used to set
-                                 the availability, kept for backwards
+                                 the visibility, kept for backwards
                                  compatibility and it will be deprecated soon
         :param plugin_info: In case the resource is a plugin,
                             it's package_name and archive_name
-        :return: The availability to set
+        :return: The visibility to set
         """
 
         # Validate we're not using the old parameter with new parameter
-        if private_resource is not None and availability:
+        if private_resource is not None and visibility:
             raise manager_exceptions.BadParametersError(
-                "The `private_resource` and `availability` "
+                "The `private_resource` and `visibility` "
                 "parameters cannot be used together"
             )
 
         # Handle the old parameter
         if private_resource:
-            return AvailabilityState.PRIVATE if private_resource else \
-                AvailabilityState.TENANT
+            return VisibilityState.PRIVATE if private_resource else \
+                VisibilityState.TENANT
 
-        # Validate that global availability is permitted
-        if availability == AvailabilityState.GLOBAL:
+        # Validate that global visibility is permitted
+        if visibility == VisibilityState.GLOBAL:
             self._validate_global_permitted(model_class,
                                             resource_id,
                                             create_resource=True,
                                             plugin_info=plugin_info)
 
-        return availability or AvailabilityState.TENANT
+        return visibility or VisibilityState.TENANT
 
-    def set_availability(self, model_class, resource_id, availability):
+    def set_visibility(self, model_class, resource_id, visibility):
         resource = self.sm.get(model_class, resource_id)
-        self._validate_availability_value(model_class,
-                                          resource,
-                                          availability)
+        self._validate_visibility_value(model_class, resource, visibility)
         # Set the resource_availability
-        resource.resource_availability = availability
+        resource.resource_availability = visibility
         resource.updated_at = utils.get_formatted_timestamp()
         return self.sm.update(resource)
 
-    def _validate_availability_value(self,
-                                     model_class,
-                                     resource,
-                                     new_availability):
-        current_availability = resource.resource_availability
-        states = AvailabilityState.STATES
-        if states.index(new_availability) < states.index(current_availability):
+    def _validate_visibility_value(self,
+                                   model_class,
+                                   resource,
+                                   new_visibility):
+        current_visibility = resource.resource_availability
+        states = VisibilityState.STATES
+        if states.index(new_visibility) < states.index(current_visibility):
             raise manager_exceptions.IllegalActionError(
-                "Can't set the availability of `{0}` to {1} because it "
-                "already has wider availability".format(resource.id,
-                                                        new_availability)
+                "Can't set the visibility of `{0}` to {1} because it "
+                "already has wider visibility".format(resource.id,
+                                                      new_visibility)
             )
 
-        if new_availability == AvailabilityState.GLOBAL:
+        if new_visibility == VisibilityState.GLOBAL:
             plugin_info = None
             if model_class == models.Plugin:
                 plugin_info = {'package_name': resource.package_name,
@@ -1356,14 +1354,14 @@ class ResourceManager(object):
         max_resource_number = 0 if create_resource else 1
         if self.sm.count(model_class, unique_filter) > max_resource_number:
             raise manager_exceptions.IllegalActionError(
-                "Can't set or create the resource `{0}`, it's availability "
+                "Can't set or create the resource `{0}`, it's visibility "
                 "can't be global because it also exists in other tenants"
                 .format(resource_id)
             )
 
     def validate_modification_permitted(self, resource):
         # A global resource can't be modify from outside its tenant
-        if resource.resource_availability == AvailabilityState.GLOBAL and \
+        if resource.resource_availability == VisibilityState.GLOBAL and \
            resource.tenant_name != self.sm.current_tenant.name:
             raise manager_exceptions.IllegalActionError(
                 "Can't modify the global resource `{0}` from outside its "

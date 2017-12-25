@@ -20,8 +20,8 @@ from manager_rest.storage import models
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage.models_states import VisibilityState
 from manager_rest.maintenance import is_bypass_maintenance_mode
-from manager_rest.storage.models_states import AvailabilityState
 from manager_rest.rest import (rest_utils,
                                resources_v1,
                                rest_decorators)
@@ -54,9 +54,9 @@ class DeploymentsId(resources_v1.DeploymentsId):
         args = get_args_and_verify_arguments(
             [Argument('private_resource', type=types.boolean)]
         )
-        availability = rest_utils.get_availability_parameter(
+        visibility = rest_utils.get_visibility_parameter(
             optional=True,
-            valid_values=[AvailabilityState.PRIVATE, AvailabilityState.TENANT]
+            valid_values=[VisibilityState.PRIVATE, VisibilityState.TENANT]
         )
         deployment = get_resource_manager().create_deployment(
             blueprint_id,
@@ -64,25 +64,25 @@ class DeploymentsId(resources_v1.DeploymentsId):
             inputs=request_dict.get('inputs', {}),
             bypass_maintenance=bypass_maintenance,
             private_resource=args.private_resource,
-            availability=availability,
+            visibility=visibility,
             skip_plugins_validation=self.get_skip_plugin_validation_flag(
                 request_dict)
         )
         return deployment, 201
 
 
-class DeploymentsSetAvailability(SecuredResource):
+class DeploymentsSetVisibility(SecuredResource):
 
     @rest_decorators.exceptions_handled
-    @authorize('deployment_set_availability')
+    @authorize('deployment_set_visibility')
     @rest_decorators.marshal_with(models.Deployment)
     def patch(self, deployment_id):
         """
-        Set the deployment's availability
+        Set the deployment's visibility
         """
-        availability = rest_utils.get_availability_parameter(
-            valid_values=AvailabilityState.TENANT
+        visibility = rest_utils.get_visibility_parameter(
+            valid_values=VisibilityState.TENANT
         )
-        return get_resource_manager().set_availability(models.Deployment,
-                                                       deployment_id,
-                                                       availability)
+        return get_resource_manager().set_visibility(models.Deployment,
+                                                     deployment_id,
+                                                     visibility)

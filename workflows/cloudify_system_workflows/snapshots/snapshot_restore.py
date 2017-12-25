@@ -57,7 +57,7 @@ from .constants import (
     MANAGER_PYTHON,
     V_4_0_0,
     V_4_2_0,
-    AvailabilityState
+    VisibilityState
 )
 
 
@@ -362,8 +362,8 @@ class SnapshotRestore(object):
         for table in resources_tables:
             postgres.run_query(update_query.format(
                 table,
-                "'{}'".format(AvailabilityState.PRIVATE),
-                "'{}'".format(AvailabilityState.TENANT))
+                "'{}'".format(VisibilityState.PRIVATE),
+                "'{}'".format(VisibilityState.TENANT))
             )
 
         ctx.logger.info('Successfully updated resource_availability')
@@ -437,7 +437,7 @@ class SnapshotRestore(object):
             ),
             'id': plugin['id'],
             'tenant': plugin['tenant_name'],
-            'availability': plugin['resource_availability'],
+            'visibility': plugin['resource_availability'],
         }
 
     def _get_plugins_to_install(self, existing_plugins):
@@ -493,7 +493,7 @@ class SnapshotRestore(object):
                     shutil.copyfile(plugin['path'], temp_plugin)
                     client.plugins.delete(plugin['id'], force=True)
                     client.plugins.upload(temp_plugin,
-                                          availability=plugin['availability'])
+                                          visibility=plugin['visibility'])
                     os.remove(temp_plugin)
             finally:
                 os.rmdir(plugins_tmp)

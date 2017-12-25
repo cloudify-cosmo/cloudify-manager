@@ -18,7 +18,7 @@ from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import AvailabilityState
+from manager_rest.storage.models_states import VisibilityState
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.rest import (rest_decorators,
                                resources_v3,
@@ -32,28 +32,28 @@ class SecretsSetGlobal(SecuredResource):
     @rest_decorators.marshal_with(models.Secret)
     def patch(self, key):
         """
-        Set the secret's availability to global
+        Set the secret's visibility to global
         """
-        return get_resource_manager().set_global_availability(
+        return get_resource_manager().set_global_visibility(
             models.Secret,
             key,
-            AvailabilityState.GLOBAL
+            VisibilityState.GLOBAL
         )
 
 
-class SecretsSetAvailability(SecuredResource):
+class SecretsSetVisibility(SecuredResource):
 
     @rest_decorators.exceptions_handled
-    @authorize('resource_set_availability')
+    @authorize('resource_set_visibility')
     @rest_decorators.marshal_with(models.Secret)
     def patch(self, key):
         """
-        Set the secret's availability
+        Set the secret's visibility
         """
-        availability = rest_utils.get_availability_parameter()
-        return get_resource_manager().set_availability(models.Secret,
-                                                       key,
-                                                       availability)
+        visibility = rest_utils.get_visibility_parameter()
+        return get_resource_manager().set_visibility(models.Secret,
+                                                     key,
+                                                     visibility)
 
 
 class SecretsKey(resources_v3.SecretsKey):
@@ -75,7 +75,7 @@ class SecretsKey(resources_v3.SecretsKey):
                 value=secret_params['value'],
                 created_at=timestamp,
                 updated_at=timestamp,
-                resource_availability=secret_params['availability'],
+                resource_availability=secret_params['visibility'],
             )
             return sm.put(new_secret)
         except ConflictError:
@@ -98,19 +98,19 @@ class SecretsKey(resources_v3.SecretsKey):
             request_dict.get('update_if_exists', False),
         )
         rest_utils.validate_inputs({'key': key})
-        availability_param = rest_utils.get_availability_parameter(
+        visibility_param = rest_utils.get_visibility_parameter(
             optional=True,
-            valid_values=AvailabilityState.STATES,
+            valid_values=VisibilityState.STATES,
         )
-        availability = get_resource_manager().get_resource_availability(
+        visibility = get_resource_manager().get_resource_visibility(
             models.Secret,
             key,
-            availability_param
+            visibility_param
         )
 
         secret_params = {
             'value': request_dict['value'],
             'update_if_exists': update_if_exists,
-            'availability': availability
+            'visibility': visibility
         }
         return secret_params

@@ -27,16 +27,16 @@ from contextlib import contextmanager
 
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
-from manager_rest.storage.models_states import AvailabilityState
+from manager_rest.storage.models_states import VisibilityState
 
 try:
     from cloudify_premium.ha import node_status
 except ImportError:
     node_status = {'initialized': False}
 
-states_except_private = copy.deepcopy(AvailabilityState.STATES)
+states_except_private = copy.deepcopy(VisibilityState.STATES)
 states_except_private.remove('private')
-AVAILABILITY_EXCEPT_PRIVATE = states_except_private
+VISIBILITY_EXCEPT_PRIVATE = states_except_private
 
 
 @contextmanager
@@ -224,23 +224,23 @@ def request_use_all_tenants():
                                    request.args.get('_all_tenants', False))
 
 
-def get_availability_parameter(optional=False,
-                               is_argument=False,
-                               valid_values=AVAILABILITY_EXCEPT_PRIVATE):
+def get_visibility_parameter(optional=False,
+                             is_argument=False,
+                             valid_values=VISIBILITY_EXCEPT_PRIVATE):
     if is_argument:
         args = get_args_and_verify_arguments(
-            [Argument('availability', type=unicode, default=None)]
+            [Argument('visibility', type=unicode, default=None)]
         )
-        availability = args.availability
+        visibility = args.visibility
     else:
         request_dict = get_json_and_verify_params({
-            'availability': {'optional': optional, 'type': unicode}
+            'visibility': {'optional': optional, 'type': unicode}
         })
-        availability = request_dict.get('availability', None)
+        visibility = request_dict.get('visibility', None)
 
-    if availability is not None and availability not in valid_values:
+    if visibility is not None and visibility not in valid_values:
         raise manager_exceptions.BadParametersError(
-            "Invalid availability: `{0}`. Valid availability's values are: {1}"
-            .format(availability, valid_values)
+            "Invalid visibility: `{0}`. Valid visibility's values are: {1}"
+            .format(visibility, valid_values)
         )
-    return availability
+    return visibility

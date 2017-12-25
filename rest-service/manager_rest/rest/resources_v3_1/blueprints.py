@@ -17,7 +17,7 @@ from manager_rest.storage import models
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import AvailabilityState
+from manager_rest.storage.models_states import VisibilityState
 from manager_rest.upload_manager import UploadedBlueprintsManager
 from manager_rest.rest import (rest_utils,
                                resources_v2,
@@ -31,28 +31,28 @@ class BlueprintsSetGlobal(SecuredResource):
     @rest_decorators.marshal_with(models.Blueprint)
     def patch(self, blueprint_id):
         """
-        Set the blueprint's availability to global
+        Set the blueprint's visibility to global
         """
-        return get_resource_manager().set_availability(
+        return get_resource_manager().set_visibility(
             models.Blueprint,
             blueprint_id,
-            AvailabilityState.GLOBAL
+            VisibilityState.GLOBAL
         )
 
 
-class BlueprintsSetAvailability(SecuredResource):
+class BlueprintsSetVisibility(SecuredResource):
 
     @rest_decorators.exceptions_handled
-    @authorize('resource_set_availability')
+    @authorize('resource_set_visibility')
     @rest_decorators.marshal_with(models.Blueprint)
     def patch(self, blueprint_id):
         """
-        Set the blueprint's availability
+        Set the blueprint's visibility
         """
-        availability = rest_utils.get_availability_parameter()
-        return get_resource_manager().set_availability(models.Blueprint,
-                                                       blueprint_id,
-                                                       availability)
+        visibility = rest_utils.get_visibility_parameter()
+        return get_resource_manager().set_visibility(models.Blueprint,
+                                                     blueprint_id,
+                                                     visibility)
 
 
 class BlueprintsId(resources_v2.BlueprintsId):
@@ -63,11 +63,11 @@ class BlueprintsId(resources_v2.BlueprintsId):
         """
         Upload a blueprint (id specified)
         """
-        availability = rest_utils.get_availability_parameter(
+        visibility = rest_utils.get_visibility_parameter(
             optional=True,
             is_argument=True,
-            valid_values=AvailabilityState.STATES
+            valid_values=VisibilityState.STATES
         )
         return UploadedBlueprintsManager().\
             receive_uploaded_data(data_id=blueprint_id,
-                                  availability=availability)
+                                  visibility=visibility)

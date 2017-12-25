@@ -17,7 +17,7 @@ from manager_rest.storage import models
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage.models_states import AvailabilityState
+from manager_rest.storage.models_states import VisibilityState
 from manager_rest.rest import (resources_v2,
                                rest_decorators,
                                rest_utils)
@@ -30,28 +30,28 @@ class PluginsSetGlobal(SecuredResource):
     @rest_decorators.marshal_with(models.Plugin)
     def patch(self, plugin_id):
         """
-        Set the plugin's availability to global
+        Set the plugin's visibility to global
         """
-        return get_resource_manager().set_availability(
+        return get_resource_manager().set_visibility(
             models.Plugin,
             plugin_id,
-            AvailabilityState.GLOBAL
+            VisibilityState.GLOBAL
         )
 
 
-class PluginsSetAvailability(SecuredResource):
+class PluginsSetVisibility(SecuredResource):
 
     @rest_decorators.exceptions_handled
-    @authorize('resource_set_availability')
+    @authorize('resource_set_visibility')
     @rest_decorators.marshal_with(models.Plugin)
     def patch(self, plugin_id):
         """
-        Set the plugin's availability
+        Set the plugin's visibility
         """
-        availability = rest_utils.get_availability_parameter()
-        return get_resource_manager().set_availability(models.Plugin,
-                                                       plugin_id,
-                                                       availability)
+        visibility = rest_utils.get_visibility_parameter()
+        return get_resource_manager().set_visibility(models.Plugin,
+                                                     plugin_id,
+                                                     visibility)
 
 
 class Plugins(resources_v2.Plugins):
@@ -62,10 +62,10 @@ class Plugins(resources_v2.Plugins):
         """
         Upload a plugin
         """
-        availability = rest_utils.get_availability_parameter(
+        visibility = rest_utils.get_visibility_parameter(
             optional=True,
             is_argument=True,
-            valid_values=AvailabilityState.STATES
+            valid_values=VisibilityState.STATES
         )
         with rest_utils.skip_nested_marshalling():
-            return super(Plugins, self).post(availability=availability)
+            return super(Plugins, self).post(visibility=visibility)

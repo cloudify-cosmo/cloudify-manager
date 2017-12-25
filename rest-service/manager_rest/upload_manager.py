@@ -472,11 +472,11 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 archive_target_path,
                 file_server_root
             )
-        availability = kwargs.get('availability', None)
+        visibility = kwargs.get('visibility', None)
         return self._prepare_and_submit_blueprint(file_server_root,
                                                   application_dir,
                                                   data_id,
-                                                  availability), None
+                                                  visibility), None
 
     @classmethod
     def _process_plugins(cls, file_server_root, blueprint_id):
@@ -514,7 +514,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
     def _get_args(cls):
         args_parser = RequestParser()
         args_parser.add_argument('private_resource', type=types.boolean)
-        args_parser.add_argument('availability', type=str)
+        args_parser.add_argument('visibility', type=str)
         args_parser.add_argument('application_file_name', type=str, default='')
         return args_parser.parse_args()
 
@@ -523,7 +523,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                                       file_server_root,
                                       app_dir,
                                       blueprint_id,
-                                      availability):
+                                      visibility):
 
         args = cls._get_args()
         app_dir, app_file_name = cls._extract_application_file(
@@ -537,7 +537,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 file_server_root,
                 blueprint_id,
                 args.private_resource,
-                availability
+                visibility
             )
 
             # moving the app directory in the file server to be under a
@@ -606,7 +606,7 @@ class UploadedPluginsManager(UploadedDataManager):
     def _get_args():
         args_parser = RequestParser()
         args_parser.add_argument('private_resource', type=types.boolean)
-        args_parser.add_argument('availability', type=str)
+        args_parser.add_argument('visibility', type=str)
         return args_parser.parse_args()
 
     def _prepare_and_process_doc(self,
@@ -615,11 +615,11 @@ class UploadedPluginsManager(UploadedDataManager):
                                  archive_target_path,
                                  **kwargs):
         args = self._get_args()
-        availability = kwargs.get('availability', None)
+        visibility = kwargs.get('visibility', None)
         new_plugin = self._create_plugin_from_archive(data_id,
                                                       archive_target_path,
                                                       args.private_resource,
-                                                      availability)
+                                                      visibility)
         filter_by_name = {'package_name': new_plugin.package_name}
         sm = get_resource_manager().sm
         plugins = sm.list(Plugin, filters=filter_by_name)
@@ -641,16 +641,16 @@ class UploadedPluginsManager(UploadedDataManager):
                                     plugin_id,
                                     archive_path,
                                     private_resource,
-                                    availability):
+                                    visibility):
         plugin = self._load_plugin_package_json(archive_path)
         build_props = plugin.get('build_server_os_properties')
         plugin_info = {'package_name': plugin.get('package_name'),
                        'archive_name': plugin.get('archive_name')}
         resource_manager = get_resource_manager()
-        availability = resource_manager.get_resource_availability(
+        visibility = resource_manager.get_resource_visibility(
             Plugin,
             plugin_id,
-            availability,
+            visibility,
             private_resource,
             plugin_info
         )
@@ -669,7 +669,7 @@ class UploadedPluginsManager(UploadedDataManager):
             excluded_wheels=plugin.get('excluded_wheels'),
             supported_py_versions=plugin.get('supported_python_versions'),
             uploaded_at=get_formatted_timestamp(),
-            resource_availability=availability
+            resource_availability=visibility
         )
 
     @staticmethod

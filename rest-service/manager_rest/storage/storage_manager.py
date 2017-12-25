@@ -13,19 +13,19 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from collections import OrderedDict
-from sqlite3 import DatabaseError as SQLiteDBError
-
 import psutil
+from collections import OrderedDict
 from flask_security import current_user
-from manager_rest.storage.models_base import db
-from flask import current_app, has_request_context
-from manager_rest import manager_exceptions, config, utils
-from manager_rest.utils import all_tenants_authorization, is_administrator
-from manager_rest.storage.models_states import AvailabilityState
 from sqlalchemy import or_ as sql_or, func
 from sqlalchemy.exc import SQLAlchemyError
+from flask import current_app, has_request_context
+from sqlite3 import DatabaseError as SQLiteDBError
 from sqlalchemy.orm.attributes import flag_modified
+
+from manager_rest.storage.models_base import db
+from manager_rest import manager_exceptions, config, utils
+from manager_rest.storage.models_states import VisibilityState
+from manager_rest.utils import all_tenants_authorization, is_administrator
 
 try:
     from psycopg2 import DatabaseError as Psycopg2DBError
@@ -171,7 +171,7 @@ class SQLStorageManager(object):
 
         # Match any of the applicable tenant ids or if it's a global resource
         tenant_filter = sql_or(
-            model_class.resource_availability == AvailabilityState.GLOBAL,
+            model_class.resource_availability == VisibilityState.GLOBAL,
             model_class._tenant_id.in_(tenant_ids)
         )
         return query.filter(tenant_filter)
@@ -197,7 +197,7 @@ class SQLStorageManager(object):
         # Only get resources that are public - not private (note that ~ stands
         # for NOT, in SQLA), *or* those where the current user is the creator
         user_filter = sql_or(
-            model_class.resource_availability != AvailabilityState.PRIVATE,
+            model_class.resource_availability != VisibilityState.PRIVATE,
             model_class.creator == current_user
         )
         return query.filter(user_filter)
@@ -380,7 +380,7 @@ class SQLStorageManager(object):
             self._safe_commit()
 
             raise manager_exceptions.ConflictError(
-                '{0} already exists on {1} or with global availability'.format(
+                '{0} already exists on {1} or with global visibility'.format(
                     instance,
                     self.current_tenant
                 )
@@ -396,7 +396,7 @@ class SQLStorageManager(object):
         tenant_id = self.current_tenant.id if self.current_tenant else ''
         unique_resource_filter = sql_or(
             model_class._tenant_id == tenant_id,
-            model_class.resource_availability == AvailabilityState.GLOBAL
+            model_class.resource_availability == VisibilityState.GLOBAL
         )
         query = query.filter(unique_resource_filter)
         return query
