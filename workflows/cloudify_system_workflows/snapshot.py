@@ -26,11 +26,15 @@ def create(snapshot_id, config, **kwargs):
 
     include_metrics = kwargs.get('include_metrics', False)
     include_credentials = kwargs.get('include_credentials', False)
+    include_logs = kwargs.get('include_logs', True)
+    include_events = kwargs.get('include_events', True)
     create_snapshot = SnapshotCreate(
         snapshot_id,
         config,
         include_metrics,
-        include_credentials
+        include_credentials,
+        include_logs,
+        include_events
     )
     create_snapshot.create()
 

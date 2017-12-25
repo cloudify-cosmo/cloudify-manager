@@ -133,11 +133,21 @@ class SnapshotsId(SecuredResource):
             'include_credentials',
             request_dict.get('include_credentials', 'true')
         )
+        include_logs = rest_utils.verify_and_convert_bool(
+            'include_logs',
+            request_dict.get('include_logs', 'true')
+        )
+        include_events = rest_utils.verify_and_convert_bool(
+            'include_events',
+            request_dict.get('include_events', 'true')
+        )
         bypass_maintenance = is_bypass_maintenance_mode()
         execution = get_resource_manager().create_snapshot(
             snapshot_id,
             include_metrics,
             include_credentials,
+            include_logs,
+            include_events,
             bypass_maintenance
         )
 

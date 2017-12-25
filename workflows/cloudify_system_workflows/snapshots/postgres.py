@@ -79,10 +79,15 @@ class Postgres(object):
 
         ctx.logger.debug('Postgres restored')
 
-    def dump(self, tempdir):
+    def dump(self, tempdir, include_logs, include_events):
+        ctx.logger.info('Dumping Postgres, include logs {0} include events {1}'.format(include_logs, include_events))
         destination_path = os.path.join(tempdir, self._POSTGRES_DUMP_FILENAME)
         admin_dump_path = os.path.join(tempdir, ADMIN_DUMP_FILE)
         try:
+            if not include_logs:
+                self._TABLES_TO_EXCLUDE_ON_DUMP = self._TABLES_TO_EXCLUDE_ON_DUMP + ['logs']
+            if not include_events:
+                self._TABLES_TO_EXCLUDE_ON_DUMP = self._TABLES_TO_EXCLUDE_ON_DUMP + ['events']
             self._dump_to_file(
                 destination_path,
                 self._db_name,

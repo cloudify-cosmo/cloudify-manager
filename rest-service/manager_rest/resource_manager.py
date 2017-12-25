@@ -131,6 +131,8 @@ class ResourceManager(object):
                         snapshot_id,
                         include_metrics,
                         include_credentials,
+                        include_logs,
+                        include_events,
                         bypass_maintenance):
         self.create_snapshot_model(snapshot_id)
         try:
@@ -141,6 +143,8 @@ class ResourceManager(object):
                     'snapshot_id': snapshot_id,
                     'include_metrics': include_metrics,
                     'include_credentials': include_credentials,
+                    'include_logs': include_logs,
+                    'include_events': include_events,
                     'config': self._get_conf_for_snapshots_wf()
                 },
                 bypass_maintenance=bypass_maintenance

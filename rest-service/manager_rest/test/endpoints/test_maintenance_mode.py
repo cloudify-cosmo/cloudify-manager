@@ -152,7 +152,9 @@ class MaintenanceModeTest(BaseServerTestCase):
                           self.client.snapshots.create,
                           snapshot_id='s1',
                           include_metrics=False,
-                          include_credentials=False)
+                          include_credentials=False,
+                          include_logs=True,
+                          include_events=True)
 
     def test_snapshot_restoration_denial_in_maintenance_transition_mode(self):
         self._start_maintenance_transition_mode()
