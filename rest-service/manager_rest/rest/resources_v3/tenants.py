@@ -13,6 +13,8 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask import request
+
 from manager_rest import constants
 from manager_rest.manager_exceptions import BadParametersError
 from manager_rest.storage import get_storage_manager, models
@@ -45,6 +47,14 @@ class Tenants(TenantsListResource):
         """
         List tenants
         """
+        @authorize('tenant_list_get_data')
+        def _authorize_with_get_data():
+            pass
+
+        if rest_utils.verify_and_convert_bool(
+                'get_data', request.args.get('_get_data', False)):
+            _authorize_with_get_data()
+
         if multi_tenancy:
             return multi_tenancy.list_tenants(_include,
                                               filters,
