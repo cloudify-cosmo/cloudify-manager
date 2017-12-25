@@ -7,10 +7,10 @@ from StringIO import StringIO
 
 import boto3
 
-
+build_type = os.environ.get('BUILD_TYPE')
 BUCKET = 'cloudify-release-eu'
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-KEY_TEMPLATE = 'cloudify/{version}/release/{name}'
+KEY_TEMPLATE = 'cloudify/{version}/{build_type}/{name}'
 
 s3 = boto3.client('s3')
 
