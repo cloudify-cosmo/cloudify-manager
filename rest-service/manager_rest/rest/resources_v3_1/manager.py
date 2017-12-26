@@ -68,7 +68,7 @@ class SSLConfig(SecuredResource):
     @staticmethod
     def _set_ssl_state(state):
         flag = '--ssl-enabled' if state else '--ssl-disabled'
-        check_call(['sudo', '/opt/cloudify/restservice/set-manager-ssl.py',
+        check_call(['sudo', '/opt/manager/scripts/set-manager-ssl.py',
                     flag])
 
     @staticmethod

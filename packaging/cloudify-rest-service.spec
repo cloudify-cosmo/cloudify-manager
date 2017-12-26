@@ -82,7 +82,7 @@ systemd-tmpfiles --create
 /etc/logrotate.d/cloudify-rest-service
 /etc/sudoers.d/cloudify-restservice
 /opt/restservice/NOTICE.txt
-/opt/restservice/set-manager-ssl.py*
+/opt/manager/scripts/set-manager-ssl.py*
 /usr/lib/systemd/system/cloudify-restservice.service
 /usr/lib/tmpfiles.d/cloudify-restservice.conf
 
