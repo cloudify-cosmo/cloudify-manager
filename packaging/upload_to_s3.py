@@ -7,10 +7,10 @@ from StringIO import StringIO
 
 import boto3
 
-
+build_dir = os.environ.get('BUILD_DIR', 'build')
 BUCKET = 'cloudify-release-eu'
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-KEY_TEMPLATE = 'cloudify/{version}/release/{name}'
+KEY_TEMPLATE = 'cloudify/{version}/{build_dir}/{name}'
 
 s3 = boto3.client('s3')
 
@@ -20,7 +20,7 @@ for file in os.listdir(THIS_DIR):
     file_path = os.path.join(THIS_DIR, file)
     version = subprocess.check_output([
         'rpm', '-qp', '--queryformat', '%{VERSION}', file_path])
-    key = KEY_TEMPLATE.format(version=version, name=file)
+    key = KEY_TEMPLATE.format(version=version, build_dir=build_dir, name=file)
     md5sum = subprocess.check_output(['md5sum', file], cwd=THIS_DIR)
 
     s3.upload_file(file_path, BUCKET, key,
