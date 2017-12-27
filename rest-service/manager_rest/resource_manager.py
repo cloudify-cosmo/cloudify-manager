@@ -725,10 +725,6 @@ class ResourceManager(object):
         if not - raises an appropriate exception.
         :param plugin: A plugin from the blueprint
         """
-        # if the plugin is 'diamond' we don't want it to be installed
-        # (since it's already installed as part of agent package)
-        if plugin['package_name'] == 'cloudify-diamond-plugin':
-            plugin['install'] = False
 
         if not plugin['install']:
             return
