@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from os import path
 from datetime import datetime
 
 from flask_restful import fields as flask_fields
@@ -20,9 +21,12 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
-from manager_rest.utils import classproperty
+from manager_rest import config
 from manager_rest.rest.responses import Workflow
+from manager_rest.utils import classproperty, files_in_folder
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
+from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
+                                    FILE_SERVER_RESOURCES_FOLDER)
 
 from .models_base import (
     db,
@@ -76,6 +80,44 @@ class Plugin(SQLResourceBase):
     supported_py_versions = db.Column(db.PickleType)
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
     wheels = db.Column(db.PickleType, nullable=False)
+
+    def _yaml_file_name(self):
+        plugin_dir = path.join(config.instance.file_server_root,
+                               FILE_SERVER_PLUGINS_FOLDER,
+                               self.id)
+        if not path.isdir(plugin_dir):
+            return ''
+        yaml_files = files_in_folder(plugin_dir, '*.yaml')
+        return path.basename(yaml_files[0]) if yaml_files else ''
+
+    @property
+    def file_server_path(self):
+        file_name = self._yaml_file_name()
+        if not file_name:
+            return ''
+        return path.join(FILE_SERVER_RESOURCES_FOLDER,
+                         FILE_SERVER_PLUGINS_FOLDER,
+                         self.id,
+                         file_name)
+
+    @property
+    def yaml_url_path(self):
+        if not self._yaml_file_name():
+            return ''
+        return path.join('/plugins', self.package_name, self.package_version)
+
+    @classproperty
+    def response_fields(cls):
+        fields = super(Plugin, cls).response_fields
+        fields['file_server_path'] = flask_fields.String
+        fields['yaml_url_path'] = flask_fields.String
+        return fields
+
+    def to_response(self, get_data=False, **kwargs):
+        plugin_dict = super(Plugin, self).to_response()
+        if not get_data:
+            plugin_dict['file_server_path'] = ''
+        return plugin_dict
 
 
 class Secret(SQLResourceBase):

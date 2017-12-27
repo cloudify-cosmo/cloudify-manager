@@ -44,7 +44,7 @@ from manager_rest.constants import (FILE_SERVER_RESOURCES_FOLDER,
 
 class Plugins(SecuredResource):
     @swagger.operation(
-        responseClass='List[{0}]'.format(models.NodeInstance.__name__),
+        responseClass='List[{0}]'.format(models.Plugin.__name__),
         nickname="listPlugins",
         notes='Returns a plugins list for the optionally provided '
               'filter parameters: {0}'.format(models.Plugin),
