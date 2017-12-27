@@ -77,11 +77,10 @@ systemd-tmpfiles --create
 %files
 
 /opt/manager
-
 /etc/cloudify/delete_logs_and_events_from_db.py*
 /etc/logrotate.d/cloudify-rest-service
 /etc/sudoers.d/cloudify-restservice
-/opt/restservice/NOTICE.txt
+/opt/restservice
 /opt/manager/scripts/set-manager-ssl.py*
 /usr/lib/systemd/system/cloudify-restservice.service
 /usr/lib/tmpfiles.d/cloudify-restservice.conf
