@@ -123,7 +123,7 @@ class ResourceManager(object):
         new_snapshot = models.Snapshot(id=snapshot_id,
                                        created_at=now,
                                        status=status,
-                                       resource_availability=visibility,
+                                       visibility=visibility,
                                        error='')
         return self.sm.put(new_snapshot)
 
@@ -282,7 +282,7 @@ class ResourceManager(object):
             created_at=now,
             updated_at=now,
             main_file_name=application_file_name,
-            resource_availability=visibility
+            visibility=visibility
         )
         return self.sm.put(new_blueprint)
 
@@ -705,7 +705,7 @@ class ResourceManager(object):
                                                   deployment_id,
                                                   visibility,
                                                   private_resource)
-        new_deployment.resource_availability = visibility
+        new_deployment.visibility = visibility
         self.sm.put(new_deployment)
 
         self._create_deployment_nodes(deployment_id, deployment_plan)
@@ -972,6 +972,7 @@ class ResourceManager(object):
         node_id = instance_dict.pop('node_id')
         tenant_name = instance_dict.pop('tenant_name')
         created_by = instance_dict.pop('created_by')
+        resource_availability = instance_dict.pop('resource_availability')
 
         # Link the node instance object to to the node, and add it to the DB
         new_node_instance = models.NodeInstance(**instance_dict)
@@ -989,6 +990,10 @@ class ResourceManager(object):
         instance_dict['node_id'] = node_id
         instance_dict['tenant_name'] = tenant_name
         instance_dict['created_by'] = created_by
+
+        # resource_availability is deprecated. For backwards compatibility -
+        # adding it to the response.
+        instance_dict['resource_availability'] = resource_availability
 
     @staticmethod
     def _try_convert_from_str(string, target_type):
@@ -1300,8 +1305,8 @@ class ResourceManager(object):
     def set_visibility(self, model_class, resource_id, visibility):
         resource = self.sm.get(model_class, resource_id)
         self._validate_visibility_value(model_class, resource, visibility)
-        # Set the resource_availability
-        resource.resource_availability = visibility
+        # Set the visibility
+        resource.visibility = visibility
         resource.updated_at = utils.get_formatted_timestamp()
         return self.sm.update(resource)
 
@@ -1309,7 +1314,7 @@ class ResourceManager(object):
                                    model_class,
                                    resource,
                                    new_visibility):
-        current_visibility = resource.resource_availability
+        current_visibility = resource.visibility
         states = VisibilityState.STATES
         if states.index(new_visibility) < states.index(current_visibility):
             raise manager_exceptions.IllegalActionError(
@@ -1357,7 +1362,7 @@ class ResourceManager(object):
 
     def validate_modification_permitted(self, resource):
         # A global resource can't be modify from outside its tenant
-        if resource.resource_availability == VisibilityState.GLOBAL and \
+        if resource.visibility == VisibilityState.GLOBAL and \
            resource.tenant_name != self.sm.current_tenant.name:
             raise manager_exceptions.IllegalActionError(
                 "Can't modify the global resource `{0}` from outside its "

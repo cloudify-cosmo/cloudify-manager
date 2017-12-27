@@ -90,7 +90,7 @@ class FileServerAuth(SecuredResource):
                                                   resource_id)
         except NotFoundError:
             return False
-        return blueprint.resource_availability == VisibilityState.GLOBAL
+        return blueprint.visibility == VisibilityState.GLOBAL
 
     @rest_decorators.exceptions_handled
     @rest_decorators.marshal_with(ResourceID)

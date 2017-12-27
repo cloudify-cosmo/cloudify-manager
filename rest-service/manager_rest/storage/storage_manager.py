@@ -171,7 +171,7 @@ class SQLStorageManager(object):
 
         # Match any of the applicable tenant ids or if it's a global resource
         tenant_filter = sql_or(
-            model_class.resource_availability == VisibilityState.GLOBAL,
+            model_class.visibility == VisibilityState.GLOBAL,
             model_class._tenant_id.in_(tenant_ids)
         )
         return query.filter(tenant_filter)
@@ -197,7 +197,7 @@ class SQLStorageManager(object):
         # Only get resources that are public - not private (note that ~ stands
         # for NOT, in SQLA), *or* those where the current user is the creator
         user_filter = sql_or(
-            model_class.resource_availability != VisibilityState.PRIVATE,
+            model_class.visibility != VisibilityState.PRIVATE,
             model_class.creator == current_user
         )
         return query.filter(user_filter)
@@ -396,7 +396,7 @@ class SQLStorageManager(object):
         tenant_id = self.current_tenant.id if self.current_tenant else ''
         unique_resource_filter = sql_or(
             model_class._tenant_id == tenant_id,
-            model_class.resource_availability == VisibilityState.GLOBAL
+            model_class.visibility == VisibilityState.GLOBAL
         )
         query = query.filter(unique_resource_filter)
         return query

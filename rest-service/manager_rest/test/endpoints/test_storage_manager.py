@@ -147,7 +147,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.sm.put(dep)
 
         serialized_dep = dep.to_response()
-        self.assertEquals(17, len(serialized_dep))
+        self.assertEquals(18, len(serialized_dep))
         self.assertEquals(dep.id, serialized_dep['id'])
         self.assertEquals(dep.created_at, serialized_dep['created_at'])
         self.assertEquals(dep.updated_at, serialized_dep['updated_at'])
@@ -160,6 +160,7 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         serialized_dep.pop('blueprint_id')
         serialized_dep.pop('tenant_name')
         serialized_dep.pop('created_by')
+        serialized_dep.pop('resource_availability')
 
         deserialized_dep = models.Deployment(**serialized_dep)
         self.assertEquals(dep.id, deserialized_dep.id)

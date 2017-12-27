@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -47,6 +48,10 @@ class SQLResourceBase(SQLModelBase):
     def response_fields(cls):
         fields = cls.resource_fields.copy()
         fields.update(cls._extra_fields)
+
+        # resource_availability is deprecated.
+        # For backwards compatibility - adding it to the response.
+        fields['resource_availability'] = fields['visibility']
         return fields
 
     @classmethod
@@ -57,9 +62,10 @@ class SQLResourceBase(SQLModelBase):
     _storage_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     id = db.Column(db.Text, index=True)
     private_resource = db.Column(db.Boolean, default=False)  # Deprecated
-    resource_availability = db.Column(
-        db.Enum(*VisibilityState.STATES, name='resource_availability'),
-        default=VisibilityState.TENANT)
+    visibility = db.Column(
+        db.Enum(*VisibilityState.STATES, name='visibility_states'),
+        default=VisibilityState.TENANT
+    )
 
     @declared_attr
     def _tenant_id(cls):
@@ -85,12 +91,18 @@ class SQLResourceBase(SQLModelBase):
     def created_by(cls):
         return association_proxy('creator', 'username')
 
+    @hybrid_property
+    def resource_availability(self):
+        # resource_availability is deprecated.
+        # For backwards compatibility - adding it to the response.
+        return self.visibility
+
     def to_response(self, **kwargs):
         fields = {f: getattr(self, f) for f in self.response_fields}
 
         # Fix the value of the deprecated property private_resource
         # for backwards compatibility
-        private = fields['resource_availability'] == VisibilityState.PRIVATE
+        private = fields['visibility'] == VisibilityState.PRIVATE
         fields['private_resource'] = private
         return fields
 
@@ -109,4 +121,4 @@ class SQLResourceBase(SQLModelBase):
         with db.session.no_autoflush:
             self.creator = parent_instance.creator
             self.tenant = parent_instance.tenant
-            self.resource_availability = parent_instance.resource_availability
+            self.visibility = parent_instance.visibility

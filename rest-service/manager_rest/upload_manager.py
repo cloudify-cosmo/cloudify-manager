@@ -669,7 +669,7 @@ class UploadedPluginsManager(UploadedDataManager):
             excluded_wheels=plugin.get('excluded_wheels'),
             supported_py_versions=plugin.get('supported_python_versions'),
             uploaded_at=get_formatted_timestamp(),
-            resource_availability=visibility
+            visibility=visibility
         )
 
     @staticmethod
