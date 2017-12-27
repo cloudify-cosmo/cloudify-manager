@@ -75,7 +75,7 @@ class SecretsKey(resources_v3.SecretsKey):
                 value=secret_params['value'],
                 created_at=timestamp,
                 updated_at=timestamp,
-                resource_availability=secret_params['visibility'],
+                visibility=secret_params['visibility'],
             )
             return sm.put(new_secret)
         except ConflictError:

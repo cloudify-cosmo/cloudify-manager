@@ -136,6 +136,13 @@ class SQLModelBase(db.Model):
             # Can't simply call here `self.to_response()` because inheriting
             # class might override it, but we always need the same code here
             res = {f: getattr(self, f) for f in self.resource_fields}
+            full_response = self.to_response()
+
+            # resource_availability is deprecated.
+            # For backwards compatibility - adding it to the response.
+            if 'resource_availability' in full_response:
+                res['resource_availability'] = \
+                    full_response['resource_availability']
         return res
 
     def to_response(self, **kwargs):

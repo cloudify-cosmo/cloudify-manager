@@ -437,7 +437,7 @@ class SnapshotRestore(object):
             ),
             'id': plugin['id'],
             'tenant': plugin['tenant_name'],
-            'visibility': plugin['resource_availability'],
+            'visibility': plugin['visibility'],
         }
 
     def _get_plugins_to_install(self, existing_plugins):
