@@ -1,0 +1,14 @@
+plugins:
+  cool:
+    executor: central_deployment_agent
+    source: https://github.com/cloudify-cosmo/cloudify-cool-plugin/archive/7.7.7.zip
+    package_name: cloudify-cool-plugin
+
+data_types:
+
+  cloudify.datatypes.cool.Config:
+    properties:
+      top_secret_access_key_id:
+        description: The ID of your TOP SECRET ACCESS KEY.
+        type: string
+        required: false

@@ -22,6 +22,7 @@ import time
 import uuid
 import os
 import shutil
+import zipfile
 
 import yaml
 
@@ -414,6 +415,10 @@ class BaseServerTestCase(unittest.TestCase):
         return os.path.join(os.path.dirname(
             os.path.abspath(__file__)), blueprint_dir_name)
 
+    def get_full_path(self, relative_file_path):
+        return os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), relative_file_path)
+
     def upload_blueprint(self,
                          client,
                          visibility=VisibilityState.TENANT,
@@ -490,9 +495,30 @@ class BaseServerTestCase(unittest.TestCase):
 
     def upload_plugin(self, package_name, package_version):
         temp_file_path = self.create_wheel(package_name, package_version)
-        response = self.post_file('/plugins', temp_file_path)
+        yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
+        zip_path = self.zip_files([temp_file_path, yaml_path])
+        response = self.post_file('/plugins', zip_path)
         os.remove(temp_file_path)
         return response
+
+    def zip_files(self, files):
+        source_folder = tempfile.mkdtemp()
+        destination_zip = source_folder + '.zip'
+        for path in files:
+            shutil.copy(path, source_folder)
+        self.zip(source_folder, destination_zip, include_folder=False)
+        return destination_zip
+
+    def zip(self, source, destination, include_folder=True):
+        with zipfile.ZipFile(destination, 'w') as zip_file:
+            for root, _, files in os.walk(source):
+                for filename in files:
+                    file_path = os.path.join(root, filename)
+                    source_dir = os.path.dirname(source) if include_folder \
+                        else source
+                    zip_file.write(
+                        file_path, os.path.relpath(file_path, source_dir))
+        return destination
 
     def create_wheel(self, package_name, package_version):
         module_src = '{0}=={1}'.format(package_name, package_version)

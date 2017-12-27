@@ -28,7 +28,7 @@ from os import path
 from setuptools import archive_util
 from urllib2 import urlopen, URLError
 
-from flask import request
+from flask import request, current_app
 from flask_restful import types
 from flask_restful.reqparse import RequestParser
 
@@ -44,7 +44,12 @@ from manager_rest.archiving import get_archive_type
 from manager_rest.storage.models import Plugin
 from manager_rest.storage.models_states import SnapshotState
 from manager_rest import config, chunked, manager_exceptions
-from manager_rest.utils import mkdirs, get_formatted_timestamp, current_tenant
+from manager_rest.utils import (mkdirs,
+                                get_formatted_timestamp,
+                                current_tenant,
+                                unzip,
+                                files_in_folder,
+                                remove)
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
                                     SUPPORTED_ARCHIVE_TYPES)
@@ -65,8 +70,11 @@ class UploadedDataManager(object):
                 file_server_root,
                 resource_target_path,
                 additional_inputs=additional_inputs,
-                **kwargs
-            )
+                ** kwargs)
+            if not os.path.isfile(resource_target_path):
+                # if the archive is a folder, we're copying its content,
+                # so there is no meaning to a specific archive file name..
+                dest_file_name = None
             self._move_archive_to_uploaded_dir(doc.id,
                                                file_server_root,
                                                resource_target_path,
@@ -74,8 +82,7 @@ class UploadedDataManager(object):
 
             return doc, 201
         finally:
-            if os.path.exists(resource_target_path):
-                os.remove(resource_target_path)
+            remove(resource_target_path)
 
     @classmethod
     def _extract_file_to_file_server(cls, archive_path, destination_root):
@@ -248,11 +255,17 @@ class UploadedDataManager(object):
             data_id)
         if not os.path.isdir(uploaded_dir):
             os.makedirs(uploaded_dir)
-        archive_type = self._get_archive_type(archive_path)
-        if not dest_file_name:
-            dest_file_name = '{0}.{1}'.format(data_id, archive_type)
-        shutil.move(archive_path,
-                    os.path.join(uploaded_dir, dest_file_name))
+        current_app.logger.info('uploading archive to: {0}'
+                                .format(uploaded_dir))
+        if os.path.isfile(archive_path):
+            if not dest_file_name:
+                archive_type = self._get_archive_type(archive_path)
+                dest_file_name = '{0}.{1}'.format(data_id, archive_type)
+            shutil.move(archive_path,
+                        os.path.join(uploaded_dir, dest_file_name))
+        else:
+            for item in os.listdir(archive_path):
+                shutil.copy(os.path.join(archive_path, item), uploaded_dir)
 
     def _get_kind(self):
         raise NotImplementedError('Subclass responsibility')
@@ -614,10 +627,22 @@ class UploadedPluginsManager(UploadedDataManager):
                                  file_server_root,
                                  archive_target_path,
                                  **kwargs):
+
+        # support previous implementation
+        wagon_target_path = archive_target_path
+
+        # handle the archive_target_path, which may be zip or wagon
+        if zipfile.is_zipfile(archive_target_path):
+            archive_name = unzip(archive_target_path,
+                                 logger=current_app.logger)
+            os.remove(archive_target_path)
+            shutil.move(archive_name, archive_target_path)
+            wagon_target_path, _ = self._verify_archive(archive_target_path)
+
         args = self._get_args()
         visibility = kwargs.get('visibility', None)
         new_plugin = self._create_plugin_from_archive(data_id,
-                                                      archive_target_path,
+                                                      wagon_target_path,
                                                       args.private_resource,
                                                       visibility)
         filter_by_name = {'package_name': new_plugin.package_name}
@@ -632,10 +657,17 @@ class UploadedPluginsManager(UploadedDataManager):
                     '{version}'.format(archive_name=new_plugin.archive_name,
                                        package_name=new_plugin.package_name,
                                        version=new_plugin.package_version))
-        else:
-            sm.put(new_plugin)
-
+        sm.put(new_plugin)
         return new_plugin, new_plugin.archive_name
+
+    @staticmethod
+    def _verify_archive(archive_path):
+        wagons = files_in_folder(archive_path, '*.wgn')
+        yamls = files_in_folder(archive_path, '*.yaml')
+        if len(wagons) != 1 or len(yamls) != 1:
+            raise RuntimeError("Archive must include one wgn file "
+                               "and one yaml file")
+        return wagons[0], yamls[0]
 
     def _create_plugin_from_archive(self,
                                     plugin_id,

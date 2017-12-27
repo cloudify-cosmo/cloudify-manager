@@ -13,18 +13,20 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-
-import StringIO
-import errno
-import json
 import os
-import platform
-import shutil
 import sys
+import glob
+import json
+import errno
+import shutil
+import zipfile
+import StringIO
+import tempfile
+import platform
 import traceback
-from base64 import urlsafe_b64encode
 from datetime import datetime
 from os import path, makedirs
+from base64 import urlsafe_b64encode
 
 import wagon
 from flask import g
@@ -228,3 +230,30 @@ def current_tenant():
 
 def set_current_tenant(tenant):
     g.current_tenant = tenant
+
+
+def unzip(archive, destination=None, logger=None):
+    if not destination:
+        destination = tempfile.mkdtemp()
+    if logger:
+        logger.debug('Extracting zip {0} to {1}...'.
+                     format(archive, destination))
+    with zipfile.ZipFile(archive, 'r') as zip_file:
+        zip_file.extractall(destination)
+    return destination
+
+
+def files_in_folder(folder, name_pattern='*'):
+    files = []
+    for item in glob.glob(os.path.join(folder, name_pattern)):
+        if os.path.isfile(item):
+            files.append(os.path.join(folder, item))
+    return files
+
+
+def remove(path):
+    if os.path.exists(path):
+        if os.path.isfile(path):
+            os.remove(path)
+        else:
+            shutil.rmtree(path)
