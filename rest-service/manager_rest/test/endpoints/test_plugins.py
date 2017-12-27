@@ -215,7 +215,9 @@ class PluginsTest(BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_upload_progress(self):
         tmp_file_path = self.create_wheel('wagon', '0.6.1')
-        total_size = os.path.getsize(tmp_file_path)
+        yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
+        zip_path = self.zip_files([tmp_file_path, yaml_path])
+        total_size = os.path.getsize(zip_path)
 
         progress_func = generate_progress_func(
             total_size=total_size,
@@ -223,7 +225,7 @@ class PluginsTest(BaseServerTestCase):
             assert_almost_equal=self.assertAlmostEqual)
 
         try:
-            self.client.plugins.upload(tmp_file_path,
+            self.client.plugins.upload(zip_path,
                                        progress_callback=progress_func)
         finally:
             self.quiet_delete(tmp_file_path)
@@ -232,10 +234,12 @@ class PluginsTest(BaseServerTestCase):
           client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_download_progress(self):
         tmp_file_path = self.create_wheel('wagon', '0.6.1')
+        yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
+        zip_path = self.zip_files([tmp_file_path, yaml_path])
         tmp_local_path = '/tmp/plugin.whl'
 
         try:
-            response = self.client.plugins.upload(tmp_file_path)
+            response = self.client.plugins.upload(zip_path)
             total_size = os.path.getsize(tmp_file_path)
 
             progress_func = generate_progress_func(

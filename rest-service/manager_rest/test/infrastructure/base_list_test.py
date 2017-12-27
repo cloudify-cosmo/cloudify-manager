@@ -55,7 +55,9 @@ class BaseListTest(BaseServerTestCase):
                 f.write('from setuptools import setup\n')
                 f.write('setup(name="some-package", version={0})'.format(i))
             plugin_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
-            self.post_file('/plugins', plugin_path)
+            yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
+            zip_path = self.zip_files([plugin_path, yaml_path])
+            self.post_file('/plugins', zip_path)
             shutil.rmtree(tmpdir)
 
     def _put_n_deployments(self, id_prefix,
