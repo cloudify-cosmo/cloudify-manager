@@ -90,13 +90,16 @@ jobs:
       DO_ENV: py27
 
 
-  rest-service-rpm:
+  build-rpms:
     machine:
       enabled: true
 
     steps:
       - checkout
-      - run: docker run --cap-add SYS_ADMIN --security-opt apparmor:unconfined --mount type=bind,source="$(pwd)",target=/source cloudify3/mock-builder:0.1 python /source/packaging/build_rpm.py /source/packaging/cloudify-rest-service.spec
+      - run: |
+          builder="docker run --cap-add SYS_ADMIN --security-opt apparmor:unconfined --mount type=bind,source=$(pwd),target=/source cloudify3/mock-builder:0.1 python /source/packaging/build_rpm.py"
+          $builder /source/packaging/cloudify-rest-service.spec
+          $builder /source/packaging/cloudify-rabbitmq.spec
       - run: mkdir result
       - run: mv packaging/*.rpm result
 
@@ -137,7 +140,7 @@ workflows:
   build_and_test:
     jobs:
       - flake8
-      - rest-service-rpm
+      - build-rpms
 
       - test_v1
       - test_clientv2_endpoints
