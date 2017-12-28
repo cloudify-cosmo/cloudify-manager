@@ -50,8 +50,10 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 %files
 %defattr(-,root,root)
-/opt/mgmtworker
 /etc/cloudify/logging.conf
+/etc/logrotate.d/cloudify-mgmtworker
+/usr/lib/systemd/system/cloudify-mgmtworker.service
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/config
 %attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/work
+/opt/mgmtworker
 %attr(750,cfyuser,adm) /var/log/cloudify/mgmtworker
