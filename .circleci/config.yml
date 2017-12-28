@@ -100,6 +100,7 @@ jobs:
           builder="docker run --cap-add SYS_ADMIN --security-opt apparmor:unconfined --mount type=bind,source=$(pwd),target=/source cloudify3/mock-builder:0.1 python /source/packaging/build_rpm.py"
           $builder /source/packaging/cloudify-rest-service.spec
           $builder /source/packaging/cloudify-rabbitmq.spec
+          $builder /source/packaging/cloudify-mgmtworker.spec
       - run: mkdir result
       - run: mv packaging/*.rpm result
 
