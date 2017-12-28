@@ -13,7 +13,7 @@ Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, git
-Requires:       python >= 2.7, postgresql-libs
+Requires:       python >= 2.7
 Requires(pre):  shadow-utils
 
 
