@@ -37,8 +37,8 @@ rm /opt/mgmtworker/env/lib/python2.7/site-packages/zmq/tests/_test_asyncio.py
 mkdir -p %{buildroot}/opt/mgmtworker
 mv /opt/mgmtworker/env %{buildroot}/opt/mgmtworker
 mkdir -p %{buildroot}/var/log/cloudify/mgmtworker
-mkdir -p %{buildroot}/opt/mgmtworker/env/config
-mkdir -p %{buildroot}/opt/mgmtworker/env/work
+mkdir -p %{buildroot}/opt/mgmtworker/config
+mkdir -p %{buildroot}/opt/mgmtworker/work
 
 cp -R ${RPM_SOURCE_DIR}/packaging/mgmtworker/files/* %{buildroot}
 
@@ -53,7 +53,7 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 /etc/cloudify/logging.conf
 /etc/logrotate.d/cloudify-mgmtworker
 /usr/lib/systemd/system/cloudify-mgmtworker.service
-%attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/config
-%attr(750,cfyuser,cfyuser) /opt/mgmtworker/env/work
+%attr(750,cfyuser,cfyuser) /opt/mgmtworker/config
+%attr(750,cfyuser,cfyuser) /opt/mgmtworker/work
 /opt/mgmtworker
 %attr(750,cfyuser,adm) /var/log/cloudify/mgmtworker
