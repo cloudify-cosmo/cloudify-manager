@@ -10,7 +10,7 @@ URL:            https://github.com/cloudify-cosmo/cloudify-amqp-influxdb
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-Requires:       rabbitmq-server = 3.5
+Requires:       rabbitmq-server = 3.5.3
 
 
 %define _user rabbitmq
