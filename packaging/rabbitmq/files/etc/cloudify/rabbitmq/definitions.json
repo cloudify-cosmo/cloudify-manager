@@ -1,4 +1,7 @@
 {
+  "vhosts":[
+    {"name": "/"}
+  ],
   "exchanges": [
     {
       "name": "cloudify-logs",
