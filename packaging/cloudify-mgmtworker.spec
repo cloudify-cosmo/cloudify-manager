@@ -9,8 +9,8 @@ Summary:        Cloudify's Management Worker
 Group:          Applications/Multimedia
 License:        Apache 2.0
 URL:            https://github.com/cloudify-cosmo/cloudify-manager
-Vendor:         Gigaspaces Inc.
-Packager:       Gigaspaces Inc.
+Vendor:         Cloudify Platform Ltd.
+Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  python >= 2.7, python-virtualenv, openssl-devel, git
 Requires:       python >= 2.7, postgresql-libs
