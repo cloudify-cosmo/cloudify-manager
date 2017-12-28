@@ -28,7 +28,6 @@ virtualenv /opt/mgmtworker/env
 /opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-plugins-common
 /opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-script-plugin
 /opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-agent
-/opt/mgmtworker/env/bin/pip install psycopg2
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
 rm /opt/mgmtworker/env/lib/python2.7/site-packages/zmq/tests/_test_asyncio.py
