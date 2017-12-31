@@ -48,6 +48,7 @@ class Config(object):
         self.insecure_endpoints_disabled = True
         self.max_results = 1000
         self.min_available_memory_mb = None
+        self.edition = 'community'
 
         self.security_hash_salt = None
         self.security_secret_key = None
