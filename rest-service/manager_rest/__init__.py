@@ -13,16 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ############
-
-import json
-import pkgutil
-
-
-def get_version():
-    version_data = get_version_data()
-    return version_data['version']
-
-
-def get_version_data():
-    data = pkgutil.get_data('manager_rest', 'VERSION')
-    return json.loads(data)

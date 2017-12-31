@@ -14,16 +14,28 @@
 #  * limitations under the License.
 #
 
+import pkg_resources
 from flask_restful_swagger import swagger
 
+from manager_rest import config
 from manager_rest.rest import responses
-from manager_rest import get_version_data
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
 )
+
+
+def get_version():
+    return pkg_resources.get_distribution('cloudify-rest-service').version
+
+
+def get_version_data():
+    return {
+        'version': get_version(),
+        'edition': config.instance.edition
+    }
 
 
 class Version(SecuredResource):
