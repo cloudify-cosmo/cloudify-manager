@@ -49,6 +49,7 @@ COMPOSER_BLUEPRINTS_FOLDER = 'backend/dev'
 V_4_0_0 = ManagerVersion('4.0.0')
 V_4_1_0 = ManagerVersion('4.1.0')
 V_4_2_0 = ManagerVersion('4.2.0')
+V_4_3_0 = ManagerVersion('4.3.0')
 
 
 class VisibilityState(object):
