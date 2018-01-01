@@ -57,6 +57,7 @@ from .constants import (
     MANAGER_PYTHON,
     V_4_0_0,
     V_4_2_0,
+    V_4_3_0,
     VisibilityState
 )
 
@@ -307,7 +308,8 @@ class SnapshotRestore(object):
         )
         # Only restore stage files to their correct location
         # if this snapshot version is the same as the manager version
-        if self._snapshot_version == self._manager_version:
+        if ((self._snapshot_version == self._manager_version) or
+            ((self._snapshot_version == V_4_2_0) and (self._manager_version == V_4_3_0))):
             stage_restore_override = True
         else:
             stage_restore_override = False
