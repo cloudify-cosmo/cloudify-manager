@@ -11,8 +11,6 @@ checkout:
 
 
 defaults:
-  - &cache_key v1-tox-env-{{ .Environment.TOX_CONFIG }}-{{ .Environment.DO_ENV }}-{{ checksum "deps_files" }}
-
   - &tox_defaults
     docker:
       - image: circleci/python:2.7
@@ -24,18 +22,11 @@ defaults:
       - checkout
 
       - run: cat "${TOX_CONFIG}/"{setup.py,dev-requirements.txt,tox.ini} > deps_files
-      - restore_cache:
-          key: *cache_key
 
       - run: sudo apt-get install libldap-dev libsasl2-dev
       - run: pip install --user tox
 
       - run: python -m tox -c $TOX_CONFIG/tox.ini -e $DO_ENV
-
-      - save_cache:
-          key: *cache_key
-          paths:
-            - $TOX_CONFIG/.tox/$DO_ENV
 
 
 jobs:
@@ -106,32 +97,6 @@ jobs:
       - store_artifacts:
           path: result
           destination: result
-
-  restore-cache:
-    <<: *tox_defaults
-    steps:
-      - checkout
-
-      - restore_cache:
-          key: *cache_key
-
-      - run: touch /tmp/tox
-
-      - persist_to_workspace:
-          root: /tmp
-          paths:
-            - tox
-
-  save-cache:
-    <<: *tox_defaults
-    steps:
-      - attach_workspace:
-          at: /tmp
-
-      - save_cache:
-          key: *cache_key
-          paths:
-            - /tmp/tox
 
 
 workflows:
