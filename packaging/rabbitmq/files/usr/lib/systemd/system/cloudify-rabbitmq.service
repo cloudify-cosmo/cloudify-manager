@@ -5,7 +5,7 @@ After=network-online.target
 
 [Service]
 Restart=on-failure
-EnvironmentFile=-/etc/sysconfig/cloudify-rabbitmq
+EnvironmentFile=/etc/sysconfig/cloudify-rabbitmq
 
 # avoid a race condition when creating the erlang cookie
 # see https://bugzilla.redhat.com/show_bug.cgi?id=1059913
