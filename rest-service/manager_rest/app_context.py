@@ -1,3 +1,5 @@
+import os
+import glob
 from flask import current_app
 
 from dsl_parser import constants
@@ -46,9 +48,8 @@ def _extract_parser_context(context):
 class ResolverWithPlugins(DefaultImportResolver):
     """A resolver which translates plugin-style urls to file:// urls.
 
-    The URL: `file://plugins/cloudify-openstack-plugin/2.0.1/plugin.yaml`
-    will be translated to:
-    `file:///opt/manager/resources/plugins/<id>/plugin.yaml`, where <id>
+    The URL: `file://plugins/cloudify-openstack-plugin/2.0.1` will be
+    translated to: `file:///opt/manager/resources/plugins/<id>`, where <id>
     is the id of the plugin looked up for the current tenant.
 
     Both the version and the filename are optional.
@@ -69,9 +70,8 @@ class ResolverWithPlugins(DefaultImportResolver):
         parts = import_url.replace(self.PREFIX, '').split('/')
         name = parts[0]
         version = parts[1] if len(parts) > 1 else None
-        filename = parts[2] if len(parts) > 2 else 'plugin.yaml'
         plugin = self._find_plugin(name, version)
-        return self._make_plugin_url(plugin.id, filename)
+        return self._make_plugin_url(plugin.id)
 
     def _find_plugin(self, name, version=None):
         filters = {'package_name': name}
@@ -80,9 +80,13 @@ class ResolverWithPlugins(DefaultImportResolver):
         sm = get_storage_manager()
         return sm.get(Plugin, element_id=None, filters=filters)
 
-    def _make_plugin_url(self, plugin_id, filename):
-        return 'file://{0}/{1}/{2}/{3}'.format(
+    def _make_plugin_url(self, plugin_id):
+        plugin_path = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_PLUGINS_FOLDER,
-            plugin_id,
-            filename)
+            plugin_id)
+        yaml_files = glob.glob(os.path.join(plugin_path, '*.yaml'))
+        if len(yaml_files) != 1:
+            return None
+        filename = os.path.join(plugin_path, yaml_files[0])
+        return 'file://{0}'.format(filename)
