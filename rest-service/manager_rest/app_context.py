@@ -49,7 +49,8 @@ def update_parser_context(context):
 def _extract_parser_context(context):
     context = context or {}
     cloudify_section = context.get(constants.CLOUDIFY, {})
-    resolver_section = cloudify_section.get(constants.IMPORT_RESOLVER_KEY)
+    resolver_section = cloudify_section.get(
+        constants.IMPORT_RESOLVER_KEY) or {}
     resolver_section.setdefault('implementation',
                                 'manager_rest.app_context:ResolverWithPlugins')
     resolver = dsl_parser_utils.create_import_resolver(resolver_section)
