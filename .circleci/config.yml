@@ -81,6 +81,19 @@ jobs:
       DO_ENV: py27
 
 
+  test_premium:
+    docker:
+      - image: circleci/python:2.7
+
+    steps:
+      - run: git checkout git@github.com:cloudify-cosmo/cloudify-premium.git ~/cloudify-premium
+      - run: |
+          cd ~/cloudify-premium
+          git checkout "${CIRCLE_BRANCH}" || echo no matching branch found, using master
+      - run: sed -i 's/^.*cloudify-manager.*$/~/project/rest-service/' ~/cloudify-premium/dev-requirements.txt
+      - run: tox -c ~/cloudify-premium/tox.ini
+
+
   build-rpms:
     machine:
       enabled: true
@@ -115,3 +128,5 @@ workflows:
       - test_clientv3_endpoints
       - test_clientv3_infrastructure
       - test_workflows
+
+      - test_premium
