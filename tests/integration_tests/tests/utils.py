@@ -38,7 +38,9 @@ def upload_mock_plugin(package_name, package_version):
     temp_file_path = utils._create_mock_wagon(
             package_name,
             package_version)
-    response = client.plugins.upload(temp_file_path)
+    yaml_path = get_resource('plugins/plugin.yaml')
+    with utils.zip_files([temp_file_path, yaml_path]) as zip_path:
+        response = client.plugins.upload(zip_path)
     os.remove(temp_file_path)
     return response
 
