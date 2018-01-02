@@ -9,7 +9,7 @@ Restart=on-failure
 User=cfyuser
 Group=cfyuser
 WorkingDirectory=/opt/mgmtworker/work
-EnvironmentFile=-/etc/sysconfig/cloudify-mgmtworker
+EnvironmentFile=/etc/sysconfig/cloudify-mgmtworker
 ExecStart=/opt/mgmtworker/env/bin/celery worker \
     -Ofair \
     --include=cloudify.dispatch \
