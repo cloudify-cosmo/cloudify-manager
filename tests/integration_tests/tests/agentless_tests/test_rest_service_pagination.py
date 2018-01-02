@@ -22,6 +22,7 @@ import wagon
 
 from manager_rest import config
 from integration_tests import AgentlessTestCase
+from integration_tests.framework import utils
 from integration_tests.tests.utils import get_resource as resource
 from cloudify_rest_client.exceptions import CloudifyClientError
 
@@ -97,8 +98,10 @@ class TestRestServiceListPagination(AgentlessTestCase):
             with open(os.path.join(tmpdir, 'setup.py'), 'w') as f:
                 f.write('from setuptools import setup\n')
                 f.write('setup(name="some-package", version={0})'.format(i))
-            plugin_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
-            self.client.plugins.upload(plugin_path)
+            wagon_path = wagon.create(tmpdir, archive_destination_dir=tmpdir)
+            yaml_path = resource('plugins/plugin.yaml')
+            with utils.zip_files([wagon_path, yaml_path]) as zip_path:
+                self.client.plugins.upload(zip_path)
             shutil.rmtree(tmpdir)
         self._test_pagination(self.client.plugins.list)
 
