@@ -50,7 +50,9 @@ def downgrade():
         op.alter_column(table_name,
                         'visibility',
                         new_column_name='resource_availability',
-                        type_=resource_availability)
+                        type_=resource_availability,
+                        postgresql_using='visibility::text::'
+                                         'resource_availability')
 
     # Remove the enum visibility_states from postgres
     op.execute("DROP TYPE visibility_states;")
