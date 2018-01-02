@@ -152,7 +152,8 @@ def restore_stage_files(archive_root, override=False):
             user=snapshot_constants.STAGE_USER,
         )
         restore_command = [snapshot_constants.STAGE_RESTORE_SCRIPT,
-                           stage_tempdir]
+                           stage_tempdir,
+                           '--homedir', snapshot_constants.STAGE_BASE_FOLDER]
         if override:
             restore_command.append('--override-existing')
         sudo(restore_command,
