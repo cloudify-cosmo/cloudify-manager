@@ -4,7 +4,7 @@
 
 Name:           cloudify-management-worker
 Version:        %{CLOUDIFY_VERSION}
-Release:        %{CLOUDIFY_PACKAGE_RELEASE}
+Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
 Summary:        Cloudify's Management Worker
 Group:          Applications/Multimedia
 License:        Apache 2.0
