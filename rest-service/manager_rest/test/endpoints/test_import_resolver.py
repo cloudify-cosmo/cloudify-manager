@@ -35,7 +35,7 @@ class UploadBlueprtinsWithImportResolverTests(base_test.BaseServerTestCase):
     @mock.patch('dsl_parser.tasks.parse_dsl')
     def test_upload_blueprint_with_resolver(self, mock_parse_dsl):
 
-        resolver_section = 'mock resolver section'
+        resolver_section = {'mock': 'mock resolver section'}
         create_import_resolver_inputs = []
 
         def mock_create_import_resolver(resolver_section):
