@@ -35,7 +35,7 @@ class UploadBlueprtinsWithImportResolverTests(base_test.BaseServerTestCase):
     @mock.patch('dsl_parser.tasks.parse_dsl')
     def test_upload_blueprint_with_resolver(self, mock_parse_dsl):
 
-        resolver_section = {'mock': 'mock resolver section'}
+        resolver_section = {'rules': ['mock resolver section']}
         create_import_resolver_inputs = []
 
         def mock_create_import_resolver(resolver_section):
@@ -54,8 +54,12 @@ class UploadBlueprtinsWithImportResolverTests(base_test.BaseServerTestCase):
             mock.ANY, mock.ANY,
             resolver='mock expected import resolver',
             validate_version=mock.ANY)
-        self.assertEqual(create_import_resolver_inputs[0],
-                         resolver_section)
+
+        # just check one key - additional keys might have been added
+        # when creating the parser context
+        self.assertEqual(create_import_resolver_inputs[0]['rules'],
+                         resolver_section['rules'])
+
         self.assertEqual(self.app.application.parser_context['resolver'],
                          'mock expected import resolver')
 
