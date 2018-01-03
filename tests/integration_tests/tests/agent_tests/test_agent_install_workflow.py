@@ -19,6 +19,8 @@ import tempfile
 
 import wagon
 
+from integration_tests.framework import utils
+from integration_tests.tests import utils as test_utils
 from integration_tests import AgentTestWithPlugins, BaseTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -93,7 +95,9 @@ class TestWorkflow(AgentTestWithPlugins):
         wagon_path = self._create_test_wagon('target-aware-mock')
         self.downloaded_archive_path = os.path.join(
             self.workdir, os.path.basename(wagon_path))
-        self.client.plugins.upload(wagon_path)
+        yaml_path = test_utils.get_resource('plugins/plugin.yaml')
+        with utils.zip_files([wagon_path, yaml_path]) as zip_path:
+            self.client.plugins.upload(zip_path)
 
     def test_deploy_with_operation_executor_override(self):
         self._upload_mock_plugin()

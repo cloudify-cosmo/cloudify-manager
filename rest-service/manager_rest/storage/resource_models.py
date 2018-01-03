@@ -104,7 +104,7 @@ class Plugin(SQLResourceBase):
     def yaml_url_path(self):
         if not self._yaml_file_name():
             return ''
-        return path.join('/plugins', self.package_name, self.package_version)
+        return 'plugin:' + path.join(self.package_name, self.package_version)
 
     @classproperty
     def response_fields(cls):
