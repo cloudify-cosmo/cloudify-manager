@@ -90,7 +90,7 @@ jobs:
       - run: pip install --user tox
       - run:
           name: Avoid hosts unknown for github
-          command: mkdir ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+          command: mkdir -p ~/.ssh && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
 
       - run: git clone git@github.com:cloudify-cosmo/cloudify-premium.git ~/cloudify-premium
       - run: |
