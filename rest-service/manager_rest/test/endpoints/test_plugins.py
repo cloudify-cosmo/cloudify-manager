@@ -235,6 +235,15 @@ class PluginsTest(BaseServerTestCase):
 
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
+    def test_plugin_upload_without_yaml(self):
+        tmp_file_path = self.create_wheel('wagon', '0.6.1')
+        try:
+            self.client.plugins.upload(tmp_file_path)
+        finally:
+            self.quiet_delete(tmp_file_path)
+
+    @attr(client_min_version=3,
+          client_max_version=base_test.LATEST_API_VERSION)
     def test_plugin_download_progress(self):
         tmp_file_path = self.create_wheel('wagon', '0.6.1')
         yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
