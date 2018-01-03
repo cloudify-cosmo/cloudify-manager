@@ -29,6 +29,7 @@ from manager_rest.constants import (
     PROVIDER_CONTEXT_ID,
     FILE_SERVER_PLUGINS_FOLDER
 )
+from manager_rest.manager_exceptions import InvalidPluginError
 from manager_rest.storage.models import ProviderContext, Plugin
 
 
@@ -74,9 +75,7 @@ class ResolverWithPlugins(DefaultImportResolver):
 
     def fetch_import(self, import_url):
         if self._is_plugin_url(import_url):
-            resolved = self._resolve_plugin_url(import_url)
-            if resolved:
-                import_url = resolved
+            import_url = self._resolve_plugin_url(import_url)
         return super(ResolverWithPlugins, self).fetch_import(import_url)
 
     def _is_plugin_url(self, import_url):
@@ -87,7 +86,7 @@ class ResolverWithPlugins(DefaultImportResolver):
         name = parts[0]
         version = parts[1] if len(parts) > 1 else None
         plugin = self._find_plugin(name, version)
-        return self._make_plugin_url(plugin.id)
+        return self._make_plugin_url(plugin)
 
     def _find_plugin(self, name, version=None):
         filters = {'package_name': name}
@@ -96,13 +95,15 @@ class ResolverWithPlugins(DefaultImportResolver):
         sm = get_storage_manager()
         return sm.get(Plugin, element_id=None, filters=filters)
 
-    def _make_plugin_url(self, plugin_id):
+    def _make_plugin_url(self, plugin):
         plugin_path = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_PLUGINS_FOLDER,
-            plugin_id)
+            plugin.id)
         yaml_files = glob.glob(os.path.join(plugin_path, '*.yaml'))
         if len(yaml_files) != 1:
-            return None
+            raise InvalidPluginError(
+                'Plugin {0}: expected one yaml file, but found {1}'
+                .format(plugin.package_name, len(yaml_files)))
         filename = os.path.join(plugin_path, yaml_files[0])
         return 'file://{0}'.format(filename)
