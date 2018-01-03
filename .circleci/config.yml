@@ -86,6 +86,7 @@ jobs:
       - image: circleci/python:2.7
 
     steps:
+      - checkout
       - run: pip install --user tox
       - run:
           name: Avoid hosts unknown for github
