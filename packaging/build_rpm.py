@@ -348,24 +348,21 @@ def check_mock_config():
     config = {'config_opts': config_opts}
     exec mock_config in config, config
 
-    options = [
-        "config_opts['rpmbuild_networking'] = True",
-        "config_opts['macros']['%dist'] = '.el7'",
-    ]
-    for option in reversed(options):
-        lhs, eq, rhs = option.partition(' = ')
-        if not eq:
-            raise ValueError('malformed option', option)
-
+    options = {
+        "config_opts['rpmbuild_networking']": "True",
+        "config_opts['macros']['%dist']": "'.el7'",
+    }
+    missing = []
+    for lhs, rhs in options.items():
         try:
             exists = eval('{} == {}'.format(lhs, rhs), config, config)
         except KeyError:
             exists = False
 
-        if exists:
-            options.remove(option)
+        if not exists:
+            missing += ['{} = {}\n'.format(lhs, rhs)]
 
-    if options:
+    if missing:
         try:
             makedirs(expanduser('~/.config'))
         except OSError as e:
@@ -375,9 +372,8 @@ def check_mock_config():
         with open(expanduser('~/.config/mock.cfg'), 'a') as f:
             f.write('\n# Added by cloudify build_rpm.py\n')
 
-            for option in options:
-                logger.info('configuring ' + option)
-                f.write(option + '\n')
+            logger.info('configuring missing options', missing)
+            f.writelines(missing)
 
 
 def download_if_newer(url, outfile=None):
