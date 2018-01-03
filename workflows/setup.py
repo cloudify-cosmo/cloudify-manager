@@ -30,6 +30,7 @@ setup(
     install_requires=[
         'cloudify-plugins-common==4.3.dev1',
         'elasticsearch==1.6.0',
-        'retrying==1.3.3'
+        'retrying==1.3.3',
+        'psycopg2==2.7'
     ]
 )
