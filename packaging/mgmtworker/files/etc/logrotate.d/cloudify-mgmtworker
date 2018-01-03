@@ -1,0 +1,10 @@
+/var/log/cloudify/mgmtworker/logs/*.log {
+        hourly
+        rotate 7
+        size 100M
+        copytruncate
+        compress
+        delaycompress
+        missingok
+        notifempty
+}

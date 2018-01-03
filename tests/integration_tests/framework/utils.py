@@ -19,8 +19,10 @@ import sys
 import time
 import json
 import yaml
-import tempfile
 import shutil
+import zipfile
+import tempfile
+from contextlib import contextmanager
 
 from functools import wraps
 from multiprocessing import Process
@@ -180,6 +182,31 @@ def _create_mock_wagon(package_name, package_version):
     finally:
         shutil.rmtree(module_src)
     return result
+
+
+@contextmanager
+def zip_files(files):
+    source_folder = tempfile.mkdtemp()
+    destination_zip = source_folder + '.zip'
+    for path in files:
+        shutil.copy(path, source_folder)
+    create_zip(source_folder, destination_zip, include_folder=False)
+    try:
+        yield destination_zip
+    finally:
+        os.remove(destination_zip)
+
+
+def create_zip(source, destination, include_folder=True):
+    with zipfile.ZipFile(destination, 'w') as zip_file:
+        for root, _, files in os.walk(source):
+            for filename in files:
+                file_path = os.path.join(root, filename)
+                source_dir = os.path.dirname(source) if include_folder \
+                    else source
+                zip_file.write(
+                    file_path, os.path.relpath(file_path, source_dir))
+    return destination
 
 
 class YamlPatcher(object):

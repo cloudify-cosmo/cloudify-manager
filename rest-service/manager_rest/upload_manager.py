@@ -632,7 +632,10 @@ class UploadedPluginsManager(UploadedDataManager):
         wagon_target_path = archive_target_path
 
         # handle the archive_target_path, which may be zip or wagon
-        if zipfile.is_zipfile(archive_target_path):
+        if not self._is_wagon_file(archive_target_path):
+            if not zipfile.is_zipfile(archive_target_path):
+                raise manager_exceptions.InvalidPluginError(
+                    'input can be only a wagon or a zip file.')
             archive_name = unzip(archive_target_path,
                                  logger=current_app.logger)
             os.remove(archive_target_path)
@@ -659,6 +662,14 @@ class UploadedPluginsManager(UploadedDataManager):
                                        version=new_plugin.package_version))
         sm.put(new_plugin)
         return new_plugin, new_plugin.archive_name
+
+    def _is_wagon_file(self, file_path):
+        try:
+            self._load_plugin_package_json(file_path)
+        except Exception:
+            return False
+        else:
+            return True
 
     @staticmethod
     def _verify_archive(archive_path):
