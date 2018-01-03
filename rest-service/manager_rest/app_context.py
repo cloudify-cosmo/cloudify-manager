@@ -82,7 +82,7 @@ class ResolverWithPlugins(DefaultImportResolver):
         return import_url.startswith(self.PREFIX)
 
     def _resolve_plugin_yaml_url(self, import_url):
-        parts = import_url.replace(self.PREFIX, '', 1).split('/')
+        parts = import_url.replace(self.PREFIX, '', 1).strip().split('/')
         name = parts[0]
         version = parts[1] if len(parts) > 1 else None
         plugin = self._find_plugin(name, version)
