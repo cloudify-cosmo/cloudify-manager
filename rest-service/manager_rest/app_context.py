@@ -29,8 +29,8 @@ from manager_rest.constants import (
     PROVIDER_CONTEXT_ID,
     FILE_SERVER_PLUGINS_FOLDER
 )
-from manager_rest.manager_exceptions import InvalidPluginError
 from manager_rest.storage.models import ProviderContext, Plugin
+from manager_rest.manager_exceptions import InvalidPluginError, NotFoundError
 
 
 def get_parser_context(sm=None):
@@ -93,7 +93,13 @@ class ResolverWithPlugins(DefaultImportResolver):
         if version is not None:
             filters['package_version'] = version
         sm = get_storage_manager()
-        return sm.get(Plugin, element_id=None, filters=filters)
+        try:
+            return sm.get(Plugin, element_id=None, filters=filters)
+        except NotFoundError:
+            version_message = ' (version: {0})'.format(version) \
+                if version is not None else ''
+            raise InvalidPluginError(
+                'Plugin {0}{1} not found'.format(name, version_message))
 
     def _make_plugin_yaml_url(self, plugin):
         plugin_path = os.path.join(
