@@ -64,13 +64,13 @@ def _extract_parser_context(context):
 class ResolverWithPlugins(DefaultImportResolver):
     """A resolver which translates plugin-style urls to file:// urls.
 
-    The URL: `file://plugins/cloudify-openstack-plugin/2.0.1` will be
+    The URL: `plugin:cloudify-openstack-plugin:2.0.1` will be
     translated to: `file:///opt/manager/resources/plugins/<id>`, where <id>
     is the id of the plugin looked up for the current tenant.
 
     Both the version and the filename are optional.
     """
-    PREFIX = 'file://plugins/'
+    PREFIX = 'plugin:'
 
     def fetch_import(self, import_url):
         if self._is_plugin_url(import_url):
@@ -83,7 +83,7 @@ class ResolverWithPlugins(DefaultImportResolver):
         return import_url.startswith(self.PREFIX)
 
     def _resolve_plugin_url(self, import_url):
-        parts = import_url.replace(self.PREFIX, '').split('/')
+        parts = import_url.replace(self.PREFIX, '').split(':')
         name = parts[0]
         version = parts[1] if len(parts) > 1 else None
         plugin = self._find_plugin(name, version)
