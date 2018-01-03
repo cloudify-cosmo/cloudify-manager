@@ -342,37 +342,31 @@ def check_mock_config():
     allow network access during the build and set the %dist macro
     (we have to download packages from pypi)
     """
-    mock_config = check_output(MOCK + ['--debug-config', '-qq'])
-
-    config_opts = {}
-    config = {'config_opts': config_opts}
-    exec mock_config in config, config
-
-    options = {
-        "config_opts['rpmbuild_networking']": "True",
-        "config_opts['macros']['%dist']": "'.el7'",
-    }
+    options = [
+        "config_opts['rpmbuild_networking'] = True",
+        "config_opts['macros']['%dist'] = '.el7'",
+    ]
     missing = []
-    for lhs, rhs in options.items():
-        try:
-            exists = eval('{} == {}'.format(lhs, rhs), config, config)
-        except KeyError:
-            exists = False
 
-        if not exists:
-            missing += ['{} = {}\n'.format(lhs, rhs)]
+    try:
+        makedirs(expanduser('~/.config'))
+    except OSError as e:
+        if e.errno != EEXIST:
+            raise
 
-    if missing:
-        try:
-            makedirs(expanduser('~/.config'))
-        except OSError as e:
-            if e.errno != EEXIST:
-                raise
+    with open(expanduser('~/.config/mock.cfg'), 'a+') as f:
+        f.seek(0)
+        config_lines = f.readlines()
 
-        with open(expanduser('~/.config/mock.cfg'), 'a') as f:
-            f.write('\n# Added by cloudify build_rpm.py\n')
+        for line in options:
+            line = line + '\n'
+            if line not in config_lines:
+                missing += [line]
 
-            logger.info('configuring missing options', missing)
+        if missing:
+            f.write('\n\n# Added by cloudify build_rpm.py\n')
+
+            logger.info('configuring missing options: %s', missing)
             f.writelines(missing)
 
 
