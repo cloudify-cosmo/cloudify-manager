@@ -86,6 +86,10 @@ jobs:
       - image: circleci/python:2.7
 
     steps:
+      - run:
+          name: Avoid hosts unknown for github
+          command: mkdir ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
+
       - run: GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no" git clone git@github.com:cloudify-cosmo/cloudify-premium.git ~/cloudify-premium
       - run: |
           cd ~/cloudify-premium
