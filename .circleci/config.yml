@@ -86,6 +86,7 @@ jobs:
       - image: circleci/python:2.7
 
     steps:
+      - run: pip install --user tox
       - run:
           name: Avoid hosts unknown for github
           command: mkdir ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
@@ -95,7 +96,7 @@ jobs:
           cd ~/cloudify-premium
           git checkout "${CIRCLE_BRANCH}" || echo no matching branch found, using master
       - run: sed -i 's:^.*cloudify-manager.*$:~/project/rest-service/:' ~/cloudify-premium/dev-requirements.txt
-      - run: tox -c ~/cloudify-premium/tox.ini
+      - run: python -m tox -c ~/cloudify-premium/tox.ini
 
 
   build-rpms:
