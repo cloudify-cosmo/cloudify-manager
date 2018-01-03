@@ -75,18 +75,18 @@ class ResolverWithPlugins(DefaultImportResolver):
 
     def fetch_import(self, import_url):
         if self._is_plugin_url(import_url):
-            import_url = self._resolve_plugin_url(import_url)
+            import_url = self._resolve_plugin_yaml_url(import_url)
         return super(ResolverWithPlugins, self).fetch_import(import_url)
 
     def _is_plugin_url(self, import_url):
         return import_url.startswith(self.PREFIX)
 
-    def _resolve_plugin_url(self, import_url):
+    def _resolve_plugin_yaml_url(self, import_url):
         parts = import_url.replace(self.PREFIX, '').split(':')
         name = parts[0]
         version = parts[1] if len(parts) > 1 else None
         plugin = self._find_plugin(name, version)
-        return self._make_plugin_url(plugin)
+        return self._make_plugin_yaml_url(plugin)
 
     def _find_plugin(self, name, version=None):
         filters = {'package_name': name}
@@ -95,7 +95,7 @@ class ResolverWithPlugins(DefaultImportResolver):
         sm = get_storage_manager()
         return sm.get(Plugin, element_id=None, filters=filters)
 
-    def _make_plugin_url(self, plugin):
+    def _make_plugin_yaml_url(self, plugin):
         plugin_path = os.path.join(
             config.instance.file_server_root,
             FILE_SERVER_PLUGINS_FOLDER,
