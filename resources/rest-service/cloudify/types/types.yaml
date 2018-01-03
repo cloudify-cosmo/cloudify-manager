@@ -197,6 +197,23 @@ node_types:
               default: 20
 
 
+        #####################################################
+        # This operation will make agents communicate with
+        # a new manager. Users will have to supply us with
+        # the new manager's IP and agents certificate.
+        # ---------------------------------------------------
+        # It will be executed on the central deployment
+        # agent.
+        #####################################################
+
+        transfer_amqp:
+          implementation: agent.cloudify_agent.operations.validate_agent_amqp
+          executor: central_deployment_agent
+          inputs:
+            validate_agent_timeout:
+              default: 20
+
+
 
       cloudify.interfaces.host:  # DEPRECATED
         get_state: {}
@@ -531,6 +548,22 @@ workflows:
   install_new_agents:
     mapping: default_workflows.cloudify.plugins.workflows.install_new_agents
     parameters:
+      install_agent_timeout:
+        default: 300
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
+      validate:
+        default: True
+      install:
+        default: True
+      install_script:
+        default: ''
+
+  transfer_agents:
+    mapping: default_workflows.cloudify.plugins.workflows.transfer_agents
+        parameters:
       install_agent_timeout:
         default: 300
       node_ids:
