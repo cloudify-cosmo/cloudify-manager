@@ -69,7 +69,7 @@ class ResolverWithPlugins(DefaultImportResolver):
     translated to: `file:///opt/manager/resources/plugins/<id>`, where <id>
     is the id of the plugin looked up for the current tenant.
 
-    Both the version and the filename are optional.
+    The version is optional
     """
     PREFIX = 'plugin:'
 
