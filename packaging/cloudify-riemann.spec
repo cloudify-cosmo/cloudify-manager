@@ -16,15 +16,11 @@ Requires:       cloudify-rest-service
 Source0:        http://repository.cloudifysource.org/cloudify/components/langohr.jar
 
 
-
 %description
 Cloudify's Riemann configuration
 
 
-%prep
-%build
 %install
-
 
 for dir in /opt/riemann /var/log/cloudify/riemann /opt/lib /etc/riemann/conf.d
 do
@@ -44,11 +40,6 @@ cp %{S:0} %{buildroot}/opt/lib
 
 groupadd -fr %user
 getent passwd %user >/dev/null || useradd -r -g %user -d /etc/cloudify -s /sbin/nologin cfyuser
-
-
-%post
-%preun
-%postun
 
 
 %files
