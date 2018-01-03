@@ -94,7 +94,7 @@ jobs:
       - run: |
           cd ~/cloudify-premium
           git checkout "${CIRCLE_BRANCH}" || echo no matching branch found, using master
-      - run: sed -i 's/^.*cloudify-manager.*$/~/project/rest-service/' ~/cloudify-premium/dev-requirements.txt
+      - run: sed -i 's:^.*cloudify-manager.*$:~/project/rest-service/:' ~/cloudify-premium/dev-requirements.txt
       - run: tox -c ~/cloudify-premium/tox.ini
 
 
