@@ -228,21 +228,38 @@ class TestSnapshot(AgentlessTestCase):
         self._assert_3_4_0_snapshot_restored(tenant_1_name)
         self._assert_3_3_1_snapshot_restored(tenant_2_name)
 
-    def test_restore_snapshot_with_private_resource(self):
+    def test_v_4_1_1_restore_snapshot_with_private_resource(self):
         """
-        Making sure the conversion from private_resource to
-        resource_availability works
+        Validate the conversion from the old column private_resource to
+        the new column visibility
         """
         snapshot_path = self._get_snapshot('snap_4.1.1.zip')
         self._upload_and_restore_snapshot(snapshot_path)
         blueprints = self.client.blueprints.list(
-            _include=['id', 'resource_availability'])
+            _include=['id', 'visibility'])
         assert blueprints[0]['id'] == 'blueprint_1' and \
-            blueprints[0]['resource_availability'] == 'tenant'
+            blueprints[0]['visibility'] == 'tenant'
         assert blueprints[1]['id'] == 'blueprint_2' and \
-            blueprints[1]['resource_availability'] == 'private'
+            blueprints[1]['visibility'] == 'private'
         assert blueprints[2]['id'] == 'blueprint_3' and \
-            blueprints[2]['resource_availability'] == 'private'
+            blueprints[2]['visibility'] == 'private'
+
+    def test_v_4_2_restore_snapshot_with_resource_availability(self):
+        """
+        Validate the conversion from the old column resource_availability to
+        the new column visibility
+        """
+        snapshot_name = 'snap_4.2.0_visibility_validation.zip'
+        snapshot_path = self._get_snapshot(snapshot_name)
+        self._upload_and_restore_snapshot(snapshot_path)
+        blueprints = self.client.blueprints.list(
+            _include=['id', 'visibility'])
+        assert blueprints[0]['id'] == 'blueprint_1' and \
+            blueprints[0]['visibility'] == 'private'
+        assert blueprints[1]['id'] == 'blueprint_2' and \
+            blueprints[1]['visibility'] == 'tenant'
+        assert blueprints[2]['id'] == 'blueprint_3' and \
+            blueprints[2]['visibility'] == 'global'
 
     def _assert_snapshot_restored(self,
                                   blueprint_id,
