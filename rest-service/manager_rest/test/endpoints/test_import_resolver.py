@@ -25,16 +25,6 @@ from dsl_parser.utils import ResolverInstantiationError
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
 class UploadBlueprtinsWithImportResolverTests(base_test.BaseServerTestCase):
 
-    def _create_resolver_section(self, resolver_impl=None, resolver_params=[]):
-        resolver_section = {}
-        if resolver_impl:
-            resolver_section[constants.RESOLVER_IMPLEMENTATION_KEY] = \
-                resolver_impl
-        if resolver_params:
-            resolver_section[constants.RESLOVER_PARAMETERS_KEY] = \
-                resolver_params
-        return resolver_section
-
     def _update_provider_context(self, resolver_section=None):
         cloudify_section = {}
         if resolver_section:
