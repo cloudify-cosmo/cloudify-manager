@@ -634,6 +634,10 @@ data_types:
           Maximum number of agent workers. By default, the value will be 5.
         type: integer
         required: false
+      broker_heartbeat:
+        description: >
+          The interval of the AMQP heartbeat in seconds
+        required: false
       disable_requiretty:
         description: >
           For linux based agents, disables the requiretty setting in the sudoers file. By default, this value will be true.
