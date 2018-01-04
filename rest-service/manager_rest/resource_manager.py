@@ -726,6 +726,13 @@ class ResourceManager(object):
         :param plugin: A plugin from the blueprint
         """
 
+        if plugin['package_name'] == 'cloudify-diamond-plugin':
+            # It is meaningless to validate whether the diamond plugin is
+            # installed on the manager because it is an agent-only plugin.
+            # The name is hardcoded because it is currently the only plugin
+            # of its type but this check should be improved if that changes.
+            return
+
         if not plugin['install']:
             return
         query_parameters = {'package_name': plugin['package_name']}
