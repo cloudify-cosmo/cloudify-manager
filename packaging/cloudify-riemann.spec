@@ -1,4 +1,4 @@
-%define user riemann
+%define _user riemann
 
 Name:           cloudify-riemann
 Version:        %{CLOUDIFY_VERSION}
@@ -27,7 +27,6 @@ do
     mkdir -p %{buildroot}$dir
 done
 
-cp ${RPM_SOURCE_DIR}/plugins/riemann-controller/riemann_controller/resources/manager.config %{buildroot}/etc/riemann/conf.d/
 # Copy static files into place. In order to have files in /packaging/files
 # actually included in the RPM, they must have an entry in the %files
 # section of this spec file.
@@ -38,18 +37,19 @@ cp %{S:0} %{buildroot}/opt/lib
 
 %pre
 
-groupadd -fr %user
-getent passwd %user >/dev/null || useradd -r -g %user -d /etc/cloudify -s /sbin/nologin cfyuser
+groupadd -fr %_user
+getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbin/nologin cfyuser
 
 
 %files
 
 /etc/logrotate.d/cloudify-riemann
-/etc/riemann/main.clj
 /etc/riemann/conf.d/manager.config
+/etc/riemann/main.clj
 /opt/lib/langohr.jar
+/opt/manager/scripts/activate_riemann_policies
+/opt/riemann_NOTICE.txt
 /usr/lib/systemd/system/cloudify-riemann.service
 
 %dir %attr(770,%user,cfyuser) /opt/riemann
-
-%dir %attr(-,%user,adm) /var/log/cloudify/riemann
+%dir %attr(-,%_user,adm) /var/log/cloudify/riemann
