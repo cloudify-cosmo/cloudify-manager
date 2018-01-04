@@ -191,6 +191,7 @@ def zip_files(files):
     for path in files:
         shutil.copy(path, source_folder)
     create_zip(source_folder, destination_zip, include_folder=False)
+    shutil.rmtree(source_folder)
     try:
         yield destination_zip
     finally:
