@@ -19,11 +19,13 @@ import sys
 import shutil
 import urllib2
 from datetime import datetime
-from os import chdir, listdir
+from errno import EEXIST
+from os import chdir, listdir, makedirs
 from os.path import (
         abspath,
         basename,
         dirname,
+        expanduser,
         getmtime,
         join as path_join,
         split as path_split,
@@ -32,7 +34,7 @@ from subprocess import check_call, check_output, CalledProcessError
 from textwrap import dedent
 
 
-MOCK = ['/usr/bin/mock', '--verbose']
+MOCK = ['/usr/bin/mock', '--root', 'epel-7-x86_64', '--verbose']
 LOCAL_REPO_PATH = '~/mock_repo'
 DEPENDENCIES_FILE = '{spec_file}.dependencies'
 RESULT_DIR = '/var/lib/mock/epel-7-x86_64/result'
@@ -336,22 +338,36 @@ def install_mock():
 
 
 def check_mock_config():
-    # allow network access during the build
-    # (we have to download packages from pypi)
-    mock_config = check_output(
-        MOCK + ['--debug-config',
-        ]).splitlines()
+    """
+    allow network access during the build and set the %dist macro
+    (we have to download packages from pypi)
+    """
+    options = [
+        "config_opts['rpmbuild_networking'] = True",
+        "config_opts['macros']['%dist'] = '.el7'",
+    ]
+    missing = []
 
-    for line in mock_config:
-        if all(s in line for s in ('rpmbuild_networking', 'True')):
-            break
-    else:
-        logger.info('configuring rpmbuild_networking')
-        check_call(
-                '''echo "config_opts['rpmbuild_networking'] = True" '''
-                '| sudo -n tee -a /etc/mock/site-defaults.cfg',
-                shell=True,
-                )
+    try:
+        makedirs(expanduser('~/.config'))
+    except OSError as e:
+        if e.errno != EEXIST:
+            raise
+
+    with open(expanduser('~/.config/mock.cfg'), 'a+') as f:
+        f.seek(0)
+        config_lines = f.readlines()
+
+        for line in options:
+            line = line + '\n'
+            if line not in config_lines:
+                missing += [line]
+
+        if missing:
+            f.write('\n\n# Added by cloudify build_rpm.py\n')
+
+            logger.info('configuring missing options: %s', missing)
+            f.writelines(missing)
 
 
 def download_if_newer(url, outfile=None):
