@@ -16,6 +16,7 @@
 import os
 import glob
 from flask import current_app
+from urlparse import parse_qs
 from distutils.version import LooseVersion
 
 from dsl_parser import constants
@@ -82,15 +83,40 @@ class ResolverWithPlugins(DefaultImportResolver):
     def _is_plugin_url(self, import_url):
         return import_url.startswith(self.PREFIX)
 
+    def _make_plugin_filters(self, plugin_spec):
+        """Parse the plugin spec to a dict of filters for the sql query
+
+        >>> _make_plugin_filters('cloudify-openstack-plugin')
+        {'package_name': 'cloudify-openstack-plugin'}
+        >>> _make_plugin_filters('cool/1.0.2')
+        {'package_name': 'cool', 'package_version': '1.0.2'}
+        >>> _make_plugin_filters('cool/1.0.2?platform=centos')
+        {'package_name': 'cool', 'package_version': '1.0.2',
+         'supported_platform': 'centos'}
+        >>> _make_plugin_filters('cool?platform=centos')
+        {'package_name': 'cool', 'supported_platform': 'centos'}
+        """
+        filter_renames = {'platform': 'supported_platform'}
+        plugin_spec, _, params = plugin_spec.partition('?')
+        name, _, version = plugin_spec.partition('/')
+        filters = {}
+        for filter_name, value in parse_qs(params):
+            renamed = filter_renames.get(filter_name)
+            if renamed is None:
+                raise InvalidPluginError(
+                    'Error parsing spec for plugin {0}: invalid parameter {1}'
+                    .format(name, filter_name))
+            filters[renamed] = value
+        return name, version, filters
+
     def _resolve_plugin_yaml_url(self, import_url):
-        parts = import_url.replace(self.PREFIX, '', 1).strip().split('/')
-        name = parts[0]
-        version = parts[1] if len(parts) > 1 else None
-        plugin = self._find_plugin(name, version)
+        plugin_spec = import_url.replace(self.PREFIX, '', 1).strip()
+        name, version, plugin_filters = self._make_plugin_filters(plugin_spec)
+        plugin = self._find_plugin(name, version, plugin_filters)
         return self._make_plugin_yaml_url(plugin)
 
-    def _find_plugin(self, name, version=None):
-        filters = {'package_name': name}
+    def _find_plugin(self, name, version, filters):
+        filters['package_name'] = name
         if version is not None:
             filters['package_version'] = version
         sm = get_storage_manager()
