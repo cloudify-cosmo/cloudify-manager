@@ -88,17 +88,15 @@ class ResolverWithPlugins(DefaultImportResolver):
 
         >>> _make_plugin_filters('cloudify-openstack-plugin')
         {'package_name': 'cloudify-openstack-plugin'}
-        >>> _make_plugin_filters('cool/1.0.2')
+        >>> _make_plugin_filters('cool?version=1.0.2')
         {'package_name': 'cool', 'package_version': '1.0.2'}
-        >>> _make_plugin_filters('cool/1.0.2?platform=centos')
+        >>> _make_plugin_filters('cool?version=1.0.2&platform=centos')
         {'package_name': 'cool', 'package_version': '1.0.2',
          'supported_platform': 'centos'}
-        >>> _make_plugin_filters('cool?platform=centos')
-        {'package_name': 'cool', 'supported_platform': 'centos'}
         """
-        filter_renames = {'platform': 'supported_platform'}
-        plugin_spec, _, params = plugin_spec.partition('?')
-        name, _, version = plugin_spec.partition('/')
+        filter_renames = {'platform': 'supported_platform',
+                          'version': 'package_version'}
+        name, _, params = plugin_spec.partition('?')
         filters = {}
         for filter_name, value in parse_qs(params):
             renamed = filter_renames.get(filter_name)
@@ -107,23 +105,21 @@ class ResolverWithPlugins(DefaultImportResolver):
                     'Error parsing spec for plugin {0}: invalid parameter {1}'
                     .format(name, filter_name))
             filters[renamed] = value
-        return name, version, filters
+        return name, filters
 
     def _resolve_plugin_yaml_url(self, import_url):
         plugin_spec = import_url.replace(self.PREFIX, '', 1).strip()
-        name, version, plugin_filters = self._make_plugin_filters(plugin_spec)
-        plugin = self._find_plugin(name, version, plugin_filters)
+        name, plugin_filters = self._make_plugin_filters(plugin_spec)
+        plugin = self._find_plugin(name, plugin_filters)
         return self._make_plugin_yaml_url(plugin)
 
-    def _find_plugin(self, name, version, filters):
+    def _find_plugin(self, name, filters):
         filters['package_name'] = name
-        if version is not None:
-            filters['package_version'] = version
         sm = get_storage_manager()
         plugins = sm.list(Plugin, filters=filters)
         if not plugins:
-            version_message = ' (version: {0})'.format(version) \
-                if version is not None else ''
+            version_message = ' (query: {0})'.format(filters) \
+                if filters else ''
             raise InvalidPluginError(
                 'Plugin {0}{1} not found'.format(name, version_message))
         return max(plugins,
