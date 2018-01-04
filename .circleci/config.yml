@@ -97,6 +97,7 @@ jobs:
       - run: |
           cd ~/cloudify-premium
           git fetch --depth 1 origin "${CIRCLE_BRANCH}" && git checkout "${CIRCLE_BRANCH}" || echo no matching branch found, using master
+      # Replace the cloudify-manager URL in dev-requirements.txt with the local path to this checkout
       - run: sed -i "s:^.*cloudify-manager.*\(rest-service\)$:-e ${HOME}/project/\1/:" ~/cloudify-premium/dev-requirements.txt
       - run: python -m tox -c ~/cloudify-premium/tox.ini
 
