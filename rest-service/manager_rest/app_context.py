@@ -98,7 +98,7 @@ class ResolverWithPlugins(DefaultImportResolver):
                           'version': 'package_version'}
         name, _, params = plugin_spec.partition('?')
         filters = {}
-        for filter_name, value in parse_qs(params):
+        for filter_name, value in parse_qs(params).items():
             renamed = filter_renames.get(filter_name)
             if renamed is None:
                 raise InvalidPluginError(
