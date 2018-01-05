@@ -95,7 +95,8 @@ class ResolverWithPlugins(DefaultImportResolver):
          'supported_platform': 'centos'}
         """
         filter_renames = {'platform': 'supported_platform',
-                          'version': 'package_version'}
+                          'version': 'package_version',
+                          'distribution': 'distribution'}
         name, _, params = plugin_spec.partition('?')
         filters = {}
         for filter_name, value in parse_qs(params).items():
