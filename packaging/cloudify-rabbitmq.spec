@@ -6,7 +6,7 @@ BuildArch:      noarch
 Summary:        Cloudify's RabbitMQ configuration
 Group:          Applications/Multimedia
 License:        Apache 2.0
-URL:            https://github.com/cloudify-cosmo/cloudify-amqp-influxdb
+URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
