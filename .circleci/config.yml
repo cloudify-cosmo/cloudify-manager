@@ -114,7 +114,8 @@ jobs:
           parallel --results logs $builder{} ::: \
               cloudify-rest-service.spec \
               cloudify-rabbitmq.spec \
-              cloudify-mgmtworker.spec
+              cloudify-mgmtworker.spec \
+              cloudify-agents.spec
       - run: mkdir result
       - run: mv packaging/*.rpm result
 
