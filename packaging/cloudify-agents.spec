@@ -7,8 +7,8 @@ Summary:        Cloudify's agents bundle
 Group:          Applications/Multimedia
 License:        Apache 2.0
 URL:            https://github.com/cloudify-cosmo/cloudify-agent
-Vendor:         Gigaspaces Inc.
-Packager:       Gigaspaces Inc.
+Vendor:         Cloudify Platform Ltd.
+Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  python >= 2.7
 Requires(pre):  shadow-utils
