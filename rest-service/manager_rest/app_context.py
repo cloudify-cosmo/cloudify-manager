@@ -90,9 +90,9 @@ class ResolverWithPlugins(DefaultImportResolver):
         {'package_name': 'cloudify-openstack-plugin'}
         >>> _make_plugin_filters('cool?version=1.0.2')
         {'package_name': 'cool', 'package_version': '1.0.2'}
-        >>> _make_plugin_filters('cool?version=1.0.2&platform=centos')
+        >>> _make_plugin_filters('cool?version=1.0.2&distribution=centos')
         {'package_name': 'cool', 'package_version': '1.0.2',
-         'supported_platform': 'centos'}
+         'distribution': 'centos'}
         """
         filter_renames = {'platform': 'supported_platform',
                           'version': 'package_version',
