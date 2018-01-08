@@ -7,8 +7,8 @@ Summary:        Cloudify's Riemann configuration
 Group:          Applications/Multimedia
 License:        Apache 2.0
 URL:            https://github.com/cloudify-cosmo/cloudify-manager
-Vendor:         Gigaspaces Inc.
-Packager:       Gigaspaces Inc.
+Vendor:         Cloudify Platform Ltd.
+Packager:       Cloudify Platform Ltd.
 
 Requires:       riemann, daemonize
 Requires:       cloudify-rest-service
@@ -38,7 +38,7 @@ cp %{S:0} %{buildroot}/opt/lib
 %pre
 
 groupadd -fr %_user
-getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbin/nologin cfyuser
+getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbin/nologin %_user
 
 
 %files
@@ -51,5 +51,5 @@ getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbi
 /opt/riemann_NOTICE.txt
 /usr/lib/systemd/system/cloudify-riemann.service
 
-%dir %attr(770,%user,cfyuser) /opt/riemann
+%dir %attr(770,%_user,cfyuser) /opt/riemann
 %dir %attr(-,%_user,adm) /var/log/cloudify/riemann
