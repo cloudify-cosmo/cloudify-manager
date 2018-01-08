@@ -17,7 +17,7 @@
 import pkg_resources
 from flask_restful_swagger import swagger
 
-from manager_rest import config
+from manager_rest import server
 from manager_rest.rest import responses
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -31,10 +31,14 @@ def get_version():
     return pkg_resources.get_distribution('cloudify-rest-service').version
 
 
+def get_edition():
+    return 'premium' if server.premium_enabled else 'community'
+
+
 def get_version_data():
     return {
         'version': get_version(),
-        'edition': config.instance.edition
+        'edition': get_edition(),
     }
 
 
