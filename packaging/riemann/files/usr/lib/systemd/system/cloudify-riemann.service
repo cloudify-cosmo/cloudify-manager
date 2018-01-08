@@ -6,7 +6,7 @@ After=cloudify-rabbitmq.service
 [Service]
 TimeoutStartSec=0
 Restart=always
-EnvironmentFile=-/etc/sysconfig/cloudify-riemann
+EnvironmentFile=/etc/sysconfig/cloudify-riemann
 ExecStart=/bin/sudo -E -uriemann /usr/bin/riemann -a ${RIEMANN_CONFIG_PATH}/main.clj
 ExecStartPost=/bin/sudo -ucfyuser /bin/bash -c "set -a && . /etc/sysconfig/cloudify-mgmtworker && /opt/mgmtworker/env/bin/python /opt/manager/scripts/activate_riemann_policies"
 
