@@ -23,7 +23,12 @@ from flask_restful import Api
 from flask import Flask, jsonify, Blueprint
 from flask_security import Security
 
-from manager_rest import config
+from manager_rest import (
+        config,
+        configure_ldap,
+        configure_okta,
+        premium_enabled,
+        )
 from manager_rest.storage import db, user_datastore
 from manager_rest.security.user_handler import user_loader
 from manager_rest.maintenance import maintenance_mode_handler
@@ -31,13 +36,6 @@ from manager_rest.rest.endpoint_mapper import setup_resources
 from manager_rest.flask_utils import set_flask_security_config
 from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
 from manager_rest.app_logging import setup_logger, log_request, log_response
-
-try:
-    from cloudify_premium import configure_ldap, configure_okta
-    premium_enabled = True
-except ImportError:
-    configure_ldap, configure_okta = None, None
-    premium_enabled = False
 
 SQL_DIALECT = 'postgresql'
 

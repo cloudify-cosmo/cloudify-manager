@@ -17,7 +17,7 @@
 import pkg_resources
 from flask_restful_swagger import swagger
 
-from manager_rest import server
+from manager_rest import premium_enabled
 from manager_rest.rest import responses
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -32,7 +32,7 @@ def get_version():
 
 
 def get_edition():
-    return 'premium' if server.premium_enabled else 'community'
+    return 'premium' if premium_enabled else 'community'
 
 
 def get_version_data():

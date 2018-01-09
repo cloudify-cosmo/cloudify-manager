@@ -13,3 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ############
+
+
+try:
+    from cloudify_premium import configure_ldap, configure_okta
+    premium_enabled = True
+except ImportError:
+    configure_ldap, configure_okta = None, None
+    premium_enabled = False
