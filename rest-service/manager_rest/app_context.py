@@ -94,8 +94,7 @@ class ResolverWithPlugins(DefaultImportResolver):
         {'package_name': 'cool', 'package_version': '1.0.2',
          'distribution': 'centos'}
         """
-        filter_renames = {'platform': 'supported_platform',
-                          'version': 'package_version',
+        filter_renames = {'version': 'package_version',
                           'distribution': 'distribution'}
         name, _, params = plugin_spec.partition('?')
         filters = {}
