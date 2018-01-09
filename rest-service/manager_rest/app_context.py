@@ -87,42 +87,52 @@ class ResolverWithPlugins(DefaultImportResolver):
         """Parse the plugin spec to a dict of filters for the sql query
 
         >>> _make_plugin_filters('cloudify-openstack-plugin')
-        {'package_name': 'cloudify-openstack-plugin'}
+        {'name': 'cloudify-openstack-plugin'}
         >>> _make_plugin_filters('cool?version=1.0.2')
-        {'package_name': 'cool', 'package_version': '1.0.2'}
+        {'name': 'cool', 'version': '1.0.2'}
         >>> _make_plugin_filters('cool?version=1.0.2&distribution=centos')
-        {'package_name': 'cool', 'package_version': '1.0.2',
-         'distribution': 'centos'}
+        {'name': 'cool', 'version': '1.0.2', 'distribution': 'centos'}
         """
-        filter_renames = {'platform': 'supported_platform',
-                          'version': 'package_version',
-                          'distribution': 'distribution'}
+        allowed_filters = {'platform', 'version', 'distribution'}
         name, _, params = plugin_spec.partition('?')
-        filters = {}
+        filters = {'name': name}
         for filter_name, value in parse_qs(params).items():
-            renamed = filter_renames.get(filter_name)
-            if renamed is None:
+            if filter_name not in allowed_filters:
                 raise InvalidPluginError(
                     'Error parsing spec for plugin {0}: invalid parameter {1}'
                     .format(name, filter_name))
-            filters[renamed] = value
-        return name, filters
+            filters[filter_name] = value
+        return filters
 
     def _resolve_plugin_yaml_url(self, import_url):
         plugin_spec = import_url.replace(self.PREFIX, '', 1).strip()
-        name, plugin_filters = self._make_plugin_filters(plugin_spec)
-        plugin = self._find_plugin(name, plugin_filters)
+        plugin_filters = self._make_plugin_filters(plugin_spec)
+        plugin = self._find_plugin(plugin_filters)
         return self._make_plugin_yaml_url(plugin)
 
-    def _find_plugin(self, name, filters):
-        filters['package_name'] = name
+    def _find_plugin(self, filters):
+        # format the filters dict to a representation expected by the storage
+        # manager, omitting the filters that can't be used by it
+        sql_filters = {
+            'package_name': filters['name'],
+            'package_version': filters['version'],
+            'distribution': filters['distribution']
+        }
         sm = get_storage_manager()
-        plugins = sm.list(Plugin, filters=filters)
+        plugins = sm.list(Plugin, filters=sql_filters)
         if not plugins:
             version_message = ' (query: {0})'.format(filters) \
                 if filters else ''
             raise InvalidPluginError(
-                'Plugin {0}{1} not found'.format(name, version_message))
+                'Plugin {0}{1} not found'
+                .format(filters['name'], version_message))
+
+        # filtering this on the python side, because storage_manager has
+        # no way to express a `platform IN supported_platform` query,
+        # and supported_platform is a list
+        if 'platform' in filters:
+            plugins = [p for p in plugins
+                       if filters['platform'] in p.supported_platform]
         return max(plugins,
                    key=lambda plugin: LooseVersion(plugin.package_version))
 
