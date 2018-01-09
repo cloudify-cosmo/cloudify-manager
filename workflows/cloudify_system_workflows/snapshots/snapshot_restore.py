@@ -308,9 +308,9 @@ class SnapshotRestore(object):
         )
         # Only restore stage files to their correct location
         # if this snapshot version is the same as the manager version
+        # or from 4.3 onwards we support stage upgrade
         if self._snapshot_version == self._manager_version or \
-            (self._snapshot_version == V_4_2_0 and
-                self._manager_version == V_4_3_0):
+           self._snapshot_version >= V_4_3_0:
             stage_restore_override = True
         else:
             stage_restore_override = False
