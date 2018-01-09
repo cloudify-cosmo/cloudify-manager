@@ -14,10 +14,12 @@
 # limitations under the License.
 ############
 
+from imp import find_module
+
 
 try:
-    from cloudify_premium import configure_ldap, configure_okta
-    premium_enabled = True
-except ImportError:
-    configure_ldap, configure_okta = None, None
+    find_module('cloudify_premium')
+except ImportError as e:
     premium_enabled = False
+else:
+    premium_enabled = True
