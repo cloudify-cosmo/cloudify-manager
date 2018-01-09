@@ -13,22 +13,18 @@ Packager:       Cloudify Platform Ltd.
 BuildRequires:  python >= 2.7
 Requires(pre):  shadow-utils
 
+Source0:        https://raw.githubusercontent.com/cloudify-cosmo/cloudify-versions/master/packages-urls/agent-packages.yaml
 
 %description
 Cloudify Agent packages
 
 
-%prep
-curl https://raw.githubusercontent.com/cloudify-cosmo/cloudify-versions/master/packages-urls/agent-packages.yaml > /tmp/agents-list.txt
-
-
 %build
 mkdir -p %_agents_dir
 pushd %_agents_dir
-    xargs -I url curl -O url </tmp/agents-list.txt
+    xargs -I url curl -O url <"%{S:0}"
     python %{RPM_SOURCE_DIR}/packaging/agents/rename_packages.py .
 popd
-rm /tmp/agents-list.txt
 
 
 %install
