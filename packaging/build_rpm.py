@@ -345,6 +345,8 @@ def check_mock_config():
     options = [
         "config_opts['rpmbuild_networking'] = True",
         "config_opts['macros']['%dist'] = '.el7'",
+        "config_opts['plugin_conf']['yum_cache_opts']['target_dir'] = "
+        "'/var/cache/%(package_manager)s'",
     ]
     missing = []
 
