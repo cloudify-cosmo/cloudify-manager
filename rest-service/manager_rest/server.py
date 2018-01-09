@@ -67,8 +67,7 @@ class CloudifyFlaskApp(Flask):
 
         # These two need to be called after the configuration was loaded
         setup_logger(self.logger)
-        self.premium_enabled = premium_enabled
-        if self.premium_enabled:
+        if premium_enabled:
             self.ldap = configure_ldap()
             self.okta = configure_okta()
         else:
