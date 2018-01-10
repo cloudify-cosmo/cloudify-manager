@@ -113,6 +113,7 @@ jobs:
           builder="docker run --cap-add SYS_ADMIN --security-opt apparmor:unconfined --mount type=bind,source=$(pwd),target=/source cloudify3/mock-builder:0.1 python /source/packaging/build_rpm.py /source/packaging/"
           parallel --results logs $builder{} ::: \
               cloudify-rest-service.spec \
+              cloudify-logstash.spec \
               cloudify-mgmtworker.spec \
               cloudify-rabbitmq.spec \
               cloudify-riemann.spec
