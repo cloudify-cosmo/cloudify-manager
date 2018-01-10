@@ -6,8 +6,8 @@ Summary:        Cloudify's Logstash
 Group:          Applications/Multimedia
 License:        Apache 2.0
 URL:            https://github.com/cloudify-cosmo/cloudify-amqp-influxdb
-Vendor:         Gigaspaces Inc.
-Packager:       Gigaspaces Inc.
+Vendor:         Cloudify Platform Ltd.
+Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  jre, rsync
 Requires:       logstash, jre, postgresql-jdbc
@@ -15,9 +15,7 @@ Requires:       logstash, jre, postgresql-jdbc
 Source0:        http://repository.cloudifysource.org/cloudify/components/logstash-output-jdbc-0.2.10.gem
 Source1:        http://repository.cloudifysource.org/cloudify/components/logstash-filter-json_encode-0.1.5.gem
 
-
 %define _user logstash
-
 
 
 %description
@@ -25,7 +23,6 @@ Cloudify's logstash plugins and configuration
 
 
 %prep
-
 
 mkdir -p %{buildroot}/opt/logstash
 # cloudify-premium needs to be installed in to the restservice virtualenv,
@@ -35,7 +32,6 @@ cp -r /opt/logstash /tmp/existing_env
 
 
 %build
-
 
 /opt/logstash/bin/plugin install ${RPM_SOURCE_DIR}/*.gem
 
@@ -50,7 +46,6 @@ rsync -rlc --compare-dest /tmp/existing_env /opt/logstash/vendor %{buildroot}/op
 # Clear out empty dirs from the result
 find %{buildroot} -depth -type d -empty -delete
 
-
 # Create the log dir
 mkdir -p %{buildroot}/var/log/cloudify/%_user
 
@@ -58,12 +53,6 @@ mkdir -p %{buildroot}/var/log/cloudify/%_user
 # actually included in the RPM, they must have an entry in the %files
 # section of this spec file.
 cp -R ${RPM_SOURCE_DIR}/packaging/logstash/files/* %{buildroot}
-
-
-%pre
-%post
-%preun
-%postun
 
 
 %files
