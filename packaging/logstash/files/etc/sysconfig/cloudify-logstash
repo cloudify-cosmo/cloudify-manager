@@ -1,0 +1,2 @@
+LS_LOG_DIR="/var/log/cloudify/logstash"
+LS_LOG_FILE="/var/log/cloudify/logstash/logstash.log"

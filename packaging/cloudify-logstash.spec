@@ -58,5 +58,9 @@ cp -R ${RPM_SOURCE_DIR}/packaging/logstash/files/* %{buildroot}
 %files
 
 /etc/logrotate.d/cloudify-logstash
+/etc/sysconfig/cloudify-logstash
+/opt/logstash_NOTICE.txt
+/usr/lib/systemd/system/logstash.service.d/restart.conf
+
 %attr(750,%_user,adm) /var/log/cloudify/%_user
 %attr(-,%_user,%_user) /opt/logstash/vendor/local_gems
