@@ -115,6 +115,7 @@ def copy_files_between_manager_and_snapshot(archive_root,
 def copy_stage_files(archive_root):
     """Copy Cloudify Stage files into the snapshot"""
     stage_data = [
+        snapshot_constants.STAGE_CONFIG_FOLDER,
         snapshot_constants.STAGE_USERDATA_FOLDER
     ]
     for folder in stage_data:
