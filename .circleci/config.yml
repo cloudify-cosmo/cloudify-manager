@@ -114,6 +114,7 @@ jobs:
           parallel --results logs $builder{} ::: \
               cloudify-rest-service.spec \
               cloudify-mgmtworker.spec \
+              cloudify-agents.spec \
               cloudify-rabbitmq.spec \
               cloudify-riemann.spec
       - run: mkdir result
