@@ -24,9 +24,8 @@ from sqlalchemy.ext.associationproxy import association_proxy
 from manager_rest import config
 from manager_rest.rest.responses import Workflow
 from manager_rest.utils import classproperty, files_in_folder
+from manager_rest.constants import FILE_SERVER_PLUGINS_FOLDER
 from manager_rest.deployment_update.constants import ACTION_TYPES, ENTITY_TYPES
-from manager_rest.constants import (FILE_SERVER_PLUGINS_FOLDER,
-                                    FILE_SERVER_RESOURCES_FOLDER)
 
 from .models_base import (
     db,
@@ -95,10 +94,7 @@ class Plugin(SQLResourceBase):
         file_name = self._yaml_file_name()
         if not file_name:
             return ''
-        return path.join(FILE_SERVER_RESOURCES_FOLDER,
-                         FILE_SERVER_PLUGINS_FOLDER,
-                         self.id,
-                         file_name)
+        return path.join(FILE_SERVER_PLUGINS_FOLDER, self.id, file_name)
 
     @property
     def yaml_url_path(self):
