@@ -12,6 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
+import os
 from manager_rest.rest import rest_utils
 from manager_rest.rest.rest_utils import get_json_and_verify_params
 
@@ -19,7 +20,10 @@ from aria.orchestrator.workflows.core import engine
 from aria.orchestrator import execution_preparer
 from aria.orchestrator.workflows.executor import process
 
-from ..... import manager_exceptions
+from aria.orchestrator.context import workflow
+
+from aria import application_model_storage
+from ..... import manager_exceptions, aria_mapi
 from .... import rest_decorators
 from .. import base
 
@@ -86,6 +90,8 @@ class ARIAExecutions(base.BaseARIAEndpoints):
         """
         Start an execution
         """
+        import pydevd; pydevd.settrace('192.168.9.239', suspend=True, port=53100)
+
         request_dict = rest_utils.get_json_and_verify_params(
             dict(
                 service_id={'type': int},
@@ -103,7 +109,29 @@ class ARIAExecutions(base.BaseARIAEndpoints):
             service,
             request_dict['workflow_name']
         )
-        workflow_ctx = compiler.prepare(executor=executor)
+        local_workflow_ctx = compiler.prepare(executor=executor)
+
+        rest_model_storage = application_model_storage(
+            aria_mapi.RESTMAPI,
+            api_kwargs=dict(
+                host='http://172.20.0.2', #os.environ['REST_HOST'],
+                port='80', #os.environ['REST_PORT'],
+                api_endpoint='core'
+            ),
+            initiator=False
+        )
+
+        workflow_ctx = workflow.WorkflowContext(
+            name=local_workflow_ctx.workflow_name,
+            model_storage=rest_model_storage,
+            resource_storage=None,
+            service_id=local_workflow_ctx.service.id,
+            execution_id=local_workflow_ctx.execution.id,
+            workflow_name=local_workflow_ctx.execution.workflow_name,
+            task_max_attempts=local_workflow_ctx._task_max_attempts,
+            task_retry_interval=local_workflow_ctx._task_retry_interval,
+        )
+
         engine_ = engine.Engine(executor)
         engine_.execute(workflow_ctx)
 

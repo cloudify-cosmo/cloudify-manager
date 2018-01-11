@@ -111,11 +111,15 @@ def setup_resources(api):
         'ARIAPlugins': 'aria-plugins',
         'ARIAPlugin': 'aria-plugins/<string:plugin_id>',
         'ARIALogs': 'aria-logs',
-        'ARIALog': 'aria-logs/<string:execution_id>'
+        'ARIALog': 'aria-logs/<string:execution_id>',
     }
 
     # Set version endpoint as a non versioned endpoint
     api.add_resource(resources_v1.Version, '/api/version', endpoint='version')
+
+    # Set api endpoint for the aria REST based ctx
+    api.add_resource(resources_v3_1.ARIACore, '/core/<path:path>')
+
     for resource, endpoint_suffix in resources_endpoints.iteritems():
         _set_versioned_urls(api, resource, endpoint_suffix)
 

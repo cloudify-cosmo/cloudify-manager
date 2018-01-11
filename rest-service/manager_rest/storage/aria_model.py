@@ -17,5 +17,6 @@ def get_model_storage():
     return aria.application_model_storage(
         api=SQLAlchemyModelAPI,
         api_kwargs=dict(engine=db.engine, session=db.session),
+        initiator=False,
         models_prefix='ARIA_'
     )
