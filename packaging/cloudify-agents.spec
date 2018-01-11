@@ -23,7 +23,7 @@ Cloudify Agent packages
 mkdir -p %_agents_dir
 pushd %_agents_dir
     xargs -I url curl -O url <"%{S:0}"
-    python %{RPM_SOURCE_DIR}/packaging/agents/rename_packages.py .
+    python ${RPM_SOURCE_DIR}/packaging/agents/rename_packages.py .
 popd
 
 
