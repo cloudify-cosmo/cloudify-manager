@@ -26,6 +26,13 @@ Source7:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1
 Cloudify Agent packages
 
 
+# The list of Sources above is the default set of agents.
+# They will be fetched by build_rpm.py during the package
+# build. If you want to use an agent package with changes
+# you can place a matching named file in cloudify-manager
+# (../ from here). Any extra agent packages found in that
+# directory will also be packaged (files with .tar.gz and
+# .exe extensions).
 
 %install
 
