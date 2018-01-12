@@ -13,23 +13,24 @@ Packager:       Cloudify Platform Ltd.
 BuildRequires:  python >= 2.7
 Requires(pre):  shadow-utils
 
-Source0:        https://raw.githubusercontent.com/cloudify-cosmo/cloudify-versions/master/packages-urls/agent-packages.yaml
+Source0:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1-release/Ubuntu-trusty-agent_4.3.0-.dev1.tar.gz
+Source1:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1-release/Ubuntu-precise-agent_4.3.0-.dev1.tar.gz
+Source2:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1-release/Ubuntu-xenial-agent_4.3.0-.dev1.tar.gz
+Source3:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1-release/centos-Core-agent_4.3.0-.dev1.tar.gz
+Source4:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1-release/centos-Final-agent_4.3.0-.dev1.tar.gz
+Source5:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1-release/redhat-Maipo-agent_4.3.0-.dev1.tar.gz
+Source6:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1-release/redhat-Santiago-agent_4.3.0-.dev1.tar.gz
+Source7:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/.dev1-release/cloudify-windows-agent_4.3.0-.dev1.exe
 
 %description
 Cloudify Agent packages
 
 
-%build
-mkdir -p %_agents_dir
-pushd %_agents_dir
-    xargs -I url curl -O url <"%{S:0}"
-    python ${RPM_SOURCE_DIR}/packaging/agents/rename_packages.py .
-popd
-
 
 %install
-mkdir -p %{buildroot}/opt
-mv /opt/manager %{buildroot}/opt/manager
+
+mkdir -p %{buildroot}%_agents_dir
+python ${RPM_SOURCE_DIR}/packaging/agents/copy_packages.py "${RPM_SOURCE_DIR}" "%{buildroot}%_agents_dir"
 
 
 %pre
@@ -38,4 +39,4 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 
 %files
-%attr(750,cfyuser,adm) /opt/manager/resources/packages/agents
+%attr(750,cfyuser,cfyuser) %_agents_dir
