@@ -3,6 +3,7 @@
 Name:           cloudify-manager-ip-setter
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
+BuildArch:      noarch
 Summary:        Cloudify Manager IP Setter
 Group:          Applications/Multimedia
 License:        Apache 2.0
