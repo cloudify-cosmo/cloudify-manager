@@ -10,7 +10,7 @@ Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  jre, rsync
-Requires:       logstash, jre, postgresql-jdbc
+Requires:       logstash, jre, postgresql94-jdbc
 
 Source0:        http://repository.cloudifysource.org/cloudify/components/logstash-output-jdbc-0.2.10.gem
 Source1:        http://repository.cloudifysource.org/cloudify/components/logstash-filter-json_encode-0.1.5.gem
