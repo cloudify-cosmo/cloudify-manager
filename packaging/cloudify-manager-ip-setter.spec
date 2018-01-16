@@ -11,9 +11,6 @@ URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-Requires:       riemann, daemonize
-Requires:       cloudify-rest-service
-
 
 %description
 Utility to configure the manager IP address when bringing up a new image-based instance
