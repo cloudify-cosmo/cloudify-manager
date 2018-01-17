@@ -38,7 +38,7 @@ cp -R /opt/logstash %{buildroot}/opt/logstash
 # move & edit init script
 mkdir -p %{buildroot}/etc/init.d
 cp /etc/init.d/logstash %{buildroot}/etc/init.d
-sed -i 's:sysconfig/\$name:sysconfig/cloudify-$name:' %{buildroot}/etc/init.d/logstash
+sed -i 's:sysconfig/\$name:sysconfig/cloudify-$name:g' %{buildroot}/etc/init.d/logstash
 
 # Create the log dir
 mkdir -p %{buildroot}/var/log/cloudify/%_user
