@@ -52,16 +52,48 @@ mkdir -p %{buildroot}/var/lib/logstash
 cp -R ${RPM_SOURCE_DIR}/packaging/logstash/files/* %{buildroot}
 
 
+%pre
+
+# create logstash group
+if ! getent group logstash >/dev/null; then
+  groupadd -r logstash
+fi
+
+# create logstash user
+if ! getent passwd logstash >/dev/null; then
+  useradd -r -g logstash -d /opt/logstash \
+    -s /sbin/nologin -c "logstash" logstash
+fi
+
+
+%post
+/sbin/chkconfig --add logstash
+
+
+%preun
+if [ $1 -eq 0 ]; then
+  /sbin/service logstash stop >/dev/null 2>&1 || true
+  /sbin/chkconfig --del logstash
+  if getent passwd logstash >/dev/null ; then
+    userdel logstash
+  fi
+
+  if getent group logstash > /dev/null ; then
+    groupdel logstash
+  fi
+fi
+
+
 %files
 
 /etc/init.d/logstash
 /etc/logrotate.d/cloudify-logstash
 /etc/sysconfig/cloudify-logstash
 
-/opt/logstash
+%attr(-,%_user,%_user) /opt/logstash
 /opt/logstash_NOTICE.txt
 
 /usr/lib/systemd/system/logstash.service.d/restart.conf
 
-/var/lib/logstash
+%attr(-,%_user,%_user) /var/lib/logstash
 %attr(750,%_user,adm) /var/log/cloudify/%_user
