@@ -18,6 +18,9 @@ Source1:        http://repository.cloudifysource.org/cloudify/components/logstas
 
 %define _user logstash
 
+# Work around lurking stale hashbangs from logstash's build process
+%define __requires_exclude ^/home/jenkins/.*
+
 
 %description
 Cloudify's logstash plugins and configuration
