@@ -114,6 +114,7 @@ jobs:
           parallel --results logs $builder{} ::: \
               cloudify-rest-service.spec \
               cloudify-logstash.spec \
+              cloudify-manager-ip-setter.spec \
               cloudify-mgmtworker.spec \
               cloudify-rabbitmq.spec \
               cloudify-riemann.spec
