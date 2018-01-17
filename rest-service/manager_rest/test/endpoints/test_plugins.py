@@ -26,6 +26,8 @@ from .test_utils import generate_progress_func
 
 TEST_PACKAGE_NAME = 'cloudify-script-plugin'
 TEST_PACKAGE_VERSION = '1.2'
+TEST_PACKAGE_NAME2 = 'requests'
+TEST_PACKAGE_VERSION2 = '2.13.0'
 OLD_TEST_PACKAGE_VERSION = '1.1'
 
 
@@ -265,3 +267,13 @@ class PluginsTest(BaseServerTestCase):
         finally:
             self.quiet_delete(tmp_file_path)
             self.quiet_delete(tmp_local_path)
+
+    @attr(client_min_version=3,
+          client_max_version=base_test.LATEST_API_VERSION)
+    def test_caravan_upload(self):
+        self.upload_caravan(
+            {TEST_PACKAGE_NAME: TEST_PACKAGE_VERSION,
+             TEST_PACKAGE_NAME2: TEST_PACKAGE_VERSION2}
+        )
+        plugins_list = self.client.plugins.list()
+        self.assertEqual(len(plugins_list), 2)
