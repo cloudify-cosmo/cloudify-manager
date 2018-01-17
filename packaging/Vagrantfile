@@ -34,30 +34,6 @@ Vagrant.configure('2') do |config|
     builder.vm.provider :virtualbox
   end
 
-  config.vm.define "restservice" do |rest|
-    #dummy box, will be overriden
-    rest.vm.box = "dummy"
-    rest.vm.box_url = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
-    rest.vm.provider :aws do |aws, override|
-      aws.access_key_id = AWS_ACCESS_KEY_ID
-      aws.secret_access_key = AWS_ACCESS_KEY
-      aws.ami = "ami-6ebc3d17"
-      aws.region = "eu-west-1"
-      aws.instance_type = "m3.medium"
-      aws.keypair_name = "vagrant_build"
-      override.ssh.username = "ec2-user"
-      override.ssh.private_key_path = "~/.ssh/aws/vagrant_build.pem"
-      override.nfs.functional = false
-      aws.tags = { "Name" => "vagrant rest 7.0 build" }
-      aws.security_groups = "vagrant_linux_build"
-    end
-    rest.vm.provision "shell" do |s|
-      s.path = "restservice/provision.sh"
-      s.args = "#{AWS_ACCESS_KEY_ID} #{AWS_ACCESS_KEY} #{REPO} #{GITHUB_USERNAME} #{GITHUB_PASSWORD}"
-      s.privileged = false
-    end
-  end
-
   config.vm.define "mgmtworker" do |mgmtworker|
     #dummy box, will be overriden
     mgmtworker.vm.box = "dummy"
