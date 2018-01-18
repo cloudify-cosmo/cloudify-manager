@@ -5,7 +5,7 @@ Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
 Summary:        Cloudify's Logstash
 Group:          Applications/Multimedia
 License:        Apache 2.0
-URL:            https://github.com/cloudify-cosmo/cloudify-amqp-influxdb
+URL:            https://github.com/cloudify-cosmo/cloudify-manager
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
