@@ -32,6 +32,8 @@ Vagrant.configure('2') do |config|
     builder.vm.box = "centos/7"
     builder.vm.provider :libvirt
     builder.vm.provider :virtualbox
+
+    builder.vm.synced_folder '.', '/vagrant', disabled: true
   end
 
   config.vm.define "restservice" do |rest|
