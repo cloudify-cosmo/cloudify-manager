@@ -9,7 +9,7 @@ URL:            https://github.com/cloudify-cosmo/cloudify-amqp-influxdb
 Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
-BuildRequires:  jre, rsync, logstash
+BuildRequires:  jre, rsync, logstash = 1.5.0
 Requires:       jre, postgresql94-jdbc
 Conflicts:      logstash
 
