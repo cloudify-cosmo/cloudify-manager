@@ -15,6 +15,7 @@
 
 import os
 import json
+import tarfile
 import uuid
 
 import wagon
@@ -57,7 +58,7 @@ from manager_rest.constants import (CONVENTION_APPLICATION_BLUEPRINT_FILE,
 
 class UploadedDataManager(object):
 
-    def receive_uploaded_data(self, data_id, **kwargs):
+    def receive_uploaded_data(self, data_id=None, **kwargs):
         file_server_root = config.instance.file_server_root
         resource_target_path = tempfile.mktemp(dir=file_server_root)
         try:
@@ -725,6 +726,113 @@ class UploadedPluginsManager(UploadedDataManager):
         #         'the provided wagon can not be read.')
 
         return wagon.show(wagon_source)
+
+
+class UploadedCaravanManager(UploadedPluginsManager):
+    class InvalidCaravanException(Exception):
+        pass
+
+    class Caravan(object):
+        def __init__(self, caravan_path):
+            self._caravan_path = caravan_path
+            self._tempdir = tempfile.mkdtemp()
+            self._cvn_dir = self._extract(self._caravan_path, self._tempdir)
+            self._metadata = self._get_metadata(self._cvn_dir)
+
+        @property
+        def root_dir(self):
+            return self._cvn_dir
+
+        @staticmethod
+        def _get_metadata(path):
+            try:
+                with open(os.path.join(path, 'METADATA')) as metadata_file:
+                    metadata = yaml.load(metadata_file)
+            except Exception:
+                raise UploadedCaravanManager.InvalidCaravanException(
+                    'Failed to get caravan metadata'
+                )
+            return metadata
+
+        @property
+        def metadata(self):
+            return self._metadata
+
+        def __iter__(self):
+            for wgn_path, yaml_path in self._metadata.iteritems():
+                yield os.path.join(self._cvn_dir, wgn_path), \
+                      os.path.join(self._cvn_dir, yaml_path)
+
+        def __getitem__(self, item):
+            return os.path.join(self._cvn_dir, self._metadata[item])
+
+        @staticmethod
+        def _extract(src, dest):
+            try:
+                tarfile_ = tarfile.open(name=src)
+            except tarfile.ReadError:
+                raise UploadedCaravanManager.InvalidCaravanException(
+                    'Failed to load caravan file'
+                )
+            try:
+                # Get the top level dir
+                root_dir = tarfile_.getmembers()[0]
+                tarfile_.extractall(path=dest, members=tarfile_.getmembers())
+            finally:
+                tarfile_.close()
+            return os.path.join(dest, root_dir.path)
+
+    def _get_kind(self):
+        return 'caravan'
+
+    def receive_uploaded_data(self, data_id=None, **kwargs):
+        file_server_root = config.instance.file_server_root
+        resource_target_path = tempfile.mktemp(dir=file_server_root)
+        try:
+            self._save_file_locally_and_extract_inputs(
+                    resource_target_path,
+                    self._get_data_url_key(),
+                    self._get_kind())
+            plugins = self._prepare_and_process_doc(
+                file_server_root,
+                resource_target_path,
+                **kwargs)
+            docs = []
+            for doc, plugin_dir in plugins:
+                self._move_archive_to_uploaded_dir(
+                    doc.id,
+                    file_server_root,
+                    plugin_dir,
+                )
+                docs.append(doc)
+
+            return docs, 201
+        finally:
+            remove(resource_target_path)
+
+    def _prepare_and_process_doc(self,
+                                 file_server_root,
+                                 archive_target_path,
+                                 **kwargs):
+        plugins = []
+        caravan_ = self.Caravan(archive_target_path)
+        for wgn_path, _ in caravan_:
+            files_dir = os.path.dirname(wgn_path)
+            archive_path = shutil.make_archive(
+                os.path.join(caravan_.root_dir, os.path.basename(files_dir)),
+                'zip',
+                files_dir)
+
+            new_plugin, _ = \
+                super(UploadedCaravanManager, self)._prepare_and_process_doc(
+                    str(uuid.uuid4()),
+                    file_server_root,
+                    archive_path,
+                    **kwargs
+                )
+            plugins.append((new_plugin, files_dir))
+
+        return plugins
 
 
 class UploadARIAServiceTemplateManager(UploadedBlueprintsManager):

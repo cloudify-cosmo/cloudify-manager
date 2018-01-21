@@ -12,7 +12,7 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-
+import tarfile
 import unittest
 import json
 import urllib
@@ -328,6 +328,39 @@ class BaseServerTestCase(unittest.TestCase):
 
         return url
 
+    # this method is completely copied from the cli. once caravan sits in a
+    # more general package, it should be removed.
+    @staticmethod
+    def _create_caravan(mappings, dest, name=None):
+        tempdir = tempfile.mkdtemp()
+        metadata = {}
+
+        for wgn_path, yaml_path in mappings.iteritems():
+            plugin_root_dir = os.path.basename(wgn_path).split('.', 1)[0]
+            os.mkdir(os.path.join(tempdir, plugin_root_dir))
+
+            dest_wgn_path = os.path.join(plugin_root_dir,
+                                         os.path.basename(wgn_path))
+            dest_yaml_path = os.path.join(plugin_root_dir,
+                                          os.path.basename(yaml_path))
+
+            shutil.copy(wgn_path, os.path.join(tempdir, dest_wgn_path))
+            shutil.copy(yaml_path, os.path.join(tempdir, dest_yaml_path))
+            metadata[dest_wgn_path] = dest_yaml_path
+
+        with open(os.path.join(tempdir, 'METADATA'), 'w+') as f:
+            yaml.dump(metadata, f)
+
+        tar_name = name or 'palace'
+        tar_path = os.path.join(dest, '{0}.cvn'.format(tar_name))
+        tarfile_ = tarfile.open(tar_path, 'w:gz')
+        try:
+            tarfile_.add(tempdir, arcname=tar_name)
+        finally:
+            tarfile_.close()
+
+        return tar_path
+
     def post(self, resource_path, data, query_params=None):
         url = self._version_url(resource_path)
         result = self.app.post(urllib.quote(url),
@@ -493,12 +526,17 @@ class BaseServerTestCase(unittest.TestCase):
                                 blueprint_response['message']))
         return blueprint_response
 
-    def upload_plugin(self, package_name, package_version):
+    def _create_wagon_and_yaml(self, package_name, package_version):
         temp_file_path = self.create_wheel(package_name, package_version)
         yaml_path = self.get_full_path('mock_blueprint/plugin.yaml')
-        zip_path = self.zip_files([temp_file_path, yaml_path])
+        return temp_file_path, yaml_path
+
+    def upload_plugin(self, package_name, package_version):
+        wgn_path, yaml_path = self._create_wagon_and_yaml(package_name,
+                                                          package_version)
+        zip_path = self.zip_files([wgn_path, yaml_path])
         response = self.post_file('/plugins', zip_path)
-        os.remove(temp_file_path)
+        os.remove(wgn_path)
         return response
 
     def zip_files(self, files):
@@ -527,6 +565,17 @@ class BaseServerTestCase(unittest.TestCase):
             archive_destination_dir=tempfile.gettempdir(),
             force=True
         )
+
+    def upload_caravan(self, packages):
+        mapping = dict(
+            self._create_wagon_and_yaml(package, version)
+            for package, version in packages.items()
+        )
+
+        caravan_path = self._create_caravan(mapping, tempfile.gettempdir())
+        response = self.post_file('/plugins', caravan_path)
+        os.remove(caravan_path)
+        return response
 
     def wait_for_url(self, url, timeout=5):
         end = time.time() + timeout
