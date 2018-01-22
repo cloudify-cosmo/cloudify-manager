@@ -91,8 +91,8 @@ class Plugin(SQLResourceBase):
         return yaml_files[0] if yaml_files else None
 
     def _yaml_file_name(self):
-        path = self.yaml_file_path()
-        return path.basename(path) if path else ''
+        yaml_path = self.yaml_file_path()
+        return path.basename(yaml_path) if yaml_path else ''
 
     @property
     def file_server_path(self):

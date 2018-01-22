@@ -441,6 +441,10 @@ class PluginInstallationTimeout(ManagerException):
         )
 
 
+class PluginDistributionNotSupported(PluginInstallationError):
+    pass
+
+
 class ExecutionFailure(RuntimeError):
     pass
 
