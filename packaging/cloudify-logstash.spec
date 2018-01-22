@@ -10,11 +10,12 @@ Vendor:         Cloudify Platform Ltd.
 Packager:       Cloudify Platform Ltd.
 
 BuildRequires:  jre, rsync, logstash = 1:1.5.0
-Requires:       jre, postgresql94-jdbc
+Requires:       jre
 Conflicts:      logstash
 
-Source0:        http://repository.cloudifysource.org/cloudify/components/logstash-output-jdbc-0.2.10.gem
-Source1:        http://repository.cloudifysource.org/cloudify/components/logstash-filter-json_encode-0.1.5.gem
+Source0:        http://repository.cloudifysource.org/cloudify/components/postgresql-9.4.1212.jar
+Source1:        http://repository.cloudifysource.org/cloudify/components/logstash-output-jdbc-0.2.10.gem
+Source2:        http://repository.cloudifysource.org/cloudify/components/logstash-filter-json_encode-0.1.5.gem
 
 %define _user logstash
 
@@ -30,7 +31,6 @@ Cloudify's logstash plugins and configuration
 
 /opt/logstash/bin/plugin install ${RPM_SOURCE_DIR}/*.gem
 
-
 # Copy entire logstash install
 mkdir %{buildroot}/opt
 cp -R /opt/logstash %{buildroot}/opt/logstash
@@ -45,6 +45,11 @@ mkdir -p %{buildroot}/var/log/cloudify/%_user
 
 # Create var dir
 mkdir -p %{buildroot}/var/lib/logstash
+
+# Copy postgresql-jdbc jar into place
+%define _jdbc_dir %{buildroot}/opt/logstash/vendor/jar/jdbc
+mkdir -p %_jdbc_dir
+cp "%{S:0}" %{_jdbc_dir}/postgresql94-jdbc.jar
 
 # Copy static files into place. In order to have files in /packaging/files
 # actually included in the RPM, they must have an entry in the %files
