@@ -81,14 +81,18 @@ class Plugin(SQLResourceBase):
     uploaded_at = db.Column(UTCDateTime, nullable=False, index=True)
     wheels = db.Column(db.PickleType, nullable=False)
 
-    def _yaml_file_name(self):
+    def yaml_file_path(self):
         plugin_dir = path.join(config.instance.file_server_root,
                                FILE_SERVER_PLUGINS_FOLDER,
                                self.id)
         if not path.isdir(plugin_dir):
-            return ''
+            return None
         yaml_files = files_in_folder(plugin_dir, '*.yaml')
-        return path.basename(yaml_files[0]) if yaml_files else ''
+        return yaml_files[0] if yaml_files else None
+
+    def _yaml_file_name(self):
+        path = self.yaml_file_path()
+        return path.basename(path) if path else ''
 
     @property
     def file_server_path(self):
