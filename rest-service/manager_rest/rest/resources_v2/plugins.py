@@ -30,6 +30,7 @@ from manager_rest.rest import (
     rest_decorators,
     rest_utils,
 )
+from manager_rest.rest.responses_v2 import ListResponse
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
@@ -68,6 +69,7 @@ class Plugins(SecuredResource):
         """
         List uploaded plugins
         """
+
         return get_storage_manager().list(
             models.Plugin,
             include=_include,
@@ -109,11 +111,10 @@ class Plugins(SecuredResource):
         """
         Upload a plugin
         """
-        is_caravan = False
+        storage_manager = get_storage_manager()
+        code = None
         try:
-            plugins, code = \
-                UploadedCaravanManager().receive_uploaded_data(**kwargs)
-            is_caravan = True
+            plugins = UploadedCaravanManager().receive_uploaded_data(**kwargs)
         except UploadedCaravanManager.InvalidCaravanException:
             plugin, code = UploadedPluginsManager().receive_uploaded_data(
                 str(uuid4()),
@@ -130,14 +131,20 @@ class Plugins(SecuredResource):
                 .format(tp.__name__, ex)), None, tb
         except Exception:
             for plugin in plugins:
-                get_resource_manager().remove_plugin(
-                    plugin_id=plugin.id, force=True)
+                get_resource_manager().remove_plugin(plugin_id=plugin.id,
+                                                     force=True)
             tp, ex, tb = sys.exc_info()
             raise manager_exceptions.PluginInstallationError(
                 'Failed during plugin installation. ({0}: {1})'
                 .format(tp.__name__, ex)), None, tb
 
-        return plugins if is_caravan else plugins[0], code
+        if code is None:
+            storage_plugins = storage_manager.list(
+                models.Plugin, filters={'id': [p.id for p in plugins]})
+            return ListResponse(items=storage_plugins.items,
+                                metadata=storage_plugins.metadata)
+        else:
+            return plugins[0], code
 
 
 class PluginsArchive(SecuredResource):

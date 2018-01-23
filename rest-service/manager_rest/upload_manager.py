@@ -806,7 +806,7 @@ class UploadedCaravanManager(UploadedPluginsManager):
                 )
                 docs.append(doc)
 
-            return docs, 201
+            return docs
         finally:
             remove(resource_target_path)
 
