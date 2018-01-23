@@ -1,7 +1,7 @@
 """<changes description>
 
 Revision ID: 3483e421713d
-Revises: 1c25381cac6c
+Revises: 784a82cec07a
 Create Date: 2017-12-27 12:29:26.302823
 
 """
@@ -10,7 +10,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '3483e421713d'
-down_revision = '1c25381cac6c'
+down_revision = '784a82cec07a'
 branch_labels = None
 depends_on = None
 
