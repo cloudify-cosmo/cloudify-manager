@@ -112,9 +112,11 @@ class Plugins(SecuredResource):
         Upload a plugin
         """
         storage_manager = get_storage_manager()
-        code = None
+        is_caravan = False
         try:
-            plugins = UploadedCaravanManager().receive_uploaded_data(**kwargs)
+            plugins, code = UploadedCaravanManager().receive_uploaded_data(
+                **kwargs)
+            is_caravan = True
         except UploadedCaravanManager.InvalidCaravanException:
             plugin, code = UploadedPluginsManager().receive_uploaded_data(
                 str(uuid4()),
@@ -138,11 +140,11 @@ class Plugins(SecuredResource):
                 'Failed during plugin installation. ({0}: {1})'
                 .format(tp.__name__, ex)), None, tb
 
-        if code is None:
+        if is_caravan:
             storage_plugins = storage_manager.list(
                 models.Plugin, filters={'id': [p.id for p in plugins]})
             return ListResponse(items=storage_plugins.items,
-                                metadata=storage_plugins.metadata)
+                                metadata=storage_plugins.metadata), code
         else:
             return plugins[0], code
 
