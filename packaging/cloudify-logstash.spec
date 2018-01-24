@@ -58,38 +58,9 @@ cp -R ${RPM_SOURCE_DIR}/packaging/logstash/files/* %{buildroot}
 
 
 %pre
-# This section imported from logstash 1:1.5.0-1 RPM
 
-# create logstash group
-if ! getent group logstash >/dev/null; then
-  groupadd -r logstash
-fi
-
-# create logstash user
-if ! getent passwd logstash >/dev/null; then
-  useradd -r -g logstash -d /opt/logstash \
-    -s /sbin/nologin -c "logstash" logstash
-fi
-
-
-%post
-# This section imported from logstash 1:1.5.0-1 RPM
-/sbin/chkconfig --add logstash
-
-
-%preun
-# This section imported from logstash 1:1.5.0-1 RPM
-if [ $1 -eq 0 ]; then
-  /sbin/service logstash stop >/dev/null 2>&1 || true
-  /sbin/chkconfig --del logstash
-  if getent passwd logstash >/dev/null ; then
-    userdel logstash
-  fi
-
-  if getent group logstash > /dev/null ; then
-    groupdel logstash
-  fi
-fi
+groupadd -fr %_user
+getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbin/nologin %_user
 
 
 %files
