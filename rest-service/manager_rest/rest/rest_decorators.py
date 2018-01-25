@@ -137,17 +137,27 @@ class marshal_with(object):
 
             response = f(*args, **kwargs)
 
-            if isinstance(response, ListResponse):
+            def wrap_list_items(response):
                 wrapped_items = self.wrap_with_response_object(response.items)
                 response.items = marshal(wrapped_items, fields_to_include)
-                return marshal(response, ListResponse.resource_fields)
+                return response
+
+            if isinstance(response, ListResponse):
+                return marshal(wrap_list_items(response),
+                               ListResponse.resource_fields)
             # SQLAlchemy returns a class that subtypes tuple, but acts
             # differently (it's taken care of in `wrap_with_response_object`)
             if isinstance(response, tuple) and \
                     not isinstance(response, sql_alchemy_collection):
                 data, code, headers = unpack(response)
-                data = self.wrap_with_response_object(data)
-                return marshal(data, fields_to_include), code, headers
+                if isinstance(data, ListResponse):
+                    data = wrap_list_items(data)
+                    return (marshal(data, ListResponse.resource_fields),
+                            code,
+                            headers)
+                else:
+                    data = self.wrap_with_response_object(data)
+                    return marshal(data, fields_to_include), code, headers
             else:
                 response = self.wrap_with_response_object(response)
                 return marshal(response, fields_to_include)
