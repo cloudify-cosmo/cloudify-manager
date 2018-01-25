@@ -122,8 +122,8 @@ class MiscManagerTest(AgentlessTestCase):
                     self.assertFalse(exists(compressed_log_path))
                 elif rotation == 1:
                     self.logger.info(
-                        'Verifying rotated log exists: {0}...'.format(
-                            rotated_log_path))
+                        'Verifying rotated log exists: {0}... {1}'.format(
+                            rotated_log_path, exists(rotated_log_path)))
                     self.assertTrue(exists(rotated_log_path))
                 else:
                     self.logger.info(
