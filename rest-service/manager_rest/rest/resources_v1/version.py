@@ -32,7 +32,7 @@ def get_version():
 
 
 def get_version_data():
-    version = ''
+    version = get_version()
     try:
         pckg = pkg_resources.get_distribution('cloudify-premium')
         edition = 'premium'
@@ -43,6 +43,8 @@ def get_version_data():
             rpm_info = subprocess.check_output(['rpm', '-q', 'cloudify'])
             version = rpm_info.split('-')[1]
         except subprocess.CalledProcessError:
+            pass
+        except OSError:
             pass
 
     return {
