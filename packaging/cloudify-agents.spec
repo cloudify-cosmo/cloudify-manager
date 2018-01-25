@@ -47,3 +47,6 @@ getent passwd cfyuser >/dev/null || useradd -r -g cfyuser -d /etc/cloudify -s /s
 
 %files
 %attr(750,cfyuser,cfyuser) %_agents_dir
+%dir /opt/manager
+%dir /opt/manager/resources
+%dir /opt/manager/resources/packages
