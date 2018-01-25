@@ -15,9 +15,9 @@
 #
 
 import pkg_resources
+import subprocess
 from flask_restful_swagger import swagger
 
-from manager_rest import config
 from manager_rest.rest import responses
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -32,9 +32,24 @@ def get_version():
 
 
 def get_version_data():
+    version = get_version()
+    try:
+        pckg = pkg_resources.get_distribution('cloudify-premium')
+        edition = 'premium'
+        version = pckg.version
+    except pkg_resources.DistributionNotFound:
+        edition = 'community'
+        try:
+            rpm_info = subprocess.check_output(['rpm', '-q', 'cloudify'])
+            version = rpm_info.split('-')[1]
+        except subprocess.CalledProcessError:
+            pass
+        except OSError:
+            pass
+
     return {
-        'version': get_version(),
-        'edition': config.instance.edition
+        'version': version,
+        'edition': edition
     }
 
 
