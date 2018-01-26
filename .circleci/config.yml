@@ -116,6 +116,7 @@ jobs:
               cloudify-logstash.spec \
               cloudify-manager-ip-setter.spec \
               cloudify-mgmtworker.spec \
+              cloudify-agents.spec \
               cloudify-rabbitmq.spec \
               cloudify-riemann.spec
       - run: mkdir result
