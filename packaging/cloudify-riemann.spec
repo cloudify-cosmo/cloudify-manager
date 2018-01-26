@@ -46,7 +46,7 @@ getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbi
 /etc/logrotate.d/cloudify-riemann
 /etc/riemann/conf.d/manager.config
 /etc/riemann/main.clj
-/opt/lib/langohr.jar
+/opt/lib
 /opt/manager/scripts/activate_riemann_policies
 /opt/riemann_NOTICE.txt
 /usr/lib/systemd/system/cloudify-riemann.service
