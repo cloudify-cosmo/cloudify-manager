@@ -72,7 +72,7 @@ getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbi
 %attr(-,%_user,%_user) /opt/logstash
 /opt/logstash_NOTICE.txt
 
-/usr/lib/systemd/system/logstash.service.d/restart.conf
+/usr/lib/systemd/system/logstash.service.d
 
 %attr(-,%_user,%_user) /var/lib/logstash
 %attr(750,%_user,adm) /var/log/cloudify/%_user
