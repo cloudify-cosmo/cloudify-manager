@@ -1,4 +1,6 @@
-/var/log/cloudify/riemann/*.log {
+/var/log/cloudify/logstash/*.log
+/var/log/cloudify/logstash/*.err
+/var/log/cloudify/logstash/*.stdout {
         hourly
         rotate 7
         size 100M
@@ -7,4 +9,4 @@
         delaycompress
         missingok
         notifempty
-        }
+}

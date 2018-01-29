@@ -30,13 +30,17 @@ from manager_rest.rest import (
     rest_decorators,
     rest_utils,
 )
+from manager_rest.rest.responses_v2 import ListResponse
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import (
     get_storage_manager,
     models,
 )
-from manager_rest.upload_manager import UploadedPluginsManager
+from manager_rest.upload_manager import (
+    UploadedPluginsManager,
+    UploadedCaravanManager,
+)
 from manager_rest.utils import create_filter_params_list_description
 from manager_rest.constants import (FILE_SERVER_RESOURCES_FOLDER,
                                     FILE_SERVER_PLUGINS_FOLDER)
@@ -65,6 +69,7 @@ class Plugins(SecuredResource):
         """
         List uploaded plugins
         """
+
         return get_storage_manager().list(
             models.Plugin,
             include=_include,
@@ -106,25 +111,42 @@ class Plugins(SecuredResource):
         """
         Upload a plugin
         """
-        plugin, code = UploadedPluginsManager().receive_uploaded_data(
-            str(uuid4()),
-            **kwargs
-        )
+        storage_manager = get_storage_manager()
+        is_caravan = False
         try:
-            get_resource_manager().install_plugin(plugin)
+            plugins, code = UploadedCaravanManager().receive_uploaded_data(
+                **kwargs)
+            is_caravan = True
+        except UploadedCaravanManager.InvalidCaravanException:
+            plugin, code = UploadedPluginsManager().receive_uploaded_data(
+                str(uuid4()),
+                **kwargs
+            )
+            plugins = [plugin]
+        try:
+            for plugin in plugins:
+                get_resource_manager().install_plugin(plugin)
         except manager_exceptions.ExecutionTimeout:
             tp, ex, tb = sys.exc_info()
             raise manager_exceptions.PluginInstallationTimeout(
                 'Timed out during plugin installation. ({0}: {1})'
                 .format(tp.__name__, ex)), None, tb
         except Exception:
-            get_resource_manager().remove_plugin(
-                plugin_id=plugin.id, force=True)
+            for plugin in plugins:
+                get_resource_manager().remove_plugin(plugin_id=plugin.id,
+                                                     force=True)
             tp, ex, tb = sys.exc_info()
             raise manager_exceptions.PluginInstallationError(
                 'Failed during plugin installation. ({0}: {1})'
                 .format(tp.__name__, ex)), None, tb
-        return plugin, code
+
+        if is_caravan:
+            storage_plugins = storage_manager.list(
+                models.Plugin, filters={'id': [p.id for p in plugins]})
+            return ListResponse(items=storage_plugins.items,
+                                metadata=storage_plugins.metadata), code
+        else:
+            return plugins[0], code
 
 
 class PluginsArchive(SecuredResource):

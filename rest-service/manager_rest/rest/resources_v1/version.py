@@ -15,6 +15,7 @@
 #
 
 import pkg_resources
+import subprocess
 from flask_restful_swagger import swagger
 
 from manager_rest import premium_enabled
@@ -36,8 +37,17 @@ def get_edition():
 
 
 def get_version_data():
+    version = get_version()
+    if not premium_enabled:
+        try:
+            rpm_info = subprocess.check_output(['rpm', '-q', 'cloudify'])
+        except (subprocess.CalledProcessError, OSError):
+            pass
+        else:
+            version = rpm_info.split('-')[1]
+
     return {
-        'version': get_version(),
+        'version': version,
         'edition': get_edition(),
     }
 

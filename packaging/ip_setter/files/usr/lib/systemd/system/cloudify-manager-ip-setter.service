@@ -1,0 +1,14 @@
+[Unit]
+Description=Cloudify Manager IP Setter
+Before=cloudify-amqpinflux.service cloudify-influxdb.service cloudify-mgmtworker.service cloudify-restservice.service cloudify-riemann.service cloudify-stage.service nginx.service cloudify-rabbitmq.service logstash.service
+After=network-online.target
+
+[Service]
+Type=oneshot
+TimeoutStartSec=0
+User=root
+Group=root
+ExecStart=/opt/cloudify/manager-ip-setter/manager-ip-setter.sh
+
+[Install]
+WantedBy=default.target

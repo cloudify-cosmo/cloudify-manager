@@ -81,8 +81,8 @@ def main(args):
     chdir(source)
     sources = get_sources(spec_file)
     sources += get_dependency_urls(spec_file)
-    logger.info(sources)
     for url in sources:
+        logger.info('checking %s', url)
         download_if_newer(url)
 
     chdir(SCRIPT_DIR)
@@ -110,11 +110,11 @@ def build(source, spec_file_name):
 
     # Build .src.rpm
     check_call(
-            MOCK + ['--buildsrpm',
-             '--spec', rendered_spec_file,
-             '--sources', source,
-             ]
-            )
+            MOCK + [
+                '--buildsrpm',
+                '--spec', rendered_spec_file,
+                '--sources', source,
+            ])
     # Extract the .src.rpm file name.
     for f in listdir(RESULT_DIR):
         if f.endswith('.src.rpm'):
@@ -130,8 +130,9 @@ def build(source, spec_file_name):
     # Here we work around that assumption by changing the onwership of /opt
     # inside the CHROOT to the mockbuild user
     check_call(
-            MOCK + ['--verbose', '--chroot', '--',
-            'chown', '-R', 'mockbuild', '/opt'
+            MOCK + [
+                '--verbose', '--chroot', '--',
+                'chown', '-R', 'mockbuild', '/opt'
             ])
     # Build the RPM
     check_call(MOCK + ['--verbose', '--no-clean', src_rpm])
@@ -165,15 +166,15 @@ def build_in_vagrant(source, spec_file_name):
         for local, remote in (
                 (source, 'source'),
                 (SCRIPT_DIR + '/', 'build_script')):
-            check_call(
-                    ['rsync', '-avz',
-                     '-e', 'ssh -F {}'.format(SSH_CONFIG_FILE),
-                     '--exclude', '.git',
-                     '--exclude', '*.sw[op]',  # vim swap files
-                     '--delete', '--delete-excluded',
-                     local,
-                     'builder:' + remote,
-                     ])
+            check_call([
+                'rsync', '-avz',
+                '-e', 'ssh -F {}'.format(SSH_CONFIG_FILE),
+                '--exclude', '.git',
+                '--exclude', '*.sw[op]',  # vim swap files
+                '--delete', '--delete-excluded',
+                local,
+                'builder:' + remote,
+                ])
 
         source = path_join('source', basename(source))
 
@@ -345,6 +346,8 @@ def check_mock_config():
     options = [
         "config_opts['rpmbuild_networking'] = True",
         "config_opts['macros']['%dist'] = '.el7'",
+        "config_opts['plugin_conf']['yum_cache_opts']['target_dir'] = "
+        "'/var/cache/%(package_manager)s'",
     ]
     missing = []
 
@@ -393,7 +396,7 @@ def download_if_newer(url, outfile=None):
             else:
                 raise
         with open(outfile, 'wb') as out:
-            print('writing', outfile)
+            logger.info('writing %s', outfile)
             out.write(f.read())
     finally:
         f.close()

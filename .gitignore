@@ -51,4 +51,11 @@ riemann.log
 # vim
 *.swp
 
+# rpm/mock build stuff
 *.rendered.spec
+*.rpm
+*.gem
+*.jar
+*.tar.gz
+*.exe
+.vagrant/

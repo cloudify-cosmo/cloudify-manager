@@ -37,6 +37,7 @@ STAGE_BASE_FOLDER = '/opt/cloudify-stage'
 STAGE_CONFIG_FOLDER = 'conf'
 STAGE_WIDGETS_FOLDER = 'dist/widgets'
 STAGE_TEMPLATES_FOLDER = 'dist/templates'
+STAGE_USERDATA_FOLDER = 'dist/userData'
 STAGE_USER = 'stage_user'
 # created during bootstrap
 STAGE_RESTORE_SCRIPT = '/opt/cloudify/stage/restore-snapshot.py'

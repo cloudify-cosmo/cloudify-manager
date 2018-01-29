@@ -53,8 +53,9 @@ class FileServerAuth(SecuredResource):
         # the header
         for resource in tenanted_resources:
             if uri.startswith(resource):
-                uri = uri.replace(resource, '', 1).strip('/')
-                uri_tenant, _ = uri.split('/', 1)
+                # Example of uri: 'blueprints/default_tenant/blueprint_1/
+                # scripts/configure.sh'
+                _, uri_tenant = uri.split('/', 2)[:2]
                 authenticator.authenticate(request)
 
                 # if it's global blueprint - no need or tenant verification
@@ -78,7 +79,7 @@ class FileServerAuth(SecuredResource):
     @staticmethod
     def _is_global_blueprint(uri):
         try:
-            resource, tenant, resource_id, _ = uri.split('/')
+            resource, tenant, resource_id = uri.split('/')[:3]
         except Exception:
             # in case of different format of file server uri
             return False
@@ -142,6 +143,11 @@ class LdapAuthentication(SecuredResource):
 
         ldap_config.pop('ldap_password')
         return ldap_config
+
+    @rest_decorators.exceptions_handled
+    @authorize('ldap_status_get')
+    def get(self):
+        return 'enabled' if authenticator.ldap else 'disabled'
 
     @staticmethod
     def _only_admin_in_manager():
