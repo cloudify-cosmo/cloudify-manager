@@ -1,8 +1,8 @@
 plugins:
   cool:
     executor: central_deployment_agent
-    source: https://github.com/cloudify-cosmo/cloudify-cool-plugin/archive/7.7.7.zip
-    package_name: cloudify-cool-plugin
+    source: https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.2.zip
+    package_name: cloudify-script-plugin
 
 data_types:
 

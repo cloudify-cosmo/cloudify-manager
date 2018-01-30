@@ -15,6 +15,7 @@
 
 import os
 import uuid
+import yaml
 import shutil
 import traceback
 import itertools
@@ -189,20 +190,53 @@ class ResourceManager(object):
         )
         return execution
 
+    def _is_central_executor_plugin(self, plugin):
+        """Is the plugin using a central_deployment_agent executor?
+
+        Requires the caller to already make sure that the plugin
+        does have a yaml file.
+        """
+        with open(plugin.yaml_file_path()) as f:
+            plugin_yaml = yaml.safe_load(f)
+
+        plugins = plugin_yaml.get(constants.PLUGINS, {})
+        for plugin_spec in plugins.values():
+            if plugin_spec.get(constants.PLUGIN_PACKAGE_NAME) == \
+                    plugin.package_name:
+                return plugin_spec.get(constants.PLUGIN_EXECUTOR_KEY) == \
+                    constants.CENTRAL_DEPLOYMENT_AGENT
+
+        return False
+
     def install_plugin(self, plugin):
-        if utils.plugin_installable_on_current_platform(plugin):
-            self._execute_system_workflow(
-                wf_id='install_plugin',
-                task_mapping='cloudify_system_workflows.plugins.install',
-                execution_parameters={
-                    'plugin': {
-                        'name': plugin.package_name,
-                        'package_name': plugin.package_name,
-                        'package_version': plugin.package_version
-                    }
-                },
-                verify_no_executions=False,
-                timeout=300)
+        """Install the plugin if required.
+
+        The plugin will be installed if the declared platform/distro
+        is the same as the manager's.
+        If the yaml file is provided, it is additionally checked that
+        the plugin's executor is central_deployment_agent.
+        """
+        plugin_yaml_path = plugin.yaml_file_path()
+        if plugin_yaml_path and not self._is_central_executor_plugin(plugin):
+            return
+
+        if not utils.plugin_installable_on_current_platform(plugin):
+            raise manager_exceptions.PluginDistributionNotSupported(
+                'Plugin `{0}` is not supported for the manager platform '
+                'or distribution.'.format(plugin))
+
+        self._execute_system_workflow(
+            wf_id='install_plugin',
+            task_mapping='cloudify_system_workflows.plugins.install',
+            execution_parameters={
+                'plugin': {
+                    'name': plugin.package_name,
+                    'package_name': plugin.package_name,
+                    'package_version': plugin.package_version
+                }
+            },
+            verify_no_executions=False,
+            timeout=300)
 
     def remove_plugin(self, plugin_id, force):
         # Verify plugin exists and can be removed
