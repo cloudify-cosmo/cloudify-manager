@@ -34,7 +34,7 @@ def authenticate(func):
 
 def missing_premium_feature_abort(func):
     @wraps(func)
-    def abort():
+    def abort(*args, **kwargs):
         abort_error(
             error=MissingPremiumPackage(
                 'This feature exists only in the premium edition of Cloudify.'
