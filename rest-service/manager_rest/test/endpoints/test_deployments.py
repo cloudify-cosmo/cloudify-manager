@@ -445,7 +445,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             raise exceptions.AssertionError(
                 "Expected DeploymentPluginNotFound error")
         except DeploymentPluginNotFound, e:
-            self.assertEqual(412, e.status_code)
+            self.assertEqual(400, e.status_code)
             self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
                              ERROR_CODE,
                              e.error_code)
@@ -464,7 +464,7 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
             raise exceptions.AssertionError(
                 "Expected DeploymentPluginNotFound error")
         except DeploymentPluginNotFound, e:
-            self.assertEqual(412, e.status_code)
+            self.assertEqual(400, e.status_code)
             self.assertEqual(manager_exceptions.DeploymentPluginNotFound.
                              ERROR_CODE,
                              e.error_code)
@@ -527,8 +527,8 @@ class DeploymentsTestCase(base_test.BaseServerTestCase):
                             {'blueprint_id': id_})
         self.assertEqual('deployment_plugin_not_found',
                          response.json['error_code'])
-        self.assertEqual('412 PRECONDITION FAILED', response.status)
-        self.assertEqual(412, response.status_code)
+        self.assertEqual('400 BAD REQUEST', response.status)
+        self.assertEqual(400, response.status_code)
 
     @attr(client_min_version=1, client_max_version=3)
     def test_creation_success_when_plugin_not_found_central_deployment_agent(
