@@ -107,7 +107,6 @@ class TestSnapshot(AgentlessTestCase):
         finally:
             self._restore_security_config(self.workdir)
 
-
     def test_4_0_1_snapshot_with_deployment(self):
         """Restore a 4_0_1 snapshot with a deployment."""
         snapshot_path = self._get_snapshot('secretshot_4.0.1.zip')
