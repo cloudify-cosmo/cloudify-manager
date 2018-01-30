@@ -37,6 +37,11 @@ class TestSnapshot(AgentlessTestCase):
     SNAPSHOT_ID = '0'
     REST_SEC_CONFIG_PATH = '/opt/manager/rest-security.conf'
 
+    def setUp(self):
+        super(TestSnapshot, self).setUp()
+        self._save_security_config()
+        self.addCleanup(self._restore_security_config)
+
     def test_v_4_snapshot_restore_validation(self):
         snapshot = self._get_snapshot('snap_4.0.0.zip')
         self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
@@ -56,7 +61,6 @@ class TestSnapshot(AgentlessTestCase):
         )
 
     def test_v_4_2_restore_validation_networks(self):
-        self._save_security_config(self.workdir)
         snapshot = self._get_snapshot('snap_4.2.0_networks_validation.zip')
         self.client.snapshots.upload(snapshot, self.SNAPSHOT_ID)
         self._try_restore_snapshot(
@@ -64,7 +68,6 @@ class TestSnapshot(AgentlessTestCase):
             error_msg="Networks `[u\'new_network\']` do not appear "
                       "in the provider context",
         )
-        self._restore_security_config(self.workdir)
 
     def _try_restore_snapshot(self,
                               snapshot_id,
@@ -81,31 +84,24 @@ class TestSnapshot(AgentlessTestCase):
         self.assertEqual(execution.status, ExecutionState.FAILED)
 
     def test_4_2_snapshot_with_deployment(self):
-        # We keep the old security config, because the hash salt needs to be
-        # restored after the snapshot restore
-        self._save_security_config(self.workdir)
+        snapshot_path = self._get_snapshot('snap_4.2.0.zip')
+        self._upload_and_restore_snapshot(snapshot_path)
 
-        try:
-            snapshot_path = self._get_snapshot('snap_4.2.0.zip')
-            self._upload_and_restore_snapshot(snapshot_path)
-
-            # Now make sure all the resources really exist in the DB
-            self._assert_snapshot_restored(
-                blueprint_id='bp',
-                deployment_id='dep',
-                node_ids=['vm', 'http_web_server'],
-                node_instance_ids=[
-                    'vm_monryi',
-                    'http_web_server_qxx9t0'
-                ],
-                num_of_workflows=7,
-                num_of_inputs=4,
-                num_of_outputs=1,
-                num_of_executions=2,
-                num_of_events=4,
-            )
-        finally:
-            self._restore_security_config(self.workdir)
+        # Now make sure all the resources really exist in the DB
+        self._assert_snapshot_restored(
+            blueprint_id='bp',
+            deployment_id='dep',
+            node_ids=['vm', 'http_web_server'],
+            node_instance_ids=[
+                'vm_monryi',
+                'http_web_server_qxx9t0'
+            ],
+            num_of_workflows=7,
+            num_of_inputs=4,
+            num_of_outputs=1,
+            num_of_executions=2,
+            num_of_events=4,
+        )
 
     def test_4_0_1_snapshot_with_deployment(self):
         """Restore a 4_0_1 snapshot with a deployment."""
@@ -245,7 +241,6 @@ class TestSnapshot(AgentlessTestCase):
         Validate the conversion from the old column resource_availability to
         the new column visibility
         """
-        self._save_security_config(self.workdir)
         snapshot_name = 'snap_4.2.0_visibility_validation.zip'
         snapshot_path = self._get_snapshot(snapshot_name)
         self._upload_and_restore_snapshot(snapshot_path)
@@ -257,7 +252,6 @@ class TestSnapshot(AgentlessTestCase):
             blueprints[1]['visibility'] == 'tenant'
         assert blueprints[2]['id'] == 'blueprint_3' and \
             blueprints[2]['visibility'] == 'global'
-        self._restore_security_config(self.workdir)
 
     def _assert_snapshot_restored(self,
                                   blueprint_id,
@@ -419,12 +413,12 @@ class TestSnapshot(AgentlessTestCase):
                 )
         return execution
 
-    def _save_security_config(self, dir):
-        tmp_config_path = os.path.join(dir, 'rest-security.conf')
+    def _save_security_config(self):
+        tmp_config_path = os.path.join(self.workdir, 'rest-security.conf')
         docl.copy_file_from_manager(self.REST_SEC_CONFIG_PATH, tmp_config_path)
 
-    def _restore_security_config(self, dir):
-        tmp_config_path = os.path.join(dir, 'rest-security.conf')
+    def _restore_security_config(self):
+        tmp_config_path = os.path.join(self.workdir, 'rest-security.conf')
         docl.copy_file_to_manager(tmp_config_path,
                                   self.REST_SEC_CONFIG_PATH)
         docl.execute('chown cfyuser: {securityconf}'.format(
