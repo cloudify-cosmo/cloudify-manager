@@ -13,9 +13,9 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from flask import current_app, request
+from flask import request
 
-from manager_rest import config, utils
+from manager_rest import config, premium_enabled, utils
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -162,7 +162,7 @@ class LdapAuthentication(SecuredResource):
         if not self._only_admin_in_manager():
             raise MethodNotAllowedError('LDAP Configuration may be set only on'
                                         ' a clean manager.')
-        if not current_app.premium_enabled:
+        if not premium_enabled:
             raise MethodNotAllowedError('LDAP is only supported in the '
                                         'Cloudify premium edition.')
         ldap_config = rest_utils.get_json_and_verify_params({

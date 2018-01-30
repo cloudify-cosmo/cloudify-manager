@@ -18,6 +18,7 @@ import pkg_resources
 import subprocess
 from flask_restful_swagger import swagger
 
+from manager_rest import premium_enabled
 from manager_rest.rest import responses
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
@@ -31,25 +32,23 @@ def get_version():
     return pkg_resources.get_distribution('cloudify-rest-service').version
 
 
+def get_edition():
+    return 'premium' if premium_enabled else 'community'
+
+
 def get_version_data():
     version = get_version()
-    try:
-        pckg = pkg_resources.get_distribution('cloudify-premium')
-        edition = 'premium'
-        version = pckg.version
-    except pkg_resources.DistributionNotFound:
-        edition = 'community'
+    if not premium_enabled:
         try:
             rpm_info = subprocess.check_output(['rpm', '-q', 'cloudify'])
+        except (subprocess.CalledProcessError, OSError):
+            pass
+        else:
             version = rpm_info.split('-')[1]
-        except subprocess.CalledProcessError:
-            pass
-        except OSError:
-            pass
 
     return {
         'version': version,
-        'edition': edition
+        'edition': get_edition(),
     }
 
 

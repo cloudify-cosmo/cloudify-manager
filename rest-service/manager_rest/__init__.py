@@ -13,3 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ############
+
+from imp import find_module
+
+
+try:
+    find_module('cloudify_premium')
+except ImportError as e:
+    premium_enabled = False
+else:
+    premium_enabled = True
