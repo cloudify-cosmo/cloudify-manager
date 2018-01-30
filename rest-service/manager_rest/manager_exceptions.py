@@ -466,7 +466,7 @@ class DeploymentPluginNotFound(ManagerException):
 
     def __init__(self, *args, **kwargs):
         super(DeploymentPluginNotFound, self).__init__(
-            412,
+            400,
             DeploymentPluginNotFound.ERROR_CODE,
             *args,
             **kwargs
