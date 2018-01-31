@@ -28,7 +28,7 @@ from flask_security import current_user
 
 from dsl_parser import constants, tasks
 from dsl_parser import exceptions as parser_exceptions
-
+from manager_rest import premium_enabled
 from manager_rest.constants import DEFAULT_TENANT_NAME
 from manager_rest.dsl_functions import get_secret_method
 from manager_rest.utils import is_create_global_permitted
@@ -183,7 +183,7 @@ class ResourceManager(object):
                 'timeout': timeout,
                 'restore_certificates': restore_certificates,
                 'no_reboot': no_reboot,
-                'premium_enabled': current_app.premium_enabled,
+                'premium_enabled': premium_enabled,
                 'user_is_bootstrap_admin': current_user.is_bootstrap_admin
             },
             bypass_maintenance=bypass_maintenance
