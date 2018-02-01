@@ -95,7 +95,8 @@ class TestWorkflow(AgentTestWithPlugins):
         wagon_path = self._create_test_wagon('target-aware-mock')
         self.downloaded_archive_path = os.path.join(
             self.workdir, os.path.basename(wagon_path))
-        yaml_path = test_utils.get_resource('plugins/plugin.yaml')
+        yaml_path = test_utils.get_resource('plugins/target-aware-mock/'
+                                            'plugin.yaml')
         with utils.zip_files([wagon_path, yaml_path]) as zip_path:
             self.client.plugins.upload(zip_path)
 
