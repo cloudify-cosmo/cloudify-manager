@@ -113,6 +113,7 @@ class Plugins(SecuredResource):
         """
         storage_manager = get_storage_manager()
         is_caravan = False
+        installed_plugins = []
         try:
             plugins, code = UploadedCaravanManager().receive_uploaded_data(
                 **kwargs)
@@ -123,26 +124,30 @@ class Plugins(SecuredResource):
                 **kwargs
             )
             plugins = [plugin]
-        try:
-            for plugin in plugins:
+        for plugin in plugins:
+            try:
                 get_resource_manager().install_plugin(plugin)
-        except manager_exceptions.ExecutionTimeout:
-            tp, ex, tb = sys.exc_info()
-            raise manager_exceptions.PluginInstallationTimeout(
-                'Timed out during plugin installation. ({0}: {1})'
-                .format(tp.__name__, ex)), None, tb
-        except Exception:
-            for plugin in plugins:
+                installed_plugins.append(plugin)
+            except manager_exceptions.ExecutionTimeout:
+                tp, ex, tb = sys.exc_info()
+                if not is_caravan:
+                    raise manager_exceptions.PluginInstallationTimeout(
+                        'Timed out during plugin installation.'
+                        '({0}: {1})'.format(tp.__name__, ex)), None, tb
+            except Exception:
                 get_resource_manager().remove_plugin(plugin_id=plugin.id,
                                                      force=True)
-            tp, ex, tb = sys.exc_info()
-            raise manager_exceptions.PluginInstallationError(
-                'Failed during plugin installation. ({0}: {1})'
-                .format(tp.__name__, ex)), None, tb
+                tp, ex, tb = sys.exc_info()
+                if not is_caravan:
+                    raise manager_exceptions.PluginInstallationError(
+                        'Failed during plugin installation.'
+                        '({0}: {1})'.format(tp.__name__, ex)), None, tb
 
         if is_caravan:
             storage_plugins = storage_manager.list(
-                models.Plugin, filters={'id': [p.id for p in plugins]})
+                models.Plugin,
+                filters={'id': [p.id for p in installed_plugins]})
+
             return ListResponse(items=storage_plugins.items,
                                 metadata=storage_plugins.metadata), code
         else:
