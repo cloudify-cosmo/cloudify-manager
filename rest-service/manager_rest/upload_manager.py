@@ -823,14 +823,18 @@ class UploadedCaravanManager(UploadedPluginsManager):
                 'zip',
                 files_dir)
 
-            new_plugin, _ = \
-                super(UploadedCaravanManager, self)._prepare_and_process_doc(
-                    str(uuid.uuid4()),
-                    file_server_root,
-                    archive_path,
-                    **kwargs
-                )
-            plugins.append((new_plugin, files_dir))
+            try:
+                new_plugin, _ = \
+                    super(UploadedCaravanManager,
+                          self)._prepare_and_process_doc(
+                        str(uuid.uuid4()),
+                        file_server_root,
+                        archive_path,
+                        **kwargs
+                    )
+                plugins.append((new_plugin, files_dir))
+            except manager_exceptions.ConflictError:
+                pass
 
         return plugins
 
