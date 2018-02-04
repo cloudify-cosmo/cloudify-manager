@@ -45,6 +45,7 @@ from manager_rest.utils import create_filter_params_list_description
 from manager_rest.constants import (FILE_SERVER_RESOURCES_FOLDER,
                                     FILE_SERVER_PLUGINS_FOLDER)
 
+
 class Plugins(SecuredResource):
     @swagger.operation(
         responseClass='List[{0}]'.format(models.Plugin.__name__),
