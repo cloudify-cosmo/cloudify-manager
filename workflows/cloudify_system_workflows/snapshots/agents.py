@@ -70,6 +70,11 @@ class Agents(object):
         node_result = {}
         for node_instance in client.node_instances.list(
                 deployment_id=deployment_id, node_name=node_id):
+            # Only patch agent config for nodes that have been initialized;
+            # uninitialized nodes don't have an agent config yet in their
+            # runtime properties
+            if node_instance.state == 'uninitialized':
+                continue
             node_result[node_instance.id] = self._get_node_instance_result(
                 node_instance)
         return node_result
