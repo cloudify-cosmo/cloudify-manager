@@ -192,11 +192,18 @@ def _create_deployment_workdir(deployment_id, logger, tenant):
         os.makedirs(deployment_workdir)
     except OSError as e:
         if e.errno == errno.EEXIST:
-            logger.error('Failed creating directory {0}. '
-                         'Current directory content: {1}'.format(
-                            deployment_workdir,
-                            os.listdir(deployment_workdir)))
-        raise
+            dir_content = os.listdir(deployment_workdir)
+            # if dir exists and empty then no problem
+            if dir_content:
+                logger.error('Failed creating directory {0}. '
+                             'Current directory content: {1}'.format(
+                                deployment_workdir, dir_content))
+                raise
+            else:
+                logger.warn('Using existing empty deployment directory '
+                            '{0}'.format(deployment_workdir))
+        else:
+            raise
 
 
 def _delete_deployment_workdir(ctx):
