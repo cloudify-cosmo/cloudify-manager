@@ -48,7 +48,7 @@ getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbi
 /etc/riemann/main.clj
 /opt/lib
 /opt/manager/scripts/activate_riemann_policies
-/opt/manager/scripts/activate_riemann_policies.sh
+%attr(755,root,root) /opt/manager/scripts/activate_riemann_policies.sh
 /opt/riemann_NOTICE.txt
 /usr/lib/systemd/system/cloudify-riemann.service
 /etc/sudoers.d/cloudify-riemann
