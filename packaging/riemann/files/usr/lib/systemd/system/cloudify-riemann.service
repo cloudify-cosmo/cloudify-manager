@@ -10,7 +10,7 @@ TimeoutStartSec=0
 Restart=always
 EnvironmentFile=/etc/sysconfig/cloudify-riemann
 ExecStart=/usr/bin/riemann -a ${RIEMANN_CONFIG_PATH}/main.clj
-ExecStartPost=/bin/sudo -ucfyuser /bin/bash -c "set -a && . /etc/sysconfig/cloudify-mgmtworker && /opt/mgmtworker/env/bin/python /opt/manager/scripts/activate_riemann_policies"
+ExecStartPost=/bin/sudo -ucfyuser /opt/manager/scripts/activate_riemann_policies.sh
 
 [Install]
 WantedBy=multi-user.target

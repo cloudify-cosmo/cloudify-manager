@@ -1,4 +1,6 @@
-# Required in order to impersonate cfyuser under systemd
-Defaults:riemann !requiretty
-# Required to run the policy addition script
-riemann ALL=(cfyuser) NOPASSWD:/bin/bash
+Cmnd_Alias RIEMANN_ACTIVATION = /opt/manager/scripts/activate_riemann_policies.sh
+
+# Riemann's user should be able to run the activation script during
+# service initialization.
+riemann ALL=(cfyuser) NOPASSWD: RIEMANN_ACTIVATION
+Defaults!RIEMANN_ACTIVATION !requiretty
