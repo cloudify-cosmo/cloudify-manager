@@ -66,6 +66,7 @@ def copy_files_between_manager_and_snapshot(archive_root,
     ctx.logger.info('Copying files/directories...')
 
     data_to_copy = [
+        constants.FILE_SERVER_ARIA_FOLDER,
         constants.FILE_SERVER_BLUEPRINTS_FOLDER,
         constants.FILE_SERVER_DEPLOYMENTS_FOLDER,
         constants.FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
