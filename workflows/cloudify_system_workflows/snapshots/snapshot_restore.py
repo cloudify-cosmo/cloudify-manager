@@ -23,6 +23,8 @@ import subprocess
 
 import wagon
 
+from contextlib import closing
+
 from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
 from cloudify.exceptions import NonRecoverableError
@@ -473,6 +475,37 @@ class SnapshotRestore(object):
         ))
         return plugins_to_install
 
+    @staticmethod
+    def _restore_plugin(client, tenant, plugin, plugins_tmp):
+        plugin_dir = os.path.dirname(plugin['path'])
+        wagon_name = os.path.basename(plugin['path'])
+        ctx.logger.info(
+            'Installing plugin {plugin} for {tenant}'.format(
+                plugin=wagon_name,
+                tenant=tenant,
+            )
+        )
+
+        temp_plugin = os.path.join(plugins_tmp, wagon_name)
+        # in case there are both wagon and yaml files
+        if len(os.listdir(plugin_dir)) > 1:
+            temp_plugin += '.zip'
+            # creating a zip containing the wagon and plugin.yaml
+            with closing(zipfile.ZipFile(temp_plugin, 'w')) as zip_file:
+                for root, _, files in os.walk(plugin_dir):
+                    for filename in files:
+                        file_path = os.path.join(root, filename)
+                        zip_file.write(file_path, os.path.relpath(file_path,
+                                                                  plugin_dir))
+        else:
+            # support case of no plugin.yaml - copy only wagon
+            shutil.copyfile(plugin['path'], temp_plugin)
+
+        client.plugins.delete(plugin['id'], force=True)
+        client.plugins.upload(temp_plugin,
+                              visibility=plugin['visibility'])
+        os.remove(temp_plugin)
+
     def _restore_plugins(self, existing_plugins):
         """Install any plugins that weren't installed prior to the restore
 
@@ -485,19 +518,7 @@ class SnapshotRestore(object):
             plugins_tmp = tempfile.mkdtemp()
             try:
                 for plugin in plugins:
-                    wagon_name = os.path.basename(plugin['path'])
-                    ctx.logger.info(
-                        'Installing plugin {plugin} for {tenant}'.format(
-                            plugin=wagon_name,
-                            tenant=tenant,
-                        )
-                    )
-                    temp_plugin = os.path.join(plugins_tmp, wagon_name)
-                    shutil.copyfile(plugin['path'], temp_plugin)
-                    client.plugins.delete(plugin['id'], force=True)
-                    client.plugins.upload(temp_plugin,
-                                          visibility=plugin['visibility'])
-                    os.remove(temp_plugin)
+                    self._restore_plugin(client, tenant, plugin, plugins_tmp)
             finally:
                 os.rmdir(plugins_tmp)
         ctx.logger.info('Successfully restored plugins')
