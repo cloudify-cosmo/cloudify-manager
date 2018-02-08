@@ -1,0 +1,4 @@
+# Required in order to impersonate cfyuser under systemd
+Defaults:riemann !requiretty
+# Required to run the policy addition script
+riemann ALL=(cfyuser) NOPASSWD:/bin/bash
