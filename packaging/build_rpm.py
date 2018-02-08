@@ -387,6 +387,7 @@ def download_if_newer(url, outfile=None):
                 mod_time).strftime('%a, %d %b %Y %H:%M:%S GMT')
 
     req = urllib2.Request(url, headers=headers)
+    f = None
     try:
         try:
             f = urllib2.urlopen(req)
@@ -395,11 +396,14 @@ def download_if_newer(url, outfile=None):
                 return
             else:
                 raise
+        except urllib2.URLError:
+            raise
         with open(outfile, 'wb') as out:
             logger.info('writing %s', outfile)
             out.write(f.read())
     finally:
-        f.close()
+        if f:
+            f.close()
 
 
 def get_sources(spec_file):
