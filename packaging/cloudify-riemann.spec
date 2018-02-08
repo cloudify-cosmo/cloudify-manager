@@ -50,6 +50,7 @@ getent passwd %_user >/dev/null || useradd -r -g %_user -d /etc/cloudify -s /sbi
 /opt/manager/scripts/activate_riemann_policies
 /opt/riemann_NOTICE.txt
 /usr/lib/systemd/system/cloudify-riemann.service
+/etc/sudoers.d/cloudify-riemann
 
 %dir %attr(770,%_user,cfyuser) /opt/riemann
 %dir %attr(-,%_user,adm) /var/log/cloudify/riemann
