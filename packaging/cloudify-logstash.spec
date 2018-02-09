@@ -39,6 +39,20 @@ cp -R /opt/logstash %{buildroot}/opt/logstash
 mkdir -p %{buildroot}/etc/init.d
 cp /etc/init.d/logstash %{buildroot}/etc/init.d
 sed -i 's:sysconfig/\$name:sysconfig/cloudify-$name:g' %{buildroot}/etc/init.d/logstash
+# This part is to make logstash service only claim to have started when it has /really/ started
+sed -i "67i\ \ done" %{buildroot}/etc/init.d/logstash
+sed -i "67i\ \ \ \ sleep 2" %{buildroot}/etc/init.d/logstash
+sed -i '67i\ \ \ \ echo "${name} starting (waited $(( ${attempt} * 2)) seconds)..."' %{buildroot}/etc/init.d/logstash
+sed -i "67i\ \ \ \ fi" %{buildroot}/etc/init.d/logstash
+sed -i "67i\ \ \ \ \ \ exit 1" %{buildroot}/etc/init.d/logstash
+sed -i '67i\ \ \ \ \ \ rm ${pidfile}' %{buildroot}/etc/init.d/logstash
+sed -i '67i\ \ \ \ \ \ kill -9 $(cat ${pidfile})' %{buildroot}/etc/init.d/logstash
+sed -i '67i\ \ \ \ \ \ echo "${name} failed to start within 2 minutes"' %{buildroot}/etc/init.d/logstash 
+sed -i '67i\ \ \ \ if [[ ${attempt} -eq 60 ]]; then' %{buildroot}/etc/init.d/logstash
+sed -i '67i\ \ \ \ attempt=$(( ${attempt} + 1 ))' %{buildroot}/etc/init.d/logstash
+sed -i "67i\ \ while ! ps aux | grep 'Xbootclasspath/a:/opt/logstash/vendor/jruby/lib/jruby.jar' | grep 'f /etc/logstash/conf.d' >/dev/null; do" %{buildroot}/etc/init.d/logstash
+sed -i "67i\ \ attempt=-1" %{buildroot}/etc/init.d/logstash
+sed -i "67i\ " %{buildroot}/etc/init.d/logstash
 
 # Create the log dir
 mkdir -p %{buildroot}/var/log/cloudify/%_user
