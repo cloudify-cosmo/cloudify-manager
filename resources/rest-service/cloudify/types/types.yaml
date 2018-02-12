@@ -634,9 +634,10 @@ data_types:
           Maximum number of agent workers. By default, the value will be 5.
         type: integer
         required: false
-      broker_heartbeat:
+      heartbeat:
         description: >
-          The interval of the AMQP heartbeat in seconds
+          The interval of the AMQP and Celery heartbeats in seconds
+          Note: the AMQP heartbeat is only used on Linux.
         required: false
       disable_requiretty:
         description: >
