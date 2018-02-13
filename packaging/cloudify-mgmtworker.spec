@@ -24,11 +24,11 @@ Cloudify's Management worker
 %build
 virtualenv /opt/mgmtworker/env
 /opt/mgmtworker/env/bin/pip install --upgrade pip setuptools
-/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/incubator-ariatosca
-/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-rest-client
-/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-plugins-common
-/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-script-plugin
-/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-agent
+/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/incubator-ariatosca/archive/%{ARIA_DEPENDENCY_VERSION}.tar.gz
+/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-rest-client/archive/%{DEPENDENCY_VERSION}.tar.gz
+/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/%{DEPENDENCY_VERSION}.tar.gz
+/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/%{SCRIPT_DEPENDENCY_VERSION}.tar.gz
+/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-agent/archive/%{DEPENDENCY_VERSION}.tar.gz
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
 rm /opt/mgmtworker/env/lib/python2.7/site-packages/zmq/tests/_test_asyncio.py
