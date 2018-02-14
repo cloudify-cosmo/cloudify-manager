@@ -207,12 +207,16 @@ node_types:
         #####################################################
 
         transfer_amqp:
-          implementation: agent.cloudify_agent.operations.validate_agent_amqp
+          implementation: agent.cloudify_agent.operations.transfer_agent_amqp
           executor: central_deployment_agent
           inputs:
             validate_agent_timeout:
               default: 20
-
+            new_manager_ip:
+              required: true
+            manager_certificate:
+              description:
+              default: ''
 
 
       cloudify.interfaces.host:  # DEPRECATED
@@ -564,7 +568,7 @@ workflows:
   transfer_agents:
     mapping: default_workflows.cloudify.plugins.workflows.transfer_agents
         parameters:
-      install_agent_timeout:
+      transfer_agent_timeout:
         default: 300
       node_ids:
         default: []
@@ -572,10 +576,8 @@ workflows:
         default: []
       validate:
         default: True
-      install:
-        default: True
-      install_script:
-        default: ''
+
+
 
 ##################################################################################
 # Base data type definitions
