@@ -8,6 +8,6 @@
         notifempty
         sharedscripts
         postrotate
-            /sbin/service rabbitmq-server rotate-logs > /dev/null
+            /usr/sbin/rabbitmqctl -n cloudify-manager@localhost rotate_logs
         endscript
 }
