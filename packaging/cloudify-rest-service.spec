@@ -21,8 +21,8 @@ BuildRequires: python-devel
 Requires:       python >= 2.7, postgresql-libs, nginx >= 1.12, sudo
 Requires(pre):  shadow-utils
 
-%define _diamond_version 1.3.6
-Source0:  http://www.getcloudify.org/spec/diamond-plugin/1.3.6/plugin.yaml
+%define _diamond_version 1.3.8
+Source0:  http://www.getcloudify.org/spec/diamond-plugin/1.3.8/plugin.yaml
 
 
 %description
