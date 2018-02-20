@@ -18,6 +18,7 @@ from flask_security import current_user
 
 from manager_rest import celery_client, utils
 from manager_rest.constants import MGMTWORKER_QUEUE
+from manager_rest.storage import get_storage_manager, models
 
 
 def execute_workflow(name,
@@ -30,9 +31,16 @@ def execute_workflow(name,
                      bypass_maintenance=None):
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
-
     plugin_name = workflow['plugin']
     plugin = [p for p in workflow_plugins if p['name'] == plugin_name][0]
+    if plugin and plugin['package_name']:
+        sm = get_storage_manager()
+        filter_plugin = {'package_name': plugin.get('package_name'),
+                         'package_version': plugin.get('package_version')}
+        managed_plugins = sm.list(models.Plugin, filters=filter_plugin).items
+        if managed_plugins:
+            plugin['visibility'] = managed_plugins[0].visibility
+            plugin['tenant_name'] = managed_plugins[0].tenant_name
 
     context = {
         'type': 'workflow',
@@ -46,7 +54,9 @@ def execute_workflow(name,
         'plugin': {
             'name': plugin_name,
             'package_name': plugin.get('package_name'),
-            'package_version': plugin.get('package_version')
+            'package_version': plugin.get('package_version'),
+            'visibility': plugin.get('visibility'),
+            'tenant_name': plugin.get('tenant_name')
         }
     }
     return _execute_task(execution_id=execution_id,
