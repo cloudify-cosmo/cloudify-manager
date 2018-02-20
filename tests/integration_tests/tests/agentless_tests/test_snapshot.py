@@ -346,7 +346,7 @@ class TestSnapshot(AgentlessTestCase):
             execution_id=execution_id,
             tenant_name=tenant_name
         )
-        expected_output = 'Total events: {0}'.format(num_of_events)
+        expected_output = 'Showing {0} of {0} events'.format(num_of_events)
         self.assertIn(expected_output, output)
 
     def _get_snapshot(self, name):
