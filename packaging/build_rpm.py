@@ -78,7 +78,7 @@ def main(args):
 
     # Get build options
     rpmbuild_defines = get_rpmbuild_defines()
-    logger.info('defines', rpmbuild_defines)
+    logger.info('defines %s', rpmbuild_defines)
     rendered_spec_file = render_spec_file(spec_file, rpmbuild_defines)
 
     # Fetch any defined Sources (this does not include the repo containing the
