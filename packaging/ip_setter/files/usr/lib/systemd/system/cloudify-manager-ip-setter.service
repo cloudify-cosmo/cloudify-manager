@@ -2,11 +2,15 @@
 Description=Cloudify Manager IP Setter
 Before=cloudify-amqpinflux.service cloudify-influxdb.service cloudify-mgmtworker.service cloudify-restservice.service cloudify-riemann.service cloudify-stage.service nginx.service cloudify-rabbitmq.service logstash.service
 Requires=postgresql-9.5.service
-After=network-online.target
+After=network-online.target postgresql-9.5.service
 
 [Service]
 Type=oneshot
 TimeoutStartSec=0
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=10
 User=root
 Group=root
 ExecStart=/opt/cloudify/manager-ip-setter/manager-ip-setter.sh
