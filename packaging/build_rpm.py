@@ -76,11 +76,16 @@ def main(args):
     # We assume that the spec always lives one dir level below the source
     source = dirname(packaging_dir)
 
+    # Get build options
+    rpmbuild_defines = get_rpmbuild_defines()
+    logger.info('defines', rpmbuild_defines)
+    rendered_spec_file = render_spec_file(spec_file, rpmbuild_defines)
+
     # Fetch any defined Sources (this does not include the repo containing the
     # spec file itself, the local copy is to be used.
     chdir(source)
-    sources = get_sources(spec_file)
-    sources += get_dependency_urls(spec_file)
+    sources = get_sources(rendered_spec_file)
+    sources += get_dependency_urls(rendered_spec_file)
     for url in sources:
         logger.info('checking %s', url)
         download_if_newer(url)
@@ -89,7 +94,7 @@ def main(args):
 
     if has_cmd('mock'):
         # run locally
-        rpm = build(source, spec_file_name)
+        rpm = build(source, rendered_spec_file)
         shutil.copy(rpm, SCRIPT_DIR)
     elif has_cmd('vagrant'):
         # install and run mock in a vagrant CentOS 7 box
@@ -103,16 +108,12 @@ def build(source, spec_file_name):
     """Builds the RPM"""
     spec_file = path_join(source, 'packaging', spec_file_name)
     check_mock_config()
-    # Get build options
-    rpmbuild_defines = get_rpmbuild_defines()
-    logger.info('defines', rpmbuild_defines)
-    rendered_spec_file = render_spec_file(spec_file, rpmbuild_defines)
 
     # Build .src.rpm
     check_call(
             MOCK + [
                 '--buildsrpm',
-                '--spec', rendered_spec_file,
+                '--spec', spec_file_name,
                 '--sources', source,
             ])
     # Extract the .src.rpm file name.
@@ -247,6 +248,7 @@ def run_vagrant(cmd, *args, **kwargs):
 
 def get_dependencies(spec_file):
     """get the list of dependencies"""
+    spec_file = spec_file.replace('.rendered', '', 1)
     dependencies_file = DEPENDENCIES_FILE.format(spec_file=spec_file)
 
     try:
