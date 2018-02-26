@@ -48,6 +48,12 @@ def authorize(action,
                         'invalid tenant name: {0}'.format(tenant_name)
                     )
 
+            if not current_user.active:
+                raise ForbiddenError(
+                    'Authorization failed: '
+                    'User `{0}` is deactivated'.format(current_user.username)
+                )
+
             # when running unittests, there is no authorization
             if config.instance.test_mode:
                 return func(*args, **kwargs)
