@@ -39,8 +39,6 @@ from voluptuous import (
     Range,
     Schema,
 )
-from aria.storage import exceptions as aria_exceptions
-
 from ..security.authentication import authenticator
 from manager_rest import utils, config, manager_exceptions
 from manager_rest.storage.models_base import SQLModelBase
@@ -99,8 +97,7 @@ def exceptions_handled(func):
                 # Re-raise voluptuous validation errors
                 # to handle them properly in the outer try/excep block
                 raise manager_exceptions.BadParametersError(e.error_message)
-        except (manager_exceptions.ManagerException,
-                aria_exceptions.NotFoundError) as e:
+        except (manager_exceptions.ManagerException) as e:
             utils.abort_error(e, current_app.logger)
     return wrapper
 
