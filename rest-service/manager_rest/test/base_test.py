@@ -139,16 +139,6 @@ class BaseServerTestCase(unittest.TestCase):
                     client.ldap.api = mock_http_client
                     client.secrets.api = mock_http_client
 
-                    if CLIENT_API_VERSION != 'v3':
-                        # support for ARIA was only added in V3.1
-                        client.aria_service_templates.api = mock_http_client
-                        client.aria_services.api = mock_http_client
-                        client.aria_node_templates.api = mock_http_client
-                        client.aria_nodes.api = mock_http_client
-                        client.aria_executions.api = mock_http_client
-                        client.aria_logs.api = mock_http_client
-                        client.aria_plugins.api = mock_http_client
-
         return client
 
     def setUp(self):
