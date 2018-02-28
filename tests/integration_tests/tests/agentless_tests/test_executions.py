@@ -232,3 +232,34 @@ class ExecutionsTest(AgentlessTestCase):
         )['mock_operation_invocation']
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0], {'before-sleep': None})
+
+    def test_dry_run_execution(self):
+        expected_messages = [
+            "Starting 'install' workflow execution (dry run)",
+            "Creating node",
+            "Sending task 'cloudmock.tasks.provision'",
+            "Task started 'cloudmock.tasks.provision'",
+            "Task succeeded 'cloudmock.tasks.provision (dry run)'",
+            "Configuring node",
+            "Starting node",
+            "Sending task 'cloudmock.tasks.start'",
+            "Task started 'cloudmock.tasks.start'",
+            "Task succeeded 'cloudmock.tasks.start (dry run)'",
+            "Sending task 'cloudmock.tasks.get_state'",
+            "Task started 'cloudmock.tasks.get_state'",
+            "Task succeeded 'cloudmock.tasks.get_state (dry run)'",
+            "'install' workflow execution succeeded (dry run)"
+        ]
+
+        dsl_path = resource("dsl/basic.yaml")
+        _, execution_id = self.deploy_application(dsl_path,
+                                                  wait_for_execution=True,
+                                                  dry_run=True)
+        # We're waiting for the final event (workflow execution success),
+        # which might arrive after the execution status has changed to
+        # "termindated", because it arrives via a different mechanism
+        time.sleep(3)
+        events = self.client.events.list(execution_id=execution_id)
+        event_messages = [event['message'] for event in events]
+
+        self.assertEquals(event_messages, expected_messages)
