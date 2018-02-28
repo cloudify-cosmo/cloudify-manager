@@ -28,6 +28,7 @@ from manager_rest.rest.rest_decorators import (
 )
 import platform
 
+
 def get_version():
     return pkg_resources.get_distribution('cloudify-rest-service').version
 
