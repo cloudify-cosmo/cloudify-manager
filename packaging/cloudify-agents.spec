@@ -14,14 +14,14 @@ Packager:       Cloudify Platform Ltd.
 BuildRequires:  python >= 2.7
 Requires(pre):  shadow-utils
 
-Source0:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/ga-release/Ubuntu-trusty-agent_4.3.0-ga.tar.gz
-Source1:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/ga-release/Ubuntu-precise-agent_4.3.0-ga.tar.gz
-Source2:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/ga-release/Ubuntu-xenial-agent_4.3.0-ga.tar.gz
-Source3:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/ga-release/centos-Core-agent_4.3.0-ga.tar.gz
-Source4:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/ga-release/centos-Final-agent_4.3.0-ga.tar.gz
-Source5:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/ga-release/redhat-Maipo-agent_4.3.0-ga.tar.gz
-Source6:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/ga-release/redhat-Santiago-agent_4.3.0-ga.tar.gz
-Source7:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.3.0/ga-release/cloudify-windows-agent_4.3.0-ga.exe
+Source0:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.4.0/.dev1-release/Ubuntu-trusty-agent_4.4.0-.dev1.tar.gz
+Source1:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.4.0/.dev1-release/Ubuntu-precise-agent_4.4.0-.dev1.tar.gz
+Source2:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.4.0/.dev1-release/Ubuntu-xenial-agent_4.4.0-.dev1.tar.gz
+Source3:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.4.0/.dev1-release/centos-Core-agent_4.4.0-.dev1.tar.gz
+Source4:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.4.0/.dev1-release/centos-Final-agent_4.4.0-.dev1.tar.gz
+Source5:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.4.0/.dev1-release/redhat-Maipo-agent_4.4.0-.dev1.tar.gz
+Source6:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.4.0/.dev1-release/redhat-Santiago-agent_4.4.0-.dev1.tar.gz
+Source7:        http://cloudify-release-eu.s3.amazonaws.com/cloudify/4.4.0/.dev1-release/cloudify-windows-agent_4.4.0-.dev1.exe
 
 %description
 Cloudify Agent packages
