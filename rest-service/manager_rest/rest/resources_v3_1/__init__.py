@@ -39,4 +39,3 @@ from .blueprints import (                        # NOQA
     BlueprintsSetGlobal,
     BlueprintsSetVisibility
 )
-

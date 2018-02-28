@@ -837,4 +837,3 @@ class UploadedCaravanManager(UploadedPluginsManager):
                 pass
 
         return plugins
-
