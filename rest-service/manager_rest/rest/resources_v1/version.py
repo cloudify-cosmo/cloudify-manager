@@ -26,7 +26,7 @@ from manager_rest.rest.rest_decorators import (
     exceptions_handled,
     marshal_with,
 )
-
+import platform
 
 def get_version():
     return pkg_resources.get_distribution('cloudify-rest-service').version
@@ -36,8 +36,15 @@ def get_edition():
     return 'premium' if premium_enabled else 'community'
 
 
+def get_distribution():
+    distribution, _, release = platform.linux_distribution(
+        full_distribution_name=False)
+    return distribution, release
+
+
 def get_version_data():
     version = get_version()
+    distro, distro_release = get_distribution()
     if not premium_enabled:
         try:
             rpm_info = subprocess.check_output(['rpm', '-q', 'cloudify'])
@@ -49,6 +56,8 @@ def get_version_data():
     return {
         'version': version,
         'edition': get_edition(),
+        'distribution': distro,
+        'distro_release': distro_release,
     }
 
 
