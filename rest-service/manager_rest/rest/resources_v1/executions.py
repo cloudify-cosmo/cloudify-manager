@@ -92,8 +92,13 @@ class Executions(SecuredResource):
     @marshal_with(models.Execution)
     def post(self, **kwargs):
         """Execute a workflow"""
-        request_dict = get_json_and_verify_params({'deployment_id',
-                                                   'workflow_id'})
+        request_dict = get_json_and_verify_params({
+            'allow_custom_parameters',
+            'deployment_id',
+            'force',
+            'parameters',
+            'workflow_id',
+        })
 
         allow_custom_parameters = verify_and_convert_bool(
             'allow_custom_parameters',
@@ -206,7 +211,15 @@ class ExecutionsId(SecuredResource):
         """
         Update execution status by id
         """
-        request_dict = get_json_and_verify_params({'status'})
+        request_dict = get_json_and_verify_params({
+            'error': {
+                'type': unicode,
+                'optional': True,
+            },
+            'status': {
+                'type': unicode,
+            },
+        })
 
         return get_resource_manager().update_execution_status(
             execution_id,

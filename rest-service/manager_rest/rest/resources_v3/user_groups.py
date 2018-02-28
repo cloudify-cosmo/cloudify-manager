@@ -60,7 +60,15 @@ class UserGroups(SecuredMultiTenancyResource):
         """
         Create a group
         """
-        request_dict = rest_utils.get_json_and_verify_params()
+        request_dict = rest_utils.get_json_and_verify_params({
+            'group_name': {
+                'type': unicode,
+            },
+            'ldap_group_dn': {
+                'type': unicode,
+                'optional': True,
+            }
+        })
         group_name = request_dict['group_name']
         ldap_group_dn = request_dict.get('ldap_group_dn')
         role = request_dict.get('role', constants.DEFAULT_SYSTEM_ROLE)

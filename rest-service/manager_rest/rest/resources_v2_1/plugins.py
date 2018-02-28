@@ -40,7 +40,7 @@ class PluginsId(resources_v2.PluginsId):
         """
         Delete plugin by ID
         """
-        request_dict = get_json_and_verify_params()
+        request_dict = get_json_and_verify_params({'force'})
         force = verify_and_convert_bool(
             'force', request_dict.get('force', False)
         )

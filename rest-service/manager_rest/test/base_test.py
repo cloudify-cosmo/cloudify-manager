@@ -506,7 +506,7 @@ class BaseServerTestCase(unittest.TestCase):
                                                 blueprint_file_name,
                                                 blueprint_id)
         blueprint_id = blueprint_response['id']
-        create_deployment_kwargs = {'inputs': inputs}
+        create_deployment_kwargs = {'inputs': inputs or {}}
         if skip_plugins_validation is not None:
             create_deployment_kwargs['skip_plugins_validation'] =\
                 skip_plugins_validation

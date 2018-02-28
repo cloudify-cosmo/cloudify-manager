@@ -201,9 +201,25 @@ class DeploymentModifications(SecuredResource):
     @marshal_with(models.DeploymentModification)
     def post(self, **kwargs):
         request_dict = get_json_and_verify_params({
-            'deployment_id': {},
-            'context': {'optional': True, 'type': dict},
-            'nodes': {'optional': True, 'type': dict}
+            'context': {
+                'type': dict,
+                'optional': True,
+            },
+            'deployment_id': {
+                'type': unicode,
+            },
+            'modified_nodes': {
+                'type': dict,
+                'optional': True,
+            },
+            'node_instances': {
+                'type': dict,
+                'optional': True,
+            },
+            'nodes': {
+                'type': dict,
+                'optional': True,
+            },
         })
         deployment_id = request_dict['deployment_id']
         context = request_dict.get('context', {})

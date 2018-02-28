@@ -75,6 +75,16 @@ def get_json_and_verify_params(params=None):
                 '{2}'.format(param,
                              param_type.__name__,
                              type(request_dict[param]).__name__))
+
+    # Check that there are now unknown keys in the request
+    if params is not None:
+        for key in request_dict:
+            if key not in params:
+                raise manager_exceptions.BadParametersError(
+                    'Unknown key found in request body: {0}'
+                    .format(key)
+                )
+
     return request_dict
 
 
