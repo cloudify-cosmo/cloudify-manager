@@ -91,6 +91,8 @@ class Version(object):
         'build': fields.String,
         'date': fields.String,
         'commit': fields.String,
+        'distribution': fields.String,
+        'distro_release': fields.String,
     }
 
     def __init__(self, **kwargs):
@@ -99,6 +101,8 @@ class Version(object):
         self.build = kwargs.get('build')
         self.date = kwargs.get('date')
         self.commit = kwargs.get('commit')
+        self.distribution = kwargs.get('distribution')
+        self.distro_release = kwargs.get('distro_release')
 
 
 @swagger.model
