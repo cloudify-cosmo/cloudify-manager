@@ -289,7 +289,8 @@ class BaseTestCase(unittest.TestCase):
                          parameters=None,
                          timeout_seconds=240,
                          wait_for_execution=True,
-                         force=False):
+                         force=False,
+                         **kwargs):
         """
         A blocking method which runs the requested workflow
         """
@@ -297,7 +298,7 @@ class BaseTestCase(unittest.TestCase):
 
         execution = client.executions.start(deployment_id, workflow_name,
                                             parameters=parameters or {},
-                                            force=force)
+                                            force=force, **kwargs)
 
         if wait_for_execution:
             BaseTestCase.wait_for_execution_to_end(
@@ -332,7 +333,8 @@ class BaseTestCase(unittest.TestCase):
                                     deployment_id=None,
                                     wait_for_execution=True,
                                     parameters=None,
-                                    inputs=None):
+                                    inputs=None,
+                                    **kwargs):
         """
         A blocking method which deploys an application from
         the provided dsl path, and runs the requested workflows
@@ -343,7 +345,7 @@ class BaseTestCase(unittest.TestCase):
                                          inputs)
         execution = BaseTestCase.execute_workflow(
                 workflow_name, deployment.id, parameters,
-                timeout_seconds, wait_for_execution)
+                timeout_seconds, wait_for_execution, **kwargs)
         return deployment, execution.id
 
     @staticmethod
@@ -352,7 +354,8 @@ class BaseTestCase(unittest.TestCase):
                            blueprint_id=None,
                            deployment_id=None,
                            wait_for_execution=True,
-                           inputs=None):
+                           inputs=None,
+                           **kwargs):
         """
         A blocking method which deploys an application
         from the provided dsl path.
@@ -364,7 +367,9 @@ class BaseTestCase(unittest.TestCase):
                 blueprint_id=blueprint_id,
                 deployment_id=deployment_id,
                 wait_for_execution=wait_for_execution,
-                inputs=inputs)
+                inputs=inputs,
+                **kwargs
+        )
 
     @staticmethod
     def undeploy_application(deployment_id,
