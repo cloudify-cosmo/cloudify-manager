@@ -93,24 +93,7 @@ def setup_resources(api):
         'SecretsKey': 'secrets/<string:key>',
         'SecretsSetGlobal': 'secrets/<string:key>/set-global',
         'SecretsSetVisibility': 'secrets/<string:key>/set-visibility',
-        'ManagerConfig': 'config',
-
-        # ARIA endpoints
-        'ARIAServiceTemplates': 'aria-service-templates',
-        'ARIAServiceTemplate':
-            'aria-service-templates/<string:service_template_id>',
-        'ARIAServices': 'aria-services',
-        'ARIAService': 'aria-services/<string:service_id>',
-        'ARIANodeTemplates': 'aria-node-templates',
-        'ARIANodeTemplate': 'aria-node-templates/<string:node_template_id>',
-        'ARIANodes': 'aria-nodes',
-        'ARIANode': 'aria-nodes/<string:node_id>',
-        'ARIAExecutions': 'aria-executions',
-        'ARIAExecution': 'aria-executions/<string:execution_id>',
-        'ARIAPlugins': 'aria-plugins',
-        'ARIAPlugin': 'aria-plugins/<string:plugin_id>',
-        'ARIALogs': 'aria-logs',
-        'ARIALog': 'aria-logs/<string:execution_id>'
+        'ManagerConfig': 'config'
     }
 
     # Set version endpoint as a non versioned endpoint
