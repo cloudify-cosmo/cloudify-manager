@@ -36,7 +36,6 @@ virtualenv /opt/manager/env
 export REST_SERVICE_BUILD=True  # TODO: remove this hack from setup.py
 
 /opt/manager/env/bin/pip install --upgrade pip setuptools
-/opt/manager/env/bin/pip install https://github.com/cloudify-cosmo/incubator-ariatosca/archive/master.tar.gz
 /opt/manager/env/bin/pip install 'git+https://github.com/cloudify-cosmo/cloudify-dsl-parser#egg=cloudify-dsl-parser==4.4.dev1'
 /opt/manager/env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
 

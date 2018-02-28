@@ -24,7 +24,6 @@ Cloudify's Management worker
 %build
 virtualenv /opt/mgmtworker/env
 /opt/mgmtworker/env/bin/pip install --upgrade pip setuptools
-/opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/incubator-ariatosca
 /opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-rest-client
 /opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-plugins-common
 /opt/mgmtworker/env/bin/pip install git+https://github.com/cloudify-cosmo/cloudify-script-plugin
