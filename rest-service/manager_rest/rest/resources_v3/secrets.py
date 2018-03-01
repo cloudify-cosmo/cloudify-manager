@@ -115,8 +115,9 @@ class Secrets(SecuredResource):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Secret)
     @rest_decorators.all_tenants
+    @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, **kwargs):
+            all_tenants=None, search=None, **kwargs):
         """
         List secrets
         """
@@ -124,6 +125,7 @@ class Secrets(SecuredResource):
             models.Secret,
             include=_include,
             filters=filters,
+            substr_filters=search,
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants

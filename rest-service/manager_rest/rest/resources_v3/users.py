@@ -49,8 +49,9 @@ class Users(SecuredMultiTenancyResource):
     @rest_decorators.create_filters(models.User)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.User)
+    @rest_decorators.search('username')
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+            sort=None, search=None, **kwargs):
         """
         List users
         """
@@ -58,7 +59,8 @@ class Users(SecuredMultiTenancyResource):
             _include,
             filters,
             pagination,
-            sort
+            sort,
+            search
         )
 
     @rest_decorators.exceptions_handled

@@ -48,8 +48,9 @@ class Blueprints(resources_v1.Blueprints):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Blueprint)
     @rest_decorators.all_tenants
+    @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, **kwargs):
+            all_tenants=None, search=None, **kwargs):
         """
         List uploaded blueprints
         """
@@ -57,6 +58,7 @@ class Blueprints(resources_v1.Blueprints):
             models.Blueprint,
             include=_include,
             filters=filters,
+            substr_filters=search,
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants

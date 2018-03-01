@@ -391,6 +391,21 @@ def all_tenants(func):
     return is_all_tenants
 
 
+def search(attribute):
+    """
+    Decorator for enabling searching of a resource id by substring
+    """
+    def search_dec(func):
+        @wraps(func)
+        def wrapper(*args, **kw):
+            pattern = request.args.get('_search', None)
+            if pattern:
+                pattern = {attribute: pattern}
+            return func(search=pattern, *args, **kw)
+        return wrapper
+    return search_dec
+
+
 def marshal_events(func):
     """
     Decorator for marshalling raw event responses
