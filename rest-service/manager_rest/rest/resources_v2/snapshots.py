@@ -83,12 +83,14 @@ class Snapshots(SecuredResource):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Snapshot)
     @rest_decorators.all_tenants
+    @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, all_tenants=None, **kwargs):
+            sort=None, all_tenants=None, search=None, **kwargs):
         return get_storage_manager().list(
             models.Snapshot,
             include=_include,
             filters=filters,
+            substr_filters=search,
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants

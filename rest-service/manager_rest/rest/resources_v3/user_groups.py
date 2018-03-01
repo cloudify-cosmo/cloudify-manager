@@ -42,8 +42,9 @@ class UserGroups(SecuredMultiTenancyResource):
     @rest_decorators.create_filters(models.Group)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Group)
+    @rest_decorators.search('name')
     def get(self, multi_tenancy, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+            sort=None, search=None, **kwargs):
         """
         List groups
         """
@@ -51,7 +52,9 @@ class UserGroups(SecuredMultiTenancyResource):
             _include,
             filters,
             pagination,
-            sort)
+            sort,
+            search
+        )
 
     @rest_decorators.exceptions_handled
     @authorize('user_group_create')

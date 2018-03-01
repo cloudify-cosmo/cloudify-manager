@@ -42,8 +42,9 @@ class Tenants(TenantsListResource):
     @rest_decorators.create_filters(models.Tenant)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Tenant)
+    @rest_decorators.search('name')
     def get(self, multi_tenancy=None, _include=None, filters=None,
-            pagination=None, sort=None, **kwargs):
+            pagination=None, sort=None, search=None, **kwargs):
         """
         List tenants
         """
@@ -59,7 +60,8 @@ class Tenants(TenantsListResource):
             return multi_tenancy.list_tenants(_include,
                                               filters,
                                               pagination,
-                                              sort)
+                                              sort,
+                                              search)
         # In community edition we have only the `default_tenant`, so it
         # should be safe to return it like this
         return get_storage_manager().list(models.Tenant)

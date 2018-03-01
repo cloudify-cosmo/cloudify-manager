@@ -85,7 +85,12 @@ class SQLStorageManager(object):
                 query = query.order_by(column)
         return query
 
-    def _filter_query(self, query, model_class, filters, all_tenants):
+    def _filter_query(self,
+                      query,
+                      model_class,
+                      filters,
+                      substr_filters,
+                      all_tenants):
         """Add filter clauses to the query
 
         :param query: Base SQL query
@@ -97,6 +102,7 @@ class SQLStorageManager(object):
         query = self._add_tenant_filter(query, model_class, all_tenants)
         query = self._add_permissions_filter(query, model_class)
         query = self._add_value_filter(query, filters)
+        query = self._add_substr_filter(query, substr_filters)
         return query
 
     def _add_value_filter(self, query, filters):
@@ -106,18 +112,28 @@ class SQLStorageManager(object):
                 query = query.filter(column.in_(value))
             else:
                 query = query.filter(column == value)
+        return query
 
+    def _add_substr_filter(self, query, filters):
+        for column, value in filters.iteritems():
+            column, value = self._update_case_insensitive(column, value, True)
+            if isinstance(value, basestring):
+                query = query.filter(column.contains(value))
+            else:
+                raise manager_exceptions.BadParametersError(
+                    'Substring filtering is only supported for strings'
+                )
         return query
 
     @staticmethod
-    def _update_case_insensitive(column, value):
+    def _update_case_insensitive(column, value, force=False):
         """Check if the column in question should be case insensitive, and
         if so, make sure the column (and the value) will be converted to lower
         case
 
         :return: The updated column and value in a (c, v) tuple
         """
-        is_case_insensitive = getattr(column, 'is_ci', False)
+        is_case_insensitive = getattr(column, 'is_ci', False) or force
         if not is_case_insensitive:
             return column, value
 
@@ -228,6 +244,7 @@ class SQLStorageManager(object):
                                          model_class,
                                          include,
                                          filters,
+                                         substr_filters,
                                          sort):
         """Get a list of tables on which we need to join and the converted
         `include`, `filters` and `sort` arguments (converted to actual SQLA
@@ -235,20 +252,22 @@ class SQLStorageManager(object):
         """
         include = include or []
         filters = filters or dict()
+        substr_filters = substr_filters or dict()
         sort = sort or OrderedDict()
 
         all_columns = set(include) | set(filters.keys()) | set(sort.keys())
         joins = self._get_joins(model_class, all_columns)
 
-        include, filters, sort = self._get_columns_from_field_names(
-            model_class, include, filters, sort
-        )
-        return include, filters, sort, joins
+        include, filters, substr_filters, sort = \
+            self._get_columns_from_field_names(
+                model_class, include, filters, substr_filters, sort)
+        return include, filters, substr_filters, sort, joins
 
     def _get_query(self,
                    model_class,
                    include=None,
                    filters=None,
+                   substr_filters=None,
                    sort=None,
                    all_tenants=None):
         """Get an SQL query object based on the params passed
@@ -263,12 +282,13 @@ class SQLStorageManager(object):
         :return: A sorted and filtered query with only the relevant
         columns
         """
-        include, filters, sort, joins = self._get_joins_and_converted_columns(
-            model_class, include, filters, sort
-        )
+        include, filters, substr_filters, sort, joins = \
+            self._get_joins_and_converted_columns(
+                model_class, include, filters, substr_filters, sort)
 
         query = self._get_base_query(model_class, include, joins)
-        query = self._filter_query(query, model_class, filters, all_tenants)
+        query = self._filter_query(
+            query, model_class, filters, substr_filters, all_tenants)
         query = self._sort_query(query, sort)
         return query
 
@@ -276,6 +296,7 @@ class SQLStorageManager(object):
                                       model_class,
                                       include,
                                       filters,
+                                      substr_filters,
                                       sort):
         """Go over the optional parameters (include, filters, sort), and
         replace column names with actual SQLA column objects
@@ -283,10 +304,12 @@ class SQLStorageManager(object):
         include = [self._get_column(model_class, c) for c in include]
         filters = {self._get_column(model_class, c): filters[c]
                    for c in filters}
+        substr_filters = {self._get_column(model_class, c): substr_filters[c]
+                          for c in substr_filters}
         sort = OrderedDict((self._get_column(model_class, c), sort[c])
                            for c in sort)
 
-        return include, filters, sort
+        return include, filters, substr_filters, sort
 
     @staticmethod
     def _get_column(model_class, column_name):
@@ -474,7 +497,8 @@ class SQLStorageManager(object):
              filters=None,
              pagination=None,
              sort=None,
-             all_tenants=None):
+             all_tenants=None,
+             substr_filters=None):
         """Return a (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
@@ -488,6 +512,7 @@ class SQLStorageManager(object):
         query = self._get_query(model_class,
                                 include,
                                 filters,
+                                substr_filters,
                                 sort,
                                 all_tenants)
 

@@ -46,8 +46,9 @@ class Nodes(resources_v1.Nodes):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Node)
     @rest_decorators.all_tenants
+    @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, all_tenants=None, **kwargs):
+            sort=None, all_tenants=None, search=None, **kwargs):
         """
         List nodes
         """
@@ -56,6 +57,7 @@ class Nodes(resources_v1.Nodes):
             include=_include,
             pagination=pagination,
             filters=filters,
+            substr_filters=search,
             sort=sort,
             all_tenants=all_tenants
         )
@@ -80,8 +82,9 @@ class NodeInstances(resources_v1.NodeInstances):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.NodeInstance)
     @rest_decorators.all_tenants
+    @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, all_tenants=None, **kwargs):
+            sort=None, all_tenants=None, search=None, **kwargs):
         """
         List node instances
         """
@@ -89,6 +92,7 @@ class NodeInstances(resources_v1.NodeInstances):
             models.NodeInstance,
             include=_include,
             filters=filters,
+            substr_filters=search,
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants

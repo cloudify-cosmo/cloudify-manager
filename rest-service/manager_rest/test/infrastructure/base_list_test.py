@@ -77,8 +77,16 @@ class BaseListTest(BaseServerTestCase):
                 self._mark_deployment_modification_finished(
                     modification_id=response['id'])
 
-    def _put_n_snapshots(self, number_of_snapshots):
+    def _put_n_snapshots(self, number_of_snapshots, prefix=None, suffix=None):
+        prefix = prefix or 'oh-snap'
+        suffix = suffix or ''
         for i in range(number_of_snapshots):
-            self.client.snapshots.create(snapshot_id='oh-snap{0}'.format(i),
-                                         include_metrics=False,
-                                         include_credentials=False)
+            self.client.snapshots.create(
+                snapshot_id='{0}{1}{2}'.format(prefix, i, suffix),
+                include_metrics=False,
+                include_credentials=False
+            )
+
+    def _put_n_secrets(self, number_of_secrets):
+        for i in range(number_of_secrets):
+            self.client.secrets.create('test{0}_secret'.format(i), 'value')

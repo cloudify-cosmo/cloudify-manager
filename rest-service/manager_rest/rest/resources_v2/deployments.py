@@ -47,8 +47,9 @@ class Deployments(resources_v1.Deployments):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Deployment)
     @rest_decorators.all_tenants
+    @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None, sort=None,
-            all_tenants=None, **kwargs):
+            all_tenants=None, search=None, **kwargs):
         """
         List deployments
         """
@@ -56,6 +57,7 @@ class Deployments(resources_v1.Deployments):
             models.Deployment,
             include=_include,
             filters=filters,
+            substr_filters=search,
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants
