@@ -28,7 +28,8 @@ def execute_workflow(name,
                      deployment_id,
                      execution_id,
                      execution_parameters=None,
-                     bypass_maintenance=None):
+                     bypass_maintenance=None,
+                     dry_run=False):
     execution_parameters = execution_parameters or {}
     task_name = workflow['operation']
     plugin_name = workflow['plugin']
@@ -51,6 +52,7 @@ def execute_workflow(name,
         'deployment_id': deployment_id,
         'execution_id': execution_id,
         'bypass_maintenance': bypass_maintenance,
+        'dry_run': dry_run,
         'plugin': {
             'name': plugin_name,
             'package_name': plugin.get('package_name'),
@@ -70,7 +72,8 @@ def execute_system_workflow(wf_id,
                             deployment=None,
                             execution_parameters=None,
                             bypass_maintenance=None,
-                            update_execution_status=True):
+                            update_execution_status=True,
+                            dry_run=False):
     execution_parameters = execution_parameters or {}
     context = {
         'type': 'workflow',
@@ -79,6 +82,7 @@ def execute_system_workflow(wf_id,
         'execution_id': task_id,
         'workflow_id': wf_id,
         'bypass_maintenance': bypass_maintenance,
+        'dry_run': dry_run,
         'update_execution_status': update_execution_status
     }
 

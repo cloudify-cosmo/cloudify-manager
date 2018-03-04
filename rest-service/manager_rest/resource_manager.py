@@ -386,7 +386,8 @@ class ResourceManager(object):
     def execute_workflow(self, deployment_id, workflow_id,
                          parameters=None,
                          allow_custom_parameters=False,
-                         force=False, bypass_maintenance=None):
+                         force=False, bypass_maintenance=None,
+                         dry_run=False):
         deployment = self.sm.get(models.Deployment, deployment_id)
         blueprint = self.sm.get(models.Blueprint, deployment.blueprint_id)
 
@@ -432,7 +433,8 @@ class ResourceManager(object):
             deployment_id=deployment_id,
             execution_id=execution_id,
             execution_parameters=execution_parameters,
-            bypass_maintenance=bypass_maintenance)
+            bypass_maintenance=bypass_maintenance,
+            dry_run=dry_run)
 
         return new_execution
 
