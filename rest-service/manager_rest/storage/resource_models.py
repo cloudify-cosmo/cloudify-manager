@@ -206,6 +206,10 @@ class Deployment(SQLResourceBase):
 class Execution(SQLResourceBase):
     __tablename__ = 'executions'
 
+    _extra_fields = {
+        'status_display': flask_fields.String
+    }
+
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     error = db.Column(db.Text)
     is_system_workflow = db.Column(db.Boolean, nullable=False)
@@ -223,6 +227,13 @@ class Execution(SQLResourceBase):
 
     deployment_id = association_proxy('deployment', 'id')
     blueprint_id = association_proxy('deployment', 'blueprint_id')
+
+    @property
+    def status_display(self):
+        status = self.status
+        return {
+            ExecutionState.TERMINATED: 'finished'
+        }.get(status, status)
 
     def _get_identifier_dict(self):
         id_dict = super(Execution, self)._get_identifier_dict()
