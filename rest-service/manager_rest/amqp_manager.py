@@ -38,6 +38,7 @@ def ignore_not_found(func):
                 raise
     return wrapper
 
+
 RABBITMQ_MANAGEMENT_PORT = 15671
 
 
