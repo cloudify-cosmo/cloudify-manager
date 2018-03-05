@@ -58,6 +58,9 @@ class RabbitMQClient(object):
     def _do_request(self, request_method, url, **kwargs):
         request_kwargs = self._request_kwargs.copy()
         request_kwargs.update(kwargs)
+        request_kwargs.setdefault('headers', {})\
+            .setdefault('Content-Type', 'application/json',)
+
         url = '{0}/api/{1}'.format(self.base_url, url)
         response = request_method(url, **request_kwargs)
         response.raise_for_status()
