@@ -575,8 +575,8 @@ class ExecutionsTestCase(BaseServerTestCase):
         cancel_response = self.post(resource_path, {
             'action': 'cancel'
         }).json
-        execution['status'] = ExecutionState.CANCELLING
-        self.assertEquals(execution, cancel_response)
+        self._assert_execution_status_changed(execution, cancel_response,
+                                              ExecutionState.CANCELLING)
 
     def test_force_cancel_execution_by_id(self):
         execution = self.test_get_execution_by_id()
@@ -587,8 +587,24 @@ class ExecutionsTestCase(BaseServerTestCase):
 
         cancel_response = self.post(
             resource_path, {'action': 'force-cancel'}).json
-        execution['status'] = ExecutionState.FORCE_CANCELLING
-        self.assertEquals(execution, cancel_response)
+        self._assert_execution_status_changed(execution, cancel_response,
+                                              ExecutionState.FORCE_CANCELLING)
+
+    def _assert_execution_status_changed(self, execution, response,
+                                         expected_state):
+        """Test that the cancel response contains the execution, but
+        with a changed state
+        """
+        skip_fields = ['status', 'status_display']
+
+        def _omit_fields(d, fields):
+            return {k: v for k, v in d.items() if k not in fields}
+
+        # check that the execution itself didn't change
+        self.assertEqual(_omit_fields(execution, skip_fields),
+                         _omit_fields(response, skip_fields))
+        # ..and that the execution now has the expected status
+        self.assertEqual(response['status'], expected_state)
 
     def test_illegal_cancel_on_execution(self):
         # tests for attempts to cancel an execution which is in a status
