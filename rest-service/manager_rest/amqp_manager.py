@@ -48,7 +48,7 @@ class RabbitMQClient(object):
         self._host = host
         self._port = port
         self._scheme = scheme
-        self._auth = (username, password)
+        request_kwargs.setdefault('auth', (username, password))
         self._request_kwargs = request_kwargs
 
     @property
