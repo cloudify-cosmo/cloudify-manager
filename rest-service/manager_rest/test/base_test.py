@@ -163,9 +163,9 @@ class BaseServerTestCase(unittest.TestCase):
         rest_utils.verify_role = self._original_verify_role
 
     def _mock_amqp_manager(self):
-        """ Mock the pyrabbit.Client for all unittests - no RabbitMQ """
+        """ Mock the RabbitMQClient for all unittests - no RabbitMQ """
 
-        self._amqp_patcher = patch('manager_rest.amqp_manager.Client')
+        self._amqp_patcher = patch('manager_rest.amqp_manager.RabbitMQClient')
         self.addCleanup(self._amqp_patcher.stop)
         self._amqp_patcher.start()
 
