@@ -27,6 +27,7 @@ with app.app_context():
     amqp_manager = AMQPManager(
         host=instance.amqp_host,
         username=instance.amqp_username,
-        password=instance.amqp_password
+        password=instance.amqp_password,
+        verify=instance.amqp_ca_path
     )
     amqp_manager.sync_metadata()

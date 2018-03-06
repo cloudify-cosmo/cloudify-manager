@@ -60,7 +60,6 @@ def setup_flask_app():
     manager_ip = utils.get_manager_ip()
     return _setup_flask_app(
         manager_ip=manager_ip,
-        driver='pg8000',
         hash_salt=security_config['hash_salt'],
         secret_key=security_config['secret_key']
     )
@@ -74,7 +73,8 @@ def setup_amqp_manager():
         amqp_manager = AMQPManager(
             host=config['amqp_host'],
             username=config['amqp_username'],
-            password=config['amqp_password']
+            password=config['amqp_password'],
+            verify=config['amqp_ca_path']
         )
     return amqp_manager
 

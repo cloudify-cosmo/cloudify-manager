@@ -15,11 +15,11 @@
 
 import random
 import string
+import requests
+from urllib import quote
+from requests.exceptions import HTTPError
 
 from functools import wraps
-
-from pyrabbit.api import Client
-from pyrabbit.http import HTTPError
 
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
@@ -32,22 +32,81 @@ def ignore_not_found(func):
     def wrapper(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except HTTPError, e:
-            if e.status == 404:
+        except HTTPError as e:
+            if e.response.status_code == 404:
                 pass
             else:
                 raise
     return wrapper
 
 
+RABBITMQ_MANAGEMENT_PORT = 15671
+
+
+class RabbitMQClient(object):
+    def __init__(self, host, username, password, port=RABBITMQ_MANAGEMENT_PORT,
+                 scheme='https', **request_kwargs):
+        self._host = host
+        self._port = port
+        self._scheme = scheme
+        request_kwargs.setdefault('auth', (username, password))
+        self._request_kwargs = request_kwargs
+
+    @property
+    def base_url(self):
+        return '{0}://{1}:{2}'.format(self._scheme, self._host, self._port)
+
+    def _do_request(self, request_method, url, **kwargs):
+        request_kwargs = self._request_kwargs.copy()
+        request_kwargs.update(kwargs)
+        request_kwargs.setdefault('headers', {})\
+            .setdefault('Content-Type', 'application/json',)
+
+        url = '{0}/api/{1}'.format(self.base_url, url)
+        response = request_method(url, **request_kwargs)
+        response.raise_for_status()
+        return response
+
+    def get_vhost_names(self):
+        return self._do_request(requests.get, 'vhosts').json()
+
+    def create_vhost(self, vhost):
+        vhost = quote(vhost, '')
+        self._do_request(requests.put, 'vhosts/{0}'.format(vhost))
+
+    def delete_vhost(self, vhost):
+        vhost = quote(vhost, '')
+        self._do_request(requests.delete, 'vhosts/{0}'.format(vhost))
+
+    def get_users(self):
+        return self._do_request(requests.get, 'users').json()
+
+    def create_user(self, username, password, tags=''):
+        self._do_request(requests.put, 'users/{0}'.format(username),
+                         json={'password': password, 'tags': tags})
+
+    def delete_user(self, username):
+        self._do_request(requests.delete, 'users/{0}'.format(username))
+
+    def set_vhost_permissions(self, vhost, username, configure, write, read):
+        vhost = quote(vhost, '')
+        self._do_request(requests.put,
+                         'permissions/{0}/{1}'.format(vhost, username),
+                         json={
+                             'configure': configure,
+                             'write': write,
+                             'read': read
+                         })
+
+
 class AMQPManager(object):
-    RABBITMQ_MANAGEMENT_PORT = 15672
+
     VHOST_NAME_PATTERN = 'rabbitmq_vhost_{0}'
     USERNAME_PATTERN = 'rabbitmq_user_{0}'
 
-    def __init__(self, host, username, password):
-        host_str = '{0}:{1}'.format(host, self.RABBITMQ_MANAGEMENT_PORT)
-        self._client = Client(host_str, username, password)
+    def __init__(self, host, username, password, **request_kwargs):
+        self._client = RabbitMQClient(host, username, password,
+                                      **request_kwargs)
         self._storage_manager = get_storage_manager()
 
     def create_tenant_vhost_and_user(self, tenant):
