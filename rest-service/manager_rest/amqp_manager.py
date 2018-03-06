@@ -78,9 +78,9 @@ class RabbitMQClient(object):
     def get_users(self):
         return self._do_request(requests.get, 'users').json()
 
-    def create_user(self, username, password):
+    def create_user(self, username, password, tags=''):
         self._do_request(requests.put, 'users/{0}'.format(username),
-                         json={'password': password})
+                         json={'password': password, 'tags': tags})
 
     def delete_user(self, username):
         self._do_request(requests.delete, 'users/{0}'.format(username))
