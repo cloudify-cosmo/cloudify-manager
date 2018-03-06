@@ -271,7 +271,7 @@ def get_tenants_list():
     version = client.manager.get_version()
     if version['edition'] != 'premium':
         return [snapshot_constants.DEFAULT_TENANT_NAME]
-    tenants = client.tenants.list().items
+    tenants = client.tenants.list(_include=['name'], _get_all_results=True)
     return [tenant.name for tenant in tenants]
 
 

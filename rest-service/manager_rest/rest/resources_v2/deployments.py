@@ -14,8 +14,10 @@
 #  * limitations under the License.
 #
 
+from flask import request
 from flask_restful_swagger import swagger
 
+from .. import rest_utils
 from manager_rest.rest import (
     resources_v1,
     rest_decorators,
@@ -53,6 +55,10 @@ class Deployments(resources_v1.Deployments):
         """
         List deployments
         """
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
         return get_storage_manager().list(
             models.Deployment,
             include=_include,
@@ -60,7 +66,8 @@ class Deployments(resources_v1.Deployments):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
         )
 
 

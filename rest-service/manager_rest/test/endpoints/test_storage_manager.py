@@ -18,6 +18,8 @@ from nose.plugins.attrib import attr
 from manager_rest import utils
 from manager_rest.test import base_test
 from manager_rest.storage import models
+from manager_rest.storage.models_states import VisibilityState
+from manager_rest.manager_exceptions import IllegalActionError
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -189,3 +191,28 @@ class StorageManagerTests(base_test.BaseServerTestCase):
         self.assertFalse(hasattr(blueprint_restored, 'updated_at'))
         self.assertFalse(hasattr(blueprint_restored, 'plan'))
         self.assertFalse(hasattr(blueprint_restored, 'main_file_name'))
+
+    def test_all_results_query(self):
+        now = utils.get_formatted_timestamp()
+        for i in range(1, 1002):
+            secret = models.Secret(id='secret_{}'.format(i),
+                                   value='value',
+                                   created_at=now,
+                                   updated_at=now,
+                                   visibility=VisibilityState.TENANT)
+            self.sm.put(secret)
+
+        error_message = '^Response size .*? bigger than max allowed .*?' \
+                        'please use pagination.$'
+        self.assertRaisesRegexp(IllegalActionError,
+                                error_message,
+                                self.sm.list,
+                                models.Secret,
+                                include=['id', 'created_at'])
+
+        secret_list = self.sm.list(
+            models.Secret,
+            include=['id', 'created_at'],
+            get_all_results=True
+        )
+        self.assertEquals(1001, len(secret_list))

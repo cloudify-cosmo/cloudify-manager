@@ -141,7 +141,7 @@ class AMQPManager(object):
     def sync_metadata(self):
         """Synchronize database tenants with rabbitmq metadata"""
 
-        tenants = self._storage_manager.list(Tenant)
+        tenants = self._storage_manager.list(Tenant, get_all_results=True)
         self._clear_extra_vhosts(tenants)
         self._clear_extra_users(tenants)
         self._add_missing_vhosts_and_users(tenants)

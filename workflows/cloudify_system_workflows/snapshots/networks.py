@@ -45,13 +45,19 @@ class Networks(object):
     def _get_compute_nodes(client):
         """ Return a set of the IDs of all the compute nodes """
 
-        all_nodes = client.nodes.list(_all_tenants=True)
+        all_nodes = client.nodes.list(_all_tenants=True,
+                                      _include=['id', 'type_hierarchy'],
+                                      _get_all_results=True)
         return {node.id for node in all_nodes if is_compute(node)}
 
     @staticmethod
     def _get_active_node_instances(client, compute_nodes):
         active_node_instances = list()
-        all_node_instances = client.node_instances.list(_all_tenants=True)
+        all_node_instances = client.node_instances.list(
+            _all_tenants=True,
+            _include=['node_id', 'state'],
+            _get_all_results=True
+        )
         for node_instance in all_node_instances:
             # Skip node instances that aren't instances of compute nodes
             if node_instance.node_id not in compute_nodes:

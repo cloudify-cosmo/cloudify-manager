@@ -14,11 +14,13 @@
 #  * limitations under the License.
 #
 
+from flask import request
 from flask_restful_swagger import swagger
 
 from manager_rest.rest import (
     resources_v1,
     rest_decorators,
+    rest_utils
 )
 from manager_rest.storage import (
     get_storage_manager,
@@ -52,6 +54,10 @@ class Nodes(resources_v1.Nodes):
         """
         List nodes
         """
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
         return get_storage_manager().list(
             models.Node,
             include=_include,
@@ -59,7 +65,8 @@ class Nodes(resources_v1.Nodes):
             filters=filters,
             substr_filters=search,
             sort=sort,
-            all_tenants=all_tenants
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
         )
 
 
@@ -88,6 +95,10 @@ class NodeInstances(resources_v1.NodeInstances):
         """
         List node instances
         """
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
         return get_storage_manager().list(
             models.NodeInstance,
             include=_include,
@@ -95,5 +106,6 @@ class NodeInstances(resources_v1.NodeInstances):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
         )

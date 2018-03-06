@@ -139,7 +139,10 @@ def _check_allowed_endpoint(request_endpoint):
 
 def get_running_executions():
     executions = get_resource_manager().list_executions(
-            is_include_system_workflows=True, all_tenants=True).items
+        is_include_system_workflows=True,
+        all_tenants=True,
+        get_all_results=True
+    )
     running_executions = []
     for execution in executions:
         if execution.status not in ExecutionState.END_STATES:

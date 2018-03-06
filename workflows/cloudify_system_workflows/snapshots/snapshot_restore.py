@@ -399,7 +399,9 @@ class SnapshotRestore(object):
         """
         return not self._premium_enabled and \
             self._force and \
-            self._client.blueprints.list(_all_tenants=True).items
+            self._client.blueprints.list(_all_tenants=True,
+                                         _include=['id'],
+                                         _get_all_results=True).items
 
     def _extract_snapshot_archive(self, snapshot_path):
         """Extract the snapshot archive to a temp folder
@@ -430,7 +432,8 @@ class SnapshotRestore(object):
 
     def _get_existing_plugin_names(self):
         ctx.logger.debug('Collecting existing plugins')
-        existing_plugins = self._client.plugins.list(_all_tenants=True)
+        existing_plugins = self._client.plugins.list(_all_tenants=True,
+                                                     _get_all_results=True)
         return [self._get_plugin_info(p) for p in existing_plugins]
 
     def _get_plugin_info(self, plugin):
@@ -458,7 +461,8 @@ class SnapshotRestore(object):
             return frozenset(plugin.items()) not in hashable_existing
 
         ctx.logger.debug('Looking for plugins to install')
-        all_plugins = self._client.plugins.list(_all_tenants=True)
+        all_plugins = self._client.plugins.list(_all_tenants=True,
+                                                _get_all_results=True)
         installable_plugins = [
             self._get_plugin_info(plugin) for plugin in all_plugins
             if self._plugin_installable_on_current_platform(plugin)
@@ -672,7 +676,12 @@ class SnapshotRestoreValidator(object):
         self._assert_clean_db(all_tenants=False)
 
     def _assert_clean_db(self, all_tenants=True):
-        if self._client.blueprints.list(_all_tenants=all_tenants).items:
+        blueprints_list = self._client.blueprints.list(
+            _all_tenants=all_tenants,
+            _include=['id'],
+            _get_all_results=True
+        )
+        if blueprints_list.items:
             if self._force:
                 ctx.logger.warning(
                     "Forcing snapshot restoration on a non-empty manager. "
