@@ -47,7 +47,10 @@ class Agents(object):
         for tenant_name in get_tenants_list():
             result[tenant_name] = {}
             tenant_client = get_rest_client(tenant_name)
-            tenant_deployments = tenant_client.deployments.list()
+            tenant_deployments = tenant_client.deployments.list(
+                _include=['id'],
+                _get_all_results=True
+            )
             for deployment in tenant_deployments:
                 result[tenant_name][deployment.id] = \
                     self._get_deployment_result(tenant_client, deployment.id)
@@ -60,7 +63,10 @@ class Agents(object):
 
     def _get_deployment_result(self, client, deployment_id):
         deployment_result = {}
-        for node in client.nodes.list(deployment_id=deployment_id):
+        nodes_list = client.nodes.list(deployment_id=deployment_id,
+                                       _include=['id', 'type_hierarchy'],
+                                       _get_all_results=True)
+        for node in nodes_list:
             if is_compute(node):
                 deployment_result[node.id] = self._get_node_result(
                     client, deployment_id, node.id)

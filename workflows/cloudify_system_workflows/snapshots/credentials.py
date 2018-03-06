@@ -23,8 +23,8 @@ import string
 from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
-from .utils import is_compute, run, get_dep_contexts, get_tenants_list
 from .constants import SECRET_STORE_AGENT_KEY_PREFIX, V_4_1_0
+from .utils import is_compute, run, get_dep_contexts, get_tenants_list
 
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
@@ -152,7 +152,9 @@ def restore(tempdir, postgres, version):
         # !! mapping key CONTENTS to their secret store keys
         key_secrets = {}
         secret_keys = set()
-        for secret in client.secrets.list():
+        secrets_list = client.secrets.list(_include=['key'],
+                                           _get_all_results=True)
+        for secret in secrets_list:
             if secret.key.startswith(SECRET_STORE_AGENT_KEY_PREFIX):
                 secret = client.secrets.get(secret.key)
                 key_secrets[secret.value] = secret.key

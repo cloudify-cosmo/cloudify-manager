@@ -329,7 +329,7 @@ class SQLStorageManager(object):
             return column.remote_attr.label(column_name)
 
     @staticmethod
-    def _paginate(query, pagination):
+    def _paginate(query, pagination, get_all_results=False):
         """Paginate the query by size and offset
 
         :param query: Current SQLAlchemy query object
@@ -350,7 +350,8 @@ class SQLStorageManager(object):
             return results, total, size, offset
         else:
             total = query.order_by(None).count()
-            SQLStorageManager._validate_returned_size(total)
+            if not get_all_results:
+                SQLStorageManager._validate_returned_size(total)
             results = query.all()
             return results, len(results), 0, 0
 
@@ -498,8 +499,26 @@ class SQLStorageManager(object):
              pagination=None,
              sort=None,
              all_tenants=None,
-             substr_filters=None):
-        """Return a (possibly empty) list of `model_class` results
+             substr_filters=None,
+             get_all_results=False):
+        """Return a list of `model_class` results
+
+        :param model_class: SQL DB table class
+        :param include: An optional list of columns to include in the query
+        :param filters: An optional dictionary where keys are column names to
+                        filter by, and values are values applicable for those
+                        columns (or lists of such values)
+        :param pagination: An optional dict with size and offset keys
+        :param sort: An optional dictionary where keys are column names to
+                     sort by, and values are the order (asc/desc)
+        :param all_tenants: Include resources from all tenants associated
+                            with the user
+        :param substr_filters: An optional dictionary similar to filters,
+                               when the results are filtered by substrings
+        :param get_all_results: Get all the results without the limitation of
+                                size or pagination. Use it carefully to
+                                prevent consumption of too much memory
+        :return: A (possibly empty) list of `model_class` results
         """
         self._validate_available_memory()
         if filters:
@@ -516,7 +535,9 @@ class SQLStorageManager(object):
                                 sort,
                                 all_tenants)
 
-        results, total, size, offset = self._paginate(query, pagination)
+        results, total, size, offset = self._paginate(query,
+                                                      pagination,
+                                                      get_all_results)
         pagination = {'total': total, 'size': size, 'offset': offset}
 
         current_app.logger.debug('Returning: {0}'.format(results))

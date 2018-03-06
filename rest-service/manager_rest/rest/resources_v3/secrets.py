@@ -13,15 +13,16 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from flask import request
+
+from ... import utils
+from .. import rest_decorators, rest_utils
+from ..responses_v3 import SecretsListResponse
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
-
-from ... import utils
-from .. import rest_decorators, rest_utils
-from ..responses_v3 import SecretsListResponse
 
 
 class SecretsKey(SecuredResource):
@@ -121,6 +122,10 @@ class Secrets(SecuredResource):
         """
         List secrets
         """
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
         return get_storage_manager().list(
             models.Secret,
             include=_include,
@@ -128,5 +133,6 @@ class Secrets(SecuredResource):
             substr_filters=search,
             pagination=pagination,
             sort=sort,
-            all_tenants=all_tenants
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
         )

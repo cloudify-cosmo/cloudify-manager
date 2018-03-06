@@ -67,14 +67,18 @@ class Executions(resources_v1.Executions):
         is_include_system_workflows = rest_utils.verify_and_convert_bool(
             '_include_system_workflows',
             request.args.get('_include_system_workflows', 'false'))
-
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
         return get_resource_manager().list_executions(
             filters=filters,
             pagination=pagination,
             sort=sort,
             is_include_system_workflows=is_include_system_workflows,
             include=_include,
-            all_tenants=all_tenants
+            all_tenants=all_tenants,
+            get_all_results=get_all_results
         )
 
     def _check_if_deployment_exists(self, deployment_id, all_tenants):

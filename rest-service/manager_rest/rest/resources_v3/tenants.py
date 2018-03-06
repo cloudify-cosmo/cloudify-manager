@@ -56,12 +56,18 @@ class Tenants(TenantsListResource):
                 'get_data', request.args.get('_get_data', False)):
             _authorize_with_get_data()
 
+        get_all_results = rest_utils.verify_and_convert_bool(
+            '_get_all_results',
+            request.args.get('_get_all_results', False)
+        )
         if multi_tenancy:
             return multi_tenancy.list_tenants(_include,
                                               filters,
                                               pagination,
                                               sort,
-                                              search)
+                                              search,
+                                              get_all_results)
+
         # In community edition we have only the `default_tenant`, so it
         # should be safe to return it like this
         return get_storage_manager().list(models.Tenant)
