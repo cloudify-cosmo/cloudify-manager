@@ -16,6 +16,7 @@
 import random
 import string
 import requests
+from urllib import quote
 from requests.exceptions import HTTPError
 
 from functools import wraps
@@ -70,9 +71,11 @@ class RabbitMQClient(object):
         return self._do_request(requests.get, 'vhosts').json()
 
     def create_vhost(self, vhost):
+        vhost = quote(vhost, '')
         self._do_request(requests.put, 'vhosts/{0}'.format(vhost))
 
     def delete_vhost(self, vhost):
+        vhost = quote(vhost, '')
         self._do_request(requests.delete, 'vhosts/{0}'.format(vhost))
 
     def get_users(self):
@@ -86,6 +89,7 @@ class RabbitMQClient(object):
         self._do_request(requests.delete, 'users/{0}'.format(username))
 
     def set_vhost_permissions(self, vhost, username, configure, write, read):
+        vhost = quote(vhost, '')
         self._do_request(requests.put,
                          'permissions/{0}/{1}'.format(vhost, username),
                          json={
