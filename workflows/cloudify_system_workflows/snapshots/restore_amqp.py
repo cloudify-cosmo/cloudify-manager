@@ -25,7 +25,7 @@ app = setup_flask_app()
 with app.app_context():
     instance.load_configuration()
     amqp_manager = AMQPManager(
-        host=instance.amqp_host,
+        host=instance.amqp_management_host,
         username=instance.amqp_username,
         password=instance.amqp_password,
         verify=instance.amqp_ca_path
