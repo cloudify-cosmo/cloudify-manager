@@ -71,7 +71,7 @@ def setup_amqp_manager():
         conf_file_str = read_manager_file('/opt/manager/cloudify-rest.conf')
         config = yaml.load(conf_file_str)
         amqp_manager = AMQPManager(
-            host=config['amqp_host'],
+            host=config['amqp_management_host'],
             username=config['amqp_username'],
             password=config['amqp_password'],
             verify=config['amqp_ca_path']
