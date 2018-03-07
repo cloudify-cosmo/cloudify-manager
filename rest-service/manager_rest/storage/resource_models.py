@@ -232,7 +232,7 @@ class Execution(SQLResourceBase):
     def status_display(self):
         status = self.status
         return {
-            ExecutionState.TERMINATED: 'finished'
+            ExecutionState.TERMINATED: 'completed'
         }.get(status, status)
 
     def _get_identifier_dict(self):
