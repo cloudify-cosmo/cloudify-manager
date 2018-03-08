@@ -68,7 +68,8 @@ class RabbitMQClient(object):
         return response
 
     def get_vhost_names(self):
-        return self._do_request(requests.get, 'vhosts').json()
+        vhosts = self._do_request(requests.get, 'vhosts').json()
+        return [vhost['name'] for vhost in vhosts]
 
     def create_vhost(self, vhost):
         vhost = quote(vhost, '')
