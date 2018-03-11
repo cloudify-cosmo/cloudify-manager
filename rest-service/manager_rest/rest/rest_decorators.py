@@ -51,6 +51,8 @@ INCLUDE = 'Include'
 SORT = 'Sort'
 FILTER = 'Filter'
 
+SPECIAL_CHARS = ['\\', '_', '%']
+
 
 def _validate_fields(valid_fields, fields_to_check, action):
     """Assert that `fields_to_check` is a subset of `valid_fields`
@@ -400,6 +402,8 @@ def search(attribute):
         def wrapper(*args, **kw):
             pattern = request.args.get('_search', None)
             if pattern:
+                for char in SPECIAL_CHARS:
+                    pattern = pattern.replace(char, '\\{0}'.format(char))
                 pattern = {attribute: pattern}
             return func(search=pattern, *args, **kw)
         return wrapper
