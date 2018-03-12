@@ -21,17 +21,20 @@ from manager_rest.storage import db, models
 from integration_tests.framework import utils
 from integration_tests.framework.docl import execute, copy_file_to_manager
 from integration_tests.tests.utils import get_resource
-
 logger = setup_logger('Flask Utils', logging.INFO)
+
+SCRIPT_PATH = '/tmp/reset_storage.py'
+
+
+def prepare_reset_storage_script():
+    reset_script = get_resource('scripts/reset_storage.py')
+    copy_file_to_manager(reset_script, SCRIPT_PATH)
 
 
 def reset_storage():
     logger.info('Resetting PostgreSQL DB')
-    reset_script = get_resource('scripts/reset_storage.py')
-    target_script_path = '/tmp/reset_storage.py'
     # reset the storage by calling a script on the manager, to access
     # localhost-only APIs (rabbitmq management api)
-    copy_file_to_manager(reset_script, target_script_path)
     execute("bash -c 'MANAGER_REST_CONFIG_PATH={config_path} "
             "MANAGER_REST_SECURITY_CONFIG_PATH={security_config_path} "
             "MANAGER_REST_AUTHORIZATION_CONFIG_PATH={auth_config_path} "
@@ -42,7 +45,7 @@ def reset_storage():
                 config_path='/opt/manager/cloudify-rest.conf',
                 security_config_path='/opt/manager/rest-security.conf',
                 auth_config_path='/opt/manager/authorization.conf',
-                target_script_path=target_script_path,
+                target_script_path=SCRIPT_PATH,
                 ip=utils.get_manager_ip(),
                 username=utils.get_manager_username(),
                 password=utils.get_manager_password(),
