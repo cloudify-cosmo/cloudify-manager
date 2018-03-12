@@ -26,6 +26,9 @@ CLOUDIFY_REST_PORT = 'CLOUDIFY_REST_PORT'
 
 PLUGIN_STORAGE_DIR = '/opt/integration-plugin-storage'
 DOCKER_COMPUTE_DIR = '/etc/cloudify/dockercompute'
+
+CONFIG_FILE_LOCATION = '/opt/manager/cloudify-rest.conf'
+SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'
 AUTHORIZATION_FILE_LOCATION = '/opt/manager/authorization.conf'
 
 CLOUDIFY_USER = 'cfyuser'

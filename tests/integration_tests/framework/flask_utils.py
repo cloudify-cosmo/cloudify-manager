@@ -14,88 +14,52 @@
 # limitations under the License.
 
 import os
-import yaml
+import json
 import logging
-from path import path
-from tempfile import mkstemp
-from contextlib import contextmanager
-
-from flask_migrate import upgrade
+import tempfile
 
 from cloudify.utils import setup_logger
 
-import manager_rest
 from manager_rest.storage import db, models
-from manager_rest.amqp_manager import AMQPManager
-from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
-from manager_rest.storage.storage_utils import \
-    create_default_user_tenant_and_roles
-from manager_rest.constants import (PROVIDER_CONTEXT_ID,
-                                    CURRENT_TENANT_CONFIG,
-                                    DEFAULT_TENANT_NAME)
-from integration_tests.framework import utils
-from integration_tests.framework.postgresql import safe_drop_all
-from integration_tests.framework.docl import read_file as read_manager_file
-from integration_tests.tests.constants import PROVIDER_NAME, PROVIDER_CONTEXT
-from integration_tests.framework.constants import AUTHORIZATION_FILE_LOCATION
+from integration_tests.framework import constants, utils
+from integration_tests.framework.docl import execute, copy_file_to_manager
+from integration_tests.tests.constants import PROVIDER_CONTEXT
+from integration_tests.tests.utils import get_resource
 
 
 logger = setup_logger('Flask Utils', logging.INFO)
 
-security_config = None
-amqp_manager = None
-
-# This is a hacky way to get to the migrations folder
-base_dir = path(manager_rest.__file__).parent.parent.parent
-migrations_dir = base_dir / 'resources' / 'rest-service' / \
-                            'cloudify' / 'migrations'
+SCRIPT_PATH = '/tmp/reset_storage.py'
+CONFIG_PATH = '/tmp/reset_storage_config.json'
 
 
-def setup_flask_app():
-    global security_config
-    if not security_config:
-        conf_file_str = read_manager_file('/opt/manager/rest-security.conf')
-        security_config = yaml.load(conf_file_str)
-
-    manager_ip = utils.get_manager_ip()
-    return _setup_flask_app(
-        manager_ip=manager_ip,
-        hash_salt=security_config['hash_salt'],
-        secret_key=security_config['secret_key']
-    )
-
-
-def setup_amqp_manager():
-    global amqp_manager
-    if not amqp_manager:
-        conf_file_str = read_manager_file('/opt/manager/cloudify-rest.conf')
-        config = yaml.load(conf_file_str)
-        amqp_manager = AMQPManager(
-            host=config['amqp_management_host'],
-            username=config['amqp_username'],
-            password=config['amqp_password'],
-            verify=config['amqp_ca_path']
-        )
-    return amqp_manager
+def prepare_reset_storage_script():
+    reset_script = get_resource('scripts/reset_storage.py')
+    copy_file_to_manager(reset_script, SCRIPT_PATH)
+    with tempfile.NamedTemporaryFile(delete=False) as f:
+        json.dump({
+            'config': {
+                '': constants.CONFIG_FILE_LOCATION,
+                'security': constants.SECURITY_FILE_LOCATION,
+                'authorization': constants.AUTHORIZATION_FILE_LOCATION
+            },
+            'ip': utils.get_manager_ip(),
+            'username': utils.get_manager_username(),
+            'password': utils.get_manager_password(),
+            'provider_context': PROVIDER_CONTEXT
+        }, f)
+    try:
+        copy_file_to_manager(f.name, CONFIG_PATH)
+    finally:
+        os.unlink(f.name)
 
 
 def reset_storage():
     logger.info('Resetting PostgreSQL DB')
-    app = setup_flask_app()
-    setup_amqp_manager()
-
-    # Clear the old RabbitMQ resources
-    amqp_manager.remove_tenant_vhost_and_user(DEFAULT_TENANT_NAME)
-
-    # Rebuild the DB
-    safe_drop_all(keep_tables=['roles'])
-    upgrade(directory=migrations_dir)
-
-    # Add default tenant, admin user and provider context
-    _add_defaults(app)
-
-    # Clear the connection
-    close_session(app)
+    # reset the storage by calling a script on the manager, to access
+    # localhost-only APIs (rabbitmq management api)
+    execute("/opt/manager/env/bin/python {script_path} --config {config_path}"
+            .format(script_path=SCRIPT_PATH, config_path=CONFIG_PATH))
 
 
 def close_session(app):
@@ -116,45 +80,3 @@ def load_user(app, username=None):
     # And then load the admin as the currently active user
     app.extensions['security'].login_manager.reload_user(user)
     return user
-
-
-def _add_defaults(app):
-    """Add default tenant, admin user and provider context to the DB
-    """
-    # Add the default network to the provider context
-    networks = PROVIDER_CONTEXT['cloudify']['cloudify_agent']['networks']
-    networks['default'] = utils.get_manager_ip()
-
-    provider_context = models.ProviderContext(
-        id=PROVIDER_CONTEXT_ID,
-        name=PROVIDER_NAME,
-        context=PROVIDER_CONTEXT
-    )
-    db.session.add(provider_context)
-
-    with _get_local_authorization_conf_path() as auth_conf_path:
-        default_tenant = create_default_user_tenant_and_roles(
-            admin_username=utils.get_manager_username(),
-            admin_password=utils.get_manager_password(),
-            amqp_manager=amqp_manager,
-            authorization_file_path=auth_conf_path
-        )
-
-    app.config[CURRENT_TENANT_CONFIG] = default_tenant
-    return default_tenant
-
-
-@contextmanager
-def _get_local_authorization_conf_path():
-    """ Read the auth config from the manager, and write it to a temp file """
-
-    content = read_manager_file(AUTHORIZATION_FILE_LOCATION)
-    yaml_content = yaml.load(content)
-    fd, file_path = mkstemp()
-    os.close(fd)
-    with open(file_path, 'w') as f:
-        yaml.dump(yaml_content, f)
-
-    yield file_path
-
-    os.remove(file_path)

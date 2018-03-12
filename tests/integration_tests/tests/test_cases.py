@@ -40,7 +40,8 @@ from manager_rest.utils import mkdirs
 from manager_rest.constants import CLOUDIFY_TENANT_HEADER
 
 from integration_tests.framework import utils, hello_world, docl
-from integration_tests.framework.flask_utils import reset_storage
+from integration_tests.framework.flask_utils import reset_storage, \
+    prepare_reset_storage_script
 from integration_tests.framework.riemann import RIEMANN_CONFIGS_DIR
 from integration_tests.tests import utils as test_utils
 from integration_tests.framework.constants import (PLUGIN_STORAGE_DIR,
@@ -449,6 +450,11 @@ class BaseTestCase(unittest.TestCase):
 
 
 class AgentlessTestCase(BaseTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(AgentlessTestCase, cls).setUpClass()
+        prepare_reset_storage_script()
 
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
