@@ -21,9 +21,12 @@ import tempfile
 from cloudify.utils import setup_logger
 
 from manager_rest.storage import db, models
-from integration_tests.framework import utils
+from integration_tests.framework import constants, utils
 from integration_tests.framework.docl import execute, copy_file_to_manager
+from integration_tests.tests.constants import PROVIDER_CONTEXT
 from integration_tests.tests.utils import get_resource
+
+
 logger = setup_logger('Flask Utils', logging.INFO)
 
 SCRIPT_PATH = '/tmp/reset_storage.py'
@@ -36,13 +39,14 @@ def prepare_reset_storage_script():
     with tempfile.NamedTemporaryFile(delete=False) as f:
         json.dump({
             'config': {
-                '': '/opt/manager/cloudify-rest.conf',
-                'security': '/opt/manager/rest-security.conf',
-                'authorization': '/opt/manager/authorization.conf',
+                '': constants.CONFIG_FILE_LOCATION,
+                'security': constants.SECURITY_FILE_LOCATION,
+                'authorization': constants.AUTHORIZATION_FILE_LOCATION
             },
             'ip': utils.get_manager_ip(),
             'username': utils.get_manager_username(),
             'password': utils.get_manager_password(),
+            'provider_context': PROVIDER_CONTEXT
         }, f)
     try:
         copy_file_to_manager(f.name, CONFIG_PATH)

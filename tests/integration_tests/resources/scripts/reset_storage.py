@@ -76,13 +76,14 @@ def _add_defaults(app, amqp_manager, script_config):
     """Add default tenant, admin user and provider context to the DB
     """
     # Add the default network to the provider context
-    networks = PROVIDER_CONTEXT['cloudify']['cloudify_agent']['networks']
+    context = script_config['provider_context']
+    networks = context['cloudify']['cloudify_agent']['networks']
     networks['default'] = script_config['ip']
 
     provider_context = models.ProviderContext(
         id=PROVIDER_CONTEXT_ID,
         name=PROVIDER_NAME,
-        context=PROVIDER_CONTEXT
+        context=context
     )
     db.session.add(provider_context)
 
