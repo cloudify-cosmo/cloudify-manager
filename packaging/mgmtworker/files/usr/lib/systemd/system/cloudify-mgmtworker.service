@@ -25,7 +25,7 @@ ExecStart=/opt/mgmtworker/env/bin/celery worker \
     --without-gossip \
     --without-mingle \
     --with-gate-keeper \
-    --gate-keeper-bucket-size=${AGENT_MAX_WORKERS} \
+    --gate-keeper-bucket-size=${GATEKEEPER_BUCKET_SIZE} \
     --with-logging-server \
     --logging-server-logdir=${CELERY_LOG_DIR}/logs \
     --logging-server-handler-cache-size=${MAX_WORKERS}
