@@ -55,7 +55,7 @@ class Networks(object):
         active_node_instances = list()
         all_node_instances = client.node_instances.list(
             _all_tenants=True,
-            _include=['node_id', 'state'],
+            _include=['node_id', 'state', 'runtime_properties'],
             _get_all_results=True
         )
         for node_instance in all_node_instances:
