@@ -64,8 +64,9 @@ class Plugins(SecuredResource):
     @rest_decorators.paginate
     @rest_decorators.sortable(models.Plugin)
     @rest_decorators.all_tenants
+    @rest_decorators.search('package_name')
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, all_tenants=None, **kwargs):
+            sort=None, all_tenants=None, search=None, **kwargs):
         """
         List uploaded plugins
         """
@@ -74,6 +75,7 @@ class Plugins(SecuredResource):
             models.Plugin,
             include=_include,
             filters=filters,
+            substr_filters=search,
             pagination=pagination,
             sort=sort,
             all_tenants=all_tenants
