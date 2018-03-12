@@ -13,7 +13,7 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
+import json
 import argparse
 
 from manager_rest.storage import db, models
@@ -72,12 +72,12 @@ def safe_drop_all(keep_tables):
     db.session.commit()
 
 
-def _add_defaults(app, amqp_manager, manager_ip, username, password):
+def _add_defaults(app, amqp_manager, script_config):
     """Add default tenant, admin user and provider context to the DB
     """
     # Add the default network to the provider context
     networks = PROVIDER_CONTEXT['cloudify']['cloudify_agent']['networks']
-    networks['default'] = manager_ip
+    networks['default'] = script_config['ip']
 
     provider_context = models.ProviderContext(
         id=PROVIDER_CONTEXT_ID,
@@ -87,11 +87,10 @@ def _add_defaults(app, amqp_manager, manager_ip, username, password):
     db.session.add(provider_context)
 
     default_tenant = create_default_user_tenant_and_roles(
-        admin_username=username,
-        admin_password=password,
+        admin_username=script_config['username'],
+        admin_password=script_config['password'],
         amqp_manager=amqp_manager,
-        authorization_file_path=os.environ[
-            'MANAGER_REST_AUTHORIZATION_CONFIG_PATH']
+        authorization_file_path=script_config['config']['authorization']
     )
 
     app.config[CURRENT_TENANT_CONFIG] = default_tenant
@@ -103,7 +102,7 @@ def close_session(app):
     db.get_engine(app).dispose()
 
 
-def reset_storage(manager_ip, username, password):
+def reset_storage(script_config):
     app = setup_flask_app()
     amqp_manager = setup_amqp_manager()
 
@@ -115,25 +114,18 @@ def reset_storage(manager_ip, username, password):
     upgrade(directory=migrations_dir)
 
     # Add default tenant, admin user and provider context
-    _add_defaults(app, amqp_manager, manager_ip, username, password)
+    _add_defaults(app, amqp_manager, script_config)
 
     # Clear the connection
     close_session(app)
 
 
 if __name__ == '__main__':
-    for required_env_var in [
-        'MANAGER_REST_CONFIG_PATH',
-        'MANAGER_REST_SECURITY_CONFIG_PATH',
-        'MANAGER_REST_AUTHORIZATION_CONFIG_PATH'
-    ]:
-        if required_env_var not in os.environ:
-            raise RuntimeError('{0} is a required environment variable'
-                               .format(required_env_var))
     parser = argparse.ArgumentParser()
-    parser.add_argument('--manager-ip', dest='manager_ip')
-    parser.add_argument('--username', dest='username')
-    parser.add_argument('--password', dest='password')
+    parser.add_argument('--config', dest='config', type=argparse.FileType('r'))
     args = parser.parse_args()
-    config.instance.load_configuration()
-    reset_storage(args.manager_ip, args.username, args.password)
+    with args.config as f:
+        script_config = json.load(f)
+    for namespace, path in script_config['config'].items():
+        config.instance.load_from_file(path, namespace=namespace)
+    reset_storage(script_config)

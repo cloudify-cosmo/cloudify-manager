@@ -13,7 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import json
 import logging
+import tempfile
 
 from cloudify.utils import setup_logger
 
@@ -24,32 +27,35 @@ from integration_tests.tests.utils import get_resource
 logger = setup_logger('Flask Utils', logging.INFO)
 
 SCRIPT_PATH = '/tmp/reset_storage.py'
+CONFIG_PATH = '/tmp/reset_storage_config.json'
 
 
 def prepare_reset_storage_script():
     reset_script = get_resource('scripts/reset_storage.py')
     copy_file_to_manager(reset_script, SCRIPT_PATH)
+    with tempfile.NamedTemporaryFile(delete=False) as f:
+        json.dump({
+            'config': {
+                '': '/opt/manager/cloudify-rest.conf',
+                'security': '/opt/manager/rest-security.conf',
+                'authorization': '/opt/manager/authorization.conf',
+            },
+            'ip': utils.get_manager_ip(),
+            'username': utils.get_manager_username(),
+            'password': utils.get_manager_password(),
+        }, f)
+    try:
+        copy_file_to_manager(f.name, CONFIG_PATH)
+    finally:
+        os.unlink(f.name)
 
 
 def reset_storage():
     logger.info('Resetting PostgreSQL DB')
     # reset the storage by calling a script on the manager, to access
     # localhost-only APIs (rabbitmq management api)
-    execute("bash -c 'MANAGER_REST_CONFIG_PATH={config_path} "
-            "MANAGER_REST_SECURITY_CONFIG_PATH={security_config_path} "
-            "MANAGER_REST_AUTHORIZATION_CONFIG_PATH={auth_config_path} "
-            "/opt/manager/env/bin/python {target_script_path} "
-            "--manager-ip {ip} "
-            "--username {username} "
-            "--password {password}'".format(
-                config_path='/opt/manager/cloudify-rest.conf',
-                security_config_path='/opt/manager/rest-security.conf',
-                auth_config_path='/opt/manager/authorization.conf',
-                target_script_path=SCRIPT_PATH,
-                ip=utils.get_manager_ip(),
-                username=utils.get_manager_username(),
-                password=utils.get_manager_password(),
-            ))
+    execute("/opt/manager/env/bin/python {script_path} --config {config_path}"
+            .format(script_path=SCRIPT_PATH, config_path=CONFIG_PATH))
 
 
 def close_session(app):
