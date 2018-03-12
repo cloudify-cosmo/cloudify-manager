@@ -28,6 +28,7 @@ class ResourceListSearchTestCase(BaseListTest):
     def setUp(self):
         super(ResourceListSearchTestCase, self).setUp()
 
+        self._put_n_plugins(NUM_OF_RESOURCES)
         self._put_n_deployments('test', NUM_OF_RESOURCES)
         self._put_n_snapshots(NUM_OF_RESOURCES, 'test', '_snapshot')
         self._put_n_secrets(NUM_OF_RESOURCES)
@@ -45,7 +46,7 @@ class ResourceListSearchTestCase(BaseListTest):
             list_ = self.resources[resource].list(_search='')
             list_est = self.resources[resource].list(_search='est')
             list_est0 = self.resources[resource].list(_search='est0')
-            list_est_bla = self.resources[resource].list(_search='est_bla')
+            list_est_bla = self.resources[resource].list(_search='est-bla')
             # validate lists sizes
             self.assertEqual(NUM_OF_RESOURCES, len(list_))
             self.assertEqual(NUM_OF_RESOURCES, len(list_est))
@@ -60,7 +61,7 @@ class ResourceListSearchTestCase(BaseListTest):
             list_ = resource.list(_search='')
             list_v = resource.list(_search='v')
             list_server = resource.list(_search='server')
-            list_server_bla = resource.list(_search='server_bla')
+            list_server_bla = resource.list(_search='server-bla')
             # validate lists sizes
             self.assertEqual(2 * NUM_OF_RESOURCES, len(list_))
             self.assertEqual(2 * NUM_OF_RESOURCES, len(list_v))
@@ -69,3 +70,10 @@ class ResourceListSearchTestCase(BaseListTest):
             # validate specific resource by id
             for i in range(NUM_OF_RESOURCES):
                 self.assertIn('http_web_server', list_server[i].id)
+
+        # test plugins - simpler test because they have the same package name
+        self.assertEqual(NUM_OF_RESOURCES,
+                         len(self.client.plugins.list(_search='')))
+        self.assertEqual(NUM_OF_RESOURCES,
+                         len(self.client.plugins.list(_search='pack')))
+        self.assertEqual(0, len(self.client.plugins.list(_search='bla')))
