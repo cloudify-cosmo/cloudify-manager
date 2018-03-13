@@ -14,7 +14,7 @@
 #  * limitations under the License.
 #
 
-from flask_restful import types
+from flask_restful import inputs
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
@@ -84,7 +84,7 @@ class ProviderContext(SecuredResource):
         """
         request_dict = get_json_and_verify_params({'context', 'name'})
         args = get_args_and_verify_arguments(
-            [Argument('update', type=types.boolean, default=False)]
+            [Argument('update', type=inputs.boolean, default=False)]
         )
         update = args['update']
         context = dict(

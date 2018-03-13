@@ -14,7 +14,7 @@
 #  * limitations under the License.
 #
 
-from flask_restful import types
+from flask_restful import inputs
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
@@ -71,7 +71,7 @@ class Executions(SecuredResource):
         """List executions"""
         args = get_args_and_verify_arguments(
             [Argument('deployment_id', type=str, required=False),
-             Argument('include_system_workflows', type=types.boolean,
+             Argument('include_system_workflows', type=inputs.boolean,
                       default=False)]
         )
         if args.deployment_id:

@@ -17,7 +17,7 @@
 import os
 import shutil
 
-from flask_restful import types
+from flask_restful import inputs
 from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
 
@@ -113,7 +113,7 @@ class DeploymentsId(SecuredResource):
         blueprint_id = request_dict['blueprint_id']
         bypass_maintenance = is_bypass_maintenance_mode()
         args = get_args_and_verify_arguments(
-            [Argument('private_resource', type=types.boolean, default=False)]
+            [Argument('private_resource', type=inputs.boolean, default=False)]
         )
         deployment = get_resource_manager().create_deployment(
             blueprint_id,
@@ -159,7 +159,7 @@ class DeploymentsId(SecuredResource):
         Delete deployment by id
         """
         args = get_args_and_verify_arguments(
-            [Argument('ignore_live_nodes', type=types.boolean, default=False)]
+            [Argument('ignore_live_nodes', type=inputs.boolean, default=False)]
         )
 
         bypass_maintenance = is_bypass_maintenance_mode()
