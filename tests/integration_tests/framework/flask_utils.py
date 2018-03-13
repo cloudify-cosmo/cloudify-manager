@@ -15,14 +15,18 @@
 
 import os
 import json
+import yaml
 import logging
 import tempfile
 
 from cloudify.utils import setup_logger
 
 from manager_rest.storage import db, models
+from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
+
 from integration_tests.framework import constants, utils
-from integration_tests.framework.docl import execute, copy_file_to_manager
+from integration_tests.framework.docl import execute, copy_file_to_manager, \
+    read_file as read_manager_file
 from integration_tests.tests.constants import PROVIDER_CONTEXT
 from integration_tests.tests.utils import get_resource
 
@@ -52,6 +56,20 @@ def prepare_reset_storage_script():
         copy_file_to_manager(f.name, CONFIG_PATH)
     finally:
         os.unlink(f.name)
+
+
+def setup_flask_app():
+    global security_config
+    if not security_config:
+        conf_file_str = read_manager_file('/opt/manager/rest-security.conf')
+        security_config = yaml.load(conf_file_str)
+
+    manager_ip = utils.get_manager_ip()
+    return _setup_flask_app(
+        manager_ip=manager_ip,
+        hash_salt=security_config['hash_salt'],
+        secret_key=security_config['secret_key']
+    )
 
 
 def reset_storage():
