@@ -20,10 +20,10 @@ import shutil
 from nose.plugins.attrib import attr
 
 from manager_rest import archiving
-from manager_rest.storage import FileServer
 from manager_rest.test import base_test
-from cloudify_rest_client.exceptions import CloudifyClientError
+from manager_rest.storage import FileServer
 from .test_utils import generate_progress_func
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 @attr(client_min_version=1, client_max_version=base_test.LATEST_API_VERSION)
@@ -38,6 +38,20 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             self.client.blueprints.get('15')
         except CloudifyClientError, e:
             self.assertEqual(404, e.status_code)
+
+    def test_upload_blueprint_illegal_id(self):
+        # try id with whitespace
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'contains illegal characters',
+                                self.client.blueprints.upload,
+                                'path',
+                                'illegal id')
+        # try id that starts with a number
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'must begin with a letter',
+                                self.client.blueprints.upload,
+                                'path',
+                                '0')
 
     def test_server_traceback_on_error(self):
         try:
@@ -249,19 +263,19 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         blueprint_path = os.path.join(
             self.get_blueprint_path('mock_blueprint'),
             blueprint_file)
-        self.client.blueprints.upload(blueprint_path, '0')
-        self.client.blueprints.upload(blueprint_path, '1')
+        self.client.blueprints.upload(blueprint_path, 'b0')
+        self.client.blueprints.upload(blueprint_path, 'b1')
 
         blueprints = self.client.blueprints.list(sort='created_at')
         self.assertEqual(2, len(blueprints))
-        self.assertEqual('0', blueprints[0].id)
-        self.assertEqual('1', blueprints[1].id)
+        self.assertEqual('b0', blueprints[0].id)
+        self.assertEqual('b1', blueprints[1].id)
 
         blueprints = self.client.blueprints.list(
             sort='created_at', is_descending=True)
         self.assertEqual(2, len(blueprints))
-        self.assertEqual('1', blueprints[0].id)
-        self.assertEqual('0', blueprints[1].id)
+        self.assertEqual('b1', blueprints[0].id)
+        self.assertEqual('b0', blueprints[1].id)
 
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
@@ -278,7 +292,7 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
             assert_almost_equal=self.assertAlmostEqual)
 
         try:
-            self.client.blueprints.upload(blueprint_path, '0',
+            self.client.blueprints.upload(blueprint_path, 'b',
                                           progress_callback=progress_func)
         finally:
             self.quiet_delete_directory(tmp_dir)
@@ -295,13 +309,13 @@ class BlueprintsTestCase(base_test.BaseServerTestCase):
         size = self.client.blueprints.calc_size(blueprint_path)
 
         try:
-            self.client.blueprints.upload(blueprint_path, '0')
+            self.client.blueprints.upload(blueprint_path, 'b')
             progress_func = generate_progress_func(
                 total_size=size,
                 assert_equal=self.assertEqual,
                 assert_almost_equal=self.assertAlmostEqual)
 
-            self.client.blueprints.download('0', tmp_local_path, progress_func)
+            self.client.blueprints.download('b', tmp_local_path, progress_func)
         finally:
             self.quiet_delete_directory(tmp_dir)
             self.quiet_delete(tmp_local_path)

@@ -77,7 +77,7 @@ class ModifyTests(base_test.BaseServerTestCase):
             self.assertEqual(node.deploy_number_of_instances, deploy_num)
 
         _, _, _, deployment = self.put_deployment(
-            deployment_id=str(uuid.uuid4()),
+            deployment_id='d{0}'.format(uuid.uuid4()),
             blueprint_file_name='modify1.yaml')
 
         node_assertions(num=1, deploy_num=1, planned_num=1)
@@ -212,11 +212,11 @@ class ModifyTests(base_test.BaseServerTestCase):
 
     def test_no_concurrent_modifications(self):
         blueprint_id, _, _, deployment = self.put_deployment(
-            deployment_id=str(uuid.uuid4()),
+            deployment_id='d{0}'.format(uuid.uuid4()),
             blueprint_file_name='modify1.yaml')
         deployment2 = self.client.deployments.create(
             blueprint_id=blueprint_id,
-            deployment_id=str(uuid.uuid4()))
+            deployment_id='d{0}'.format(uuid.uuid4()))
 
         modification = self.client.deployment_modifications.start(
             deployment.id, nodes={})
@@ -239,8 +239,8 @@ class ModifyTests(base_test.BaseServerTestCase):
     def test_finish_and_rollback_on_ended_modification(self):
         def test(end_function):
             _, _, _, deployment = self.put_deployment(
-                deployment_id=str(uuid.uuid4()),
-                blueprint_id=str(uuid.uuid4()),
+                deployment_id='d{0}'.format(uuid.uuid4()),
+                blueprint_id='b{0}'.format(uuid.uuid4()),
                 blueprint_file_name='modify1.yaml')
             modification = self.client.deployment_modifications.start(
                 deployment.id, nodes={})
@@ -273,7 +273,7 @@ class ModifyTests(base_test.BaseServerTestCase):
 
     def test_modify_add_instance(self):
         _, _, _, deployment = self.put_deployment(
-            deployment_id=str(uuid.uuid4()),
+            deployment_id='d{0}'.format(uuid.uuid4()),
             blueprint_file_name='modify1.yaml')
 
         node_instances1 = self.client.node_instances.list()
@@ -330,7 +330,7 @@ class ModifyTests(base_test.BaseServerTestCase):
 
     def test_modify_remove_instance(self):
         _, _, _, deployment = self.put_deployment(
-            deployment_id=str(uuid.uuid4()),
+            deployment_id='d{0}'.format(uuid.uuid4()),
             blueprint_file_name='modify2.yaml')
 
         node_instances1 = self.client.node_instances.list()

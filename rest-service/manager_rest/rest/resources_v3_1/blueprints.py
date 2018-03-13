@@ -63,6 +63,7 @@ class BlueprintsId(resources_v2.BlueprintsId):
         """
         Upload a blueprint (id specified)
         """
+        rest_utils.validate_inputs({'blueprint_id': blueprint_id})
         visibility = rest_utils.get_visibility_parameter(
             optional=True,
             is_argument=True,

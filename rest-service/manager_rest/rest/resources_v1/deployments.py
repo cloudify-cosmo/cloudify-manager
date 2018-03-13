@@ -18,36 +18,27 @@ import os
 import shutil
 
 from flask_restful import types
-from flask_restful.reqparse import Argument
 from flask_restful_swagger import swagger
+from flask_restful.reqparse import Argument
 
 
 from manager_rest import config, utils
-from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
-from manager_rest.maintenance import is_bypass_maintenance_mode
-from manager_rest.dsl_functions import evaluate_deployment_outputs
-from manager_rest.resource_manager import (
-    ResourceManager,
-    get_resource_manager,
-)
-from manager_rest.rest import (
-    requests_schema,
-    responses,
-)
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
-from manager_rest.rest.rest_utils import (
-    get_args_and_verify_arguments,
-    get_json_and_verify_params,
-)
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.storage import (
-    get_storage_manager,
-    models,
-)
+from manager_rest.maintenance import is_bypass_maintenance_mode
+from manager_rest.constants import FILE_SERVER_DEPLOYMENTS_FOLDER
+from manager_rest.dsl_functions import evaluate_deployment_outputs
+from manager_rest.rest import (requests_schema,
+                               responses)
+from manager_rest.storage import (get_storage_manager,
+                                  models)
+from manager_rest.resource_manager import (ResourceManager,
+                                           get_resource_manager)
+from manager_rest.rest.rest_decorators import (exceptions_handled,
+                                               marshal_with)
+from manager_rest.rest.rest_utils import (get_args_and_verify_arguments,
+                                          get_json_and_verify_params,
+                                          validate_inputs)
 
 
 class Deployments(SecuredResource):
@@ -108,6 +99,7 @@ class DeploymentsId(SecuredResource):
         """
         Create a deployment
         """
+        validate_inputs({'deployment_id': deployment_id})
         request_schema = self.create_request_schema()
         request_dict = get_json_and_verify_params(request_schema)
         blueprint_id = request_dict['blueprint_id']

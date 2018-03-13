@@ -1,15 +1,32 @@
+
 import os
 
 from nose.plugins.attrib import attr
 
 from manager_rest.test import base_test
-from manager_rest.test.base_test import BaseServerTestCase
-
 from .test_utils import generate_progress_func
+from manager_rest.test.base_test import BaseServerTestCase
+from cloudify_rest_client.exceptions import CloudifyClientError
 
 
 @attr(client_min_version=2, client_max_version=base_test.LATEST_API_VERSION)
 class SnapshotsTest(BaseServerTestCase):
+    def test_create_snapshot_illegal_id(self):
+        # try id with whitespace
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'contains illegal characters',
+                                self.client.snapshots.create,
+                                'illegal id',
+                                False,
+                                False)
+        # try id that starts with a number
+        self.assertRaisesRegexp(CloudifyClientError,
+                                'must begin with a letter',
+                                self.client.snapshots.create,
+                                '0',
+                                False,
+                                False)
+
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_snapshot_upload_progress(self):

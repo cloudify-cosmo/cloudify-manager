@@ -12,41 +12,39 @@
 #  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
-import tarfile
-import unittest
+
+import os
 import json
-import urllib
-import urllib2
-import tempfile
 import time
 import uuid
-import os
+import urllib
 import shutil
 import zipfile
+import urllib2
+import tarfile
+import unittest
+import tempfile
 
 import yaml
-
-from flask.testing import FlaskClient
-from nose.plugins.attrib import attr
 import wagon
+
 from mock import MagicMock, patch
+from nose.plugins.attrib import attr
+from flask.testing import FlaskClient
 
 from manager_rest.rest import rest_utils
-from manager_rest import utils, config, constants, archiving
+from cloudify_rest_client import CloudifyClient
 from manager_rest.test.security_utils import get_admin_user
+from manager_rest import utils, config, constants, archiving
+from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.storage import FileServer, get_storage_manager, models
+from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
+from manager_rest.storage.models_states import ExecutionState, VisibilityState
 from manager_rest.storage.storage_utils import \
     create_default_user_tenant_and_roles
-from manager_rest.storage.models_states import (ExecutionState,
-                                                VisibilityState)
 from manager_rest.constants import (CLOUDIFY_TENANT_HEADER,
                                     DEFAULT_TENANT_NAME,
                                     FILE_SERVER_BLUEPRINTS_FOLDER)
-
-from cloudify_rest_client import CloudifyClient
-from cloudify_rest_client.exceptions import CloudifyClientError
-
-from .mocks import MockHTTPClient, CLIENT_API_VERSION, build_query_string
 
 
 FILE_SERVER_PORT = 53229

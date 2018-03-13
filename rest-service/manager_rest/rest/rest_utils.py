@@ -16,14 +16,14 @@
 import copy
 import urllib
 import subprocess
-from flask import current_app
-from string import ascii_letters
 
+from string import ascii_letters
+from contextlib import contextmanager
+
+from flask import current_app
 from flask import request, make_response
 from flask_restful.reqparse import Argument
 from flask_restful.reqparse import RequestParser
-
-from contextlib import contextmanager
 
 from manager_rest import manager_exceptions, config
 from manager_rest.constants import REST_SERVICE_NAME
@@ -33,6 +33,7 @@ try:
     from cloudify_premium.ha import node_status
 except ImportError:
     node_status = {'initialized': False}
+
 
 states_except_private = copy.deepcopy(VisibilityState.STATES)
 states_except_private.remove('private')

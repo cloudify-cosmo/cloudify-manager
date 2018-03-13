@@ -60,8 +60,8 @@ class NodesTest(base_test.BaseServerTestCase):
     @attr(client_min_version=3,
           client_max_version=base_test.LATEST_API_VERSION)
     def test_sort_nodes_list(self):
-        self.put_deployment(deployment_id='0', blueprint_id='0')
-        self.put_deployment(deployment_id='1', blueprint_id='1')
+        self.put_deployment(deployment_id='d0', blueprint_id='b0')
+        self.put_deployment(deployment_id='d1', blueprint_id='b1')
 
         nodes = self.client.nodes.list(sort='deployment_id')
         for i in range(len(nodes) - 1):

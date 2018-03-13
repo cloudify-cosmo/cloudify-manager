@@ -30,7 +30,7 @@ class IncludeQueryParamTests(base_test.BaseServerTestCase):
 
     def setUp(self):
         super(IncludeQueryParamTests, self).setUp()
-        self.put_deployment(deployment_id=str(uuid.uuid4()),
+        self.put_deployment(deployment_id='d{0}'.format(uuid.uuid4()),
                             blueprint_file_name='blueprint.yaml')
 
     @attr(client_min_version=2,
