@@ -9,7 +9,6 @@ function set_manager_ip() {
 
   echo "Updating cloudify-amqpinflux.."
   /usr/bin/sed -i -e "s/AMQP_HOST=.*/AMQP_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-amqpinflux
-  /usr/bin/sed -i -e "s/INFLUXDB_HOST=.*/INFLUXDB_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-amqpinflux
 
   echo "Updating cloudify-riemann.."
   /usr/bin/sed -i -e "s/RABBITMQ_HOST=.*/RABBITMQ_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-riemann
