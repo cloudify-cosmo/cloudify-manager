@@ -22,9 +22,7 @@ from manager_rest.security.authorization import authorize
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.models_states import VisibilityState
 from manager_rest.maintenance import is_bypass_maintenance_mode
-from manager_rest.rest import (rest_utils,
-                               resources_v1,
-                               rest_decorators)
+from manager_rest.rest import rest_utils, resources_v1, rest_decorators
 from manager_rest.rest.rest_utils import (get_args_and_verify_arguments,
                                           get_json_and_verify_params)
 
@@ -47,6 +45,7 @@ class DeploymentsId(resources_v1.DeploymentsId):
         """
         Create a deployment
         """
+        rest_utils.validate_inputs({'deployment_id': deployment_id})
         request_schema = self.create_request_schema()
         request_dict = get_json_and_verify_params(request_schema)
         blueprint_id = request_dict['blueprint_id']

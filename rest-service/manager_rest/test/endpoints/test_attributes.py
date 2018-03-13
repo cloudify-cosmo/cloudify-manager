@@ -25,7 +25,7 @@ class AttributesTestCase(base_test.BaseServerTestCase):
 
     def setUp(self):
         super(AttributesTestCase, self).setUp()
-        self.id_ = str(uuid.uuid4())
+        self.id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
             blueprint_file_name='blueprint_for_get_attribute.yaml',
             blueprint_id=self.id_,
@@ -123,7 +123,7 @@ class MultiInstanceAttributesTestCase(base_test.BaseServerTestCase):
         # parser unit tests. This test serves only to have an end to end path
         # that includes actual storage DeploymentNode and
         # DeploymentNodeInstance when using the intrinsic functions storage
-        id_ = str(uuid.uuid4())
+        id_ = 'i{0}'.format(uuid.uuid4())
         self.put_deployment(
             blueprint_file_name='get_attribute_multi_instance.yaml',
             blueprint_id=id_,

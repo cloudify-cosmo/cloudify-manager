@@ -17,17 +17,12 @@
 from flask import request
 from flask_restful_swagger import swagger
 
-from manager_rest.rest import (
-    resources_v1,
-    rest_decorators,
-    rest_utils,
-)
-from manager_rest.storage import (
-    get_storage_manager,
-    models,
-)
 from manager_rest.security.authorization import authorize
+from manager_rest.storage import get_storage_manager, models
 from manager_rest.utils import create_filter_params_list_description
+from manager_rest.rest import (resources_v1,
+                               rest_decorators,
+                               rest_utils)
 
 
 class Blueprints(resources_v1.Blueprints):

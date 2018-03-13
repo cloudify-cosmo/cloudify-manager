@@ -20,25 +20,20 @@ import shutil
 from flask_restful_swagger import swagger
 
 from manager_rest import config, utils
-from manager_rest.constants import (
-    SUPPORTED_ARCHIVE_TYPES,
-    FILE_SERVER_RESOURCES_FOLDER,
-    FILE_SERVER_BLUEPRINTS_FOLDER,
-    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER
-)
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
-from manager_rest.rest.rest_decorators import (
-    exceptions_handled,
-    marshal_with,
-)
-from manager_rest.rest.rest_utils import make_streaming_response
 from manager_rest.resource_manager import get_resource_manager
-from manager_rest.storage import (
-    get_storage_manager,
-    models,
-)
 from manager_rest.upload_manager import UploadedBlueprintsManager
+from manager_rest.storage import (get_storage_manager,
+                                  models)
+from manager_rest.rest.rest_decorators import (exceptions_handled,
+                                               marshal_with)
+from manager_rest.rest.rest_utils import (make_streaming_response,
+                                          validate_inputs)
+from manager_rest.constants import (SUPPORTED_ARCHIVE_TYPES,
+                                    FILE_SERVER_RESOURCES_FOLDER,
+                                    FILE_SERVER_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER)
 
 
 class BlueprintsIdArchive(SecuredResource):
@@ -166,6 +161,7 @@ class BlueprintsId(SecuredResource):
         """
         Upload a blueprint (id specified)
         """
+        validate_inputs({'blueprint_id': blueprint_id})
         return UploadedBlueprintsManager().\
             receive_uploaded_data(data_id=blueprint_id)
 
