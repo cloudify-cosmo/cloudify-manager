@@ -87,6 +87,8 @@ class CloudifyFlaskApp(Flask):
                     user_datastore.find_or_create_role(name=role['name'])
                 user_datastore.commit()
 
+        # disable flask-restful's "helpful" 404 messages
+        self.config['ERROR_404_HELP'] = False
         setup_resources(Api(self))
         self.register_blueprint(app_errors)
 
