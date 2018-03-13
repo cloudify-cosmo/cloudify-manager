@@ -32,7 +32,7 @@ from integration_tests.tests.utils import get_resource
 
 
 logger = setup_logger('Flask Utils', logging.INFO)
-
+security_config = None
 SCRIPT_PATH = '/tmp/reset_storage.py'
 CONFIG_PATH = '/tmp/reset_storage_config.json'
 
