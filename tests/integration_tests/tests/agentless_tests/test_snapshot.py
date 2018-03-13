@@ -403,7 +403,7 @@ class TestSnapshot(AgentlessTestCase):
             # real time - it's OK. Just try again
             try:
                 execution = rest_client.executions.get(execution.id)
-            except CloudifyClientError:
+            except (requests.exceptions.ConnectionError, CloudifyClientError):
                 pass
             if time.time() > deadline:
                 raise utils.TimeoutException(
