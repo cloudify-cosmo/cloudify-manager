@@ -158,7 +158,7 @@ class TestDeploymentModification(AgentlessTestCase):
                                       rollback=False):
         if not deployment_id:
             dsl_path = resource("dsl/deployment_modification.yaml")
-            test_id = str(uuid.uuid4())
+            test_id = 'i{0}'.format(uuid.uuid4())
             deployment, _ = self.deploy_application(
                     dsl_path,
                     deployment_id=test_id,

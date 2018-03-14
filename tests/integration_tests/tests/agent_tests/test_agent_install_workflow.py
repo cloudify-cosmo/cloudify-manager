@@ -61,7 +61,7 @@ class TestWorkflow(AgentTestWithPlugins):
                                        blueprint,
                                        install_events,
                                        uninstall_events):
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = resource(blueprint)
         _, execution_id = self.deploy_application(dsl_path,
                                                   deployment_id=deployment_id)
@@ -103,7 +103,7 @@ class TestWorkflow(AgentTestWithPlugins):
     def test_deploy_with_operation_executor_override(self):
         self._upload_mock_plugin()
 
-        self.setup_deployment_id = str(uuid.uuid4())
+        self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'webserver_host'
         dsl_path = resource('dsl/operation_executor_override.yaml')
         _, execution_id = self.deploy_application(

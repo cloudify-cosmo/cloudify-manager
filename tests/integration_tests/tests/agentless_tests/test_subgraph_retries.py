@@ -32,7 +32,7 @@ class TaskRetriesTest(AgentlessTestCase):
             'task_retry_interval': 0,
             'subgraph_retries': 2
         }}}
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         self.client.manager.create_context(self._testMethodName, context)
         self.deploy_application(
             resource('dsl/workflow_subgraph_retries.yaml'),

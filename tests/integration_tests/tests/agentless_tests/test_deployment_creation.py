@@ -35,7 +35,7 @@ class TestDeploymentCreation(AgentlessTestCase):
 
         """
         dsl_path = utils.get_resource('dsl/basic.yaml')
-        blueprint_id = deployment_id = str(uuid.uuid4())
+        blueprint_id = deployment_id = 'd{0}'.format(uuid.uuid4())
         self.client.blueprints.upload(dsl_path, blueprint_id)
 
         for _ in range(self.DEPLOYMENTS_COUNT):

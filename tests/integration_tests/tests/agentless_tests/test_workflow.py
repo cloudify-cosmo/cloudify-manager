@@ -74,7 +74,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     @timeout(seconds=120)
     def test_execute_operation_failure(self):
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         dsl_path = get_resource("dsl/basic.yaml")
         try:
             self.deploy_application(dsl_path, deployment_id=deployment_id)
@@ -156,7 +156,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
 
     def test_get_blueprint(self):
         dsl_path = get_resource("dsl/basic.yaml")
-        blueprint_id = str(uuid.uuid4())
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
         deployment, _ = self.deploy_application(dsl_path,
                                                 blueprint_id=blueprint_id)
 
@@ -169,7 +169,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
         archive_location = self._make_archive_file("dsl/basic.yaml")
 
         blueprint_id = self.client.blueprints.publish_archive(
-            archive_location, str(uuid.uuid4()), 'basic.yaml').id
+            archive_location, 'b{0}'.format(uuid.uuid4()), 'basic.yaml').id
         # verifying blueprint exists
         result = self.client.blueprints.get(blueprint_id)
         self.assertEqual(blueprint_id, result.id)
@@ -186,7 +186,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_delete_blueprint(self):
         dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = self.client.blueprints.upload(
-            dsl_path, str(uuid.uuid4())).id
+            dsl_path, 'b{0}'.format(uuid.uuid4())).id
 
         # verifying blueprint exists
         result = self.client.blueprints.get(blueprint_id)
@@ -212,7 +212,7 @@ class BasicWorkflowsTest(AgentlessTestCase):
     def test_delete_deployment(self):
         dsl_path = get_resource("dsl/basic.yaml")
         blueprint_id = self.id()
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
 
         def change_execution_status(execution_id, status):
             self.client.executions.update(execution_id, status)

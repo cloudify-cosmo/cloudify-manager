@@ -24,7 +24,7 @@ class TestPoliciesWithDiamond(AgentTestWithPlugins, PoliciesTestsBase):
 
     def setUp(self):
         super(TestPoliciesWithDiamond, self).setUp()
-        self.setup_deployment_id = str(uuid.uuid4())
+        self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'node'
 
     def test_policies_flow_with_diamond(self):

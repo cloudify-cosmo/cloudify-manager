@@ -99,7 +99,7 @@ class TaskRetriesTest(AgentlessTestCase):
 
     def test_operation_retry(self):
         self.configure(retries=5, retry_interval=5)
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         self.deploy_application(
             resource('dsl/test-operation-retry-blueprint.yaml'),
             deployment_id=deployment_id)
@@ -181,7 +181,7 @@ class TaskRetriesTest(AgentlessTestCase):
                                               invocations_type,
                                               expect_failure=False):
         self.configure(retries=retries, retry_interval=retry_interval)
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         if expect_failure:
             self.assertRaises(RuntimeError, self.deploy_application,
                               dsl_path=resource(blueprint),
