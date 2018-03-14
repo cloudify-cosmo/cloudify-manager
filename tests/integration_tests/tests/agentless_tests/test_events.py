@@ -148,7 +148,7 @@ class EventsTest(AgentlessTestCase):
         """ Make sure snapshots events appear when using the
          'cfy events list' command """
         # Make sure 'snapshots create' events appear
-        snapshot_id = str(uuid.uuid4())
+        snapshot_id = 's{0}'.format(uuid.uuid4())
         execution = self.client.snapshots.create(snapshot_id, False, False)
         self._wait_for_events_to_update_in_DB(
             execution, CREATE_SNAPSHOT_SUCCESS_MSG)

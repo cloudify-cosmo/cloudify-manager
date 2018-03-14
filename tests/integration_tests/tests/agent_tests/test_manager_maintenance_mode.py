@@ -33,7 +33,7 @@ class ManagerMaintenanceModeTest(AgentTestCase):
         self.env.chown(CLOUDIFY_USER, '/opt/manager', recursive=False)
 
     def test_maintenance_mode(self):
-        blueprint_id = str(uuid.uuid4())
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
         deployment_id = blueprint_id
         blueprint_path = resource('dsl/maintenance_mode.yaml')
         self.client.blueprints.upload(blueprint_path,

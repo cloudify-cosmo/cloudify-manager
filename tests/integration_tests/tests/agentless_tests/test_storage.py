@@ -21,7 +21,7 @@ from integration_tests.tests.utils import get_resource as resource
 
 class TestStorage(AgentlessTestCase):
     def test_deployment_inputs(self):
-        blueprint_id = str(uuid.uuid4())
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
         blueprint = self.client.blueprints.upload(resource("dsl/basic.yaml"),
                                                   blueprint_id)
         inputs = blueprint.plan['inputs']
@@ -30,7 +30,7 @@ class TestStorage(AgentlessTestCase):
         self.assertFalse(inputs['install_agent']['default'])
         self.assertTrue(
             len(inputs['install_agent']['description']) > 0)
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         deployment = self.client.deployments.create(
             blueprint.id, deployment_id, skip_plugins_validation=True)
         self.assertEqual(1, len(deployment.inputs))
@@ -42,10 +42,10 @@ class TestStorage(AgentlessTestCase):
         Tests storing different nodes with different structured inputs for
         the same operation.
         """
-        blueprint_id = str(uuid.uuid4())
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
         blueprint = self.client.blueprints.upload(
             resource("dsl/two_nodes_different_inputs.yaml"),
             blueprint_id)
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         self.client.deployments.create(
             blueprint.id, deployment_id, skip_plugins_validation=True)

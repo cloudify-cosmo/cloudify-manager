@@ -33,7 +33,7 @@ RESOURCE_CONTENT = 'this is a deployment resource'
 class DeploymentResourceTest(AgentlessTestCase):
 
     def get_and_download_deployment_resource_test(self):
-        blueprint_id = str(uuid.uuid4())
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
         deployment_id = blueprint_id
         blueprint_path = resource('dsl/deployment_resource.yaml')
         base_dep_dir = '/opt/manager/resources/deployments'

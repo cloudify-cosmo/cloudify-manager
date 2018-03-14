@@ -22,7 +22,7 @@ from integration_tests.tests.utils import get_resource as resource
 class BaseExistingVMTest(AgentTestWithPlugins):
     def setUp(self):
         super(BaseExistingVMTest, self).setUp()
-        self.setup_deployment_id = str(uuid.uuid4())
+        self.setup_deployment_id = 'd{0}'.format(uuid.uuid4())
         self.setup_node_id = 'setup_host'
         dsl_path = resource("dsl/existing-vm-setup.yaml")
         self.deploy_application(dsl_path,

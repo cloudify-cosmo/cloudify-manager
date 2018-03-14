@@ -31,7 +31,7 @@ class DownloadBlueprintTest(AgentlessTestCase):
 
     def setUp(self):
         super(DownloadBlueprintTest, self).setUp()
-        self.blueprint_id = str(uuid.uuid4())
+        self.blueprint_id = 'b{0}'.format(uuid.uuid4())
         self.blueprint_file = '{0}.tar.gz'.format(self.blueprint_id)
         self.downloaded_archive_path = os.path.join(self.workdir,
                                                     self.blueprint_file)

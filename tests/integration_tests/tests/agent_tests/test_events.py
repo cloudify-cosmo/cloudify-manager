@@ -61,7 +61,7 @@ class TimezoneTest(AgentTestWithPlugins):
         timestamp values are still in the expected range.
 
         """
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         blueprint = 'dsl/dockercompute_timezone.yaml'
         dsl_path = resource(blueprint)
 

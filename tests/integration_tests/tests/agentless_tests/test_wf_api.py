@@ -79,7 +79,7 @@ class WorkflowsAPITest(AgentlessTestCase):
             self.assertLessEqual(1, invocations[i+1] - invocations[i])
 
     def test_fail_remote_task_eventual_failure(self):
-        deployment_id = str(uuid.uuid4())
+        deployment_id = 'd{0}'.format(uuid.uuid4())
         self.assertRaises(RuntimeError, self.deploy_and_execute_workflow,
                           resource('dsl/workflow_api.yaml'),
                           self._testMethodName,

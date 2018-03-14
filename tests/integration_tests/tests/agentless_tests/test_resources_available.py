@@ -29,7 +29,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
 
     def test_resources_available(self):
         container_ip = self.get_manager_ip()
-        blueprint_id = str(uuid.uuid4())
+        blueprint_id = 'b{0}'.format(uuid.uuid4())
         blueprint_name = 'empty_blueprint.yaml'
         blueprint_path = resource('dsl/{0}'.format(blueprint_name))
         self.client.blueprints.upload(blueprint_path,

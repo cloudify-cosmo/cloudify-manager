@@ -312,10 +312,10 @@ class BaseTestCase(unittest.TestCase):
     def deploy(dsl_path, blueprint_id=None, deployment_id=None, inputs=None):
         client = test_utils.create_rest_client()
         if not blueprint_id:
-            blueprint_id = str(uuid.uuid4())
+            blueprint_id = 'b{0}'.format(uuid.uuid4())
         blueprint = client.blueprints.upload(dsl_path, blueprint_id)
         if deployment_id is None:
-            deployment_id = str(uuid.uuid4())
+            deployment_id = 'd{0}'.format(uuid.uuid4())
         deployment = client.deployments.create(
                 blueprint.id,
                 deployment_id,
