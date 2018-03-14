@@ -32,22 +32,6 @@ from manager_rest.storage.storage_utils import \
 # This is a hacky way to get to the migrations folder
 migrations_dir = '/opt/manager/resources/cloudify/migrations'
 PROVIDER_NAME = 'integration_tests'
-PROVIDER_CONTEXT = {
-    'cloudify': {
-        'workflows': {
-            'task_retries': 0,
-            'task_retry_interval': 0,
-            'subgraph_retries': 0
-        },
-        'cloudify_agent':
-            {
-                'broker_ip': '',
-                'broker_user': 'cloudify',
-                'broker_pass': 'c10udify',
-                'networks': {}
-        },
-    }
-}
 
 
 def setup_amqp_manager():

@@ -18,6 +18,7 @@ import copy
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from integration_tests import AgentlessTestCase
+from integration_tests.framework.utils import get_manager_ip
 from integration_tests.tests.utils import delete_provider_context
 from integration_tests.tests.constants import PROVIDER_NAME, PROVIDER_CONTEXT
 
@@ -28,7 +29,9 @@ class TestProviderContext(AgentlessTestCase):
         # Context is already setup during test bootstrap phase,
         # we only verify everything was properly saved and accessible
         name = PROVIDER_NAME
-        context = PROVIDER_CONTEXT
+        context = copy.deepcopy(PROVIDER_CONTEXT)
+        context['cloudify']['cloudify_agent']['networks']['default'] = \
+            get_manager_ip()
         response_context = self.client.manager.get_context()
         self.assertEqual(name, response_context['name'])
         self.assertEqual(context, response_context['context'])
