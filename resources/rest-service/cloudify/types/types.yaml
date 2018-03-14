@@ -210,14 +210,20 @@ node_types:
           implementation: agent.cloudify_agent.operations.transfer_agent_amqp
           executor: central_deployment_agent
           inputs:
-            validate_agent_timeout:
+            transfer_agent_timeout:
               default: 20
-            new_manager_ip:
-              required: true
-            manager_certificate:
-              description:
+            manager_ip:
+              description: the private ip of the new manager
               default: ''
-
+              # required: true
+            manager_certificate:
+              description: the cloudify_internal_ca_cert.pem of the new manager
+              default: ''
+              # required: true
+            manager_rest_token:
+              description: the rest token of the new manager
+              default: ''
+              # required: true
 
       cloudify.interfaces.host:  # DEPRECATED
         get_state: {}
@@ -567,7 +573,7 @@ workflows:
 
   transfer_agents:
     mapping: default_workflows.cloudify.plugins.workflows.transfer_agents
-        parameters:
+    parameters:
       transfer_agent_timeout:
         default: 300
       node_ids:
@@ -575,7 +581,16 @@ workflows:
       node_instance_ids:
         default: []
       validate:
-        default: True
+        default: true
+      manager_ip:
+        description: the private ip of the new manager
+        # required: true
+      manager_certificate:
+        description: the cloudify_internal_ca_cert.pem of the new manager
+        # required: true
+      manager_rest_token:
+        description: the rest token of the new manager
+        # required: true
 
 
 
