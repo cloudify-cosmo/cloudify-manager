@@ -31,13 +31,13 @@ install_requires = [
     'gunicorn==18.0',
     'PyYAML==3.10',
     'elasticsearch==1.6.0',
-    'celery==3.1.17',
     'psutil==3.3.0',
     'jsonpickle==0.9.2',
     'wagon[venv]==0.6.1',
     'python-dateutil==2.5.3',
     'voluptuous==0.9.3',
     'toolz==0.8.2',
+    'pika==0.11.2'
     'cryptography==2.1.4',
 ]
 
@@ -65,5 +65,5 @@ setup(
     install_requires=install_requires,
     extras_require={
         'dbus': ['dbus-python==1.2.4'],
-        },
-    )
+    },
+)
