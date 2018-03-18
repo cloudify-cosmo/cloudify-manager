@@ -22,15 +22,13 @@ import yaml
 import shutil
 import zipfile
 import tempfile
-from contextlib import contextmanager
 
 from functools import wraps
 from multiprocessing import Process
+from contextlib import contextmanager
 
-import influxdb
-import pika
 import sh
-
+import pika
 import wagon
 
 import constants
@@ -116,11 +114,6 @@ def create_rest_client(**kwargs):
             headers=headers,
             trust_all=trust_all,
             cert=cert_path)
-
-
-def create_influxdb_client():
-    return influxdb.InfluxDBClient(get_manager_ip(), 8086,
-                                   'root', 'root', 'cloudify')
 
 
 def create_pika_connection():
