@@ -55,6 +55,7 @@ class Config(object):
         self.security_encoding_alphabet = None
         self.security_encoding_block_size = None
         self.security_encoding_min_length = None
+        self.security_encryption_key = None
 
         self.authorization_roles = None
         self.authorization_permissions = None
