@@ -111,7 +111,7 @@ def _execute_task(execution_id, execution_parameters, context):
     context['task_target'] = MGMTWORKER_QUEUE
     execution_parameters['__cloudify_context'] = context
     message = {
-        'cloudify_task': {'kwrgs': execution_parameters},
+        'cloudify_task': {'kwargs': execution_parameters},
         'id': execution_id
     }
 
