@@ -110,7 +110,10 @@ def _execute_task(execution_id, execution_parameters, context):
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
     execution_parameters['__cloudify_context'] = context
-    execution_parameters['id'] = execution_id
+    message = {
+        'cloudify_task': {'kwrgs': execution_parameters},
+        'id': execution_id
+    }
 
     credentials = pika.credentials.PlainCredentials(
         username=config.instance.amqp_username,
@@ -136,6 +139,6 @@ def _execute_task(execution_id, execution_parameters, context):
     channel.basic_publish(
         exchange=MGMTWORKER_QUEUE,
         routing_key='',
-        body=json.dumps(execution_parameters))
+        body=json.dumps(message))
 
     connection.close()
