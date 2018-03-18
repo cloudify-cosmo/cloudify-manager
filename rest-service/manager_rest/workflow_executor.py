@@ -129,7 +129,7 @@ def _execute_task(execution_id, execution_parameters, context):
     channel.confirm_delivery()
     channel.exchange_declare(
         exchange=MGMTWORKER_QUEUE,
-        type='direct',
+        exchange_type='direct',
         auto_delete=False,
         durable=True)
     channel.basic_publish(
