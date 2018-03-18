@@ -33,7 +33,6 @@ setup(
         'fasteners==0.13.0',
         'sh==1.11',
         'pg8000==1.10.6',
-        'influxdb==0.1.13',
         'awscli==1.11.14',
         'docl',
     ],
