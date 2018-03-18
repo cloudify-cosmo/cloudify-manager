@@ -49,7 +49,7 @@ def execute_workflow(name,
     context = {
         'type': 'workflow',
         'task_name': task_name,
-        'id': execution_id,
+        'task_id': execution_id,
         'workflow_id': name,
         'blueprint_id': blueprint_id,
         'deployment_id': deployment_id,
@@ -64,7 +64,8 @@ def execute_workflow(name,
             'tenant_name': plugin.get('tenant_name')
         }
     }
-    return _execute_task(execution_parameters=execution_parameters,
+    return _execute_task(execution_id=execution_id,
+                         execution_parameters=execution_parameters,
                          context=context)
 
 
@@ -79,7 +80,7 @@ def execute_system_workflow(wf_id,
     execution_parameters = execution_parameters or {}
     context = {
         'type': 'workflow',
-        'id': task_id,
+        'task_id': task_id,
         'task_name': task_mapping,
         'execution_id': task_id,
         'workflow_id': wf_id,
@@ -92,7 +93,8 @@ def execute_system_workflow(wf_id,
         context['blueprint_id'] = deployment.blueprint_id
         context['deployment_id'] = deployment.id
 
-    return _execute_task(execution_parameters=execution_parameters,
+    return _execute_task(execution_id=context['task_id'],
+                         execution_parameters=execution_parameters,
                          context=context)
 
 
@@ -103,11 +105,12 @@ def _get_tenant_dict():
     return tenant_dict
 
 
-def _execute_task(execution_parameters, context):
+def _execute_task(execution_id, execution_parameters, context):
     context['rest_token'] = current_user.get_auth_token()
     context['tenant'] = _get_tenant_dict()
     context['task_target'] = MGMTWORKER_QUEUE
     execution_parameters['__cloudify_context'] = context
+    execution_parameters['id'] = execution_id
 
     credentials = pika.credentials.PlainCredentials(
         username=config.instance.amqp_username,
