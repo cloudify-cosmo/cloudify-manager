@@ -14,12 +14,14 @@
 #  * limitations under the License.
 
 from manager_rest import utils
+from manager_rest import config
+from manager_rest import cryptography_utils
 from manager_rest.security import SecuredResource
+from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.models_states import VisibilityState
-from manager_rest.manager_exceptions import ConflictError
 from manager_rest.rest import (rest_decorators,
                                resources_v3,
                                rest_utils)
@@ -66,13 +68,14 @@ class SecretsKey(resources_v3.SecretsKey):
         update_if_exists is set to true
         """
         secret_params = self._get_secret_params(key)
+        encrypted_value = self._encrypt_secret_value(secret_params['value'])
         sm = get_storage_manager()
         timestamp = utils.get_formatted_timestamp()
 
         try:
             new_secret = models.Secret(
                 id=key,
-                value=secret_params['value'],
+                value=encrypted_value,
                 created_at=timestamp,
                 updated_at=timestamp,
                 visibility=secret_params['visibility'],
@@ -83,7 +86,7 @@ class SecretsKey(resources_v3.SecretsKey):
             if secret and secret_params['update_if_exists']:
                 get_resource_manager().validate_modification_permitted(
                     secret)
-                secret.value = secret_params['value']
+                secret.value = encrypted_value
                 secret.updated_at = timestamp
                 return sm.update(secret)
             raise
@@ -114,3 +117,7 @@ class SecretsKey(resources_v3.SecretsKey):
             'visibility': visibility
         }
         return secret_params
+
+    def _encrypt_secret_value(self, value):
+        encryption_key = config.instance.security_encryption_key
+        return cryptography_utils.encrypt(encryption_key, value)

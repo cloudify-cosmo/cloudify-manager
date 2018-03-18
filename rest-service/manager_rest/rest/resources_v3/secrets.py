@@ -16,10 +16,12 @@
 from flask import request
 
 from ... import utils
+from manager_rest import config
 from .. import rest_decorators, rest_utils
+from manager_rest import cryptography_utils
 from ..responses_v3 import SecretsListResponse
-from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security import SecuredResource
+from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
@@ -34,7 +36,11 @@ class SecretsKey(SecuredResource):
         Get secret by key
         """
         rest_utils.validate_inputs({'key': key})
-        return get_storage_manager().get(models.Secret, key)
+        secret = get_storage_manager().get(models.Secret, key)
+        encryption_key = config.instance.security_encryption_key
+        secret.value = cryptography_utils.decrypt(encryption_key,
+                                                  secret.value)
+        return secret
 
     @rest_decorators.exceptions_handled
     @authorize('secret_create')
