@@ -14,8 +14,6 @@
 #  * limitations under the License.
 
 from manager_rest import utils
-from manager_rest import config
-from manager_rest import cryptography_utils
 from manager_rest.security import SecuredResource
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
@@ -117,7 +115,3 @@ class SecretsKey(resources_v3.SecretsKey):
             'visibility': visibility
         }
         return secret_params
-
-    def _encrypt_secret_value(self, value):
-        encryption_key = config.instance.security_encryption_key
-        return cryptography_utils.encrypt(encryption_key, value)

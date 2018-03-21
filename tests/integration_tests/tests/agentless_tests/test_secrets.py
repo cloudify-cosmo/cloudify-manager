@@ -14,7 +14,9 @@
 #    * limitations under the License.
 
 from integration_tests import AgentlessTestCase
-from cloudify_rest_client.exceptions import CloudifyClientError
+from integration_tests.tests.utils import get_resource as resource
+from cloudify_rest_client.exceptions import (CloudifyClientError,
+                                             UnknownDeploymentSecretError)
 
 
 class SecretsTest(AgentlessTestCase):
@@ -29,6 +31,14 @@ class SecretsTest(AgentlessTestCase):
         self.assertEqual(received_secret.key, new_secret.key)
         self.assertEqual(received_secret.value, 'test_value')
 
+    def test_update_encrypted_secret(self):
+        key = 'test_key'
+        self.client.secrets.create(key, 'test_value')
+        updated_secret = self.client.secrets.update(key, 'test_value2')
+        self.assertNotEqual('test_value2', updated_secret.value)
+        updated_secret = self.client.secrets.get(key)
+        self.assertEqual('test_value2', updated_secret.value)
+
     def test_get_secret_not_found(self):
         self.assertRaisesRegexp(
             CloudifyClientError,
@@ -36,3 +46,19 @@ class SecretsTest(AgentlessTestCase):
             self.client.secrets.get,
             'test_key'
         )
+
+    def test_get_secret_intrinsic_function(self):
+        dsl_path = resource("dsl/basic_get_secret.yaml")
+
+        # Fails to create deployment because the secret is missing
+        error_msg = "^400: Required secrets .*? don't exist in this tenant$"
+        self.assertRaisesRegexp(
+            UnknownDeploymentSecretError,
+            error_msg,
+            self.deploy_application,
+            dsl_path
+        )
+
+        # Manage to create deployment after creating the secret
+        self.client.secrets.create('agent_key', 'test_key')
+        deployment, _ = self.deploy_application(dsl_path)
