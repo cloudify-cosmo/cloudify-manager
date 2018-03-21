@@ -22,6 +22,7 @@ import sys
 
 import flask_migrate
 
+from manager_rest import config
 from manager_rest.flask_utils import setup_flask_app
 
 
@@ -32,6 +33,7 @@ DIRECTORY = os.path.dirname(__file__)
 def main():
     """Run migration command."""
     args = parse_arguments(sys.argv[1:])
+    setup_config(args)
     configure_logging(args['log_level'])
 
     setup_flask_app(manager_ip=args['postgresql_host'])
@@ -55,6 +57,14 @@ def current(args):
     flask_migrate.current(DIRECTORY)
 
 
+def setup_config(args):
+    for setting in ['host', 'username', 'password', 'db_name']:
+        setting = 'postgresql_{0}'.format(setting)
+        value = args.get(setting)
+        if value:
+            setattr(config.instance, setting, value)
+
+
 def parse_arguments(argv):
     """Parse command line arguments.
 
@@ -69,6 +79,16 @@ def parse_arguments(argv):
                         dest='postgresql_host',
                         help='Address the database is listening on',
                         default='localhost')
+    parser.add_argument('--postgresql-username',
+                        dest='postgresql_username',
+                        help='Username for the database connection')
+    parser.add_argument('--postgresql-password',
+                        dest='postgresql_password',
+                        help='Password for the database connection')
+    parser.add_argument('--postgresql-db-name',
+                        dest='postgresql_db_name',
+                        help='Database name')
+
     subparsers = parser.add_subparsers(help='Migration subcommands')
 
     downgrade_parser = subparsers.add_parser(
