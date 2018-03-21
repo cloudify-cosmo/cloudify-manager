@@ -530,6 +530,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
         args_parser.add_argument('private_resource', type=types.boolean)
         args_parser.add_argument('visibility', type=str)
         args_parser.add_argument('application_file_name', type=str, default='')
+        args_parser.add_argument('render', type=str, default='')
         return args_parser.parse_args()
 
     @classmethod
@@ -543,6 +544,12 @@ class UploadedBlueprintsManager(UploadedDataManager):
         app_dir, app_file_name = cls._extract_application_file(
             file_server_root, app_dir, args.application_file_name)
 
+        render = None
+        if args.render:
+            from base64 import urlsafe_b64decode
+            import json
+            render = json.loads(urlsafe_b64decode(args.render))
+
         # add to blueprints manager (will also dsl_parse it)
         try:
             blueprint = get_resource_manager().publish_blueprint(
@@ -551,7 +558,8 @@ class UploadedBlueprintsManager(UploadedDataManager):
                 file_server_root,
                 blueprint_id,
                 args.private_resource,
-                visibility
+                visibility,
+                render
             )
 
             # moving the app directory in the file server to be under a

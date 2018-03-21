@@ -292,7 +292,8 @@ class ResourceManager(object):
                           resources_base,
                           blueprint_id,
                           private_resource,
-                          visibility):
+                          visibility,
+                          render):
         dsl_location = os.path.join(
             resources_base,
             application_dir,
@@ -301,6 +302,7 @@ class ResourceManager(object):
         try:
             plan = tasks.parse_dsl(dsl_location,
                                    resources_base,
+                                   render=render,
                                    **app_context.get_parser_context())
         except Exception, ex:
             raise manager_exceptions.DslParseException(str(ex))
