@@ -38,9 +38,11 @@ class SecretsKey(SecuredResource):
         rest_utils.validate_inputs({'key': key})
         secret = get_storage_manager().get(models.Secret, key)
         encryption_key = config.instance.security_encryption_key
-        secret.value = cryptography_utils.decrypt(encryption_key,
-                                                  secret.value)
-        return secret
+        decrypted_value = cryptography_utils.decrypt(encryption_key,
+                                                     secret.value)
+        secret_dict = secret.to_dict()
+        secret_dict['value'] = decrypted_value
+        return secret_dict
 
     @rest_decorators.exceptions_handled
     @authorize('secret_create')
@@ -91,12 +93,11 @@ class SecretsKey(SecuredResource):
         Update an existing secret
         """
         request_dict = rest_utils.get_json_and_verify_params({'value'})
-        value = request_dict['value']
         rest_utils.validate_inputs({'key': key})
 
         secret = get_storage_manager().get(models.Secret, key)
         get_resource_manager().validate_modification_permitted(secret)
-        secret.value = value
+        secret.value = self._encrypt_secret_value(request_dict['value'])
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret)
 
@@ -112,6 +113,10 @@ class SecretsKey(SecuredResource):
         secret = storage_manager.get(models.Secret, key)
         get_resource_manager().validate_modification_permitted(secret)
         return storage_manager.delete(secret)
+
+    def _encrypt_secret_value(self, value):
+        encryption_key = config.instance.security_encryption_key
+        return cryptography_utils.encrypt(encryption_key, value)
 
 
 class Secrets(SecuredResource):

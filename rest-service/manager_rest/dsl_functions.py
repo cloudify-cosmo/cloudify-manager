@@ -13,9 +13,13 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from collections import namedtuple
+
 from dsl_parser import functions
 from dsl_parser import exceptions as parser_exceptions
 
+from manager_rest import config
+from manager_rest import cryptography_utils
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage import get_node as get_storage_node
 from manager_rest.storage.models import NodeInstance, Deployment, Secret
@@ -23,6 +27,8 @@ from manager_rest.manager_exceptions import (
     FunctionsEvaluationError,
     DeploymentOutputsEvaluationError
 )
+
+SecretType = namedtuple('Secret', 'key value')
 
 
 def evaluate_intrinsic_functions(payload, deployment_id, context=None):
@@ -76,7 +82,11 @@ def _get_methods(deployment_id, storage_manager):
         return get_storage_node(deployment_id, node_id)
 
     def get_secret(secret_key):
-        return storage_manager.get(Secret, secret_key)
+        secret = storage_manager.get(Secret, secret_key)
+        encryption_key = config.instance.security_encryption_key
+        decrypted_value = cryptography_utils.decrypt(encryption_key,
+                                                     secret.value)
+        return SecretType(secret_key, decrypted_value)
 
     return dict(
         get_node_instances_method=get_node_instances,
