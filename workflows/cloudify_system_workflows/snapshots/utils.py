@@ -396,8 +396,15 @@ def db_schema_get_current_revision(config=None):
 
 def _schema(config, command):
     full_command = [PYTHON_MANAGER_ENV, SCHEMA_SCRIPT]
-    if config and config.postgresql_host:
-        full_command += ['--postgresql-host', config.postgresql_host]
+    if config:
+        for arg, value in [
+            ('--postgresql-host', config.postgresql_host),
+            ('--postgresql-username', config.postgresql_username),
+            ('--postgresql-password', config.postgresql_password),
+            ('--postgresql-db-name', config.postgresql_db_name),
+        ]:
+            if value:
+                full_command += [arg, value]
     full_command += command
     return subprocess.check_output(full_command)
 
