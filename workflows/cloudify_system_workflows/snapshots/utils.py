@@ -24,6 +24,7 @@ import contextlib
 from cloudify.workflows import ctx
 from cloudify import constants, manager
 from . import constants as snapshot_constants
+from .constants import SECURITY_FILE_LOCATION, SECURITY_FILENAME
 from cloudify.utils import ManagerVersion, get_local_rest_certificate
 from cloudify.utils import get_tenant_name, internal as internal_utils
 
@@ -96,6 +97,7 @@ def copy_files_between_manager_and_snapshot(archive_root,
     if to_archive:
         data_to_copy.append((local_cert_dir,
                              snapshot_constants.ARCHIVE_CERT_DIR))
+        data_to_copy.append((SECURITY_FILE_LOCATION, SECURITY_FILENAME))
 
     ctx.logger.info(str(data_to_copy))
     for p1, p2 in data_to_copy:
