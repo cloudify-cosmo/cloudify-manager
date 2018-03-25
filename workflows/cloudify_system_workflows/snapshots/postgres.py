@@ -15,8 +15,10 @@
 
 import os
 import psycopg2
-from contextlib import closing
 from uuid import uuid4
+from contextlib import closing
+from cryptography.fernet import Fernet
+from psycopg2.extras import execute_values
 
 from cloudify.workflows import ctx
 from cloudify.exceptions import NonRecoverableError
@@ -307,13 +309,16 @@ class Postgres(object):
         run_shell(command=cat_content, redirect_output_path=new_dump_file)
         return new_dump_file
 
-    def run_query(self, query, vars=None):
+    def run_query(self, query, vars=None, bulk_query=False):
         str_query = query.decode(encoding='UTF-8', errors='replace')
         str_query = str_query.replace(u"\uFFFD", "?")
         ctx.logger.debug('Running query: {0}'.format(str_query))
         with closing(self._connection.cursor()) as cur:
             try:
-                cur.execute(query, vars)
+                if bulk_query:
+                    execute_values(cur, query, vars)
+                else:
+                    cur.execute(query, vars)
                 status_message = cur.statusmessage
                 fetchall = cur.fetchall()
                 result = {'status': status_message, 'all': fetchall}
@@ -369,6 +374,26 @@ class Postgres(object):
                 'token': row[3],
             }
         return details
+
+    def encrypt_secrets_values(self, encryption_key):
+        secrets = self.run_query("SELECT secrets.id, secrets.value "
+                                 "FROM secrets")
+        # There are no secrets in the snapshot
+        if len(secrets['all']) < 1:
+            return
+
+        encrypted_secrets = []
+        fernet = Fernet(encryption_key)
+        for secret in secrets['all']:
+            encrypted_value = fernet.encrypt(bytes(secret[1]))
+            encrypted_secrets.append((secret[0], encrypted_value))
+
+        update_query = """UPDATE secrets
+                          SET value = encrypted_secrets.value
+                          FROM (VALUES %s) AS encrypted_secrets (id, value)
+                          WHERE secrets.id = encrypted_secrets.id"""
+
+        self.run_query(update_query, vars=encrypted_secrets, bulk_query=True)
 
     def _connect(self):
         try:

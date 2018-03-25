@@ -72,7 +72,6 @@ class SnapshotCreate(object):
                                 stage_schema_revision,
                                 composer_schema_revision)
             self._dump_agents(manager_version)
-            self._save_hash_salt()
 
             self._create_archive()
             self._update_snapshot_status(self._config.created_status)
@@ -173,24 +172,3 @@ class SnapshotCreate(object):
         if not os.path.exists(snapshots_dir):
             os.makedirs(snapshots_dir)
         return snapshots_dir
-
-    def _save_hash_salt(self):
-        """Save the hash salt so that users can be restored usefully from this
-        snapshot."""
-        with open('/opt/manager/rest-security.conf') as security_conf_handle:
-            rest_security_conf = json.load(security_conf_handle)
-
-        try:
-            hash_salt = rest_security_conf['hash_salt']
-        except KeyError:
-            # Make a nicer error message for the user to see
-            raise KeyError(
-                'Rest security configuration did not contain hash_salt!'
-            )
-
-        hash_salt_filename = os.path.join(
-            self._tempdir,
-            constants.HASH_SALT_FILENAME,
-        )
-        with open(hash_salt_filename, 'w') as f:
-            json.dump(hash_salt, f)

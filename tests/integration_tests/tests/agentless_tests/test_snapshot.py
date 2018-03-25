@@ -23,6 +23,7 @@ from collections import Counter
 from integration_tests.framework import docl
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
+from integration_tests.framework import postgresql
 
 from manager_rest.storage.models_states import ExecutionState
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
@@ -252,6 +253,29 @@ class TestSnapshot(AgentlessTestCase):
             blueprints[1]['visibility'] == 'tenant'
         assert blueprints[2]['id'] == 'blueprint_3' and \
             blueprints[2]['visibility'] == 'global'
+
+    def test_v_4_3_encrypt_secrets_in_restore(self):
+        """
+        Validate the encryption of the secrets values for versions before 4.4.0
+        """
+        snapshot_name = 'snap_4.3.0_with_secrets.zip'
+        snapshot_path = self._get_snapshot(snapshot_name)
+        self._upload_and_restore_snapshot(snapshot_path)
+        secrets = self.client.secrets.list(_include=['key'])
+        assert len(secrets) == 3
+
+        # The secrets values as in the snapshot
+        secret_string = self.client.secrets.get('sec1')
+        secret_file = self.client.secrets.get('sec3')
+        assert secret_string.value == 'top_secret'
+        assert 'test_mail' in secret_file.value
+
+        # Validate the value is encrypted in the DB
+        result = postgresql.run_query("SELECT value "
+                                      "FROM secrets "
+                                      "WHERE id='sec1';")
+        secret_encrypted = result['all'][0][0]
+        assert secret_encrypted != 'top_secret'
 
     def _assert_snapshot_restored(self,
                                   blueprint_id,

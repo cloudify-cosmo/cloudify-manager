@@ -20,10 +20,9 @@ import zipfile
 import platform
 import tempfile
 import subprocess
+from contextlib import closing
 
 import wagon
-
-from contextlib import closing
 
 from cloudify.workflows import ctx
 from cloudify.manager import get_rest_client
@@ -60,7 +59,10 @@ from .constants import (
     V_4_0_0,
     V_4_2_0,
     V_4_3_0,
-    VisibilityState
+    V_4_4_0,
+    VisibilityState,
+    SECURITY_FILE_LOCATION,
+    SECURITY_FILENAME
 )
 
 
@@ -118,6 +120,7 @@ class SnapshotRestore(object):
                 self._restore_db(postgres, schema_revision, stage_revision)
                 self._update_visibility(postgres)
                 self._restore_files_to_manager()
+                self._encrypt_secrets(postgres)
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
                 self._restore_credentials(postgres)
@@ -318,7 +321,27 @@ class SnapshotRestore(object):
             stage_restore_override = False
         utils.restore_stage_files(self._tempdir, stage_restore_override)
         utils.restore_composer_files(self._tempdir)
+        self._restore_security_file()
         ctx.logger.info('Successfully restored archive files')
+
+    def _restore_security_file(self):
+        """Update the rest security config file according to the snapshot
+        """
+        # Starting from 4.4.0 we save the rest-security.conf in the snapshot
+        if self._snapshot_version < V_4_4_0:
+            return
+
+        snapshot_security_path = os.path.join(self._tempdir, SECURITY_FILENAME)
+        with open(snapshot_security_path) as snapshot_security_file:
+            snapshot_security_conf = json.load(snapshot_security_file)
+
+        with open(SECURITY_FILE_LOCATION) as security_conf_file:
+            rest_security_conf = json.load(security_conf_file)
+
+        rest_security_conf.update(snapshot_security_conf)
+        with open(SECURITY_FILE_LOCATION, 'w') as security_conf_file:
+            json.dump(rest_security_conf, security_conf_file)
+        self._add_restart_command()
 
     def _restore_db(self, postgres, schema_revision, stage_revision):
         """Restore database from snapshot.
@@ -372,6 +395,20 @@ class SnapshotRestore(object):
             )
 
         ctx.logger.info('Successfully updated visibility')
+
+    def _encrypt_secrets(self, postgres):
+        # The secrets are encrypted
+        if self._snapshot_version >= V_4_4_0:
+            return
+
+        with open(SECURITY_FILE_LOCATION) as security_conf_file:
+            rest_security_conf = json.load(security_conf_file)
+
+        ctx.logger.info('Encrypting the secrets values')
+        postgres.encrypt_secrets_values(
+            str(rest_security_conf['encryption_key'])
+        )
+        ctx.logger.info('Successfully encrypted the secrets values')
 
     def _restore_stage(self, postgres, tempdir, migration_version):
         if not (self._snapshot_version > V_4_0_0 and self._premium_enabled):
@@ -572,6 +609,11 @@ class SnapshotRestore(object):
         )
 
     def _load_hash_salt(self):
+        if self._snapshot_version >= V_4_4_0:
+            with open(SECURITY_FILE_LOCATION) as security_conf_handle:
+                rest_security_conf = json.load(security_conf_handle)
+            return rest_security_conf['hash_salt']
+
         hash_salt = None
         try:
             with open(os.path.join(self._tempdir,
@@ -586,23 +628,23 @@ class SnapshotRestore(object):
     def _restore_hash_salt(self):
         """Restore the hash salt so that restored users can log in.
         """
-        hash_salt = self._load_hash_salt()
-        if hash_salt is None:
-            return
+        # Starting from snapshot version 4.4.0 we restore the file
+        # rest-security.conf, so we don't restore the hash_salt separately
+        if self._snapshot_version < V_4_4_0:
+            hash_salt = self._load_hash_salt()
+            if hash_salt is None:
+                return
 
-        with open('/opt/manager/rest-security.conf') as security_conf_handle:
-            rest_security_conf = json.load(security_conf_handle)
+            with open(SECURITY_FILE_LOCATION) as security_conf_handle:
+                rest_security_conf = json.load(security_conf_handle)
 
-        rest_security_conf['hash_salt'] = hash_salt
+            rest_security_conf['hash_salt'] = hash_salt
 
-        with open('/opt/manager/rest-security.conf',
-                  'w') as security_conf_handle:
-            json.dump(rest_security_conf, security_conf_handle)
+            with open(SECURITY_FILE_LOCATION, 'w') as security_conf_handle:
+                json.dump(rest_security_conf, security_conf_handle)
+            self._add_restart_command()
 
         self._restore_admin_user()
-        self._post_restore_commands.append(
-            'sudo systemctl restart cloudify-restservice'
-        )
 
     def _get_script_path(self, script_name):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -626,6 +668,11 @@ class SnapshotRestore(object):
         ]).aggr_stdout.strip()
 
         return prefix + token_info['token']
+
+    def _add_restart_command(self):
+        restart_rest = 'sudo systemctl restart cloudify-restservice'
+        if restart_rest not in self._post_restore_commands:
+            self._post_restore_commands.append(restart_rest)
 
 
 class SnapshotRestoreValidator(object):

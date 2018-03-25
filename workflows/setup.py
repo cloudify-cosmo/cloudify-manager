@@ -31,6 +31,7 @@ setup(
         'cloudify-plugins-common==4.4.dev1',
         'elasticsearch==1.6.0',
         'retrying==1.3.3',
-        'psycopg2==2.7'
+        'psycopg2==2.7',
+        'cryptography==2.1.4',
     ]
 )
