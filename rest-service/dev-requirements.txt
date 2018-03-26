@@ -5,5 +5,5 @@ https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
 # test dependencies
 mock
 python-dateutil
-wagon[venv]==0.6.1
+wagon[venv]==0.6.2
 faker
