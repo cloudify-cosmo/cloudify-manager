@@ -17,12 +17,10 @@ import os
 import uuid
 import yaml
 import shutil
-import traceback
 import itertools
 from copy import deepcopy
 from StringIO import StringIO
 
-import celery.exceptions
 from flask import current_app
 from flask_security import current_user
 
@@ -138,7 +136,7 @@ class ResourceManager(object):
                         bypass_maintenance):
         self.create_snapshot_model(snapshot_id)
         try:
-            _, execution = self._execute_system_workflow(
+            execution = self._execute_system_workflow(
                 wf_id='create_snapshot',
                 task_mapping='cloudify_system_workflows.snapshot.create',
                 execution_parameters={
@@ -173,7 +171,7 @@ class ResourceManager(object):
                 'Failed snapshot cannot be restored'
             )
 
-        _, execution = self._execute_system_workflow(
+        execution = self._execute_system_workflow(
             wf_id='restore_snapshot',
             task_mapping='cloudify_system_workflows.snapshot.restore',
             execution_parameters={
@@ -513,7 +511,7 @@ class ResourceManager(object):
             execution.set_deployment(deployment)
         self.sm.put(execution)
 
-        async_task = workflow_executor.execute_system_workflow(
+        workflow_executor.execute_system_workflow(
             wf_id=wf_id,
             task_id=execution_id,
             task_mapping=task_mapping,
@@ -522,37 +520,7 @@ class ResourceManager(object):
             bypass_maintenance=bypass_maintenance,
             update_execution_status=update_execution_status)
 
-        if timeout > 0:
-            try:
-                # wait for the workflow execution to complete
-                async_task.get(timeout=timeout, propagate=True)
-            except celery.exceptions.TimeoutError:
-                raise manager_exceptions.ExecutionTimeout(
-                    'Execution of system workflow {0} timed out ({1} seconds)'
-                    .format(wf_id, timeout))
-            except Exception as e:
-                # error message for the user
-                if deployment:
-                    add_info = ' for deployment {0}'.format(deployment.id)
-                else:
-                    add_info = ''
-                error_msg = 'Error occurred while executing the {0} ' \
-                            'system workflow {1}: {2} - {3}'.format(
-                                wf_id, add_info, type(e).__name__, e)
-                # adding traceback to the log error message
-                tb = StringIO()
-                traceback.print_exc(file=tb)
-                log_error_msg = '{0}; traceback: {1}'.format(
-                    error_msg, tb.getvalue())
-                current_app.logger.error(log_error_msg)
-                raise manager_exceptions.ExecutionFailure(error_msg)
-            self.sm.refresh(execution)  # Reload the status form the DB
-            if execution.status != ExecutionState.TERMINATED:
-                raise manager_exceptions.ExecutionFailure(
-                    'Failed executing the {0} system workflow: '
-                    'Execution did not complete successfully.'.format(wf_id))
-
-        return async_task, execution
+        return execution
 
     def cancel_execution(self, execution_id, force=False):
         """
@@ -989,7 +957,7 @@ class ResourceManager(object):
                 models.Node,
                 filters=deployment_id_filter,
                 include=['id', 'number_of_instances'])
-            }
+        }
 
         scaling_groups = deepcopy(deployment.scaling_groups)
         for node_id, modified_node in modification.modified_nodes.items():
@@ -1000,7 +968,7 @@ class ResourceManager(object):
             else:
                 node = get_node(modification.deployment_id, node_id)
                 node.planned_number_of_instances = nodes_num_instances[
-                        node_id].number_of_instances
+                    node_id].number_of_instances
                 self.sm.update(node)
         self.sm.update(deployment)
 
