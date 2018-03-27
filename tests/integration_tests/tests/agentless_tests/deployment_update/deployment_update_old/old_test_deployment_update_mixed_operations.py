@@ -12,10 +12,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateOldBase
 
 
-class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
+class TestDeploymentUpdateOldMixedOperations(DeploymentUpdateOldBase):
 
     def test_add_node_and_relationship(self):
         """
@@ -51,10 +51,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 ['runtime_properties']
         )
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -79,8 +77,7 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
                 base_node_instances,
                 modified_node_instances,
                 keys=['stagnant', 'added_relationship', 'new'],
-                excluded_items=['runtime_properties',
-                                'relationships']
+                excluded_items=['runtime_properties', 'relationships']
         )
 
         # Check that there is only 1 from each
@@ -150,10 +147,9 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         """
         deployment, modified_bp_path = self._deploy_and_get_modified_bp_path(
                 'add_remove_and_modify_relationship')
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
         self._wait_for_execution_to_terminate(deployment.id, 'update')
         self._wait_for_successful_state(dep_update.id)
 
@@ -222,10 +218,8 @@ class TestDeploymentUpdateMixedOperations(DeploymentUpdateBase):
         node_ids = set(node_mapping.keys())
         root_node_ids = {'e', 'f'}
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')

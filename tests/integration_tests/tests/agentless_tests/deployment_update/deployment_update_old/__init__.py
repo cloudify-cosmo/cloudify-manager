@@ -22,7 +22,6 @@ from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
 
-BLUEPRINT_ID = 'update-blueprint'
 blueprints_base_path = 'dsl/deployment_update'
 
 
@@ -30,16 +29,17 @@ class TimeoutException(Exception):
     pass
 
 
-class DeploymentUpdateBase(AgentlessTestCase):
+class DeploymentUpdateOldBase(AgentlessTestCase):
 
-    def _wait_for(self,
-                  callable_obj,
-                  callable_obj_key,
-                  value_attr,
-                  test_value,
-                  test_condition,
-                  msg='',
-                  timeout=900):
+    def _wait_for(
+            self,
+            callable_obj,
+            callable_obj_key,
+            value_attr,
+            test_value,
+            test_condition,
+            msg='',
+            timeout=900):
         deadline = time.time() + timeout
         while True:
             if time.time() > deadline:
@@ -70,11 +70,8 @@ class DeploymentUpdateBase(AgentlessTestCase):
                               error_msg,
                               timeout)
 
-    def _assert_relationship(self,
-                             relationships,
-                             target,
-                             expected_type=None,
-                             exists=True):
+    def _assert_relationship(self, relationships, target,
+                             expected_type=None, exists=True):
         """
         assert that a node/node instance has a specific relationship
         :param relationships: node/node instance relationships list
@@ -160,7 +157,8 @@ class DeploymentUpdateBase(AgentlessTestCase):
                                    old_nodes,
                                    new_nodes,
                                    keys,
-                                   excluded_items=None):
+                                   excluded_items=()):
+
         old_nodes_by_id = \
             {n['id']: n for k in keys for n in old_nodes.get(k, {})}
         new_nodes_by_id = \
@@ -173,10 +171,7 @@ class DeploymentUpdateBase(AgentlessTestCase):
                                      new_nodes_by_id[id],
                                      excluded_items=excluded_items)
 
-    def _assert_equal_dicts(self, d1, d2, excluded_items=None):
-        # the blueprint id will always change in deployment update
-        excluded_items = excluded_items or []
-        excluded_items.append('blueprint_id')
+    def _assert_equal_dicts(self, d1, d2, excluded_items=()):
         for k, v in d1.iteritems():
             if k not in excluded_items:
                 # Assuming here that only node instances have a version

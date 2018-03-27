@@ -162,8 +162,7 @@ class BlueprintsId(SecuredResource):
         Upload a blueprint (id specified)
         """
         validate_inputs({'blueprint_id': blueprint_id})
-        return UploadedBlueprintsManager().\
-            receive_uploaded_data(data_id=blueprint_id)
+        return UploadedBlueprintsManager().receive_uploaded_data(blueprint_id)
 
     @swagger.operation(
         responseClass=models.Blueprint,

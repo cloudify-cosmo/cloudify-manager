@@ -1,5 +1,7 @@
-from os import environ as env
+
 import json
+
+from os import environ as env
 
 from base64 import urlsafe_b64encode
 from cloudify_rest_client.client import CloudifyClient

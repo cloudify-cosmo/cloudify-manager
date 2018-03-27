@@ -15,7 +15,6 @@
 
 import os
 import re
-import uuid
 import datetime
 
 from mock import patch
@@ -25,6 +24,7 @@ from nose.plugins.attrib import attr
 from dsl_parser import exceptions as parser_exceptions
 from cloudify_rest_client.exceptions import CloudifyClientError
 
+from manager_rest import archiving
 from manager_rest.test import base_test
 from manager_rest.storage import models
 from manager_rest.deployment_update.constants import STATES
@@ -33,7 +33,7 @@ from manager_rest.storage.models_states import ExecutionState
 
 
 @attr(client_min_version=2.1, client_max_version=base_test.LATEST_API_VERSION)
-class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
+class DeploymentUpdatesOldTestCase(base_test.BaseServerTestCase):
 
     execution_parameters = {
         'added_instance_ids',
@@ -59,11 +59,10 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                 parser_exceptions.DSLParsingException('')
             # # It doesn't matter that we are updating the deployment with the
             # same blueprint, since we mocked the blueprint parsing process.
-            self.assertRaisesRegexp(RuntimeError,
-                                    'invalid_blueprint_error',
-                                    self._update,
-                                    deployment_id,
-                                    'no_output.yaml')
+            response = self._update(deployment_id, 'no_output.yaml')
+            self.assertEquals(400, response.status_code)
+            self.assertEquals('invalid_blueprint_error',
+                              response.json['error_code'])
 
     def test_missing_required_input_raises_missing_required_input_error(self):
         deployment_id = 'dep'
@@ -324,13 +323,16 @@ class DeploymentUpdatesTestCase(base_test.BaseServerTestCase):
                 **kwargs):
         blueprint_path = resource(os.path.join('deployment_update',
                                                'depup_step'))
-        blueprint_id = 'b-{0}'.format(uuid.uuid4())
-        self.put_blueprint(blueprint_path, blueprint_name, blueprint_id)
-        kwargs['blueprint_id'] = blueprint_id
-        return self.put(
-            '/deployment-updates/{0}/update/initiate'.format(deployment_id),
-            data=kwargs
-        )
+
+        archive_path = self.archive_mock_blueprint(
+            archive_func=archiving.make_tarbz2file,
+            blueprint_dir=blueprint_path)
+        kwargs['application_file_name'] = blueprint_name
+
+        return self.post_file('/deployment-updates/{0}/update/initiate'
+                              .format(deployment_id),
+                              archive_path,
+                              query_params=kwargs)
 
     def test_storage_serialization_and_response(self):
         blueprint = self._add_blueprint()
@@ -432,10 +434,9 @@ class DeploymentUpdatesStepAndStageTestCase(base_test.BaseServerTestCase):
                 self.assertEqual(e.status_code, 400)
                 self.assertEqual(e.error_code,
                                  'unknown_modification_stage_error')
-                self.assertIn(
-                        "Entity type {0} with entity id {1}:"
-                        .format(step['entity_type'], step['entity_id']),
-                        e.message)
+                self.assertIn("Entity type {0} with entity id {1}:".format(
+                    step['entity_type'], step['entity_id']),
+                              e.message)
                 break
             self.fail("entity id {0} of entity type {1} shouldn't be valid"
                       .format(step['entity_id'], step['entity_type']))

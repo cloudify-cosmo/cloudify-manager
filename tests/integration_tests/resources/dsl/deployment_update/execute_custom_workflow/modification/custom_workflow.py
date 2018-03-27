@@ -1,5 +1,7 @@
+
 from cloudify.workflows import ctx, parameters
 from cloudify.manager import get_rest_client
+
 
 instance = next(ctx.node_instances)
 instance.execute_operation('custom_lifecycle.custom_operation',

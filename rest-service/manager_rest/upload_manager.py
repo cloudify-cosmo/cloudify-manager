@@ -71,16 +71,15 @@ class UploadedDataManager(object):
                 file_server_root,
                 resource_target_path,
                 additional_inputs=additional_inputs,
-                ** kwargs)
+                **kwargs)
             if not os.path.isfile(resource_target_path):
                 # if the archive is a folder, we're copying its content,
-                # so there is no meaning to a specific archive file name..
+                # so there is no meaning to a specific archive file name...
                 dest_file_name = None
             self._move_archive_to_uploaded_dir(doc.id,
                                                file_server_root,
                                                resource_target_path,
                                                dest_file_name=dest_file_name)
-
             return doc, 201
         finally:
             remove(resource_target_path)
@@ -355,8 +354,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                                       deployment_id,
                                       additional_inputs=None):
 
-        app_dir, app_file_name = \
-            cls._extract_application_file(file_server_root, app_dir)
+        app_file_name = cls._extract_application_file(file_server_root,
+                                                      app_dir)
 
         # add to deployment update manager (will also dsl_parse it)
         try:
@@ -400,9 +399,8 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
                     shutil.copy(source_file, dest_file)
 
             return update
-        except Exception:
+        finally:
             shutil.rmtree(os.path.join(file_server_root, app_dir))
-            raise
 
     @classmethod
     def _extract_application_file(cls, file_server_root, application_dir):
@@ -430,7 +428,7 @@ class UploadedBlueprintsDeploymentUpdateManager(UploadedDataManager):
 
         # return relative path from the file server root since this path
         # is appended to the file server base uri
-        return application_dir, application_file_name
+        return application_file_name
 
     @classmethod
     def _process_plugins(cls, file_server_root, app_dir):
@@ -540,7 +538,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
                                       visibility):
 
         args = cls._get_args()
-        app_dir, app_file_name = cls._extract_application_file(
+        app_file_name = cls._extract_application_file(
             file_server_root, app_dir, args.application_file_name)
 
         # add to blueprints manager (will also dsl_parse it)
@@ -599,7 +597,7 @@ class UploadedBlueprintsManager(UploadedDataManager):
 
         # return relative path from the file server root since this path
         # is appended to the file server base uri
-        return application_dir, application_file_name
+        return application_file_name
 
 
 class UploadedPluginsManager(UploadedDataManager):

@@ -12,21 +12,20 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+
 from nose.tools import nottest
 
 from cloudify_rest_client.exceptions import CloudifyClientError
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateOldBase
 
 
-class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
+class TestDeploymentUpdateOldRemoval(DeploymentUpdateOldBase):
 
     def test_uninstall_execution_order(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('uninstall_execution_order')
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        self.client.deployment_updates.update_with_existing_blueprint(
-            deployment.id, BLUEPRINT_ID)
+        self.client.deployment_updates.update(deployment.id, modified_bp_path)
         self._wait_for_execution_to_terminate(deployment.id, 'update')
 
         self.assertFalse(self.client.node_instances.list(
@@ -47,10 +46,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -118,10 +115,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
                 base_node_instances['modified'][0]['runtime_properties']
         )
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -178,10 +173,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -247,10 +240,9 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
 
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_workflow')
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -283,10 +275,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -362,10 +352,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -390,10 +378,9 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
     def test_remove_output(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_output')
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -407,10 +394,8 @@ class TestDeploymentUpdateRemoval(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('remove_description')
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')

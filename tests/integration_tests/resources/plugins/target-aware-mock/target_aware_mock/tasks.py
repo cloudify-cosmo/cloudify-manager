@@ -13,7 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-
 from cloudify.decorators import operation
 from integration_tests_plugins.utils import update_storage
 
