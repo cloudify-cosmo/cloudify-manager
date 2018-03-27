@@ -1,4 +1,4 @@
 git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==4.4.dev1
-git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==4.4.dev1
-git+https://github.com/cloudify-cosmo/cloudify-agent@master#egg=cloudify-agent==4.4.dev1
-git+https://github.com/cloudify-cosmo/cloudify-script-plugin@master#egg=cloudify-script-plugin==1.5.3
+git+https://github.com/cloudify-cosmo/cloudify-plugins-common@CY-199-celery-replacement#egg=cloudify-plugins-common==4.4.dev1
+git+https://github.com/cloudify-cosmo/cloudify-agent@CY-199-celery-replacement#egg=cloudify-agent==4.4.dev1
+git+https://github.com/cloudify-cosmo/cloudify-script-plugin@CY-199-celery-replacement#egg=cloudify-script-plugin==1.5.3
