@@ -12,10 +12,10 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateOldBase
 
 
-class TestDeploymentUpdateModification(DeploymentUpdateBase):
+class TestDeploymentUpdateOldModification(DeploymentUpdateOldBase):
 
     def test_modify_relationships(self):
         deployment, modified_bp_path = \
@@ -32,10 +32,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         base_source_node = base_nodes['modified'][0]
         base_source_node_instance = base_node_instances['modified'][0]
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -117,10 +115,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
                 base_node_instances['modified'][0]['runtime_properties']
         )
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -207,10 +203,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -291,10 +285,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
             base_properties.get('custom_prop', {}).get('inner_prop')
         self.assertEqual(modified_property, 1)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -310,19 +302,16 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self.assertEqual(modified_property, 2)
 
         # assert nothing else changed
-        self._assert_equal_dicts(
-            base_node['properties'],
-            modified_node['properties'],
-            excluded_items=['custom_prop', 'blueprint_id']
-        )
+        self._assert_equal_dicts(base_node['properties'],
+                                 modified_node['properties'],
+                                 excluded_items=['custom_prop'])
 
     def test_modify_workflow(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('modify_workflow')
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id,
@@ -352,10 +341,9 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
         self.assertDictContainsSubset({'custom_output': {'value': 0}},
                                       deployment.outputs)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
         dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+            self.client.deployment_updates.update(deployment.id,
+                                                  modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -371,10 +359,8 @@ class TestDeploymentUpdateModification(DeploymentUpdateBase):
 
         self.assertRegexpMatches(deployment['description'], 'old description')
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')

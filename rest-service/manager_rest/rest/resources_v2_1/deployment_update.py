@@ -13,19 +13,24 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+from os.path import join
+from shutil import copytree, rmtree
+
 from flask import request
 from flask_restful_swagger import swagger
 
-from manager_rest.deployment_update.constants import PHASES
-from manager_rest import manager_exceptions
-from manager_rest.storage import models
 from manager_rest.security import SecuredResource
+from manager_rest import manager_exceptions, config
 from manager_rest.security.authorization import authorize
+from manager_rest.deployment_update.constants import PHASES
+from manager_rest.storage import models, get_storage_manager
 from manager_rest.utils import create_filter_params_list_description
 from manager_rest.upload_manager import \
     UploadedBlueprintsDeploymentUpdateManager
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
+from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
 
 from .. import rest_decorators
 from ..rest_utils import verify_and_convert_bool
@@ -62,16 +67,85 @@ class DeploymentUpdate(SecuredResource):
         elif phase == PHASES.FINAL:
             return get_deployment_updates_manager().finalize_commit(id)
 
-    @staticmethod
-    def _commit(deployment_id):
-        manager = get_deployment_updates_manager()
+    @rest_decorators.exceptions_handled
+    @authorize('deployment_update_create')
+    @rest_decorators.marshal_with(models.DeploymentUpdate)
+    def put(self, id, phase):
+        """
+        Supports a newer form of deployment update, when the blueprint for the
+        update has already been uploaded to the manager.
+        The request should contain a blueprint id (instead of a new blueprint
+        to upload)
+        The inputs are now supplied as a json dict - just like in deployment
+        creation.
+
+        Note: the blueprint id of the deployment will be updated to the given
+        blueprint id.
+        """
+        request_json = request.json
+        manager, skip_install, skip_uninstall, workflow_id = \
+            self._get_params_and_validate(id, request_json)
+        inputs = request_json.get('inputs', {})
+        blueprint_id = request_json.get('blueprint_id')
+        if not isinstance(inputs, dict):
+            raise manager_exceptions.BadParametersError(
+                'parameter `inputs` must be of type `dict`')
+        if not blueprint_id:
+            raise manager_exceptions.BadParametersError(
+                'Must supply the parameter `blueprint_id`')
+
+        sm = get_storage_manager()
+        blueprint = sm.get(models.Blueprint, blueprint_id)
+        blueprint_dir_abs = join(config.instance.file_server_root,
+                                 FILE_SERVER_BLUEPRINTS_FOLDER,
+                                 blueprint.tenant_name,
+                                 blueprint_id)
+        deployment = sm.get(models.Deployment, id)
+        deployment_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
+                              deployment.tenant_name,
+                              id)
+        dep_dir_abs = join(config.instance.file_server_root, deployment_dir)
+        rmtree(dep_dir_abs, ignore_errors=True)
+        copytree(blueprint_dir_abs, dep_dir_abs)
+        file_name = blueprint.main_file_name
+        deployment.blueprint = blueprint
+        sm.update(deployment)
+        deployment_update = manager.stage_deployment_update(id,
+                                                            deployment_dir,
+                                                            file_name,
+                                                            inputs)
+        manager.extract_steps_from_deployment_update(deployment_update)
+        return manager.commit_deployment_update(deployment_update,
+                                                skip_install=skip_install,
+                                                skip_uninstall=skip_uninstall,
+                                                workflow_id=workflow_id)
+
+    def _commit(self, deployment_id):
         request_json = request.args
+        manager, skip_install, skip_uninstall, workflow_id = \
+            self._get_params_and_validate(deployment_id, request_json)
+
+        deployment_update, _ = \
+            UploadedBlueprintsDeploymentUpdateManager(). \
+            receive_uploaded_data(deployment_id)
+
+        manager.extract_steps_from_deployment_update(deployment_update)
+
+        return manager.commit_deployment_update(
+            deployment_update,
+            skip_install=skip_install,
+            skip_uninstall=skip_uninstall,
+            workflow_id=workflow_id)
+
+    @staticmethod
+    def _get_params_and_validate(deployment_id, request_json):
+        manager = get_deployment_updates_manager()
         skip_install = verify_and_convert_bool(
-                'skip_install',
-                request_json.get('skip_install', 'false'))
+            'skip_install',
+            request_json.get('skip_install', 'false'))
         skip_uninstall = verify_and_convert_bool(
-                'skip_uninstall',
-                request_json.get('skip_uninstall', 'false'))
+            'skip_uninstall',
+            request_json.get('skip_uninstall', 'false'))
         force = verify_and_convert_bool(
             'force',
             request_json.get('force', 'false'))
@@ -86,21 +160,9 @@ class DeploymentUpdate(SecuredResource):
                 'workflow'.format(skip_install,
                                   skip_uninstall,
                                   workflow_id))
-
         manager.validate_no_active_updates_per_deployment(
             deployment_id=deployment_id, force=force)
-
-        deployment_update, _ = \
-            UploadedBlueprintsDeploymentUpdateManager(). \
-            receive_uploaded_data(deployment_id)
-
-        manager.extract_steps_from_deployment_update(deployment_update)
-
-        return manager.commit_deployment_update(
-            deployment_update,
-            skip_install=skip_install,
-            skip_uninstall=skip_uninstall,
-            workflow_id=workflow_id)
+        return manager, skip_install, skip_uninstall, workflow_id
 
 
 class DeploymentUpdateId(SecuredResource):

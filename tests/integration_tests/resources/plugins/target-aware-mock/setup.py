@@ -1,4 +1,6 @@
+
 from setuptools import setup
+
 
 setup(
     name='target-aware-mock',

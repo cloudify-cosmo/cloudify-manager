@@ -20,10 +20,10 @@ from nose.tools import nottest
 
 from integration_tests.tests.utils import tar_blueprint
 
-from . import DeploymentUpdateBase, BLUEPRINT_ID
+from . import DeploymentUpdateOldBase
 
 
-class TestDeploymentUpdateAddition(DeploymentUpdateBase):
+class TestDeploymentUpdateOldAddition(DeploymentUpdateOldBase):
 
     def test_add_node_bp(self):
         self._test_add_node(archive_mode=False)
@@ -55,16 +55,16 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         try:
             if archive_mode:
                 tar_path = tar_blueprint(modified_bp_path, tempdir)
-                self.client.blueprints.publish_archive(tar_path,
-                                                       BLUEPRINT_ID,
-                                                       os.path.basename(
-                                                           modified_bp_path))
+                dep_update = self.client.deployment_updates.update(
+                        deployment.id,
+                        tar_path,
+                        application_file_name=os.path.basename(
+                                modified_bp_path))
             else:
-                self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
 
-            dep_update = \
-                self.client.deployment_updates.update_with_existing_blueprint(
-                    deployment.id, BLUEPRINT_ID)
+                dep_update = self.client.deployment_updates.update(
+                        deployment.id,
+                        modified_bp_path)
 
             # wait for 'update' workflow to finish
             self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -128,9 +128,7 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
     def test_install_execution_order(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('install_execution_order')
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        self.client.deployment_updates.update_with_existing_blueprint(
-            deployment.id, BLUEPRINT_ID)
+        self.client.deployment_updates.update(deployment.id, modified_bp_path)
         self._wait_for_execution_to_terminate(deployment.id, 'update')
 
         self.assertFalse(self.client.node_instances.list(
@@ -150,10 +148,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -231,10 +227,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         base_nodes, base_node_instances = \
             self._map_node_and_node_instances(deployment.id, node_mapping)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -303,10 +297,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
                 base_node_instances['related'][0]['runtime_properties']
         )
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -401,10 +393,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._map_node_and_node_instances(
                     deployment.id, node_mapping)
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -487,10 +477,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
             self._map_node_and_node_instances(deployment.id, node_mapping)
         base_node = base_nodes['affected_node'][0]
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # wait for 'update' workflow to finish
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -516,10 +504,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
     def test_add_workflow(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_workflow')
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id,
@@ -547,10 +533,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
     def test_add_output(self):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_output')
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
@@ -565,10 +549,8 @@ class TestDeploymentUpdateAddition(DeploymentUpdateBase):
         deployment, modified_bp_path = \
             self._deploy_and_get_modified_bp_path('add_description')
 
-        self.client.blueprints.upload(modified_bp_path, BLUEPRINT_ID)
-        dep_update = \
-            self.client.deployment_updates.update_with_existing_blueprint(
-                deployment.id, BLUEPRINT_ID)
+        dep_update = self.client.deployment_updates.update(deployment.id,
+                                                           modified_bp_path)
 
         # assert that 'update' workflow was executed
         self._wait_for_execution_to_terminate(deployment.id, 'update')
