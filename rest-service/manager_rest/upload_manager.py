@@ -28,6 +28,7 @@ import contextlib
 from os import path
 from setuptools import archive_util
 from urllib2 import urlopen, URLError
+from base64 import urlsafe_b64decode
 
 from flask import request, current_app
 from flask_restful import types
@@ -546,8 +547,6 @@ class UploadedBlueprintsManager(UploadedDataManager):
 
         render = None
         if args.render:
-            from base64 import urlsafe_b64decode
-            import json
             render = json.loads(urlsafe_b64decode(args.render))
 
         # add to blueprints manager (will also dsl_parse it)
