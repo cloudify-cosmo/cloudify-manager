@@ -16,6 +16,8 @@
 import time
 import uuid
 
+from flaky import flaky
+
 from cloudify_rest_client.executions import Execution
 
 from integration_tests import AgentlessTestCase
@@ -233,6 +235,7 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertEqual(1, len(invocations))
         self.assertDictEqual(invocations[0], {'before-sleep': None})
 
+    @flaky(max_runs=3)
     def test_dry_run_execution(self):
         expected_messages = [
             "Starting 'install' workflow execution (dry run)",

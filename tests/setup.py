@@ -34,6 +34,7 @@ setup(
         'sh==1.11',
         'pg8000==1.10.6',
         'awscli==1.11.14',
+        'flaky==3.4.0',
         'docl',
     ],
     entry_points={

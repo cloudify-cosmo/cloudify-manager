@@ -16,14 +16,19 @@
 import uuid
 import time
 import json
+
 from datetime import datetime
+
+from flaky import flaky
+
+from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.framework.postgresql import run_query
 from integration_tests.tests.utils import get_resource as resource
-from integration_tests.framework import utils
-from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.flask_utils import get_postgres_conf
+from cloudify_rest_client.exceptions import CloudifyClientError
+
 
 CREATE_SNAPSHOT_SUCCESS_MSG =\
     "'create_snapshot' workflow execution succeeded"
@@ -234,6 +239,7 @@ class EventsAlternativeTimezoneTest(EventsTest):
         super(EventsAlternativeTimezoneTest, self).setUp()
         self.stop_timestamp = datetime.utcnow().isoformat()
 
+    @flaky(max_runs=3)
     def test_timestamp_in_utc(self):
         """Make sure events timestamp field is in UTC."""
         events = self._events_list()

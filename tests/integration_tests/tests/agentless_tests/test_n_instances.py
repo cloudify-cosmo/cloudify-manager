@@ -15,6 +15,8 @@
 
 import time
 
+from flaky import flaky
+
 from integration_tests import AgentlessTestCase
 from integration_tests.tests.utils import get_resource as resource
 
@@ -54,6 +56,7 @@ class TestMultiInstanceApplication(AgentlessTestCase):
         self.assertEquals(5, len(filter(lambda ma: ma.startswith('host3'),
                                         machines)))
 
+    @flaky(max_runs=3)
     def test_deploy_multi_large_scale(self):
         dsl_path = resource('dsl/multi_instance_large_scale.yaml')
         start = time.time()

@@ -18,18 +18,21 @@ import time
 import json
 import tempfile
 import requests
+
 from collections import Counter
+
+from flaky import flaky
 
 from integration_tests.framework import docl
 from integration_tests.framework import utils
 from integration_tests import AgentlessTestCase
 from integration_tests.framework import postgresql
 
+from cloudify_rest_client.executions import Execution
 from manager_rest.storage.models_states import ExecutionState
+from cloudify_rest_client.exceptions import CloudifyClientError
 from manager_rest.constants import DEFAULT_TENANT_NAME, DEFAULT_TENANT_ROLE
 
-from cloudify_rest_client.executions import Execution
-from cloudify_rest_client.exceptions import CloudifyClientError
 
 SNAPSHOTS = 'http://cloudify-tests-files.s3-eu-west-1.amazonaws.com/snapshots/'
 
@@ -84,6 +87,7 @@ class TestSnapshot(AgentlessTestCase):
         execution = client.executions.get(execution.id)
         self.assertEqual(execution.status, ExecutionState.FAILED)
 
+    @flaky(max_runs=3)
     def test_4_2_snapshot_with_deployment(self):
         snapshot_path = self._get_snapshot('snap_4.2.0.zip')
         self._upload_and_restore_snapshot(snapshot_path)
@@ -104,6 +108,7 @@ class TestSnapshot(AgentlessTestCase):
             num_of_events=4,
         )
 
+    @flaky(max_runs=3)
     def test_4_0_1_snapshot_with_deployment(self):
         """Restore a 4_0_1 snapshot with a deployment."""
         snapshot_path = self._get_snapshot('secretshot_4.0.1.zip')
@@ -237,6 +242,7 @@ class TestSnapshot(AgentlessTestCase):
         assert blueprints[2]['id'] == 'blueprint_3' and \
             blueprints[2]['visibility'] == 'private'
 
+    @flaky(max_runs=3)
     def test_v_4_2_restore_snapshot_with_resource_availability(self):
         """
         Validate the conversion from the old column resource_availability to
