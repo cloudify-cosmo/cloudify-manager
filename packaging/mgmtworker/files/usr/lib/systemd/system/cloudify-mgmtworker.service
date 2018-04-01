@@ -10,25 +10,11 @@ User=cfyuser
 Group=cfyuser
 WorkingDirectory=/opt/mgmtworker/work
 EnvironmentFile=/etc/sysconfig/cloudify-mgmtworker
-ExecStart=/opt/mgmtworker/env/bin/celery worker \
-    -Ofair \
-    --include=cloudify.dispatch \
-    --hostname cloudify.management \
-    --config=cloudify.broker_config \
-    --events \
-    --app=cloudify_agent.app.app \
-    --loglevel=${CELERY_LOG_LEVEL} \
-    --queues=cloudify.management \
-    --logfile=${CELERY_LOG_DIR}/cloudify.management_worker.log \
-    --autoscale=${MAX_WORKERS},${MIN_WORKERS} \
-    --maxtasksperchild=10 \
-    --without-gossip \
-    --without-mingle \
-    --with-gate-keeper \
-    --gate-keeper-bucket-size=${GATEKEEPER_BUCKET_SIZE} \
-    --with-logging-server \
-    --logging-server-logdir=${CELERY_LOG_DIR}/logs \
-    --logging-server-handler-cache-size=${MAX_WORKERS}
+
+ExecStart=/opt/mgmtworker/env/bin/python -m cloudify_agent.worker --queue "cloudify.management" \
+    --max-workers ${MAX_WORKERS} \
+    --log-file "${CELERY_LOG_DIR}/mgmtworker.log" \
+    --log-level ${CELERY_LOG_LEVEL} \
 
 [Install]
 WantedBy=multi-user.target
