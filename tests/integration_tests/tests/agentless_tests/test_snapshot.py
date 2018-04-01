@@ -254,17 +254,25 @@ class TestSnapshot(AgentlessTestCase):
         assert blueprints[2]['id'] == 'blueprint_3' and \
             blueprints[2]['visibility'] == 'global'
 
-    def test_v_4_3_encrypt_secrets_in_restore(self):
+    def test_v_4_3_restore_snapshot_with_secrets(self):
         """
         Validate the encryption of the secrets values for versions before 4.4.0
         """
-        snapshot_name = 'snap_4.3.0_with_secrets.zip'
+        self._test_secrets_restored('snap_4.3.0_with_secrets.zip')
+
+    def test_v_4_4_restore_snapshot_with_secrets(self):
+        """
+        Validate the restore of the secrets values for snapshot of 4.4.0
+        """
+        self._test_secrets_restored('snap_4.4.0_with_secrets.zip')
+
+    def _test_secrets_restored(self, snapshot_name):
         snapshot_path = self._get_snapshot(snapshot_name)
         self._upload_and_restore_snapshot(snapshot_path)
-        secrets = self.client.secrets.list(_include=['key'])
-        assert len(secrets) == 3
 
         # The secrets values as in the snapshot
+        secrets = self.client.secrets.list(_include=['key'])
+        assert len(secrets) == 3
         secret_string = self.client.secrets.get('sec1')
         secret_file = self.client.secrets.get('sec3')
         assert secret_string.value == 'top_secret'
@@ -402,6 +410,12 @@ class TestSnapshot(AgentlessTestCase):
         if execution.status == Execution.FAILED:
             self.logger.error('Execution error: {0}'.format(execution.error))
         self.assertEqual(Execution.TERMINATED, execution.status)
+
+        # Wait for the restart of cloudify-restservice to end.
+        # If the rest-security.conf file was changed the service is being
+        # restarted. As you can see in snapshot_restore.py when calling the
+        # function _add_restart_command.
+        time.sleep(5)
 
     def _upload_and_validate_snapshot(self,
                                       snapshot_path,
