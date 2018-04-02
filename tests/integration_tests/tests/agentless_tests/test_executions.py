@@ -234,7 +234,7 @@ class ExecutionsTest(AgentlessTestCase):
         self.assertDictEqual(invocations[0], {'before-sleep': None})
 
     def test_dry_run_execution(self):
-        expected_messages = [
+        expected_messages = {
             "Starting 'install' workflow execution (dry run)",
             "Creating node",
             "Sending task 'cloudmock.tasks.provision'",
@@ -249,7 +249,7 @@ class ExecutionsTest(AgentlessTestCase):
             "Task started 'cloudmock.tasks.get_state'",
             "Task succeeded 'cloudmock.tasks.get_state (dry run)'",
             "'install' workflow execution succeeded (dry run)"
-        ]
+        }
 
         dsl_path = resource("dsl/basic.yaml")
         _, execution_id = self.deploy_application(dsl_path,
@@ -260,6 +260,6 @@ class ExecutionsTest(AgentlessTestCase):
         # "termindated", because it arrives via a different mechanism
         time.sleep(3)
         events = self.client.events.list(execution_id=execution_id)
-        event_messages = [event['message'] for event in events]
+        event_messages = {event['message'] for event in events}
 
         self.assertEquals(event_messages, expected_messages)
