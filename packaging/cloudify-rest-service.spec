@@ -36,7 +36,7 @@ virtualenv /opt/manager/env
 export REST_SERVICE_BUILD=True  # TODO: remove this hack from setup.py
 
 /opt/manager/env/bin/pip install --upgrade pip setuptools
-/opt/manager/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/master.zip
+/opt/manager/env/bin/pip install -r "${RPM_SOURCE_DIR}/rest-service/dev-requirements.txt"
 /opt/manager/env/bin/pip install "${RPM_SOURCE_DIR}/rest-service"[dbus]
 
 # Jinja2 includes 2 files which will only be imported if async is available,
