@@ -40,7 +40,8 @@ class SecretsListResponse(BaseResponse):
         'resource_availability': fields.String,
         'visibility': fields.String,
         'tenant_name': fields.String,
-        'created_by': fields.String
+        'created_by': fields.String,
+        'is_hidden_value': fields.Boolean,
     }
 
     def __init__(self, **kwargs):
@@ -51,6 +52,7 @@ class SecretsListResponse(BaseResponse):
         self.visibility = kwargs.get('visibility')
         self.tenant_name = kwargs.get('tenant_name')
         self.created_by = kwargs.get('created_by')
+        self.is_hidden_value = kwargs.get('is_hidden_value')
 
 
 @swagger.model

@@ -134,6 +134,7 @@ class Secret(SQLResourceBase):
     value = db.Column(db.Text)
     created_at = db.Column(UTCDateTime, nullable=False, index=True)
     updated_at = db.Column(UTCDateTime)
+    is_hidden_value = db.Column(db.Boolean, nullable=False, default=False)
 
     @hybrid_property
     def key(self):

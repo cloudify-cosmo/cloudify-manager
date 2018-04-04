@@ -14,12 +14,14 @@
 #  * limitations under the License.
 
 from flask import request
+from flask_security import current_user
 
 from ... import utils
 from manager_rest import config
 from .. import rest_decorators, rest_utils
 from manager_rest import cryptography_utils
 from ..responses_v3 import SecretsListResponse
+from manager_rest.utils import is_administrator
 from manager_rest.security import SecuredResource
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
@@ -37,11 +39,16 @@ class SecretsKey(SecuredResource):
         """
         rest_utils.validate_inputs({'key': key})
         secret = get_storage_manager().get(models.Secret, key)
-        encryption_key = config.instance.security_encryption_key
-        decrypted_value = cryptography_utils.decrypt(encryption_key,
-                                                     secret.value)
         secret_dict = secret.to_dict()
-        secret_dict['value'] = decrypted_value
+        if secret_dict['is_hidden_value'] and not \
+                self._is_value_permitted(secret_dict['created_by']):
+            # Hide the value of the secret
+            secret_dict['value'] = ''
+        else:
+            # Returns the decrypted value
+            encryption_key = config.instance.security_encryption_key
+            secret_dict['value'] = cryptography_utils.decrypt(encryption_key,
+                                                              secret.value)
         return secret_dict
 
     @rest_decorators.exceptions_handled
@@ -117,6 +124,11 @@ class SecretsKey(SecuredResource):
     def _encrypt_secret_value(self, value):
         encryption_key = config.instance.security_encryption_key
         return cryptography_utils.encrypt(encryption_key, value)
+
+    def _is_value_permitted(self, creator):
+        current_tenant = get_storage_manager().current_tenant
+        current_username = current_user.username
+        return is_administrator(current_tenant) or creator == current_username
 
 
 class Secrets(SecuredResource):
