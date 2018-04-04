@@ -33,16 +33,8 @@ class Authentication(object):
         return current_app.logger
 
     @property
-    def ldap(self):
-        return current_app.ldap
-
-    @property
-    def okta_configured(self):
-        return current_app.okta and current_app.okta.is_configured()
-
-    @property
-    def external_authentication(self):
-        return current_app.ldap or self.okta_configured
+    def external_auth(self):
+        return current_app.external_auth
 
     def authenticate(self, request):
         user = None
@@ -59,9 +51,9 @@ class Authentication(object):
             if not user or user.api_token_key != user_token_key:
                 raise_unauthorized_user_error(
                     'API token authentication failed')
-        elif self.okta_configured and \
-                current_app.okta.okta_saml_inside(request):
-            user = user_handler.get_okta_user(request.data, logger=self.logger)
+        elif self.external_auth \
+                and self.external_auth.okta_saml_inside(request):
+            user = self.external_auth.get_okta_user(request.data)
             if not user:
                 raise_unauthorized_user_error('OKTA authentication failed')
         if not user:
@@ -77,11 +69,17 @@ class Authentication(object):
 
         # If LDAP is not configured, *or* if the user is the bootstrap admin
         # we should run a basic HTTP auth
-        if (user and user.is_bootstrap_admin) or not self.ldap:
-            return self._http_auth(user, username, password)
-        # Otherwise, we authenticate through LDAP
+        is_bootstrap_admin = user and user.is_bootstrap_admin
+        if self.external_auth:
+            use_external_auth \
+                = self.external_auth.configured_user_password_auth()
         else:
-            return self._ldap_auth(user, username, password)
+            use_external_auth = False
+        if is_bootstrap_admin or not use_external_auth:
+            return self._http_auth(user, username, password)
+        # Otherwise, we authenticate through External auth
+        else:
+            return self.external_auth.authenticate(user, username, password)
 
     def _http_auth(self, user, username, password):
         """Perform basic user authentication
@@ -104,24 +102,6 @@ class Authentication(object):
                 'Authentication failed for {0}'.format(user)
             )
         return user
-
-    def _ldap_auth(self, user, username, password):
-        """Perform LDAP user authentication
-        - Authenticate the username and password against the LDAP server
-        - If the user exists in the DB, update its groups and login date
-        - If the user doesn't exist in the DB, create it with data from LDAP
-
-        :param user: The DB user object
-        :param username: The username from the request
-        :param password: The password from the request
-        :return: The DB user object
-        """
-        self.logger.debug('Running LDAP authentication')
-        self.ldap.authenticate_user(username, password)
-        if user:
-            return self.ldap.update_user(user)
-        else:
-            return self.ldap.create_user(username)
 
     def _authenticate_token(self, token):
         """Make sure that the token passed exists, is valid, is not expired,

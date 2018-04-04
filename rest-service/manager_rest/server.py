@@ -33,7 +33,7 @@ from manager_rest.manager_exceptions import INTERNAL_SERVER_ERROR_CODE
 from manager_rest.app_logging import setup_logger, log_request, log_response
 
 if premium_enabled:
-    from cloudify_premium import configure_ldap, configure_okta
+    from cloudify_premium import configure_auth
 
 SQL_DIALECT = 'postgresql'
 
@@ -66,11 +66,9 @@ class CloudifyFlaskApp(Flask):
         # These two need to be called after the configuration was loaded
         setup_logger(self.logger)
         if premium_enabled:
-            self.ldap = configure_ldap()
-            self.okta = configure_okta()
+            self.external_auth = configure_auth(self.logger)
         else:
-            self.ldap = None
-            self.okta = None
+            self.external_auth = None
 
         self.before_request(log_request)
         self.before_request(maintenance_mode_handler)
