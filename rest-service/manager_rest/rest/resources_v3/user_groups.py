@@ -125,7 +125,8 @@ class UserGroupsUsers(SecuredMultiTenancyResource):
         """
         Add a user to a group
         """
-        if current_app.ldap:
+        if current_app.external_auth \
+                and current_app.external_auth.configured():
             raise MethodNotAllowedError(
                 'Explicit group to user association is not permitted when '
                 'using LDAP. Group association to users is done automatically'

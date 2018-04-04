@@ -510,7 +510,7 @@ def no_external_authenticator(action):
     def no_external_authenticator_dec(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if authenticator.external_authentication:
+            if authenticator.external_auth:
                 raise manager_exceptions.IllegalActionError(
                     'Action `{0}` is not available when '
                     'using external authentication'.format(action)
