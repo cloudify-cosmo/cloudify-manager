@@ -77,6 +77,7 @@ class SecretsKey(resources_v3.SecretsKey):
                 created_at=timestamp,
                 updated_at=timestamp,
                 visibility=secret_params['visibility'],
+                is_hidden_value=secret_params['is_hidden_value']
             )
             return sm.put(new_secret)
         except ConflictError:
@@ -90,15 +91,18 @@ class SecretsKey(resources_v3.SecretsKey):
             raise
 
     def _get_secret_params(self, key):
+        rest_utils.validate_inputs({'key': key})
         request_dict = rest_utils.get_json_and_verify_params({
-            'value': {'type': unicode},
-            'update_if_exists': {'optional': True}
+            'value': {'type': unicode}
         })
         update_if_exists = rest_utils.verify_and_convert_bool(
             'update_if_exists',
             request_dict.get('update_if_exists', False),
         )
-        rest_utils.validate_inputs({'key': key})
+        is_hidden_value = rest_utils.verify_and_convert_bool(
+            'is_hidden_value',
+            request_dict.get('is_hidden_value', False),
+        )
         visibility_param = rest_utils.get_visibility_parameter(
             optional=True,
             valid_values=VisibilityState.STATES,
@@ -112,6 +116,7 @@ class SecretsKey(resources_v3.SecretsKey):
         secret_params = {
             'value': request_dict['value'],
             'update_if_exists': update_if_exists,
-            'visibility': visibility
+            'visibility': visibility,
+            'is_hidden_value': is_hidden_value
         }
         return secret_params
