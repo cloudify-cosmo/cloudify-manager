@@ -2,3 +2,4 @@ plugins:
     get_attribute:
         executor: central_deployment_agent
         source: get_attribute
+        install: false
