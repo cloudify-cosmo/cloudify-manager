@@ -220,5 +220,5 @@ def _delete_deployment_workdir(ctx):
 
 
 def _workdir(deployment_id, tenant):
-    base_workdir = os.environ['CELERY_WORK_DIR']
+    base_workdir = os.environ['AGENT_WORK_DIR']
     return os.path.join(base_workdir, 'deployments', tenant, deployment_id)
