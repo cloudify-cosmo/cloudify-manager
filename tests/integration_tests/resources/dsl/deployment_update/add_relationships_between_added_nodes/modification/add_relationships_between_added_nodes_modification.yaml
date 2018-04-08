@@ -103,10 +103,10 @@ node_templates:
     type: cloudify.nodes.Compute
     properties:
       agent_config:
-        install_method: None
+        install_method: none
 
   site_f:
     type: cloudify.nodes.Compute
     properties:
       agent_config:
-        install_method: None
+        install_method: none
