@@ -592,6 +592,13 @@ workflows:
         description: the rest token of the new manager
         # required: true
 
+  validate_agents:
+    mapping: default_workflows.cloudify.plugins.workflows.validate_agents
+    parameters:
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
 
 
 ##################################################################################
