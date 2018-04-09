@@ -200,5 +200,10 @@ def patch_yaml(yaml_path, is_json=False, default_flow_style=True):
         yield patch
 
 
+def run_postgresql_command(cmd):
+    return docl.execute('sudo -u postgres psql cloudify_db '
+                        '-c "{0}"'.format(cmd))
+
+
 def delete_provider_context():
-    postgresql.run_query('DELETE from provider_context')
+    run_postgresql_command('DELETE from provider_context')
