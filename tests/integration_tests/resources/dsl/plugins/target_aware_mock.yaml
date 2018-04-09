@@ -3,3 +3,4 @@ plugins:
         executor: host_agent
         package_name: target-aware-mock
         package_version: '1.0'
+        install: false

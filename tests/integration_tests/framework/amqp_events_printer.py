@@ -50,7 +50,7 @@ class EventsPrinter(threading.Thread):
         exchanges = ['cloudify-events', 'cloudify-logs']
         queues = []
         for exchange in exchanges:
-            channel.exchange_declare(exchange=exchange, type='fanout',
+            channel.exchange_declare(exchange=exchange, exchange_type='fanout',
                                      auto_delete=False,
                                      durable=True)
             result = channel.queue_declare(exclusive=True)
