@@ -78,15 +78,28 @@ class TestPlugins(AgentlessTestCase):
             )
             self.assertEquals(404, e.status_code)
 
+    def _get_execution(self, workflow_id):
+        executions = self.client.executions.list(include_system_workflows=True)
+        ex_list = [e for e in executions if e.workflow_id == workflow_id]
+        self.assertEqual(len(ex_list), 1,
+                         msg='Expected to find 1 execution with workflow_id '
+                             '`{workflow_id}`, but found: '
+                             '{ex_list}'.format(
+                             workflow_id=workflow_id, ex_list=ex_list)
+                         )
+        return ex_list[0]
+
     def test_install_uninstall_workflows_execution(self):
-        self.clear_plugin_data('agent')
         test_utils.upload_mock_plugin(TEST_PACKAGE_NAME, TEST_PACKAGE_VERSION)
-        plugins = self.get_plugin_data('agent',
-                                       deployment_id='system')['local']
-        self.assertEqual(plugins[TEST_PACKAGE_NAME], ['installed'])
+
+        ex = self._get_execution('install_plugin')
+        self.wait_for_execution_to_end(ex)
+
         plugin = self.client.plugins.list()[0]
         self.client.plugins.delete(plugin.id)
-        plugins = self.get_plugin_data('agent',
-                                       deployment_id='system')['local']
-        self.assertEqual(plugins[TEST_PACKAGE_NAME], ['installed',
-                                                      'uninstalled'])
+
+        ex = self._get_execution('uninstall_plugin')
+        self.wait_for_execution_to_end(ex)
+
+        plugins = self.client.plugins.list()
+        self.assertEqual(len(plugins), 0)
