@@ -215,15 +215,12 @@ node_types:
             manager_ip:
               description: the private ip of the new manager
               default: ''
-              # required: true
             manager_certificate:
               description: the cloudify_internal_ca_cert.pem of the new manager
               default: ''
-              # required: true
             manager_rest_token:
               description: the rest token of the new manager
               default: ''
-              # required: true
 
       cloudify.interfaces.host:  # DEPRECATED
         get_state: {}
@@ -584,13 +581,10 @@ workflows:
         default: true
       manager_ip:
         description: the private ip of the new manager
-        # required: true
       manager_certificate:
         description: the cloudify_internal_ca_cert.pem of the new manager
-        # required: true
       manager_rest_token:
         description: the rest token of the new manager
-        # required: true
 
   validate_agents:
     mapping: default_workflows.cloudify.plugins.workflows.validate_agents
