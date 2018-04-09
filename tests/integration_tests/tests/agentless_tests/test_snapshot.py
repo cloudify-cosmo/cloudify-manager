@@ -260,11 +260,21 @@ class TestSnapshot(AgentlessTestCase):
         """
         self._test_secrets_restored('snap_4.3.0_with_secrets.zip')
 
+        # The secret's value is not hidden
+        second_secret = self.client.secrets.get('sec2')
+        assert second_secret.value == 'top_secret2'
+        assert not second_secret.is_hidden_value
+
     def test_v_4_4_restore_snapshot_with_secrets(self):
         """
         Validate the restore of the secrets values for snapshot of 4.4.0
         """
         self._test_secrets_restored('snap_4.4.0_with_secrets.zip')
+
+        # The secret's value is hidden
+        second_secret = self.client.secrets.get('sec2')
+        assert second_secret.value == 'top_secret2'
+        assert second_secret.is_hidden_value
 
     def _test_secrets_restored(self, snapshot_name):
         snapshot_path = self._get_snapshot(snapshot_name)
@@ -284,6 +294,10 @@ class TestSnapshot(AgentlessTestCase):
                                       "WHERE id='sec1';")
         secret_encrypted = result['all'][0][0]
         assert secret_encrypted != 'top_secret'
+
+        # The secrets values are not hidden
+        assert not secret_string.is_hidden_value and \
+            not secret_file.is_hidden_value
 
     def _assert_snapshot_restored(self,
                                   blueprint_id,
