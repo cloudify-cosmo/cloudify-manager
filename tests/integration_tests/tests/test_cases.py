@@ -455,6 +455,24 @@ class AgentlessTestCase(BaseTestCase):
     def setUpClass(cls):
         super(AgentlessTestCase, cls).setUpClass()
         prepare_reset_storage_script()
+        cls._set_install_method_none()
+
+    @classmethod
+    def _set_install_method_none(cls):
+        """
+        We're setting install method to none, because we don't actually
+        want to install agents in agentless tests (duh)
+        """
+        # Using wildcard here, because the version may change
+        types_yaml = '/opt/manager/resources/spec/cloudify/*/types.yaml'
+        regex = 's/install_method: remote/install_method: none/'
+
+        # Using /bin/bash explicitly, because we want wildcard evaluation,
+        # which docker doesn't do by default
+        cls.execute_on_manager(
+            """ /bin/bash -c "sed '{regex}' {types} -i"
+            """.format(regex=regex, types=types_yaml)
+        )
 
     def setUp(self):
         super(AgentlessTestCase, self).setUp()
