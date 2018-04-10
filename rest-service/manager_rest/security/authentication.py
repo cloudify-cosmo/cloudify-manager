@@ -28,6 +28,9 @@ Authorization = namedtuple('Authorization', 'username password')
 
 
 class Authentication(object):
+    def __init__(self):
+        self.token_based_auth = False
+
     @property
     def logger(self):
         return current_app.logger
@@ -37,25 +40,14 @@ class Authentication(object):
         return current_app.external_auth
 
     def authenticate(self, request):
-        user = None
-        auth = request.authorization
-        token = user_handler.get_token_from_request(request)
-        api_token = user_handler.get_api_token_from_request(request)
-        if auth:            # Basic authentication (User + Password)
-            user = user_handler.get_user_from_auth(auth)
-            user = self._authenticate_password(user, auth)
-        elif token:         # Token authentication
-            user = self._authenticate_token(token)
-        elif api_token:     # API token authentication
-            user, user_token_key = user_handler.extract_api_token(api_token)
-            if not user or user.api_token_key != user_token_key:
-                raise_unauthorized_user_error(
-                    'API token authentication failed')
-        elif self.external_auth \
-                and self.external_auth.okta_saml_inside(request):
-            user = self.external_auth.get_okta_user(request.data)
-            if not user:
-                raise_unauthorized_user_error('OKTA authentication failed')
+        user = self._internal_auth(request)
+        is_bootstrap_admin = user and user.is_bootstrap_admin
+        if self.external_auth \
+                and not is_bootstrap_admin \
+                and not self.token_based_auth:
+            self.logger.debug('using external auth')
+            user = user_handler.get_user_from_auth(request.authorization)
+            user = self.external_auth.authenticate(request, user)
         if not user:
             raise_unauthorized_user_error('No authentication info provided')
         self.logger.info('Authenticated user: {0}'.format(user))
@@ -63,23 +55,32 @@ class Authentication(object):
         user_datastore.commit()
         return user
 
+    def _internal_auth(self, request):
+        user = None
+        auth = request.authorization
+        token = user_handler.get_token_from_request(request)
+        api_token = user_handler.get_api_token_from_request(request)
+        self.token_based_auth = token or api_token
+        if auth:  # Basic authentication (User + Password)
+            user = user_handler.get_user_from_auth(auth)
+            user = self._authenticate_password(user, auth)
+        elif token:  # Token authentication
+            user = self._authenticate_token(token)
+        elif api_token:  # API token authentication
+            user, user_token_key = user_handler.extract_api_token(api_token)
+            if not user or user.api_token_key != user_token_key:
+                raise_unauthorized_user_error(
+                    'API token authentication failed')
+        return user
+
     def _authenticate_password(self, user, auth):
         self.logger.debug('Authenticating username/password')
-        username, password = auth.username, auth.password
-
-        # If LDAP is not configured, *or* if the user is the bootstrap admin
-        # we should run a basic HTTP auth
         is_bootstrap_admin = user and user.is_bootstrap_admin
-        if self.external_auth:
-            use_external_auth \
-                = self.external_auth.configured_user_password_auth()
-        else:
-            use_external_auth = False
-        if is_bootstrap_admin or not use_external_auth:
-            return self._http_auth(user, username, password)
-        # Otherwise, we authenticate through External auth
-        else:
-            return self.external_auth.authenticate(user, username, password)
+        if self.external_auth and not is_bootstrap_admin:
+            # if external_auth is configured, use it
+            return None
+        username, password = auth.username, auth.password
+        return self._http_auth(user, username, password)
 
     def _http_auth(self, user, username, password):
         """Perform basic user authentication

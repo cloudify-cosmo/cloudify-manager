@@ -68,6 +68,8 @@ def extract_api_token(api_token):
 
 
 def get_user_from_auth(auth):
+    if not auth:
+        return None
     return user_datastore.get_user(auth.username)
 
 
