@@ -50,9 +50,8 @@ def user_loader(request):
         user, user_token_key = extract_api_token(api_token)
         return user
     if current_app.external_auth \
-            and current_app.external_auth.okta_saml_inside(request):
-        user = current_app.external_auth.get_okta_user(request.data)
-        return user
+            and current_app.external_auth.can_extract_user_from_request():
+        return current_app.external_auth.get_user_from_request(request)
     return None
 
 
