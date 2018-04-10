@@ -16,7 +16,7 @@
 import logging
 from contextlib import closing
 
-import pg8000
+import psycopg2
 from cloudify.utils import setup_logger
 from integration_tests.framework import utils
 from manager_rest.flask_utils import get_postgres_conf
@@ -31,10 +31,10 @@ def run_query(query, db_name=None):
     manager_ip = utils.get_manager_ip()
 
     db_name = db_name or conf.db_name
-    with closing(pg8000.connect(database=db_name,
-                                user=conf.username,
-                                password=conf.password,
-                                host=manager_ip)) as con:
+    with psycopg2.connect(database=db_name,
+                          user=conf.username,
+                          password=conf.password,
+                          host=manager_ip) as con:
         con.autocommit = True
         logger.info('Trying to execute SQL query: ' + query)
         with closing(con.cursor()) as cur:

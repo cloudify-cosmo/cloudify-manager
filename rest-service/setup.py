@@ -13,8 +13,6 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import os
-
 from setuptools import setup, find_packages
 
 install_requires = [
@@ -39,15 +37,8 @@ install_requires = [
     'voluptuous==0.9.3',
     'toolz==0.8.2',
     'cryptography==2.1.4',
+    'psycopg2-binary==2.7.4'
 ]
-
-
-if os.environ.get('REST_SERVICE_BUILD'):
-    # since psycopg2 installation require postgres,
-    # we're adding it only to the build process,
-    # where we know there is postgresql..
-    # tests will use pg8000, which doesn't require postgres
-    install_requires.append('psycopg2==2.6.2')
 
 
 setup(
@@ -65,5 +56,5 @@ setup(
     install_requires=install_requires,
     extras_require={
         'dbus': ['dbus-python==1.2.4'],
-        },
-    )
+    },
+)
