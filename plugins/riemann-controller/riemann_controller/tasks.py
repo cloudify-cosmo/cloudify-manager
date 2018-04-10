@@ -18,6 +18,7 @@ import os
 import time
 import errno
 import json
+import shutil
 import subprocess
 from os import path
 
@@ -74,6 +75,8 @@ def create(api_token,
 def delete(**_):
     deployment_config_dir_path = _deployment_config_dir()
     _publish_configuration_event('stop', deployment_config_dir_path)
+    _verify_core_down(deployment_config_dir_path)
+    shutil.rmtree(deployment_config_dir_path)
 
 
 def _deployment_config_dir():
@@ -163,6 +166,30 @@ def _verify_core_up(deployment_config_dir_path):
         riemann_log_output = 'Failed extracting log: {0}'.format(e)
 
     raise NonRecoverableError('Riemann core has not started in {} seconds.\n'
+                              'tail -n 100 {}:\n {}'
+                              .format(timeout,
+                                      RIEMANN_LOG_PATH,
+                                      riemann_log_output))
+
+
+def _verify_core_down(deployment_config_dir_path):
+    timeout = 60
+    ok_path = path.join(deployment_config_dir_path, 'ok')
+    end = time.time() + timeout
+    while time.time() < end:
+        # after the core is stopped this file is removed
+        if os.path.isfile(ok_path):
+            time.sleep(0.5)
+        else:
+            return
+
+    try:
+        riemann_log_output = subprocess.check_output(
+            'tail -n 100 {}'.format(RIEMANN_LOG_PATH), shell=True)
+    except Exception as e:
+        riemann_log_output = 'Failed extracting log: {0}'.format(e)
+
+    raise NonRecoverableError('Riemann core has not stopped in {} seconds.\n'
                               'tail -n 100 {}:\n {}'
                               .format(timeout,
                                       RIEMANN_LOG_PATH,
