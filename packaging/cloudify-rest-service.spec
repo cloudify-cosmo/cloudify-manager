@@ -1,6 +1,11 @@
 %define dbus_glib_version 0.70
 %define dbus_version 0.90
 
+# due to a bug in psycopg2's 2.7.4 build, stripping their binaries must be disabled
+%define debug_package %{nil}
+%define __strip /bin/true
+
+
 Name:           cloudify-rest-service
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
