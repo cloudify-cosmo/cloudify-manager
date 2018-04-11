@@ -29,7 +29,6 @@ setup(
     install_requires=[
         'pika==0.11.2',
         'elasticsearch==1.6.0',
-        'celery==3.1.17',
         'fasteners==0.13.0',
         'sh==1.11',
         'awscli==1.11.14',
