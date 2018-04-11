@@ -19,7 +19,7 @@ Vendor:         Gigaspaces Inc.
 Packager:       Gigaspaces Inc.
 
 BuildRequires:  python >= 2.7, python-virtualenv
-BuildRequires:  openssl-devel, postgresql-devel, openldap-devel, libffi-devel
+BuildRequires:  openssl-devel, openldap-devel, libffi-devel
 BuildRequires:  git, sudo
 BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
