@@ -1,6 +1,13 @@
 %define dbus_glib_version 0.70
 %define dbus_version 0.90
 
+# due to a bug in psycopg2's 2.7.4 build, stripping their binaries must be disabled
+%define debug_package %{nil}
+%define __strip /bin/true
+
+%global __requires_exclude_from site-packages/psycopg2
+%global __provides_exclude_from site-packages/psycopg2
+
 Name:           cloudify-rest-service
 Version:        %{CLOUDIFY_VERSION}
 Release:        %{CLOUDIFY_PACKAGE_RELEASE}%{?dist}
@@ -12,7 +19,7 @@ Vendor:         Gigaspaces Inc.
 Packager:       Gigaspaces Inc.
 
 BuildRequires:  python >= 2.7, python-virtualenv
-BuildRequires:  openssl-devel, postgresql-devel, openldap-devel, libffi-devel
+BuildRequires:  openssl-devel, openldap-devel, libffi-devel
 BuildRequires:  git, sudo
 BuildRequires: dbus-devel >= %{dbus_version}
 BuildRequires: dbus-glib-devel >= %{dbus_glib_version}
