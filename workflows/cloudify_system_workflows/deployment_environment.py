@@ -138,7 +138,7 @@ def delete(ctx,
 
 
 def _delete_logs(ctx):
-    log_dir = os.environ.get('CELERY_LOG_DIR')
+    log_dir = os.environ.get('AGENT_LOG_DIR')
     if log_dir:
         log_file_path = os.path.join(log_dir, 'logs',
                                      '{0}.log'.format(ctx.deployment.id))
