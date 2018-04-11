@@ -39,10 +39,15 @@ class Authentication(object):
     def external_auth(self):
         return current_app.external_auth
 
+    @property
+    def external_auth_configured(self):
+        return current_app.external_auth \
+               and current_app.external_auth.configured()
+
     def authenticate(self, request):
         user = self._internal_auth(request)
         is_bootstrap_admin = user and user.is_bootstrap_admin
-        if self.external_auth \
+        if self.external_auth_configured \
                 and not is_bootstrap_admin \
                 and not self.token_based_auth:
             self.logger.debug('using external auth')
@@ -76,7 +81,7 @@ class Authentication(object):
     def _authenticate_password(self, user, auth):
         self.logger.debug('Authenticating username/password')
         is_bootstrap_admin = user and user.is_bootstrap_admin
-        if self.external_auth and not is_bootstrap_admin:
+        if self.external_auth_configured and not is_bootstrap_admin:
             # if external_auth is configured, use it
             return None
         username, password = auth.username, auth.password

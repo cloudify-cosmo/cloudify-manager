@@ -14,6 +14,7 @@
 #  * limitations under the License.
 
 from flask import request
+from flask import current_app
 
 from manager_rest import config, premium_enabled, utils
 from manager_rest.security import SecuredResource
@@ -124,7 +125,7 @@ class LdapAuthentication(SecuredResource):
 
         # assert LDAP configuration is valid.
         auth = LdapAuthentication()
-        auth.configure_ldap()
+        auth.configure(current_app.logger)
         try:
             auth.authenticate_user(ldap_config.get('ldap_username'),
                                    ldap_config.get('ldap_password'))
