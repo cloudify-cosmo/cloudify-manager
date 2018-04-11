@@ -13,8 +13,8 @@ EnvironmentFile=/etc/sysconfig/cloudify-mgmtworker
 
 ExecStart=/opt/mgmtworker/env/bin/python -m cloudify_agent.worker --queue "cloudify.management" \
     --max-workers ${MAX_WORKERS} \
-    --log-file "${CELERY_LOG_DIR}/mgmtworker.log" \
-    --log-level ${CELERY_LOG_LEVEL} \
+    --log-file "${AGENT_LOG_DIR}/mgmtworker.log" \
+    --log-level ${AGENT_LOG_LEVEL} \
 
 [Install]
 WantedBy=multi-user.target
