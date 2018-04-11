@@ -341,7 +341,7 @@ class SnapshotRestore(object):
         rest_security_conf.update(snapshot_security_conf)
         with open(SECURITY_FILE_LOCATION, 'w') as security_conf_file:
             json.dump(rest_security_conf, security_conf_file)
-        self._add_restart_command()
+        self._client.manager_config.reload()
 
     def _restore_db(self, postgres, schema_revision, stage_revision):
         """Restore database from snapshot.
@@ -642,7 +642,7 @@ class SnapshotRestore(object):
 
             with open(SECURITY_FILE_LOCATION, 'w') as security_conf_handle:
                 json.dump(rest_security_conf, security_conf_handle)
-            self._add_restart_command()
+            self._client.manager_config.reload()
 
         self._restore_admin_user()
 
@@ -668,11 +668,6 @@ class SnapshotRestore(object):
         ]).aggr_stdout.strip()
 
         return prefix + token_info['token']
-
-    def _add_restart_command(self):
-        restart_rest = 'sudo systemctl restart cloudify-restservice'
-        if restart_rest not in self._post_restore_commands:
-            self._post_restore_commands.append(restart_rest)
 
 
 class SnapshotRestoreValidator(object):
