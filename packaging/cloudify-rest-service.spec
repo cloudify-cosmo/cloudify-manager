@@ -5,6 +5,8 @@
 %define debug_package %{nil}
 %define __strip /bin/true
 
+%global __requires_exclude_from site-packages/psycopg2
+%global __provides_exclude_from site-packages/psycopg2
 
 Name:           cloudify-rest-service
 Version:        %{CLOUDIFY_VERSION}
