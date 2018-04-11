@@ -41,6 +41,15 @@ class ManagerConfig(SecuredResource):
             result['authorization'] = self._authorization_config()
         return result
 
+    @rest_decorators.exceptions_handled
+    @authorize('manager_config_reload')
+    def post(self):
+        """
+        Reload the Manager config
+        """
+        config.instance.load_configuration()
+        return 'The rest service configuration was reloaded', 200
+
     @staticmethod
     def _authorization_config():
         cfy_config = config.instance
