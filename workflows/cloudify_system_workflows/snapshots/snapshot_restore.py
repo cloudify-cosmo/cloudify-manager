@@ -341,7 +341,6 @@ class SnapshotRestore(object):
         rest_security_conf.update(snapshot_security_conf)
         with open(SECURITY_FILE_LOCATION, 'w') as security_conf_file:
             json.dump(rest_security_conf, security_conf_file)
-        self._add_restart_command()
 
     def _restore_db(self, postgres, schema_revision, stage_revision):
         """Restore database from snapshot.
@@ -642,9 +641,9 @@ class SnapshotRestore(object):
 
             with open(SECURITY_FILE_LOCATION, 'w') as security_conf_handle:
                 json.dump(rest_security_conf, security_conf_handle)
-            self._add_restart_command()
 
         self._restore_admin_user()
+        self._restart_rest_service()
 
     def _get_script_path(self, script_name):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -669,10 +668,9 @@ class SnapshotRestore(object):
 
         return prefix + token_info['token']
 
-    def _add_restart_command(self):
-        restart_rest = 'sudo systemctl restart cloudify-restservice'
-        if restart_rest not in self._post_restore_commands:
-            self._post_restore_commands.append(restart_rest)
+    def _restart_rest_service(self):
+        command = 'sudo systemctl restart cloudify-restservice'
+        subprocess.Popen(command, shell=True)
 
 
 class SnapshotRestoreValidator(object):
