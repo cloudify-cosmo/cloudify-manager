@@ -46,7 +46,7 @@ class Status(SecuredResource):
         else:
             jobs = ['undefined']
 
-        return dict(status='running', services=jobs)
+        return {'status': 'running', 'services': jobs}
 
     def _get_systemd_manager_services(self):
         """Services the status of which we keep track of.
