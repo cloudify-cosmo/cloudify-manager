@@ -17,10 +17,10 @@ from cryptography.fernet import Fernet
 
 
 def encrypt(key, data):
-    fernet = Fernet(key)
+    fernet = Fernet(str(key))
     return fernet.encrypt(bytes(data))
 
 
 def decrypt(key, encrypted_data):
-    fernet = Fernet(key)
+    fernet = Fernet(str(key))
     return fernet.decrypt(bytes(encrypted_data))

@@ -121,8 +121,9 @@ class SecretsKey(SecuredResource):
         get_resource_manager().validate_modification_permitted(secret)
         return storage_manager.delete(secret)
 
-    def _encrypt_secret_value(self, value):
-        encryption_key = config.instance.security_encryption_key
+    def _encrypt_secret_value(self, value, encryption_key=None):
+        encryption_key = encryption_key or \
+                         config.instance.security_encryption_key
         return cryptography_utils.encrypt(encryption_key, value)
 
     def _is_value_permitted(self, creator):

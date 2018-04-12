@@ -13,19 +13,21 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-import itertools
 import os
-import pickle
 import re
+import json
+import pickle
 import shutil
 import string
+import itertools
 
 from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
-from .constants import SECRET_STORE_AGENT_KEY_PREFIX, V_4_1_0
 from .utils import is_compute, run, get_dep_contexts, get_tenants_list
-
+from .constants import (V_4_1_0,
+                        SECURITY_FILE_LOCATION,
+                        SECRET_STORE_AGENT_KEY_PREFIX)
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
 CRED_DIR = 'snapshot-credentials'
@@ -220,8 +222,15 @@ def restore(tempdir, postgres, version):
 
             replacements[agent_key] = key_secrets[key_data]
 
+        encryption_key = _get_encryption_key() if new_key_secrets else None
         for key, value in new_key_secrets.items():
-            client.secrets.create(key, value)
+            client.secrets.create(key, value, encryption_key=encryption_key)
 
         for orig, replace in replacements.items():
             _fix_snapshot_ssh_db(tenant, orig, replace)
+
+
+def _get_encryption_key():
+    with open(SECURITY_FILE_LOCATION) as security_conf_file:
+        rest_security_conf = json.load(security_conf_file)
+    return rest_security_conf['encryption_key']
