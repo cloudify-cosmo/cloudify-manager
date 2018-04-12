@@ -66,7 +66,10 @@ class SecretsKey(resources_v3.SecretsKey):
         update_if_exists is set to true
         """
         secret_params = self._get_secret_params(key)
-        encrypted_value = self._encrypt_secret_value(secret_params['value'])
+        encrypted_value = self._encrypt_secret_value(
+            secret_params['value'],
+            secret_params['encryption_key']  # Used only in restore snapshot
+        )
         sm = get_storage_manager()
         timestamp = utils.get_formatted_timestamp()
 
@@ -117,6 +120,7 @@ class SecretsKey(resources_v3.SecretsKey):
             'value': request_dict['value'],
             'update_if_exists': update_if_exists,
             'visibility': visibility,
-            'is_hidden_value': is_hidden_value
+            'is_hidden_value': is_hidden_value,
+            'encryption_key': request_dict.get('encryption_key', None)
         }
         return secret_params
