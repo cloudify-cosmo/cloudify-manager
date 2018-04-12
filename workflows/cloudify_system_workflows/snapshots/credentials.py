@@ -224,6 +224,10 @@ def restore(tempdir, postgres, version):
 
         encryption_key = _get_encryption_key() if new_key_secrets else None
         for key, value in new_key_secrets.items():
+            # The encryption_key parameter is used internally only
+            # when we create the agent's ssh keys as secrets during snapshot
+            # restore. We need to use the encryption key from the snapshot
+            # so after the snapshot restore these secrets can be decrypted
             client.secrets.create(key, value, encryption_key=encryption_key)
 
         for orig, replace in replacements.items():
@@ -231,6 +235,8 @@ def restore(tempdir, postgres, version):
 
 
 def _get_encryption_key():
+    # The encryption_key (from the snapshot) is updated in rest-security.conf
+    # file but not yet loaded to the config
     with open(SECURITY_FILE_LOCATION) as security_conf_file:
         rest_security_conf = json.load(security_conf_file)
     return rest_security_conf['encryption_key']
