@@ -39,7 +39,7 @@ class ResourcesAvailableTest(AgentlessTestCase):
         with self.assertRaises(
                 ConnectionError,
                 msg="Resources are available through port 53229."):
-            result = requests.head(invalid_resource_url)
+            requests.head(invalid_resource_url)
 
     def test_resources_access(self):
         self.client.blueprints.upload(resource('dsl/empty_blueprint.yaml'),
