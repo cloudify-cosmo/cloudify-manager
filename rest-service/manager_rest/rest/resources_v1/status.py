@@ -23,6 +23,10 @@ from manager_rest.rest.rest_decorators import (
 )
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
+try:
+    from manager_rest.systemddbus import get_services
+except ImportError:
+    get_services = None
 
 
 class Status(SecuredResource):
@@ -36,40 +40,43 @@ class Status(SecuredResource):
     @authorize('status_get')
     @marshal_with(responses.Status)
     def get(self, **kwargs):
-        """
-        Get the status of running system services
-        """
-        try:
-            from manager_rest.systemddbus import get_services
-            job_list = {'cloudify-mgmtworker.service': 'Celery Management',
-                        'cloudify-restservice.service':
-                            'Manager Rest-Service',
-                        'cloudify-amqpinflux.service': 'AMQP InfluxDB',
-                        'cloudify-influxdb.service': 'InfluxDB',
-                        'cloudify-rabbitmq.service': 'RabbitMQ',
-                        'cloudify-riemann.service': 'Riemann',
-                        'cloudify-stage.service': 'Cloudify Stage',
-                        'cloudify-composer.service': 'Cloudify Composer',
-                        'logstash.service': 'Logstash',
-                        'nginx.service': 'Webserver',
-                        'postgresql-9.5.service': 'PostgreSQL'
-                        }
-
-            if rest_utils.is_clustered():
-                # clustered postgresql service is named differently -
-                # the old service is not used in a clustered manager,
-                # so we can ignore its status
-                del job_list['postgresql-9.5.service']
-
-                # services that are only running in a clustered manager
-                job_list.update({
-                    'cloudify-postgresql.service': 'PostgreSQL',
-                    'cloudify-consul.service': 'Consul',
-                    'cloudify-syncthing.service': 'Syncthing',
-                })
-
-            jobs = get_services(job_list)
-        except ImportError:
+        """Get the status of running system services"""
+        if get_services:
+            jobs = get_services(self._get_systemd_manager_services())
+        else:
             jobs = ['undefined']
 
         return dict(status='running', services=jobs)
+
+    def _get_systemd_manager_services(self):
+        """Services the status of which we keep track of.
+
+        :return: a dict of {service_name: label}
+        """
+        services = {
+            'cloudify-mgmtworker.service': 'Celery Management',
+            'cloudify-restservice.service': 'Manager Rest-Service',
+            'cloudify-amqpinflux.service': 'AMQP InfluxDB',
+            'cloudify-influxdb.service': 'InfluxDB',
+            'cloudify-rabbitmq.service': 'RabbitMQ',
+            'cloudify-riemann.service': 'Riemann',
+            'cloudify-stage.service': 'Cloudify Stage',
+            'cloudify-composer.service': 'Cloudify Composer',
+            'logstash.service': 'Logstash',
+            'nginx.service': 'Webserver',
+            'postgresql-9.5.service': 'PostgreSQL'
+        }
+
+        if rest_utils.is_clustered():
+            # clustered postgresql service is named differently -
+            # the old service is not used in a clustered manager,
+            # so we can ignore its status
+            del services['postgresql-9.5.service']
+
+            # services that are only running in a clustered manager
+            services.update({
+                'cloudify-postgresql.service': 'PostgreSQL',
+                'cloudify-consul.service': 'Consul',
+                'cloudify-syncthing.service': 'Syncthing',
+            })
+        return services
