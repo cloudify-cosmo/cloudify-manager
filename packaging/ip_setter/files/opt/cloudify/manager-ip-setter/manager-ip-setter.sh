@@ -7,12 +7,22 @@ function set_manager_ip() {
 
   echo "Setting manager IP to: ${ip}"
 
-  echo "Updating cloudify-amqpinflux.."
-  /usr/bin/sed -i -e "s/AMQP_HOST=.*/AMQP_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-amqpinflux
+  if [[ -d /opt/amqpinflux ]]; then
+    # If /opt/amqpinflux exists then we expect amqpinflux to be in use
+    echo "Updating cloudify-amqpinflux.."
+    /usr/bin/sed -i -e "s/AMQP_HOST=.*/AMQP_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-amqpinflux
+  else
+    echo "amqpinflux not installed."
+  fi
 
-  echo "Updating cloudify-riemann.."
-  /usr/bin/sed -i -e "s/RABBITMQ_HOST=.*/RABBITMQ_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-riemann
-  /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-riemann
+  if [[ -d /opt/riemann ]]; then
+    # If /opt/riemann exists then we expect riemann to be in use
+    echo "Updating cloudify-riemann.."
+    /usr/bin/sed -i -e "s/RABBITMQ_HOST=.*/RABBITMQ_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-riemann
+    /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-riemann
+  else
+    echo "Riemann not installed."
+  fi
 
   echo "Updating cloudify-mgmtworker.."
   /usr/bin/sed -i -e "s/REST_HOST=.*/REST_HOST="'"'"${ip}"'"'"/" /etc/sysconfig/cloudify-mgmtworker
@@ -33,7 +43,7 @@ function set_manager_ip() {
 
   echo "Updating logstash config..."
   /usr/bin/sed -i -e 's/host => ".*"/host => "'"${ip}"'"/g' /etc/logstash/conf.d/logstash.conf
-  
+
   echo "Done!"
 
 }
