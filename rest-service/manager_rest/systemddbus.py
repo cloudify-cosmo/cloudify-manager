@@ -46,6 +46,7 @@ def get_services(units):
     for unit_id, display_name in units.iteritems():
         service = {}
         service['display_name'] = display_name
+        service['unit_id'] = unit_id
         service['instances'] = []
         try:
             instance = {}
