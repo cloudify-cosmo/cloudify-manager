@@ -28,6 +28,27 @@ try:
 except ImportError:
     get_services = None
 
+BASE_SERVICES = {
+    'cloudify-mgmtworker.service': 'Celery Management',
+    'cloudify-restservice.service': 'Manager Rest-Service',
+    'cloudify-rabbitmq.service': 'RabbitMQ',
+    'logstash.service': 'Logstash',
+    'nginx.service': 'Webserver',
+    'postgresql-9.5.service': 'PostgreSQL'
+}
+OPTIONAL_SERVICES = {
+    'cloudify-influxdb.service': 'InfluxDB',
+    'cloudify-riemann.service': 'Riemann',
+    'cloudify-amqpinflux.service': 'AMQP InfluxDB',
+    'cloudify-stage.service': 'Cloudify Stage',
+    'cloudify-composer.service': 'Cloudify Composer',
+}
+CLUSTER_SERVICES = {
+    'cloudify-postgresql.service': 'PostgreSQL',
+    'cloudify-consul.service': 'Consul',
+    'cloudify-syncthing.service': 'Syncthing',
+}
+
 
 class Status(SecuredResource):
 
@@ -43,6 +64,14 @@ class Status(SecuredResource):
         """Get the status of running system services"""
         if get_services:
             jobs = get_services(self._get_systemd_manager_services())
+            jobs = [
+                job for job in jobs
+                # Don't display optional services if they don't exist
+                if (
+                    job['instances']
+                    or job['unit_id'] not in OPTIONAL_SERVICES
+                )
+            ]
         else:
             jobs = ['undefined']
 
@@ -53,19 +82,11 @@ class Status(SecuredResource):
 
         :return: a dict of {service_name: label}
         """
-        services = {
-            'cloudify-mgmtworker.service': 'Celery Management',
-            'cloudify-restservice.service': 'Manager Rest-Service',
-            'cloudify-amqpinflux.service': 'AMQP InfluxDB',
-            'cloudify-influxdb.service': 'InfluxDB',
-            'cloudify-rabbitmq.service': 'RabbitMQ',
-            'cloudify-riemann.service': 'Riemann',
-            'cloudify-stage.service': 'Cloudify Stage',
-            'cloudify-composer.service': 'Cloudify Composer',
-            'logstash.service': 'Logstash',
-            'nginx.service': 'Webserver',
-            'postgresql-9.5.service': 'PostgreSQL'
-        }
+        services = {}
+
+        # Use updates to avoid mutating the 'constant'
+        services.update(BASE_SERVICES)
+        services.update(OPTIONAL_SERVICES)
 
         if rest_utils.is_clustered():
             # clustered postgresql service is named differently -
@@ -74,9 +95,5 @@ class Status(SecuredResource):
             del services['postgresql-9.5.service']
 
             # services that are only running in a clustered manager
-            services.update({
-                'cloudify-postgresql.service': 'PostgreSQL',
-                'cloudify-consul.service': 'Consul',
-                'cloudify-syncthing.service': 'Syncthing',
-            })
+            services.update(CLUSTER_SERVICES)
         return services
