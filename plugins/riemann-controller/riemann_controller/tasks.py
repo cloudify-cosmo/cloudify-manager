@@ -44,6 +44,15 @@ def create(api_token,
            policy_triggers=None,
            groups=None,
            **_):
+    if not path.isdir(os.environ[RIEMANN_CONFIGS_DIR]):
+        raise NonRecoverableError(
+            'Riemann configs dir "{path}" does not exist. '
+            'It is likely that this manager does not have monitoring '
+            'components installed. Please try deploying a blueprint without '
+            'configured policies.'.format(
+                path=os.environ[RIEMANN_CONFIGS_DIR],
+            )
+        )
 
     policy_types = policy_types or {}
     groups = groups or {}
