@@ -197,6 +197,30 @@ node_types:
               default: 20
 
 
+        #####################################################
+        # This operation will make agents communicate with
+        # a new manager. Users will have to supply the new
+        # manager's IP and agents certificate.
+        # ---------------------------------------------------
+        # It will be executed on the central deployment
+        # agent.
+        #####################################################
+
+        transfer_amqp:
+          implementation: agent.cloudify_agent.operations.transfer_agent_amqp
+          executor: central_deployment_agent
+          inputs:
+            transfer_agent_timeout:
+              default: 20
+            manager_ip:
+              description: The private ip of the new manager [required]
+              default: ''
+            manager_certificate:
+              description: The cloudify_internal_ca_cert.pem of the new manager [required]
+              default: ''
+            manager_rest_token:
+              description: The rest token of the new manager [required]
+              default: ''
 
       cloudify.interfaces.host:  # DEPRECATED
         get_state: {}
@@ -543,6 +567,33 @@ workflows:
         default: True
       install_script:
         default: ''
+
+  transfer_agents:
+    mapping: default_workflows.cloudify.plugins.workflows.transfer_agents
+    parameters:
+      transfer_agent_timeout:
+        default: 300
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
+      validate:
+        default: true
+      manager_ip:
+        description: The private ip of the new manager [required]
+      manager_certificate:
+        description: The cloudify_internal_ca_cert.pem of the new manager [required]
+      manager_rest_token:
+        description: The rest token of the new manager [required]
+
+  validate_agents:
+    mapping: default_workflows.cloudify.plugins.workflows.validate_agents
+    parameters:
+      node_ids:
+        default: []
+      node_instance_ids:
+        default: []
+
 
 ##################################################################################
 # Base data type definitions
