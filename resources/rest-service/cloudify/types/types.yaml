@@ -177,6 +177,12 @@ node_types:
           inputs:
             install_agent_timeout:
               default: 300
+            manager_ip:
+              description: The private ip of the new manager
+              default: ''
+            manager_certificate:
+              description: The cloudify_internal_ca_cert.pem of the new manager
+              default: ''
 
 
         #####################################################
@@ -566,6 +572,12 @@ workflows:
       install:
         default: True
       install_script:
+        default: ''
+      manager_ip:
+        description: The private ip of the new manager
+        default: ''
+      manager_certificate:
+        description: The cloudify_internal_ca_cert.pem of the new manager
         default: ''
 
   transfer_agents:
