@@ -180,17 +180,11 @@ class BaseTestEnvironment(object):
 
 
 class AgentlessTestEnvironment(BaseTestEnvironment):
-    # See _build_resource_mapping
-    mock_cloudify_agent = True
-
     def on_environment_created(self):
         self.run_manager()
 
 
 class AgentTestEnvironment(BaseTestEnvironment):
-    # See _build_resource_mapping
-    mock_cloudify_agent = False
-
     def on_environment_created(self):
         self.run_manager()
 
