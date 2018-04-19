@@ -66,16 +66,26 @@ class Status(SecuredResource):
             jobs = get_services(self._get_systemd_manager_services())
             jobs = [
                 job for job in jobs
-                # Don't display optional services if they don't exist
-                if (
-                    job['instances']
-                    or job['unit_id'] not in OPTIONAL_SERVICES
-                )
+                if self._should_be_in_services_output(job)
             ]
         else:
             jobs = ['undefined']
 
         return {'status': 'running', 'services': jobs}
+
+    def _should_be_in_services_output(self, job):
+        if job['unit_id'] not in OPTIONAL_SERVICES:
+            return True
+
+        if job['instances']:
+            # We have some details of the systemd job...
+            if job['instances'][0]['LoadState'] != 'not-found':
+                # And since its LoadState wasn't not-found, it should be
+                # installed and working
+                return True
+
+        # If we reach here then the service is optional and not installed
+        return False
 
     def _get_systemd_manager_services(self):
         """Services the status of which we keep track of.
