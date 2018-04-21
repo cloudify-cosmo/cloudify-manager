@@ -26,7 +26,8 @@ from manager_rest.manager_exceptions import (BadParametersError,
                                              NotFoundError)
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-                                    FILE_SERVER_DEPLOYMENTS_FOLDER)
+                                    FILE_SERVER_DEPLOYMENTS_FOLDER,
+                                    FILE_SERVER_TENANT_RESOURCES_FOLDER)
 
 from .. import rest_decorators, rest_utils
 from ...security.authentication import authenticator
@@ -44,7 +45,8 @@ class FileServerAuth(SecuredResource):
         tenanted_resources = [
             FILE_SERVER_BLUEPRINTS_FOLDER,
             FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
-            FILE_SERVER_DEPLOYMENTS_FOLDER
+            FILE_SERVER_DEPLOYMENTS_FOLDER,
+            FILE_SERVER_TENANT_RESOURCES_FOLDER
         ]
         tenanted_resources = [r.strip('/') for r in tenanted_resources]
         uri = uri.strip('/')
