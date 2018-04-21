@@ -71,6 +71,8 @@ def copy_files_between_manager_and_snapshot(archive_root,
         constants.FILE_SERVER_DEPLOYMENTS_FOLDER,
         constants.FILE_SERVER_UPLOADED_BLUEPRINTS_FOLDER,
         constants.FILE_SERVER_PLUGINS_FOLDER,
+        constants.FILE_SERVER_GLOBAL_RESOURCES_FOLDER,
+        constants.FILE_SERVER_TENANT_RESOURCES_FOLDER,
     ]
 
     # To work with cert dir logic for archiving
