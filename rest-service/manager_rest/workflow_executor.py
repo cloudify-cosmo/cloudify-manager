@@ -138,7 +138,7 @@ def _execute_task(execution_id, execution_parameters, context):
         durable=True)
     channel.basic_publish(
         exchange=MGMTWORKER_QUEUE,
-        routing_key='',
+        routing_key='workflow',
         body=json.dumps(message))
 
     connection.close()
