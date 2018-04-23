@@ -148,6 +148,8 @@ class DeploymentUpdateManager(object):
         )
         deployment_update.set_deployment(deployment)
         self.sm.put(deployment_update)
+        deployment.inputs = inputs
+        self.sm.update(deployment)
         return deployment_update
 
     def create_deployment_update_step(self,
