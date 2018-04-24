@@ -124,7 +124,7 @@ def _publish_configuration_event(state, deployment_config_dir_path):
     try:
         channel = connection.channel()
         channel.exchange_declare(exchange=exchange_name,
-                                 type='topic',
+                                 exchange_type='topic',
                                  durable=False,
                                  auto_delete=True,
                                  internal=False)

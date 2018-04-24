@@ -52,7 +52,7 @@ def publish_event(queue, routing_key, event):
     channel = connection.channel()
     try:
         channel.exchange_declare(exchange=exchange_name,
-                                 type=exchange_type,
+                                 exchange_type=exchange_type,
                                  durable=False,
                                  auto_delete=True,
                                  internal=False)
