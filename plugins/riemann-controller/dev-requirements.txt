@@ -1,1 +1,1 @@
--e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==4.4.dev1
+-e git+https://github.com/cloudify-cosmo/cloudify-plugins-common@CY-199-celery-replacement#egg=cloudify-plugins-common==4.4.dev1
