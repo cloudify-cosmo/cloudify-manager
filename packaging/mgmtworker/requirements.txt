@@ -1,4 +1,4 @@
 https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
 https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/CY-199-celery-replacement.zip
-https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
+https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/CY-199-celery-replacement.zip
 https://github.com/cloudify-cosmo/cloudify-agent/archive/CY-199-celery-replacement.zip
