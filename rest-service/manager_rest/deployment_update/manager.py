@@ -61,10 +61,15 @@ class DeploymentUpdateManager(object):
         """
         return self.sm.get(models.DeploymentUpdate, deployment_update_id)
 
-    def list_deployment_updates(self, include=None, filters=None,
-                                pagination=None, sort=None):
+    def list_deployment_updates(self,
+                                include=None,
+                                filters=None,
+                                pagination=None,
+                                sort=None,
+                                substr_filters=None):
         """Return a list of deployment updates.
 
+        :param substr_filters:
         :param include:
         :param filters:
         :param pagination:
@@ -76,6 +81,7 @@ class DeploymentUpdateManager(object):
             include=include,
             filters=filters,
             pagination=pagination,
+            substr_filters=substr_filters,
             sort=sort
         )
 
@@ -83,9 +89,12 @@ class DeploymentUpdateManager(object):
                                 deployment_id,
                                 app_dir,
                                 app_blueprint,
-                                additional_inputs):
+                                additional_inputs,
+                                new_blueprint_id=None):
         """Stage a deployment update
 
+        :param new_blueprint_id:
+        :param additional_inputs:
         :param app_blueprint:
         :param app_dir:
         :param deployment_id: the deployment id for the update
@@ -94,14 +103,14 @@ class DeploymentUpdateManager(object):
 
         # enables reverting to original blueprint resources
         deployment = self.sm.get(models.Deployment, deployment_id)
-        blueprint_id = deployment.blueprint_id
+        old_blueprint = deployment.blueprint
         file_server_root = config.instance.file_server_root
 
         blueprint_resource_dir = os.path.join(
             file_server_root,
             'blueprints',
-            utils.current_tenant.name,
-            blueprint_id)
+            old_blueprint.tenant_name,
+            old_blueprint.id)
         # The dsl parser expects a URL
         blueprint_resource_dir_url = 'file:{0}'.format(blueprint_resource_dir)
 
@@ -121,14 +130,16 @@ class DeploymentUpdateManager(object):
 
         # Updating the new inputs with the deployment inputs
         # (overriding old values and adding new ones)
-        inputs = copy.deepcopy(deployment.inputs)
-        inputs.update(additional_inputs)
+        old_inputs = copy.deepcopy(deployment.inputs)
+        new_inputs = {k: old_inputs[k]
+                      for k in plan.inputs.keys() if k in old_inputs}
+        new_inputs.update(additional_inputs)
 
         # applying intrinsic functions
         try:
             prepared_plan = tasks.prepare_deployment_plan(plan,
                                                           get_secret_method(),
-                                                          inputs=inputs)
+                                                          inputs=new_inputs)
         except parser_exceptions.MissingRequiredInputError, e:
             raise manager_exceptions.MissingRequiredDeploymentInputError(
                 str(e))
@@ -147,8 +158,15 @@ class DeploymentUpdateManager(object):
             created_at=utils.get_formatted_timestamp()
         )
         deployment_update.set_deployment(deployment)
+        deployment_update.old_inputs = old_inputs
+        deployment_update.new_inputs = new_inputs
+        if new_blueprint_id:
+            new_blueprint = self.sm.get(models.Blueprint, new_blueprint_id)
+            deployment_update.old_blueprint = old_blueprint
+            deployment_update.new_blueprint = new_blueprint
+            deployment.blueprint = new_blueprint
         self.sm.put(deployment_update)
-        deployment.inputs = inputs
+        deployment.inputs = new_inputs
         self.sm.update(deployment)
         return deployment_update
 
