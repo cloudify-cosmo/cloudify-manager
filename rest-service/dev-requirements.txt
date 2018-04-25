@@ -1,6 +1,6 @@
-https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/4.3.1.zip
+https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/4.3.2.zip
 https://github.com/cloudify-cosmo/incubator-ariatosca/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/4.3.1.zip
+https://github.com/cloudify-cosmo/cloudify-rest-client/archive/4.3.2.zip
 
 # test dependencies
 mock
