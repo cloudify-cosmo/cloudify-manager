@@ -1,4 +1,4 @@
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/master.zip
-https://github.com/cloudify-cosmo/cloudify-agent/archive/master.zip
+git+https://github.com/cloudify-cosmo/cloudify-rest-client@master#egg=cloudify-rest-client==4.4.dev1
+git+https://github.com/cloudify-cosmo/cloudify-plugins-common@master#egg=cloudify-plugins-common==4.4.dev1
+git+https://github.com/cloudify-cosmo/cloudify-agent@master#egg=cloudify-agent==4.4.dev1
+git+https://github.com/cloudify-cosmo/cloudify-script-plugin@master#egg=cloudify-script-plugin==1.5.3
