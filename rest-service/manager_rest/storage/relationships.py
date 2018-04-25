@@ -16,8 +16,10 @@
 from .models_base import db
 
 
-def foreign_key(
-        foreign_key_column, nullable=False, index=False, primary_key=False):
+def foreign_key(foreign_key_column,
+                nullable=False,
+                index=False,
+                primary_key=False):
     """Return a ForeignKey object with the relevant
 
     :param foreign_key_column: Unique id column in the parent table
@@ -37,7 +39,8 @@ def one_to_many_relationship(child_class,
                              parent_class,
                              foreign_key_column,
                              parent_class_primary_key='_storage_id',
-                             backreference=None):
+                             backreference=None,
+                             cascade='all'):
     """Return a one-to-many SQL relationship object
     Meant to be used from inside the *child* object
 
@@ -46,6 +49,7 @@ def one_to_many_relationship(child_class,
     :param foreign_key_column: The column of the foreign key
     :param parent_class_primary_key: The name of the parent's primary key
     :param backreference: The name to give to the reference to the child
+    :param cascade: in what cases to cascade changes from parent to child
     """
     backreference = backreference or child_class.__tablename__
     parent_primary_key = getattr(parent_class, parent_class_primary_key)
@@ -54,7 +58,7 @@ def one_to_many_relationship(child_class,
         primaryjoin=lambda: parent_primary_key == foreign_key_column,
         # The following line makes sure that when the *parent* is
         # deleted, all its connected children are deleted as well
-        backref=db.backref(backreference, cascade='all')
+        backref=db.backref(backreference, cascade=cascade)
     )
 
 

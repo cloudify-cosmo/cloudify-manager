@@ -321,10 +321,14 @@ class DeploymentUpdate(SQLResourceBase):
     deployment_update_deployment = db.Column(db.PickleType)
     deployment_update_nodes = db.Column(db.PickleType)
     modified_entity_ids = db.Column(db.PickleType)
+    old_inputs = db.Column(db.PickleType)
+    new_inputs = db.Column(db.PickleType)
     state = db.Column(db.Text)
 
     _execution_fk = foreign_key(Execution._storage_id, nullable=True)
     _deployment_fk = foreign_key(Deployment._storage_id)
+    _old_blueprint_fk = foreign_key(Blueprint._storage_id, nullable=True)
+    _new_blueprint_fk = foreign_key(Blueprint._storage_id, nullable=True)
 
     @declared_attr
     def execution(cls):
@@ -334,8 +338,26 @@ class DeploymentUpdate(SQLResourceBase):
     def deployment(cls):
         return one_to_many_relationship(cls, Deployment, cls._deployment_fk)
 
+    @declared_attr
+    def old_blueprint(cls):
+        return one_to_many_relationship(cls,
+                                        Blueprint,
+                                        cls._old_blueprint_fk,
+                                        backreference='update_from',
+                                        cascade=False)
+
+    @declared_attr
+    def new_blueprint(cls):
+        return one_to_many_relationship(cls,
+                                        Blueprint,
+                                        cls._new_blueprint_fk,
+                                        backreference='update_to',
+                                        cascade=False)
+
     deployment_id = association_proxy('deployment', 'id')
     execution_id = association_proxy('execution', 'id')
+    old_blueprint_id = association_proxy('old_blueprint', 'id')
+    new_blueprint_id = association_proxy('new_blueprint', 'id')
 
     @classproperty
     def response_fields(cls):

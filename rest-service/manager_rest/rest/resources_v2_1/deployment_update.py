@@ -24,13 +24,14 @@ from manager_rest import manager_exceptions, config
 from manager_rest.security.authorization import authorize
 from manager_rest.deployment_update.constants import PHASES
 from manager_rest.storage import models, get_storage_manager
-from manager_rest.utils import create_filter_params_list_description
 from manager_rest.upload_manager import \
     UploadedBlueprintsDeploymentUpdateManager
 from manager_rest.deployment_update.manager import \
     get_deployment_updates_manager
 from manager_rest.constants import (FILE_SERVER_BLUEPRINTS_FOLDER,
                                     FILE_SERVER_DEPLOYMENTS_FOLDER)
+from manager_rest.utils import (create_filter_params_list_description,
+                                current_tenant)
 
 from .. import rest_decorators
 from ..rest_utils import verify_and_convert_bool
@@ -94,26 +95,23 @@ class DeploymentUpdate(SecuredResource):
             raise manager_exceptions.BadParametersError(
                 'Must supply the parameter `blueprint_id`')
 
-        sm = get_storage_manager()
-        blueprint = sm.get(models.Blueprint, blueprint_id)
+        blueprint = get_storage_manager().get(models.Blueprint, blueprint_id)
         blueprint_dir_abs = join(config.instance.file_server_root,
                                  FILE_SERVER_BLUEPRINTS_FOLDER,
                                  blueprint.tenant_name,
                                  blueprint_id)
-        deployment = sm.get(models.Deployment, id)
         deployment_dir = join(FILE_SERVER_DEPLOYMENTS_FOLDER,
-                              deployment.tenant_name,
+                              current_tenant.name,
                               id)
         dep_dir_abs = join(config.instance.file_server_root, deployment_dir)
         rmtree(dep_dir_abs, ignore_errors=True)
         copytree(blueprint_dir_abs, dep_dir_abs)
         file_name = blueprint.main_file_name
-        deployment.blueprint = blueprint
-        sm.update(deployment)
         deployment_update = manager.stage_deployment_update(id,
                                                             deployment_dir,
                                                             file_name,
-                                                            inputs)
+                                                            inputs,
+                                                            blueprint_id)
         manager.extract_steps_from_deployment_update(deployment_update)
         return manager.commit_deployment_update(deployment_update,
                                                 skip_install=skip_install,
@@ -199,13 +197,18 @@ class DeploymentUpdates(SecuredResource):
     @rest_decorators.create_filters(models.DeploymentUpdate)
     @rest_decorators.paginate
     @rest_decorators.sortable(models.DeploymentUpdate)
+    @rest_decorators.search('id')
     def get(self, _include=None, filters=None, pagination=None,
-            sort=None, **kwargs):
+            sort=None, search=None, **kwargs):
         """
         List deployment modification stages
         """
         deployment_updates = \
             get_deployment_updates_manager().list_deployment_updates(
-                    include=_include, filters=filters, pagination=pagination,
-                    sort=sort, **kwargs)
+                include=_include,
+                filters=filters,
+                pagination=pagination,
+                sort=sort,
+                substr_filters=search
+            )
         return deployment_updates
