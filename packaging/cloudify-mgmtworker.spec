@@ -24,11 +24,7 @@ Cloudify's Management worker
 %build
 virtualenv /opt/mgmtworker/env
 /opt/mgmtworker/env/bin/pip install --upgrade pip setuptools
-/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/incubator-ariatosca/archive/master.zip
-/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-rest-client/archive/4.3.1-build.zip
-/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/4.3.1-build.zip
-/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-script-plugin/archive/1.5.3.zip
-/opt/mgmtworker/env/bin/pip install https://github.com/cloudify-cosmo/cloudify-agent/archive/4.3.1-build.zip
+/opt/mgmtworker/env/bin/pip install -r "${RPM_SOURCE_DIR}/packaging/mgmtworker/requirements.txt"
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/plugins/riemann-controller"
 /opt/mgmtworker/env/bin/pip install --upgrade "${RPM_SOURCE_DIR}/workflows"
 rm /opt/mgmtworker/env/lib/python2.7/site-packages/zmq/tests/_test_asyncio.py
