@@ -16,7 +16,7 @@
 from datetime import datetime
 from collections import namedtuple
 
-from flask import current_app
+from flask import current_app, Response
 from flask_security.utils import verify_password, md5
 
 from . import user_handler
@@ -52,7 +52,10 @@ class Authentication(object):
                 and not self.token_based_auth:
             self.logger.debug('using external auth')
             user = user_handler.get_user_from_auth(request.authorization)
-            user = self.external_auth.authenticate(request, user)
+            response = self.external_auth.authenticate(request, user)
+            if isinstance(response, Response):
+                return response
+            user = response
         if not user:
             raise_unauthorized_user_error('No authentication info provided')
         self.logger.info('Authenticated user: {0}'.format(user))

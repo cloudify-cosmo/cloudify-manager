@@ -16,7 +16,7 @@
 from functools import wraps
 
 from flask_restful import Resource
-from flask import request, current_app
+from flask import request, current_app, Response, make_response
 
 from manager_rest.utils import abort_error
 from manager_rest.manager_exceptions import MissingPremiumPackage
@@ -27,8 +27,15 @@ from .authentication import authenticator
 def authenticate(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        authenticator.authenticate(request)
-        return func(*args, **kwargs)
+        auth_response = authenticator.authenticate(request)
+        if isinstance(auth_response, Response):
+            return auth_response
+        response = func(*args, **kwargs)
+        if hasattr(auth_response, 'response_headers'):
+            response = make_response(response)  # to set additional headers
+            for header, value in auth_response.response_headers.iteritems():
+                response.headers[header] = value
+        return response
     return wrapper
 
 
