@@ -23,10 +23,13 @@ from manager_rest import cryptography_utils
 from ..responses_v3 import SecretsListResponse
 from manager_rest.utils import is_administrator
 from manager_rest.security import SecuredResource
-from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
+from manager_rest.storage.models_states import VisibilityState
+from manager_rest.manager_exceptions import (ConflictError,
+                                             ForbiddenError,
+                                             IllegalActionError)
 
 
 class SecretsKey(SecuredResource):
@@ -99,12 +102,15 @@ class SecretsKey(SecuredResource):
         """
         Update an existing secret
         """
-        request_dict = rest_utils.get_json_and_verify_params({'value'})
         rest_utils.validate_inputs({'key': key})
-
+        if not request.json:
+            raise IllegalActionError('Update a secret request must include at '
+                                     'least one parameter to update')
         secret = get_storage_manager().get(models.Secret, key)
-        get_resource_manager().validate_modification_permitted(secret)
-        secret.value = self._encrypt_secret_value(request_dict['value'])
+        self._validate_secret_modification_permitted(secret)
+        self._update_is_hidden_value(secret)
+        self._update_visibility(secret)
+        self._update_value(secret)
         secret.updated_at = utils.get_formatted_timestamp()
         return get_storage_manager().update(secret)
 
@@ -118,7 +124,7 @@ class SecretsKey(SecuredResource):
         rest_utils.validate_inputs({'key': key})
         storage_manager = get_storage_manager()
         secret = storage_manager.get(models.Secret, key)
-        get_resource_manager().validate_modification_permitted(secret)
+        self._validate_secret_modification_permitted(secret)
         return storage_manager.delete(secret)
 
     def _encrypt_secret_value(self, value, encryption_key=None):
@@ -130,6 +136,45 @@ class SecretsKey(SecuredResource):
         current_tenant = get_storage_manager().current_tenant
         current_username = current_user.username
         return is_administrator(current_tenant) or creator == current_username
+
+    def _validate_secret_modification_permitted(self, secret):
+        get_resource_manager().validate_modification_permitted(secret)
+        if secret.is_hidden_value and \
+                not self._is_value_permitted(secret.created_by):
+            raise ForbiddenError(
+                'User `{0}` is not permitted to modify the hidden value '
+                'secret `{1}`'.format(current_user.username, secret.key)
+            )
+
+    def _update_is_hidden_value(self, secret):
+        is_hidden_value = request.json.get('is_hidden_value')
+        if is_hidden_value is not None:
+            is_hidden_value = rest_utils.verify_and_convert_bool(
+                'is_hidden_value',
+                is_hidden_value
+            )
+            secret.is_hidden_value = is_hidden_value
+
+    def _update_visibility(self, secret):
+        visibility = rest_utils.get_visibility_parameter(
+            optional=True,
+            valid_values=VisibilityState.STATES,
+        )
+        if visibility:
+            get_resource_manager().validate_visibility_value(
+                models.Secret,
+                secret,
+                visibility
+            )
+            secret.visibility = visibility
+
+    def _update_value(self, secret):
+        request_dict = rest_utils.get_json_and_verify_params({
+            'value': {'type': unicode, 'optional': True}
+        })
+        value = request_dict.get('value')
+        if value:
+            secret.value = self._encrypt_secret_value(value)
 
 
 class Secrets(SecuredResource):
