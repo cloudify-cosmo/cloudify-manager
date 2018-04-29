@@ -1348,16 +1348,13 @@ class ResourceManager(object):
 
     def set_visibility(self, model_class, resource_id, visibility):
         resource = self.sm.get(model_class, resource_id)
-        self._validate_visibility_value(model_class, resource, visibility)
+        self.validate_visibility_value(model_class, resource, visibility)
         # Set the visibility
         resource.visibility = visibility
         resource.updated_at = utils.get_formatted_timestamp()
         return self.sm.update(resource)
 
-    def _validate_visibility_value(self,
-                                   model_class,
-                                   resource,
-                                   new_visibility):
+    def validate_visibility_value(self, model_class, resource, new_visibility):
         current_visibility = resource.visibility
         states = VisibilityState.STATES
         if states.index(new_visibility) < states.index(current_visibility):

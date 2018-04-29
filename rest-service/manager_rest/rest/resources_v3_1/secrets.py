@@ -44,7 +44,7 @@ class SecretsSetGlobal(SecuredResource):
 class SecretsSetVisibility(SecuredResource):
 
     @rest_decorators.exceptions_handled
-    @authorize('resource_set_visibility')
+    @authorize('secret_update')
     @rest_decorators.marshal_with(models.Secret)
     def patch(self, key):
         """
