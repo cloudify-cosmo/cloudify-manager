@@ -23,7 +23,7 @@ from contextlib import contextmanager
 
 from cloudify.utils import setup_logger
 from cloudify_rest_client.executions import Execution
-from integration_tests.framework import utils, postgresql, docl
+from integration_tests.framework import utils, docl
 
 
 logger = setup_logger('testenv.utils')
