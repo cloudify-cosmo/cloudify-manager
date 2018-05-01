@@ -13,6 +13,7 @@
 #  * See the License for the specific language governing permissions and
 #  * limitations under the License.
 
+import json
 from functools import wraps
 
 from flask_restful import Resource
@@ -32,7 +33,8 @@ def authenticate(func):
             return auth_response
         response = func(*args, **kwargs)
         if hasattr(auth_response, 'response_headers'):
-            response = make_response(response)  # to set additional headers
+            # to set additional headers
+            response = make_response(json.dumps(response))
             for header, value in auth_response.response_headers.iteritems():
                 response.headers[header] = value
         return response

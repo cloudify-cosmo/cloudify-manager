@@ -61,6 +61,8 @@ class Authentication(object):
         self.logger.info('Authenticated user: {0}'.format(user))
         user.last_login_at = datetime.now()
         user_datastore.commit()
+        # Need to reload user, otherwise current_user is `AnonymousUser`
+        current_app.extensions['security'].login_manager.reload_user(user)
         return user
 
     def _internal_auth(self, request):
