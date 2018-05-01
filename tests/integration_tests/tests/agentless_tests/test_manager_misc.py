@@ -73,13 +73,11 @@ class MiscManagerTest(AgentlessTestCase):
         """
         logs_dir = '/var/log/cloudify'
         test_log_files = [
-            'influxdb/log.txt',
             'mgmtworker/logs/test.log',
             'rabbitmq/rabbit@cloudifyman.log',
             'rest/cloudify-rest-service.log',
             'logstash/logstash.log',
             'nginx/cloudify.access.log',
-            'riemann/riemann.log',
             'stage/app.log',
             'composer/app.log'
         ]
