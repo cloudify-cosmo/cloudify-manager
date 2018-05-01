@@ -82,6 +82,10 @@ def create(api_token,
 
 @operation
 def delete(**_):
+    if not path.isdir(os.environ[RIEMANN_CONFIGS_DIR]):
+        # We can't raise an exception here because this workflow gets called
+        # on every deployment env deletion
+        return
     deployment_config_dir_path = _deployment_config_dir()
     _publish_configuration_event('stop', deployment_config_dir_path)
     _verify_core_down(deployment_config_dir_path)
