@@ -21,7 +21,7 @@ import requests
 import nose.tools
 
 
-from integration_tests.framework import utils, docl
+from integration_tests.framework import utils
 from integration_tests.tests import utils as test_utils
 
 _HELLO_WORLD_URL = 'https://github.com/cloudify-cosmo/{0}/archive/{1}.tar.gz'
@@ -39,8 +39,6 @@ class _HelloWorld(object):
         self.use_cli = use_cli
         self.modify_blueprint_func = modify_blueprint_func
         self.skip_uninstall = skip_uninstall
-        self.influxdb_url = \
-            'http://localhost:8086/db/cloudify/series?u=root&p=root'
 
     @nose.tools.nottest
     def test_hello_world(self):
@@ -50,8 +48,6 @@ class _HelloWorld(object):
             timeout_seconds=120)
 
         self._assert_hello_world_events(deployment.id)
-        self._assert_hello_world_metric(deployment.id)
-
         ip = self.test_case.get_host_ip(node_id='vm',
                                         deployment_id=deployment.id)
         url = 'http://{0}:8080'.format(ip)
@@ -79,23 +75,6 @@ class _HelloWorld(object):
         events = rest_client.events.list(
             deployment_id=deployment_id)
         self.test_case.assertGreater(len(events.items), 0)
-
-    def _assert_hello_world_metric(self, deployment_id):
-        self.test_case.logger.info('Verifying deployment metrics...')
-        # This query finds all the time series that begin with the
-        # deployment ID (which should be all the series created by diamond)
-        # and have values in the last 5 seconds
-        result = docl.execute(
-            'curl -G "{url}" --data-urlencode '
-            '"q=select * from /^{dep}\./i '
-            'where time > now() - 5s"'.format(url=self.influxdb_url,
-                                              dep=deployment_id),
-            quiet=True
-        )
-        if result == '[]':
-            self.test_case.fail(
-                'Monitoring events list for deployment with ID `{0}` '
-                'were not found on influxDB'.format(deployment_id))
 
     def _prepare_hello_world(self):
         logger = self.test_case.logger
