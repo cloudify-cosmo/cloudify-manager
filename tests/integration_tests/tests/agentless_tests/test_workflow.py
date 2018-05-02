@@ -434,31 +434,3 @@ class BasicWorkflowsTest(AgentlessTestCase):
         self.assertEqual(1, len([
             i for i in invocations
             if i == constants.NODE_INSTANCE]))
-
-    def test_riemann_core_started_with_policies(self):
-        """A riemann core is started if the blueprint defines policies
-        """
-        dsl_path = get_resource('dsl/with_policies1.yaml')
-        deployment, _ = self.deploy_application(dsl_path)
-
-        self.assertTrue(self.is_riemann_core_up(deployment.id))
-
-        self.undeploy_application(deployment.id, is_delete_deployment=True)
-
-        self._assert_riemann_core_is_down(deployment)
-
-    @retrying.retry(wait_fixed=5000, stop_max_attempt_number=10)
-    def _assert_riemann_core_is_down(self, deployment):
-        self.assertFalse(self.is_riemann_core_up(deployment.id))
-
-    def test_riemann_core_not_started_without_policies(self):
-        """A riemann core isn't started if there's no policies defined
-        """
-        dsl_path = get_resource('dsl/without_policies.yaml')
-        deployment, _ = self.deploy_application(dsl_path)
-
-        self.assertFalse(self.is_riemann_core_up(deployment.id))
-
-        self.undeploy_application(deployment.id, is_delete_deployment=True)
-
-        self._assert_riemann_core_is_down(deployment)
