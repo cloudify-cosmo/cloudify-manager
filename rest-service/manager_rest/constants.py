@@ -50,3 +50,5 @@ FILE_SERVER_PLUGINS_FOLDER = 'plugins'
 FILE_SERVER_AUTHENTICATORS_FOLDER = 'authenticators'
 
 BROKER_SSL_PORT = 5671
+
+SECURITY_FILE_LOCATION = '/opt/manager/rest-security.conf'

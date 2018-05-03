@@ -15,6 +15,7 @@
 
 from manager_rest import utils
 from manager_rest.security import SecuredResource
+from manager_rest.cryptography_utils import encrypt
 from manager_rest.manager_exceptions import ConflictError
 from manager_rest.security.authorization import authorize
 from manager_rest.storage import models, get_storage_manager
@@ -66,10 +67,7 @@ class SecretsKey(resources_v3.SecretsKey):
         update_if_exists is set to true
         """
         secret_params = self._get_secret_params(key)
-        encrypted_value = self._encrypt_secret_value(
-            secret_params['value'],
-            secret_params['encryption_key']  # Used only in restore snapshot
-        )
+        encrypted_value = encrypt(secret_params['value'])
         sm = get_storage_manager()
         timestamp = utils.get_formatted_timestamp()
 
@@ -120,7 +118,6 @@ class SecretsKey(resources_v3.SecretsKey):
             'value': request_dict['value'],
             'update_if_exists': update_if_exists,
             'visibility': visibility,
-            'is_hidden_value': is_hidden_value,
-            'encryption_key': request_dict.get('encryption_key', None)
+            'is_hidden_value': is_hidden_value
         }
         return secret_params

@@ -36,6 +36,8 @@ from cloudify_rest_client import CloudifyClient
 from cloudify_rest_client.exceptions import CloudifyClientError
 
 from manager_rest.rest import rest_utils
+from manager_rest.amqp_manager import AMQPManager
+from manager_rest.cryptography_utils import encrypt
 from manager_rest.test.security_utils import get_admin_user
 from manager_rest import utils, config, constants, archiving
 from manager_rest.storage import FileServer, get_storage_manager, models
@@ -153,6 +155,7 @@ class BaseServerTestCase(unittest.TestCase):
 
         server_module = self._set_config_path_and_get_server_module()
         self._create_config_and_reset_app(server_module)
+        self._mock_get_encryption_key()
         self._handle_flask_app_and_db(server_module)
         self.client = self.create_client()
         self.sm = get_storage_manager()
@@ -180,6 +183,16 @@ class BaseServerTestCase(unittest.TestCase):
         for amqp_patch in amqp_patches:
             self.addCleanup(amqp_patch.stop)
             amqp_patch.start()
+
+    def _mock_get_encryption_key(self):
+        """ Mock the _get_encryption_key_patcher function for all unittests """
+        self._get_encryption_key_patcher = patch(
+            'manager_rest.cryptography_utils._get_encryption_key'
+        )
+        self.addCleanup(self._get_encryption_key_patcher.stop)
+        self._get_encryption_key = self._get_encryption_key_patcher.start()
+        self._get_encryption_key.return_value = \
+            config.instance.security_encryption_key
 
     def _create_temp_files_and_folders(self):
         self.tmpdir = tempfile.mkdtemp(prefix='fileserver-')
@@ -254,6 +267,9 @@ class BaseServerTestCase(unittest.TestCase):
                 admin_password=admin_user['password'],
                 amqp_manager=MagicMock(),
                 authorization_file_path=temp_auth_file
+            )
+            default_tenant.rabbitmq_password = encrypt(
+                AMQPManager._generate_user_password()
             )
         finally:
             os.remove(temp_auth_file)

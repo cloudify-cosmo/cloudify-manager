@@ -17,9 +17,11 @@ from os import environ
 from manager_rest.config import instance
 from manager_rest.amqp_manager import AMQPManager
 from manager_rest.flask_utils import setup_flask_app
+from manager_rest.constants import SECURITY_FILE_LOCATION
 
 
 environ['MANAGER_REST_CONFIG_PATH'] = '/opt/manager/cloudify-rest.conf'
+environ['MANAGER_REST_SECURITY_CONFIG_PATH'] = SECURITY_FILE_LOCATION
 app = setup_flask_app()
 
 with app.app_context():

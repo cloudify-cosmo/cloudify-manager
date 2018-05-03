@@ -95,6 +95,7 @@ class SnapshotRestore(object):
         self._snapshot_version = None
         self._client = get_rest_client()
         self._manager_version = utils.get_manager_version(self._client)
+        self._encryption_key = None
 
     def restore(self):
         self._tempdir = tempfile.mkdtemp('-snapshot-data')
@@ -121,6 +122,7 @@ class SnapshotRestore(object):
                 self._update_visibility(postgres)
                 self._restore_files_to_manager()
                 self._encrypt_secrets(postgres)
+                self._encrypt_rabbitmq_passwords(postgres)
                 self._restore_plugins(existing_plugins)
                 self._restore_influxdb()
                 self._restore_credentials(postgres)
@@ -341,6 +343,7 @@ class SnapshotRestore(object):
         rest_security_conf.update(snapshot_security_conf)
         with open(SECURITY_FILE_LOCATION, 'w') as security_conf_file:
             json.dump(rest_security_conf, security_conf_file)
+        self._encryption_key = str(rest_security_conf['encryption_key'])
         self._add_restart_command()
 
     def _restore_db(self, postgres, schema_revision, stage_revision):
@@ -401,14 +404,20 @@ class SnapshotRestore(object):
         if self._snapshot_version >= V_4_4_0:
             return
 
-        with open(SECURITY_FILE_LOCATION) as security_conf_file:
-            rest_security_conf = json.load(security_conf_file)
-
         ctx.logger.info('Encrypting the secrets values')
-        postgres.encrypt_secrets_values(
-            str(rest_security_conf['encryption_key'])
-        )
+        postgres.encrypt_values(self._encryption_key, 'secrets', 'value')
         ctx.logger.info('Successfully encrypted the secrets values')
+
+    def _encrypt_rabbitmq_passwords(self, postgres):
+        # The passwords are encrypted
+        if self._snapshot_version >= V_4_4_0:
+            return
+
+        ctx.logger.info('Encrypting the passwords of RabbitMQ vhosts')
+        postgres.encrypt_values(self._encryption_key,
+                                'tenants',
+                                'rabbitmq_password')
+        ctx.logger.info('Successfully encrypted the passwords of RabbitMQ')
 
     def _restore_stage(self, postgres, tempdir, migration_version):
         if not (self._snapshot_version > V_4_0_0 and self._premium_enabled):

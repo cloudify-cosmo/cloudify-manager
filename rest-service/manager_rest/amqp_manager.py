@@ -23,6 +23,7 @@ from functools import wraps
 
 from manager_rest.storage.models import Tenant
 from manager_rest.storage import get_storage_manager
+from manager_rest.cryptography_utils import encrypt, decrypt
 
 
 def ignore_not_found(func):
@@ -121,10 +122,12 @@ class AMQPManager(object):
             self.VHOST_NAME_PATTERN.format(tenant.name)
         username = tenant.rabbitmq_username or \
             self.USERNAME_PATTERN.format(tenant.name)
-        password = (
-            tenant.rabbitmq_password or
-            AMQPManager._generate_user_password()
-        )
+
+        # The password is being stored encrypted in the DB
+        new_password = AMQPManager._generate_user_password()
+        password = decrypt(tenant.rabbitmq_password) \
+            if tenant.rabbitmq_password else new_password
+        encrypted_password = tenant.rabbitmq_password or encrypt(new_password)
 
         self._client.create_vhost(vhost)
         self._client.create_user(username, password)
@@ -135,7 +138,7 @@ class AMQPManager(object):
 
         tenant.rabbitmq_vhost = vhost
         tenant.rabbitmq_username = username
-        tenant.rabbitmq_password = password
+        tenant.rabbitmq_password = encrypted_password
 
         return tenant
 
