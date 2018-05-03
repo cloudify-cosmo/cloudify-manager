@@ -375,25 +375,27 @@ class Postgres(object):
             }
         return details
 
-    def encrypt_secrets_values(self, encryption_key):
-        secrets = self.run_query("SELECT secrets.id, secrets.value "
-                                 "FROM secrets")
-        # There are no secrets in the snapshot
-        if len(secrets['all']) < 1:
+    def encrypt_values(self, encryption_key, table_name, column_name):
+        """Encrypt the values of one column in a table
+        """
+        values = self.run_query("SELECT id, {0} FROM {1}".format(column_name,
+                                                                 table_name))
+        # There is no relevant data in the snapshot
+        if len(values['all']) < 1:
             return
 
-        encrypted_secrets = []
+        encrypted_values = []
         fernet = Fernet(encryption_key)
-        for secret in secrets['all']:
-            encrypted_value = fernet.encrypt(bytes(secret[1]))
-            encrypted_secrets.append((secret[0], encrypted_value))
+        for value in values['all']:
+            encrypted_value = fernet.encrypt(bytes(value[1]))
+            encrypted_values.append((value[0], encrypted_value))
 
-        update_query = """UPDATE secrets
-                          SET value = encrypted_secrets.value
-                          FROM (VALUES %s) AS encrypted_secrets (id, value)
-                          WHERE secrets.id = encrypted_secrets.id"""
-
-        self.run_query(update_query, vars=encrypted_secrets, bulk_query=True)
+        update_query = """UPDATE {0}
+                          SET {1} = encrypted_values.value
+                          FROM (VALUES %s) AS encrypted_values (id, value)
+                          WHERE {0}.id = encrypted_values.id""" \
+            .format(table_name, column_name)
+        self.run_query(update_query, vars=encrypted_values, bulk_query=True)
 
     def _connect(self):
         try:

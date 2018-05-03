@@ -15,7 +15,6 @@
 
 import os
 import re
-import json
 import pickle
 import shutil
 import string
@@ -24,10 +23,8 @@ import itertools
 from cloudify.manager import get_rest_client
 from cloudify.workflows import ctx
 
+from .constants import V_4_1_0, SECRET_STORE_AGENT_KEY_PREFIX
 from .utils import is_compute, run, get_dep_contexts, get_tenants_list
-from .constants import (V_4_1_0,
-                        SECURITY_FILE_LOCATION,
-                        SECRET_STORE_AGENT_KEY_PREFIX)
 
 ALLOWED_KEY_CHARS = string.ascii_letters + string.digits + '-._'
 CRED_DIR = 'snapshot-credentials'
@@ -222,21 +219,8 @@ def restore(tempdir, postgres, version):
 
             replacements[agent_key] = key_secrets[key_data]
 
-        encryption_key = _get_encryption_key() if new_key_secrets else None
         for key, value in new_key_secrets.items():
-            # The encryption_key parameter is used internally only
-            # when we create the agent's ssh keys as secrets during snapshot
-            # restore. We need to use the encryption key from the snapshot
-            # so after the snapshot restore these secrets can be decrypted
-            client.secrets.create(key, value, encryption_key=encryption_key)
+            client.secrets.create(key, value)
 
         for orig, replace in replacements.items():
             _fix_snapshot_ssh_db(tenant, orig, replace)
-
-
-def _get_encryption_key():
-    # The encryption_key (from the snapshot) is updated in rest-security.conf
-    # file but not yet loaded to the config
-    with open(SECURITY_FILE_LOCATION) as security_conf_file:
-        rest_security_conf = json.load(security_conf_file)
-    return rest_security_conf['encryption_key']

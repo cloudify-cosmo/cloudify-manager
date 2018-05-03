@@ -18,8 +18,9 @@ from flask_security import current_user
 from cloudify.amqp_client import get_client, SendHandler
 
 from manager_rest import config, utils
-from manager_rest.constants import MGMTWORKER_QUEUE, BROKER_SSL_PORT
+from manager_rest.cryptography_utils import decrypt
 from manager_rest.storage import get_storage_manager, models
+from manager_rest.constants import MGMTWORKER_QUEUE, BROKER_SSL_PORT
 
 
 def execute_workflow(name,
@@ -98,6 +99,9 @@ def execute_system_workflow(wf_id,
 
 def _get_tenant_dict():
     tenant_dict = utils.current_tenant.to_dict()
+    tenant_dict['rabbitmq_password'] = decrypt(
+        tenant_dict['rabbitmq_password']
+    )
     for to_remove in ['id', 'users', 'groups']:
         tenant_dict.pop(to_remove)
     return tenant_dict

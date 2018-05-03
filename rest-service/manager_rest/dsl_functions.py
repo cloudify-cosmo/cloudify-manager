@@ -18,7 +18,6 @@ from collections import namedtuple
 from dsl_parser import functions
 from dsl_parser import exceptions as parser_exceptions
 
-from manager_rest import config
 from manager_rest import cryptography_utils
 from manager_rest.storage import get_storage_manager
 from manager_rest.storage import get_node as get_storage_node
@@ -83,9 +82,7 @@ def _get_methods(deployment_id, storage_manager):
 
     def get_secret(secret_key):
         secret = storage_manager.get(Secret, secret_key)
-        encryption_key = config.instance.security_encryption_key
-        decrypted_value = cryptography_utils.decrypt(encryption_key,
-                                                     secret.value)
+        decrypted_value = cryptography_utils.decrypt(secret.value)
         return SecretType(secret_key, decrypted_value)
 
     return dict(

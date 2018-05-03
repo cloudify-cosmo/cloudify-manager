@@ -17,13 +17,12 @@ from flask import request
 from flask_security import current_user
 
 from ... import utils
-from manager_rest import config
 from .. import rest_decorators, rest_utils
-from manager_rest import cryptography_utils
 from ..responses_v3 import SecretsListResponse
 from manager_rest.utils import is_administrator
 from manager_rest.security import SecuredResource
 from manager_rest.security.authorization import authorize
+from manager_rest.cryptography_utils import encrypt, decrypt
 from manager_rest.storage import models, get_storage_manager
 from manager_rest.resource_manager import get_resource_manager
 from manager_rest.storage.models_states import VisibilityState
@@ -49,9 +48,7 @@ class SecretsKey(SecuredResource):
             secret_dict['value'] = ''
         else:
             # Returns the decrypted value
-            encryption_key = config.instance.security_encryption_key
-            secret_dict['value'] = cryptography_utils.decrypt(encryption_key,
-                                                              secret.value)
+            secret_dict['value'] = decrypt(secret.value)
         return secret_dict
 
     @rest_decorators.exceptions_handled
@@ -127,11 +124,6 @@ class SecretsKey(SecuredResource):
         self._validate_secret_modification_permitted(secret)
         return storage_manager.delete(secret)
 
-    def _encrypt_secret_value(self, value, encryption_key=None):
-        encryption_key = encryption_key or \
-                         config.instance.security_encryption_key
-        return cryptography_utils.encrypt(encryption_key, value)
-
     def _is_hidden_value_permitted(self, creator):
         current_tenant = get_storage_manager().current_tenant
         current_username = current_user.username
@@ -182,7 +174,7 @@ class SecretsKey(SecuredResource):
         })
         value = request_dict.get('value')
         if value:
-            secret.value = self._encrypt_secret_value(value)
+            secret.value = encrypt(value)
 
 
 class Secrets(SecuredResource):

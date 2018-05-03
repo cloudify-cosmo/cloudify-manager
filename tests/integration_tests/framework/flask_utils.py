@@ -22,6 +22,7 @@ import tempfile
 from cloudify.utils import setup_logger
 
 from manager_rest.storage import db, models
+from manager_rest.constants import SECURITY_FILE_LOCATION
 from manager_rest.flask_utils import setup_flask_app as _setup_flask_app
 
 from integration_tests.framework import constants, utils
@@ -44,7 +45,7 @@ def prepare_reset_storage_script():
         json.dump({
             'config': {
                 '': constants.CONFIG_FILE_LOCATION,
-                'security': constants.SECURITY_FILE_LOCATION,
+                'security': SECURITY_FILE_LOCATION,
                 'authorization': constants.AUTHORIZATION_FILE_LOCATION
             },
             'ip': utils.get_manager_ip(),
