@@ -73,7 +73,7 @@ def fix_fabric_env(input_dict, original_string, secret_name):
     if 'fabric_env' in input_dict:
         if 'key_filename' in input_dict['fabric_env']:
             if input_dict['fabric_env']['key_filename'] == original_string:
-                input_dict['fabric_env'].pop('fabric_env')
+                input_dict['fabric_env'].pop('key_filename')
                 input_dict['fabric_env']['key'] = {
                     'get_secret': secret_name,
                 }
