@@ -100,6 +100,11 @@ class TestWorkflow(AgentTestWithPlugins):
         with utils.zip_files([wagon_path, yaml_path]) as zip_path:
             self.client.plugins.upload(zip_path)
 
+        install_plugin_ex = [ex for ex in self.client.executions.list(
+            include_system_workflows=True) if
+                 ex.workflow_id == 'install_plugin'][0]
+        self.wait_for_execution_to_end(install_plugin_ex)
+
     def test_deploy_with_operation_executor_override(self):
         self._upload_mock_plugin()
 
